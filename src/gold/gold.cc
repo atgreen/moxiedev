@@ -178,7 +178,7 @@ queue_initial_tasks(const General_options& options,
     thread_count = cmdline.number_of_input_files();
   workqueue->set_thread_count(thread_count);
 
-  if (cmdline.options().incremental())
+  if (parameters->incremental())
     {
       Incremental_checker incremental_checker(
           parameters->options().output_file_name(),
@@ -309,7 +309,7 @@ queue_middle_tasks(const General_options& options,
 		   Mapfile* mapfile)
 {
   // Add any symbols named with -u options to the symbol table.
-  symtab->add_undefined_symbols_from_command_line();
+  symtab->add_undefined_symbols_from_command_line(layout);
 
   // If garbage collection was chosen, relocs have been read and processed
   // at this point by pre_middle_tasks.  Layout can then be done for all 
@@ -333,7 +333,7 @@ queue_middle_tasks(const General_options& options,
             }
         }
       // Symbols named with -u should not be considered garbage.
-      symtab->gc_mark_undef_symbols();
+      symtab->gc_mark_undef_symbols(layout);
       gold_assert(symtab->gc() != NULL);
       // Do a transitive closure on all references to determine the worklist.
       symtab->gc()->do_transitive_closure();
@@ -359,6 +359,7 @@ queue_middle_tasks(const General_options& options,
            p != input_objects->relobj_end();
            ++p)
         {
+          Task_lock_obj<Object> tlo(task, *p);
           (*p)->layout(symtab, layout, NULL);
         }
     }
@@ -379,7 +380,7 @@ queue_middle_tasks(const General_options& options,
            ++p)
         {
           // Update the value of output_section stored in rd.
-          Read_relocs_data *rd = (*p)->get_relocs_data();
+          Read_relocs_data* rd = (*p)->get_relocs_data();
           for (Read_relocs_data::Relocs_list::iterator q = rd->relocs.begin();
                q != rd->relocs.end();
                ++q)
@@ -655,7 +656,7 @@ queue_final_tasks(const General_options& options,
     }
   else
     {
-      Task_token *new_final_blocker = new Task_token(true);
+      Task_token* new_final_blocker = new Task_token(true);
       new_final_blocker->add_blocker();
       Task* t = new Write_after_input_sections_task(layout, of,
 						    final_blocker,

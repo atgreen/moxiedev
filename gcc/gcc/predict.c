@@ -942,7 +942,7 @@ predict_loops (void)
       exits = get_loop_exit_edges (loop);
       n_exits = VEC_length (edge, exits);
 
-      for (j = 0; VEC_iterate (edge, exits, j, ex); j++)
+      FOR_EACH_VEC_ELT (edge, exits, j, ex)
 	{
 	  tree niter = NULL;
 	  HOST_WIDE_INT nitercst;
@@ -1180,9 +1180,8 @@ expr_expected_value_1 (tree type, tree op0, enum tree_code code, tree op1, bitma
       def = SSA_NAME_DEF_STMT (op0);
 
       /* If we were already here, break the infinite cycle.  */
-      if (bitmap_bit_p (visited, SSA_NAME_VERSION (op0)))
+      if (!bitmap_set_bit (visited, SSA_NAME_VERSION (op0)))
 	return NULL;
-      bitmap_set_bit (visited, SSA_NAME_VERSION (op0));
 
       if (gimple_code (def) == GIMPLE_PHI)
 	{
@@ -1330,9 +1329,17 @@ strip_predict_hints (void)
 		  && gimple_call_num_args (stmt) == 2)
 		{
 		  var = gimple_call_lhs (stmt);
-		  ass_stmt = gimple_build_assign (var, gimple_call_arg (stmt, 0));
-
-		  gsi_replace (&bi, ass_stmt, true);
+		  if (var)
+		    {
+		      ass_stmt
+			= gimple_build_assign (var, gimple_call_arg (stmt, 0));
+		      gsi_replace (&bi, ass_stmt, true);
+		    }
+		  else
+		    {
+		      gsi_remove (&bi, true);
+		      continue;
+		    }
 		}
 	    }
 	  gsi_next (&bi);
@@ -2188,6 +2195,11 @@ compute_function_frequency (void)
 {
   basic_block bb;
   struct cgraph_node *node = cgraph_node (current_function_decl);
+  if (DECL_STATIC_CONSTRUCTOR (current_function_decl)
+      || MAIN_NAME_P (DECL_NAME (current_function_decl)))
+    node->only_called_at_startup = true;
+  if (DECL_STATIC_DESTRUCTOR (current_function_decl))
+    node->only_called_at_exit = true;
 
   if (!profile_info || !flag_branch_probabilities)
     {
@@ -2317,6 +2329,7 @@ struct gimple_opt_pass pass_strip_predict_hints =
 void
 rebuild_frequencies (void)
 {
+  timevar_push (TV_REBUILD_FREQUENCIES);
   if (profile_status == PROFILE_GUESSED)
     {
       loop_optimizer_init (0);
@@ -2331,4 +2344,5 @@ rebuild_frequencies (void)
     counts_to_freqs ();
   else
     gcc_unreachable ();
+  timevar_pop (TV_REBUILD_FREQUENCIES);
 }

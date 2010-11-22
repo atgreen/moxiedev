@@ -132,6 +132,7 @@ double_int_fits_in_uhwi_p (double_int cst)
    2 * HOST_BITS_PER_WIDE_INT bits.  */
 
 double_int double_int_mul (double_int, double_int);
+double_int double_int_mul_with_sign (double_int, double_int, bool, int *);
 double_int double_int_add (double_int, double_int);
 double_int double_int_sub (double_int, double_int);
 double_int double_int_neg (double_int);
@@ -148,7 +149,9 @@ double_int double_int_umod (double_int, double_int, unsigned);
 double_int double_int_divmod (double_int, double_int, bool, unsigned, double_int *);
 double_int double_int_sdivmod (double_int, double_int, unsigned, double_int *);
 double_int double_int_udivmod (double_int, double_int, unsigned, double_int *);
+
 double_int double_int_setbit (double_int, unsigned);
+int double_int_ctz (double_int);
 
 /* Logical operations.  */
 

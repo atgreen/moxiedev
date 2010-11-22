@@ -108,6 +108,8 @@ enum gdb_regnum {
 
 #define CPSR_T		0x20
 
+#define XPSR_T		0x01000000
+
 /* Type of floating-point code in use by inferior.  There are really 3 models
    that are traditionally supported (plus the endianness issue), but gcc can
    only generate 2 of those.  The third is APCS_FLOAT, where arguments to
@@ -163,6 +165,7 @@ struct gdbarch_tdep
 				   have_vfp_pseudos.  */
   int have_neon;		/* Do we have a NEON unit?  */
 
+  int is_m;			/* Does the target follow the "M" profile.  */
   CORE_ADDR lowest_pc;		/* Lowest address at which instructions 
 				   will appear.  */
 
@@ -193,6 +196,10 @@ struct gdbarch_tdep
   struct type *arm_ext_type;
   struct type *neon_double_type;
   struct type *neon_quad_type;
+
+  /* Return the expected next PC if FRAME is stopped at a syscall
+     instruction.  */
+  CORE_ADDR (*syscall_next_pc) (struct frame_info *frame);
 };
 
 /* Structures used for displaced stepping.  */
@@ -294,6 +301,7 @@ extern void
 CORE_ADDR arm_skip_stub (struct frame_info *, CORE_ADDR);
 CORE_ADDR arm_get_next_pc (struct frame_info *, CORE_ADDR);
 int arm_software_single_step (struct frame_info *);
+int arm_frame_is_thumb (struct frame_info *frame);
 
 extern struct displaced_step_closure *
   arm_displaced_step_copy_insn (struct gdbarch *, CORE_ADDR, CORE_ADDR,

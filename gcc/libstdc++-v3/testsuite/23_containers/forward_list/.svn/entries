@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/forward_list
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-27T17:27:06.727889Z
-162578
+2010-10-25T10:47:19.719791Z
+165915
 paolo
 
 
@@ -70,6 +70,9 @@ operations
 dir
 
 requirements
+dir
+
+debug
 dir
 
 comparable.cc

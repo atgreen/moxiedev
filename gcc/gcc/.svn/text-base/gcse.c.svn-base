@@ -1460,7 +1460,7 @@ hash_scan_set (rtx pat, rtx insn, struct hash_table_d *table)
 		  modified.  Here we want to search from INSN+1 on, but
 		  oprs_available_p searches from INSN on.  */
 	       && (insn == BB_END (BLOCK_FOR_INSN (insn))
-		   || (tmp = next_nonnote_insn (insn)) == NULL_RTX
+		   || (tmp = next_nonnote_nondebug_insn (insn)) == NULL_RTX
 		   || BLOCK_FOR_INSN (tmp) != BLOCK_FOR_INSN (insn)
 		   || oprs_available_p (pat, tmp)))
 	insert_set_in_table (pat, insn, table);
@@ -1748,7 +1748,7 @@ compute_hash_table_work (struct hash_table_d *table)
 	 determine when registers and memory are first and last set.  */
       FOR_BB_INSNS (current_bb, insn)
 	{
-	  if (! INSN_P (insn))
+	  if (!NONDEBUG_INSN_P (insn))
 	    continue;
 
 	  if (CALL_P (insn))
@@ -1771,7 +1771,7 @@ compute_hash_table_work (struct hash_table_d *table)
 
       /* The next pass builds the hash table.  */
       FOR_BB_INSNS (current_bb, insn)
-	if (INSN_P (insn))
+	if (NONDEBUG_INSN_P (insn))
 	  hash_scan_insn (insn, table);
     }
 
@@ -2351,12 +2351,10 @@ try_replace_reg (rtx from, rtx to, rtx insn)
 	  && validate_change (insn, &SET_SRC (set), src, 0))
 	success = 1;
 
-      /* If we've failed to do replacement, have a single SET, don't already
-	 have a note, and have no special SET, add a REG_EQUAL note to not
-	 lose information.  */
-      if (!success && note == 0 && set != 0
-	  && GET_CODE (SET_DEST (set)) != ZERO_EXTRACT
-	  && GET_CODE (SET_DEST (set)) != STRICT_LOW_PART)
+      /* If we've failed perform the replacement, have a single SET to
+	 a REG destination and don't yet have a note, add a REG_EQUAL note
+	 to not lose information.  */
+      if (!success && note == 0 && set != 0 && REG_P (SET_DEST (set)))
 	note = set_unique_reg_note (insn, REG_EQUAL, copy_rtx (src));
     }
 
@@ -3576,7 +3574,7 @@ insert_insn_end_basic_block (struct expr *expr, basic_block bb)
 	 the new instruction just before the tablejump.  */
       if (GET_CODE (PATTERN (insn)) == ADDR_VEC
 	  || GET_CODE (PATTERN (insn)) == ADDR_DIFF_VEC)
-	insn = prev_real_insn (insn);
+	insn = prev_active_insn (insn);
 
 #ifdef HAVE_cc0
       /* FIXME: 'twould be nice to call prev_cc0_setter here but it aborts
@@ -4413,9 +4411,7 @@ hoist_code (void)
 
   /* Walk over each basic block looking for potentially hoistable
      expressions, nothing gets hoisted from the entry block.  */
-  for (dom_tree_walk_index = 0;
-       VEC_iterate (basic_block, dom_tree_walk, dom_tree_walk_index, bb);
-       dom_tree_walk_index++)
+  FOR_EACH_VEC_ELT (basic_block, dom_tree_walk, dom_tree_walk_index, bb)
     {
       domby = get_dominated_to_depth (CDI_DOMINATORS, bb, MAX_HOIST_DEPTH);
 
@@ -4468,7 +4464,7 @@ hoist_code (void)
 	      /* We've found a potentially hoistable expression, now
 		 we look at every block BB dominates to see if it
 		 computes the expression.  */
-	      for (j = 0; VEC_iterate (basic_block, domby, j, dominated); j++)
+	      FOR_EACH_VEC_ELT (basic_block, domby, j, dominated)
 		{
 		  int max_distance;
 
@@ -4552,9 +4548,7 @@ hoist_code (void)
 
 	      /* Walk through occurences of I'th expressions we want
 		 to hoist to BB and make the transformations.  */
-	      for (j = 0;
-		   VEC_iterate (occr_t, occrs_to_hoist, j, occr);
-		   j++)
+	      FOR_EACH_VEC_ELT (occr_t, occrs_to_hoist, j, occr)
 		{
 		  rtx insn;
 		  rtx set;
@@ -5252,10 +5246,14 @@ gate_rtl_cprop (void)
 static unsigned int
 execute_rtl_cprop (void)
 {
+  int changed;
   delete_unreachable_blocks ();
   df_set_flags (DF_LR_RUN_DCE);
   df_analyze ();
-  flag_rerun_cse_after_global_opts |= one_cprop_pass ();
+  changed = one_cprop_pass ();
+  flag_rerun_cse_after_global_opts |= changed;
+  if (changed)
+    cleanup_cfg (0);
   return 0;
 }
 
@@ -5271,9 +5269,13 @@ gate_rtl_pre (void)
 static unsigned int
 execute_rtl_pre (void)
 {
+  int changed;
   delete_unreachable_blocks ();
   df_analyze ();
-  flag_rerun_cse_after_global_opts |= one_pre_gcse_pass ();
+  changed = one_pre_gcse_pass ();
+  flag_rerun_cse_after_global_opts |= changed;
+  if (changed)
+    cleanup_cfg (0);
   return 0;
 }
 
@@ -5292,9 +5294,13 @@ gate_rtl_hoist (void)
 static unsigned int
 execute_rtl_hoist (void)
 {
+  int changed;
   delete_unreachable_blocks ();
   df_analyze ();
-  flag_rerun_cse_after_global_opts |= one_code_hoisting_pass ();
+  changed = one_code_hoisting_pass ();
+  flag_rerun_cse_after_global_opts |= changed;
+  if (changed)
+    cleanup_cfg (0);
   return 0;
 }
 

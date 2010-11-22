@@ -24,6 +24,11 @@
 #include "value.h"
 #include "vec.h"
 
+#if HAVE_PYTHON
+#include "python/python.h"
+#include "python/python-internal.h"
+#endif
+
 struct value;
 struct block;
 
@@ -240,13 +245,18 @@ struct bp_location
      the same parent breakpoint.  */
   struct bp_location *next;
 
+  /* The reference count.  */
+  int refc;
+
   /* Type of this breakpoint location.  */
   enum bp_loc_type loc_type;
 
   /* Each breakpoint location must belong to exactly one higher-level
-     breakpoint.  This and the DUPLICATE flag are more straightforward
-     than reference counting.  This pointer is NULL iff this bp_location is in
-     (and therefore only in) moribund_locations.  */
+     breakpoint.  This pointer is NULL iff this bp_location is no
+     longer attached to a breakpoint.  For example, when a breakpoint
+     is deleted, its locations may still be found in the
+     moribund_locations list, or if we had stopped for it, in
+     bpstats.  */
   struct breakpoint *owner;
 
   /* Conditional.  Break only if this expression's value is nonzero.
@@ -450,8 +460,11 @@ struct breakpoint
     /* String form of the breakpoint condition (malloc'd), or NULL if there
        is no condition.  */
     char *cond_string;
-    /* String form of exp (malloc'd), or NULL if none.  */
+    /* String form of exp to use for displaying to the user (malloc'd), or
+       NULL if none.  */
     char *exp_string;
+    /* String form to use for reparsing of EXP (malloc'd) or NULL.  */
+    char *exp_string_reparse;
 
     /* The expression we are watching, or NULL if not a watchpoint.  */
     struct expression *exp;
@@ -549,7 +562,14 @@ struct breakpoint
        breakpoints, we will use this index to try to find the same
        marker again.  */
     int static_trace_marker_id_idx;
-  };
+
+    /* With a Python scripting enabled GDB, store a reference to the
+       Python object that has been associated with this breakpoint.
+       This is always NULL for a GDB that is not script enabled.  It
+       can sometimes be NULL for enabled GDBs as not all breakpoint
+       types are tracked by the Python scripting API.  */
+    PyObject *py_bp_object;
+};
 
 typedef struct breakpoint *breakpoint_p;
 DEF_VEC_P(breakpoint_p);
@@ -559,10 +579,6 @@ DEF_VEC_P(breakpoint_p);
    stopped at a breakpoint, and what we should do about it.  */
 
 typedef struct bpstats *bpstat;
-
-/* Frees any storage that is part of a bpstat.
-   Does not walk the 'next' chain.  */
-extern void bpstat_free (bpstat);
 
 /* Clears a chain of bpstat, freeing storage
    of each.  */
@@ -728,16 +744,41 @@ enum bp_print_how
 
 struct bpstats
   {
-    /* Linked list because there can be two breakpoints at the same
-       place, and a bpstat reflects the fact that both have been hit.  */
+    /* Linked list because there can be more than one breakpoint at
+       the same place, and a bpstat reflects the fact that all have
+       been hit.  */
     bpstat next;
-    /* Breakpoint that we are at.  */
-    const struct bp_location *breakpoint_at;
+
+    /* Location that caused the stop.  Locations are refcounted, so
+       this will never be NULL.  Note that this location may end up
+       detached from a breakpoint, but that does not necessary mean
+       that the struct breakpoint is gone.  E.g., consider a
+       watchpoint with a condition that involves an inferior function
+       call.  Watchpoint locations are recreated often (on resumes,
+       hence on infcalls too).  Between creating the bpstat and after
+       evaluating the watchpoint condition, this location may hence
+       end up detached from its original owner watchpoint, even though
+       the watchpoint is still listed.  If it's condition evaluates as
+       true, we still want this location to cause a stop, and we will
+       still need to know which watchpoint it was originally attached.
+       What this means is that we should not (in most cases) follow
+       the `bpstat->bp_location->owner' link, but instead use the
+       `breakpoint_at' field below.  */
+    struct bp_location *bp_location_at;
+
+    /* Breakpoint that caused the stop.  This is nullified if the
+       breakpoint ends up being deleted.  See comments on
+       `bp_location_at' above for why do we need this field instead of
+       following the location's owner.  */
+    struct breakpoint *breakpoint_at;
+
     /* The associated command list.  */
     struct counted_command_line *commands;
+
     /* Commands left to be done.  This points somewhere in
        base_command.  */
     struct command_line *commands_left;
+
     /* Old value associated with a watchpoint.  */
     struct value *old_val;
 
@@ -826,9 +867,9 @@ extern void break_command (char *, int);
 extern void hbreak_command_wrapper (char *, int);
 extern void thbreak_command_wrapper (char *, int);
 extern void rbreak_command_wrapper (char *, int);
-extern void watch_command_wrapper (char *, int);
-extern void awatch_command_wrapper (char *, int);
-extern void rwatch_command_wrapper (char *, int);
+extern void watch_command_wrapper (char *, int, int);
+extern void awatch_command_wrapper (char *, int, int);
+extern void rwatch_command_wrapper (char *, int, int);
 extern void tbreak_command (char *, int);
 
 extern int create_breakpoint (struct gdbarch *gdbarch, char *arg,
@@ -839,7 +880,8 @@ extern int create_breakpoint (struct gdbarch *gdbarch, char *arg,
 			      enum auto_boolean pending_break_support,
 			      struct breakpoint_ops *ops,
 			      int from_tty,
-			      int enabled);
+			      int enabled,
+			      int internal);
 
 extern void insert_breakpoints (void);
 
@@ -1000,6 +1042,7 @@ extern int remove_hw_watchpoints (void);
    twice before remove is called.  */
 extern void insert_single_step_breakpoint (struct gdbarch *,
 					   struct address_space *, CORE_ADDR);
+extern int single_step_breakpoints_inserted (void);
 extern void remove_single_step_breakpoints (void);
 extern void cancel_single_step_breakpoints (void);
 
@@ -1070,5 +1113,16 @@ extern void check_tracepoint_command (char *line, void *closure);
    breakpoint numbers for a later "commands" command.  */
 extern void start_rbreak_breakpoints (void);
 extern void end_rbreak_breakpoints (void);
+
+/* Breakpoint iterator function.
+
+   Calls a callback function once for each breakpoint, so long as the
+   callback function returns false.  If the callback function returns
+   true, the iteration will end and the current breakpoint will be
+   returned.  This can be useful for implementing a search for a
+   breakpoint with arbitrary attributes, or for applying an operation
+   to every breakpoint.  */
+extern struct breakpoint *iterate_over_breakpoints (int (*) (struct breakpoint *,
+							     void *), void *);
 
 #endif /* !defined (BREAKPOINT_H) */

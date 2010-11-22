@@ -102,7 +102,7 @@ bfd *symfile_bfd_open (char *);
 
 int get_section_index (struct objfile *, char *);
 
-static struct sym_fns *find_sym_fns (bfd *);
+static const struct sym_fns *find_sym_fns (bfd *);
 
 static void decrement_reading_symtab (void *);
 
@@ -147,7 +147,10 @@ void _initialize_symfile (void);
    calls add_symtab_fns() to register information on each format it is
    prepared to read. */
 
-static struct sym_fns *symtab_fns = NULL;
+typedef const struct sym_fns *sym_fns_ptr;
+DEF_VEC_P (sym_fns_ptr);
+
+static VEC (sym_fns_ptr) *symtab_fns = NULL;
 
 /* Flag for whether user will be reloading symbols multiple times.
    Defaults to ON for VxWorks, otherwise OFF.  */
@@ -547,6 +550,23 @@ relative_addr_info_to_section_offsets (struct section_offsets *section_offsets,
     }
 }
 
+/* Transform section name S for a name comparison.  prelink can split section
+   `.bss' into two sections `.dynbss' and `.bss' (in this order).  Similarly
+   prelink can split `.sbss' into `.sdynbss' and `.sbss'.  Use virtual address
+   of the new `.dynbss' (`.sdynbss') section as the adjacent new `.bss'
+   (`.sbss') section has invalid (increased) virtual address.  */
+
+static const char *
+addr_section_name (const char *s)
+{
+  if (strcmp (s, ".dynbss") == 0)
+    return ".bss";
+  if (strcmp (s, ".sdynbss") == 0)
+    return ".sbss";
+
+  return s;
+}
+
 /* qsort comparator for addrs_section_sort.  Sort entries in ascending order by
    their (name, sectindex) pair.  sectindex makes the sort by name stable.  */
 
@@ -557,7 +577,7 @@ addrs_section_compar (const void *ap, const void *bp)
   const struct other_sections *b = *((struct other_sections **) bp);
   int retval, a_idx, b_idx;
 
-  retval = strcmp (a->name, b->name);
+  retval = strcmp (addr_section_name (a->name), addr_section_name (b->name));
   if (retval)
     return retval;
 
@@ -641,14 +661,16 @@ addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
 
   while (*addrs_sorted)
     {
-      const char *sect_name = (*addrs_sorted)->name;
+      const char *sect_name = addr_section_name ((*addrs_sorted)->name);
 
       while (*abfd_addrs_sorted
-	     && strcmp ((*abfd_addrs_sorted)->name, sect_name) < 0)
+	     && strcmp (addr_section_name ((*abfd_addrs_sorted)->name),
+			sect_name) < 0)
 	abfd_addrs_sorted++;
 
       if (*abfd_addrs_sorted
-	  && strcmp ((*abfd_addrs_sorted)->name, sect_name) == 0)
+	  && strcmp (addr_section_name ((*abfd_addrs_sorted)->name),
+		     sect_name) == 0)
 	{
 	  int index_in_addrs;
 
@@ -676,7 +698,6 @@ addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
 
   for (i = 0; i < addrs->num_sections && addrs->other[i].name; i++)
     {
-      const char *sect_name = addrs->other[i].name;
       struct other_sections *sect = addrs_to_abfd_addrs[i];
 
       if (sect)
@@ -694,6 +715,9 @@ addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
 	}
       else
 	{
+	  /* addr_section_name transformation is not used for SECT_NAME.  */
+	  const char *sect_name = addrs->other[i].name;
+
 	  /* This section does not exist in ABFD, which is normally
 	     unexpected and we want to issue a warning.
 
@@ -704,12 +728,20 @@ addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
 	     a warning.  Shared libraries contain just the section
 	     ".gnu.liblist" but it is not marked as loadable there.  There is
 	     no other way to identify them than by their name as the sections
-	     created by prelink have no special flags.  */
+	     created by prelink have no special flags.
+
+	     For the sections `.bss' and `.sbss' see addr_section_name.  */
 
 	  if (!(strcmp (sect_name, ".gnu.liblist") == 0
 		|| strcmp (sect_name, ".gnu.conflict") == 0
-		|| strcmp (sect_name, ".dynbss") == 0
-		|| strcmp (sect_name, ".sdynbss") == 0))
+		|| (strcmp (sect_name, ".bss") == 0
+		    && i > 0
+		    && strcmp (addrs->other[i - 1].name, ".dynbss") == 0
+		    && addrs_to_abfd_addrs[i - 1] != NULL)
+		|| (strcmp (sect_name, ".sbss") == 0
+		    && i > 0
+		    && strcmp (addrs->other[i - 1].name, ".sdynbss") == 0
+		    && addrs_to_abfd_addrs[i - 1] != NULL)))
 	    warning (_("section %s not found in %s"), sect_name,
 		     bfd_get_filename (abfd));
 
@@ -1006,7 +1038,7 @@ syms_from_objfile (struct objfile *objfile,
 
 /* Perform required actions after either reading in the initial
    symbols for a new objfile, or mapping in the symbols from a reusable
-   objfile. */
+   objfile.  ADD_FLAGS is a bitmask of enum symfile_add_flags.  */
 
 void
 new_symfile_objfile (struct objfile *objfile, int add_flags)
@@ -1019,7 +1051,7 @@ new_symfile_objfile (struct objfile *objfile, int add_flags)
       /* OK, make it the "real" symbol file.  */
       symfile_objfile = objfile;
 
-      clear_symtab_users ();
+      clear_symtab_users (add_flags);
     }
   else if ((add_flags & SYMFILE_DEFER_BP_RESET) == 0)
     {
@@ -1059,6 +1091,9 @@ symbol_file_add_with_addrs_or_offsets (bfd *abfd,
   const char *name = bfd_get_filename (abfd);
   const int from_tty = add_flags & SYMFILE_VERBOSE;
 
+  if (readnow_symbol_files)
+    flags |= OBJF_READNOW;
+
   my_cleanups = make_cleanup_bfd_close (abfd);
 
   /* Give user a chance to burp if we'd be
@@ -1095,7 +1130,7 @@ symbol_file_add_with_addrs_or_offsets (bfd *abfd,
      the gdb startup command line or on a per symbol file basis.  Expand
      all partial symbol tables for this objfile if so. */
 
-  if ((flags & OBJF_READNOW) || readnow_symbol_files)
+  if ((flags & OBJF_READNOW))
     {
       if (from_tty || info_verbose)
 	{
@@ -1371,15 +1406,13 @@ find_separate_debug_file_by_debuglink (struct objfile *objfile)
   dir = xstrdup (objfile->name);
 
   /* Strip off the final filename part, leaving the directory name,
-     followed by a slash.  Objfile names should always be absolute and
-     tilde-expanded, so there should always be a slash in there
-     somewhere.  */
+     followed by a slash.  The directory can be relative or absolute.  */
   for (i = strlen(dir) - 1; i >= 0; i--)
     {
       if (IS_DIR_SEPARATOR (dir[i]))
 	break;
     }
-  gdb_assert (i >= 0 && IS_DIR_SEPARATOR (dir[i]));
+  /* If I is -1 then no directory is present there and DIR will be "".  */
   dir[i+1] = '\0';
 
   /* Set I to max (strlen (canon_name), strlen (dir)). */
@@ -1535,12 +1568,18 @@ symbol_file_command (char *args, int from_tty)
 void
 set_initial_language (void)
 {
-  char *filename;
   enum language lang = language_unknown;
 
-  filename = find_main_filename ();
-  if (filename != NULL)
-    lang = deduce_language_from_filename (filename);
+  if (language_of_main != language_unknown)
+    lang = language_of_main;
+  else
+    {
+      const char *filename;
+      
+      filename = find_main_filename ();
+      if (filename != NULL)
+	lang = deduce_language_from_filename (filename);
+    }
 
   if (lang == language_unknown)
     {
@@ -1672,10 +1711,9 @@ get_section_index (struct objfile *objfile, char *section_name)
    handle. */
 
 void
-add_symtab_fns (struct sym_fns *sf)
+add_symtab_fns (const struct sym_fns *sf)
 {
-  sf->next = symtab_fns;
-  symtab_fns = sf;
+  VEC_safe_push (sym_fns_ptr, symtab_fns, sf);
 }
 
 /* Initialize OBJFILE to read symbols from its associated BFD.  It
@@ -1683,18 +1721,19 @@ add_symtab_fns (struct sym_fns *sf)
    struct sym_fns in the objfile structure, that contains cached
    information about the symbol file.  */
 
-static struct sym_fns *
+static const struct sym_fns *
 find_sym_fns (bfd *abfd)
 {
-  struct sym_fns *sf;
+  const struct sym_fns *sf;
   enum bfd_flavour our_flavour = bfd_get_flavour (abfd);
+  int i;
 
   if (our_flavour == bfd_target_srec_flavour
       || our_flavour == bfd_target_ihex_flavour
       || our_flavour == bfd_target_tekhex_flavour)
     return NULL;	/* No symbols.  */
 
-  for (sf = symtab_fns; sf != NULL; sf = sf->next)
+  for (i = 0; VEC_iterate (sym_fns_ptr, symtab_fns, i, sf); ++i)
     if (our_flavour == sf->sym_flavour)
       return sf;
 
@@ -2401,12 +2440,12 @@ reread_symbols (void)
 		  sizeof (objfile->static_psymbols));
 
 	  /* Free the obstacks for non-reusable objfiles */
-	  bcache_xfree (objfile->psymbol_cache);
-	  objfile->psymbol_cache = bcache_xmalloc ();
+	  psymbol_bcache_free (objfile->psymbol_cache);
+	  objfile->psymbol_cache = psymbol_bcache_init ();
 	  bcache_xfree (objfile->macro_cache);
-	  objfile->macro_cache = bcache_xmalloc ();
+	  objfile->macro_cache = bcache_xmalloc (NULL, NULL);
 	  bcache_xfree (objfile->filename_cache);
-	  objfile->filename_cache = bcache_xmalloc ();
+	  objfile->filename_cache = bcache_xmalloc (NULL,NULL);
 	  if (objfile->demangled_names_hash != NULL)
 	    {
 	      htab_delete (objfile->demangled_names_hash);
@@ -2419,6 +2458,7 @@ reread_symbols (void)
 	  objfile->psymtabs_addrmap = NULL;
 	  objfile->free_psymtabs = NULL;
 	  objfile->cp_namespace_symtab = NULL;
+	  objfile->template_symbols = NULL;
 	  objfile->msymbols = NULL;
 	  objfile->deprecated_sym_private = NULL;
 	  objfile->minimal_symbol_count = 0;
@@ -2427,9 +2467,9 @@ reread_symbols (void)
 	  memset (&objfile->msymbol_demangled_hash, 0,
 		  sizeof (objfile->msymbol_demangled_hash));
 
-	  objfile->psymbol_cache = bcache_xmalloc ();
-	  objfile->macro_cache = bcache_xmalloc ();
-	  objfile->filename_cache = bcache_xmalloc ();
+	  objfile->psymbol_cache = psymbol_bcache_init ();
+	  objfile->macro_cache = bcache_xmalloc (NULL, NULL);
+	  objfile->filename_cache = bcache_xmalloc (NULL, NULL);
 	  /* obstack_init also initializes the obstack so it is
 	     empty.  We could use obstack_specify_allocation but
 	     gdb_obstack.h specifies the alloc/dealloc
@@ -2496,7 +2536,7 @@ reread_symbols (void)
       /* Notify objfiles that we've modified objfile sections.  */
       objfiles_changed ();
 
-      clear_symtab_users ();
+      clear_symtab_users (0);
       /* At least one objfile has changed, so we can consider that
          the executable we're debugging has changed too.  */
       observer_notify_executable_changed ();
@@ -2662,7 +2702,7 @@ init_filename_language_table (void)
 }
 
 enum language
-deduce_language_from_filename (char *filename)
+deduce_language_from_filename (const char *filename)
 {
   int i;
   char *cp;
@@ -2690,7 +2730,7 @@ deduce_language_from_filename (char *filename)
  */
 
 struct symtab *
-allocate_symtab (char *filename, struct objfile *objfile)
+allocate_symtab (const char *filename, struct objfile *objfile)
 {
   struct symtab *symtab;
 
@@ -2714,10 +2754,10 @@ allocate_symtab (char *filename, struct objfile *objfile)
 
 
 /* Reset all data structures in gdb which may contain references to symbol
-   table data.  */
+   table data.  ADD_FLAGS is a bitmask of enum symfile_add_flags.  */
 
 void
-clear_symtab_users (void)
+clear_symtab_users (int add_flags)
 {
   /* Someday, we should do better than this, by only blowing away
      the things that really need to be blown.  */
@@ -2727,7 +2767,8 @@ clear_symtab_users (void)
   clear_current_source_symtab_and_line ();
 
   clear_displays ();
-  breakpoint_re_set ();
+  if ((add_flags & SYMFILE_DEFER_BP_RESET) == 0)
+    breakpoint_re_set ();
   set_default_breakpoint (0, NULL, 0, 0, 0);
   clear_pc_function_cache ();
   observer_notify_new_objfile (NULL);
@@ -2746,7 +2787,7 @@ clear_symtab_users (void)
 static void
 clear_symtab_users_cleanup (void *ignore)
 {
-  clear_symtab_users ();
+  clear_symtab_users (0);
 }
 
 /* OVERLAYS:
@@ -3556,7 +3597,7 @@ symfile_relocate_debug_section (struct objfile *objfile,
 struct symfile_segment_data *
 get_symfile_segment_data (bfd *abfd)
 {
-  struct sym_fns *sf = find_sym_fns (abfd);
+  const struct sym_fns *sf = find_sym_fns (abfd);
 
   if (sf == NULL)
     return NULL;

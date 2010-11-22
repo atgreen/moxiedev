@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/javax/print/ipp/attribute/job
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 
 
 
@@ -32,79 +32,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-2c7d029fffbe146e58645def98e9be9e
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-646
-
-AttributesCharset.class
-file
-
-
-
-
-2009-04-24T17:47:45.000000Z
-ab1fea08325cd4f801faf156048e5239
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-804
-
-JobStateMessage.class
-file
-
-
-
-
-2009-04-24T17:47:45.000000Z
-ab0c91cbf1752a0c71967eb3c24edb8d
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.988794Z
+5db8559510271b8bcee47bbf90027b0f
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -128,17 +60,17 @@ has-props
 
 724
 
-AttributesNaturalLanguage.class
+AttributesCharset.class
 file
 
 
 
 
-2009-04-24T17:47:45.000000Z
-d8345c514b151b2e6fe62d6819d72113
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.988794Z
+e8f10780bd0b5b032a53b47626d20649
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -160,7 +92,75 @@ has-props
 
 
 
-844
+882
+
+JobStateMessage.class
+file
+
+
+
+
+2010-11-22T19:18:53.989810Z
+dbe66dae8726b115e6fb52ef06822226
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+802
+
+AttributesNaturalLanguage.class
+file
+
+
+
+
+2010-11-22T19:18:53.989810Z
+5ff53869f555c6938db2f94aaea33637
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+922
 
 JobDetailedStatusMessages.class
 file
@@ -168,11 +168,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-c268962a2f0adb2da20dc3421c7077dc
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.990793Z
+638a718ba95fcc3754bd376840b77023
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -194,7 +194,7 @@ has-props
 
 
 
-765
+843
 
 JobId.class
 file
@@ -202,11 +202,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-d50f86e6dbb2b6051bc3f742563d9ef5
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.990793Z
+6f8975eeb8eb72f45994ad6537b24365
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -228,7 +228,7 @@ has-props
 
 
 
-725
+803
 
 JobDocumentAccessErrors.class
 file
@@ -236,11 +236,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-c6da56ce8470ba256bb888edd041a987
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.990793Z
+e2760f8ccde1d32827202a9dc73b8573
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -262,7 +262,7 @@ has-props
 
 
 
-757
+835
 
 JobMoreInfo.class
 file
@@ -270,11 +270,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-e01eb77143ea246b3c504dfdffb43390
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.991784Z
+a77314170c85d8c3b40ec9980b22c604
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -296,7 +296,7 @@ has-props
 
 
 
-638
+716
 
 JobUri.class
 file
@@ -304,11 +304,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-2f7f44f4174b3de6055d16585b683450
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.991784Z
+a3147494f0531b9740b053941df983d7
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -330,5 +330,5 @@ has-props
 
 
 
-617
+695
 

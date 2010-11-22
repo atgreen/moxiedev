@@ -1,3 +1,95 @@
+2010-11-20  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* lib/binutils-common.exp (regexp_diff): New procedure.
+	* lib/utils-lib.exp (regexp_diff): Delete.
+
+2010-11-20  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* lib/binutils-common.exp: New file.
+	* lib/utils-lib.exp (load_common_lib): New function.  Load
+	binutils-common.exp.
+	(is_elf_format): Delete.
+
+2010-11-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* binutils-all/compress.exp: Replace binutils_assemble with
+	binutils_assemble_flags for --nocompress-debug-sections.
+
+2010-11-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* binutils-all/compress.exp: Pass --nocompress-debug-sections to
+	assembler for uncompressed debug sections.
+
+	* binutils-all/testranges.d: Also expect .zdebug in section name.
+
+2010-11-08  Thomas Schwinge  <thomas@schwinge.name>
+
+	* lib/utils-lib.exp (is_elf_format): Consider for *-*-gnu*, too.
+	* binutils-all/elfedit-2.d (target): Likewise.
+	* binutils-all/elfedit-3.d (target): Likewise.
+	* binutils-all/i386/i386.exp: Likewise.
+	* binutils-all/objcopy.exp: Likewise.
+	* binutils-all/strip-3.d (target): Likewise.
+
+2010-11-08  Alan Modra  <amodra@gmail.com>
+
+	* binutils-all/objdump.W: Adjust expected result for debug section
+	rename.
+
+2010-11-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* binutils-all/libdw2.out: Also accept MIPS_DWARF.
+
+2010-10-29  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* binutils-all/compress.exp: New.
+	* binutils-all/dw2-1.S: Likewise.
+	* binutils-all/dw2-2.S: Likewise.
+	* binutils-all/libdw2-compressed.out: Likewise.
+	* binutils-all/libdw2.out: Likewise.
+
+2010-10-22  Mark Mitchell  <mark@codesourcery.com>
+
+	* binutils-all/group-5.d: Expect ".group" for the name of group
+	sections.
+	* binutils-all/strip-2.d: Likewise.
+
+2010-10-12  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* binutils-all/m68k/objdump.exp: Add fnop test.
+	* binutils-all/m68k/fnop.s: New file.
+
+2010-09-29  Alan Modra  <amodra@gmail.com>
+
+	* lib/utils-lib.exp (is_elf_format): Merge with gas and ld versions.
+
+2010-09-23  Alan Modra  <amodra@gmail.com>
+
+	* binutils-all/ar.exp: Don't run unique_symbol on msp or hpux.
+	* binutils-all/copy-2.d: Update not-target list.
+	* binutils-all/note-1.d: Don't run on h8300.
+	* binutils-all/objcopy.exp: Don't run strip-10 on msp or hpux.
+	(objcopy_test): Remove h8300-rtems from xfails.
+
+2010-09-16  Alan Modra  <amodra@gmail.com>
+
+	* binutils-all/i386/i386.exp: Don't run on linuxaout.
+
+2010-09-10  Ben Gardiner  <bengardiner@nanometrics.ca>
+
+	* binutils-all/objcopy.exp: Add test of new --interleave-width
+	option.
+
+2010-09-03  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* binutils-all/objdump.W: Update DW_OP_reg5 expected output.
+
+2010-08-23  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* binutils-all/elfedit-3.d: New.
+
+	* binutils-all/elfedit.exp: Run elfedit-3.
+
 2010-07-19  Andreas Schwab  <schwab@redhat.com>
 
 	* binutils-all/readelf.s: Ignore "Key to Flags" contents.

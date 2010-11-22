@@ -109,13 +109,15 @@ static GTY(()) rtx frv_nops[NUM_NOP_PATTERNS];
 /* The number of nop instructions in frv_nops[].  */
 static unsigned int frv_num_nops;
 
+  /* The type of access.  FRV_IO_UNKNOWN means the access can be either
+     a read or a write.  */
+enum frv_io_type { FRV_IO_UNKNOWN, FRV_IO_READ, FRV_IO_WRITE };
+
 /* Information about one __builtin_read or __builtin_write access, or
    the combination of several such accesses.  The most general value
    is all-zeros (an unknown access to an unknown address).  */
 struct frv_io {
-  /* The type of access.  FRV_IO_UNKNOWN means the access can be either
-     a read or a write.  */
-  enum { FRV_IO_UNKNOWN, FRV_IO_READ, FRV_IO_WRITE } type;
+  enum frv_io_type type;
 
   /* The constant address being accessed, or zero if not known.  */
   HOST_WIDE_INT const_address;
@@ -264,6 +266,7 @@ frv_cpu_t frv_cpu_type = CPU_TYPE;	/* value of -mcpu= */
 /* Forward references */
 
 static bool frv_handle_option			(size_t, const char *, int);
+static void frv_option_override			(void);
 static bool frv_legitimate_address_p		(enum machine_mode, rtx, bool);
 static int frv_default_flags_for_cpu		(void);
 static int frv_string_begins_with		(const_tree, const char *);
@@ -371,6 +374,10 @@ static void frv_setup_incoming_varargs		(CUMULATIVE_ARGS *,
 static rtx frv_expand_builtin_saveregs		(void);
 static void frv_expand_builtin_va_start		(tree, rtx);
 static bool frv_rtx_costs			(rtx, int, int, int*, bool);
+static int frv_register_move_cost		(enum machine_mode,
+						 reg_class_t, reg_class_t);
+static int frv_memory_move_cost			(enum machine_mode,
+						 reg_class_t, bool);
 static void frv_asm_out_constructor		(rtx, int);
 static void frv_asm_out_destructor		(rtx, int);
 static bool frv_function_symbol_referenced_p	(rtx);
@@ -383,6 +390,14 @@ static rtx frv_struct_value_rtx			(tree, int);
 static bool frv_must_pass_in_stack (enum machine_mode mode, const_tree type);
 static int frv_arg_partial_bytes (CUMULATIVE_ARGS *, enum machine_mode,
 				  tree, bool);
+static rtx frv_function_arg (CUMULATIVE_ARGS *, enum machine_mode,
+			     const_tree, bool);
+static rtx frv_function_incoming_arg (CUMULATIVE_ARGS *, enum machine_mode,
+				      const_tree, bool);
+static void frv_function_arg_advance (CUMULATIVE_ARGS *, enum machine_mode,
+				       const_tree, bool);
+static unsigned int frv_function_arg_boundary	(enum machine_mode,
+						 const_tree);
 static void frv_output_dwarf_dtprel		(FILE *, int, rtx)
   ATTRIBUTE_UNUSED;
 static reg_class_t frv_secondary_reload		(bool, rtx, reg_class_t,
@@ -390,7 +405,16 @@ static reg_class_t frv_secondary_reload		(bool, rtx, reg_class_t,
 						 secondary_reload_info *);
 static bool frv_frame_pointer_required		(void);
 static bool frv_can_eliminate			(const int, const int);
+static void frv_conditional_register_usage	(void);
 static void frv_trampoline_init			(rtx, tree, rtx);
+static bool frv_class_likely_spilled_p 		(reg_class_t);
+
+/* Implement TARGET_OPTION_OPTIMIZATION_TABLE.  */
+static const struct default_options frv_option_optimization_table[] =
+  {
+    { OPT_LEVELS_1_PLUS, OPT_fomit_frame_pointer, NULL, 1 },
+    { OPT_LEVELS_NONE, 0, NULL, 0 }
+  };
 
 /* Allow us to easily change the default for -malloc-cc.  */
 #ifndef DEFAULT_NO_ALLOC_CC
@@ -423,6 +447,10 @@ static void frv_trampoline_init			(rtx, tree, rtx);
    | MASK_NESTED_CE)
 #undef TARGET_HANDLE_OPTION
 #define TARGET_HANDLE_OPTION frv_handle_option
+#undef TARGET_OPTION_OVERRIDE
+#define TARGET_OPTION_OVERRIDE frv_option_override
+#undef TARGET_OPTION_OPTIMIZATION_TABLE
+#define TARGET_OPTION_OPTIMIZATION_TABLE frv_option_optimization_table
 #undef TARGET_INIT_BUILTINS
 #define TARGET_INIT_BUILTINS frv_init_builtins
 #undef TARGET_EXPAND_BUILTIN
@@ -431,6 +459,10 @@ static void frv_trampoline_init			(rtx, tree, rtx);
 #define TARGET_INIT_LIBFUNCS frv_init_libfuncs
 #undef TARGET_IN_SMALL_DATA_P
 #define TARGET_IN_SMALL_DATA_P frv_in_small_data_p
+#undef TARGET_REGISTER_MOVE_COST
+#define TARGET_REGISTER_MOVE_COST frv_register_move_cost
+#undef TARGET_MEMORY_MOVE_COST
+#define TARGET_MEMORY_MOVE_COST frv_memory_move_cost
 #undef TARGET_RTX_COSTS
 #define TARGET_RTX_COSTS frv_rtx_costs
 #undef TARGET_ASM_CONSTRUCTOR
@@ -465,6 +497,14 @@ static void frv_trampoline_init			(rtx, tree, rtx);
 #define TARGET_PASS_BY_REFERENCE hook_pass_by_reference_must_pass_in_stack
 #undef TARGET_ARG_PARTIAL_BYTES
 #define TARGET_ARG_PARTIAL_BYTES frv_arg_partial_bytes
+#undef TARGET_FUNCTION_ARG
+#define TARGET_FUNCTION_ARG frv_function_arg
+#undef TARGET_FUNCTION_INCOMING_ARG
+#define TARGET_FUNCTION_INCOMING_ARG frv_function_incoming_arg
+#undef TARGET_FUNCTION_ARG_ADVANCE
+#define TARGET_FUNCTION_ARG_ADVANCE frv_function_arg_advance
+#undef TARGET_FUNCTION_ARG_BOUNDARY
+#define TARGET_FUNCTION_ARG_BOUNDARY frv_function_arg_boundary
 
 #undef TARGET_EXPAND_BUILTIN_SAVEREGS
 #define TARGET_EXPAND_BUILTIN_SAVEREGS frv_expand_builtin_saveregs
@@ -481,6 +521,9 @@ static void frv_trampoline_init			(rtx, tree, rtx);
 #define TARGET_ASM_OUTPUT_DWARF_DTPREL frv_output_dwarf_dtprel
 #endif
 
+#undef TARGET_CLASS_LIKELY_SPILLED_P
+#define TARGET_CLASS_LIKELY_SPILLED_P frv_class_likely_spilled_p
+
 #undef  TARGET_SECONDARY_RELOAD
 #define TARGET_SECONDARY_RELOAD frv_secondary_reload
 
@@ -492,6 +535,9 @@ static void frv_trampoline_init			(rtx, tree, rtx);
 
 #undef TARGET_CAN_ELIMINATE
 #define TARGET_CAN_ELIMINATE frv_can_eliminate
+
+#undef TARGET_CONDITIONAL_REGISTER_USAGE
+#define TARGET_CONDITIONAL_REGISTER_USAGE frv_conditional_register_usage
 
 #undef TARGET_TRAMPOLINE_INIT
 #define TARGET_TRAMPOLINE_INIT frv_trampoline_init
@@ -554,7 +600,7 @@ frv_const_unspec_p (rtx x, struct frv_unspec *unspec)
 
 	  if (frv_small_data_reloc_p (unspec->symbol, unspec->reloc)
 	      && unspec->offset > 0
-	      && (unsigned HOST_WIDE_INT) unspec->offset < g_switch_value)
+	      && unspec->offset < g_switch_value)
 	    return true;
 	}
     }
@@ -652,17 +698,10 @@ frv_default_flags_for_cpu (void)
     }
 }
 
-/* Sometimes certain combinations of command options do not make
-   sense on a particular target machine.  You can define a macro
-   `OVERRIDE_OPTIONS' to take account of this.  This macro, if
-   defined, is executed once just after all the command options have
-   been parsed.
+/* Implement TARGET_OPTION_OVERRIDE.  */
 
-   Don't use this macro to turn on various extra optimizations for
-   `-O'.  That is what `OPTIMIZATION_OPTIONS' is for.  */
-
-void
-frv_override_options (void)
+static void
+frv_option_override (void)
 {
   int regno;
   unsigned int i;
@@ -676,9 +715,8 @@ frv_override_options (void)
       if (!flag_pic)		/* -fPIC */
 	flag_pic = 2;
 
-      if (! g_switch_set)	/* -G0 */
+      if (!global_options_set.x_g_switch_value)	/* -G0 */
 	{
-	  g_switch_set = 1;
 	  g_switch_value = 0;
 	}
     }
@@ -770,7 +808,7 @@ frv_override_options (void)
     }
 
   /* Check for small data option */
-  if (!g_switch_set)
+  if (!global_options_set.x_g_switch_value && !TARGET_LIBPIC)
     g_switch_value = SDATA_DEFAULT_SIZE;
 
   /* A C expression which defines the machine-dependent operand
@@ -837,42 +875,6 @@ frv_override_options (void)
 }
 
 
-/* Some machines may desire to change what optimizations are performed for
-   various optimization levels.  This macro, if defined, is executed once just
-   after the optimization level is determined and before the remainder of the
-   command options have been parsed.  Values set in this macro are used as the
-   default values for the other command line options.
-
-   LEVEL is the optimization level specified; 2 if `-O2' is specified, 1 if
-   `-O' is specified, and 0 if neither is specified.
-
-   SIZE is nonzero if `-Os' is specified, 0 otherwise.
-
-   You should not use this macro to change options that are not
-   machine-specific.  These should uniformly selected by the same optimization
-   level on all supported machines.  Use this macro to enable machine-specific
-   optimizations.
-
-   *Do not examine `write_symbols' in this macro!* The debugging options are
-   *not supposed to alter the generated code.  */
-
-/* On the FRV, possibly disable VLIW packing which is done by the 2nd
-   scheduling pass at the current time.  */
-void
-frv_optimization_options (int level, int size ATTRIBUTE_UNUSED)
-{
-  if (level >= 2)
-    {
-#ifdef DISABLE_SCHED2
-      flag_schedule_insns_after_reload = 0;
-#endif
-#ifdef ENABLE_RCSP
-      flag_rcsp = 1;
-#endif
-    }
-}
-
-
 /* Return true if NAME (a STRING_CST node) begins with PREFIX.  */
 
 static int
@@ -905,7 +907,7 @@ frv_string_begins_with (const_tree name, const char *prefix)
    switches, then GCC will automatically avoid using these registers when the
    target switches are opposed to them.)  */
 
-void
+static void
 frv_conditional_register_usage (void)
 {
   int i;
@@ -1728,9 +1730,10 @@ frv_frame_access (frv_frame_accessor_t *accessor, rtx reg, int stack_offset)
 	      && GET_CODE (XEXP (XEXP (mem, 0), 1)) == REG)
 	    {
 	      rtx temp = gen_rtx_REG (SImode, TEMP_REGNO);
-	      rtx insn = emit_move_insn (temp,
-					 gen_rtx_PLUS (SImode, XEXP (XEXP (mem, 0), 0),
-						       XEXP (XEXP (mem, 0), 1)));
+
+	      emit_move_insn (temp,
+			      gen_rtx_PLUS (SImode, XEXP (XEXP (mem, 0), 0),
+					    XEXP (XEXP (mem, 0), 1)));
 	      mem = gen_rtx_MEM (DImode, temp);
 	    }
 	  emit_insn (gen_rtx_SET (VOIDmode, reg, mem));
@@ -1761,9 +1764,9 @@ frv_frame_access (frv_frame_accessor_t *accessor, rtx reg, int stack_offset)
 	      && GET_CODE (XEXP (XEXP (mem, 0), 1)) == REG)
 	    {
 	      rtx temp = gen_rtx_REG (SImode, TEMP_REGNO);
-	      rtx insn = emit_move_insn (temp,
-					 gen_rtx_PLUS (SImode, XEXP (XEXP (mem, 0), 0),
-						       XEXP (XEXP (mem, 0), 1)));
+	      emit_move_insn (temp,
+			      gen_rtx_PLUS (SImode, XEXP (XEXP (mem, 0), 0),
+					    XEXP (XEXP (mem, 0), 1)));
 	      mem = gen_rtx_MEM (DImode, temp);
 	    }
 
@@ -1868,11 +1871,9 @@ frv_expand_prologue (void)
   accessor.op = FRV_STORE;
   if (frame_pointer_needed && info->total_size > 2048)
     {
-      rtx insn;
-
       accessor.base = gen_rtx_REG (Pmode, OLD_SP_REGNO);
       accessor.base_offset = info->total_size;
-      insn = emit_insn (gen_movsi (accessor.base, sp));
+      emit_insn (gen_movsi (accessor.base, sp));
     }
   else
     {
@@ -2401,7 +2402,6 @@ frv_expand_block_clear (rtx operands[])
   int align;
   int bytes;
   int offset;
-  int num_reg;
   rtx dest_reg;
   rtx dest_addr;
   rtx dest_mem;
@@ -2429,7 +2429,7 @@ frv_expand_block_clear (rtx operands[])
   /* Move the address into a scratch register.  */
   dest_reg = copy_addr_to_reg (XEXP (orig_dest, 0));
 
-  num_reg = offset = 0;
+  offset = 0;
   for ( ; bytes > 0; (bytes -= clear_bytes), (offset += clear_bytes))
     {
       /* Calculate the correct offset for src/dest.  */
@@ -3203,19 +3203,17 @@ frv_must_pass_in_stack (enum machine_mode mode, const_tree type)
    argument with the specified mode and type.  If it is not defined,
    `PARM_BOUNDARY' is used for all arguments.  */
 
-int
+static unsigned int
 frv_function_arg_boundary (enum machine_mode mode ATTRIBUTE_UNUSED,
-                           tree type ATTRIBUTE_UNUSED)
+                           const_tree type ATTRIBUTE_UNUSED)
 {
   return BITS_PER_WORD;
 }
 
-rtx
-frv_function_arg (CUMULATIVE_ARGS *cum,
-                  enum machine_mode mode,
-                  tree type ATTRIBUTE_UNUSED,
-                  int named,
-                  int incoming ATTRIBUTE_UNUSED)
+static rtx
+frv_function_arg_1 (const CUMULATIVE_ARGS *cum, enum machine_mode mode,
+		    const_tree type ATTRIBUTE_UNUSED, bool named,
+		    bool incoming ATTRIBUTE_UNUSED)
 {
   enum machine_mode xmode = (mode == BLKmode) ? SImode : mode;
   int arg_num = *cum;
@@ -3249,6 +3247,20 @@ frv_function_arg (CUMULATIVE_ARGS *cum,
   return ret;
 }
 
+static rtx
+frv_function_arg (CUMULATIVE_ARGS *cum, enum machine_mode mode,
+		  const_tree type, bool named)
+{
+  return frv_function_arg_1 (cum, mode, type, named, false);
+}
+
+static rtx
+frv_function_incoming_arg (CUMULATIVE_ARGS *cum, enum machine_mode mode,
+			   const_tree type, bool named)
+{
+  return frv_function_arg_1 (cum, mode, type, named, true);
+}
+
 
 /* A C statement (sans semicolon) to update the summarizer variable CUM to
    advance past an argument in the argument list.  The values MODE, TYPE and
@@ -3259,11 +3271,11 @@ frv_function_arg (CUMULATIVE_ARGS *cum,
    the stack.  The compiler knows how to track the amount of stack space used
    for arguments without any special help.  */
 
-void
+static void
 frv_function_arg_advance (CUMULATIVE_ARGS *cum,
                           enum machine_mode mode,
-                          tree type ATTRIBUTE_UNUSED,
-                          int named)
+                          const_tree type ATTRIBUTE_UNUSED,
+                          bool named)
 {
   enum machine_mode xmode = (mode == BLKmode) ? SImode : mode;
   int bytes = GET_MODE_SIZE (xmode);
@@ -4068,7 +4080,7 @@ frv_emit_movsi (rtx dest, rtx src)
 	  || (GET_CODE (src) == REG
 	      && IN_RANGE_P (REGNO (src),
 			     FIRST_VIRTUAL_REGISTER,
-			     LAST_VIRTUAL_REGISTER))))
+			     LAST_VIRTUAL_POINTER_REGISTER))))
     {
       emit_insn (gen_rtx_SET (VOIDmode, dest, copy_to_mode_reg (SImode, src)));
       return TRUE;
@@ -6367,7 +6379,7 @@ frv_trampoline_init (rtx m_tramp, tree fndecl, rtx static_chain)
   rtx sc_reg = force_reg (Pmode, static_chain);
 
   emit_library_call (gen_rtx_SYMBOL_REF (SImode, "__trampoline_setup"),
-		     FALSE, VOIDmode, 4,
+		     LCT_NORMAL, VOIDmode, 4,
 		     addr, Pmode,
 		     GEN_INT (frv_trampoline_size ()), SImode,
 		     fnaddr, Pmode,
@@ -6528,23 +6540,10 @@ frv_secondary_reload (bool in_p, rtx x, reg_class_t reload_class_i,
 
 }
 
-/* A C expression whose value is nonzero if pseudos that have been assigned to
-   registers of class RCLASS would likely be spilled because registers of RCLASS
-   are needed for spill registers.
+/* Worker function for TARGET_CLASS_LIKELY_SPILLED_P.  */
 
-   The default value of this macro returns 1 if RCLASS has exactly one register
-   and zero otherwise.  On most machines, this default should be used.  Only
-   define this macro to some other expression if pseudo allocated by
-   `local-alloc.c' end up in memory because their hard registers were needed
-   for spill registers.  If this macro returns nonzero for those classes, those
-   pseudos will only be allocated by `global.c', which knows how to reallocate
-   the pseudo to another register.  If there would not be another register
-   available for reallocation, you should not change the definition of this
-   macro since the only effect of such a definition would be to slow down
-   register allocation.  */
-
-int
-frv_class_likely_spilled_p (enum reg_class rclass)
+static bool
+frv_class_likely_spilled_p (reg_class_t rclass)
 {
   switch (rclass)
     {
@@ -6569,10 +6568,10 @@ frv_class_likely_spilled_p (enum reg_class rclass)
     case EVEN_ACC_REGS:
     case ACC_REGS:
     case ACCG_REGS:
-      return TRUE;
+      return true;
     }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -6912,28 +6911,16 @@ frv_select_cc_mode (enum rtx_code code, rtx x, rtx y)
     }
 }
 
-/* A C expression for the cost of moving data from a register in class FROM to
-   one in class TO.  The classes are expressed using the enumeration values
-   such as `GENERAL_REGS'.  A value of 4 is the default; other values are
-   interpreted relative to that.
 
-   It is not required that the cost always equal 2 when FROM is the same as TO;
-   on some machines it is expensive to move between registers if they are not
-   general registers.
-
-   If reload sees an insn consisting of a single `set' between two hard
-   registers, and if `REGISTER_MOVE_COST' applied to their classes returns a
-   value of 2, reload does not check to ensure that the constraints of the insn
-   are met.  Setting a cost of other than 2 will allow reload to verify that
-   the constraints are met.  You should do this if the `movM' pattern's
-   constraints do not allow such copying.  */
+/* Worker function for TARGET_REGISTER_MOVE_COST.  */
 
 #define HIGH_COST 40
 #define MEDIUM_COST 3
 #define LOW_COST 1
 
-int
-frv_register_move_cost (enum reg_class from, enum reg_class to)
+static int
+frv_register_move_cost (enum machine_mode mode ATTRIBUTE_UNUSED,
+			reg_class_t from, reg_class_t to)
 {
   switch (from)
     {
@@ -7016,6 +7003,17 @@ frv_register_move_cost (enum reg_class from, enum reg_class to)
 
   return HIGH_COST;
 }
+
+/* Worker function for TARGET_MEMORY_MOVE_COST.  */
+
+static int
+frv_memory_move_cost (enum machine_mode mode ATTRIBUTE_UNUSED,
+                      reg_class_t rclass ATTRIBUTE_UNUSED,
+                      bool in ATTRIBUTE_UNUSED)
+{
+  return 4;
+}
+
 
 /* Implementation of TARGET_ASM_INTEGER.  In the FRV case we need to
    use ".picptr" to generate safe relocations for PIC code.  We also
@@ -7177,6 +7175,24 @@ frv_issues_to_branch_unit_p (rtx insn)
   return frv_unit_groups[frv_insn_unit (insn)] == GROUP_B;
 }
 
+/* The instructions in the packet, partitioned into groups.  */
+struct frv_packet_group {
+  /* How many instructions in the packet belong to this group.  */
+  unsigned int num_insns;
+
+  /* A list of the instructions that belong to this group, in the order
+     they appear in the rtl stream.  */
+  rtx insns[ARRAY_SIZE (frv_unit_codes)];
+
+  /* The contents of INSNS after they have been sorted into the correct
+     assembly-language order.  Element X issues to unit X.  The list may
+     contain extra nops.  */
+  rtx sorted[ARRAY_SIZE (frv_unit_codes)];
+
+  /* The member of frv_nops[] to use in sorted[].  */
+  rtx nop;
+};
+
 /* The current state of the packing pass, implemented by frv_pack_insns.  */
 static struct {
   /* The state of the pipeline DFA.  */
@@ -7202,22 +7218,7 @@ static struct {
   unsigned int issue_rate;
 
   /* The instructions in the packet, partitioned into groups.  */
-  struct frv_packet_group {
-    /* How many instructions in the packet belong to this group.  */
-    unsigned int num_insns;
-
-    /* A list of the instructions that belong to this group, in the order
-       they appear in the rtl stream.  */
-    rtx insns[ARRAY_SIZE (frv_unit_codes)];
-
-    /* The contents of INSNS after they have been sorted into the correct
-       assembly-language order.  Element X issues to unit X.  The list may
-       contain extra nops.  */
-    rtx sorted[ARRAY_SIZE (frv_unit_codes)];
-
-    /* The member of frv_nops[] to use in sorted[].  */
-    rtx nop;
-  } groups[NUM_GROUPS];
+  struct frv_packet_group groups[NUM_GROUPS];
 
   /* The instructions that make up the current packet.  */
   rtx insns[ARRAY_SIZE (frv_unit_codes)];
@@ -7390,7 +7391,8 @@ frv_start_packet (void)
   memset (frv_packet.regstate, 0, sizeof (frv_packet.regstate));
   frv_packet.num_mems = 0;
   frv_packet.num_insns = 0;
-  for (group = 0; group < NUM_GROUPS; group++)
+  for (group =  GROUP_I; group < NUM_GROUPS;
+       group = (enum frv_insn_group) (group + 1))
     frv_packet.groups[group].num_insns = 0;
 }
 
@@ -7739,7 +7741,8 @@ frv_reorder_packet (void)
   struct frv_packet_group *packet_group;
 
   /* First sort each group individually.  */
-  for (group = 0; group < NUM_GROUPS; group++)
+  for (group = GROUP_I; group < NUM_GROUPS;
+       group = (enum frv_insn_group) (group + 1))
     {
       cursor[group] = 0;
       frv_sort_insn_group (group);
@@ -7872,7 +7875,7 @@ static void
 frv_extract_membar (struct frv_io *io, rtx insn)
 {
   extract_insn (insn);
-  io->type = INTVAL (recog_data.operand[2]);
+  io->type = (enum frv_io_type) INTVAL (recog_data.operand[2]);
   io->const_address = INTVAL (recog_data.operand[1]);
   io->var_address = XEXP (recog_data.operand[0], 0);
 }
@@ -8291,99 +8294,100 @@ struct builtin_description
 
 static struct builtin_description bdesc_set[] =
 {
-  { CODE_FOR_mhdsets, "__MHDSETS", FRV_BUILTIN_MHDSETS, 0, 0 }
+  { CODE_FOR_mhdsets, "__MHDSETS", FRV_BUILTIN_MHDSETS, UNKNOWN, 0 }
 };
 
 /* Media intrinsics that take just one argument.  */
 
 static struct builtin_description bdesc_1arg[] =
 {
-  { CODE_FOR_mnot, "__MNOT", FRV_BUILTIN_MNOT, 0, 0 },
-  { CODE_FOR_munpackh, "__MUNPACKH", FRV_BUILTIN_MUNPACKH, 0, 0 },
-  { CODE_FOR_mbtoh, "__MBTOH", FRV_BUILTIN_MBTOH, 0, 0 },
-  { CODE_FOR_mhtob, "__MHTOB", FRV_BUILTIN_MHTOB, 0, 0 },
-  { CODE_FOR_mabshs, "__MABSHS", FRV_BUILTIN_MABSHS, 0, 0 },
-  { CODE_FOR_scutss, "__SCUTSS", FRV_BUILTIN_SCUTSS, 0, 0 }
+  { CODE_FOR_mnot, "__MNOT", FRV_BUILTIN_MNOT, UNKNOWN, 0 },
+  { CODE_FOR_munpackh, "__MUNPACKH", FRV_BUILTIN_MUNPACKH, UNKNOWN, 0 },
+  { CODE_FOR_mbtoh, "__MBTOH", FRV_BUILTIN_MBTOH, UNKNOWN, 0 },
+  { CODE_FOR_mhtob, "__MHTOB", FRV_BUILTIN_MHTOB, UNKNOWN, 0},
+  { CODE_FOR_mabshs, "__MABSHS", FRV_BUILTIN_MABSHS, UNKNOWN, 0 },
+  { CODE_FOR_scutss, "__SCUTSS", FRV_BUILTIN_SCUTSS, UNKNOWN, 0 }
 };
 
 /* Media intrinsics that take two arguments.  */
 
 static struct builtin_description bdesc_2arg[] =
 {
-  { CODE_FOR_mand, "__MAND", FRV_BUILTIN_MAND, 0, 0 },
-  { CODE_FOR_mor, "__MOR", FRV_BUILTIN_MOR, 0, 0 },
-  { CODE_FOR_mxor, "__MXOR", FRV_BUILTIN_MXOR, 0, 0 },
-  { CODE_FOR_maveh, "__MAVEH", FRV_BUILTIN_MAVEH, 0, 0 },
-  { CODE_FOR_msaths, "__MSATHS", FRV_BUILTIN_MSATHS, 0, 0 },
-  { CODE_FOR_msathu, "__MSATHU", FRV_BUILTIN_MSATHU, 0, 0 },
-  { CODE_FOR_maddhss, "__MADDHSS", FRV_BUILTIN_MADDHSS, 0, 0 },
-  { CODE_FOR_maddhus, "__MADDHUS", FRV_BUILTIN_MADDHUS, 0, 0 },
-  { CODE_FOR_msubhss, "__MSUBHSS", FRV_BUILTIN_MSUBHSS, 0, 0 },
-  { CODE_FOR_msubhus, "__MSUBHUS", FRV_BUILTIN_MSUBHUS, 0, 0 },
-  { CODE_FOR_mqaddhss, "__MQADDHSS", FRV_BUILTIN_MQADDHSS, 0, 0 },
-  { CODE_FOR_mqaddhus, "__MQADDHUS", FRV_BUILTIN_MQADDHUS, 0, 0 },
-  { CODE_FOR_mqsubhss, "__MQSUBHSS", FRV_BUILTIN_MQSUBHSS, 0, 0 },
-  { CODE_FOR_mqsubhus, "__MQSUBHUS", FRV_BUILTIN_MQSUBHUS, 0, 0 },
-  { CODE_FOR_mpackh, "__MPACKH", FRV_BUILTIN_MPACKH, 0, 0 },
-  { CODE_FOR_mcop1, "__Mcop1", FRV_BUILTIN_MCOP1, 0, 0 },
-  { CODE_FOR_mcop2, "__Mcop2", FRV_BUILTIN_MCOP2, 0, 0 },
-  { CODE_FOR_mwcut, "__MWCUT", FRV_BUILTIN_MWCUT, 0, 0 },
-  { CODE_FOR_mqsaths, "__MQSATHS", FRV_BUILTIN_MQSATHS, 0, 0 },
-  { CODE_FOR_mqlclrhs, "__MQLCLRHS", FRV_BUILTIN_MQLCLRHS, 0, 0 },
-  { CODE_FOR_mqlmths, "__MQLMTHS", FRV_BUILTIN_MQLMTHS, 0, 0 },
-  { CODE_FOR_smul, "__SMUL", FRV_BUILTIN_SMUL, 0, 0 },
-  { CODE_FOR_umul, "__UMUL", FRV_BUILTIN_UMUL, 0, 0 },
-  { CODE_FOR_addss, "__ADDSS", FRV_BUILTIN_ADDSS, 0, 0 },
-  { CODE_FOR_subss, "__SUBSS", FRV_BUILTIN_SUBSS, 0, 0 },
-  { CODE_FOR_slass, "__SLASS", FRV_BUILTIN_SLASS, 0, 0 },
-  { CODE_FOR_scan, "__SCAN", FRV_BUILTIN_SCAN, 0, 0 }
+  { CODE_FOR_mand, "__MAND", FRV_BUILTIN_MAND, UNKNOWN, 0},
+  { CODE_FOR_mor, "__MOR", FRV_BUILTIN_MOR, UNKNOWN, 0},
+  { CODE_FOR_mxor, "__MXOR", FRV_BUILTIN_MXOR, UNKNOWN, 0},
+  { CODE_FOR_maveh, "__MAVEH", FRV_BUILTIN_MAVEH, UNKNOWN, 0},
+  { CODE_FOR_msaths, "__MSATHS", FRV_BUILTIN_MSATHS, UNKNOWN, 0},
+  { CODE_FOR_msathu, "__MSATHU", FRV_BUILTIN_MSATHU, UNKNOWN, 0},
+  { CODE_FOR_maddhss, "__MADDHSS", FRV_BUILTIN_MADDHSS, UNKNOWN, 0},
+  { CODE_FOR_maddhus, "__MADDHUS", FRV_BUILTIN_MADDHUS, UNKNOWN, 0},
+  { CODE_FOR_msubhss, "__MSUBHSS", FRV_BUILTIN_MSUBHSS, UNKNOWN, 0},
+  { CODE_FOR_msubhus, "__MSUBHUS", FRV_BUILTIN_MSUBHUS, UNKNOWN, 0},
+  { CODE_FOR_mqaddhss, "__MQADDHSS", FRV_BUILTIN_MQADDHSS, UNKNOWN, 0},
+  { CODE_FOR_mqaddhus, "__MQADDHUS", FRV_BUILTIN_MQADDHUS, UNKNOWN, 0},
+  { CODE_FOR_mqsubhss, "__MQSUBHSS", FRV_BUILTIN_MQSUBHSS, UNKNOWN, 0},
+  { CODE_FOR_mqsubhus, "__MQSUBHUS", FRV_BUILTIN_MQSUBHUS, UNKNOWN, 0},
+  { CODE_FOR_mpackh, "__MPACKH", FRV_BUILTIN_MPACKH, UNKNOWN, 0},
+  { CODE_FOR_mcop1, "__Mcop1", FRV_BUILTIN_MCOP1, UNKNOWN, 0},
+  { CODE_FOR_mcop2, "__Mcop2", FRV_BUILTIN_MCOP2, UNKNOWN, 0},
+  { CODE_FOR_mwcut, "__MWCUT", FRV_BUILTIN_MWCUT, UNKNOWN, 0},
+  { CODE_FOR_mqsaths, "__MQSATHS", FRV_BUILTIN_MQSATHS, UNKNOWN, 0},
+  { CODE_FOR_mqlclrhs, "__MQLCLRHS", FRV_BUILTIN_MQLCLRHS, UNKNOWN, 0},
+  { CODE_FOR_mqlmths, "__MQLMTHS", FRV_BUILTIN_MQLMTHS, UNKNOWN, 0},
+  { CODE_FOR_smul, "__SMUL", FRV_BUILTIN_SMUL, UNKNOWN, 0},
+  { CODE_FOR_umul, "__UMUL", FRV_BUILTIN_UMUL, UNKNOWN, 0},
+  { CODE_FOR_addss, "__ADDSS", FRV_BUILTIN_ADDSS, UNKNOWN, 0},
+  { CODE_FOR_subss, "__SUBSS", FRV_BUILTIN_SUBSS, UNKNOWN, 0},
+  { CODE_FOR_slass, "__SLASS", FRV_BUILTIN_SLASS, UNKNOWN, 0},
+  { CODE_FOR_scan, "__SCAN", FRV_BUILTIN_SCAN, UNKNOWN, 0}
 };
 
 /* Integer intrinsics that take two arguments and have no return value.  */
 
 static struct builtin_description bdesc_int_void2arg[] =
 {
-  { CODE_FOR_smass, "__SMASS", FRV_BUILTIN_SMASS, 0, 0 },
-  { CODE_FOR_smsss, "__SMSSS", FRV_BUILTIN_SMSSS, 0, 0 },
-  { CODE_FOR_smu, "__SMU", FRV_BUILTIN_SMU, 0, 0 }
+  { CODE_FOR_smass, "__SMASS", FRV_BUILTIN_SMASS, UNKNOWN, 0},
+  { CODE_FOR_smsss, "__SMSSS", FRV_BUILTIN_SMSSS, UNKNOWN, 0},
+  { CODE_FOR_smu, "__SMU", FRV_BUILTIN_SMU, UNKNOWN, 0}
 };
 
 static struct builtin_description bdesc_prefetches[] =
 {
-  { CODE_FOR_frv_prefetch0, "__data_prefetch0", FRV_BUILTIN_PREFETCH0, 0, 0 },
-  { CODE_FOR_frv_prefetch, "__data_prefetch", FRV_BUILTIN_PREFETCH, 0, 0 }
+  { CODE_FOR_frv_prefetch0, "__data_prefetch0", FRV_BUILTIN_PREFETCH0, UNKNOWN,
+    0},
+  { CODE_FOR_frv_prefetch, "__data_prefetch", FRV_BUILTIN_PREFETCH, UNKNOWN, 0}
 };
 
 /* Media intrinsics that take two arguments, the first being an ACC number.  */
 
 static struct builtin_description bdesc_cut[] =
 {
-  { CODE_FOR_mcut, "__MCUT", FRV_BUILTIN_MCUT, 0, 0 },
-  { CODE_FOR_mcutss, "__MCUTSS", FRV_BUILTIN_MCUTSS, 0, 0 },
-  { CODE_FOR_mdcutssi, "__MDCUTSSI", FRV_BUILTIN_MDCUTSSI, 0, 0 }
+  { CODE_FOR_mcut, "__MCUT", FRV_BUILTIN_MCUT, UNKNOWN, 0},
+  { CODE_FOR_mcutss, "__MCUTSS", FRV_BUILTIN_MCUTSS, UNKNOWN, 0},
+  { CODE_FOR_mdcutssi, "__MDCUTSSI", FRV_BUILTIN_MDCUTSSI, UNKNOWN, 0}
 };
 
 /* Two-argument media intrinsics with an immediate second argument.  */
 
 static struct builtin_description bdesc_2argimm[] =
 {
-  { CODE_FOR_mrotli, "__MROTLI", FRV_BUILTIN_MROTLI, 0, 0 },
-  { CODE_FOR_mrotri, "__MROTRI", FRV_BUILTIN_MROTRI, 0, 0 },
-  { CODE_FOR_msllhi, "__MSLLHI", FRV_BUILTIN_MSLLHI, 0, 0 },
-  { CODE_FOR_msrlhi, "__MSRLHI", FRV_BUILTIN_MSRLHI, 0, 0 },
-  { CODE_FOR_msrahi, "__MSRAHI", FRV_BUILTIN_MSRAHI, 0, 0 },
-  { CODE_FOR_mexpdhw, "__MEXPDHW", FRV_BUILTIN_MEXPDHW, 0, 0 },
-  { CODE_FOR_mexpdhd, "__MEXPDHD", FRV_BUILTIN_MEXPDHD, 0, 0 },
-  { CODE_FOR_mdrotli, "__MDROTLI", FRV_BUILTIN_MDROTLI, 0, 0 },
-  { CODE_FOR_mcplhi, "__MCPLHI", FRV_BUILTIN_MCPLHI, 0, 0 },
-  { CODE_FOR_mcpli, "__MCPLI", FRV_BUILTIN_MCPLI, 0, 0 },
-  { CODE_FOR_mhsetlos, "__MHSETLOS", FRV_BUILTIN_MHSETLOS, 0, 0 },
-  { CODE_FOR_mhsetloh, "__MHSETLOH", FRV_BUILTIN_MHSETLOH, 0, 0 },
-  { CODE_FOR_mhsethis, "__MHSETHIS", FRV_BUILTIN_MHSETHIS, 0, 0 },
-  { CODE_FOR_mhsethih, "__MHSETHIH", FRV_BUILTIN_MHSETHIH, 0, 0 },
-  { CODE_FOR_mhdseth, "__MHDSETH", FRV_BUILTIN_MHDSETH, 0, 0 },
-  { CODE_FOR_mqsllhi, "__MQSLLHI", FRV_BUILTIN_MQSLLHI, 0, 0 },
-  { CODE_FOR_mqsrahi, "__MQSRAHI", FRV_BUILTIN_MQSRAHI, 0, 0 }
+  { CODE_FOR_mrotli, "__MROTLI", FRV_BUILTIN_MROTLI, UNKNOWN, 0},
+  { CODE_FOR_mrotri, "__MROTRI", FRV_BUILTIN_MROTRI, UNKNOWN, 0},
+  { CODE_FOR_msllhi, "__MSLLHI", FRV_BUILTIN_MSLLHI, UNKNOWN, 0},
+  { CODE_FOR_msrlhi, "__MSRLHI", FRV_BUILTIN_MSRLHI, UNKNOWN, 0},
+  { CODE_FOR_msrahi, "__MSRAHI", FRV_BUILTIN_MSRAHI, UNKNOWN, 0},
+  { CODE_FOR_mexpdhw, "__MEXPDHW", FRV_BUILTIN_MEXPDHW, UNKNOWN, 0},
+  { CODE_FOR_mexpdhd, "__MEXPDHD", FRV_BUILTIN_MEXPDHD, UNKNOWN, 0},
+  { CODE_FOR_mdrotli, "__MDROTLI", FRV_BUILTIN_MDROTLI, UNKNOWN, 0},
+  { CODE_FOR_mcplhi, "__MCPLHI", FRV_BUILTIN_MCPLHI, UNKNOWN, 0},
+  { CODE_FOR_mcpli, "__MCPLI", FRV_BUILTIN_MCPLI, UNKNOWN, 0},
+  { CODE_FOR_mhsetlos, "__MHSETLOS", FRV_BUILTIN_MHSETLOS, UNKNOWN, 0},
+  { CODE_FOR_mhsetloh, "__MHSETLOH", FRV_BUILTIN_MHSETLOH, UNKNOWN, 0},
+  { CODE_FOR_mhsethis, "__MHSETHIS", FRV_BUILTIN_MHSETHIS, UNKNOWN, 0},
+  { CODE_FOR_mhsethih, "__MHSETHIH", FRV_BUILTIN_MHSETHIH, UNKNOWN, 0},
+  { CODE_FOR_mhdseth, "__MHDSETH", FRV_BUILTIN_MHDSETH, UNKNOWN, 0},
+  { CODE_FOR_mqsllhi, "__MQSLLHI", FRV_BUILTIN_MQSLLHI, UNKNOWN, 0},
+  { CODE_FOR_mqsrahi, "__MQSRAHI", FRV_BUILTIN_MQSRAHI, UNKNOWN, 0}
 };
 
 /* Media intrinsics that take two arguments and return void, the first argument
@@ -8391,8 +8395,8 @@ static struct builtin_description bdesc_2argimm[] =
 
 static struct builtin_description bdesc_void2arg[] =
 {
-  { CODE_FOR_mdunpackh, "__MDUNPACKH", FRV_BUILTIN_MDUNPACKH, 0, 0 },
-  { CODE_FOR_mbtohe, "__MBTOHE", FRV_BUILTIN_MBTOHE, 0, 0 },
+  { CODE_FOR_mdunpackh, "__MDUNPACKH", FRV_BUILTIN_MDUNPACKH, UNKNOWN, 0},
+  { CODE_FOR_mbtohe, "__MBTOHE", FRV_BUILTIN_MBTOHE, UNKNOWN, 0},
 };
 
 /* Media intrinsics that take three arguments, the first being a const_int that
@@ -8400,31 +8404,31 @@ static struct builtin_description bdesc_void2arg[] =
 
 static struct builtin_description bdesc_void3arg[] =
 {
-  { CODE_FOR_mcpxrs, "__MCPXRS", FRV_BUILTIN_MCPXRS, 0, 0 },
-  { CODE_FOR_mcpxru, "__MCPXRU", FRV_BUILTIN_MCPXRU, 0, 0 },
-  { CODE_FOR_mcpxis, "__MCPXIS", FRV_BUILTIN_MCPXIS, 0, 0 },
-  { CODE_FOR_mcpxiu, "__MCPXIU", FRV_BUILTIN_MCPXIU, 0, 0 },
-  { CODE_FOR_mmulhs, "__MMULHS", FRV_BUILTIN_MMULHS, 0, 0 },
-  { CODE_FOR_mmulhu, "__MMULHU", FRV_BUILTIN_MMULHU, 0, 0 },
-  { CODE_FOR_mmulxhs, "__MMULXHS", FRV_BUILTIN_MMULXHS, 0, 0 },
-  { CODE_FOR_mmulxhu, "__MMULXHU", FRV_BUILTIN_MMULXHU, 0, 0 },
-  { CODE_FOR_mmachs, "__MMACHS", FRV_BUILTIN_MMACHS, 0, 0 },
-  { CODE_FOR_mmachu, "__MMACHU", FRV_BUILTIN_MMACHU, 0, 0 },
-  { CODE_FOR_mmrdhs, "__MMRDHS", FRV_BUILTIN_MMRDHS, 0, 0 },
-  { CODE_FOR_mmrdhu, "__MMRDHU", FRV_BUILTIN_MMRDHU, 0, 0 },
-  { CODE_FOR_mqcpxrs, "__MQCPXRS", FRV_BUILTIN_MQCPXRS, 0, 0 },
-  { CODE_FOR_mqcpxru, "__MQCPXRU", FRV_BUILTIN_MQCPXRU, 0, 0 },
-  { CODE_FOR_mqcpxis, "__MQCPXIS", FRV_BUILTIN_MQCPXIS, 0, 0 },
-  { CODE_FOR_mqcpxiu, "__MQCPXIU", FRV_BUILTIN_MQCPXIU, 0, 0 },
-  { CODE_FOR_mqmulhs, "__MQMULHS", FRV_BUILTIN_MQMULHS, 0, 0 },
-  { CODE_FOR_mqmulhu, "__MQMULHU", FRV_BUILTIN_MQMULHU, 0, 0 },
-  { CODE_FOR_mqmulxhs, "__MQMULXHS", FRV_BUILTIN_MQMULXHS, 0, 0 },
-  { CODE_FOR_mqmulxhu, "__MQMULXHU", FRV_BUILTIN_MQMULXHU, 0, 0 },
-  { CODE_FOR_mqmachs, "__MQMACHS", FRV_BUILTIN_MQMACHS, 0, 0 },
-  { CODE_FOR_mqmachu, "__MQMACHU", FRV_BUILTIN_MQMACHU, 0, 0 },
-  { CODE_FOR_mqxmachs, "__MQXMACHS", FRV_BUILTIN_MQXMACHS, 0, 0 },
-  { CODE_FOR_mqxmacxhs, "__MQXMACXHS", FRV_BUILTIN_MQXMACXHS, 0, 0 },
-  { CODE_FOR_mqmacxhs, "__MQMACXHS", FRV_BUILTIN_MQMACXHS, 0, 0 }
+  { CODE_FOR_mcpxrs, "__MCPXRS", FRV_BUILTIN_MCPXRS, UNKNOWN, 0},
+  { CODE_FOR_mcpxru, "__MCPXRU", FRV_BUILTIN_MCPXRU, UNKNOWN, 0},
+  { CODE_FOR_mcpxis, "__MCPXIS", FRV_BUILTIN_MCPXIS, UNKNOWN, 0},
+  { CODE_FOR_mcpxiu, "__MCPXIU", FRV_BUILTIN_MCPXIU, UNKNOWN, 0},
+  { CODE_FOR_mmulhs, "__MMULHS", FRV_BUILTIN_MMULHS, UNKNOWN, 0},
+  { CODE_FOR_mmulhu, "__MMULHU", FRV_BUILTIN_MMULHU, UNKNOWN, 0},
+  { CODE_FOR_mmulxhs, "__MMULXHS", FRV_BUILTIN_MMULXHS, UNKNOWN, 0},
+  { CODE_FOR_mmulxhu, "__MMULXHU", FRV_BUILTIN_MMULXHU, UNKNOWN, 0},
+  { CODE_FOR_mmachs, "__MMACHS", FRV_BUILTIN_MMACHS, UNKNOWN, 0},
+  { CODE_FOR_mmachu, "__MMACHU", FRV_BUILTIN_MMACHU, UNKNOWN, 0},
+  { CODE_FOR_mmrdhs, "__MMRDHS", FRV_BUILTIN_MMRDHS, UNKNOWN, 0},
+  { CODE_FOR_mmrdhu, "__MMRDHU", FRV_BUILTIN_MMRDHU, UNKNOWN, 0},
+  { CODE_FOR_mqcpxrs, "__MQCPXRS", FRV_BUILTIN_MQCPXRS, UNKNOWN, 0},
+  { CODE_FOR_mqcpxru, "__MQCPXRU", FRV_BUILTIN_MQCPXRU, UNKNOWN, 0},
+  { CODE_FOR_mqcpxis, "__MQCPXIS", FRV_BUILTIN_MQCPXIS, UNKNOWN, 0},
+  { CODE_FOR_mqcpxiu, "__MQCPXIU", FRV_BUILTIN_MQCPXIU, UNKNOWN, 0},
+  { CODE_FOR_mqmulhs, "__MQMULHS", FRV_BUILTIN_MQMULHS, UNKNOWN, 0},
+  { CODE_FOR_mqmulhu, "__MQMULHU", FRV_BUILTIN_MQMULHU, UNKNOWN, 0},
+  { CODE_FOR_mqmulxhs, "__MQMULXHS", FRV_BUILTIN_MQMULXHS, UNKNOWN, 0},
+  { CODE_FOR_mqmulxhu, "__MQMULXHU", FRV_BUILTIN_MQMULXHU, UNKNOWN, 0},
+  { CODE_FOR_mqmachs, "__MQMACHS", FRV_BUILTIN_MQMACHS, UNKNOWN, 0},
+  { CODE_FOR_mqmachu, "__MQMACHU", FRV_BUILTIN_MQMACHU, UNKNOWN, 0},
+  { CODE_FOR_mqxmachs, "__MQXMACHS", FRV_BUILTIN_MQXMACHS, UNKNOWN, 0},
+  { CODE_FOR_mqxmacxhs, "__MQXMACXHS", FRV_BUILTIN_MQXMACXHS, UNKNOWN, 0},
+  { CODE_FOR_mqmacxhs, "__MQMACXHS", FRV_BUILTIN_MQMACXHS, UNKNOWN, 0}
 };
 
 /* Media intrinsics that take two accumulator numbers as argument and
@@ -8432,12 +8436,12 @@ static struct builtin_description bdesc_void3arg[] =
 
 static struct builtin_description bdesc_voidacc[] =
 {
-  { CODE_FOR_maddaccs, "__MADDACCS", FRV_BUILTIN_MADDACCS, 0, 0 },
-  { CODE_FOR_msubaccs, "__MSUBACCS", FRV_BUILTIN_MSUBACCS, 0, 0 },
-  { CODE_FOR_masaccs, "__MASACCS", FRV_BUILTIN_MASACCS, 0, 0 },
-  { CODE_FOR_mdaddaccs, "__MDADDACCS", FRV_BUILTIN_MDADDACCS, 0, 0 },
-  { CODE_FOR_mdsubaccs, "__MDSUBACCS", FRV_BUILTIN_MDSUBACCS, 0, 0 },
-  { CODE_FOR_mdasaccs, "__MDASACCS", FRV_BUILTIN_MDASACCS, 0, 0 }
+  { CODE_FOR_maddaccs, "__MADDACCS", FRV_BUILTIN_MADDACCS, UNKNOWN, 0},
+  { CODE_FOR_msubaccs, "__MSUBACCS", FRV_BUILTIN_MSUBACCS, UNKNOWN, 0},
+  { CODE_FOR_masaccs, "__MASACCS", FRV_BUILTIN_MASACCS, UNKNOWN, 0},
+  { CODE_FOR_mdaddaccs, "__MDADDACCS", FRV_BUILTIN_MDADDACCS, UNKNOWN, 0},
+  { CODE_FOR_mdsubaccs, "__MDSUBACCS", FRV_BUILTIN_MDSUBACCS, UNKNOWN, 0},
+  { CODE_FOR_mdasaccs, "__MDASACCS", FRV_BUILTIN_MDASACCS, UNKNOWN, 0}
 };
 
 /* Intrinsics that load a value and then issue a MEMBAR.  The load is
@@ -8446,13 +8450,13 @@ static struct builtin_description bdesc_voidacc[] =
 static struct builtin_description bdesc_loads[] =
 {
   { CODE_FOR_optional_membar_qi, "__builtin_read8",
-    FRV_BUILTIN_READ8, 0, 0 },
+    FRV_BUILTIN_READ8, UNKNOWN, 0},
   { CODE_FOR_optional_membar_hi, "__builtin_read16",
-    FRV_BUILTIN_READ16, 0, 0 },
+    FRV_BUILTIN_READ16, UNKNOWN, 0},
   { CODE_FOR_optional_membar_si, "__builtin_read32",
-    FRV_BUILTIN_READ32, 0, 0 },
+    FRV_BUILTIN_READ32, UNKNOWN, 0},
   { CODE_FOR_optional_membar_di, "__builtin_read64",
-    FRV_BUILTIN_READ64, 0, 0 }
+    FRV_BUILTIN_READ64, UNKNOWN, 0}
 };
 
 /* Likewise stores.  */
@@ -8460,13 +8464,13 @@ static struct builtin_description bdesc_loads[] =
 static struct builtin_description bdesc_stores[] =
 {
   { CODE_FOR_optional_membar_qi, "__builtin_write8",
-    FRV_BUILTIN_WRITE8, 0, 0 },
+    FRV_BUILTIN_WRITE8, UNKNOWN, 0},
   { CODE_FOR_optional_membar_hi, "__builtin_write16",
-    FRV_BUILTIN_WRITE16, 0, 0 },
+    FRV_BUILTIN_WRITE16, UNKNOWN, 0},
   { CODE_FOR_optional_membar_si, "__builtin_write32",
-    FRV_BUILTIN_WRITE32, 0, 0 },
+    FRV_BUILTIN_WRITE32, UNKNOWN, 0},
   { CODE_FOR_optional_membar_di, "__builtin_write64",
-    FRV_BUILTIN_WRITE64, 0, 0 },
+    FRV_BUILTIN_WRITE64, UNKNOWN, 0},
 };
 
 /* Initialize media builtins.  */
@@ -8821,8 +8825,7 @@ frv_matching_accg_for_acc (rtx acc)
 static rtx
 frv_read_argument (tree exp, unsigned int index)
 {
-  return expand_expr (CALL_EXPR_ARG (exp, index),
-		      NULL_RTX, VOIDmode, 0);
+  return expand_normal (CALL_EXPR_ARG (exp, index));
 }
 
 /* Like frv_read_argument, but interpret the argument as the number
@@ -9585,7 +9588,7 @@ frv_in_small_data_p (const_tree decl)
     }
 
   size = int_size_in_bytes (TREE_TYPE (decl));
-  if (size > 0 && (unsigned HOST_WIDE_INT) size <= g_switch_value)
+  if (size > 0 && size <= g_switch_value)
     return true;
 
   return false;

@@ -89,7 +89,9 @@ namespace __debug
       template<class _InputIterator>
       list(_InputIterator __first, _InputIterator __last,
 	   const _Allocator& __a = _Allocator())
-      : _Base(__gnu_debug::__check_valid_range(__first, __last), __last, __a)
+      : _Base(__gnu_debug::__base(__gnu_debug::__check_valid_range(__first,
+								   __last)),
+              __gnu_debug::__base(__last), __a)
       { }
 
 
@@ -101,7 +103,7 @@ namespace __debug
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       list(list&& __x)
-      : _Base(std::forward<list>(__x)), _Safe_base()
+      : _Base(std::move(__x)), _Safe_base()
       { this->_M_swap(__x); }
 
       list(initializer_list<value_type> __l,
@@ -151,7 +153,8 @@ namespace __debug
         assign(_InputIterator __first, _InputIterator __last)
         {
 	  __glibcxx_check_valid_range(__first, __last);
-	  _Base::assign(__first, __last);
+	  _Base::assign(__gnu_debug::__base(__first),
+			__gnu_debug::__base(__last));
 	  this->_M_invalidate_all();
 	}
 
@@ -411,7 +414,8 @@ namespace __debug
 	       _InputIterator __last)
         {
 	  __glibcxx_check_insert_range(__position, __first, __last);
-	  _Base::insert(__position.base(), __first, __last);
+	  _Base::insert(__position.base(), __gnu_debug::__base(__first),
+					   __gnu_debug::__base(__last));
 	}
 
       iterator

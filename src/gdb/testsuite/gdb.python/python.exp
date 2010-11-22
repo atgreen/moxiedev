@@ -20,11 +20,26 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-# Start with a fresh gdb.
+load_lib gdb-python.exp
 
+set testfile "python"
+set srcfile  ${testfile}.c
+set srcfile1  ${testfile}-1.c
+set binfile  ${objdir}/${subdir}/${testfile}
+
+if { [gdb_compile "${srcdir}/${subdir}/${srcfile} ${srcdir}/${subdir}/${srcfile1}" \
+	  ${binfile} executable {debug}] != "" } {
+    untested "Could not compile $binfile."
+    return -1
+}
+
+# Start with a fresh gdb.
 gdb_exit
 gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
+
+# Skip all tests if Python scripting is not enabled.
+if { [skip_python_tests] } { continue }
 
 gdb_test_multiple "python print 23" "verify python support" {
     -re "not supported.*$gdb_prompt $"	{
@@ -87,3 +102,84 @@ gdb_test "python import itertools; print 'IMPOR'+'TED'" "IMPORTED" "pythonX.Y/li
 gdb_test_no_output \
     "python x = gdb.execute('printf \"%d\", 23', to_string = True)"
 gdb_test "python print x" "23"
+
+# Test post_event.
+gdb_py_test_multiple "post event insertion" \
+  "python" "" \
+  "someVal = 0" "" \
+  "class Foo(object):" "" \
+  "  def __call__(self):" "" \
+  "    global someVal" "" \
+  "    someVal += 1" "" \
+  "gdb.post_event(Foo())" "" \
+  "end" ""
+
+gdb_test "python print someVal" "1" "test post event execution"
+gdb_test "python gdb.post_event(str(1))" "RuntimeError: Posted event is not callable.*" "Test non callable class"
+
+# Test (no) pagination of the executed command.
+gdb_test "show height" {Number of lines gdb thinks are in a page is unlimited\.}
+set lines 10
+gdb_test_no_output "set height $lines"
+
+set test "verify pagination beforehand"
+gdb_test_multiple "python print \"\\n\" * $lines" $test {
+    -re "---Type <return> to continue, or q <return> to quit---$" {
+	pass $test
+    }
+}
+gdb_test "q" "Quit" "verify pagination beforehand: q"
+
+gdb_test "python if gdb.execute('python print \"\\\\n\" * $lines', to_string=True) == \"\\n\" * [expr $lines + 1]: print \"yes\"" "yes" "gdb.execute does not page"
+
+set test "verify pagination afterwards"
+gdb_test_multiple "python print \"\\n\" * $lines" $test {
+    -re "---Type <return> to continue, or q <return> to quit---$" {
+	pass $test
+    }
+}
+gdb_test "q" "Quit" "verify pagination afterwards: q"
+
+gdb_test_no_output "set height 0"
+
+gdb_test_no_output "python a = gdb.execute('help', to_string=True)" "collect help from uiout"
+
+gdb_test "python print a" ".*aliases -- Aliases of other commands.*" "verify help to uiout"
+
+# Start with a fresh gdb.
+clean_restart ${testfile}
+
+# The following tests require execution.
+
+if ![runto_main] then {
+    fail "Can't run to main"
+    return 0
+}
+
+runto [gdb_get_line_number "Break to end."]
+
+# Test gdb.decode_line.
+gdb_test "python gdb.decode_line(\"main.c:43\")" \
+    "gdb.error: No source file named main.c.*" "test decode_line no source named main"
+
+gdb_py_test_silent_cmd "python symtab = gdb.decode_line()" "test decode_line current location" 1
+gdb_test "python print len(symtab)" "2" "Test decode_line current location"
+gdb_test "python print symtab\[0\]" "None" "Test decode_line expression parse"
+gdb_test "python print len(symtab\[1\])" "1" "Test decode_line current location"
+gdb_test "python print symtab\[1\]\[0\].symtab" "gdb/testsuite/gdb.python/python.c.*" "Test decode_line current locationn filename"
+gdb_test "python print symtab\[1\]\[0\].line" "22" "Test decode_line current location line number"
+
+gdb_py_test_silent_cmd "python symtab = gdb.decode_line(\"python.c:26 if foo\")" "test decode_line python.c:26" 1
+gdb_test "python print len(symtab)" "2" "Test decode_line python.c:26 length"
+gdb_test "python print symtab\[0\]" "if foo" "Test decode_line expression parse"
+gdb_test "python print len(symtab\[1\])" "1" "Test decode_line python.c:26 length"
+gdb_test "python print symtab\[1\]\[0\].symtab" "gdb/testsuite/gdb.python/python.c.*" "Test decode_line python.c:26 filename"
+gdb_test "python print symtab\[1\]\[0\].line" "26" "Test decode_line python.c:26 line number"
+
+gdb_test "python gdb.decode_line(\"randomfunc\")" \
+    "gdb.error: Function \"randomfunc\" not defined.*" "test decode_line randomfunc"
+gdb_py_test_silent_cmd "python symtab = gdb.decode_line(\"func1\")" "test decode_line func1()" 1
+gdb_test "python print len(symtab)" "2" "Test decode_line func1 length"
+gdb_test "python print len(symtab\[1\])" "1" "Test decode_line func1 length"
+gdb_test "python print symtab\[1\]\[0\].symtab" "gdb/testsuite/gdb.python/python-1.c.*" "Test decode_line func1 filename"
+gdb_test "python print symtab\[1\]\[0\].line" "19" "Test decode_line func1 line number"

@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/vect/costmodel/ppc
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-05T06:48:32.791322Z
-161819
-irar
+2010-11-22T12:16:52.158952Z
+167028
+ebotcazou
 
 
 
@@ -100,11 +100,11 @@ file
 
 
 
-2009-04-24T17:45:25.000000Z
-fc7ac78504f3cdfc1375c2a3d903b99e
-2008-12-11T07:13:47.345497Z
-142672
-irar
+2010-11-22T19:14:43.425034Z
+38dc12c013eb7958f5203658e7923324
+2010-11-22T12:16:52.158952Z
+167028
+ebotcazou
 
 
 
@@ -126,7 +126,7 @@ irar
 
 
 
-3046
+3027
 
 costmodel-slp-33.c
 file
@@ -230,40 +230,6 @@ dorit
 
 881
 
-costmodel-vect-33.c
-file
-
-
-
-
-2009-04-24T17:45:25.000000Z
-e95af8b78e2e017c1e82666d6456a4f0
-2007-08-07T19:13:27.358879Z
-127276
-dorit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-887
-
 costmodel-vect-31b.c
 file
 
@@ -298,6 +264,40 @@ dorit
 
 795
 
+costmodel-vect-33.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+e95af8b78e2e017c1e82666d6456a4f0
+2007-08-07T19:13:27.358879Z
+127276
+dorit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+887
+
 costmodel-vect-31c.c
 file
 
@@ -331,6 +331,40 @@ dorit
 
 
 799
+
+costmodel-bb-slp-9a.c
+file
+
+
+
+
+2010-11-22T19:14:43.425034Z
+cc5fb3817623d6f0743eb9c14f743cca
+2010-11-22T12:16:52.158952Z
+167028
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+861
 
 costmodel-pr37194.c
 file
@@ -372,11 +406,11 @@ file
 
 
 
-2009-04-24T17:45:25.000000Z
-c575ffca7ee1f55bfd8ff860e9cb4410
-2007-10-20T14:48:28.913565Z
-129512
-dje
+2010-11-22T19:14:43.426033Z
+fc05e1ebe67893edcbb1ff2412bd266d
+2010-08-15T07:00:32.968716Z
+163260
+irar
 
 
 
@@ -398,7 +432,7 @@ dje
 
 
 
-2753
+2954
 
 costmodel-vect-76a.c
 file
@@ -434,16 +468,16 @@ irar
 
 904
 
-costmodel-vect-reduc-1char.c
+costmodel-vect-68a.c
 file
 
 
 
 
 2009-04-24T17:45:25.000000Z
-1565573f385ca141e7bd09b65c47b7a8
-2007-07-12T12:17:03.158791Z
-126584
+0c5edbbba2c8db95a4f5f68f5ec20bc3
+2007-07-05T13:15:20.084646Z
+126368
 dorit
 
 
@@ -466,7 +500,7 @@ dorit
 
 
 
-1132
+725
 
 costmodel-vect-76b.c
 file
@@ -502,16 +536,16 @@ irar
 
 1388
 
-costmodel-vect-68a.c
+costmodel-vect-reduc-1char.c
 file
 
 
 
 
 2009-04-24T17:45:25.000000Z
-0c5edbbba2c8db95a4f5f68f5ec20bc3
-2007-07-05T13:15:20.084646Z
-126368
+1565573f385ca141e7bd09b65c47b7a8
+2007-07-12T12:17:03.158791Z
+126584
 dorit
 
 
@@ -534,7 +568,7 @@ dorit
 
 
 
-725
+1132
 
 costmodel-vect-68b.c
 file

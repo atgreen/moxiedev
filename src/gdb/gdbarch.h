@@ -154,8 +154,8 @@ extern void set_gdbarch_long_double_format (struct gdbarch *gdbarch, const struc
    / addr_bit will be set from it.
   
    If gdbarch_ptr_bit and gdbarch_addr_bit are different, you'll probably
-   also need to set gdbarch_pointer_to_address and gdbarch_address_to_pointer
-   as well.
+   also need to set gdbarch_dwarf2_addr_size, gdbarch_pointer_to_address and
+   gdbarch_address_to_pointer as well.
   
    ptr_bit is the size of a pointer on the target */
 
@@ -166,6 +166,23 @@ extern void set_gdbarch_ptr_bit (struct gdbarch *gdbarch, int ptr_bit);
 
 extern int gdbarch_addr_bit (struct gdbarch *gdbarch);
 extern void set_gdbarch_addr_bit (struct gdbarch *gdbarch, int addr_bit);
+
+/* dwarf2_addr_size is the target address size as used in the Dwarf debug
+   info.  For .debug_frame FDEs, this is supposed to be the target address
+   size from the associated CU header, and which is equivalent to the
+   DWARF2_ADDR_SIZE as defined by the target specific GCC back-end.
+   Unfortunately there is no good way to determine this value.  Therefore
+   dwarf2_addr_size simply defaults to the target pointer size.
+  
+   dwarf2_addr_size is not used for .eh_frame FDEs, which are generally
+   defined using the target's pointer size so far.
+  
+   Note that dwarf2_addr_size only needs to be redefined by a target if the
+   GCC back-end defines a DWARF2_ADDR_SIZE other than the target pointer size,
+   and if Dwarf versions < 4 need to be supported. */
+
+extern int gdbarch_dwarf2_addr_size (struct gdbarch *gdbarch);
+extern void set_gdbarch_dwarf2_addr_size (struct gdbarch *gdbarch, int dwarf2_addr_size);
 
 /* One if `char' acts like `signed char', zero if `unsigned char'. */
 
@@ -649,15 +666,6 @@ typedef const struct regset * (gdbarch_regset_from_core_section_ftype) (struct g
 extern const struct regset * gdbarch_regset_from_core_section (struct gdbarch *gdbarch, const char *sect_name, size_t sect_size);
 extern void set_gdbarch_regset_from_core_section (struct gdbarch *gdbarch, gdbarch_regset_from_core_section_ftype *regset_from_core_section);
 
-/* When creating core dumps, some systems encode the PID in addition
-   to the LWP id in core file register section names.  In those cases, the
-   "XXX" in ".reg/XXX" is encoded as [LWPID << 16 | PID].  This setting
-   is set to true for such architectures; false if "XXX" represents an LWP
-   or thread id with no special encoding. */
-
-extern int gdbarch_core_reg_section_encodes_pid (struct gdbarch *gdbarch);
-extern void set_gdbarch_core_reg_section_encodes_pid (struct gdbarch *gdbarch, int core_reg_section_encodes_pid);
-
 /* Supported register notes in a core file. */
 
 extern struct core_regset_section * gdbarch_core_regset_sections (struct gdbarch *gdbarch);
@@ -672,8 +680,7 @@ typedef LONGEST (gdbarch_core_xfer_shared_libraries_ftype) (struct gdbarch *gdba
 extern LONGEST gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, LONGEST len);
 extern void set_gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch, gdbarch_core_xfer_shared_libraries_ftype *core_xfer_shared_libraries);
 
-/* How the core_stratum layer converts a PTID from a core file to a
-   string. */
+/* How the core target converts a PTID from a core file to a string. */
 
 extern int gdbarch_core_pid_to_str_p (struct gdbarch *gdbarch);
 

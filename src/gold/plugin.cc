@@ -132,7 +132,7 @@ Plugin::load()
   // Allocate and populate a transfer vector.
   const int tv_fixed_size = 16;
   int tv_size = this->args_.size() + tv_fixed_size;
-  ld_plugin_tv *tv = new ld_plugin_tv[tv_size];
+  ld_plugin_tv* tv = new ld_plugin_tv[tv_size];
 
   // Put LDPT_MESSAGE at the front of the list so the plugin can use it
   // while processing subsequent entries.
@@ -224,7 +224,7 @@ Plugin::load()
 // Call the plugin claim-file handler.
 
 inline bool
-Plugin::claim_file(struct ld_plugin_input_file *plugin_input_file)
+Plugin::claim_file(struct ld_plugin_input_file* plugin_input_file)
 {
   int claimed = 0;
 
@@ -361,7 +361,14 @@ Plugin_manager::layout_deferred_objects()
   for (obj = this->deferred_layout_objects_.begin();
        obj != this->deferred_layout_objects_.end();
        ++obj)
-    (*obj)->layout_deferred_sections(this->layout_);
+    {
+      // Lock the object so we can read from it.  This is only called
+      // single-threaded from queue_middle_tasks, so it is OK to lock.
+      // Unfortunately we have no way to pass in a Task token.
+      const Task* dummy_task = reinterpret_cast<const Task*>(-1);
+      Task_lock_obj<Object> tl(dummy_task, *obj);
+      (*obj)->layout_deferred_sections(this->layout_);
+    }
 }
 
 // Call the cleanup handlers.
@@ -397,7 +404,7 @@ Plugin_manager::make_plugin_object(unsigned int handle)
 
 ld_plugin_status
 Plugin_manager::get_input_file(unsigned int handle,
-                               struct ld_plugin_input_file *file)
+                               struct ld_plugin_input_file* file)
 {
   Pluginobj* obj = this->object(handle);
   if (obj == NULL)
@@ -428,7 +435,7 @@ Plugin_manager::release_input_file(unsigned int handle)
 // Add a new library path.
 
 ld_plugin_status
-Plugin_manager::set_extra_library_path(const char *path)
+Plugin_manager::set_extra_library_path(const char* path)
 {
   this->extra_search_path_ = std::string(path);
   return LDPS_OK;
@@ -437,7 +444,7 @@ Plugin_manager::set_extra_library_path(const char *path)
 // Add a new input file.
 
 ld_plugin_status
-Plugin_manager::add_input_file(const char *pathname, bool is_lib)
+Plugin_manager::add_input_file(const char* pathname, bool is_lib)
 {
   Input_file_argument file(pathname,
                            (is_lib
@@ -451,7 +458,7 @@ Plugin_manager::add_input_file(const char *pathname, bool is_lib)
   Input_argument* input_argument = new Input_argument(file);
   Task_token* next_blocker = new Task_token(true);
   next_blocker->add_blocker();
-  if (this->layout_->incremental_inputs())
+  if (parameters->incremental())
     gold_error(_("input files added by plug-ins in --incremental mode not "
 		 "supported yet"));
   this->workqueue_->queue_soon(new Read_symbols(this->input_objects_,
@@ -505,7 +512,7 @@ Pluginobj::get_symbol_resolution_info(int nsyms, ld_plugin_symbol* syms) const
     {
       // We never decided to include this object. We mark all symbols as
       // preempted.
-      gold_assert (this->symbols_.size() == 0);
+      gold_assert(this->symbols_.size() == 0);
       for (int i = 0; i < nsyms; i++)
         syms[i].resolution = LDPR_PREEMPTED_REG;
       return LDPS_OK;
@@ -626,7 +633,7 @@ Sized_pluginobj<size, big_endian>::do_add_symbols(Symbol_table* symtab,
 
   for (int i = 0; i < this->nsyms_; ++i)
     {
-      const struct ld_plugin_symbol *isym = &this->syms_[i];
+      const struct ld_plugin_symbol* isym = &this->syms_[i];
       const char* name = isym->name;
       const char* ver = isym->version;
       elfcpp::Elf_Half shndx;
@@ -705,26 +712,32 @@ Sized_pluginobj<size, big_endian>::do_add_symbols(Symbol_table* symtab,
 template<int size, bool big_endian>
 Archive::Should_include
 Sized_pluginobj<size, big_endian>::do_should_include_member(
-    Symbol_table* symtab, Read_symbols_data*, std::string* why)
+    Symbol_table* symtab,
+    Layout* layout,
+    Read_symbols_data*,
+    std::string* why)
 {
   char* tmpbuf = NULL;
   size_t tmpbuflen = 0;
 
-  for (int i = 0; i < this->nsyms_; ++i) {
-    const struct ld_plugin_symbol& sym = this->syms_[i];
-    const char* name = sym.name;
-    Symbol* symbol;
-    Archive::Should_include t = Archive::should_include_member(symtab, name,
-                                                               &symbol, why,
-                                                               &tmpbuf,
-                                                               &tmpbuflen);
+  for (int i = 0; i < this->nsyms_; ++i)
+    {
+      const struct ld_plugin_symbol& sym = this->syms_[i];
+      const char* name = sym.name;
+      Symbol* symbol;
+      Archive::Should_include t = Archive::should_include_member(symtab,
+								 layout,
+								 name,
+								 &symbol, why,
+								 &tmpbuf,
+								 &tmpbuflen);
       if (t == Archive::SHOULD_INCLUDE_YES)
 	{
 	  if (tmpbuf != NULL)
 	    free(tmpbuf);
 	  return t;
 	}
-  }
+    }
   if (tmpbuf != NULL)
     free(tmpbuf);
   return Archive::SHOULD_INCLUDE_UNKNOWN;
@@ -994,7 +1007,7 @@ register_cleanup(ld_plugin_cleanup_handler handler)
 // Add symbols from a plugin-claimed input file.
 
 static enum ld_plugin_status
-add_symbols(void* handle, int nsyms, const ld_plugin_symbol *syms)
+add_symbols(void* handle, int nsyms, const ld_plugin_symbol* syms)
 {
   gold_assert(parameters->options().has_plugins());
   Pluginobj* obj = parameters->options().plugins()->make_plugin_object(
@@ -1009,7 +1022,7 @@ add_symbols(void* handle, int nsyms, const ld_plugin_symbol *syms)
 // file descriptor.
 
 static enum ld_plugin_status
-get_input_file(const void *handle, struct ld_plugin_input_file *file)
+get_input_file(const void* handle, struct ld_plugin_input_file* file)
 {
   gold_assert(parameters->options().has_plugins());
   unsigned int obj_index =
@@ -1020,7 +1033,7 @@ get_input_file(const void *handle, struct ld_plugin_input_file *file)
 // Release the input file.
 
 static enum ld_plugin_status
-release_input_file(const void *handle)
+release_input_file(const void* handle)
 {
   gold_assert(parameters->options().has_plugins());
   unsigned int obj_index =
@@ -1031,7 +1044,7 @@ release_input_file(const void *handle)
 // Get the symbol resolution info for a plugin-claimed input file.
 
 static enum ld_plugin_status
-get_symbols(const void * handle, int nsyms, ld_plugin_symbol* syms)
+get_symbols(const void* handle, int nsyms, ld_plugin_symbol* syms)
 {
   gold_assert(parameters->options().has_plugins());
   Pluginobj* obj = parameters->options().plugins()->object(
@@ -1044,7 +1057,7 @@ get_symbols(const void * handle, int nsyms, ld_plugin_symbol* syms)
 // Add a new (real) input file generated by a plugin.
 
 static enum ld_plugin_status
-add_input_file(const char *pathname)
+add_input_file(const char* pathname)
 {
   gold_assert(parameters->options().has_plugins());
   return parameters->options().plugins()->add_input_file(pathname, false);
@@ -1053,7 +1066,7 @@ add_input_file(const char *pathname)
 // Add a new (real) library required by a plugin.
 
 static enum ld_plugin_status
-add_input_library(const char *pathname)
+add_input_library(const char* pathname)
 {
   gold_assert(parameters->options().has_plugins());
   return parameters->options().plugins()->add_input_file(pathname, true);
@@ -1063,7 +1076,7 @@ add_input_library(const char *pathname)
 // add_input_library
 
 static enum ld_plugin_status
-set_extra_library_path(const char *path)
+set_extra_library_path(const char* path)
 {
   gold_assert(parameters->options().has_plugins());
   return parameters->options().plugins()->set_extra_library_path(path);
@@ -1072,7 +1085,7 @@ set_extra_library_path(const char *path)
 // Issue a diagnostic message from a plugin.
 
 static enum ld_plugin_status
-message(int level, const char * format, ...)
+message(int level, const char* format, ...)
 {
   va_list args;
   va_start(args, format);

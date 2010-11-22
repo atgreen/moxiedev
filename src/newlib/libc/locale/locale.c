@@ -90,16 +90,15 @@ Cygwin additionally supports locales from the file
 (<<"">> is also accepted; if given, the settings are read from the
 corresponding LC_* environment variables and $LANG according to POSIX rules.
 
-This implementation also supports a single modifier, <<"cjknarrow">>.
-Any other modifier is ignored.  <<"cjknarrow">>, in conjunction with one
-of the language specifiers <<"ja">>, <<"ko">>, and <<"zh">> specifies
-how the functions <<wcwidth>> and <<wcswidth>> handle characters from
-the "CJK Ambiguous Width" character class described in
-http://www.unicode.org/unicode/reports/tr11/.  Usually these characters
-have a width of 1, unless you specify one of the aforementioned
-languages, in which case these characters have a width of 2.  By
-specifying the <<"cjknarrow">> modifier, these characters will have a
-width of one in the languages <<"ja">>, <<"ko">>, and <<"zh">> as well.
+This implementation also supports the modifier <<"cjknarrow">>, which
+affects how the functions <<wcwidth>> and <<wcswidth>> handle characters
+from the "CJK Ambiguous Width" category of characters described at
+http://www.unicode.org/reports/tr11/#Ambiguous. These characters have a width
+of 1 for singlebyte charsets and a width of 2 for multibyte charsets
+other than UTF-8. For UTF-8, their width depends on the language specifier:
+it is 2 for <<"zh">> (Chinese), <<"ja">> (Japanese), and <<"ko">> (Korean),
+and 1 for everything else. Specifying <<"cjknarrow">> forces a width of 1,
+independent of charset and language.
 
 If you use <<NULL>> as the <[locale]> argument, <<setlocale>> returns a
 pointer to the string representing the current locale.  The acceptable
@@ -453,7 +452,7 @@ loadlocale(struct _reent *p, int category)
   char *locale = NULL;
   char charset[ENCODING_LEN + 1];
   unsigned long val;
-  char *end, *c;
+  char *end, *c = NULL;
   int mbc_max;
   int (*l_wctomb) (struct _reent *, char *, wchar_t, const char *, mbstate_t *);
   int (*l_mbtowc) (struct _reent *, wchar_t *, const char *, size_t,
@@ -508,7 +507,16 @@ restart:
 					   sticking to the C locale in terms
 					   of sort order, etc.  Proposed in
 					   the Debian project. */
-    strcpy (charset, locale + 2);
+    {
+      char *chp;
+
+      c = locale + 2;
+      strcpy (charset, c);
+      if ((chp = strchr (charset, '@')))
+        /* Strip off modifier */
+        *chp = '\0';
+      c += strlen (charset);
+    }
   else							/* POSIX style */
     {
       c = locale;
@@ -559,15 +567,15 @@ restart:
       else
 	/* Invalid string */
       	FAIL;
-      if (c[0] == '@')
-	{
-	  /* Modifier */
-	  /* Only one modifier is recognized right now.  "cjknarrow" is used
-	     to modify the behaviour of wcwidth() for East Asian languages.
-	     For details see the comment at the end of this function. */
-	  if (!strcmp (c + 1, "cjknarrow"))
-	    cjknarrow = 1;
-	}
+    }
+  if (c && c[0] == '@')
+    {
+      /* Modifier */
+      /* Only one modifier is recognized right now.  "cjknarrow" is used
+         to modify the behaviour of wcwidth() for East Asian languages.
+         For details see the comment at the end of this function. */
+      if (!strcmp (c + 1, "cjknarrow"))
+	cjknarrow = 1;
     }
   /* We only support this subset of charsets. */
   switch (charset[0])
@@ -845,16 +853,18 @@ restart:
       __wctomb = l_wctomb;
       __mbtowc = l_mbtowc;
       __set_ctype (charset);
-      /* Check for the language part of the locale specifier.  In case
-         of "ja", "ko", or "zh", assume the use of CJK fonts, unless the
-	 "@cjknarrow" modifier has been specifed.
-	 The result is stored in lc_ctype_cjk_lang and tested in wcwidth()
-	 to figure out the width to return (1 or 2) for the "CJK Ambiguous
-	 Width" category of characters. */
+      /* Determine the width for the "CJK Ambiguous Width" category of
+         characters. This is used in wcwidth(). Assume single width for
+         single-byte charsets, and double width for multi-byte charsets
+         other than UTF-8. For UTF-8, use double width for the East Asian
+         languages ("ja", "ko", "zh"), and single width for everything else.
+         Single width can also be forced with the "@cjknarrow" modifier. */
       lc_ctype_cjk_lang = !cjknarrow
-			  && ((strncmp (locale, "ja", 2) == 0
+			  && mbc_max > 1
+			  && (charset[0] != 'U'
+			      || strncmp (locale, "ja", 2) == 0
 			      || strncmp (locale, "ko", 2) == 0
-			      || strncmp (locale, "zh", 2) == 0));
+			      || strncmp (locale, "zh", 2) == 0);
 #ifdef __HAVE_LOCALE_INFO__
       ret = __ctype_load_locale (locale, (void *) l_wctomb, charset, mbc_max);
 #endif /* __HAVE_LOCALE_INFO__ */

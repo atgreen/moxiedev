@@ -78,12 +78,14 @@ namespace __debug
       : _Base(__n, __hf, __eql, __a) { }
 
       template<typename _InputIterator>
-        unordered_map(_InputIterator __f, _InputIterator __l, 
-		      size_type __n = 10,
+        unordered_map(_InputIterator __first, _InputIterator __last, 
+		      size_type __n = 0,
 		      const hasher& __hf = hasher(), 
 		      const key_equal& __eql = key_equal(), 
 		      const allocator_type& __a = allocator_type())
-	: _Base(__gnu_debug::__check_valid_range(__f, __l), __l, __n,
+	: _Base(__gnu_debug::__base(__gnu_debug::__check_valid_range(__first,
+								     __last)),
+		__gnu_debug::__base(__last), __n,
 		__hf, __eql, __a), _Safe_base() { }
 
       unordered_map(const unordered_map& __x) 
@@ -93,10 +95,10 @@ namespace __debug
       : _Base(__x), _Safe_base() { }
 
       unordered_map(unordered_map&& __x)
-      : _Base(std::forward<unordered_map>(__x)), _Safe_base() { }
+      : _Base(std::move(__x)), _Safe_base() { }
 
       unordered_map(initializer_list<value_type> __l,
-		    size_type __n = 10,
+		    size_type __n = 0,
 		    const hasher& __hf = hasher(),
 		    const key_equal& __eql = key_equal(),
 		    const allocator_type& __a = allocator_type())
@@ -188,6 +190,28 @@ namespace __debug
 	return iterator(__res.first, this);
       }
 
+      template<typename _Pair, typename = typename
+	       std::enable_if<std::is_convertible<_Pair,
+						  value_type>::value>::type>
+        std::pair<iterator, bool>
+        insert(_Pair&& __obj)
+        {
+	  typedef std::pair<typename _Base::iterator, bool> __pair_type;
+	  __pair_type __res = _Base::insert(std::forward<_Pair>(__obj));
+	  return std::make_pair(iterator(__res.first, this), __res.second);
+	}
+
+      template<typename _Pair, typename = typename
+	       std::enable_if<std::is_convertible<_Pair,
+						  value_type>::value>::type>
+        iterator
+        insert(const_iterator, _Pair&& __obj)
+        {
+	  typedef std::pair<typename _Base::iterator, bool> __pair_type;
+	  __pair_type __res = _Base::insert(std::forward<_Pair>(__obj));
+	  return iterator(__res.first, this);
+	}
+
       void
       insert(std::initializer_list<value_type> __l)
       { _Base::insert(__l); }
@@ -197,7 +221,8 @@ namespace __debug
         insert(_InputIterator __first, _InputIterator __last)
         {
 	  __glibcxx_check_valid_range(__first, __last);
-	  _Base::insert(__first, __last);
+	  _Base::insert(__gnu_debug::__base(__first),
+			__gnu_debug::__base(__last));
 	}
 
       iterator
@@ -337,12 +362,14 @@ namespace __debug
       : _Base(__n, __hf, __eql, __a) { }
 
       template<typename _InputIterator>
-        unordered_multimap(_InputIterator __f, _InputIterator __l, 
-			   size_type __n = 10,
+        unordered_multimap(_InputIterator __first, _InputIterator __last, 
+			   size_type __n = 0,
 			   const hasher& __hf = hasher(), 
 			   const key_equal& __eql = key_equal(), 
 			   const allocator_type& __a = allocator_type())
-	: _Base(__gnu_debug::__check_valid_range(__f, __l), __l, __n,
+	: _Base(__gnu_debug::__base(__gnu_debug::__check_valid_range(__first,
+								     __last)),
+		__gnu_debug::__base(__last), __n,
 		__hf, __eql, __a), _Safe_base() { }
 
       unordered_multimap(const unordered_multimap& __x) 
@@ -352,10 +379,10 @@ namespace __debug
       : _Base(__x), _Safe_base() { }
 
       unordered_multimap(unordered_multimap&& __x) 
-      : _Base(std::forward<unordered_multimap>(__x)), _Safe_base() { }
+      : _Base(std::move(__x)), _Safe_base() { }
 
       unordered_multimap(initializer_list<value_type> __l,
-			 size_type __n = 10,
+			 size_type __n = 0,
 			 const hasher& __hf = hasher(),
 			 const key_equal& __eql = key_equal(),
 			 const allocator_type& __a = allocator_type())
@@ -439,6 +466,20 @@ namespace __debug
       insert(const_iterator, const value_type& __obj)
       { return iterator(_Base::insert(__obj), this); }
 
+      template<typename _Pair, typename = typename
+	       std::enable_if<std::is_convertible<_Pair,
+						  value_type>::value>::type>
+        iterator
+        insert(_Pair&& __obj)
+        { return iterator(_Base::insert(std::forward<_Pair>(__obj)), this); }
+
+      template<typename _Pair, typename = typename
+	       std::enable_if<std::is_convertible<_Pair,
+						  value_type>::value>::type>
+        iterator
+        insert(const_iterator, _Pair&& __obj)
+        { return iterator(_Base::insert(std::forward<_Pair>(__obj)), this); }
+
       void
       insert(std::initializer_list<value_type> __l)
       { _Base::insert(__l); }
@@ -448,7 +489,8 @@ namespace __debug
         insert(_InputIterator __first, _InputIterator __last)
         {
 	  __glibcxx_check_valid_range(__first, __last);
-	  _Base::insert(__first, __last);
+	  _Base::insert(__gnu_debug::__base(__first),
+			__gnu_debug::__base(__last));
 	}
 
       iterator

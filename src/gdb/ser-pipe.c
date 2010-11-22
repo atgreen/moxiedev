@@ -31,6 +31,7 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include "gdb_string.h"
+#include "gdb_wait.h"
 
 #include <signal.h>
 
@@ -157,21 +158,43 @@ pipe_close (struct serial *scb)
 {
   struct pipe_state *state = scb->state;
 
+  close (scb->fd);
+  scb->fd = -1;
+
   if (state != NULL)
     {
-      int pid = state->pid;
-      close (scb->fd);
-      scb->fd = -1;
+      int status;
+      kill (state->pid, SIGTERM);
+#ifdef HAVE_WAITPID
+      /* Assume the program will exit after SIGTERM.  Might be
+	 useful to print any remaining stderr output from
+	 scb->error_fd while waiting.  */
+      waitpid (state->pid, &status, 0);
+#endif
       if (scb->error_fd != -1)
 	close (scb->error_fd);
       scb->error_fd = -1;
       xfree (state);
       scb->state = NULL;
-      kill (pid, SIGTERM);
-      /* Might be useful to check that the child does die,
-	 and while we're waiting for it to die print any remaining
-	 stderr output.  */
     }
+}
+
+int
+gdb_pipe (int pdes[2])
+{
+#if !HAVE_SOCKETPAIR
+  errno = ENOSYS;
+  return -1;
+#else
+
+  if (socketpair (AF_UNIX, SOCK_STREAM, 0, pdes) < 0)
+    return -1;
+
+  /* If we don't do this, GDB simply exits when the remote side
+     dies.  */
+  signal (SIGPIPE, SIG_IGN);
+  return 0;
+#endif
 }
 
 void

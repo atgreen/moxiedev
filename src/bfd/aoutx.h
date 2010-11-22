@@ -269,7 +269,7 @@ NAME (aout, reloc_type_lookup) (bfd *abfd, bfd_reloc_code_real_type code)
   int ext = obj_reloc_entry_size (abfd) == RELOC_EXT_SIZE;
 
   if (code == BFD_RELOC_CTOR)
-    switch (bfd_get_arch_info (abfd)->bits_per_address)
+    switch (bfd_arch_bits_per_address (abfd))
       {
       case 32:
 	code = BFD_RELOC_32;
@@ -3210,7 +3210,8 @@ aout_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 static bfd_boolean
 aout_link_check_ar_symbols (bfd *abfd,
 			    struct bfd_link_info *info,
-			    bfd_boolean *pneeded)
+			    bfd_boolean *pneeded,
+			    bfd **subsbfd)
 {
   struct external_nlist *p;
   struct external_nlist *pend;
@@ -3304,7 +3305,8 @@ aout_link_check_ar_symbols (bfd *abfd,
 		continue;
 	    }
 
-	  if (! (*info->callbacks->add_archive_element) (info, abfd, name))
+	  if (! (*info->callbacks->add_archive_element)
+					(info, abfd, name, subsbfd))
 	    return FALSE;
 	  *pneeded = TRUE;
 	  return TRUE;
@@ -3331,9 +3333,8 @@ aout_link_check_ar_symbols (bfd *abfd,
 			 outside BFD.  We assume that we should link
 			 in the object file.  This is done for the -u
 			 option in the linker.  */
-		      if (! (*info->callbacks->add_archive_element) (info,
-								     abfd,
-								     name))
+		      if (! (*info->callbacks->add_archive_element)
+					(info, abfd, name, subsbfd))
 			return FALSE;
 		      *pneeded = TRUE;
 		      return TRUE;
@@ -3381,7 +3382,8 @@ aout_link_check_ar_symbols (bfd *abfd,
 	     it if the current link symbol is common.  */
 	  if (h->type == bfd_link_hash_undefined)
 	    {
-	      if (! (*info->callbacks->add_archive_element) (info, abfd, name))
+	      if (! (*info->callbacks->add_archive_element)
+					(info, abfd, name, subsbfd))
 		return FALSE;
 	      *pneeded = TRUE;
 	      return TRUE;
@@ -3402,15 +3404,21 @@ aout_link_check_archive_element (bfd *abfd,
 				 struct bfd_link_info *info,
 				 bfd_boolean *pneeded)
 {
+  bfd *subsbfd = NULL;
+
   if (! aout_get_external_symbols (abfd))
     return FALSE;
 
-  if (! aout_link_check_ar_symbols (abfd, info, pneeded))
+  if (! aout_link_check_ar_symbols (abfd, info, pneeded, &subsbfd))
     return FALSE;
 
   if (*pneeded)
     {
-      if (! aout_link_add_symbols (abfd, info))
+      /* Potentially, the add_archive_element hook may have set a
+	 substitute BFD for us.  */
+      if (subsbfd && !aout_get_external_symbols (subsbfd))
+	return FALSE;
+      if (! aout_link_add_symbols (subsbfd ? subsbfd : abfd, info))
 	return FALSE;
     }
 

@@ -61,6 +61,7 @@ static bfd_vma opd_entry_value
 #define TARGET_BIG_SYM		bfd_elf64_powerpc_vec
 #define TARGET_BIG_NAME		"elf64-powerpc"
 #define ELF_ARCH		bfd_arch_powerpc
+#define ELF_TARGET_ID		PPC64_ELF_DATA
 #define ELF_MACHINE_CODE	EM_PPC64
 #define ELF_MAXPAGESIZE		0x10000
 #define ELF_COMMONPAGESIZE	0x1000
@@ -2651,7 +2652,7 @@ ppc64_elf_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
   elf_tdata (abfd)->core_signal = bfd_get_16 (abfd, note->descdata + 12);
 
   /* pr_pid */
-  elf_tdata (abfd)->core_pid = bfd_get_32 (abfd, note->descdata + 32);
+  elf_tdata (abfd)->core_lwpid = bfd_get_32 (abfd, note->descdata + 32);
 
   /* pr_reg */
   offset = 112;
@@ -7072,6 +7073,7 @@ ppc64_elf_edit_opd (struct bfd_link_info *info, bfd_boolean non_overlapping)
       if (need_edit || add_aux_fields)
 	{
 	  Elf_Internal_Rela *write_rel;
+	  Elf_Internal_Shdr *rel_hdr;
 	  bfd_byte *rptr, *wptr;
 	  bfd_byte *new_contents;
 	  bfd_boolean skip;
@@ -7251,9 +7253,8 @@ ppc64_elf_edit_opd (struct bfd_link_info *info, bfd_boolean non_overlapping)
 
 	  /* Fudge the header size too, as this is used later in
 	     elf_bfd_final_link if we are emitting relocs.  */
-	  elf_section_data (sec)->rel_hdr.sh_size
-	    = sec->reloc_count * elf_section_data (sec)->rel_hdr.sh_entsize;
-	  BFD_ASSERT (elf_section_data (sec)->rel_hdr2 == NULL);
+	  rel_hdr = _bfd_elf_single_rel_hdr (sec);
+	  rel_hdr->sh_size = sec->reloc_count * rel_hdr->sh_entsize;
 	  some_edited = TRUE;
 	}
       else if (elf_section_data (sec)->relocs != relstart)
@@ -8412,6 +8413,7 @@ ppc64_elf_edit_toc (struct bfd_link_info *info)
 
 	  if (toc->reloc_count != 0)
 	    {
+	      Elf_Internal_Shdr *rel_hdr;
 	      Elf_Internal_Rela *wrel;
 	      bfd_size_type sz;
 
@@ -8437,9 +8439,9 @@ ppc64_elf_edit_toc (struct bfd_link_info *info)
 		  goto error_ret;
 
 	      toc->reloc_count = wrel - relstart;
-	      sz = elf_section_data (toc)->rel_hdr.sh_entsize;
-	      elf_section_data (toc)->rel_hdr.sh_size = toc->reloc_count * sz;
-	      BFD_ASSERT (elf_section_data (toc)->rel_hdr2 == NULL);
+	      rel_hdr = _bfd_elf_single_rel_hdr (toc);
+	      sz = rel_hdr->sh_entsize;
+	      rel_hdr->sh_size = toc->reloc_count * sz;
 	    }
 	}
 
@@ -9375,9 +9377,13 @@ get_relocs (asection *sec, int count)
       if (relocs == NULL)
 	return NULL;
       elfsec_data->relocs = relocs;
-      elfsec_data->rel_hdr.sh_size = (sec->reloc_count
-				      * sizeof (Elf64_External_Rela));
-      elfsec_data->rel_hdr.sh_entsize = sizeof (Elf64_External_Rela);
+      elfsec_data->rela.hdr = bfd_zalloc (sec->owner,
+					  sizeof (Elf_Internal_Shdr));
+      if (elfsec_data->rela.hdr == NULL)
+	return NULL;
+      elfsec_data->rela.hdr->sh_size = (sec->reloc_count
+					* sizeof (Elf64_External_Rela));
+      elfsec_data->rela.hdr->sh_entsize = sizeof (Elf64_External_Rela);
       sec->reloc_count = 0;
     }
   relocs += sec->reloc_count;
@@ -11397,12 +11403,14 @@ ppc64_elf_action_discarded (asection *sec)
 
 /* REL points to a low-part reloc on a largetoc instruction sequence.
    Find the matching high-part reloc instruction and verify that it
-   is addis REG,r2,x.  If so, return a pointer to the high-part reloc.  */
+   is addis REG,x,imm.  If so, set *REG to x and return a pointer to
+   the high-part reloc.  */
 
 static const Elf_Internal_Rela *
 ha_reloc_match (const Elf_Internal_Rela *relocs,
 		const Elf_Internal_Rela *rel,
-		unsigned int reg,
+		unsigned int *reg,
+		bfd_boolean match_addend,
 		const bfd *input_bfd,
 		const bfd_byte *contents)
 {
@@ -11434,14 +11442,17 @@ ha_reloc_match (const Elf_Internal_Rela *relocs,
 
   while (--rel >= relocs)
     if (rel->r_info == r_info_ha
-	&& rel->r_addend == r_addend)
+	&& (!match_addend
+	    || rel->r_addend == r_addend))
       {
 	const bfd_byte *p = contents + (rel->r_offset & ~3);
 	unsigned int insn = bfd_get_32 (input_bfd, p);
-	if ((insn & ((0x3f << 26) | (0x1f << 16)))
-	    == ((15u << 26) | (2 << 16)) /* addis rt,r2,x */
-	    && (insn & (0x1f << 21)) == (reg << 21))
-	  return rel;
+	if ((insn & (0x3f << 26)) == (15u << 26) /* addis rt,x,imm */
+	    && (insn & (0x1f << 21)) == (*reg << 21))
+	  {
+	    *reg = (insn >> 16) & 0x1f;
+	    return rel;
+	  }
 	break;
       }
   return NULL;
@@ -11494,7 +11505,9 @@ ppc64_elf_relocate_section (bfd *output_bfd,
   Elf_Internal_Rela outrel;
   bfd_byte *loc;
   struct got_entry **local_got_ents;
+  unsigned char *ha_opt;
   bfd_vma TOCstart;
+  bfd_boolean no_ha_opt;
   bfd_boolean ret = TRUE;
   bfd_boolean is_opd;
   /* Disabled until we sort out how ld should choose 'y' vs 'at'.  */
@@ -11520,6 +11533,8 @@ ppc64_elf_relocate_section (bfd *output_bfd,
   symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   is_opd = ppc64_elf_section_data (input_section)->sec_type == sec_opd;
+  ha_opt = NULL;
+  no_ha_opt = FALSE;
 
   rel = relocs;
   relend = relocs + input_section->reloc_count;
@@ -11609,16 +11624,10 @@ ppc64_elf_relocate_section (bfd *output_bfd,
       h = (struct ppc_link_hash_entry *) h_elf;
 
       if (sec != NULL && elf_discarded_section (sec))
-	{
-	  /* For relocs against symbols from removed linkonce sections,
-	     or sections discarded by a linker script, we just want the
-	     section contents zeroed.  Avoid any special processing.  */
-	  _bfd_clear_contents (ppc64_elf_howto_table[r_type], input_bfd,
-			       contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend,
+					 ppc64_elf_howto_table[r_type],
+					 contents);
 
       if (info->relocatable)
 	continue;
@@ -11658,7 +11667,7 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 
       /* Check that tls relocs are used with tls syms, and non-tls
 	 relocs are used with non-tls syms.  */
-      if (r_symndx != 0
+      if (r_symndx != STN_UNDEF
 	  && r_type != R_PPC64_NONE
 	  && (h == NULL
 	      || h->elf.root.type == bfd_link_hash_defined
@@ -11907,9 +11916,9 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 			if (local_sections[r_symndx] == sec)
 			  break;
 		      if (r_symndx >= symtab_hdr->sh_info)
-			r_symndx = 0;
+			r_symndx = STN_UNDEF;
 		      rel->r_addend = htab->elf.tls_sec->vma + DTP_OFFSET;
-		      if (r_symndx != 0)
+		      if (r_symndx != STN_UNDEF)
 			rel->r_addend -= (local_syms[r_symndx].st_value
 					  + sec->output_offset
 					  + sec->output_section->vma);
@@ -12015,9 +12024,9 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 		if (local_sections[r_symndx] == sec)
 		  break;
 	      if (r_symndx >= symtab_hdr->sh_info)
-		r_symndx = 0;
+		r_symndx = STN_UNDEF;
 	      rel->r_addend = htab->elf.tls_sec->vma + DTP_OFFSET;
-	      if (r_symndx != 0)
+	      if (r_symndx != STN_UNDEF)
 		rel->r_addend -= (local_syms[r_symndx].st_value
 				  + sec->output_offset
 				  + sec->output_section->vma);
@@ -12559,7 +12568,7 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 	case R_PPC64_TOC:
 	  /* Relocation value is TOC base.  */
 	  relocation = TOCstart;
-	  if (r_symndx == 0)
+	  if (r_symndx == STN_UNDEF)
 	    relocation += htab->stub_group[input_section->id].toc_off;
 	  else if (unresolved_reloc)
 	    ;
@@ -12809,7 +12818,7 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 			     sym_name);
 			  ret = FALSE;
 			}
-		      else if (r_symndx == 0 || bfd_is_abs_section (sec))
+		      else if (r_symndx == STN_UNDEF || bfd_is_abs_section (sec))
 			;
 		      else if (sec == NULL || sec->owner == NULL)
 			{
@@ -12945,7 +12954,7 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 	case R_PPC64_GOT_DTPREL16_HA:
 	case R_PPC64_GOT16_HA:
 	case R_PPC64_TOC16_HA:
-	  /* For now we don't nop out the first instruction.  */
+	  /* nop is done later.  */
 	  break;
 
 	case R_PPC64_GOT_TLSLD16_LO:
@@ -12980,12 +12989,31 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 		      && ((insn & 3) == 0 || (insn & 3) == 3)))
 		{
 		  unsigned int reg = (insn >> 16) & 0x1f;
-		  if (ha_reloc_match (relocs, rel, reg, input_bfd, contents))
+		  const Elf_Internal_Rela *ha;
+		  bfd_boolean match_addend;
+
+		  match_addend = (sym != NULL
+				  && ELF_ST_TYPE (sym->st_info) == STT_SECTION);
+		  ha = ha_reloc_match (relocs, rel, &reg, match_addend,
+				       input_bfd, contents);
+		  if (ha != NULL)
 		    {
 		      insn &= ~(0x1f << 16);
-		      insn |= 2 << 16;
+		      insn |= reg << 16;
 		      bfd_put_32 (input_bfd, insn, p);
+		      if (ha_opt == NULL)
+			{
+			  ha_opt = bfd_zmalloc (input_section->reloc_count);
+			  if (ha_opt == NULL)
+			    return FALSE;
+			}
+		      ha_opt[ha - relocs] = 1;
 		    }
+		  else
+		    /* If we don't find a matching high part insn,
+		       something is fishy.  Refuse to nop any high
+		       part insn in this section.  */
+		    no_ha_opt = TRUE;
 		}
 	    }
 	  break;
@@ -13141,6 +13169,23 @@ ppc64_elf_relocate_section (bfd *output_bfd,
 	      ret = FALSE;
 	    }
 	}
+    }
+
+  if (ha_opt != NULL)
+    {
+      if (!no_ha_opt)
+	{
+	  unsigned char *opt = ha_opt;
+	  rel = relocs;
+	  relend = relocs + input_section->reloc_count;
+	  for (; rel < relend; opt++, rel++)
+	    if (*opt != 0)
+	      {
+		bfd_byte *p = contents + (rel->r_offset & ~3);
+		bfd_put_32 (input_bfd, NOP, p);
+	      }
+	}
+      free (ha_opt);
     }
 
   /* If we're emitting relocations, then shortly after this function
@@ -13426,7 +13471,7 @@ ppc64_elf_finish_dynamic_sections (bfd *output_bfd,
       && htab->brlt->reloc_count != 0
       && !_bfd_elf_link_output_relocs (output_bfd,
 				       htab->brlt,
-				       &elf_section_data (htab->brlt)->rel_hdr,
+				       elf_section_data (htab->brlt)->rela.hdr,
 				       elf_section_data (htab->brlt)->relocs,
 				       NULL))
     return FALSE;
@@ -13435,7 +13480,7 @@ ppc64_elf_finish_dynamic_sections (bfd *output_bfd,
       && htab->glink->reloc_count != 0
       && !_bfd_elf_link_output_relocs (output_bfd,
 				       htab->glink,
-				       &elf_section_data (htab->glink)->rel_hdr,
+				       elf_section_data (htab->glink)->rela.hdr,
 				       elf_section_data (htab->glink)->relocs,
 				       NULL))
     return FALSE;

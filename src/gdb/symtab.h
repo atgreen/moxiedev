@@ -75,7 +75,12 @@ struct program_space;
 
    --chastain 2003-08-21  */
 
+/* Struct for storing C++ specific information.  Allocated when needed.  */
 
+struct cplus_specific
+{
+  char *demangled_name;
+};
 
 /* Define a structure for the information that is common to all symbol types,
    including minimal symbols, partial symbols, and full symbols.  In a
@@ -120,16 +125,19 @@ struct general_symbol_info
   value;
 
   /* Since one and only one language can apply, wrap the language specific
-     information inside a union. */
+     information inside a union.  */
 
   union
   {
-    struct cplus_specific
+    /* This is used by languages which wish to store a demangled name.
+       currently used by Ada, Java, and Objective C.*/
+    struct mangled_lang
     {
-      /* This is in fact used for C++, Java, and Objective C.  */
       char *demangled_name;
     }
-    cplus_specific;
+    mangled_lang;
+
+    struct cplus_specific *cplus_specific;
   }
   language_specific;
 
@@ -153,12 +161,17 @@ struct general_symbol_info
   struct obj_section *obj_section;
 };
 
+extern void symbol_set_demangled_name (struct general_symbol_info *, char *,
+                                       struct objfile *);
+
+extern char *symbol_get_demangled_name (const struct general_symbol_info *);
+
 extern CORE_ADDR symbol_overlayed_address (CORE_ADDR, struct obj_section *);
 
 /* Note that all the following SYMBOL_* macros are used with the
    SYMBOL argument being either a partial symbol, a minimal symbol or
    a full symbol.  All three types have a ginfo field.  In particular
-   the SYMBOL_INIT_LANGUAGE_SPECIFIC, SYMBOL_DEMANGLED_NAME, etc.
+   the SYMBOL_SET_LANGUAGE, SYMBOL_DEMANGLED_NAME, etc.
    macros cannot be entirely substituted by
    functions, unless the callers are changed to pass in the ginfo
    field only, instead of the SYMBOL parameter.  */
@@ -174,10 +187,10 @@ extern CORE_ADDR symbol_overlayed_address (CORE_ADDR, struct obj_section *);
 
 /* Initializes the language dependent portion of a symbol
    depending upon the language for the symbol. */
-#define SYMBOL_INIT_LANGUAGE_SPECIFIC(symbol,language) \
-  (symbol_init_language_specific (&(symbol)->ginfo, (language)))
-extern void symbol_init_language_specific (struct general_symbol_info *symbol,
-					   enum language language);
+#define SYMBOL_SET_LANGUAGE(symbol,language) \
+  (symbol_set_language (&(symbol)->ginfo, (language)))
+extern void symbol_set_language (struct general_symbol_info *symbol,
+                                 enum language language);
 
 /* Set just the linkage name of a symbol; do not try to demangle
    it.  Used for constructs which do not have a mangled name,
@@ -377,8 +390,7 @@ typedef enum domain_enum_tag
 
   STRUCT_DOMAIN,
 
-  /* LABEL_DOMAIN may be used for names of labels (for gotos);
-     currently it is not used and labels are not recorded at all.  */
+  /* LABEL_DOMAIN may be used for names of labels (for gotos).  */
 
   LABEL_DOMAIN,
 
@@ -577,6 +589,10 @@ struct symbol
   /* Whether this is an inlined function (class LOC_BLOCK only).  */
   unsigned is_inlined : 1;
 
+  /* True if this is a C++ function symbol with template arguments.
+     In this case the symbol is really a "struct template_symbol".  */
+  unsigned is_cplus_template_function : 1;
+
   /* Line number of this symbol's definition, except for inlined
      functions.  For an inlined function (class LOC_BLOCK and
      SYMBOL_INLINED set) this is the line number of the function's call
@@ -624,12 +640,34 @@ struct symbol
 #define SYMBOL_CLASS(symbol)		(symbol)->aclass
 #define SYMBOL_IS_ARGUMENT(symbol)	(symbol)->is_argument
 #define SYMBOL_INLINED(symbol)		(symbol)->is_inlined
+#define SYMBOL_IS_CPLUS_TEMPLATE_FUNCTION(symbol) \
+  (symbol)->is_cplus_template_function
 #define SYMBOL_TYPE(symbol)		(symbol)->type
 #define SYMBOL_LINE(symbol)		(symbol)->line
 #define SYMBOL_SYMTAB(symbol)		(symbol)->symtab
 #define SYMBOL_COMPUTED_OPS(symbol)     (symbol)->ops.ops_computed
 #define SYMBOL_REGISTER_OPS(symbol)     (symbol)->ops.ops_register
 #define SYMBOL_LOCATION_BATON(symbol)   (symbol)->aux_value
+
+/* An instance of this type is used to represent a C++ template
+   function.  It includes a "struct symbol" as a kind of base class;
+   users downcast to "struct template_symbol *" when needed.  A symbol
+   is really of this type iff SYMBOL_IS_CPLUS_TEMPLATE_FUNCTION is
+   true.  */
+
+struct template_symbol
+{
+  /* The base class.  */
+  struct symbol base;
+
+  /* The number of template arguments.  */
+  int n_template_arguments;
+
+  /* The template arguments.  This is an array with
+     N_TEMPLATE_ARGUMENTS elements.  */
+  struct symbol **template_arguments;
+};
+
 
 /* Each item represents a line-->pc (or the reverse) mapping.  This is
    somewhat more wasteful of space than one might wish, but since only
@@ -1137,7 +1175,7 @@ extern char **make_source_files_completion_list (char *, char *);
 
 int matching_obj_sections (struct obj_section *, struct obj_section *);
 
-extern char *find_main_filename (void);
+extern const char *find_main_filename (void);
 
 extern struct symtab *find_line_symtab (struct symtab *, int, int *, int *);
 
@@ -1148,9 +1186,9 @@ extern void skip_prologue_sal (struct symtab_and_line *);
 
 /* symfile.c */
 
-extern void clear_symtab_users (void);
+extern void clear_symtab_users (int add_flags);
 
-extern enum language deduce_language_from_filename (char *);
+extern enum language deduce_language_from_filename (const char *);
 
 /* symtab.c */
 
@@ -1200,6 +1238,7 @@ extern struct cleanup *make_cleanup_free_search_symbols (struct symbol_search
    const. */
 extern void set_main_name (const char *name);
 extern /*const */ char *main_name (void);
+extern enum language language_of_main;
 
 /* Check global symbols in objfile.  */
 struct symbol *lookup_global_symbol_from_objfile (const struct objfile *objfile,

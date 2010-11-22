@@ -56,6 +56,7 @@
 #include "cfglayout.h"
 #include "timevar.h"
 #include "df.h"
+#include "sel-sched.h"
 
 /* A C structure for machine-specific, per-function data.
    This is added to the cfun structure.  */
@@ -336,7 +337,7 @@ struct bfin_cpu bfin_cpus[] =
    | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
    | WA_05000074},
 
-  {NULL, 0, 0, 0}
+  {NULL, BFIN_CPU_UNKNOWN, 0, 0}
 };
 
 int splitting_for_sched, splitting_loops;
@@ -358,7 +359,7 @@ output_file_start (void)
 
   /* Variable tracking should be run after all optimizations which change order
      of insns.  It also needs a valid CFG.  This can't be done in
-     override_options, because flag_var_tracking is finalized after
+     bfin_option_override, because flag_var_tracking is finalized after
      that.  */
   bfin_flag_var_tracking = flag_var_tracking;
   flag_var_tracking = 0;
@@ -368,17 +369,6 @@ output_file_start (void)
   for (i = 0; arg_regs[i] >= 0; i++)
     ;
   max_arg_registers = i;	/* how many arg reg used  */
-}
-
-/* Called early in the compilation to conditionally modify
-   fixed_regs/call_used_regs.  */
-
-void 
-conditional_register_usage (void)
-{
-  /* initialize condition code flag register rtx */
-  bfin_cc_rtx = gen_rtx_REG (BImode, REG_CC);
-  bfin_rets_rtx = gen_rtx_REG (Pmode, REG_RETS);
 }
 
 /* Examine machine-dependent attributes of function type FUNTYPE and return its
@@ -1255,14 +1245,13 @@ expand_interrupt_handler_prologue (rtx spreg, e_funkind fkind, bool all)
       rtx r0reg = gen_rtx_REG (SImode, REG_R0);
       rtx r1reg = gen_rtx_REG (SImode, REG_R1);
       rtx r2reg = gen_rtx_REG (SImode, REG_R2);
-      rtx insn;
 
-      insn = emit_move_insn (r0reg, gen_rtx_REG (SImode, REG_SEQSTAT));
-      insn = emit_insn (gen_ashrsi3 (r0reg, r0reg, GEN_INT (26)));
-      insn = emit_insn (gen_ashlsi3 (r0reg, r0reg, GEN_INT (26)));
-      insn = emit_move_insn (r1reg, spreg);
-      insn = emit_move_insn (r2reg, gen_rtx_REG (Pmode, REG_FP));
-      insn = emit_insn (gen_addsi3 (r2reg, r2reg, GEN_INT (8)));
+      emit_move_insn (r0reg, gen_rtx_REG (SImode, REG_SEQSTAT));
+      emit_insn (gen_ashrsi3 (r0reg, r0reg, GEN_INT (26)));
+      emit_insn (gen_ashlsi3 (r0reg, r0reg, GEN_INT (26)));
+      emit_move_insn (r1reg, spreg);
+      emit_move_insn (r2reg, gen_rtx_REG (Pmode, REG_FP));
+      emit_insn (gen_addsi3 (r2reg, r2reg, GEN_INT (8)));
     }
 }
 
@@ -1311,7 +1300,7 @@ static rtx
 bfin_load_pic_reg (rtx dest)
 {
   struct cgraph_local_info *i = NULL;
-  rtx addr, insn;
+  rtx addr;
  
   i = cgraph_local_info (current_function_decl);
  
@@ -1326,7 +1315,7 @@ bfin_load_pic_reg (rtx dest)
     addr = gen_rtx_PLUS (Pmode, pic_offset_table_rtx,
 			 gen_rtx_UNSPEC (Pmode, gen_rtvec (1, const0_rtx),
 					 UNSPEC_LIBRARY_OFFSET));
-  insn = emit_insn (gen_movsi (dest, gen_rtx_MEM (Pmode, addr)));
+  emit_insn (gen_movsi (dest, gen_rtx_MEM (Pmode, addr)));
   return dest;
 }
 
@@ -1907,9 +1896,9 @@ init_cumulative_args (CUMULATIVE_ARGS *cum, tree fntype,
    of mode MODE and data type TYPE.
    (TYPE is null for libcalls where that information may not be available.)  */
 
-void
-function_arg_advance (CUMULATIVE_ARGS *cum, enum machine_mode mode, tree type,
-		      int named ATTRIBUTE_UNUSED)
+static void
+bfin_function_arg_advance (CUMULATIVE_ARGS *cum, enum machine_mode mode,
+			   const_tree type, bool named ATTRIBUTE_UNUSED)
 {
   int count, bytes, words;
 
@@ -1946,9 +1935,9 @@ function_arg_advance (CUMULATIVE_ARGS *cum, enum machine_mode mode, tree type,
    NAMED is nonzero if this argument is a named parameter
     (otherwise it is an extra parameter matching an ellipsis).  */
 
-struct rtx_def *
-function_arg (CUMULATIVE_ARGS *cum, enum machine_mode mode, tree type,
-	      int named ATTRIBUTE_UNUSED)
+static rtx
+bfin_function_arg (CUMULATIVE_ARGS *cum, enum machine_mode mode,
+		   const_tree type, bool named ATTRIBUTE_UNUSED)
 {
   int bytes
     = (mode == BLKmode) ? int_size_in_bytes (type) : GET_MODE_SIZE (mode);
@@ -2543,6 +2532,29 @@ bfin_secondary_reload (bool in_p, rtx x, reg_class_t rclass_i,
 
   return NO_REGS;
 }
+
+/* Implement TARGET_CLASS_LIKELY_SPILLED_P.  */
+
+static bool
+bfin_class_likely_spilled_p (reg_class_t rclass)
+{
+  switch (rclass)
+    {
+      case PREGS_CLOBBERED:
+      case PROLOGUE_REGS:
+      case P0REGS:
+      case D0REGS:
+      case D1REGS:
+      case D2REGS:
+      case CCREGS:
+        return true;
+
+      default:
+        break;
+    }
+
+  return false;
+}
 
 /* Implement TARGET_HANDLE_OPTION.  */
 
@@ -2639,10 +2651,10 @@ bfin_init_machine_status (void)
   return ggc_alloc_cleared_machine_function ();
 }
 
-/* Implement the macro OVERRIDE_OPTIONS.  */
+/* Implement the TARGET_OPTION_OVERRIDE hook.  */
 
-void
-override_options (void)
+static void
+bfin_option_override (void)
 {
   /* If processor type is not specified, enable all workarounds.  */
   if (bfin_cpu_type == BFIN_CPU_UNKNOWN)
@@ -2673,10 +2685,10 @@ override_options (void)
     error ("-mshared-library-id= specified without -mid-shared-library");
 
   if (stack_limit_rtx && TARGET_STACK_CHECK_L1)
-    error ("Can't use multiple stack checking methods together.");
+    error ("can%'t use multiple stack checking methods together");
 
   if (TARGET_ID_SHARED_LIBRARY && TARGET_FDPIC)
-    error ("ID shared libraries and FD-PIC mode can't be used together.");
+    error ("ID shared libraries and FD-PIC mode can%'t be used together");
 
   /* Don't allow the user to specify -mid-shared-library and -msep-data
      together, as it makes little sense from a user's point of view...  */
@@ -2710,7 +2722,7 @@ override_options (void)
     error ("-mcoreb should be used with -mmulticore");
 
   if (TARGET_COREA && TARGET_COREB)
-    error ("-mcorea and -mcoreb can't be used together");
+    error ("-mcorea and -mcoreb can%'t be used together");
 
   flag_schedule_insns = 0;
 
@@ -3094,8 +3106,10 @@ bfin_legitimate_constant_p (rtx x)
 }
 
 static bool
-bfin_rtx_costs (rtx x, int code, int outer_code, int *total, bool speed)
+bfin_rtx_costs (rtx x, int code_i, int outer_code_i, int *total, bool speed)
 {
+  enum rtx_code code = (enum rtx_code) code_i;
+  enum rtx_code outer_code = (enum rtx_code) outer_code_i;
   int cost2 = COSTS_N_INSNS (1);
   rtx op0, op1;
 
@@ -3590,8 +3604,8 @@ bfin_expand_movmem (rtx dst, rtx src, rtx count_exp, rtx align_exp)
    the object would ordinarily have.  The value of this macro is used
    instead of that alignment to align the object.  */
 
-int
-bfin_local_alignment (tree type, int align)
+unsigned
+bfin_local_alignment (tree type, unsigned align)
 {
   /* Increasing alignment for (relatively) big types allows the builtin
      memcpy can use 32 bit loads/stores.  */
@@ -3614,7 +3628,7 @@ bfin_issue_rate (void)
 static int
 bfin_adjust_cost (rtx insn, rtx link, rtx dep_insn, int cost)
 {
-  enum attr_type insn_type, dep_insn_type;
+  enum attr_type dep_insn_type;
   int dep_insn_code_number;
 
   /* Anti and output dependencies have zero cost.  */
@@ -3627,16 +3641,17 @@ bfin_adjust_cost (rtx insn, rtx link, rtx dep_insn, int cost)
   if (dep_insn_code_number < 0 || recog_memoized (insn) < 0)
     return cost;
 
-  insn_type = get_attr_type (insn);
   dep_insn_type = get_attr_type (dep_insn);
 
   if (dep_insn_type == TYPE_MOVE || dep_insn_type == TYPE_MCLD)
     {
       rtx pat = PATTERN (dep_insn);
+      rtx dest, src;
+
       if (GET_CODE (pat) == PARALLEL)
 	pat = XVECEXP (pat, 0, 0);
-      rtx dest = SET_DEST (pat);
-      rtx src = SET_SRC (pat);
+      dest = SET_DEST (pat);
+      src = SET_SRC (pat);
       if (! ADDRESS_REGNO_P (REGNO (dest))
 	  || ! (MEM_P (src) || D_REGNO_P (REGNO (src))))
 	return cost;
@@ -3695,13 +3710,13 @@ bfin_hardware_loop (void)
 #define MAX_LSETUP_DISTANCE 30
 
 /* We need to keep a vector of loops */
-typedef struct loop_info *loop_info;
+typedef struct loop_info_d *loop_info;
 DEF_VEC_P (loop_info);
 DEF_VEC_ALLOC_P (loop_info,heap);
 
 /* Information about a loop we have found (or are in the process of
    finding).  */
-struct GTY (()) loop_info
+struct GTY (()) loop_info_d
 {
   /* loop number, for dumps */
   int loop_no;
@@ -3762,10 +3777,10 @@ struct GTY (()) loop_info
   int clobber_loop1;
 
   /* Next loop in the graph. */
-  struct loop_info *next;
+  struct loop_info_d *next;
 
   /* Immediate outer loop of this loop.  */
-  struct loop_info *outer;
+  struct loop_info_d *outer;
 
   /* Vector of blocks only within the loop, including those within
      inner loops.  */
@@ -3795,12 +3810,12 @@ bfin_dump_loops (loop_info loops)
       fprintf (dump_file, "{head:%d, depth:%d}", loop->head->index, loop->depth);
 
       fprintf (dump_file, " blocks: [ ");
-      for (ix = 0; VEC_iterate (basic_block, loop->blocks, ix, b); ix++)
+      FOR_EACH_VEC_ELT (basic_block, loop->blocks, ix, b)
 	fprintf (dump_file, "%d ", b->index);
       fprintf (dump_file, "] ");
 
       fprintf (dump_file, " inner loops: [ ");
-      for (ix = 0; VEC_iterate (loop_info, loop->loops, ix, i); ix++)
+      FOR_EACH_VEC_ELT (loop_info, loop->loops, ix, i)
 	fprintf (dump_file, "%d ", i->loop_no);
       fprintf (dump_file, "]\n");
     }
@@ -3826,7 +3841,7 @@ bfin_scan_loop (loop_info loop, rtx reg, rtx loop_end)
   unsigned ix;
   basic_block bb;
 
-  for (ix = 0; VEC_iterate (basic_block, loop->blocks, ix, bb); ix++)
+  FOR_EACH_VEC_ELT (basic_block, loop->blocks, ix, bb)
     {
       rtx insn;
 
@@ -3902,7 +3917,7 @@ bfin_optimize_loop (loop_info loop)
   /* Every loop contains in its list of inner loops every loop nested inside
      it, even if there are intermediate loops.  This works because we're doing
      a depth-first search here and never visit a loop more than once.  */
-  for (ix = 0; VEC_iterate (loop_info, loop->loops, ix, inner); ix++)
+  FOR_EACH_VEC_ELT (loop_info, loop->loops, ix, inner)
     {
       bfin_optimize_loop (inner);
 
@@ -4052,7 +4067,7 @@ bfin_optimize_loop (loop_info loop)
   reg_lb0 = gen_rtx_REG (SImode, REG_LB0);
   reg_lb1 = gen_rtx_REG (SImode, REG_LB1);
 
-  for (ix = 0; VEC_iterate (basic_block, loop->blocks, ix, bb); ix++)
+  FOR_EACH_VEC_ELT (basic_block, loop->blocks, ix, bb)
     {
       rtx insn;
 
@@ -4398,14 +4413,13 @@ bfin_discover_loop (loop_info loop, basic_block tail_bb, rtx tail_insn)
 	  break;
 	}
 
-      if (bitmap_bit_p (loop->block_bitmap, bb->index))
+      if (!bitmap_set_bit (loop->block_bitmap, bb->index))
 	continue;
 
       /* We've not seen this block before.  Add it to the loop's
 	 list and then add each successor to the work list.  */
 
       VEC_safe_push (basic_block, heap, loop->blocks, bb);
-      bitmap_set_bit (loop->block_bitmap, bb->index);
 
       if (bb != tail_bb)
 	{
@@ -4434,7 +4448,7 @@ bfin_discover_loop (loop_info loop, basic_block tail_bb, rtx tail_insn)
   if (!loop->bad)
     {
       int pass, retry;
-      for (dwork = 0; VEC_iterate (basic_block, loop->blocks, dwork, bb); dwork++)
+      FOR_EACH_VEC_ELT (basic_block, loop->blocks, dwork, bb)
 	{
 	  edge e;
 	  edge_iterator ei;
@@ -4574,7 +4588,7 @@ bfin_discover_loops (bitmap_obstack *stack, FILE *dump_file)
 	      continue;
 	    }
 
-	  loop = XNEW (struct loop_info);
+	  loop = XNEW (struct loop_info_d);
 	  loop->next = loops;
 	  loops = loop;
 	  loop->loop_no = nloops++;
@@ -5035,7 +5049,8 @@ workaround_rts_anomaly (void)
 	    }
 	  else
 	    {
-	      enum insn_code icode = recog_memoized (insn);
+	      int icode = recog_memoized (insn);
+
 	      if (icode == CODE_FOR_link)
 		this_cycles = 4;
 	      else if (icode == CODE_FOR_unlink)
@@ -5087,10 +5102,10 @@ harmless_null_pointer_p (rtx mem, int np_reg)
   mem = XEXP (mem, 0);
   if (GET_CODE (mem) == POST_INC || GET_CODE (mem) == POST_DEC)
     mem = XEXP (mem, 0);
-  if (REG_P (mem) && REGNO (mem) == np_reg)
+  if (REG_P (mem) && (int) REGNO (mem) == np_reg)
     return true;
   if (GET_CODE (mem) == PLUS
-      && REG_P (XEXP (mem, 0)) && REGNO (XEXP (mem, 0)) == np_reg)
+      && REG_P (XEXP (mem, 0)) && (int) REGNO (XEXP (mem, 0)) == np_reg)
     {
       mem = XEXP (mem, 1);
       if (GET_CODE (mem) == CONST_INT && INTVAL (mem) > 0)
@@ -5104,7 +5119,6 @@ harmless_null_pointer_p (rtx mem, int np_reg)
 static bool
 trapping_loads_p (rtx insn, int np_reg, bool after_np_branch)
 {
-  rtx pat = PATTERN (insn);
   rtx mem = SET_SRC (single_set (insn));
 
   if (!after_np_branch)
@@ -5162,9 +5176,10 @@ bool np_after_branch = false;
 
 /* Subroutine of workaround_speculation, called through note_stores.  */
 static void
-note_np_check_stores (rtx x, const_rtx pat, void *data ATTRIBUTE_UNUSED)
+note_np_check_stores (rtx x, const_rtx pat ATTRIBUTE_UNUSED,
+		      void *data ATTRIBUTE_UNUSED)
 {
-  if (REG_P (x) && (REGNO (x) == REG_CC || REGNO (x) == np_check_regno))
+  if (REG_P (x) && (REGNO (x) == REG_CC || (int) REGNO (x) == np_check_regno))
     np_check_regno = -1;
 }
 
@@ -5617,7 +5632,7 @@ bfin_handle_longcall_attribute (tree *node, tree name,
 	  && lookup_attribute ("longcall", TYPE_ATTRIBUTES (*node))))
     {
       warning (OPT_Wattributes,
-	       "can't apply both longcall and shortcall attributes to the same function");
+	       "can%'t apply both longcall and shortcall attributes to the same function");
       *no_add_attrs = true;
     }
 
@@ -6222,8 +6237,8 @@ bfin_expand_binop_builtin (enum insn_code icode, tree exp, rtx target,
   rtx pat;
   tree arg0 = CALL_EXPR_ARG (exp, 0);
   tree arg1 = CALL_EXPR_ARG (exp, 1);
-  rtx op0 = expand_expr (arg0, NULL_RTX, VOIDmode, 0);
-  rtx op1 = expand_expr (arg1, NULL_RTX, VOIDmode, 0);
+  rtx op0 = expand_normal (arg0);
+  rtx op1 = expand_normal (arg1);
   enum machine_mode op0mode = GET_MODE (op0);
   enum machine_mode op1mode = GET_MODE (op1);
   enum machine_mode tmode = insn_data[icode].operand[0].mode;
@@ -6279,7 +6294,7 @@ bfin_expand_unop_builtin (enum insn_code icode, tree exp,
 {
   rtx pat;
   tree arg0 = CALL_EXPR_ARG (exp, 0);
-  rtx op0 = expand_expr (arg0, NULL_RTX, VOIDmode, 0);
+  rtx op0 = expand_normal (arg0);
   enum machine_mode op0mode = GET_MODE (op0);
   enum machine_mode tmode = insn_data[icode].operand[0].mode;
   enum machine_mode mode0 = insn_data[icode].operand[1].mode;
@@ -6343,7 +6358,7 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
     case BFIN_BUILTIN_DIFFLH_2X16:
     case BFIN_BUILTIN_SUM_2X16:
       arg0 = CALL_EXPR_ARG (exp, 0);
-      op0 = expand_expr (arg0, NULL_RTX, VOIDmode, 0);
+      op0 = expand_normal (arg0);
       icode = (fcode == BFIN_BUILTIN_DIFFHL_2X16 ? CODE_FOR_subhilov2hi3
 	       : fcode == BFIN_BUILTIN_DIFFLH_2X16 ? CODE_FOR_sublohiv2hi3
 	       : CODE_FOR_ssaddhilov2hi3);
@@ -6371,8 +6386,8 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
     case BFIN_BUILTIN_MULT_1X32X32NS:
       arg0 = CALL_EXPR_ARG (exp, 0);
       arg1 = CALL_EXPR_ARG (exp, 1);
-      op0 = expand_expr (arg0, NULL_RTX, VOIDmode, 0);
-      op1 = expand_expr (arg1, NULL_RTX, VOIDmode, 0);
+      op0 = expand_normal (arg0);
+      op1 = expand_normal (arg1);
       if (! target
 	  || !register_operand (target, SImode))
 	target = gen_reg_rtx (SImode);
@@ -6430,10 +6445,11 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
     case BFIN_BUILTIN_CPLX_MUL_16_S40:
       arg0 = CALL_EXPR_ARG (exp, 0);
       arg1 = CALL_EXPR_ARG (exp, 1);
-      op0 = expand_expr (arg0, NULL_RTX, VOIDmode, 0);
-      op1 = expand_expr (arg1, NULL_RTX, VOIDmode, 0);
+      op0 = expand_normal (arg0);
+      op1 = expand_normal (arg1);
       accvec = gen_reg_rtx (V2PDImode);
       icode = CODE_FOR_flag_macv2hi_parts;
+      tmode = insn_data[icode].operand[0].mode;
 
       if (! target
 	  || GET_MODE (target) != V2HImode
@@ -6466,11 +6482,12 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
       arg0 = CALL_EXPR_ARG (exp, 0);
       arg1 = CALL_EXPR_ARG (exp, 1);
       arg2 = CALL_EXPR_ARG (exp, 2);
-      op0 = expand_expr (arg0, NULL_RTX, VOIDmode, 0);
-      op1 = expand_expr (arg1, NULL_RTX, VOIDmode, 0);
-      op2 = expand_expr (arg2, NULL_RTX, VOIDmode, 0);
+      op0 = expand_normal (arg0);
+      op1 = expand_normal (arg1);
+      op2 = expand_normal (arg2);
       accvec = gen_reg_rtx (V2PDImode);
       icode = CODE_FOR_flag_macv2hi_parts;
+      tmode = insn_data[icode].operand[0].mode;
 
       if (! target
 	  || GET_MODE (target) != V2HImode
@@ -6520,7 +6537,7 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
 
     case BFIN_BUILTIN_CPLX_SQU:
       arg0 = CALL_EXPR_ARG (exp, 0);
-      op0 = expand_expr (arg0, NULL_RTX, VOIDmode, 0);
+      op0 = expand_normal (arg0);
       accvec = gen_reg_rtx (V2PDImode);
       icode = CODE_FOR_flag_mulv2hi;
       tmp1 = gen_reg_rtx (V2HImode);
@@ -6560,6 +6577,21 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
       return bfin_expand_unop_builtin (d->icode, exp, target);
 
   gcc_unreachable ();
+}
+
+static void
+bfin_conditional_register_usage (void)
+{
+  /* initialize condition code flag register rtx */
+  bfin_cc_rtx = gen_rtx_REG (BImode, REG_CC);
+  bfin_rets_rtx = gen_rtx_REG (Pmode, REG_RETS);
+  if (TARGET_FDPIC)
+    call_used_regs[FDPIC_REGNO] = 1;
+  if (!TARGET_FDPIC && flag_pic)
+    {
+      fixed_regs[PIC_OFFSET_TABLE_REGNUM] = 1;
+      call_used_regs[PIC_OFFSET_TABLE_REGNUM] = 1;
+    }
 }
 
 #undef TARGET_INIT_BUILTINS
@@ -6612,6 +6644,12 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
 #undef TARGET_ARG_PARTIAL_BYTES
 #define TARGET_ARG_PARTIAL_BYTES bfin_arg_partial_bytes
 
+#undef TARGET_FUNCTION_ARG
+#define TARGET_FUNCTION_ARG bfin_function_arg
+
+#undef TARGET_FUNCTION_ARG_ADVANCE
+#define TARGET_FUNCTION_ARG_ADVANCE bfin_function_arg_advance
+
 #undef TARGET_PASS_BY_REFERENCE
 #define TARGET_PASS_BY_REFERENCE bfin_pass_by_reference
 
@@ -6627,11 +6665,17 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
 #undef TARGET_HANDLE_OPTION
 #define TARGET_HANDLE_OPTION bfin_handle_option
 
+#undef TARGET_OPTION_OVERRIDE
+#define TARGET_OPTION_OVERRIDE bfin_option_override
+
 #undef TARGET_DEFAULT_TARGET_FLAGS
 #define TARGET_DEFAULT_TARGET_FLAGS TARGET_DEFAULT
 
 #undef TARGET_SECONDARY_RELOAD
 #define TARGET_SECONDARY_RELOAD bfin_secondary_reload
+
+#undef TARGET_CLASS_LIKELY_SPILLED_P
+#define TARGET_CLASS_LIKELY_SPILLED_P bfin_class_likely_spilled_p
 
 #undef TARGET_DELEGITIMIZE_ADDRESS
 #define TARGET_DELEGITIMIZE_ADDRESS bfin_delegitimize_address
@@ -6650,6 +6694,9 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
 
 #undef TARGET_CAN_ELIMINATE
 #define TARGET_CAN_ELIMINATE bfin_can_eliminate
+
+#undef TARGET_CONDITIONAL_REGISTER_USAGE
+#define TARGET_CONDITIONAL_REGISTER_USAGE bfin_conditional_register_usage
 
 #undef TARGET_ASM_TRAMPOLINE_TEMPLATE
 #define TARGET_ASM_TRAMPOLINE_TEMPLATE bfin_asm_trampoline_template

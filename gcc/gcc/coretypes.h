@@ -64,11 +64,14 @@ typedef const union tree_node *const_tree;
 typedef const union gimple_statement_d *const_gimple;
 union section;
 typedef union section section;
+struct gcc_options;
 struct cl_target_option;
 struct cl_optimization;
 struct cl_option;
 struct cl_decoded_option;
 struct cl_option_handlers;
+struct diagnostic_context;
+typedef struct diagnostic_context diagnostic_context;
 struct gimple_seq_d;
 typedef struct gimple_seq_d *gimple_seq;
 typedef const struct gimple_seq_d *const_gimple_seq;
@@ -106,6 +109,16 @@ enum tls_model {
   TLS_MODEL_LOCAL_DYNAMIC,
   TLS_MODEL_INITIAL_EXEC,
   TLS_MODEL_LOCAL_EXEC
+};
+
+/* Types of unwind/exception handling info that can be generated.  */
+
+enum unwind_info_type
+{
+  UI_NONE,
+  UI_SJLJ,
+  UI_DWARF2,
+  UI_TARGET
 };
 
 struct edge_def;

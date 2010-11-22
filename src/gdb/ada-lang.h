@@ -181,9 +181,7 @@ extern void ada_printstr (struct ui_file *, struct type *, const gdb_byte *,
 			  const struct value_print_options *);
 
 struct value *ada_convert_actual (struct value *actual,
-                                  struct type *formal_type0,
-				  struct gdbarch *gdbarch,
-                                  CORE_ADDR *sp);
+                                  struct type *formal_type0);
 
 extern struct value *ada_value_subscript (struct value *, int,
                                           struct value **);
@@ -377,6 +375,10 @@ extern char *ada_main_name (void);
 extern int valid_task_id (int);
 
 extern int ada_get_task_number (ptid_t);
+
+typedef void (ada_task_list_iterator_ftype) (struct ada_task_info *task);
+extern void iterate_over_live_ada_tasks
+  (ada_task_list_iterator_ftype *iterator);
 
 extern int ada_build_task_list (int warn_if_null);
 

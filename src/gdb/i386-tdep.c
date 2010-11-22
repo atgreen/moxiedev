@@ -165,7 +165,7 @@ i386_dword_regnum_p (struct gdbarch *gdbarch, int regnum)
   return regnum >= 0 && regnum < tdep->num_dword_regs;
 }
 
-int
+static int
 i386_ymmh_regnum_p (struct gdbarch *gdbarch, int regnum)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
@@ -2417,7 +2417,7 @@ i386_ymm_type (struct gdbarch *gdbarch)
 				   init_vector_type (bt->builtin_int128, 2));
 
       TYPE_VECTOR (t) = 1;
-      TYPE_NAME (t) = "builtin_type_vec128i";
+      TYPE_NAME (t) = "builtin_type_vec256i";
       tdep->i386_ymm_type = t;
     }
 
@@ -7113,7 +7113,7 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   ymm0_regnum = tdep->ax_regnum + tdep->num_word_regs;
   if (tdep->num_dword_regs)
     {
-      /* Support dword pseudo-registesr if it hasn't been disabled,  */
+      /* Support dword pseudo-register if it hasn't been disabled.  */
       tdep->eax_regnum = ymm0_regnum;
       ymm0_regnum += tdep->num_dword_regs;
     }
@@ -7123,7 +7123,7 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   mm0_regnum = ymm0_regnum;
   if (tdep->num_ymm_regs)
     {
-      /* Support YMM pseudo-registesr if it is available,  */
+      /* Support YMM pseudo-register if it is available.  */
       tdep->ymm0_regnum = ymm0_regnum;
       mm0_regnum += tdep->num_ymm_regs;
     }
@@ -7132,7 +7132,7 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   if (tdep->num_mmx_regs != 0)
     {
-      /* Support MMX pseudo-registesr if MMX hasn't been disabled,  */
+      /* Support MMX pseudo-register if MMX hasn't been disabled.  */
       tdep->mm0_regnum = mm0_regnum;
     }
   else

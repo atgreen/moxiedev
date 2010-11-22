@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-27T17:27:06.727889Z
-162578
+2010-11-11T13:10:49.521801Z
+166599
 paolo
 
 
@@ -29,19 +29,103 @@ paolo
 owner_less
 dir
 
-hash
-dir
-
-decay
-dir
-
 duration
+dir
+
+enable_shared_from_this
+dir
+
+tuple
+dir
+
+pair
+dir
+
+reference_wrapper
+dir
+
+duration_cast
+dir
+
+enable_if
+dir
+
+has_nothrow_default_constructor
+dir
+
+move
+dir
+
+make_signed
+dir
+
+is_rvalue_reference
+dir
+
+make_unsigned
+dir
+
+declval
+dir
+
+is_pod
+dir
+
+ratio
+dir
+
+clocks
+dir
+
+has_trivial_default_constructor
+dir
+
+uses_allocator
+dir
+
+time_point_cast
+dir
+
+add_rvalue_reference
+dir
+
+bad_function_call
+dir
+
+is_reference
+dir
+
+shared_ptr
+dir
+
+auto_ptr
+dir
+
+conditional
+dir
+
+has_trivial_copy_constructor
+dir
+
+is_signed
+dir
+
+is_unsigned
+dir
+
+typeindex
+dir
+
+addressof
+dir
+
+hash
 dir
 
 function
 dir
 
-enable_shared_from_this
+decay
 dir
 
 raw_storage_iterator
@@ -81,22 +165,13 @@ jakub
 
 1160
 
-tuple
-dir
-
-pair
+is_nothrow_constructible
 dir
 
 unique_ptr
 dir
 
-is_nothrow_constructible
-dir
-
 function_objects
-dir
-
-reference_wrapper
 dir
 
 is_integral
@@ -105,34 +180,16 @@ dir
 is_lvalue_reference
 dir
 
-enable_if
-dir
-
-has_nothrow_default_constructor
-dir
-
 is_trivial
 dir
 
-move
-dir
-
-make_signed
+default_delete
 dir
 
 time_point
 dir
 
-is_rvalue_reference
-dir
-
 is_convertible
-dir
-
-make_unsigned
-dir
-
-declval
 dir
 
 remove_reference
@@ -141,61 +198,34 @@ dir
 bind
 dir
 
-is_pod
-dir
-
 is_explicitly_convertible
-dir
-
-has_trivial_default_constructor
 dir
 
 add_lvalue_reference
 dir
 
-clocks
-dir
-
-ratio
-dir
-
 allocator
-dir
-
-add_rvalue_reference
 dir
 
 specialized_algorithms
 dir
 
-bad_function_call
+aligned_storage
 dir
 
-aligned_storage
+is_literal_type
 dir
 
 is_standard_layout
 dir
 
-common_type
-dir
-
-identity
-dir
-
-is_reference
-dir
-
 has_nothrow_copy_assign
 dir
 
+common_type
+dir
+
 has_nothrow_copy_constructor
-dir
-
-shared_ptr
-dir
-
-auto_ptr
 dir
 
 temporary_buffer.cc
@@ -232,31 +262,16 @@ jakub
 
 1429
 
-conditional
-dir
-
 has_trivial_copy_assign
-dir
-
-is_signed
-dir
-
-has_trivial_copy_constructor
 dir
 
 forward
 dir
 
-is_unsigned
-dir
-
-addressof
+is_constructible
 dir
 
 headers
-dir
-
-is_constructible
 dir
 
 weak_ptr

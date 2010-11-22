@@ -413,7 +413,8 @@ compute_complex_assign_jump_func (struct ipa_node_params *info,
   offset += mem_ref_offset (op1).low * BITS_PER_UNIT;
   op1 = TREE_OPERAND (op1, 0);
   if (TREE_CODE (op1) != SSA_NAME
-      || !SSA_NAME_IS_DEFAULT_DEF (op1))
+      || !SSA_NAME_IS_DEFAULT_DEF (op1)
+      || offset < 0)
     return;
 
   index = ipa_get_param_decl_index (info, SSA_NAME_VAR (op1));
@@ -490,7 +491,8 @@ compute_complex_ancestor_jump_func (struct ipa_node_params *info,
   offset += mem_ref_offset (expr).low * BITS_PER_UNIT;
   parm = TREE_OPERAND (expr, 0);
   if (TREE_CODE (parm) != SSA_NAME
-      || !SSA_NAME_IS_DEFAULT_DEF (parm))
+      || !SSA_NAME_IS_DEFAULT_DEF (parm)
+      || offset < 0)
     return;
 
   index = ipa_get_param_decl_index (info, SSA_NAME_VAR (parm));
@@ -888,7 +890,7 @@ ipa_compute_jump_functions (struct cgraph_node *node,
     {
       /* We do not need to bother analyzing calls to unknown
 	 functions unless they may become known during lto/whopr.  */
-      if (!cs->callee->analyzed && !flag_lto && !flag_whopr)
+      if (!cs->callee->analyzed && !flag_lto)
 	continue;
       ipa_count_arguments (cs);
       /* If the descriptor of the callee is not initialized yet, we have to do
@@ -916,23 +918,46 @@ ipa_compute_jump_functions (struct cgraph_node *node,
 static tree
 ipa_get_member_ptr_load_param (tree rhs, bool use_delta)
 {
-  tree rec, fld;
-  tree ptr_field;
-  tree delta_field;
+  tree rec, ref_field, ref_offset, fld, fld_offset, ptr_field, delta_field;
 
-  if (TREE_CODE (rhs) != COMPONENT_REF)
+  if (TREE_CODE (rhs) == COMPONENT_REF)
+    {
+      ref_field = TREE_OPERAND (rhs, 1);
+      rhs = TREE_OPERAND (rhs, 0);
+    }
+  else
+    ref_field = NULL_TREE;
+  if (TREE_CODE (rhs) != MEM_REF)
     return NULL_TREE;
-
   rec = TREE_OPERAND (rhs, 0);
+  if (TREE_CODE (rec) != ADDR_EXPR)
+    return NULL_TREE;
+  rec = TREE_OPERAND (rec, 0);
   if (TREE_CODE (rec) != PARM_DECL
       || !type_like_member_ptr_p (TREE_TYPE (rec), &ptr_field, &delta_field))
     return NULL_TREE;
 
-  fld = TREE_OPERAND (rhs, 1);
-  if (use_delta ? (fld == delta_field) : (fld == ptr_field))
-    return rec;
+  ref_offset = TREE_OPERAND (rhs, 1);
+
+  if (ref_field)
+    {
+      if (integer_nonzerop (ref_offset))
+	return NULL_TREE;
+
+      if (use_delta)
+	fld = delta_field;
+      else
+	fld = ptr_field;
+
+      return ref_field == fld ? rec : NULL_TREE;
+    }
+
+  if (use_delta)
+    fld_offset = byte_position (delta_field);
   else
-    return NULL_TREE;
+    fld_offset = byte_position (ptr_field);
+
+  return tree_int_cst_equal (ref_offset, fld_offset) ? rec : NULL_TREE;
 }
 
 /* If STMT looks like a statement loading a value from a member pointer formal
@@ -1002,7 +1027,12 @@ ipa_note_param_call (struct cgraph_node *node, int param_index, gimple stmt,
        f$__delta_5 = f.__delta;
        f$__pfn_24 = f.__pfn;
 
-     ...
+   or
+     <bb 2>:
+       f$__delta_5 = MEM[(struct  *)&f];
+       f$__pfn_24 = MEM[(struct  *)&f + 4B];
+
+   and a few lines below:
 
      <bb 5>
        D.2496_3 = (int) f$__pfn_24;
@@ -1430,8 +1460,8 @@ update_jump_functions_after_inlining (struct cgraph_edge *cs,
 /* If TARGET is an addr_expr of a function declaration, make it the destination
    of an indirect edge IE and return the edge.  Otherwise, return NULL.  */
 
-static struct cgraph_edge *
-make_edge_direct_to_target (struct cgraph_edge *ie, tree target)
+struct cgraph_edge *
+ipa_make_edge_direct_to_target (struct cgraph_edge *ie, tree target)
 {
   struct cgraph_node *callee;
 
@@ -1443,7 +1473,7 @@ make_edge_direct_to_target (struct cgraph_edge *ie, tree target)
   callee = cgraph_node (target);
   if (!callee)
     return NULL;
-
+  ipa_check_create_node_params ();
   cgraph_make_edge_direct (ie, callee);
   if (dump_file)
     {
@@ -1484,7 +1514,7 @@ try_make_edge_direct_simple_call (struct cgraph_edge *ie,
   else
     return NULL;
 
-  return make_edge_direct_to_target (ie, target);
+  return ipa_make_edge_direct_to_target (ie, target);
 }
 
 /* Try to find a destination for indirect edge IE that corresponds to a
@@ -1525,7 +1555,7 @@ try_make_edge_direct_virtual_call (struct cgraph_edge *ie,
     return NULL;
 
   if (target)
-    return make_edge_direct_to_target (ie, target);
+    return ipa_make_edge_direct_to_target (ie, target);
   else
     return NULL;
 }
@@ -1541,11 +1571,12 @@ update_indirect_edges_after_inlining (struct cgraph_edge *cs,
 				      struct cgraph_node *node,
 				      VEC (cgraph_edge_p, heap) **new_edges)
 {
-  struct ipa_edge_args *top = IPA_EDGE_REF (cs);
+  struct ipa_edge_args *top;
   struct cgraph_edge *ie, *next_ie, *new_direct_edge;
   bool res = false;
 
   ipa_check_create_edge_args ();
+  top = IPA_EDGE_REF (cs);
 
   for (ie = node->indirect_calls; ie; ie = next_ie)
     {
@@ -1672,9 +1703,7 @@ ipa_free_all_edge_args (void)
   int i;
   struct ipa_edge_args *args;
 
-  for (i = 0;
-       VEC_iterate (ipa_edge_args_t, ipa_edge_args_vector, i, args);
-       i++)
+  FOR_EACH_VEC_ELT (ipa_edge_args_t, ipa_edge_args_vector, i, args)
     ipa_free_edge_args_substructures (args);
 
   VEC_free (ipa_edge_args_t, gc, ipa_edge_args_vector);
@@ -1701,9 +1730,7 @@ ipa_free_all_node_params (void)
   int i;
   struct ipa_node_params *info;
 
-  for (i = 0;
-       VEC_iterate (ipa_node_params_t, ipa_node_params_vector, i, info);
-       i++)
+  FOR_EACH_VEC_ELT (ipa_node_params_t, ipa_node_params_vector, i, info)
     ipa_free_node_params_substructures (info);
 
   VEC_free (ipa_node_params_t, heap, ipa_node_params_vector);
@@ -1794,7 +1821,7 @@ ipa_node_duplication_hook (struct cgraph_node *src, struct cgraph_node *dst,
 			   __attribute__((unused)) void *data)
 {
   struct ipa_node_params *old_info, *new_info;
-  int param_count;
+  int param_count, i;
 
   ipa_check_create_node_params ();
   old_info = IPA_NODE_REF (src);
@@ -1805,8 +1832,15 @@ ipa_node_duplication_hook (struct cgraph_node *src, struct cgraph_node *dst,
   new_info->params = (struct ipa_param_descriptor *)
     duplicate_array (old_info->params,
 		     sizeof (struct ipa_param_descriptor) * param_count);
+  for (i = 0; i < param_count; i++)
+    new_info->params[i].types = VEC_copy (tree, heap,
+ 					  old_info->params[i].types);
   new_info->ipcp_orig_node = old_info->ipcp_orig_node;
   new_info->count_scale = old_info->count_scale;
+
+  new_info->called_with_var_arguments = old_info->called_with_var_arguments;
+  new_info->uses_analysis_done = old_info->uses_analysis_done;
+  new_info->node_enqueued = old_info->node_enqueued;
 }
 
 /* Register our cgraph hooks if they are not already there.  */
@@ -2077,7 +2111,7 @@ ipa_modify_formal_parameters (tree fndecl, ipa_parm_adjustment_vec adjustments,
        || (VEC_index (ipa_parm_adjustment_t, adjustments, 0)->copy_param
 	 && VEC_index (ipa_parm_adjustment_t, adjustments, 0)->base_index == 0))
     {
-      new_type = copy_node (orig_type);
+      new_type = build_distinct_type_copy (orig_type);
       TYPE_ARG_TYPES (new_type) = new_reversed;
     }
   else
@@ -2112,6 +2146,7 @@ ipa_modify_formal_parameters (tree fndecl, ipa_parm_adjustment_vec adjustments,
     }
 
   TREE_TYPE (fndecl) = new_type;
+  DECL_VIRTUAL_P (fndecl) = 0;
   if (otypes)
     VEC_free (tree, heap, otypes);
   VEC_free (tree, heap, oparms);
@@ -2149,40 +2184,77 @@ ipa_modify_call_arguments (struct cgraph_edge *cs, gimple stmt,
 	}
       else if (!adj->remove_param)
 	{
-	  tree expr, orig_expr;
-	  bool allow_ptr, repl_found;
+	  tree expr, base, off;
+	  location_t loc;
 
-	  orig_expr = expr = gimple_call_arg (stmt, adj->base_index);
-	  if (TREE_CODE (expr) == ADDR_EXPR)
-	    {
-	      allow_ptr = false;
-	      expr = TREE_OPERAND (expr, 0);
-	    }
-	  else
-	    allow_ptr = true;
+	  /* We create a new parameter out of the value of the old one, we can
+	     do the following kind of transformations:
 
-	  repl_found = build_ref_for_offset (&expr, TREE_TYPE (expr),
-					     adj->offset, adj->type,
-					     allow_ptr);
-	  if (repl_found)
-	    {
-	      if (adj->by_ref)
-		expr = build_fold_addr_expr (expr);
-	    }
+	     - A scalar passed by reference is converted to a scalar passed by
+               value.  (adj->by_ref is false and the type of the original
+               actual argument is a pointer to a scalar).
+
+             - A part of an aggregate is passed instead of the whole aggregate.
+               The part can be passed either by value or by reference, this is
+               determined by value of adj->by_ref.  Moreover, the code below
+               handles both situations when the original aggregate is passed by
+               value (its type is not a pointer) and when it is passed by
+               reference (it is a pointer to an aggregate).
+
+	     When the new argument is passed by reference (adj->by_ref is true)
+	     it must be a part of an aggregate and therefore we form it by
+	     simply taking the address of a reference inside the original
+	     aggregate.  */
+
+	  gcc_checking_assert (adj->offset % BITS_PER_UNIT == 0);
+	  base = gimple_call_arg (stmt, adj->base_index);
+	  loc = EXPR_LOCATION (base);
+
+	  if (TREE_CODE (base) == ADDR_EXPR
+	      && DECL_P (TREE_OPERAND (base, 0)))
+	    off = build_int_cst (TREE_TYPE (base),
+				 adj->offset / BITS_PER_UNIT);
+	  else if (TREE_CODE (base) != ADDR_EXPR
+		   && POINTER_TYPE_P (TREE_TYPE (base)))
+	    off = build_int_cst (TREE_TYPE (base), adj->offset / BITS_PER_UNIT);
 	  else
 	    {
-	      tree ptrtype = build_pointer_type (adj->type);
-	      expr = orig_expr;
-	      if (!POINTER_TYPE_P (TREE_TYPE (expr)))
-		expr = build_fold_addr_expr (expr);
-	      if (!useless_type_conversion_p (ptrtype, TREE_TYPE (expr)))
-		expr = fold_convert (ptrtype, expr);
-	      expr = fold_build2 (POINTER_PLUS_EXPR, ptrtype, expr,
-				  build_int_cst (sizetype,
-						 adj->offset / BITS_PER_UNIT));
-	      if (!adj->by_ref)
-		expr = fold_build1 (INDIRECT_REF, adj->type, expr);
+	      HOST_WIDE_INT base_offset;
+	      tree prev_base;
+
+	      if (TREE_CODE (base) == ADDR_EXPR)
+		base = TREE_OPERAND (base, 0);
+	      prev_base = base;
+	      base = get_addr_base_and_unit_offset (base, &base_offset);
+	      /* Aggregate arguments can have non-invariant addresses.  */
+	      if (!base)
+		{
+		  base = build_fold_addr_expr (prev_base);
+		  off = build_int_cst (reference_alias_ptr_type (prev_base),
+				       adj->offset / BITS_PER_UNIT);
+		}
+	      else if (TREE_CODE (base) == MEM_REF)
+		{
+		  off = build_int_cst (TREE_TYPE (TREE_OPERAND (base, 1)),
+				       base_offset
+				       + adj->offset / BITS_PER_UNIT);
+		  off = int_const_binop (PLUS_EXPR, TREE_OPERAND (base, 1),
+					 off, 0);
+		  base = TREE_OPERAND (base, 0);
+		}
+	      else
+		{
+		  off = build_int_cst (reference_alias_ptr_type (prev_base),
+				       base_offset
+				       + adj->offset / BITS_PER_UNIT);
+		  base = build_fold_addr_expr (base);
+		}
 	    }
+
+	  expr = fold_build2_loc (loc, MEM_REF, adj->type, base, off);
+	  if (adj->by_ref)
+	    expr = build_fold_addr_expr (expr);
+
 	  expr = force_gimple_operand_gsi (&gsi, expr,
 					   adj->by_ref
 					   || is_gimple_reg_type (adj->type),

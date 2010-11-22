@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/vect/costmodel
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-05T10:41:25.078884Z
-161827
-irar
+2010-11-22T12:16:52.158952Z
+167028
+ebotcazou
 
 
 

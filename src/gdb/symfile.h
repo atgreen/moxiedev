@@ -171,6 +171,15 @@ struct quick_symbol_functions
 				   int kind, const char *name,
 				   domain_enum domain);
 
+  /* This is called to expand symbol tables before looking up a
+     symbol.  A backend can choose to implement this and then have its
+     `lookup_symbol' hook always return NULL, or the reverse.  (It
+     doesn't make sense to implement both.)  The arguments are as for
+     `lookup_symbol'.  */
+  void (*pre_expand_symtabs_matching) (struct objfile *objfile,
+				       int kind, const char *name,
+				       domain_enum domain);
+
   /* Print statistics about any indices loaded for OBJFILE.  The
      statistics should be printed to gdb_stdout.  This is used for
      "maint print statistics".  */
@@ -201,23 +210,33 @@ struct quick_symbol_functions
 
   /* Return the file name of the file holding the symbol in OBJFILE
      named NAME.  If no such symbol exists in OBJFILE, return NULL.  */
-  char *(*find_symbol_file) (struct objfile *objfile, const char *name);
+  const char *(*find_symbol_file) (struct objfile *objfile, const char *name);
 
-  /* This method is specific to Ada.  It walks the partial symbol
-     tables of OBJFILE looking for a name match.  WILD_MATCH and
-     IS_NAME_SUFFIX are predicate functions that the implementation
-     may call to check for a match.
+  /* Find global or static symbols in all tables that are in NAMESPACE 
+     and for which MATCH (symbol name, NAME) == 0, passing each to 
+     CALLBACK, reading in partial symbol symbol tables as needed.  Look
+     through global symbols if GLOBAL and otherwise static symbols.  
+     Passes NAME, NAMESPACE, and DATA to CALLBACK with each symbol
+     found.  After each block is processed, passes NULL to CALLBACK.
+     MATCH must be weaker than strcmp_iw in the sense that
+     strcmp_iw(x,y) == 0 --> MATCH(x,y) == 0.  ORDERED_COMPARE, if
+     non-null, must be an ordering relation compatible with strcmp_iw
+     in the sense that  
+            strcmp(x,y) == 0 --> ORDERED_COMPARE(x,y) == 0 
+     and 
+            strcmp(x,y) <= 0 --> ORDERED_COMPARE(x,y) <= 0
+     (allowing strcmp(x,y) < 0 while ORDERED_COMPARE(x, y) == 0). 
+     CALLBACK returns 0 to indicate that the scan should continue, or
+     non-zero to indicate that the scan should be terminated.  */
 
-     This function is completely ad hoc and new implementations should
-     refer to the psymtab implementation to see what to do.  */
-  void (*map_ada_symtabs) (struct objfile *objfile,
-			   int (*wild_match) (const char *, int, const char *),
-			   int (*is_name_suffix) (const char *),
-			   void (*callback) (struct objfile *,
-					     struct symtab *, void *),
-			   const char *name, int global,
-			   domain_enum namespace, int wild,
-			   void *data);
+  void (*map_matching_symbols) (const char *name, domain_enum namespace,
+				struct objfile *, int global,
+				int (*callback) (struct block *,
+						 struct symbol *, void *),
+				void *data,
+				int (*match) (const char *, const char *),
+				int (*ordered_compare) (const char *,
+							const char *));
 
   /* Expand all symbol tables in OBJFILE matching some criteria.
 
@@ -336,14 +355,6 @@ struct sym_fns
   /* The "quick" (aka partial) symbol functions for this symbol
      reader.  */
   const struct quick_symbol_functions *qf;
-
-  /* Finds the next struct sym_fns.  They are allocated and
-     initialized in whatever module implements the functions pointed
-     to; an initializer calls add_symtab_fns to add them to the global
-     chain.  */
-
-  struct sym_fns *next;
-
 };
 
 extern struct section_addr_info *
@@ -373,25 +384,9 @@ extern struct symfile_segment_data *default_symfile_segments (bfd *abfd);
 extern bfd_byte *default_symfile_relocate (struct objfile *objfile,
                                            asection *sectp, bfd_byte *buf);
 
-extern void extend_psymbol_list (struct psymbol_allocation_list *,
-				 struct objfile *);
+extern struct symtab *allocate_symtab (const char *, struct objfile *);
 
-/* Add any kind of symbol to a psymbol_allocation_list.  */
-
-/* #include "demangle.h" */
-
-extern const
-struct partial_symbol *add_psymbol_to_list (char *, int, int, domain_enum,
-					    enum address_class,
-					    struct psymbol_allocation_list *,
-					    long, CORE_ADDR,
-					    enum language, struct objfile *);
-
-extern void init_psymbol_list (struct objfile *, int);
-
-extern struct symtab *allocate_symtab (char *, struct objfile *);
-
-extern void add_symtab_fns (struct sym_fns *);
+extern void add_symtab_fns (const struct sym_fns *);
 
 /* This enum encodes bit-flags passed as ADD_FLAGS parameter to
    syms_from_objfile, symbol_file_add, etc.  */
@@ -446,12 +441,6 @@ extern struct section_addr_info
 extern void free_section_addr_info (struct section_addr_info *);
 
 
-extern struct partial_symtab *start_psymtab_common (struct objfile *,
-						    struct section_offsets *,
-						    const char *, CORE_ADDR,
-						    struct partial_symbol **,
-						    struct partial_symbol **);
-
 /* Make a copy of the string at PTR with SIZE characters in the symbol
    obstack (and add a null character at the end in the copy).  Returns
    the address of the copy.  */
@@ -490,11 +479,6 @@ extern int auto_solib_limit;
 /* From symfile.c */
 
 extern void set_initial_language (void);
-
-extern struct partial_symtab *allocate_psymtab (const char *,
-						struct objfile *);
-
-extern void discard_psymtab (struct partial_symtab *);
 
 extern void find_lowest_section (bfd *, asection *, void *);
 
@@ -566,6 +550,7 @@ extern struct cleanup *increment_reading_symtab (void);
 
 extern int dwarf2_has_info (struct objfile *);
 
+extern int dwarf2_initialize_objfile (struct objfile *);
 extern void dwarf2_build_psymtabs (struct objfile *);
 extern void dwarf2_build_frame_info (struct objfile *);
 

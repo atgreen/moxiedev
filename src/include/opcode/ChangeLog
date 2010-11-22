@@ -1,3 +1,52 @@
+2010-11-15  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	PR gas/12198
+	* arm.h (ARM_AEXT_V6M_ONLY): New define.
+	(ARM_AEXT_V6M): Rewrite in terms of ARM_AEXT_V6M_ONLY.
+	(ARM_ARCH_V6M_ONLY): New define.
+
+2010-11-11  Mingming Sun  <mingm.sun@gmail.com>
+
+	* mips.h (INSN_LOONGSON_3A): Defined.
+	(CPU_LOONGSON_3A): Defined.
+	(OPCODE_IS_MEMBER): Add LOONGSON_3A.
+
+2010-10-09  Matt Rice  <ratmice@gmail.com>
+
+	* cgen.h (CGEN_ATTR, CGEN_ATTR_TYPE): Rename bool attribute to bool_.
+	(CGEN_ATTR_BOOLS, CGEN_ATTR_CGEN_INSN_ALIAS_VALUE): Likewise.
+
+2010-09-23  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* arm.h (ARM_EXT_VIRT): New define.
+	(ARM_ARCH_V7A_IDIV_MP_SEC): Rename...
+	(ARM_ARCH_V7A_IDIV_MP_SEC_VIRT): ...to this and include Virtualization
+	Extensions.
+
+2010-09-23  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* arm.h (ARM_AEXT_ADIV): New define.
+	(ARM_ARCH_V7A_IDIV_MP_SEC): Likewise.
+
+2010-09-23  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* arm.h (ARM_EXT_OS): New define.
+	(ARM_AEXT_V6SM): Likewise.
+	(ARM_ARCH_V6SM): Likewise.
+
+2010-09-23  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* arm.h (ARM_EXT_MP): Add.
+	(ARM_ARCH_V7A_MP): Likewise.
+
+2010-09-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin.h: Declare pseudoChr structs/defines.
+
+2010-09-21  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin.h: Strip trailing whitespace.
+
 2010-07-29  DJ Delorie  <dj@redhat.com>
 
 	* rx.h (RX_Operand_Type): Add TwoReg.

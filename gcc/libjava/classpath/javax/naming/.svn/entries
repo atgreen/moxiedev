@@ -1,7 +1,7 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/naming
 svn://gcc.gnu.org/svn/gcc
 
@@ -440,9 +440,6 @@ tromey
 
 8313
 
-directory
-dir
-
 NotContextException.java
 file
 
@@ -477,39 +474,8 @@ mark
 
 2031
 
-AuthenticationNotSupportedException.java
-file
-
-
-
-
-2009-04-24T17:47:17.000000Z
-9670f075072127ad94ca5bfb825e0cae
-2006-03-10T21:46:48.115162Z
-111942
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2109
+directory
+dir
 
 CompoundName.java
 file
@@ -544,6 +510,40 @@ doko
 
 
 14358
+
+AuthenticationNotSupportedException.java
+file
+
+
+
+
+2009-04-24T17:47:17.000000Z
+9670f075072127ad94ca5bfb825e0cae
+2006-03-10T21:46:48.115162Z
+111942
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2109
 
 ConfigurationException.java
 file
@@ -613,40 +613,6 @@ doko
 
 9529
 
-AuthenticationException.java
-file
-
-
-
-
-2009-04-24T17:47:17.000000Z
-63831a8765a684975e30db208ac1f4b8
-2006-03-10T21:46:48.115162Z
-111942
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2057
-
 InitialContext.java
 file
 
@@ -681,20 +647,17 @@ doko
 
 16546
 
-event
-dir
-
-CannotProceedException.java
+AuthenticationException.java
 file
 
 
 
 
 2009-04-24T17:47:17.000000Z
-f05d39ccb61edfea0579eef15f492c3f
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+63831a8765a684975e30db208ac1f4b8
+2006-03-10T21:46:48.115162Z
+111942
+mark
 
 
 
@@ -716,7 +679,10 @@ tromey
 
 
 
-2959
+2057
+
+event
+dir
 
 CompositeName.java
 file
@@ -752,6 +718,40 @@ doko
 
 8947
 
+CannotProceedException.java
+file
+
+
+
+
+2009-04-24T17:47:17.000000Z
+f05d39ccb61edfea0579eef15f492c3f
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2959
+
 NoPermissionException.java
 file
 
@@ -786,40 +786,6 @@ mark
 
 2048
 
-OperationNotSupportedException.java
-file
-
-
-
-
-2009-04-24T17:47:17.000000Z
-99eb0896b0822fcb737b8d9224f281c8
-2006-03-10T21:46:48.115162Z
-111942
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2064
-
 LinkLoopException.java
 file
 
@@ -853,6 +819,40 @@ mark
 
 
 2025
+
+OperationNotSupportedException.java
+file
+
+
+
+
+2009-04-24T17:47:17.000000Z
+99eb0896b0822fcb737b8d9224f281c8
+2006-03-10T21:46:48.115162Z
+111942
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2064
 
 RefAddr.java
 file

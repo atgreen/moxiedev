@@ -90,8 +90,11 @@
 #undef iconv_t
 #define iconv_t int
 #undef iconv_open
+#define iconv_open phony_iconv_open
 #undef iconv
+#define iconv phony_iconv
 #undef iconv_close
+#define iconv_close phony_iconv_close
 
 #undef ICONV_CONST
 #define ICONV_CONST const
@@ -106,7 +109,7 @@
 #endif
 
 iconv_t
-iconv_open (const char *to, const char *from)
+phony_iconv_open (const char *to, const char *from)
 {
   /* We allow conversions from UTF-32BE, wchar_t, and the host charset.
      We allow conversions to wchar_t and the host charset.  */
@@ -122,14 +125,14 @@ iconv_open (const char *to, const char *from)
 }
 
 int
-iconv_close (iconv_t arg)
+phony_iconv_close (iconv_t arg)
 {
   return 0;
 }
 
 size_t
-iconv (iconv_t utf_flag, const char **inbuf, size_t *inbytesleft,
-       char **outbuf, size_t *outbytesleft)
+phony_iconv (iconv_t utf_flag, const char **inbuf, size_t *inbytesleft,
+	     char **outbuf, size_t *outbytesleft)
 {
   if (utf_flag)
     {
@@ -645,8 +648,13 @@ wchar_iterate (struct wchar_iterator *iter,
 	  switch (errno)
 	    {
 	    case EILSEQ:
-	      /* Invalid input sequence.  Skip it, and let the caller
-		 know about it.  */
+	      /* Invalid input sequence.  We still might have converted a
+		 character; if so, return it.  */
+	      if (out_avail < out_request * sizeof (gdb_wchar_t))
+		break;
+	      
+	      /* Otherwise skip the first invalid character, and let the
+		 caller know about it.  */
 	      *out_result = wchar_iterate_invalid;
 	      *ptr = iter->input;
 	      *len = iter->width;

@@ -317,6 +317,10 @@ gld${EMULATION_NAME}_try_needed (struct dt_needed *needed,
   abfd = bfd_openr (name, bfd_get_target (link_info.output_bfd));
   if (abfd == NULL)
     return FALSE;
+
+  /* Linker needs to decompress sections.  */
+  abfd->flags |= BFD_DECOMPRESS;
+
   if (! bfd_check_format (abfd, bfd_object))
     {
       bfd_close (abfd);
@@ -1065,7 +1069,11 @@ gld${EMULATION_NAME}_after_open (void)
       asection *s;
       bfd_size_type size;
 
-      abfd = link_info.input_bfds;
+      /* Find an ELF input.  */
+      for (abfd = link_info.input_bfds;
+	   abfd != (bfd *) NULL; abfd = abfd->link_next)
+	if (bfd_get_flavour (abfd) == bfd_target_elf_flavour)
+	  break;
 
       if (abfd == NULL)
 	{
@@ -1120,30 +1128,43 @@ gld${EMULATION_NAME}_after_open (void)
   if (link_info.eh_frame_hdr
       && !link_info.traditional_format)
     {
-      bfd *abfd;
+      bfd *abfd, *elfbfd = NULL;
+      bfd_boolean warn_eh_frame = FALSE;
       asection *s;
 
       for (abfd = link_info.input_bfds; abfd; abfd = abfd->link_next)
 	{
-	  s = bfd_get_section_by_name (abfd, ".eh_frame");
-	  if (s && s->size > 8 && !bfd_is_abs_section (s->output_section))
+	  if (bfd_get_flavour (abfd) == bfd_target_elf_flavour)
+	    elfbfd = abfd;
+	  if (!warn_eh_frame)
+	    {
+	      s = bfd_get_section_by_name (abfd, ".eh_frame");
+	      warn_eh_frame
+		= (s
+		   && s->size > 8
+		   && !bfd_is_abs_section (s->output_section));
+	    }
+	  if (elfbfd && warn_eh_frame)
 	    break;
 	}
-      if (abfd)
+      if (elfbfd)
 	{
 	  const struct elf_backend_data *bed;
 
-	  bed = get_elf_backend_data (abfd);
-	  s = bfd_make_section_with_flags (abfd, ".eh_frame_hdr",
+	  bed = get_elf_backend_data (elfbfd);
+	  s = bfd_make_section_with_flags (elfbfd, ".eh_frame_hdr",
 					   bed->dynamic_sec_flags
 					   | SEC_READONLY);
 	  if (s != NULL
-	      && bfd_set_section_alignment (abfd, s, 2))
-	    htab->eh_info.hdr_sec = s;
-	  else
-	    einfo ("%P: warning: Cannot create .eh_frame_hdr section,"
-		   " --eh-frame-hdr ignored.\n");
+	      && bfd_set_section_alignment (elfbfd, s, 2))
+	    {
+	      htab->eh_info.hdr_sec = s;
+	      warn_eh_frame = FALSE;
+	    }
 	}
+      if (warn_eh_frame)
+	einfo ("%P: warning: Cannot create .eh_frame_hdr section,"
+	       " --eh-frame-hdr ignored.\n");
     }
 
   /* Get the list of files which appear in DT_NEEDED entries in
@@ -1478,33 +1499,34 @@ gld${EMULATION_NAME}_before_allocation (void)
     rpath = (const char *) getenv ("LD_RUN_PATH");
 
   for (abfd = link_info.input_bfds; abfd; abfd = abfd->link_next)
-    {
-      const char *audit_libs = elf_dt_audit (abfd);
+    if (bfd_get_flavour (abfd) == bfd_target_elf_flavour)
+      {
+	const char *audit_libs = elf_dt_audit (abfd);
 
-      /* If the input bfd contains an audit entry, we need to add it as 
-         a dep audit entry.  */
-      if (audit_libs && *audit_libs != '\0')
-	{
-	  char *cp = xstrdup (audit_libs);
-	  do
-	    {
-	      int more = 0;
-	      char *cp2 = strchr (cp, config.rpath_separator);
+	/* If the input bfd contains an audit entry, we need to add it as 
+	   a dep audit entry.  */
+	if (audit_libs && *audit_libs != '\0')
+	  {
+	    char *cp = xstrdup (audit_libs);
+	    do
+	      {
+		int more = 0;
+		char *cp2 = strchr (cp, config.rpath_separator);
 
-	      if (cp2)
-		{
-	          *cp2 = '\0';
-		  more = 1;
-		}
-	      
-	      if (cp != NULL && *cp != '\0')
-	        gld${EMULATION_NAME}_append_to_separated_string (&depaudit, cp);
+		if (cp2)
+		  {
+		    *cp2 = '\0';
+		    more = 1;
+		  }
 
-	      cp = more ? ++cp2 : NULL;
-	    }
-	  while (cp != NULL);
-	}
-    }
+		if (cp != NULL && *cp != '\0')
+		  gld${EMULATION_NAME}_append_to_separated_string (&depaudit, cp);
+
+		cp = more ? ++cp2 : NULL;
+	      }
+	    while (cp != NULL);
+	  }
+      }
 
   if (! (bfd_elf_size_dynamic_sections
 	 (link_info.output_bfd, command_line.soname, rpath,

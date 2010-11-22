@@ -87,28 +87,6 @@ Stringpool_template<Stringpool_char>::reserve(unsigned int n)
   this->string_set_.swap(new_string_set);
 }
 
-// Return the length of a string of arbitrary character type.
-
-template<typename Stringpool_char>
-size_t
-Stringpool_template<Stringpool_char>::string_length(const Stringpool_char* p)
-{
-  size_t len = 0;
-  for (; *p != 0; ++p)
-    ++len;
-  return len;
-}
-
-// Specialize string_length for char.  Maybe we could just use
-// std::char_traits<>::length?
-
-template<>
-inline size_t
-Stringpool_template<char>::string_length(const char* p)
-{
-  return strlen(p);
-}
-
 // Compare two strings of arbitrary character type for equality.
 
 template<typename Stringpool_char>
@@ -191,7 +169,7 @@ Stringpool_template<Stringpool_char>::add_string(const Stringpool_char* s,
     alc = sizeof(Stringdata) + buffer_size;
   else
     {
-      Stringdata *psd = this->strings_.front();
+      Stringdata* psd = this->strings_.front();
       if (len > psd->alc - psd->len)
 	alc = sizeof(Stringdata) + buffer_size;
       else
@@ -207,7 +185,7 @@ Stringpool_template<Stringpool_char>::add_string(const Stringpool_char* s,
 	}
     }
 
-  Stringdata *psd = reinterpret_cast<Stringdata*>(new char[alc]);
+  Stringdata* psd = reinterpret_cast<Stringdata*>(new char[alc]);
   psd->alc = alc - sizeof(Stringdata);
   memcpy(psd->data, s, len - sizeof(Stringpool_char));
   memset(psd->data + len - sizeof(Stringpool_char), 0,

@@ -16,6 +16,8 @@ _backward_target:
 	.size	_backward_target, .-_backward_target
 	
 	.text
+# Use 256-byte alignment so that we know where the stubs start.
+	.align	8
 
 # Define _start so that linker does not complain.
 	.global	_start
@@ -42,6 +44,10 @@ _forward_test:
 	bl	_forward_target
 	.size	_forward_test, .-_forward_test
 	
+# switch back to ARM mode so that stubs are disassembled correctly.
+	.code	32
+	nop
+
 	.section	.text.post,"x"
 
 # Add padding so that target is just out of branch range. 

@@ -41,6 +41,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "langhooks.h"
 #include "target.h"
 #include "tm_p.h"
+#include "c-tree.h"
+#include "c-lang.h"
 #include "diagnostic-core.h"
 #include "toplev.h"
 #include "hashtab.h"
@@ -85,8 +87,20 @@ along with GCC; see the file COPYING3.  If not see
    kernel) the stubs might still be required, and this will be set true.  */
 int darwin_emit_branch_islands = false;
 
+/* A flag to determine whether we are running c++ or obj-c++.  This has to be
+   settable from non-c-family contexts too (i.e. we can't use the c_dialect_
+   functions).  */
+int darwin_running_cxx;
+
 /* Section names.  */
 section * darwin_sections[NUM_DARWIN_SECTIONS];
+
+/* While we transition to using in-tests instead of ifdef'd code.  */
+#ifndef HAVE_lo_sum
+#define HAVE_lo_sum 0
+#define gen_macho_high(a,b) (a)
+#define gen_macho_low(a,b,c) (a)
+#endif
 
 /* True if we're setting __attribute__ ((ms_struct)).  */
 int darwin_ms_struct = false;
@@ -172,7 +186,7 @@ name_needs_quotes (const char *name)
 }
 
 /* Return true if SYM_REF can be used without an indirection.  */
-static int
+int
 machopic_symbol_defined_p (rtx sym_ref)
 {
   if (SYMBOL_REF_FLAGS (sym_ref) & MACHO_SYMBOL_FLAG_DEFINED)
@@ -312,12 +326,22 @@ machopic_output_function_base_name (FILE *file)
 
   /* If dynamic-no-pic is on, we should not get here.  */
   gcc_assert (!MACHO_DYNAMIC_NO_PIC_P);
-  current_name =
-    IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (current_function_decl));
-  if (function_base_func_name != current_name)
+  /* When we are generating _get_pc thunks within stubs, there is no current
+     function.  */
+  if (current_function_decl)
+    {
+      current_name =
+	IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (current_function_decl));
+      if (function_base_func_name != current_name)
+	{
+	  ++current_pic_label_num;
+	  function_base_func_name = current_name;
+	}
+    }
+  else
     {
       ++current_pic_label_num;
-      function_base_func_name = current_name;
+      function_base_func_name = "L_machopic_stub_dummy";
     }
   fprintf (file, "L%011d$pb", current_pic_label_num);
 }
@@ -507,24 +531,28 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
 
       if (defined && MACHO_DYNAMIC_NO_PIC_P)
 	{
-#if defined (TARGET_TOC)
+	  if (DARWIN_PPC)
+	    {
 	  /* Create a new register for CSE opportunities.  */
 	  rtx hi_reg = (!can_create_pseudo_p () ? reg : gen_reg_rtx (Pmode));
  	  emit_insn (gen_macho_high (hi_reg, orig));
  	  emit_insn (gen_macho_low (reg, hi_reg, orig));
-#else
+	      return reg;
+ 	    }
+	  else if (DARWIN_X86)
+	    return orig;
+	  else
 	   /* some other cpu -- writeme!  */
 	   gcc_unreachable ();
-#endif
-	   return reg;
 	}
       else if (defined)
 	{
-#if defined (TARGET_TOC) || defined (HAVE_lo_sum)
-	  rtx offset = machopic_gen_offset (orig);
-#endif
+	  rtx offset = NULL;
+	  if (DARWIN_PPC || HAVE_lo_sum)
+	    offset = machopic_gen_offset (orig);
 
-#if defined (TARGET_TOC) /* i.e., PowerPC */
+	  if (DARWIN_PPC)
+	    {
 	  rtx hi_sum_reg = (!can_create_pseudo_p ()
 			    ? reg
 			    : gen_reg_rtx (Pmode));
@@ -539,8 +567,9 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
 						  copy_rtx (offset))));
 
 	  orig = reg;
-#else
-#if defined (HAVE_lo_sum)
+	    }
+	  else if (HAVE_lo_sum)
+	    {
 	  gcc_assert (reg);
 
 	  emit_insn (gen_rtx_SET (VOIDmode, reg,
@@ -551,8 +580,7 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
 	  emit_use (pic_offset_table_rtx);
 
 	  orig = gen_rtx_PLUS (Pmode, pic_offset_table_rtx, reg);
-#endif
-#endif
+	    }
 	  return orig;
 	}
 
@@ -565,24 +593,56 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
       ptr_ref = gen_const_mem (Pmode, ptr_ref);
       machopic_define_symbol (ptr_ref);
 
+      if (DARWIN_X86 
+          && reg 
+          && MACHO_DYNAMIC_NO_PIC_P)
+	{
+	    emit_insn (gen_rtx_SET (Pmode, reg, ptr_ref));
+	    ptr_ref = reg;
+	}
+
       return ptr_ref;
     }
   else if (GET_CODE (orig) == CONST)
     {
-      rtx base, result;
-
-      /* legitimize both operands of the PLUS */
+      /* If "(const (plus ...", walk the PLUS and return that result.
+	 PLUS processing (below) will restore the "(const ..." if
+	 appropriate.  */
       if (GET_CODE (XEXP (orig, 0)) == PLUS)
-	{
-	  base = machopic_indirect_data_reference (XEXP (XEXP (orig, 0), 0),
-						   reg);
-	  orig = machopic_indirect_data_reference (XEXP (XEXP (orig, 0), 1),
-						   (base == reg ? 0 : reg));
-	}
-      else
+	return machopic_indirect_data_reference (XEXP (orig, 0), reg);
+      else 
 	return orig;
+    }
+  else if (GET_CODE (orig) == MEM)
+    {
+      XEXP (ptr_ref, 0) = 
+		machopic_indirect_data_reference (XEXP (orig, 0), reg);
+      return ptr_ref;
+    }
+  else if (GET_CODE (orig) == PLUS)
+    {
+      rtx base, result;
+      /* When the target is i386, this code prevents crashes due to the
+	compiler's ignorance on how to move the PIC base register to
+	other registers.  (The reload phase sometimes introduces such
+	insns.)  */
+      if (GET_CODE (XEXP (orig, 0)) == REG
+	   && REGNO (XEXP (orig, 0)) == PIC_OFFSET_TABLE_REGNUM
+	   /* Prevent the same register from being erroneously used
+	      as both the base and index registers.  */
+	   && (DARWIN_X86 && (GET_CODE (XEXP (orig, 1)) == CONST))
+	   && reg)
+	{
+	  emit_move_insn (reg, XEXP (orig, 0));
+	  XEXP (ptr_ref, 0) = reg;
+	  return ptr_ref;
+	}
 
-      if (MACHOPIC_PURE && GET_CODE (orig) == CONST_INT)
+      /* Legitimize both operands of the PLUS.  */
+      base = machopic_indirect_data_reference (XEXP (orig, 0), reg);
+      orig = machopic_indirect_data_reference (XEXP (orig, 1),
+					       (base == reg ? 0 : reg));
+      if (MACHOPIC_INDIRECT && (GET_CODE (orig) == CONST_INT))
 	result = plus_constant (base, INTVAL (orig));
       else
 	result = gen_rtx_PLUS (Pmode, base, orig);
@@ -601,26 +661,6 @@ machopic_indirect_data_reference (rtx orig, rtx reg)
 	}
 
       return result;
-
-    }
-  else if (GET_CODE (orig) == MEM)
-    XEXP (ptr_ref, 0) = machopic_indirect_data_reference (XEXP (orig, 0), reg);
-  /* When the target is i386, this code prevents crashes due to the
-     compiler's ignorance on how to move the PIC base register to
-     other registers.  (The reload phase sometimes introduces such
-     insns.)  */
-  else if (GET_CODE (orig) == PLUS
-	   && GET_CODE (XEXP (orig, 0)) == REG
-	   && REGNO (XEXP (orig, 0)) == PIC_OFFSET_TABLE_REGNUM
-#ifdef I386
-	   /* Prevent the same register from being erroneously used
-	      as both the base and index registers.  */
-	   && GET_CODE (XEXP (orig, 1)) == CONST
-#endif
-	   && reg)
-    {
-      emit_move_insn (reg, XEXP (orig, 0));
-      XEXP (ptr_ref, 0) = reg;
     }
   return ptr_ref;
 }
@@ -690,7 +730,7 @@ machopic_legitimize_pic_address (rtx orig, enum machine_mode mode, rtx reg)
 	      reg = gen_reg_rtx (Pmode);
 	    }
 
-#ifdef HAVE_lo_sum
+#if HAVE_lo_sum
 	  if (MACHO_DYNAMIC_NO_PIC_P
 	      && (GET_CODE (XEXP (orig, 0)) == SYMBOL_REF
 		  || GET_CODE (XEXP (orig, 0)) == LABEL_REF))
@@ -785,7 +825,7 @@ machopic_legitimize_pic_address (rtx orig, enum machine_mode mode, rtx reg)
       else
 	{
 
-#ifdef HAVE_lo_sum
+#if HAVE_lo_sum
 	  if (GET_CODE (orig) == SYMBOL_REF
 	      || GET_CODE (orig) == LABEL_REF)
 	    {
@@ -1256,6 +1296,8 @@ machopic_select_section (tree decl,
           else
             return darwin_sections[objc_string_object_section];
         }
+      else if (!strcmp (IDENTIFIER_POINTER (name), "__builtin_CFString"))
+	return darwin_sections[cfstring_constant_object_section];
       else
         return base_section;
     }
@@ -1450,6 +1492,11 @@ darwin_asm_lto_end (void)
   saved_asm_out_file = NULL;
 }
 
+static void
+darwin_asm_dwarf_section (const char *name, unsigned int flags, tree decl);
+
+/*  Called for the TARGET_ASM_NAMED_SECTION hook.  */
+
 void
 darwin_asm_named_section (const char *name,
 			  unsigned int flags,
@@ -1486,6 +1533,8 @@ darwin_asm_named_section (const char *name,
       gcc_assert (lto_section_names_offset > 0
 		  && lto_section_names_offset < ((unsigned) 1 << 31));
     }
+  else if (strncmp (name, "__DWARF,", 8) == 0)
+    darwin_asm_dwarf_section (name, flags, decl);
   else
     fprintf (asm_out_file, "\t.section %s\n", name);
 }
@@ -1666,6 +1715,73 @@ darwin_assemble_visibility (tree decl, int vis)
 	     "not supported in this configuration; ignored");
 }
 
+/* VEC Used by darwin_asm_dwarf_section.
+   Maybe a hash tab would be better here - but the intention is that this is
+   a very short list (fewer than 16 items) and each entry should (ideally, 
+   eventually) only be presented once.
+
+   A structure to hold a dwarf debug section used entry.  */
+
+typedef struct GTY(()) dwarf_sect_used_entry {
+  const char *name;
+  unsigned count;
+}
+dwarf_sect_used_entry;
+
+DEF_VEC_O(dwarf_sect_used_entry);
+DEF_VEC_ALLOC_O(dwarf_sect_used_entry, gc);
+
+/* A list of used __DWARF sections.  */
+static GTY (()) VEC (dwarf_sect_used_entry, gc) * dwarf_sect_names_table;
+
+/* This is called when we are asked to assemble a named section and the 
+   name begins with __DWARF,.  We keep a list of the section names (without
+   the __DWARF, prefix) and use this to emit our required start label on the
+   first switch to each section.  */
+
+static void
+darwin_asm_dwarf_section (const char *name, unsigned int flags,
+			  tree ARG_UNUSED (decl))
+{
+  unsigned i;
+  int namelen;
+  const char * sname;
+  dwarf_sect_used_entry *ref;
+  bool found = false;
+  gcc_assert ((flags & (SECTION_DEBUG | SECTION_NAMED))
+		    == (SECTION_DEBUG | SECTION_NAMED));
+  /* We know that the name starts with __DWARF,  */
+  sname = name + 8;
+  namelen = strchr (sname, ',') - sname;
+  gcc_assert (namelen);
+  if (dwarf_sect_names_table == NULL)
+    dwarf_sect_names_table = VEC_alloc (dwarf_sect_used_entry, gc, 16);
+  else
+    for (i = 0; 
+	 VEC_iterate (dwarf_sect_used_entry, dwarf_sect_names_table, i, ref);
+	 i++)
+      {
+	if (!ref)
+	  break;
+	if (!strcmp (ref->name, sname))
+	  {
+	    found = true;
+	    ref->count++;
+	    break;
+	  }
+      }
+
+  fprintf (asm_out_file, "\t.section %s\n", name);
+  if (!found)
+    {
+      dwarf_sect_used_entry e;
+      fprintf (asm_out_file, "Lsection%.*s:\n", namelen, sname);
+      e.count = 1;
+      e.name = xstrdup (sname);
+      VEC_safe_push (dwarf_sect_used_entry, gc, dwarf_sect_names_table, &e);
+    }
+}
+
 /* Output a difference of two labels that will be an assembly time
    constant if the two labels are local.  (.long lab1-lab2 will be
    very different if lab1 is at the boundary between two sections; it
@@ -1694,49 +1810,6 @@ darwin_asm_output_dwarf_delta (FILE *file, int size,
     fprintf (file, "\n\t%s L$set$%d", directive, darwin_dwarf_label_counter++);
 }
 
-/* Output labels for the start of the DWARF sections if necessary.
-   Initialize the stuff we need for LTO long section names support.  */
-void
-darwin_file_start (void)
-{
-  if (write_symbols == DWARF2_DEBUG)
-    {
-      static const char * const debugnames[] =
-	{
-	  DEBUG_FRAME_SECTION,
-	  DEBUG_INFO_SECTION,
-	  DEBUG_ABBREV_SECTION,
-	  DEBUG_ARANGES_SECTION,
-	  DEBUG_MACINFO_SECTION,
-	  DEBUG_LINE_SECTION,
-	  DEBUG_LOC_SECTION,
-	  DEBUG_PUBNAMES_SECTION,
-	  DEBUG_PUBTYPES_SECTION,
-	  DEBUG_STR_SECTION,
-	  DEBUG_RANGES_SECTION
-	};
-      size_t i;
-
-      for (i = 0; i < ARRAY_SIZE (debugnames); i++)
-	{
-	  int namelen;
-
-	  switch_to_section (get_section (debugnames[i], SECTION_DEBUG, NULL));
-
-	  gcc_assert (strncmp (debugnames[i], "__DWARF,", 8) == 0);
-	  gcc_assert (strchr (debugnames[i] + 8, ','));
-
-	  namelen = strchr (debugnames[i] + 8, ',') - (debugnames[i] + 8);
-	  fprintf (asm_out_file, "Lsection%.*s:\n", namelen, debugnames[i] + 8);
-	}
-    }
-
-  /* We fill this obstack with the complete section text for the lto section
-     names to write in darwin_file_end.  */
-  obstack_init (&lto_section_names_obstack);
-  lto_section_names_offset = 0;
-}
-
 /* Output an offset in a DWARF section on Darwin.  On Darwin, DWARF section
    offsets are not represented using relocs in .o files; either the
    section never leaves the .o file, or the linker or other tool is
@@ -1757,6 +1830,23 @@ darwin_asm_output_dwarf_offset (FILE *file, int size, const char * lab,
   sprintf (sname, "*Lsection%.*s", namelen, base->named.name + 8);
   darwin_asm_output_dwarf_delta (file, size, lab, sname);
 }
+
+/* Called from the within the TARGET_ASM_FILE_START for each target. 
+  Initialize the stuff we need for LTO long section names support.  */
+
+void
+darwin_file_start (void)
+{
+  /* We fill this obstack with the complete section text for the lto section
+     names to write in darwin_file_end.  */
+  obstack_init (&lto_section_names_obstack);
+  lto_section_names_offset = 0;
+}
+
+/* Called for the TARGET_ASM_FILE_END hook.
+   Emit the mach-o pic indirection data, the lto data and, finally a flag
+   to tell the linker that it can break the file object into sections and
+   move those around for efficiency.  */
 
 void
 darwin_file_end (void)
@@ -1906,10 +1996,25 @@ darwin_override_options (void)
       && debug_hooks->var_location != do_nothing_debug_hooks.var_location)
     flag_var_tracking_uninit = 1;
 
+  if (MACHO_DYNAMIC_NO_PIC_P)
+    {
+      if (flag_pic)
+	warning (0, "-mdynamic-no-pic overrides -fpic or -fPIC");
+      flag_pic = 0;
+    }
+  else if (flag_pic == 1)
+    {
+      /* Darwin's -fpic is -fPIC.  */
+      flag_pic = 2;
+    }
+
   /* It is assumed that branch island stubs are needed for earlier systems.  */
   if (darwin_macosx_version_min
       && strverscmp (darwin_macosx_version_min, "10.5") < 0)
     darwin_emit_branch_islands = true;
+
+  /* The c_dialect...() macros are not available to us here.  */
+  darwin_running_cxx = (strstr (lang_hooks.name, "C++") != 0);
 }
 
 /* Add $LDBL128 suffix to long double builtins.  */
@@ -1954,5 +2059,307 @@ darwin_patch_builtins (void)
 #undef PATCH_BUILTIN_VARIADIC
 }
 
+/*  CFStrings implementation.  */
+static GTY(()) tree cfstring_class_reference = NULL_TREE;
+static GTY(()) tree cfstring_type_node = NULL_TREE;
+static GTY(()) tree ccfstring_type_node = NULL_TREE;
+static GTY(()) tree pccfstring_type_node = NULL_TREE;
+static GTY(()) tree pcint_type_node = NULL_TREE;
+static GTY(()) tree pcchar_type_node = NULL_TREE;
+
+static enum built_in_function DARWIN_BUILTIN_CFSTRINGMAKECONSTANTSTRING;
+
+/* Store all constructed constant CFStrings in a hash table so that
+   they get uniqued properly.  */
+
+typedef struct GTY (()) cfstring_descriptor {
+  /* The string literal.  */
+  tree literal;
+  /* The resulting constant CFString.  */
+  tree constructor;
+} cfstring_descriptor;
+
+static GTY ((param_is (struct cfstring_descriptor))) htab_t cfstring_htab;
+
+static hashval_t cfstring_hash (const void *);
+static int cfstring_eq (const void *, const void *);
+
+static tree
+add_builtin_field_decl (tree type, const char *name, tree **chain)
+{
+  tree field = build_decl (BUILTINS_LOCATION, FIELD_DECL, 
+			    get_identifier (name), type);
+
+  if (*chain != NULL)
+    **chain = field;
+  *chain = &DECL_CHAIN (field);
+
+  return field;
+}
+
+void
+darwin_init_cfstring_builtins (unsigned first_avail)
+{
+  tree cfsfun, fields, pccfstring_ftype_pcchar;
+  tree *chain = NULL;
+
+  DARWIN_BUILTIN_CFSTRINGMAKECONSTANTSTRING = 
+			(enum built_in_function) first_avail;
+  
+  /* struct __builtin_CFString {
+       const int *isa;		(will point at
+       int flags;		 __CFConstantStringClassReference)
+       const char *str;
+       long length;
+     };  */
+
+  pcint_type_node = build_pointer_type 
+		   (build_qualified_type (integer_type_node, TYPE_QUAL_CONST));
+
+  pcchar_type_node = build_pointer_type 
+		   (build_qualified_type (char_type_node, TYPE_QUAL_CONST));
+
+  cfstring_type_node = (*lang_hooks.types.make_type) (RECORD_TYPE);
+
+  /* Have to build backwards for finish struct.  */
+  fields = add_builtin_field_decl (long_integer_type_node, "length", &chain);
+  add_builtin_field_decl (pcchar_type_node, "str", &chain);
+  add_builtin_field_decl (integer_type_node, "flags", &chain);
+  add_builtin_field_decl (pcint_type_node, "isa", &chain);
+  finish_builtin_struct (cfstring_type_node, "__builtin_CFString",
+			 fields, NULL_TREE);
+
+  /* const struct __builtin_CFstring *
+     __builtin___CFStringMakeConstantString (const char *); */
+
+  ccfstring_type_node = build_qualified_type 
+			(cfstring_type_node, TYPE_QUAL_CONST);
+  pccfstring_type_node = build_pointer_type (ccfstring_type_node);
+  pccfstring_ftype_pcchar = build_function_type_list 
+			(pccfstring_type_node, pcchar_type_node, NULL_TREE);
+
+  cfsfun  = build_decl (BUILTINS_LOCATION, FUNCTION_DECL, 
+			get_identifier ("__builtin___CFStringMakeConstantString"),
+			pccfstring_ftype_pcchar);
+
+  TREE_PUBLIC (cfsfun) = 1;
+  DECL_EXTERNAL (cfsfun) = 1;
+  DECL_ARTIFICIAL (cfsfun) = 1;
+  /* Make a lang-specific section - dup_lang_specific_decl makes a new node
+     in place of the existing, which may be NULL.  */
+  DECL_LANG_SPECIFIC (cfsfun) = NULL;
+  (*lang_hooks.dup_lang_specific_decl) (cfsfun);
+  DECL_BUILT_IN_CLASS (cfsfun) = BUILT_IN_MD;
+  DECL_FUNCTION_CODE (cfsfun) = DARWIN_BUILTIN_CFSTRINGMAKECONSTANTSTRING;
+  lang_hooks.builtin_function (cfsfun);
+
+  /* extern int __CFConstantStringClassReference[];  */
+  cfstring_class_reference = build_decl (BUILTINS_LOCATION, VAR_DECL,
+		 get_identifier ("__CFConstantStringClassReference"),
+		 build_array_type (integer_type_node, NULL_TREE));
+
+  TREE_PUBLIC (cfstring_class_reference) = 1;
+  DECL_ARTIFICIAL (cfstring_class_reference) = 1;
+  (*lang_hooks.decls.pushdecl) (cfstring_class_reference);
+  DECL_EXTERNAL (cfstring_class_reference) = 1;
+  rest_of_decl_compilation (cfstring_class_reference, 0, 0);
+  
+  /* Initialize the hash table used to hold the constant CFString objects.  */
+  cfstring_htab = htab_create_ggc (31, cfstring_hash, cfstring_eq, NULL);
+}
+
+tree
+darwin_fold_builtin (tree fndecl, int n_args, tree *argp, 
+		     bool ARG_UNUSED (ignore))
+{
+  unsigned int fcode = DECL_FUNCTION_CODE (fndecl);
+  
+  if (fcode == DARWIN_BUILTIN_CFSTRINGMAKECONSTANTSTRING)
+    {
+      if (!darwin_constant_cfstrings)
+	{
+	  error ("built-in function %qD requires the" 
+		 " %<-mconstant-cfstrings%> flag", fndecl);
+	  return error_mark_node;
+	}
+
+      if (n_args != 1)
+	{
+	  error ("built-in function %qD takes one argument only", fndecl);
+	  return error_mark_node;
+	}
+
+      return darwin_build_constant_cfstring (*argp);
+    }
+
+  return NULL_TREE;
+}
+
+static hashval_t
+cfstring_hash (const void *ptr)
+{
+  tree str = ((const struct cfstring_descriptor *)ptr)->literal;
+  const unsigned char *p = (const unsigned char *) TREE_STRING_POINTER (str);
+  int i, len = TREE_STRING_LENGTH (str);
+  hashval_t h = len;
+
+  for (i = 0; i < len; i++)
+    h = ((h * 613) + p[i]);
+
+  return h;
+}
+
+static int
+cfstring_eq (const void *ptr1, const void *ptr2)
+{
+  tree str1 = ((const struct cfstring_descriptor *)ptr1)->literal;
+  tree str2 = ((const struct cfstring_descriptor *)ptr2)->literal;
+  int len1 = TREE_STRING_LENGTH (str1);
+
+  return (len1 == TREE_STRING_LENGTH (str2)
+	  && !memcmp (TREE_STRING_POINTER (str1), TREE_STRING_POINTER (str2),
+		      len1));
+}
+
+tree
+darwin_build_constant_cfstring (tree str)
+{
+  struct cfstring_descriptor *desc, key;
+  void **loc;
+  tree addr;
+
+  if (!str)
+    {
+      error ("CFString literal is missing");
+      return error_mark_node;
+    }
+
+  STRIP_NOPS (str);
+
+  if (TREE_CODE (str) == ADDR_EXPR)
+    str = TREE_OPERAND (str, 0);
+
+  if (TREE_CODE (str) != STRING_CST)
+    {
+      error ("CFString literal expression is not a string constant");
+      return error_mark_node;
+    }
+
+  /* Perhaps we already constructed a constant CFString just like this one? */
+  key.literal = str;
+  loc = htab_find_slot (cfstring_htab, &key, INSERT);
+  desc = (struct cfstring_descriptor *) *loc;
+
+  if (!desc)
+    {
+      tree var, constructor, field;
+      VEC(constructor_elt,gc) *v = NULL;
+      int length = TREE_STRING_LENGTH (str) - 1;
+
+      if (darwin_warn_nonportable_cfstrings)
+	{
+	  const char *s = TREE_STRING_POINTER (str);
+	  int l = 0;
+
+	  for (l = 0; l < length; l++)
+	    if (!s[l] || !isascii (s[l]))
+	      {
+		warning (darwin_warn_nonportable_cfstrings, "%s in CFString literal",
+			 s[l] ? "non-ASCII character" : "embedded NUL");
+		break;
+	      }
+	}
+
+      *loc = desc = ggc_alloc_cleared_cfstring_descriptor ();
+      desc->literal = str;
+
+      /* isa *. */
+      field = TYPE_FIELDS (ccfstring_type_node);
+      CONSTRUCTOR_APPEND_ELT(v, NULL_TREE, 
+			     build1 (ADDR_EXPR,  TREE_TYPE (field),  
+				     cfstring_class_reference));
+      /* flags */
+      field = DECL_CHAIN (field);
+      CONSTRUCTOR_APPEND_ELT(v, NULL_TREE, 
+			     build_int_cst (TREE_TYPE (field), 0x000007c8));
+      /* string *. */
+      field = DECL_CHAIN (field);
+      CONSTRUCTOR_APPEND_ELT(v, NULL_TREE,
+			     build1 (ADDR_EXPR, TREE_TYPE (field), str));
+      /* length */
+      field = DECL_CHAIN (field);
+      CONSTRUCTOR_APPEND_ELT(v, NULL_TREE,
+			     build_int_cst (TREE_TYPE (field), length));
+
+      constructor = build_constructor (ccfstring_type_node, v);
+      TREE_READONLY (constructor) = 1;
+      TREE_CONSTANT (constructor) = 1;
+      TREE_STATIC (constructor) = 1;
+
+      /* Fromage: The C++ flavor of 'build_unary_op' expects constructor nodes
+	 to have the TREE_HAS_CONSTRUCTOR (...) bit set.  However, this file is
+	 being built without any knowledge of C++ tree accessors; hence, we shall
+	 use the generic accessor that TREE_HAS_CONSTRUCTOR actually maps to!  */
+      if (darwin_running_cxx)
+	TREE_LANG_FLAG_4 (constructor) = 1;  /* TREE_HAS_CONSTRUCTOR  */
+
+      /* Create an anonymous global variable for this CFString.  */
+      var = build_decl (input_location, CONST_DECL, 
+			NULL, TREE_TYPE (constructor));
+      DECL_ARTIFICIAL (var) = 1;
+      TREE_STATIC (var) = 1;
+      DECL_INITIAL (var) = constructor;
+      /* FIXME: This should use a translation_unit_decl to indicate file scope.  */
+      DECL_CONTEXT (var) = NULL_TREE;
+      desc->constructor = var;
+    }
+
+  addr = build1 (ADDR_EXPR, pccfstring_type_node, desc->constructor);
+  TREE_CONSTANT (addr) = 1;
+
+  return addr;
+}
+
+bool
+darwin_cfstring_p (tree str)
+{
+  struct cfstring_descriptor key;
+  void **loc;
+
+  if (!str)
+    return false;
+
+  STRIP_NOPS (str);
+
+  if (TREE_CODE (str) == ADDR_EXPR)
+    str = TREE_OPERAND (str, 0);
+
+  if (TREE_CODE (str) != STRING_CST)
+    return false;
+
+  key.literal = str;
+  loc = htab_find_slot (cfstring_htab, &key, NO_INSERT);
+  
+  if (loc)
+    return true;
+
+  return false;
+}
+
+void
+darwin_enter_string_into_cfstring_table (tree str)
+{
+  struct cfstring_descriptor key;
+  void **loc;
+
+  key.literal = str;
+  loc = htab_find_slot (cfstring_htab, &key, INSERT);
+
+  if (!*loc)
+    {
+      *loc = ggc_alloc_cleared_cfstring_descriptor ();
+      ((struct cfstring_descriptor *)*loc)->literal = str;
+    }
+}
 
 #include "gt-darwin.h"

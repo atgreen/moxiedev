@@ -1,5 +1,6 @@
 /* Base configuration file for all OpenBSD targets.
-   Copyright (C) 1999, 2000, 2004, 2005, 2007 Free Software Foundation, Inc.
+   Copyright (C) 1999, 2000, 2004, 2005, 2007, 2009, 2010
+   Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -117,13 +118,6 @@ while (0)
 #define LIB_SPEC OBSD_LIB_SPEC
 
 #ifndef OBSD_HAS_CORRECT_SPECS
-
-#ifndef OBSD_NO_DYNAMIC_LIBRARIES
-#undef SWITCH_TAKES_ARG
-#define SWITCH_TAKES_ARG(CHAR) \
-  (DEFAULT_SWITCH_TAKES_ARG (CHAR) \
-   || (CHAR) == 'R')
-#endif
 
 #undef CPP_SPEC
 #define CPP_SPEC OBSD_CPP_SPEC
@@ -288,12 +282,6 @@ do {									 \
 /* Storage layout.  */
 
 
-/* bug work around: we don't want to support #pragma weak, but the current
-   code layout needs HANDLE_PRAGMA_WEAK asserted for __attribute((weak)) to
-   work.  On the other hand, we don't define HANDLE_PRAGMA_WEAK directly,
-   as this depends on a few other details as well...  */
-#define HANDLE_SYSV_PRAGMA 1
-
 /* Stack is explicitly denied execution rights on OpenBSD platforms.  */
 #define ENABLE_EXECUTE_STACK						\
 extern void __enable_execute_stack (void *);				\

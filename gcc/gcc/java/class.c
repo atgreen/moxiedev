@@ -43,6 +43,7 @@ The Free Software Foundation is independent of Sun Microsystems, Inc.  */
 #include "tree-iterator.h"
 #include "vecprim.h"
 #include "tm.h"         /* FIXME: For gcc_obstack_init from defaults.h.  */
+#include "target.h"
 
 /* DOS brain-damage */
 #ifndef O_BINARY
@@ -983,6 +984,7 @@ build_utf8_ref (tree name)
   TREE_READONLY (decl) = 1;
   TREE_THIS_VOLATILE (decl) = 0;
   DECL_INITIAL (decl) = cinit;
+  DECL_USER_ALIGN (decl) = 1;
 
   if (HAVE_GAS_SHF_MERGE)
     {
@@ -1398,7 +1400,7 @@ make_local_function_alias (tree method)
   *name = 'L';
   strcpy (name + 1, method_name);
 
-  ASM_GENERATE_INTERNAL_LABEL (buf, name, alias_labelno++);  
+  targetm.asm_out.generate_internal_label (buf, name, alias_labelno++);  
   alias = build_decl (input_location,
 		      FUNCTION_DECL, get_identifier (buf),
 		      TREE_TYPE (method));
@@ -1543,9 +1545,7 @@ make_method_value (tree mdecl)
 	e = VEC_index (constructor_elt, v, idx--);
 	e->value = null_pointer_node;
 
-	for (ix = 0;
-	     VEC_iterate (tree, DECL_FUNCTION_THROWS (mdecl), ix, t);
-	     ix++)
+	FOR_EACH_VEC_ELT (tree, DECL_FUNCTION_THROWS (mdecl), ix, t)
 	  {
 	    tree sig = DECL_NAME (TYPE_NAME (t));
 	    tree utf8
@@ -2761,7 +2761,7 @@ emit_indirect_register_classes (tree *list_p)
 			   VAR_DECL, get_identifier ("_Jv_CLS"),
 			   class_array_type);
   tree reg_class_list;
-  for (i = 0; VEC_iterate (tree, registered_class, i, klass); ++i)
+  FOR_EACH_VEC_ELT (tree, registered_class, i, klass)
     {
       t = fold_convert (ptr_type_node, build_static_class_ref (klass));
       CONSTRUCTOR_APPEND_ELT (init, NULL_TREE, t);
@@ -2833,7 +2833,7 @@ emit_register_classes (tree *list_p)
 #endif
       assemble_align (POINTER_SIZE);
 
-      for (i = 0; VEC_iterate (tree, registered_class, i, klass); ++i)
+      FOR_EACH_VEC_ELT (tree, registered_class, i, klass)
 	{
 	  t = build_fold_addr_expr (klass);
 	  output_constant (t, POINTER_SIZE / BITS_PER_UNIT, POINTER_SIZE);
@@ -2851,7 +2851,7 @@ emit_register_classes (tree *list_p)
       DECL_EXTERNAL (t) = 1;
       register_class_fn = t;
 
-      for (i = 0; VEC_iterate (tree, registered_class, i, klass); ++i)
+      FOR_EACH_VEC_ELT (tree, registered_class, i, klass)
 	{
 	  t = build_fold_addr_expr (klass);
 	  t = build_call_expr (register_class_fn, 1, t);
@@ -2927,7 +2927,7 @@ emit_symbol_table (tree name, tree the_table,
     return the_table;
 
   /* Build a list of _Jv_MethodSymbols for each entry in otable_methods. */
-  for (index = 0; VEC_iterate (method_entry, decl_table, index, e); index++)
+  FOR_EACH_VEC_ELT (method_entry, decl_table, index, e)
     CONSTRUCTOR_APPEND_ELT (v, NULL_TREE,
 			    build_symbol_entry (e->method, e->special));
 

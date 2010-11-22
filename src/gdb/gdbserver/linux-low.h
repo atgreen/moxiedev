@@ -259,7 +259,7 @@ int elf_64_file_p (const char *file);
 
 void linux_attach_lwp (unsigned long pid);
 struct lwp_info *find_lwp_pid (ptid_t ptid);
-int linux_get_thread_area (int lwpid, CORE_ADDR *area);
+void linux_stop_lwp (struct lwp_info *lwp);
 
 /* From thread-db.c  */
 int thread_db_init (int use_events);

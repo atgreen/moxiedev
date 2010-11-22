@@ -603,6 +603,7 @@ binop_promote (const struct language_defn *language, struct gdbarch *gdbarch,
 	case language_cplus:
 	case language_asm:
 	case language_objc:
+	case language_opencl:
 	  /* No promotion required.  */
 	  break;
 
@@ -690,7 +691,24 @@ binop_promote (const struct language_defn *language, struct gdbarch *gdbarch,
 			       : builtin->builtin_long_long);
 	    }
 	  break;
-
+	case language_opencl:
+	  if (result_len <= TYPE_LENGTH (lookup_signed_typename
+					 (language, gdbarch, "int")))
+	    {
+	      promoted_type =
+		(unsigned_operation
+		 ? lookup_unsigned_typename (language, gdbarch, "int")
+		 : lookup_signed_typename (language, gdbarch, "int"));
+	    }
+	  else if (result_len <= TYPE_LENGTH (lookup_signed_typename
+					      (language, gdbarch, "long")))
+	    {
+	      promoted_type =
+		(unsigned_operation
+		 ? lookup_unsigned_typename (language, gdbarch, "long")
+		 : lookup_signed_typename (language, gdbarch,"long"));
+	    }
+	  break;
 	default:
 	  /* For other languages the result type is unchanged from gdb
 	     version 6.7 for backward compatibility.
@@ -736,7 +754,7 @@ ptrmath_type_p (const struct language_defn *lang, struct type *type)
       return 1;
 
     case TYPE_CODE_ARRAY:
-      return lang->c_style_arrays;
+      return TYPE_VECTOR (type) ? 0 : lang->c_style_arrays;
 
     default:
       return 0;
@@ -1510,6 +1528,28 @@ evaluate_subexp_standard (struct type *expect_type,
 	  else
 	    {
 	      arg2 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
+
+	      /* Check to see if the operator '->' has been overloaded.  If the operator
+	         has been overloaded replace arg2 with the value returned by the custom
+	         operator and continue evaluation.  */
+	      while (unop_user_defined_p (op, arg2))
+		{
+		  volatile struct gdb_exception except;
+		  struct value *value = NULL;
+		  TRY_CATCH (except, RETURN_MASK_ERROR)
+		    {
+		      value = value_x_unop (arg2, op, noside);
+		    }
+
+		  if (except.reason < 0)
+		    {
+		      if (except.error == NOT_FOUND_ERROR)
+			break;
+		      else
+			throw_exception (except);
+		    }
+		  arg2 = value;
+		}
 	    }
 	  /* Now, say which argument to start evaluating from */
 	  tem = 2;
@@ -1570,19 +1610,29 @@ evaluate_subexp_standard (struct type *expect_type,
 	{
 	  /* Non-method function call */
 	  save_pos1 = *pos;
-	  argvec[0] = evaluate_subexp_with_coercion (exp, pos, noside);
 	  tem = 1;
-	  type = value_type (argvec[0]);
-	  if (type && TYPE_CODE (type) == TYPE_CODE_PTR)
-	    type = TYPE_TARGET_TYPE (type);
-	  if (type && TYPE_CODE (type) == TYPE_CODE_FUNC)
+
+	  /* If this is a C++ function wait until overload resolution.  */
+	  if (op == OP_VAR_VALUE
+	      && overload_resolution
+	      && (exp->language_defn->la_language == language_cplus))
 	    {
-	      for (; tem <= nargs && tem <= TYPE_NFIELDS (type); tem++)
+	      (*pos) += 4; /* Skip the evaluation of the symbol.  */
+	      argvec[0] = NULL;
+	    }
+	  else
+	    {
+	      argvec[0] = evaluate_subexp_with_coercion (exp, pos, noside);
+	      type = value_type (argvec[0]);
+	      if (type && TYPE_CODE (type) == TYPE_CODE_PTR)
+		type = TYPE_TARGET_TYPE (type);
+	      if (type && TYPE_CODE (type) == TYPE_CODE_FUNC)
 		{
-		  /* pai: FIXME This seems to be coercing arguments before
-		   * overload resolution has been done! */
-		  argvec[tem] = evaluate_subexp (TYPE_FIELD_TYPE (type, tem - 1),
-						 exp, pos, noside);
+		  for (; tem <= nargs && tem <= TYPE_NFIELDS (type); tem++)
+		    {
+		      argvec[tem] = evaluate_subexp (TYPE_FIELD_TYPE (type, tem - 1),
+						     exp, pos, noside);
+		    }
 		}
 	    }
 	}
@@ -1887,6 +1937,27 @@ evaluate_subexp_standard (struct type *expect_type,
       arg1 = evaluate_subexp (NULL_TYPE, exp, pos, noside);
       if (noside == EVAL_SKIP)
 	goto nosideret;
+
+      /* Check to see if operator '->' has been overloaded.  If so replace
+         arg1 with the value returned by evaluating operator->().  */
+      while (unop_user_defined_p (op, arg1))
+	{
+	  volatile struct gdb_exception except;
+	  struct value *value = NULL;
+	  TRY_CATCH (except, RETURN_MASK_ERROR)
+	    {
+	      value = value_x_unop (arg1, op, noside);
+	    }
+
+	  if (except.reason < 0)
+	    {
+	      if (except.error == NOT_FOUND_ERROR)
+		break;
+	      else
+		throw_exception (except);
+	    }
+	  arg1 = value;
+	}
 
       /* JYG: if print object is on we need to replace the base type
 	 with rtti type in order to continue on with successful
@@ -2729,6 +2800,8 @@ evaluate_subexp_standard (struct type *expect_type,
 	}
       else
 	{
+	  arg3 = value_non_lval (arg1);
+
 	  if (ptrmath_type_p (exp->language_defn, value_type (arg1)))
 	    arg2 = value_ptradd (arg1, 1);
 	  else
@@ -2741,7 +2814,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	    }
 
 	  value_assign (arg1, arg2);
-	  return arg1;
+	  return arg3;
 	}
 
     case UNOP_POSTDECREMENT:
@@ -2754,6 +2827,8 @@ evaluate_subexp_standard (struct type *expect_type,
 	}
       else
 	{
+	  arg3 = value_non_lval (arg1);
+
 	  if (ptrmath_type_p (exp->language_defn, value_type (arg1)))
 	    arg2 = value_ptradd (arg1, -1);
 	  else
@@ -2766,7 +2841,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	    }
 
 	  value_assign (arg1, arg2);
-	  return arg1;
+	  return arg3;
 	}
 
     case OP_THIS:
@@ -2946,6 +3021,7 @@ evaluate_subexp_with_coercion (struct expression *exp,
       var = exp->elts[pc + 2].symbol;
       type = check_typedef (SYMBOL_TYPE (var));
       if (TYPE_CODE (type) == TYPE_CODE_ARRAY
+	  && !TYPE_VECTOR (type)
 	  && CAST_IS_CONVERSION (exp->language_defn))
 	{
 	  (*pos) += 4;

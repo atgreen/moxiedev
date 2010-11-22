@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/javax/print/ipp/attribute/defaults
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-829491aa0b7bf21948d62166ef2dfc3a
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.893783Z
+36df37d478b1f6baecdebc6522e30bf8
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -58,7 +58,7 @@ has-props
 
 
 
-1338
+1416
 
 DocumentFormatDefault.class
 file
@@ -66,11 +66,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-14ecef63ef32e51e0e3a3e379875a6cb
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.893783Z
+6824cf5d3d7d2a782dc73a58a3b95547
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -92,7 +92,7 @@ has-props
 
 
 
-1042
+1120
 
 PrinterResolutionDefault.class
 file
@@ -100,11 +100,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-fe093c49dd89bf2da0e7249664c20598
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.894784Z
+45f2a546408d3889d4a73cde113601c5
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -126,7 +126,7 @@ has-props
 
 
 
-1207
+1285
 
 SidesDefault.class
 file
@@ -134,11 +134,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-07de65a44efeebb200ed675d47bb3fac
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.894784Z
+e94b45568e332756566b2b5a98e367ba
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -160,7 +160,7 @@ has-props
 
 
 
-1850
+1928
 
 JobPriorityDefault.class
 file
@@ -168,11 +168,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-5fb980bc01d0046beda8f582c65b0bc3
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.895784Z
+3fc5b98b793843ff2a3aafb018a68767
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -194,7 +194,7 @@ has-props
 
 
 
-1173
+1251
 
 JobHoldUntilDefault.class
 file
@@ -202,11 +202,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-5742afff0f615e75d116fa4135d4580e
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.895784Z
+4f2dc8fd5ede3262cdee9cdd4d7e4405
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -228,7 +228,7 @@ has-props
 
 
 
-1603
+1681
 
 NumberUpDefault.class
 file
@@ -236,11 +236,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-9a6562d06942917c15b7064b6e98eb9f
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.896783Z
+a3203a6ee81a964197159a13351f5e17
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -262,7 +262,7 @@ has-props
 
 
 
-1031
+1109
 
 OrientationRequestedDefault.class
 file
@@ -270,11 +270,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-c220e8483bbdaed9606ce2cfa662e019
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.896783Z
+c932d2573c3ce0a0530fc24166a5ef42
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -296,7 +296,7 @@ has-props
 
 
 
-1998
+2076
 
 MediaDefault.class
 file
@@ -304,11 +304,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-4774cf82cc3fbba22dbe9ec1cc61d95b
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.896783Z
+bf19156e054ba7f0f52217a5f4022ccf
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -330,7 +330,7 @@ has-props
 
 
 
-1043
+1121
 
 MultipleDocumentHandlingDefault.class
 file
@@ -338,11 +338,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-883d1ac2819c48998d555f2659222d96
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.897784Z
+e0258809f4a436a0f65ecfbeb9d51990
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -364,7 +364,7 @@ has-props
 
 
 
-2077
+2155
 
 FinishingsDefault.class
 file
@@ -372,11 +372,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-73852612ef1e651b6a500cca1e071d6c
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.897784Z
+ca38ff33a27855b36bf3138a995ccd9e
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -398,7 +398,7 @@ has-props
 
 
 
-3187
+3265
 
 CopiesDefault.class
 file
@@ -406,11 +406,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-2a9a0911d984940822e30f178b75a8c7
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.898784Z
+d9b21ac94ade4d7a71d0f9d58518ead0
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -432,7 +432,7 @@ has-props
 
 
 
-1151
+1229
 
 PrintQualityDefault.class
 file
@@ -440,11 +440,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-59507ad0db4895401ca2c503ef6aebdc
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.898784Z
+743624879e05bada459990975808b80c
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -466,5 +466,5 @@ has-props
 
 
 
-1778
+1856
 

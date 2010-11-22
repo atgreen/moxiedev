@@ -753,8 +753,10 @@ Sized_dynobj<size, big_endian>::do_add_symbols(Symbol_table* symtab,
 
 template<int size, bool big_endian>
 Archive::Should_include
-Sized_dynobj<size, big_endian>::do_should_include_member(
-    Symbol_table*, Read_symbols_data*, std::string*)
+Sized_dynobj<size, big_endian>::do_should_include_member(Symbol_table*,
+							 Layout*,
+							 Read_symbols_data*,
+							 std::string*)
 {
   return Archive::SHOULD_INCLUDE_YES;
 }
@@ -1729,8 +1731,8 @@ Versions::def_section_contents(const Stringpool* dynpool,
 template<int size, bool big_endian>
 void
 Versions::need_section_contents(const Stringpool* dynpool,
-				unsigned char** pp, unsigned int *psize,
-				unsigned int *pentries) const
+				unsigned char** pp, unsigned int* psize,
+				unsigned int* pentries) const
 {
   gold_assert(this->is_finalized_);
   gold_assert(!this->needs_.empty());

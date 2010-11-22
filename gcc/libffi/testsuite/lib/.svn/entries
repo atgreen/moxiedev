@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libffi/testsuite/lib
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-01T12:32:24.799527Z
-155549
-green
+2010-11-15T20:30:37.684837Z
+166768
+ro
 
 
 
@@ -26,17 +26,17 @@ green
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-libffi-dg.exp
+libffi.exp
 file
 
 
 
 
-2010-01-06T00:59:53.816646Z
-4ff7f7a31a97eec90af2e4dfb964b213
-2010-01-01T12:32:24.799527Z
-155549
-green
+2010-11-22T19:18:42.362814Z
+1d1d2e21a0c36c10b3cf472496566ff3
+2010-11-15T20:30:37.684837Z
+166768
+ro
 
 
 
@@ -58,5 +58,5 @@ green
 
 
 
-9170
+10710
 

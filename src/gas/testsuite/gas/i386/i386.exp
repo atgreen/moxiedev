@@ -28,6 +28,7 @@ if [expr ([istarget "i*86-*-*"] ||  [istarget "x86_64-*-*"]) && [gas_32_check]] 
     run_list_test "inval" "-al"
     run_list_test "segment" "-al"
     run_list_test "inval-seg" "-al"
+    run_list_test "inval-reg" "-al"
     run_list_test "modrm" "-al --listing-lhs-width=2"
     run_dump_test "naked"
     run_dump_test "opcode"
@@ -37,11 +38,12 @@ if [expr ([istarget "i*86-*-*"] ||  [istarget "x86_64-*-*"]) && [gas_32_check]] 
     run_dump_test "intel16"
     run_list_test "intelbad" ""
     run_dump_test "intelok"
-    run_dump_test "intel-got32"
     run_dump_test "prefix"
     run_dump_test "amd"
     run_dump_test "katmai"
     run_dump_test "jump"
+    run_dump_test "relax-1"
+    run_dump_test "relax-2"
     run_dump_test "ssemmx2"
     run_dump_test "sse2"
     run_dump_test "sub"
@@ -50,6 +52,7 @@ if [expr ([istarget "i*86-*-*"] ||  [istarget "x86_64-*-*"]) && [gas_32_check]] 
     run_dump_test "sib-intel"
     run_dump_test "disp"
     run_dump_test "disp-intel"
+    run_dump_test "disp32"
     run_dump_test "vmx"
     run_dump_test "smx"
     run_dump_test "suffix"
@@ -112,6 +115,7 @@ if [expr ([istarget "i*86-*-*"] ||  [istarget "x86_64-*-*"]) && [gas_32_check]] 
     run_dump_test "arch-1"
     run_dump_test "arch-2"
     run_dump_test "arch-3"
+    run_dump_test "arch-4"
     run_dump_test "arch-5"
     run_dump_test "arch-6"
     run_dump_test "arch-7"
@@ -206,6 +210,7 @@ if [expr ([istarget "i*86-*-*"] ||  [istarget "x86_64-*-*"]) && [gas_32_check]] 
 	run_list_test "reloc32" "--defsym _bad_=1"
 	run_dump_test "mixed-mode-reloc32"
 	run_dump_test "att-regs"
+	run_dump_test "intel-got32"
 	run_dump_test "intel-regs"
 	run_list_test "inval-equ-1" "-al"
 	run_list_test "inval-equ-2" "-al"
@@ -214,10 +219,7 @@ if [expr ([istarget "i*86-*-*"] ||  [istarget "x86_64-*-*"]) && [gas_32_check]] 
 	run_dump_test "localpic"
 	run_dump_test "debug1"
 
-	if [expr [istarget "*-*-linux*"]] then {
-	    setup_xfail "*-*-linux*"
-	    run_dump_test "dw2-compress-2"
-	}
+	run_dump_test "dw2-compress-2"
     }
 
     # This is a PE specific test.
@@ -240,8 +242,6 @@ if [expr [istarget "i*86-*-*"] || [istarget "x86_64-*-*"]] then {
 	run_list_test_stdin "list-1" "-al"
 	run_list_test_stdin "list-2" "-al"
 	run_list_test_stdin "list-3" "-al"
-    }
-    if [expr [istarget "*-*-linux*"]] then {
 	run_dump_test "dw2-compress-1"
     }
 }
@@ -271,6 +271,7 @@ if [expr ([istarget "i*86-*-*"] || [istarget "x86_64-*-*"]) && [gas_64_check]] t
     run_list_test "x86-64-segment" "-al"
     run_list_test "x86-64-inval-seg" "-al"
     run_dump_test "x86-64-branch"
+    run_dump_test "x86-64-relax-1"
     run_dump_test "svme64"
     run_dump_test "x86-64-amdfam10"
     run_dump_test "x86-64-vmx"
@@ -296,6 +297,7 @@ if [expr ([istarget "i*86-*-*"] || [istarget "x86_64-*-*"]) && [gas_64_check]] t
     run_dump_test "x86-64-gidt"
     run_dump_test "x86-64-nops"
     run_dump_test "x86-64-nops-1"
+    run_dump_test "x86-64-nops-1-g64"
     run_dump_test "x86-64-nops-1-k8"
     run_dump_test "x86-64-nops-1-nocona"
     run_dump_test "x86-64-nops-1-core2"
@@ -326,11 +328,7 @@ if [expr ([istarget "i*86-*-*"] || [istarget "x86_64-*-*"]) && [gas_64_check]] t
     run_dump_test "x86-64-sib-intel"
     run_dump_test "x86-64-disp"
     run_dump_test "x86-64-disp-intel"
-    if { ![istarget "*-*-mingw*"] } then {
-      run_dump_test "x86-64-opcode-inval"
-      run_dump_test "x86-64-opcode-inval-intel"
-      run_dump_test "intel-got64"
-    }
+    run_dump_test "x86-64-disp32"
     run_dump_test "rexw"
     run_dump_test "x86-64-fxsave"
     run_dump_test "x86-64-fxsave-intel"
@@ -403,14 +401,14 @@ if [expr ([istarget "i*86-*-*"] || [istarget "x86_64-*-*"]) && [gas_64_check]] t
 	run_list_test "reloc64" "--defsym _bad_=1"
 	run_dump_test "mixed-mode-reloc64"
 	run_dump_test "x86-64-ifunc"
+	run_dump_test "x86-64-opcode-inval"
+	run_dump_test "x86-64-opcode-inval-intel"
+	run_dump_test "intel-got64"
 	run_dump_test "l1om"
 	run_dump_test "x86-64-localpic"
 	run_dump_test "debug1"
 
-	if [istarget "*-*-linux*"] then {
-	    setup_xfail "*-*-linux*"
-	    run_dump_test "x86-64-dw2-compress-2"
-	}
+	run_dump_test "x86-64-dw2-compress-2"
     }
 
     set ASFLAGS "$old_ASFLAGS"

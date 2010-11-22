@@ -221,6 +221,9 @@ Support for D is partial.  For information on D, see
 Support for Modula-2 is partial.  For information on Modula-2, see
 @ref{Modula-2,,Modula-2}.
 
+Support for OpenCL C is partial.  For information on OpenCL C, see
+@ref{OpenCL C,,OpenCL C}.
+
 @cindex Pascal
 Debugging Pascal programs which use sets, subranges, file variables, or
 nested functions does not currently work.  @value{GDBN} does not support
@@ -1031,9 +1034,9 @@ Run in batch mode.  Exit with status @code{0} after processing all the
 command files specified with @samp{-x} (and all commands from
 initialization files, if not inhibited with @samp{-n}).  Exit with
 nonzero status if an error occurs in executing the @value{GDBN} commands
-in the command files.  Batch mode also disables pagination;
-@pxref{Screen Size} and acts as if @kbd{set confirm off} were in
-effect (@pxref{Messages/Warnings}).
+in the command files.  Batch mode also disables pagination, sets unlimited
+terminal width and height @pxref{Screen Size}, and acts as if @kbd{set confirm
+off} were in effect (@pxref{Messages/Warnings}).
 
 Batch mode may be useful for running @value{GDBN} as a filter, for
 example to download and run a program on another computer; in order to
@@ -2481,12 +2484,16 @@ using the @w{@code{kill inferior}} command:
 @kindex detach inferior @var{infno}
 @item detach inferior @var{infno}
 Detach from the inferior identified by @value{GDBN} inferior number
-@var{infno}, and remove it from the inferior list.
+@var{infno}.  Note that the inferior's entry still stays on the list
+of inferiors shown by @code{info inferiors}, but its Description will
+show @samp{<null>}.
 
 @kindex kill inferior @var{infno}
 @item kill inferior @var{infno}
 Kill the inferior identified by @value{GDBN} inferior number
-@var{infno}, and remove it from the inferior list.
+@var{infno}.  Note that the inferior's entry still stays on the list
+of inferiors shown by @code{info inferiors}, but its Description will
+show @samp{<null>}.
 @end table
 
 After the successful completion of a command such as @code{detach},
@@ -2860,6 +2867,14 @@ only on some platforms.
 @kindex show libthread-db-search-path 
 @item show libthread-db-search-path 
 Display current libthread_db search path.
+
+@kindex set debug libthread-db
+@kindex show debug libthread-db
+@cindex debugging @code{libthread_db}
+@item set debug libthread-db
+@itemx show debug libthread-db
+Turns on or off display of @code{libthread_db}-related events.
+Use @code{1} to enable, @code{0} to disable.
 @end table
 
 @node Forks
@@ -3699,7 +3714,7 @@ watchpoints, which do not slow down the running of your program.
 
 @table @code
 @kindex watch
-@item watch @var{expr} @r{[}thread @var{threadnum}@r{]}
+@item watch @r{[}-l@r{|}-location@r{]} @var{expr} @r{[}thread @var{threadnum}@r{]}
 Set a watchpoint for an expression.  @value{GDBN} will break when the
 expression @var{expr} is written into by the program and its value
 changes.  The simplest (and the most popular) use of this command is
@@ -3716,13 +3731,22 @@ change the value of @var{expr}, @value{GDBN} will not break.  Note
 that watchpoints restricted to a single thread in this way only work
 with Hardware Watchpoints.
 
+Ordinarily a watchpoint respects the scope of variables in @var{expr}
+(see below).  The @code{-location} argument tells @value{GDBN} to
+instead watch the memory referred to by @var{expr}.  In this case,
+@value{GDBN} will evaluate @var{expr}, take the address of the result,
+and watch the memory at that address.  The type of the result is used
+to determine the size of the watched memory.  If the expression's
+result does not have an address, then @value{GDBN} will print an
+error.
+
 @kindex rwatch
-@item rwatch @var{expr} @r{[}thread @var{threadnum}@r{]}
+@item rwatch @r{[}-l@r{|}-location@r{]} @var{expr} @r{[}thread @var{threadnum}@r{]}
 Set a watchpoint that will break when the value of @var{expr} is read
 by the program.
 
 @kindex awatch
-@item awatch @var{expr} @r{[}thread @var{threadnum}@r{]}
+@item awatch @r{[}-l@r{|}-location@r{]} @var{expr} @r{[}thread @var{threadnum}@r{]}
 Set a watchpoint that will break when @var{expr} is either read from
 or written into by the program.
 
@@ -6330,6 +6354,13 @@ in the file @var{filename}.  You only need the file name with a
 function name to avoid ambiguity when there are identically named
 functions in different source files.
 
+@item @var{label}
+Specifies the line at which the label named @var{label} appears.
+@value{GDBN} searches for the label in the function corresponding to
+the currently selected stack frame.  If there is no current selected
+stack frame (for instance, if the inferior is not running), then
+@value{GDBN} will not search for a label.
+
 @item *@var{address}
 Specifies the program address @var{address}.  For line-oriented
 commands, such as @code{list} and @code{edit}, this specifies a source
@@ -6592,6 +6623,11 @@ Reset the source path to its default value (@samp{$cdir:$cwd} on Unix systems). 
 @c RET-repeat for @code{directory} is explicitly disabled, but since
 @c repeating it would be a no-op we do not say that.  (thanks to RMS)
 
+@item set directories @var{path-list}
+@kindex set directories
+Set the source path to @var{path-list}.
+@samp{$cdir:$cwd} are added if missing.
+
 @item show directories
 @kindex show directories
 Print the source path: show which directories it contains.
@@ -6735,9 +6771,19 @@ program counter of the selected frame.  A single argument to this
 command is a program counter value; @value{GDBN} dumps the function
 surrounding this value.  When two arguments are given, they should
 be separated by a comma, possibly surrounded by whitespace.  The
-arguments specify a range of addresses (first inclusive, second exclusive)
-to dump.  In that case, the name of the function is also printed (since
-there could be several functions in the given range).
+arguments specify a range of addresses to dump, in one of two forms:
+
+@table @code
+@item @var{start},@var{end}
+the addresses from @var{start} (inclusive) to @var{end} (exclusive)
+@item @var{start},+@var{length}
+the addresses from @var{start} (inclusive) to
+@code{@var{start}+@var{length}} (exclusive).
+@end table
+
+@noindent
+When 2 arguments are specified, the name of the function is also
+printed (since there could be several functions in the given range).
 
 The argument(s) can be any expression yielding a numeric value, such as
 @samp{0x32c4}, @samp{&main+10} or @samp{$pc - 8}.
@@ -6786,6 +6832,18 @@ Dump of assembler code for function main:
    0x0804834d <+29>:   leave
    0x0804834e <+30>:   ret
 
+End of assembler dump.
+@end smallexample
+
+Here is another example showing raw instructions in hex for AMD x86-64,
+
+@smallexample
+(gdb) disas /r 0x400281,+10
+Dump of assembler code from 0x400281 to 0x40028b:
+   0x0000000000400281:  38 36  cmp    %dh,(%rsi)
+   0x0000000000400283:  2d 36 34 2e 73 sub    $0x732e3436,%eax
+   0x0000000000400288:  6f     outsl  %ds:(%rsi),(%dx)
+   0x0000000000400289:  2e 32 00       xor    %cs:(%rax),%al
 End of assembler dump.
 @end smallexample
 
@@ -8077,8 +8135,60 @@ Show whether C@t{++} virtual function tables are pretty printed, or not.
 Python code.  It greatly simplifies the display of complex objects.  This
 mechanism works for both MI and the CLI.
 
-For example, here is how a C@t{++} @code{std::string} looks without a
-pretty-printer:
+@menu
+* Pretty-Printer Introduction::  Introduction to pretty-printers
+* Pretty-Printer Example::       An example pretty-printer
+* Pretty-Printer Commands::      Pretty-printer commands
+@end menu
+
+@node Pretty-Printer Introduction
+@subsection Pretty-Printer Introduction
+
+When @value{GDBN} prints a value, it first sees if there is a pretty-printer
+registered for the value.  If there is then @value{GDBN} invokes the
+pretty-printer to print the value.  Otherwise the value is printed normally.
+
+Pretty-printers are normally named.  This makes them easy to manage.
+The @samp{info pretty-printer} command will list all the installed
+pretty-printers with their names.
+If a pretty-printer can handle multiple data types, then its
+@dfn{subprinters} are the printers for the individual data types.
+Each such subprinter has its own name.
+The format of the name is @var{printer-name}:@var{subprinter-name}.
+
+Pretty-printers are installed by @dfn{registering} them with @value{GDBN}.
+Typically they are automatically loaded and registered when the corresponding
+debug information is loaded, thus making them available without having to
+do anything special.
+
+There are three places where a pretty-printer can be registered.
+
+@itemize @bullet
+@item
+Pretty-printers registered globally are available when debugging
+all inferiors.
+
+@item
+Pretty-printers registered with a program space are available only
+when debugging that program.
+@xref{Progspaces In Python}, for more details on program spaces in Python.
+
+@item
+Pretty-printers registered with an objfile are loaded and unloaded
+with the corresponding objfile (e.g., shared library).
+@xref{Objfiles In Python}, for more details on objfiles in Python.
+@end itemize
+
+@xref{Selecting Pretty-Printers}, for further information on how 
+pretty-printers are selected,
+
+@xref{Writing a Pretty-Printer}, for implementing pretty printers
+for new types.
+
+@node Pretty-Printer Example
+@subsection Pretty-Printer Example
+
+Here is how a C@t{++} @code{std::string} looks without a pretty-printer:
 
 @smallexample
 (@value{GDBP}) print s
@@ -8103,8 +8213,91 @@ With a pretty-printer for @code{std::string} only the contents are printed:
 $2 = "abcd"
 @end smallexample
 
-For implementing pretty printers for new types you should read the Python API
-details (@pxref{Pretty Printing API}).
+@node Pretty-Printer Commands
+@subsection Pretty-Printer Commands
+@cindex pretty-printer commands
+
+@table @code
+@kindex info pretty-printer
+@item info pretty-printer [@var{object-regexp} [@var{name-regexp}]]
+Print the list of installed pretty-printers.
+This includes disabled pretty-printers, which are marked as such.
+
+@var{object-regexp} is a regular expression matching the objects
+whose pretty-printers to list.
+Objects can be @code{global}, the program space's file
+(@pxref{Progspaces In Python}),
+and the object files within that program space (@pxref{Objfiles In Python}).
+@xref{Selecting Pretty-Printers}, for details on how @value{GDBN}
+looks up a printer from these three objects.
+
+@var{name-regexp} is a regular expression matching the name of the printers
+to list.
+
+@kindex disable pretty-printer
+@item disable pretty-printer [@var{object-regexp} [@var{name-regexp}]]
+Disable pretty-printers matching @var{object-regexp} and @var{name-regexp}.
+A disabled pretty-printer is not forgotten, it may be enabled again later.
+
+@kindex enable pretty-printer
+@item enable pretty-printer [@var{object-regexp} [@var{name-regexp}]]
+Enable pretty-printers matching @var{object-regexp} and @var{name-regexp}.
+@end table
+
+Example:
+
+Suppose we have three pretty-printers installed: one from library1.so
+named @code{foo} that prints objects of type @code{foo}, and
+another from library2.so named @code{bar} that prints two types of objects,
+@code{bar1} and @code{bar2}.
+
+@smallexample
+(gdb) info pretty-printer
+library1.so:
+  foo
+library2.so:
+  bar
+    bar1
+    bar2
+(gdb) info pretty-printer library2
+library2.so:
+  bar
+    bar1
+    bar2
+(gdb) disable pretty-printer library1
+1 printer disabled
+2 of 3 printers enabled
+(gdb) info pretty-printer
+library1.so:
+  foo [disabled]
+library2.so:
+  bar
+    bar1
+    bar2
+(gdb) disable pretty-printer library2 bar:bar1
+1 printer disabled
+1 of 3 printers enabled
+(gdb) info pretty-printer library2
+library1.so:
+  foo [disabled]
+library2.so:
+  bar
+    bar1 [disabled]
+    bar2
+(gdb) disable pretty-printer library2 bar
+1 printer disabled
+0 of 3 printers enabled
+(gdb) info pretty-printer library2
+library1.so:
+  foo [disabled]
+library2.so:
+  bar [disabled]
+    bar1 [disabled]
+    bar2
+@end smallexample
+
+Note that for @code{bar} the entire printer can be disabled,
+as can each individual subprinter.
 
 @node Value History
 @section Value History
@@ -8865,7 +9058,7 @@ automatically determine the appropriate host character set.  In this
 case, @value{GDBN} uses @samp{UTF-8}.
 
 @value{GDBN} can only use certain character sets as its host character
-set.  If you type @kbd{@w{set target-charset @key{TAB}@key{TAB}}},
+set.  If you type @kbd{@w{set host-charset @key{TAB}@key{TAB}}},
 @value{GDBN} will list the host character sets it supports.
 
 @item set charset @var{charset}
@@ -11426,7 +11619,7 @@ being set automatically by @value{GDBN}.
 @node Supported Languages
 @section Supported Languages
 
-@value{GDBN} supports C, C@t{++}, D, Objective-C, Fortran, Java, Pascal,
+@value{GDBN} supports C, C@t{++}, D, Objective-C, Fortran, Java, OpenCL C, Pascal,
 assembly, Modula-2, and Ada.
 @c This is false ...
 Some @value{GDBN} features may be used in expressions regardless of the
@@ -11447,6 +11640,7 @@ language reference or tutorial.
 * C::                           C and C@t{++}
 * D::                           D
 * Objective-C::                 Objective-C
+* OpenCL C::                    OpenCL C
 * Fortran::                     Fortran
 * Pascal::                      Pascal
 * Modula-2::                    Modula-2
@@ -12092,6 +12286,42 @@ and print the result.  Also, an additional command has been added,
 the description of an object.  However, this command may only work
 with certain Objective-C libraries that have a particular hook
 function, @code{_NSPrintForDebugger}, defined.
+
+@node OpenCL C
+@subsection OpenCL C
+
+@cindex OpenCL C
+This section provides information about @value{GDBN}s OpenCL C support.
+
+@menu
+* OpenCL C Datatypes::
+* OpenCL C Expressions::
+* OpenCL C Operators::
+@end menu
+
+@node OpenCL C Datatypes
+@subsubsection OpenCL C Datatypes
+
+@cindex OpenCL C Datatypes
+@value{GDBN} supports the builtin scalar and vector datatypes specified
+by OpenCL 1.1.  In addition the half- and double-precision floating point
+data types of the @code{cl_khr_fp16} and @code{cl_khr_fp64} OpenCL
+extensions are also known to @value{GDBN}.
+
+@node OpenCL C Expressions
+@subsubsection OpenCL C Expressions
+
+@cindex OpenCL C Expressions
+@value{GDBN} supports accesses to vector components including the access as
+lvalue where possible.  Since OpenCL C is based on C99 most C expressions
+supported by @value{GDBN} can be used as well.
+
+@node OpenCL C Operators
+@subsubsection OpenCL C Operators
+
+@cindex OpenCL C Operators
+@value{GDBN} supports the operators specified by OpenCL 1.1 for scalar and
+vector data types.
 
 @node Fortran
 @subsection Fortran
@@ -12811,6 +13041,8 @@ to be difficult.
 * Stopping Before Main Program:: Debugging the program during elaboration.
 * Ada Tasks::                   Listing and setting breakpoints in tasks.
 * Ada Tasks and Core Files::    Tasking Support when Debugging Core Files
+* Ravenscar Profile::           Tasking Support when using the Ravenscar
+                                   Profile
 * Ada Glitches::                Known peculiarities of Ada mode.
 @end menu
 
@@ -13360,6 +13592,36 @@ a core file, this means that the core file must be opened with read-write
 privileges, using the command @samp{"set write on"} (@pxref{Patching}).
 Under these circumstances, you should make a backup copy of the core
 file before inspecting it with @value{GDBN}.
+
+@node Ravenscar Profile
+@subsubsection Tasking Support when using the Ravenscar Profile
+@cindex Ravenscar Profile
+
+The @dfn{Ravenscar Profile} is a subset of the Ada tasking features,
+specifically designed for systems with safety-critical real-time
+requirements.
+
+@table @code
+@kindex set ravenscar task-switching on
+@cindex task switching with program using Ravenscar Profile
+@item set ravenscar task-switching on
+Allows task switching when debugging a program that uses the Ravenscar
+Profile.  This is the default.
+
+@kindex set ravenscar task-switching off
+@item set ravenscar task-switching off
+Turn off task switching when debugging a program that uses the Ravenscar
+Profile.  This is mostly intended to disable the code that adds support
+for the Ravenscar Profile, in case a bug in either @value{GDBN} or in
+the Ravenscar runtime is preventing @value{GDBN} from working properly.
+To be effective, this command should be run before the program is started.
+
+@kindex show ravenscar task-switching
+@item show ravenscar task-switching
+Show whether it is possible to switch from task to task in a program
+using the Ravenscar Profile.
+
+@end table
 
 @node Ada Glitches
 @subsubsection Known Peculiarities of Ada Mode
@@ -14282,6 +14544,7 @@ program.  To debug a core dump of a previous run, you must also tell
 @menu
 * Files::                       Commands to specify files
 * Separate Debug Files::        Debugging information in separate files
+* Index Files::                 Index files speed up GDB
 * Symbol Errors::               Errors reading symbol files
 * Data Files::                  GDB data files
 @end menu
@@ -15171,6 +15434,45 @@ gnu_debuglink_crc32 (unsigned long crc,
 This computation does not apply to the ``build ID'' method.
 
 
+@node Index Files
+@section Index Files Speed Up @value{GDBN}
+@cindex index files
+@cindex @samp{.gdb_index} section
+
+When @value{GDBN} finds a symbol file, it scans the symbols in the
+file in order to construct an internal symbol table.  This lets most
+@value{GDBN} operations work quickly---at the cost of a delay early
+on.  For large programs, this delay can be quite lengthy, so
+@value{GDBN} provides a way to build an index, which speeds up
+startup.
+
+The index is stored as a section in the symbol file.  @value{GDBN} can
+write the index to a file, then you can put it into the symbol file
+using @command{objcopy}.
+
+To create an index file, use the @code{save gdb-index} command:
+
+@table @code
+@item save gdb-index @var{directory}
+@kindex save gdb-index
+Create an index file for each symbol file currently known by
+@value{GDBN}.  Each file is named after its corresponding symbol file,
+with @samp{.gdb-index} appended, and is written into the given
+@var{directory}.
+@end table
+
+Once you have created an index file you can merge it into your symbol
+file, here named @file{symfile}, using @command{objcopy}:
+
+@smallexample
+$ objcopy --add-section .gdb_index=symfile.gdb-index \
+    --set-section-flags .gdb_index=readonly symfile symfile
+@end smallexample
+
+There are currently some limitation on indices.  They only work when
+for DWARF debugging information, not stabs.  And, they do not
+currently work for programs using Ada.
+
 @node Symbol Errors
 @section Errors Reading Symbol Files
 
@@ -15343,33 +15645,20 @@ and @code{show architecture}.
 @cindex active targets
 @cindex multiple targets
 
-There are three classes of targets: processes, core files, and
-executable files.  @value{GDBN} can work concurrently on up to three
-active targets, one in each class.  This allows you to (for example)
-start a process and inspect its activity without abandoning your work on
-a core file.
+There are multiple classes of targets such as: processes, executable files or
+recording sessions.  Core files belong to the process class, making core file
+and process mutually exclusive.  Otherwise, @value{GDBN} can work concurrently
+on multiple active targets, one in each class.  This allows you to (for
+example) start a process and inspect its activity, while still having access to
+the executable file after the process finishes.  Or if you start process
+recording (@pxref{Reverse Execution}) and @code{reverse-step} there, you are
+presented a virtual layer of the recording target, while the process target
+remains stopped at the chronologically last point of the process execution.
 
-For example, if you execute @samp{gdb a.out}, then the executable file
-@code{a.out} is the only active target.  If you designate a core file as
-well---presumably from a prior run that crashed and coredumped---then
-@value{GDBN} has two active targets and uses them in tandem, looking
-first in the corefile target, then in the executable file, to satisfy
-requests for memory addresses.  (Typically, these two classes of target
-are complementary, since core files contain only a program's
-read-write memory---variables and so on---plus machine status, while
-executable files contain only the program text and initialized data.)
-
-When you type @code{run}, your executable file becomes an active process
-target as well.  When a process target is active, all @value{GDBN}
-commands requesting memory addresses refer to that target; addresses in
-an active core file or executable file target are obscured while the
-process target is active.
-
-Use the @code{core-file} and @code{exec-file} commands to select a new
-core file or executable target (@pxref{Files, ,Commands to Specify
-Files}).  To specify as a target a process that is already running, use
-the @code{attach} command (@pxref{Attach, ,Debugging an Already-running
-Process}).
+Use the @code{core-file} and @code{exec-file} commands to select a new core
+file or executable target (@pxref{Files, ,Commands to Specify Files}).  To
+specify as a target a process that is already running, use the @code{attach}
+command (@pxref{Attach, ,Debugging an Already-running Process}).
 
 @node Target Commands
 @section Commands for Managing Targets
@@ -18395,6 +18684,19 @@ Set suspend trace mode.
 @node PowerPC Embedded
 @subsection PowerPC Embedded
 
+@cindex DVC register
+@value{GDBN} supports using the DVC (Data Value Compare) register to
+implement in hardware simple hardware watchpoint conditions of the form:
+
+@smallexample
+(@value{GDBP}) watch @var{ADDRESS|VARIABLE} \
+  if  @var{ADDRESS|VARIABLE} == @var{CONSTANT EXPRESSION}
+@end smallexample
+
+The DVC register will be automatically used whenever @value{GDBN} detects
+such pattern in a condition expression.  This feature is available in native
+@value{GDBN} running on a Linux kernel version 2.6.34 or newer.
+
 @value{GDBN} provides the following PowerPC-specific commands:
 
 @table @code
@@ -20271,7 +20573,8 @@ Python programming language}.  This feature is available only if
 @cindex python directory
 Python scripts used by @value{GDBN} should be installed in
 @file{@var{data-directory}/python}, where @var{data-directory} is
-the data directory as determined at @value{GDBN} startup (@pxref{Data Files}).  This directory, known as the @dfn{python directory},
+the data directory as determined at @value{GDBN} startup (@pxref{Data Files}).
+This directory, known as the @dfn{python directory},
 is automatically added to the Python Search Path in order to allow
 the Python interpreter to locate all scripts installed at this location.
 
@@ -20279,6 +20582,7 @@ the Python interpreter to locate all scripts installed at this location.
 * Python Commands::             Accessing Python from @value{GDBN}.
 * Python API::                  Accessing @value{GDBN} from Python.
 * Auto-loading::                Automatically loading Python code.
+* Python modules::              Python modules provided by @value{GDBN}.
 @end menu
 
 @node Python Commands
@@ -20360,7 +20664,7 @@ situation, a Python @code{KeyboardInterrupt} exception is thrown.
 * Types In Python::             Python representation of types.
 * Pretty Printing API::         Pretty-printing values.
 * Selecting Pretty-Printers::   How GDB chooses a pretty-printer.
-* Disabling Pretty-Printers::   Disabling broken printers.
+* Writing a Pretty-Printer::    Writing a Pretty-Printer.
 * Inferiors In Python::         Python representation of inferiors (processes)
 * Threads In Python::           Accessing inferior threads from Python.
 * Commands In Python::          Implementing new commands in Python.
@@ -20406,7 +20710,9 @@ By default, any output produced by @var{command} is sent to
 @value{GDBN}'s standard output.  If the @var{to_string} parameter is
 @code{True}, then output will be collected by @code{gdb.execute} and
 returned as a string.  The default is @code{False}, in which case the
-return value is @code{None}.
+return value is @code{None}.  If @var{to_string} is @code{True}, the
+@value{GDBN} virtual terminal will be temporarily set to unlimited width
+and height, and its pagination will be disabled; @pxref{Screen Size}.
 @end defun
 
 @findex gdb.breakpoints
@@ -20423,8 +20729,9 @@ spaces if the parameter has a multi-part name.  For example,
 @samp{print object} is a valid parameter name.
 
 If the named parameter does not exist, this function throws a
-@code{RuntimeError}.  Otherwise, the parameter's value is converted to
-a Python value of the appropriate type, and returned.
+@code{gdb.error} (@pxref{Exception Handling}).  Otherwise, the
+parameter's value is converted to a Python value of the appropriate
+type, and returned.
 @end defun
 
 @findex gdb.history
@@ -20435,7 +20742,7 @@ If @var{number} is negative, then @value{GDBN} will take its absolute value
 and count backward from the last element (i.e., the most recent element) to
 find the value to return.  If @var{number} is zero, then @value{GDBN} will
 return the most recent element.  If the element specified by @var{number}
-doesn't exist in the value history, a @code{RuntimeError} exception will be
+doesn't exist in the value history, a @code{gdb.error} exception will be
 raised.
 
 If no exception is raised, the return value is always an instance of
@@ -20453,6 +20760,45 @@ This function can be useful when implementing a new command
 command's argument as an expression.  It is also useful simply to
 compute values, for example, it is the only way to get the value of a
 convenience variable (@pxref{Convenience Vars}) as a @code{gdb.Value}.
+@end defun
+
+@findex gdb.post_event
+@defun post_event event
+Put @var{event}, a callable object taking no arguments, into
+@value{GDBN}'s internal event queue.  This callable will be invoked at
+some later point, during @value{GDBN}'s event processing.  Events
+posted using @code{post_event} will be run in the order in which they
+were posted; however, there is no way to know when they will be
+processed relative to other events inside @value{GDBN}.
+
+@value{GDBN} is not thread-safe.  If your Python program uses multiple
+threads, you must be careful to only call @value{GDBN}-specific
+functions in the main @value{GDBN} thread.  @code{post_event} ensures
+this.  For example:
+
+@smallexample
+(@value{GDBP}) python
+>import threading
+>
+>class Writer():
+> def __init__(self, message):
+>        self.message = message;
+> def __call__(self):
+>        gdb.write(self.message)
+>
+>class MyThread1 (threading.Thread):
+> def run (self):
+>        gdb.post_event(Writer("Hello "))
+>
+>class MyThread2 (threading.Thread):
+> def run (self):
+>        gdb.post_event(Writer("World\n"))
+>
+>MyThread1().start()
+>MyThread2().start()
+>end
+(@value{GDBP}) Hello World
+@end smallexample
 @end defun
 
 @findex gdb.write
@@ -20484,6 +20830,26 @@ Return the name of the current target wide character set
 never returned.
 @end defun
 
+@findex gdb.solib_name
+@defun solib_name address
+Return the name of the shared library holding the given @var{address}
+as a string, or @code{None}.
+@end defun
+
+@findex gdb.decode_line 
+@defun decode_line @r{[}expression@r{]}
+Return locations of the line specified by @var{expression}, or of the
+current line if no argument was given.  This function returns a Python
+tuple containing two elements.  The first element contains a string
+holding any unparsed section of @var{expression} (or @code{None} if
+the expression has been fully parsed).  The second element contains
+either @code{None} or another tuple that contains all the locations
+that match the expression represented as @code{gdb.Symtab_and_line}
+objects (@pxref{Symbol Tables In Python}).  If @var{expression} is
+provided, it is decoded the way that @value{GDBN}'s inbuilt
+@code{break} or @code{edit} commands do (@pxref{Specify Location}).
+@end defun
+
 @node Exception Handling
 @subsubsection Exception Handling
 @cindex python exceptions
@@ -20504,15 +20870,31 @@ Traceback (most recent call last):
 NameError: name 'foo' is not defined
 @end smallexample
 
-@value{GDBN} errors that happen in @value{GDBN} commands invoked by Python
-code are converted to Python @code{RuntimeError} exceptions.  User
-interrupt (via @kbd{C-c} or by typing @kbd{q} at a pagination
-prompt) is translated to a Python @code{KeyboardInterrupt}
-exception.  If you catch these exceptions in your Python code, your
-exception handler will see @code{RuntimeError} or
-@code{KeyboardInterrupt} as the exception type, the @value{GDBN} error
-message as its value, and the Python call stack backtrace at the
-Python statement closest to where the @value{GDBN} error occured as the
+@value{GDBN} errors that happen in @value{GDBN} commands invoked by
+Python code are converted to Python exceptions.  The type of the
+Python exception depends on the error.
+
+@ftable @code
+@item gdb.error
+This is the base class for most exceptions generated by @value{GDBN}.
+It is derived from @code{RuntimeError}, for compatibility with earlier
+versions of @value{GDBN}.
+
+If an error occurring in @value{GDBN} does not fit into some more
+specific category, then the generated exception will have this type.
+
+@item gdb.MemoryError
+This is a subclass of @code{gdb.error} which is thrown when an
+operation tried to access invalid memory in the inferior.
+
+@item KeyboardInterrupt
+User interrupt (via @kbd{C-c} or by typing @kbd{q} at a pagination
+prompt) is translated to a Python @code{KeyboardInterrupt} exception.
+@end ftable
+
+In all cases, your exception handler will see the @value{GDBN} error
+message as its value and the Python call stack backtrace at the Python
+statement closest to where the @value{GDBN} error occured as the
 traceback.
 
 @findex gdb.GdbError
@@ -20573,6 +20955,22 @@ bar = some_val['foo']
 
 Again, @code{bar} will also be a @code{gdb.Value} object.
 
+A @code{gdb.Value} that represents a function can be executed via
+inferior function call.  Any arguments provided to the call must match
+the function's prototype, and must be provided in the order specified
+by that prototype.
+
+For example, @code{some_val} is a @code{gdb.Value} instance
+representing a function that takes two integers as arguments.  To
+execute this function, call it like so:
+
+@smallexample
+result = some_val (10,20)
+@end smallexample
+
+Any values returned from a function call will be stored as a
+@code{gdb.Value}.
+
 The following attributes are provided:
 
 @table @code
@@ -20590,13 +20988,64 @@ this value, thus it is not available for fetching from the inferior.
 
 @defivar Value type
 The type of this @code{gdb.Value}.  The value of this attribute is a
-@code{gdb.Type} object.
+@code{gdb.Type} object (@pxref{Types In Python}).
+@end defivar
+
+@defivar Value dynamic_type
+The dynamic type of this @code{gdb.Value}.  This uses C@t{++} run-time
+type information (@acronym{RTTI}) to determine the dynamic type of the
+value.  If this value is of class type, it will return the class in
+which the value is embedded, if any.  If this value is of pointer or
+reference to a class type, it will compute the dynamic type of the
+referenced object, and return a pointer or reference to that type,
+respectively.  In all other cases, it will return the value's static
+type.
+
+Note that this feature will only work when debugging a C@t{++} program
+that includes @acronym{RTTI} for the object in question.  Otherwise,
+it will just return the static type of the value as in @kbd{ptype foo}
+(@pxref{Symbols, ptype}).
 @end defivar
 @end table
 
 The following methods are provided:
 
 @table @code
+@defmethod Value __init__ @var{val}
+Many Python values can be converted directly to a @code{gdb.Value} via
+this object initializer.  Specifically:
+
+@table @asis
+@item Python boolean
+A Python boolean is converted to the boolean type from the current
+language.
+
+@item Python integer
+A Python integer is converted to the C @code{long} type for the
+current architecture.
+
+@item Python long
+A Python long is converted to the C @code{long long} type for the
+current architecture.
+
+@item Python float
+A Python float is converted to the C @code{double} type for the
+current architecture.
+
+@item Python string
+A Python string is converted to a target string, using the current
+target encoding.
+
+@item @code{gdb.Value}
+If @code{val} is a @code{gdb.Value}, then a copy of the value is made.
+
+@item @code{gdb.LazyString}
+If @code{val} is a @code{gdb.LazyString} (@pxref{Lazy Strings In
+Python}), then the lazy string's @code{value} method is called, and
+its result is used.
+@end table
+@end defmethod
+
 @defmethod Value cast type
 Return a new instance of @code{gdb.Value} that is the result of
 casting this instance to the type described by @var{type}, which must
@@ -20623,6 +21072,16 @@ bar = foo.dereference ()
 
 The result @code{bar} will be a @code{gdb.Value} object holding the
 value pointed to by @code{foo}.
+@end defmethod
+
+@defmethod Value dynamic_cast type
+Like @code{Value.cast}, but works as if the C@t{++} @code{dynamic_cast}
+operator were used.  Consult a C@t{++} reference for details.
+@end defmethod
+
+@defmethod Value reinterpret_cast type
+Like @code{Value.cast}, but works as if the C@t{++} @code{reinterpret_cast}
+operator were used.  Consult a C@t{++} reference for details.
 @end defmethod
 
 @defmethod Value string @r{[}encoding@r{]} @r{[}errors@r{]} @r{[}length@r{]}
@@ -20771,6 +21230,15 @@ but it can be @code{None} in some situations.
 @end table
 @end defmethod
 
+@defmethod Type array @var{n1} @r{[}@var{n2}@r{]}
+Return a new @code{gdb.Type} object which represents an array of this
+type.  If one argument is given, it is the inclusive upper bound of
+the array; in this case the lower bound is zero.  If two arguments are
+given, the first argument is the lower bound of the array, and the
+second argument is the upper bound of the array.  An array's length
+must not be negative, but the bounds can be.
+@end defmethod
+
 @defmethod Type const
 Return a new @code{gdb.Type} object which represents a
 @code{const}-qualified variant of this type.
@@ -20791,7 +21259,7 @@ variant of this type.  That is, the result is neither @code{const} nor
 Return a Python @code{Tuple} object that contains two elements: the
 low bound of the argument type and the high bound of that type.  If
 the type does not have a range, @value{GDBN} will raise a
-@code{RuntimeError} exception.
+@code{gdb.error} exception (@pxref{Exception Handling}).
 @end defmethod
 
 @defmethod Type reference
@@ -20976,6 +21444,9 @@ A function internal to @value{GDBN}.  This is the type used to represent
 convenience functions.
 @end table
 
+Further support for types is provided in the @code{gdb.types}
+Python module (@pxref{gdb.types}).
+
 @node Pretty Printing API
 @subsubsection Pretty Printing API
 
@@ -21060,17 +21531,28 @@ are peformed in this method and nothing is printed.
 If the result is not one of these types, an exception is raised.
 @end defop
 
+@value{GDBN} provides a function which can be used to look up the
+default pretty-printer for a @code{gdb.Value}:
+
+@findex gdb.default_visualizer
+@defun default_visualizer value
+This function takes a @code{gdb.Value} object as an argument.  If a
+pretty-printer for this value exists, then it is returned.  If no such
+printer exists, then this returns @code{None}.
+@end defun
+
 @node Selecting Pretty-Printers
 @subsubsection Selecting Pretty-Printers
 
 The Python list @code{gdb.pretty_printers} contains an array of
 functions or callable objects that have been registered via addition
-as a pretty-printer.
+as a pretty-printer.  Printers in this list are called @code{global}
+printers, they're available when debugging all inferiors.
 Each @code{gdb.Progspace} contains a @code{pretty_printers} attribute.
 Each @code{gdb.Objfile} also contains a @code{pretty_printers}
 attribute.
 
-A function on one of these lists is passed a single @code{gdb.Value}
+Each function on these lists is passed a single @code{gdb.Value}
 argument and should return a pretty-printer object conforming to the
 interface definition above (@pxref{Pretty Printing API}).  If a function
 cannot create a pretty-printer for the value, it should return
@@ -21078,9 +21560,8 @@ cannot create a pretty-printer for the value, it should return
 
 @value{GDBN} first checks the @code{pretty_printers} attribute of each
 @code{gdb.Objfile} in the current program space and iteratively calls
-each enabled function (@pxref{Disabling Pretty-Printers})
-in the list for that @code{gdb.Objfile} until it receives
-a pretty-printer object.
+each enabled lookup routine in the list for that @code{gdb.Objfile}
+until it receives a pretty-printer object.
 If no pretty-printer is found in the objfile lists, @value{GDBN} then
 searches the pretty-printer list of the current program space,
 calling each enabled function until an object is returned.
@@ -21093,20 +21574,43 @@ given list, functions are always invoked from the head of the list,
 and iterated over sequentially until the end of the list, or a printer
 object is returned.
 
+For various reasons a pretty-printer may not work.
+For example, the underlying data structure may have changed and
+the pretty-printer is out of date.
+
+The consequences of a broken pretty-printer are severe enough that
+@value{GDBN} provides support for enabling and disabling individual
+printers.  For example, if @code{print frame-arguments} is on,
+a backtrace can become highly illegible if any argument is printed
+with a broken printer.
+
+Pretty-printers are enabled and disabled by attaching an @code{enabled}
+attribute to the registered function or callable object.  If this attribute
+is present and its value is @code{False}, the printer is disabled, otherwise
+the printer is enabled.
+
+@node Writing a Pretty-Printer
+@subsubsection Writing a Pretty-Printer
+@cindex writing a pretty-printer
+
+A pretty-printer consists of two parts: a lookup function to detect
+if the type is supported, and the printer itself.
+
 Here is an example showing how a @code{std::string} printer might be
-written:
+written.  @xref{Pretty Printing API}, for details on the API this class
+must provide.
 
 @smallexample
-class StdStringPrinter:
+class StdStringPrinter(object):
     "Print a std::string"
 
-    def __init__ (self, val):
+    def __init__(self, val):
         self.val = val
 
-    def to_string (self):
+    def to_string(self):
         return self.val['_M_dataplus']['_M_p']
 
-    def display_hint (self):
+    def display_hint(self):
         return 'string'
 @end smallexample
 
@@ -21114,15 +21618,13 @@ And here is an example showing how a lookup function for the printer
 example above might be written.
 
 @smallexample
-def str_lookup_function (val):
-
+def str_lookup_function(val):
     lookup_tag = val.type.tag
-    regex = re.compile ("^std::basic_string<char,.*>$")
     if lookup_tag == None:
         return None
-    if regex.match (lookup_tag):
-        return StdStringPrinter (val)
-    
+    regex = re.compile("^std::basic_string<char,.*>$")
+    if regex.match(lookup_tag):
+        return StdStringPrinter(val)
     return None
 @end smallexample
 
@@ -21158,8 +21660,8 @@ To continue the @code{std::string} example (@pxref{Pretty Printing API}),
 this code might appear in @code{gdb.libstdcxx.v6}:
 
 @smallexample
-def register_printers (objfile):
-    objfile.pretty_printers.add (str_lookup_function)
+def register_printers(objfile):
+    objfile.pretty_printers.add(str_lookup_function)
 @end smallexample
 
 @noindent
@@ -21167,27 +21669,92 @@ And then the corresponding contents of the auto-load file would be:
 
 @smallexample
 import gdb.libstdcxx.v6
-gdb.libstdcxx.v6.register_printers (gdb.current_objfile ())
+gdb.libstdcxx.v6.register_printers(gdb.current_objfile())
 @end smallexample
 
-@node Disabling Pretty-Printers
-@subsubsection Disabling Pretty-Printers
-@cindex disabling pretty-printers
+The previous example illustrates a basic pretty-printer.
+There are a few things that can be improved on.
+The printer doesn't have a name, making it hard to identify in a
+list of installed printers.  The lookup function has a name, but
+lookup functions can have arbitrary, even identical, names.
 
-For various reasons a pretty-printer may not work.
-For example, the underlying data structure may have changed and
-the pretty-printer is out of date.
+Second, the printer only handles one type, whereas a library typically has
+several types.  One could install a lookup function for each desired type
+in the library, but one could also have a single lookup function recognize
+several types.  The latter is the conventional way this is handled.
+If a pretty-printer can handle multiple data types, then its
+@dfn{subprinters} are the printers for the individual data types.
 
-The consequences of a broken pretty-printer are severe enough that
-@value{GDBN} provides support for enabling and disabling individual
-printers.  For example, if @code{print frame-arguments} is on,
-a backtrace can become highly illegible if any argument is printed
-with a broken printer.
+The @code{gdb.printing} module provides a formal way of solving these
+problems (@pxref{gdb.printing}).
+Here is another example that handles multiple types.
 
-Pretty-printers are enabled and disabled by attaching an @code{enabled}
-attribute to the registered function or callable object.  If this attribute
-is present and its value is @code{False}, the printer is disabled, otherwise
-the printer is enabled.
+These are the types we are going to pretty-print:
+
+@smallexample
+struct foo @{ int a, b; @};
+struct bar @{ struct foo x, y; @};
+@end smallexample
+
+Here are the printers:
+
+@smallexample
+class fooPrinter:
+    """Print a foo object."""
+
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        return ("a=<" + str(self.val["a"]) +
+                "> b=<" + str(self.val["b"]) + ">")
+
+class barPrinter:
+    """Print a bar object."""
+
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        return ("x=<" + str(self.val["x"]) +
+                "> y=<" + str(self.val["y"]) + ">")
+@end smallexample
+
+This example doesn't need a lookup function, that is handled by the
+@code{gdb.printing} module.  Instead a function is provided to build up
+the object that handles the lookup.
+
+@smallexample
+import gdb.printing
+
+def build_pretty_printer():
+    pp = gdb.printing.RegexpCollectionPrettyPrinter(
+        "my_library")
+    pp.add_printer('foo', '^foo$', fooPrinter)
+    pp.add_printer('bar', '^bar$', barPrinter)
+    return pp
+@end smallexample
+
+And here is the autoload support:
+
+@smallexample
+import gdb.printing
+import my_library
+gdb.printing.register_pretty_printer(
+    gdb.current_objfile(),
+    my_library.build_pretty_printer())
+@end smallexample
+
+Finally, when this printer is loaded into @value{GDBN}, here is the
+corresponding output of @samp{info pretty-printer}:
+
+@smallexample
+(gdb) info pretty-printer
+my_library.so:
+  my_library
+    foo
+    bar
+@end smallexample
 
 @node Inferiors In Python
 @subsubsection Inferiors In Python
@@ -21883,8 +22450,8 @@ When the debugged program stops, @value{GDBN} is able to analyze its call
 stack (@pxref{Frames,,Stack frames}).  The @code{gdb.Frame} class
 represents a frame in the stack.  A @code{gdb.Frame} object is only valid
 while its corresponding frame exists in the inferior's stack.  If you try
-to use an invalid frame object, @value{GDBN} will throw a @code{RuntimeError}
-exception.
+to use an invalid frame object, @value{GDBN} will throw a @code{gdb.error}
+exception (@pxref{Exception Handling}).
 
 Two @code{gdb.Frame} objects can be compared for equality with the @code{==}
 operator, like:
@@ -22273,7 +22840,7 @@ Return the symbol table's source absolute file name.
 Python code can manipulate breakpoints via the @code{gdb.Breakpoint}
 class.
 
-@defmethod Breakpoint __init__ spec @r{[}type@r{]} @r{[}wp_class@r{]}
+@defmethod Breakpoint __init__ spec @r{[}type@r{]} @r{[}wp_class@r{]} @r{[}internal@r{]}
 Create a new breakpoint.  @var{spec} is a string naming the
 location of the breakpoint, or an expression that defines a
 watchpoint.  The contents can be any location recognized by the
@@ -22281,10 +22848,14 @@ watchpoint.  The contents can be any location recognized by the
 command.  The optional @var{type} denotes the breakpoint to create
 from the types defined later in this chapter.  This argument can be
 either: @code{BP_BREAKPOINT} or @code{BP_WATCHPOINT}.  @var{type}
-defaults to @code{BP_BREAKPOINT}.  The optional @var{wp_class}
+defaults to @code{BP_BREAKPOINT}.  The optional @var{internal} argument
+allows the breakpoint to become invisible to the user.  The breakpoint
+will neither be reported when created, nor will it be listed in the
+output from @code{info breakpoints} (but will be listed with the
+@code{maint info breakpoints} command).  The optional @var{wp_class}
 argument defines the class of watchpoint to create, if @var{type} is
-defined as @code{BP_WATCHPOINT}.  If a watchpoint class is not
-provided, it is assumed to be a @var{WP_WRITE} class.
+@code{BP_WATCHPOINT}.  If a watchpoint class is not provided, it is
+assumed to be a @var{WP_WRITE} class.
 @end defmethod
 
 The available watchpoint types represented by constants are defined in the
@@ -22357,6 +22928,12 @@ the user to manipulate the breakpoint.  This attribute is not writable.
 This attribute holds the breakpoint's type --- the identifier used to
 determine the actual breakpoint type or use-case.  This attribute is not
 writable.
+@end defivar
+
+@defivar Breakpoint visible
+This attribute tells whether the breakpoint is visible to the user
+when set, or when the @samp{info breakpoints} command is run.  This
+attribute is not writable.
 @end defivar
 
 The available types are represented by constants defined in the @code{gdb}
@@ -22558,7 +23135,7 @@ Entries can be placed in section @code{.debug_gdb_scripts} with,
 for example, this GCC macro:
 
 @example
-/* Note: The "MS" section flags are to remote duplicates.  */
+/* Note: The "MS" section flags are to remove duplicates.  */
 #define DEFINE_GDB_SCRIPT(script_name) \
   asm("\
 .pushsection \".debug_gdb_scripts\", \"MS\",@@progbits,1\n\
@@ -22631,6 +23208,82 @@ cumbersome.  It may be easier to specify the scripts in the
 @code{.debug_gdb_scripts} section as relative paths, and add a path to the
 top of the source tree to the source search path.
 @end itemize
+
+@node Python modules
+@subsection Python modules
+@cindex python modules
+
+@value{GDBN} comes with a module to assist writing Python code.
+
+@menu
+* gdb.printing::       Building and registering pretty-printers.
+* gdb.types::          Utilities for working with types.
+@end menu
+
+@node gdb.printing
+@subsubsection gdb.printing
+@cindex gdb.printing
+
+This module provides a collection of utilities for working with
+pretty-printers.
+
+@table @code
+@item PrettyPrinter (@var{name}, @var{subprinters}=None)
+This class specifies the API that makes @samp{info pretty-printer},
+@samp{enable pretty-printer} and @samp{disable pretty-printer} work.
+Pretty-printers should generally inherit from this class.
+
+@item SubPrettyPrinter (@var{name})
+For printers that handle multiple types, this class specifies the
+corresponding API for the subprinters.
+
+@item RegexpCollectionPrettyPrinter (@var{name})
+Utility class for handling multiple printers, all recognized via
+regular expressions.
+@xref{Writing a Pretty-Printer}, for an example.
+
+@item register_pretty_printer (@var{obj}, @var{printer})
+Register @var{printer} with the pretty-printer list of @var{obj}.
+@end table
+
+@node gdb.types
+@subsubsection gdb.types
+@cindex gdb.types
+
+This module provides a collection of utilities for working with
+@code{gdb.Types} objects.
+
+@table @code
+@item get_basic_type (@var{type})
+Return @var{type} with const and volatile qualifiers stripped,
+and with typedefs and C@t{++} references converted to the underlying type.
+
+C@t{++} example:
+
+@smallexample
+typedef const int const_int;
+const_int foo (3);
+const_int& foo_ref (foo);
+int main () @{ return 0; @}
+@end smallexample
+
+Then in gdb:
+
+@smallexample
+(gdb) start
+(gdb) python import gdb.types
+(gdb) python foo_ref = gdb.parse_and_eval("foo_ref")
+(gdb) python print gdb.types.get_basic_type(foo_ref.type)
+int
+@end smallexample
+
+@item has_field (@var{type}, @var{field})
+Return @code{True} if @var{type}, assumed to be a type with fields
+(e.g., a structure or union), has field @var{field}.
+
+@item make_enum_dict (@var{enum_type})
+Return a Python @code{dictionary} type produced from @var{enum_type}.
+@end table
 
 @node Interpreters
 @chapter Command Interpreters
@@ -25835,8 +26488,13 @@ The @code{$pc} value for that frame.
 Function name.
 @item @var{file}
 File name of the source file where the function lives.
+@item @var{fullname}
+The full file name of the source file where the function lives.
 @item @var{line}
 Line number corresponding to the @code{$pc}.
+@item @var{from}
+The shared library where this function is defined.  This is only given
+if the frame's function is not known.
 @end table
 
 If invoked without arguments, this command prints a backtrace for the
@@ -26386,7 +27044,7 @@ be available.
 
 Return a list of the children of the specified variable object and
 create variable objects for them, if they do not already exist.  With
-a single argument or if @var{print-values} has a value for of 0 or
+a single argument or if @var{print-values} has a value of 0 or
 @code{--no-values}, print only the names of the variables; if
 @var{print-values} is 1 or @code{--all-values}, also print their
 values; and if it is 2 or @code{--simple-values} print the name and
@@ -27220,6 +27878,8 @@ don't appear in the actual output):
 @subheading The @code{-data-read-memory} Command
 @findex -data-read-memory
 
+This command is deprecated, use @code{-data-read-memory-bytes} instead.
+
 @subsubheading Synopsis
 
 @smallexample
@@ -27330,6 +27990,128 @@ next-page="0x000013c0",prev-page="0x00001380",memory=[
 @{addr="0x000013bc",data=["0x2c","0x2d","0x2e","0x2f"],ascii=",-./"@}]
 (gdb)
 @end smallexample
+
+@subheading The @code{-data-read-memory-bytes} Command
+@findex -data-read-memory-bytes
+
+@subsubheading Synopsis
+
+@smallexample
+ -data-read-memory-bytes [ -o @var{byte-offset} ]
+   @var{address} @var{count}
+@end smallexample
+
+@noindent
+where:
+
+@table @samp
+@item @var{address}
+An expression specifying the address of the first memory word to be
+read.  Complex expressions containing embedded white space should be
+quoted using the C convention.
+
+@item @var{count}
+The number of bytes to read.  This should be an integer literal.
+
+@item @var{byte-offset}
+The offsets in bytes relative to @var{address} at which to start
+reading.  This should be an integer literal.  This option is provided
+so that a frontend is not required to first evaluate address and then
+perform address arithmetics itself.
+
+@end table
+
+This command attempts to read all accessible memory regions in the
+specified range.  First, all regions marked as unreadable in the memory
+map (if one is defined) will be skipped.  @xref{Memory Region
+Attributes}.  Second, @value{GDBN} will attempt to read the remaining
+regions.  For each one, if reading full region results in an errors,
+@value{GDBN} will try to read a subset of the region.
+
+In general, every single byte in the region may be readable or not,
+and the only way to read every readable byte is to try a read at
+every address, which is not practical.   Therefore, @value{GDBN} will
+attempt to read all accessible bytes at either beginning or the end
+of the region, using a binary division scheme.  This heuristic works
+well for reading accross a memory map boundary.  Note that if a region
+has a readable range that is neither at the beginning or the end,
+@value{GDBN} will not read it.
+
+The result record (@pxref{GDB/MI Result Records}) that is output of
+the command includes a field named @samp{memory} whose content is a
+list of tuples.  Each tuple represent a successfully read memory block
+and has the following fields:
+
+@table @code
+@item begin
+The start address of the memory block, as hexadecimal literal.
+
+@item end
+The end address of the memory block, as hexadecimal literal.
+
+@item offset
+The offset of the memory block, as hexadecimal literal, relative to
+the start address passed to @code{-data-read-memory-bytes}.
+
+@item contents
+The contents of the memory block, in hex.
+
+@end table
+
+
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} command is @samp{x}.
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-data-read-memory-bytes &a 10
+^done,memory=[@{begin="0xbffff154",offset="0x00000000",
+              end="0xbffff15e",
+              contents="01000000020000000300"@}]
+(gdb)
+@end smallexample
+
+
+@subheading The @code{-data-write-memory-bytes} Command
+@findex -data-write-memory-bytes
+
+@subsubheading Synopsis
+
+@smallexample
+ -data-write-memory-bytes @var{address} @var{contents}
+@end smallexample
+
+@noindent
+where:
+
+@table @samp
+@item @var{address}
+An expression specifying the address of the first memory word to be
+read.  Complex expressions containing embedded white space should be
+quoted using the C convention.
+
+@item @var{contents}
+The hex-encoded bytes to write.
+
+@end table
+
+@subsubheading @value{GDBN} Command
+
+There's no corresponding @value{GDBN} command.
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-data-write-memory-bytes &a "aabbccdd"
+^done
+(gdb)
+@end smallexample
+
 
 @c %%%%%%%%%%%%%%%%%%%%%%%%%%%% SECTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 @node GDB/MI Tracepoint Commands
@@ -28669,6 +29451,9 @@ pretty-printing commands, and possible presence of the
 @samp{display_hint} field in the output of @code{-var-list-children}
 @item thread-info
 Indicates presence of the @code{-thread-info} command.
+@item data-read-memory-bytes
+Indicates presense of the @code{-data-read-memory-bytes} and the
+@code{-data-write-memory-bytes} commands.
 
 @end table
 
@@ -28696,6 +29481,10 @@ The current list of features is:
 Indicates that the target is capable of asynchronous command
 execution, which means that @value{GDBN} will accept further commands
 while the target is running.
+
+@item reverse
+Indicates that the target is capable of reverse execution.
+@xref{Reverse Execution}, for more information.
 
 @end table
 
@@ -35324,9 +36113,15 @@ registers using the capitalization used in the description.
 @subsection ARM Features
 @cindex target descriptions, ARM features
 
-The @samp{org.gnu.gdb.arm.core} feature is required for ARM targets.
+The @samp{org.gnu.gdb.arm.core} feature is required for non-M-profile
+ARM targets.
 It should contain registers @samp{r0} through @samp{r13}, @samp{sp},
 @samp{lr}, @samp{pc}, and @samp{cpsr}.
+
+For M-profile targets (e.g. Cortex-M3), the @samp{org.gnu.gdb.arm.core}
+feature is replaced by @samp{org.gnu.gdb.arm.m-profile}.  It should contain
+registers @samp{r0} through @samp{r13}, @samp{sp}, @samp{lr}, @samp{pc},
+and @samp{xpsr}.
 
 The @samp{org.gnu.gdb.arm.fpa} feature is optional.  If present, it
 should contain registers @samp{f0} through @samp{f7} and @samp{fps}.
@@ -35394,7 +36189,6 @@ describe the upper 128 bits of @sc{ymm} registers:
 @samp{ymm0h} through @samp{ymm7h} for i386
 @item
 @samp{ymm0h} through @samp{ymm15h} for amd64
-@item 
 @end itemize
 
 The @samp{org.gnu.gdb.i386.linux} feature is optional.  It should

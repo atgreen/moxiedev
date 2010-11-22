@@ -171,8 +171,13 @@ c_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
       elttype = check_typedef (unresolved_elttype);
       if (TYPE_LENGTH (type) > 0 && TYPE_LENGTH (unresolved_elttype) > 0)
 	{
+          LONGEST low_bound, high_bound;
+
+          if (!get_array_bounds (type, &low_bound, &high_bound))
+            error (_("Could not determine the array high bound"));
+
 	  eltlen = TYPE_LENGTH (elttype);
-	  len = TYPE_LENGTH (type) / eltlen;
+	  len = high_bound - low_bound + 1;
 	  if (options->prettyprint_arrays)
 	    {
 	      print_spaces_filtered (2 + 2 * recurse, stream);
@@ -180,8 +185,7 @@ c_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 
 	  /* Print arrays of textual chars with a string syntax, as
 	     long as the entire array is valid.  */
-          if (!TYPE_VECTOR (type)
-	      && c_textual_element_type (unresolved_elttype, options->format)
+          if (c_textual_element_type (unresolved_elttype, options->format)
 	      && value_bits_valid (original_value,
 				   TARGET_CHAR_BIT * embedded_offset,
 				   TARGET_CHAR_BIT * TYPE_LENGTH (type)))
@@ -222,7 +226,8 @@ c_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 		{
 		  i = 0;
 		}
-	      val_print_array_elements (type, valaddr + embedded_offset, address, stream,
+	      val_print_array_elements (type, valaddr + embedded_offset,
+					address + embedded_offset, stream,
 					recurse, original_value, options, i);
 	      fprintf_filtered (stream, "}");
 	    }
@@ -289,7 +294,7 @@ c_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 	  if (c_textual_element_type (unresolved_elttype, options->format)
 	      && addr != 0)
 	    {
-	      i = val_print_string (unresolved_elttype, addr, -1, stream,
+	      i = val_print_string (unresolved_elttype, NULL, addr, -1, stream,
 				    options);
 	    }
 	  else if (cp_is_vtbl_member (type))

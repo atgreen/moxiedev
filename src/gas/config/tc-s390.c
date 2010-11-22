@@ -399,6 +399,8 @@ md_parse_option (int c, char *arg)
 	    current_cpu = S390_OPCODE_Z9_EC;
 	  else if (strcmp (arg + 5, "z10") == 0)
 	    current_cpu = S390_OPCODE_Z10;
+	  else if (strcmp (arg + 5, "z196") == 0)
+	    current_cpu = S390_OPCODE_Z196;
 	  else
 	    {
 	      as_bad (_("invalid switch -m%s"), arg);
@@ -504,13 +506,18 @@ md_begin (void)
 	    break;
 	  op++;
         }
-      retval = hash_insert (s390_opcode_hash, op->name, (void *) op);
-      if (retval != (const char *) NULL)
-        {
-          as_bad (_("Internal assembler error for instruction %s"),
-		  op->name);
-	  dup_insn = TRUE;
+
+      if (op->min_cpu <= current_cpu && (op->modes & current_mode_mask))
+	{
+	  retval = hash_insert (s390_opcode_hash, op->name, (void *) op);
+	  if (retval != (const char *) NULL)
+	    {
+	      as_bad (_("Internal assembler error for instruction %s"),
+		      op->name);
+	      dup_insn = TRUE;
+	    }
 	}
+
       while (op < op_end - 1 && strcmp (op->name, op[1].name) == 0)
 	op++;
       }

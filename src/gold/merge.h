@@ -70,7 +70,7 @@ class Object_merge_map
   bool
   get_output_offset(const Merge_map*, unsigned int shndx,
 		    section_offset_type offset,
-		    section_offset_type *output_offset);
+		    section_offset_type* output_offset);
 
   // Return whether this is the merge map for section SHNDX.
   bool
@@ -200,7 +200,7 @@ class Merge_map
   bool
   get_output_offset(const Relobj* object, unsigned int shndx,
 		    section_offset_type offset,
-		    section_offset_type *output_offset) const;
+		    section_offset_type* output_offset) const;
 
   // Return whether this is the merge mapping for section SHNDX in
   // OBJECT.  This should return true when get_output_offset would
@@ -462,7 +462,7 @@ class Output_merge_string : public Output_merge_base
  public:
   Output_merge_string(uint64_t addralign)
     : Output_merge_base(sizeof(Char_type), addralign), stringpool_(),
-      merged_strings_lists_(), input_count_(0)
+      merged_strings_lists_(), input_count_(0), input_size_(0)
   {
     gold_assert(addralign <= sizeof(Char_type));
     this->stringpool_.set_no_zero_null();
@@ -566,6 +566,8 @@ class Output_merge_string : public Output_merge_base
   Merged_strings_lists merged_strings_lists_;
   // The number of entries seen in input files.
   size_t input_count_;
+  // The total size of input sections.
+  size_t input_size_;
 };
 
 } // End namespace gold.

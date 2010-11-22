@@ -843,6 +843,7 @@ static struct serial_ops dos_ops =
   0,
   dos_open,
   dos_close,
+  NULL,				/* fdopen, not implemented */
   dos_readchar,
   dos_write,
   dos_noop,			/* flush output */
@@ -859,6 +860,13 @@ static struct serial_ops dos_ops =
   (void (*)(struct serial *, int))NULL	/* change into async mode */
 };
 
+int
+gdb_pipe (int pdes[2])
+{
+  /* No support for pipes.  */
+  errno = ENOSYS;
+  return -1;
+}
 
 static void
 dos_info (char *arg, int from_tty)

@@ -150,6 +150,16 @@ _bfd_nocore_core_file_failing_signal (bfd *ignore_abfd ATTRIBUTE_UNUSED)
   return 0;
 }
 
+/* Routine to handle the core_file_pid entry point for targets without
+   core file support.  */
+
+int
+_bfd_nocore_core_file_pid (bfd *ignore_abfd ATTRIBUTE_UNUSED)
+{
+  bfd_set_error (bfd_error_invalid_operation);
+  return 0;
+}
+
 const bfd_target *
 _bfd_dummy_target (bfd *ignore_abfd ATTRIBUTE_UNUSED)
 {
@@ -846,6 +856,15 @@ _bfd_generic_get_section_contents (bfd *abfd,
   bfd_size_type sz;
   if (count == 0)
     return TRUE;
+
+  if (section->compress_status != COMPRESS_SECTION_NONE)
+    {
+      (*_bfd_error_handler)
+	(_("%B: unable to get decompressed section %A"),
+	 abfd, section);
+      bfd_set_error (bfd_error_invalid_operation);
+      return FALSE;
+    }
 
   sz = section->rawsize ? section->rawsize : section->size;
   if (offset + count < count

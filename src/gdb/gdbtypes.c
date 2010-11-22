@@ -41,6 +41,28 @@
 #include "hashtab.h"
 
 
+/* Initialize BADNESS constants.  */
+
+const struct rank LENGTH_MISMATCH_BADNESS = {100,0};
+
+const struct rank TOO_FEW_PARAMS_BADNESS = {100,0};
+const struct rank INCOMPATIBLE_TYPE_BADNESS = {100,0};
+
+const struct rank EXACT_MATCH_BADNESS = {0,0};
+
+const struct rank INTEGER_PROMOTION_BADNESS = {1,0};
+const struct rank FLOAT_PROMOTION_BADNESS = {1,0};
+const struct rank BASE_PTR_CONVERSION_BADNESS = {1,0};
+const struct rank INTEGER_CONVERSION_BADNESS = {2,0};
+const struct rank FLOAT_CONVERSION_BADNESS = {2,0};
+const struct rank INT_FLOAT_CONVERSION_BADNESS = {2,0};
+const struct rank VOID_PTR_CONVERSION_BADNESS = {2,0};
+const struct rank BOOL_PTR_CONVERSION_BADNESS = {3,0};
+const struct rank BASE_CONVERSION_BADNESS = {2,0};
+const struct rank REFERENCE_CONVERSION_BADNESS = {2,0};
+
+const struct rank NS_POINTER_CONVERSION_BADNESS = {10,0};
+
 /* Floatformat pairs.  */
 const struct floatformat *floatformats_ieee_half[BFD_ENDIAN_UNKNOWN] = {
   &floatformat_ieee_half_big,
@@ -802,6 +824,50 @@ get_discrete_bounds (struct type *type, LONGEST *lowp, LONGEST *highp)
     }
 }
 
+/* Assuming TYPE is a simple, non-empty array type, compute its upper
+   and lower bound.  Save the low bound into LOW_BOUND if not NULL.
+   Save the high bound into HIGH_BOUND if not NULL.
+
+   Return 1 if the operation was successful. Return zero otherwise,
+   in which case the values of LOW_BOUND and HIGH_BOUNDS are unmodified.
+
+   We now simply use get_discrete_bounds call to get the values
+   of the low and high bounds.
+   get_discrete_bounds can return three values:
+   1, meaning that index is a range,
+   0, meaning that index is a discrete type,
+   or -1 for failure.  */
+
+int
+get_array_bounds (struct type *type, LONGEST *low_bound, LONGEST *high_bound)
+{
+  struct type *index = TYPE_INDEX_TYPE (type);
+  LONGEST low = 0;
+  LONGEST high = 0;
+  int res;
+
+  if (index == NULL)
+    return 0;
+
+  res = get_discrete_bounds (index, &low, &high);
+  if (res == -1)
+    return 0;
+
+  /* Check if the array bounds are undefined.  */
+  if (res == 1
+      && ((low_bound && TYPE_ARRAY_LOWER_BOUND_IS_UNDEFINED (type))
+	  || (high_bound && TYPE_ARRAY_UPPER_BOUND_IS_UNDEFINED (type))))
+    return 0;
+
+  if (low_bound)
+    *low_bound = low;
+
+  if (high_bound)
+    *high_bound = high;
+
+  return 1;
+}
+
 /* Create an array type using either a blank type supplied in
    RESULT_TYPE, or creating a new type, inheriting the objfile from
    RANGE_TYPE.
@@ -942,7 +1008,7 @@ make_vector_type (struct type *array_type)
   elt_type = TYPE_TARGET_TYPE (inner_array);
   if (TYPE_CODE (elt_type) == TYPE_CODE_INT)
     {
-      flags = TYPE_INSTANCE_FLAGS (elt_type) | TYPE_FLAG_NOTTEXT;
+      flags = TYPE_INSTANCE_FLAGS (elt_type) | TYPE_INSTANCE_FLAG_NOTTEXT;
       elt_type = make_qualified_type (elt_type, flags, NULL);
       TYPE_TARGET_TYPE (inner_array) = elt_type;
     }
@@ -1046,7 +1112,7 @@ type_name_no_tag (const struct type *type)
 struct type *
 lookup_typename (const struct language_defn *language,
 		 struct gdbarch *gdbarch, char *name,
-		 struct block *block, int noerr)
+		 const struct block *block, int noerr)
 {
   struct symbol *sym;
   struct type *tmp;
@@ -1212,6 +1278,7 @@ struct type *
 lookup_struct_elt_type (struct type *type, char *name, int noerr)
 {
   int i;
+  char *typename;
 
   for (;;)
     {
@@ -1225,11 +1292,9 @@ lookup_struct_elt_type (struct type *type, char *name, int noerr)
   if (TYPE_CODE (type) != TYPE_CODE_STRUCT 
       && TYPE_CODE (type) != TYPE_CODE_UNION)
     {
-      target_terminal_ours ();
-      gdb_flush (gdb_stdout);
-      fprintf_unfiltered (gdb_stderr, "Type ");
-      type_print (type, "", gdb_stderr, -1);
-      error (_(" is not a structure or union type."));
+      typename = type_to_string (type);
+      make_cleanup (xfree, typename);
+      error (_("Type %s is not a structure or union type."), typename);
     }
 
 #if 0
@@ -1281,14 +1346,9 @@ lookup_struct_elt_type (struct type *type, char *name, int noerr)
       return NULL;
     }
 
-  target_terminal_ours ();
-  gdb_flush (gdb_stdout);
-  fprintf_unfiltered (gdb_stderr, "Type ");
-  type_print (type, "", gdb_stderr, -1);
-  fprintf_unfiltered (gdb_stderr, " has no component named ");
-  fputs_filtered (name, gdb_stderr);
-  error (("."));
-  return (struct type *) -1;	/* For lint */
+  typename = type_to_string (type);
+  make_cleanup (xfree, typename);
+  error (_("Type %s has no component named %s."), typename, name);
 }
 
 /* Lookup the vptr basetype/fieldno values for TYPE.
@@ -1353,7 +1413,21 @@ stub_noname_complaint (void)
   complaint (&symfile_complaints, _("stub type has NULL name"));
 }
 
-/* Added by Bryan Boreham, Kewill, Sun Sep 17 18:07:17 1989.
+/* Find the real type of TYPE.  This function returns the real type,
+   after removing all layers of typedefs, and completing opaque or stub
+   types.  Completion changes the TYPE argument, but stripping of
+   typedefs does not.
+
+   Instance flags (e.g. const/volatile) are preserved as typedefs are
+   stripped.  If necessary a new qualified form of the underlying type
+   is created.
+
+   NOTE: This will return a typedef if TYPE_TARGET_TYPE for the typedef has
+   not been computed and we're either in the middle of reading symbols, or
+   there was no name for the typedef in the debug info.
+
+   If TYPE is a TYPE_CODE_TYPEDEF, its length is updated to the length of
+   the target type.
 
    If this is a stubbed struct (i.e. declared as struct foo *), see if
    we can find a full definition in some other file. If so, copy this
@@ -1361,26 +1435,15 @@ stub_noname_complaint (void)
    (but not any code) that if we don't find a full definition, we'd
    set a flag so we don't spend time in the future checking the same
    type.  That would be a mistake, though--we might load in more
-   symbols which contain a full definition for the type.
-
-   This used to be coded as a macro, but I don't think it is called 
-   often enough to merit such treatment.
-
-   Find the real type of TYPE.  This function returns the real type,
-   after removing all layers of typedefs and completing opaque or stub
-   types.  Completion changes the TYPE argument, but stripping of
-   typedefs does not.
-
-   If TYPE is a TYPE_CODE_TYPEDEF, its length is (also) set to the length of
-   the target type instead of zero.  However, in the case of TYPE_CODE_TYPEDEF
-   check_typedef can still return different type than the original TYPE
-   pointer.  */
+   symbols which contain a full definition for the type.  */
 
 struct type *
 check_typedef (struct type *type)
 {
   struct type *orig_type = type;
-  int is_const, is_volatile;
+  /* While we're removing typedefs, we don't want to lose qualifiers.
+     E.g., const/volatile.  */
+  int instance_flags = TYPE_INSTANCE_FLAGS (type);
 
   gdb_assert (type);
 
@@ -1394,7 +1457,7 @@ check_typedef (struct type *type)
 	  /* It is dangerous to call lookup_symbol if we are currently
 	     reading a symtab.  Infinite recursion is one danger.  */
 	  if (currently_reading_symtab)
-	    return type;
+	    return make_qualified_type (type, instance_flags, NULL);
 
 	  name = type_name_no_tag (type);
 	  /* FIXME: shouldn't we separately check the TYPE_NAME and
@@ -1404,7 +1467,7 @@ check_typedef (struct type *type)
 	  if (name == NULL)
 	    {
 	      stub_noname_complaint ();
-	      return type;
+	      return make_qualified_type (type, instance_flags, NULL);
 	    }
 	  sym = lookup_symbol (name, 0, STRUCT_DOMAIN, 0);
 	  if (sym)
@@ -1413,10 +1476,33 @@ check_typedef (struct type *type)
 	    TYPE_TARGET_TYPE (type) = alloc_type_arch (get_type_arch (type));
 	}
       type = TYPE_TARGET_TYPE (type);
-    }
 
-  is_const = TYPE_CONST (type);
-  is_volatile = TYPE_VOLATILE (type);
+      /* Preserve the instance flags as we traverse down the typedef chain.
+
+	 Handling address spaces/classes is nasty, what do we do if there's a
+	 conflict?
+	 E.g., what if an outer typedef marks the type as class_1 and an inner
+	 typedef marks the type as class_2?
+	 This is the wrong place to do such error checking.  We leave it to
+	 the code that created the typedef in the first place to flag the
+	 error.  We just pick the outer address space (akin to letting the
+	 outer cast in a chain of casting win), instead of assuming
+	 "it can't happen".  */
+      {
+	const int ALL_SPACES = (TYPE_INSTANCE_FLAG_CODE_SPACE
+				| TYPE_INSTANCE_FLAG_DATA_SPACE);
+	const int ALL_CLASSES = TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL;
+	int new_instance_flags = TYPE_INSTANCE_FLAGS (type);
+
+	/* Treat code vs data spaces and address classes separately.  */
+	if ((instance_flags & ALL_SPACES) != 0)
+	  new_instance_flags &= ~ALL_SPACES;
+	if ((instance_flags & ALL_CLASSES) != 0)
+	  new_instance_flags &= ~ALL_CLASSES;
+
+	instance_flags |= new_instance_flags;
+      }
+    }
 
   /* If this is a struct/class/union with no fields, then check
      whether a full definition exists somewhere else.  This is for
@@ -1434,7 +1520,7 @@ check_typedef (struct type *type)
       if (name == NULL)
 	{
 	  stub_noname_complaint ();
-	  return type;
+	  return make_qualified_type (type, instance_flags, NULL);
 	}
       newtype = lookup_transparent_type (name);
 
@@ -1451,7 +1537,9 @@ check_typedef (struct type *type)
 	     move over any other types NEWTYPE refers to, which could
 	     be an unbounded amount of stuff.  */
 	  if (TYPE_OBJFILE (newtype) == TYPE_OBJFILE (type))
-	    make_cv_type (is_const, is_volatile, newtype, &type);
+	    type = make_qualified_type (newtype,
+					TYPE_INSTANCE_FLAGS (type),
+					type);
 	  else
 	    type = newtype;
 	}
@@ -1470,17 +1558,18 @@ check_typedef (struct type *type)
       if (name == NULL)
 	{
 	  stub_noname_complaint ();
-	  return type;
+	  return make_qualified_type (type, instance_flags, NULL);
 	}
       sym = lookup_symbol (name, 0, STRUCT_DOMAIN, 0);
       if (sym)
         {
           /* Same as above for opaque types, we can replace the stub
-             with the complete type only if they are int the same
+             with the complete type only if they are in the same
              objfile.  */
 	  if (TYPE_OBJFILE (SYMBOL_TYPE(sym)) == TYPE_OBJFILE (type))
-            make_cv_type (is_const, is_volatile, 
-			  SYMBOL_TYPE (sym), &type);
+            type = make_qualified_type (SYMBOL_TYPE (sym),
+					TYPE_INSTANCE_FLAGS (type),
+					type);
 	  else
 	    type = SYMBOL_TYPE (sym);
         }
@@ -1540,8 +1629,12 @@ check_typedef (struct type *type)
 	  TYPE_TARGET_STUB (type) = 0;
 	}
     }
+
+  type = make_qualified_type (type, instance_flags, NULL);
+
   /* Cache TYPE_LENGTH for future use.  */
   TYPE_LENGTH (orig_type) = TYPE_LENGTH (type);
+
   return type;
 }
 
@@ -1807,8 +1900,6 @@ init_type (enum type_code code, int length, int flags,
     TYPE_VECTOR (type) = 1;
   if (flags & TYPE_FLAG_STUB_SUPPORTED)
     TYPE_STUB_SUPPORTED (type) = 1;
-  if (flags & TYPE_FLAG_NOTTEXT)
-    TYPE_NOTTEXT (type) = 1;
   if (flags & TYPE_FLAG_FIXED_INSTANCE)
     TYPE_FIXED_INSTANCE (type) = 1;
 
@@ -1876,30 +1967,62 @@ class_types_same_p (const struct type *a, const struct type *b)
 	      && !strcmp (TYPE_NAME (a), TYPE_NAME (b))));
 }
 
-/* Check whether BASE is an ancestor or base class or DCLASS 
-   Return 1 if so, and 0 if not.
-   Note: callers may want to check for identity of the types before
-   calling this function -- identical types are considered to satisfy
-   the ancestor relationship even if they're identical.  */
+/* If BASE is an ancestor of DCLASS return the distance between them.
+   otherwise return -1;
+   eg:
 
-int
-is_ancestor (struct type *base, struct type *dclass)
+   class A {};
+   class B: public A {};
+   class C: public B {};
+   class D: C {};
+
+   distance_to_ancestor (A, A, 0) = 0
+   distance_to_ancestor (A, B, 0) = 1
+   distance_to_ancestor (A, C, 0) = 2
+   distance_to_ancestor (A, D, 0) = 3
+
+   If PUBLIC is 1 then only public ancestors are considered,
+   and the function returns the distance only if BASE is a public ancestor
+   of DCLASS.
+   Eg:
+
+   distance_to_ancestor (A, D, 1) = -1  */
+
+static int
+distance_to_ancestor (struct type *base, struct type *dclass, int public)
 {
   int i;
+  int d;
 
   CHECK_TYPEDEF (base);
   CHECK_TYPEDEF (dclass);
 
   if (class_types_same_p (base, dclass))
-    return 1;
+    return 0;
 
   for (i = 0; i < TYPE_N_BASECLASSES (dclass); i++)
     {
-      if (is_ancestor (base, TYPE_BASECLASS (dclass, i)))
-	return 1;
+      if (public && ! BASETYPE_VIA_PUBLIC (dclass, i))
+	continue;
+
+      d = distance_to_ancestor (base, TYPE_BASECLASS (dclass, i), public);
+      if (d >= 0)
+	return 1 + d;
     }
 
-  return 0;
+  return -1;
+}
+
+/* Check whether BASE is an ancestor or base class or DCLASS
+   Return 1 if so, and 0 if not.
+   Note: If BASE and DCLASS are of the same type, this function
+   will return 1. So for some class A, is_ancestor (A, A) will
+   return 1.  */
+
+int
+is_ancestor (struct type *base, struct type *dclass)
+{
+  return distance_to_ancestor (base, dclass, 0) >= 0;
 }
 
 /* Like is_ancestor, but only returns true when BASE is a public
@@ -1908,23 +2031,7 @@ is_ancestor (struct type *base, struct type *dclass)
 int
 is_public_ancestor (struct type *base, struct type *dclass)
 {
-  int i;
-
-  CHECK_TYPEDEF (base);
-  CHECK_TYPEDEF (dclass);
-
-  if (class_types_same_p (base, dclass))
-    return 1;
-
-  for (i = 0; i < TYPE_N_BASECLASSES (dclass); ++i)
-    {
-      if (! BASETYPE_VIA_PUBLIC (dclass, i))
-	continue;
-      if (is_public_ancestor (base, TYPE_BASECLASS (dclass, i)))
-	return 1;
-    }
-
-  return 0;
+  return distance_to_ancestor (base, dclass, 1) >= 0;
 }
 
 /* A helper function for is_unique_ancestor.  */
@@ -1989,6 +2096,41 @@ is_unique_ancestor (struct type *base, struct value *val)
 
 
 
+/* Return the sum of the rank of A with the rank of B.  */
+
+struct rank
+sum_ranks (struct rank a, struct rank b)
+{
+  struct rank c;
+  c.rank = a.rank + b.rank;
+  c.subrank = a.subrank + b.subrank;
+  return c;
+}
+
+/* Compare rank A and B and return:
+   0 if a = b
+   1 if a is better than b
+  -1 if b is better than a.  */
+
+int
+compare_ranks (struct rank a, struct rank b)
+{
+  if (a.rank == b.rank)
+    {
+      if (a.subrank == b.subrank)
+	return 0;
+      if (a.subrank < b.subrank)
+	return 1;
+      if (a.subrank > b.subrank)
+	return -1;
+    }
+
+  if (a.rank < b.rank)
+    return 1;
+
+  /* a.rank > b.rank  */
+  return -1;
+}
 
 /* Functions for overload resolution begin here */
 
@@ -2013,7 +2155,7 @@ compare_badness (struct badness_vector *a, struct badness_vector *b)
   /* Subtract b from a */
   for (i = 0; i < a->length; i++)
     {
-      tmp = a->rank[i] - b->rank[i];
+      tmp = compare_ranks (b->rank[i], a->rank[i]);
       if (tmp > 0)
 	found_pos = 1;
       else if (tmp < 0)
@@ -2061,7 +2203,9 @@ rank_function (struct type **parms, int nparms,
      arguments and ellipsis parameter lists, we should consider those
      and rank the length-match more finely.  */
 
-  LENGTH_MATCH (bv) = (nargs != nparms) ? LENGTH_MISMATCH_BADNESS : 0;
+  LENGTH_MATCH (bv) = (nargs != nparms)
+		      ? LENGTH_MISMATCH_BADNESS
+		      : EXACT_MATCH_BADNESS;
 
   /* Now rank all the parameters of the candidate function */
   for (i = 1; i <= min_len; i++)
@@ -2112,6 +2256,56 @@ integer_types_same_name_p (const char *first, const char *second)
   return 1;
 }
 
+/* Compares type A to type B returns 1 if the represent the same type
+   0 otherwise.  */
+
+static int
+types_equal (struct type *a, struct type *b)
+{
+  /* Identical type pointers.  */
+  /* However, this still doesn't catch all cases of same type for b
+     and a.  The reason is that builtin types are different from
+     the same ones constructed from the object.  */
+  if (a == b)
+    return 1;
+
+  /* Resolve typedefs */
+  if (TYPE_CODE (a) == TYPE_CODE_TYPEDEF)
+    a = check_typedef (a);
+  if (TYPE_CODE (b) == TYPE_CODE_TYPEDEF)
+    b = check_typedef (b);
+
+  /* If after resolving typedefs a and b are not of the same type
+     code then they are not equal.  */
+  if (TYPE_CODE (a) != TYPE_CODE (b))
+    return 0;
+
+  /* If a and b are both pointers types or both reference types then
+     they are equal of the same type iff the objects they refer to are
+     of the same type.  */
+  if (TYPE_CODE (a) == TYPE_CODE_PTR
+      || TYPE_CODE (a) == TYPE_CODE_REF)
+    return types_equal (TYPE_TARGET_TYPE (a),
+                        TYPE_TARGET_TYPE (b));
+
+  /*
+     Well, damnit, if the names are exactly the same, I'll say they
+     are exactly the same.  This happens when we generate method
+     stubs.  The types won't point to the same address, but they
+     really are the same.
+  */
+
+  if (TYPE_NAME (a) && TYPE_NAME (b)
+      && strcmp (TYPE_NAME (a), TYPE_NAME (b)) == 0)
+    return 1;
+
+  /* Check if identical after resolving typedefs.  */
+  if (a == b)
+    return 1;
+
+  return 0;
+}
+
 /* Compare one type (PARM) for compatibility with another (ARG).
  * PARM is intended to be the parameter type of a function; and
  * ARG is the supplied argument's type.  This function tests if
@@ -2122,15 +2316,13 @@ integer_types_same_name_p (const char *first, const char *second)
  * PARM is to ARG.  The higher the return value, the worse the match.
  * Generally the "bad" conversions are all uniformly assigned a 100.  */
 
-int
+struct rank
 rank_one_type (struct type *parm, struct type *arg)
 {
-  /* Identical type pointers.  */
-  /* However, this still doesn't catch all cases of same type for arg
-     and param.  The reason is that builtin types are different from
-     the same ones constructed from the object.  */
-  if (parm == arg)
-    return 0;
+  struct rank rank = {0,0};
+
+  if (types_equal (parm, arg))
+    return EXACT_MATCH_BADNESS;
 
   /* Resolve typedefs */
   if (TYPE_CODE (parm) == TYPE_CODE_TYPEDEF)
@@ -2138,29 +2330,14 @@ rank_one_type (struct type *parm, struct type *arg)
   if (TYPE_CODE (arg) == TYPE_CODE_TYPEDEF)
     arg = check_typedef (arg);
 
-  /*
-     Well, damnit, if the names are exactly the same, I'll say they
-     are exactly the same.  This happens when we generate method
-     stubs.  The types won't point to the same address, but they
-     really are the same.
-  */
-
-  if (TYPE_NAME (parm) && TYPE_NAME (arg) 
-      && !strcmp (TYPE_NAME (parm), TYPE_NAME (arg)))
-    return 0;
-
-  /* Check if identical after resolving typedefs.  */
-  if (parm == arg)
-    return 0;
-
   /* See through references, since we can almost make non-references
      references.  */
   if (TYPE_CODE (arg) == TYPE_CODE_REF)
-    return (rank_one_type (parm, TYPE_TARGET_TYPE (arg))
-	    + REFERENCE_CONVERSION_BADNESS);
+    return (sum_ranks (rank_one_type (parm, TYPE_TARGET_TYPE (arg)),
+                       REFERENCE_CONVERSION_BADNESS));
   if (TYPE_CODE (parm) == TYPE_CODE_REF)
-    return (rank_one_type (TYPE_TARGET_TYPE (parm), arg)
-	    + REFERENCE_CONVERSION_BADNESS);
+    return (sum_ranks (rank_one_type (TYPE_TARGET_TYPE (parm), arg),
+                       REFERENCE_CONVERSION_BADNESS));
   if (overload_debug)
   /* Debugging only.  */
     fprintf_filtered (gdb_stderr, 
@@ -2176,15 +2353,25 @@ rank_one_type (struct type *parm, struct type *arg)
       switch (TYPE_CODE (arg))
 	{
 	case TYPE_CODE_PTR:
-	  if (TYPE_CODE (TYPE_TARGET_TYPE (parm)) == TYPE_CODE_VOID
-	      && TYPE_CODE (TYPE_TARGET_TYPE (arg)) != TYPE_CODE_VOID)
+
+	  /* Allowed pointer conversions are:
+	     (a) pointer to void-pointer conversion.  */
+	  if (TYPE_CODE (TYPE_TARGET_TYPE (parm)) == TYPE_CODE_VOID)
 	    return VOID_PTR_CONVERSION_BADNESS;
-	  else
-	    return rank_one_type (TYPE_TARGET_TYPE (parm), 
-				  TYPE_TARGET_TYPE (arg));
+
+	  /* (b) pointer to ancestor-pointer conversion.  */
+	  rank.subrank = distance_to_ancestor (TYPE_TARGET_TYPE (parm),
+	                                       TYPE_TARGET_TYPE (arg),
+	                                       0);
+	  if (rank.subrank >= 0)
+	    return sum_ranks (BASE_PTR_CONVERSION_BADNESS, rank);
+
+	  return INCOMPATIBLE_TYPE_BADNESS;
 	case TYPE_CODE_ARRAY:
-	  return rank_one_type (TYPE_TARGET_TYPE (parm), 
-				TYPE_TARGET_TYPE (arg));
+	  if (types_equal (TYPE_TARGET_TYPE (parm),
+	                   TYPE_TARGET_TYPE (arg)))
+	    return EXACT_MATCH_BADNESS;
+	  return INCOMPATIBLE_TYPE_BADNESS;
 	case TYPE_CODE_FUNC:
 	  return rank_one_type (TYPE_TARGET_TYPE (parm), arg);
 	case TYPE_CODE_INT:
@@ -2193,7 +2380,6 @@ rank_one_type (struct type *parm, struct type *arg)
 	case TYPE_CODE_CHAR:
 	case TYPE_CODE_RANGE:
 	case TYPE_CODE_BOOL:
-	  return POINTER_CONVERSION_BADNESS;
 	default:
 	  return INCOMPATIBLE_TYPE_BADNESS;
 	}
@@ -2227,7 +2413,7 @@ rank_one_type (struct type *parm, struct type *arg)
 		{
 		  /* This case only for character types */
 		  if (TYPE_NOSIGN (arg))
-		    return 0;	/* plain char -> plain char */
+		    return EXACT_MATCH_BADNESS;	/* plain char -> plain char */
 		  else		/* signed/unsigned char -> plain char */
 		    return INTEGER_CONVERSION_BADNESS;
 		}
@@ -2239,7 +2425,7 @@ rank_one_type (struct type *parm, struct type *arg)
 			 unsigned long -> unsigned long */
 		      if (integer_types_same_name_p (TYPE_NAME (parm), 
 						     TYPE_NAME (arg)))
-			return 0;
+			return EXACT_MATCH_BADNESS;
 		      else if (integer_types_same_name_p (TYPE_NAME (arg), 
 							  "int")
 			       && integer_types_same_name_p (TYPE_NAME (parm),
@@ -2263,7 +2449,7 @@ rank_one_type (struct type *parm, struct type *arg)
 		{
 		  if (integer_types_same_name_p (TYPE_NAME (parm), 
 						 TYPE_NAME (arg)))
-		    return 0;
+		    return EXACT_MATCH_BADNESS;
 		  else if (integer_types_same_name_p (TYPE_NAME (arg), 
 						      "int")
 			   && integer_types_same_name_p (TYPE_NAME (parm), 
@@ -2329,19 +2515,19 @@ rank_one_type (struct type *parm, struct type *arg)
 	  if (TYPE_NOSIGN (parm))
 	    {
 	      if (TYPE_NOSIGN (arg))
-		return 0;
+		return EXACT_MATCH_BADNESS;
 	      else
 		return INTEGER_CONVERSION_BADNESS;
 	    }
 	  else if (TYPE_UNSIGNED (parm))
 	    {
 	      if (TYPE_UNSIGNED (arg))
-		return 0;
+		return EXACT_MATCH_BADNESS;
 	      else
 		return INTEGER_PROMOTION_BADNESS;
 	    }
 	  else if (!TYPE_NOSIGN (arg) && !TYPE_UNSIGNED (arg))
-	    return 0;
+	    return EXACT_MATCH_BADNESS;
 	  else
 	    return INTEGER_CONVERSION_BADNESS;
 	default:
@@ -2371,10 +2557,11 @@ rank_one_type (struct type *parm, struct type *arg)
 	case TYPE_CODE_RANGE:
 	case TYPE_CODE_ENUM:
 	case TYPE_CODE_FLT:
+	  return INCOMPATIBLE_TYPE_BADNESS;
 	case TYPE_CODE_PTR:
-	  return BOOLEAN_CONVERSION_BADNESS;
+	  return BOOL_PTR_CONVERSION_BADNESS;
 	case TYPE_CODE_BOOL:
-	  return 0;
+	  return EXACT_MATCH_BADNESS;
 	default:
 	  return INCOMPATIBLE_TYPE_BADNESS;
 	}
@@ -2386,7 +2573,7 @@ rank_one_type (struct type *parm, struct type *arg)
 	  if (TYPE_LENGTH (arg) < TYPE_LENGTH (parm))
 	    return FLOAT_PROMOTION_BADNESS;
 	  else if (TYPE_LENGTH (arg) == TYPE_LENGTH (parm))
-	    return 0;
+	    return EXACT_MATCH_BADNESS;
 	  else
 	    return FLOAT_CONVERSION_BADNESS;
 	case TYPE_CODE_INT:
@@ -2405,7 +2592,7 @@ rank_one_type (struct type *parm, struct type *arg)
 	case TYPE_CODE_FLT:
 	  return FLOAT_PROMOTION_BADNESS;
 	case TYPE_CODE_COMPLEX:
-	  return 0;
+	  return EXACT_MATCH_BADNESS;
 	default:
 	  return INCOMPATIBLE_TYPE_BADNESS;
 	}
@@ -2416,8 +2603,9 @@ rank_one_type (struct type *parm, struct type *arg)
 	{
 	case TYPE_CODE_STRUCT:
 	  /* Check for derivation */
-	  if (is_ancestor (parm, arg))
-	    return BASE_CONVERSION_BADNESS;
+	  rank.subrank = distance_to_ancestor (parm, arg, 0);
+	  if (rank.subrank >= 0)
+	    return sum_ranks (BASE_CONVERSION_BADNESS, rank);
 	  /* else fall through */
 	default:
 	  return INCOMPATIBLE_TYPE_BADNESS;
@@ -3496,8 +3684,10 @@ gdbtypes_post_init (struct gdbarch *gdbarch)
     = arch_integer_type (gdbarch, 128, 0, "int128_t");
   builtin_type->builtin_uint128
     = arch_integer_type (gdbarch, 128, 1, "uint128_t");
-  TYPE_NOTTEXT (builtin_type->builtin_int8) = 1;
-  TYPE_NOTTEXT (builtin_type->builtin_uint8) = 1;
+  TYPE_INSTANCE_FLAGS (builtin_type->builtin_int8) |=
+    TYPE_INSTANCE_FLAG_NOTTEXT;
+  TYPE_INSTANCE_FLAGS (builtin_type->builtin_uint8) |=
+    TYPE_INSTANCE_FLAG_NOTTEXT;
 
   /* Wide character types.  */
   builtin_type->builtin_char16

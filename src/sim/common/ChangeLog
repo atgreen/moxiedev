@@ -1,3 +1,185 @@
+2010-11-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-sockser.c (dv_sockser_write_buffer): New function.
+	(dv_sockser_write): Rewrite to use dv_sockser_write_buffer.
+	* dv-sockser.h (dv_sockser_write_buffer): New prototype.
+
+2010-10-07  Hans-Peter Nilsson  <hp@axis.com>
+
+	* callback.c (os_lseek): Call wrap on lseek result.
+
+2010-05-26  Ozkan Sezer  <sezeroz@gmail.com>
+
+	* dv-sockser.c (dv_sockser_init): Check error return from socket()
+	call by its equality to -1 not by it being negative.
+	(connected_p): Likewise for accept() call.
+
+2010-04-23  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-fpu.c (sim_fpu_zero, sim_fpu_qnan): Add 0 initializers.
+
+2010-04-21  Mike Frysinger  <vapier@gentoo.org>
+
+	* profile.c (sim_profile_print_bar): Add cpu argument.
+
+2010-04-21  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-profile.h (sim_profile_print_bar): Use sim_cpu, not SIM_CPU.
+
+2010-04-21  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-profile.c (profile_vprintf, profile_printf): New functions.
+	(profile_print_pc): Convert sim_io_printf to profile_printf.
+	(profile_print_insn): Likewise.
+	(profile_print_memory): Likewise.
+	(profile_print_core): Likewise.
+	(profile_print_model): Likewise.
+	(sim_profile_print_bar): Likewise.
+	(profile_print_speed): Likewise.
+	(profile_print_addr_ranges): Likewise.
+	(profile_info): Likewise.
+	* sim-profile.h (sim_profile_print_bar): Add cpu argument.
+
+2010-04-19  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-model.c (OPTION_MODEL): Convert to enum.
+	(OPTION_MODEL_INFO): New enum.
+	(model_options): Add model-info/info-model entries.
+	(model_option_handler): Handle OPTION_MODEL_INFO.
+
+2010-04-13  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-sockser.h (DV_SOCKSER_DISCONNECTED): Define.
+	* dv-sockser.c (dv_sockser_status): Set DV_SOCKSER_DISCONNECTED
+	initially.
+
+2010-04-13  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-hrw.c (sim_write): Add const to buf arg.
+	* sim-utils.h (sim_write_fn): Likewise.
+
+2010-04-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-profile.h (PROFILE_BRANCH_TAKEN, PROFILE_BRANCH_UNTAKEN): New
+	defines.
+
+2010-04-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-core.c (dv_core_descriptor): Add NULL initializer.
+	* dv-glue.c (hw_glue_ports, dv_glue_descriptor): Likewise.
+	* dv-pal.c (hw_pal_ports, dv_pal_descriptor): Likewise.
+	* dv-sockser.c (sockser_options): Likewise.
+	* hw-ports.c (empty_hw_ports): Likewise.
+	* sim-hw.c (hw_options): Likewise.
+	* sim-model.c (model_options): Likewise.
+	* sim-options.c (standard_options): Likewise.
+	* sim-profile.c (profile_options): Likewise.
+	* sim-trace.c (trace_options): Likewise.
+	* sim-watch.c (watchpoint_options): Likewise.
+
+2010-04-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-options.c (dup_arg_p): Add "const" to the "arg" argument,
+	the local "arg_table" variable, and the xmalloc cast.
+
+2010-04-10  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-fpu.c (sim_fpu_print_status): Add const markings to local
+	"prefix" var.
+	(sim_fpu_print_func): Add const markings to format buffer.
+
+2010-04-10  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-fpu.c (sim_fpu_print_status): Remove duplicate break statements.
+
+2010-04-10  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-trace.c (save_data): Add const markings to "buf" argument.
+
+2010-04-10  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-options.c (standard_option_handler): Add const markings to
+	local "type" var.
+
+2010-04-02  Mike Frysinger  <vapier@gentoo.org>
+
+	* hw-ports.h: Fix spelling typos.
+
+2010-03-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Check for socklen_t.
+	* configure, config.in: Regenerated.
+	* dv-sockser.c (connected_p): Change addrlen type to socklen_t.
+
+2010-03-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-utils.c (sim_io_eprintf_cpu): Use %s with printf string.
+	* sim-hw.c (hw_option_handler): Likewise.
+
+2010-03-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-watch.c (watchpoint_type_to_str): Add const to return.
+	(interrupt_nr_to_str): Likewise.
+	(default_interrupt_names): Add const to pointer type.
+	(sim_watchpoint_install): Add const to prefix.
+	* sim-watch.h (struct _sim_watchpoints): Add const to interrupt_names.
+
+2010-03-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-core.c (sim_core_read_buffer): Change raddr to address_word.
+	(sim_core_write_buffer): Likewise.
+
+2010-03-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-trace.c (trace_option_handler): Move cpu_nr decl behind
+	the SIM_HAVE_ADDR_RANGE define.
+
+2010-03-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-core.h (device_error): Add const to message, and add printf
+	format attribute.
+
+2010-03-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-profile.c (profile_print_addr_ranges): Wrap with the
+	SIM_HAVE_ADDR_RANGE define.
+
+2010-03-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-glue.c (hw_glue_ports): Swap static and const.
+
+2010-03-30  Mike Frysinger  <vapier@gentoo.org>
+
+	* nrun.c (usage): Use void in definition.
+	* sim-options.c (dup_arg_p): Convert old-style function definition.
+	(sim_parse_args): Likewise.
+	(sim_print_help): Likewise.
+	* sim-trace.c (set_trace_option_mask): Likewise.
+	(set_trace_option): Likewise.
+	* sim-utils.c (sim_analyze_program): Likewise.
+	(sim_elapsed_time_get): Likewise.
+	(sim_elapsed_time_since): Likewise.
+
+2010-03-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim/common/sim-options.c (enum): Remove SIM_HAVE_BIENDIAN ifdef.
+	(standard_options): Likewise.
+	(standard_option_handler): Likewise.
+
+2010-03-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* hw-ports.c (TRACE): Delete.
+	* hw-properties.c (TRACE): Delete.
+	(hw_find_ihandle_runtime_property): Change TRACE to HW_TRACE.
+	(hw_find_integer_property): Likewise.
+	(hw_find_integer_array_property): Likewise.
+	(hw_add_duplicate_property): Likewise.
+
+2010-03-15  Mike Frysinger  <vapier@gentoo.org>
+
+	* hw-properties.h (hw_add_boolean_property): Rename "bool" to
+	"boolean".
+
 2010-02-04  Mike Frysinger  <vapier@gentoo.org>
 
 	* sim-model.c: Include sim-model.h

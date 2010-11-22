@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler. NEC V850 series
    Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2007, 2008, 2009  Free Software Foundation, Inc.
+   2007, 2008, 2009, 2010  Free Software Foundation, Inc.
    Contributed by Jeff Law (law@cygnus.com).
 
    This file is part of GCC.
@@ -137,42 +137,6 @@ enum small_memory_type {
 };
 
 extern struct small_memory_info small_memory[(int)SMALL_MEMORY_max];
-
-/* Show we can debug even without a frame pointer.  */
-#define CAN_DEBUG_WITHOUT_FP
-
-/* Some machines may desire to change what optimizations are
-   performed for various optimization levels.   This macro, if
-   defined, is executed once just after the optimization level is
-   determined and before the remainder of the command options have
-   been parsed.  Values set in this macro are used as the default
-   values for the other command line options.
-
-   LEVEL is the optimization level specified; 2 if `-O2' is
-   specified, 1 if `-O' is specified, and 0 if neither is specified.
-
-   SIZE is nonzero if `-Os' is specified, 0 otherwise.  
-
-   You should not use this macro to change options that are not
-   machine-specific.  These should uniformly selected by the same
-   optimization level on all supported machines.  Use this macro to
-   enable machine-specific optimizations.
-
-   *Do not examine `write_symbols' in this macro!* The debugging
-   options are not supposed to alter the generated code.  */
-
-#define OPTIMIZATION_OPTIONS(LEVEL,SIZE)				\
-{									\
-  if (LEVEL)								\
-    /* Note - we no longer enable MASK_EP when optimizing.  This is	\
-       because of a hardware bug which stops the SLD and SST instructions\
-       from correctly detecting some hazards.  If the user is sure that \
-       their hardware is fixed or that their program will not encounter \
-       the conditions that trigger the bug then they can enable -mep by \
-       hand.  */							\
-    target_flags |= MASK_PROLOG_FUNCTION;				\
-}
-
 
 /* Target machine storage layout */
 
@@ -292,18 +256,6 @@ extern struct small_memory_info small_memory[(int)SMALL_MEMORY_max];
   34, 35								\
 }
 
-/* If TARGET_APP_REGS is not defined then add r2 and r5 to
-   the pool of fixed registers. See PR 14505.  */
-#define CONDITIONAL_REGISTER_USAGE             \
-{                                              \
-  if (TARGET_APP_REGS)                         \
-    {                                          \
-     fixed_regs[2] = 0;  call_used_regs[2] = 0;        \
-     fixed_regs[5] = 0;  call_used_regs[5] = 1;        \
-    }                                          \
- }
-
-
 /* Return number of consecutive hard regs needed starting at reg REGNO
    to hold something of mode MODE.
 
@@ -408,13 +360,6 @@ enum reg_class
    || reg_renumber[regno] >= 0)
 
 #define REGNO_OK_FOR_INDEX_P(regno) 0
-
-/* Given an rtx X being reloaded into a reg required to be
-   in class CLASS, return the class of reg to actually use.
-   In general this is just CLASS; but on some machines
-   in some cases it is preferable to use a more restrictive class.  */
-
-#define PREFERRED_RELOAD_CLASS(X,CLASS)  (CLASS)
 
 /* Return the maximum number of consecutive registers
    needed to represent mode MODE in a register of class CLASS.  */
@@ -608,40 +553,12 @@ enum reg_class
 #define CUMULATIVE_ARGS struct cum_arg
 struct cum_arg { int nbytes; int anonymous_args; };
 
-/* Define where to put the arguments to a function.
-   Value is zero to push the argument on the stack,
-   or a hard register in which to store the argument.
-
-   MODE is the argument's machine mode.
-   TYPE is the data type of the argument (as a tree).
-    This is null for libcalls where that information may
-    not be available.
-   CUM is a variable of type CUMULATIVE_ARGS which gives info about
-    the preceding args and about the function being called.
-   NAMED is nonzero if this argument is a named parameter
-    (otherwise it is an extra parameter matching an ellipsis).  */
-
-#define FUNCTION_ARG(CUM, MODE, TYPE, NAMED) \
-  function_arg (&CUM, MODE, TYPE, NAMED)
-
 /* Initialize a variable CUM of type CUMULATIVE_ARGS
    for a call to a function whose data type is FNTYPE.
    For a library call, FNTYPE is 0.  */
 
 #define INIT_CUMULATIVE_ARGS(CUM, FNTYPE, LIBNAME, INDIRECT, N_NAMED_ARGS) \
  ((CUM).nbytes = 0, (CUM).anonymous_args = 0)
-
-/* Update the data in CUM to advance over an argument
-   of mode MODE and data type TYPE.
-   (TYPE is null for libcalls where that information may not be available.)  */
-#define FUNCTION_ARG_ADVANCE(CUM, MODE, TYPE, NAMED)			\
- ((CUM).nbytes +=							\
-  ((((TYPE) && int_size_in_bytes (TYPE) > 8)				\
-   ? GET_MODE_SIZE (Pmode)						\
-   : ((MODE) != BLKmode							\
-      ? GET_MODE_SIZE ((MODE))						\
-      : int_size_in_bytes ((TYPE))))					\
-   + UNITS_PER_WORD - 1) & -UNITS_PER_WORD)
 
 /* When a parameter is passed in a register, stack space is still
    allocated for it.  */
@@ -656,10 +573,6 @@ struct cum_arg { int nbytes; int anonymous_args; };
 
 #define LIBCALL_VALUE(MODE) \
   gen_rtx_REG (MODE, 10)
-
-/* 1 if N is a possible register number for a function value.  */
-
-#define FUNCTION_VALUE_REGNO_P(N) ((N) == 10)
 
 #define DEFAULT_PCC_STRUCT_RETURN 0
 
@@ -963,9 +876,6 @@ typedef enum
   { "r30",     30 },                           \
   { "lp",      LP_REGNUM} }
 
-#define ASM_OUTPUT_REG_PUSH(FILE,REGNO)
-#define ASM_OUTPUT_REG_POP(FILE,REGNO)
-
 /* This is how to output an element of a case-vector that is absolute.  */
 
 #define ASM_OUTPUT_ADDR_VEC_ELT(FILE, VALUE) \
@@ -1132,6 +1042,10 @@ extern union tree_node * GHS_current_section_names [(int) COUNT_OF_GHS_SECTION_K
 
 #define TARGET_ASM_INIT_SECTIONS v850_asm_init_sections
 
+/* Define this so that the cc1plus will not think that system header files
+   need an implicit 'extern "C" { ... }' assumed.  This breaks testing C++
+   in a build directory where the libstdc++ header files are found via a
+   -isystem <path-to-build-dir>.  */
+#define NO_IMPLICIT_EXTERN_C
+
 #endif /* ! GCC_V850_H */
-
-

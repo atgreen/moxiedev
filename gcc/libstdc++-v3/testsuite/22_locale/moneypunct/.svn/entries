@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale/moneypunct
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-06-08T00:45:02.718875Z
-160416
+2010-09-15T10:46:39.518825Z
+164300
 paolo
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2009-09-10T17:50:38.000000Z
-499bac5bcf6a4cb60795e8597cacbc01
-2009-07-18T22:58:10.598929Z
-149782
+2010-11-22T19:18:27.000784Z
+1e47b08e45cd13134da99ff009db6e0e
+2010-09-15T10:46:39.518825Z
+164300
 paolo
 
 
@@ -58,7 +58,7 @@ paolo
 
 
 
-1154
+1159
 
 requirements
 dir

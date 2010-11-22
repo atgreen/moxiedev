@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_stringbuf
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-06-08T00:45:02.718875Z
-160416
+2010-09-15T10:46:39.518825Z
+164300
 paolo
 
 
@@ -32,10 +32,10 @@ dir
 sgetn
 dir
 
-seekoff
+in_avail
 dir
 
-in_avail
+seekoff
 dir
 
 requirements
@@ -65,10 +65,10 @@ dir
 sgetc
 dir
 
-str
+sungetc
 dir
 
-sungetc
+str
 dir
 
 sputn

@@ -53,7 +53,7 @@
 	    (abfd == NULL)
       (2) SYMBOL + OFFSET addresses, where SYMBOL is local to an input bfd
 	    (abfd != NULL, symndx >= 0)
-      (3) global and forced-local symbols
+      (3) SYMBOL addresses, where SYMBOL is not local to an input bfd
 	    (abfd != NULL, symndx == -1)
 
    Type (3) entries are treated differently for different types of GOT.
@@ -94,8 +94,9 @@ struct mips_got_entry
        that should be added to the symbol value.  */
     bfd_vma addend;
     /* If abfd != NULL && symndx == -1, the hash table entry
-       corresponding to a global symbol in the got (or, local, if
-       h->forced_local).  */
+       corresponding to symbol in the GOT.  The symbol's entry
+       is in the local area if h->global_got_area is GGA_NONE,
+       otherwise it is in the global area.  */
     struct mips_elf_link_hash_entry *h;
   } d;
 
@@ -372,6 +373,11 @@ struct mips_elf_link_hash_entry
 
   /* The highest GGA_* value that satisfies all references to this symbol.  */
   unsigned int global_got_area : 2;
+
+  /* True if all GOT relocations against this symbol are for calls.  This is
+     a looser condition than no_fn_stub below, because there may be other
+     non-call non-GOT relocations against the symbol.  */
+  unsigned int got_only_for_calls : 1;
 
   /* True if one of the relocations described by possibly_dynamic_relocs
      is against a readonly section.  */
@@ -777,23 +783,6 @@ static bfd *reldyn_sorting_bfd;
 #define MIPS_ELF_RTYPE_TO_HOWTO(abfd, rtype, rela)			\
   (get_elf_backend_data (abfd)->elf_backend_mips_rtype_to_howto (rtype, rela))
 
-/* Determine whether the internal relocation of index REL_IDX is REL
-   (zero) or RELA (non-zero).  The assumption is that, if there are
-   two relocation sections for this section, one of them is REL and
-   the other is RELA.  If the index of the relocation we're testing is
-   in range for the first relocation section, check that the external
-   relocation size is that for RELA.  It is also assumed that, if
-   rel_idx is not in range for the first section, and this first
-   section contains REL relocs, then the relocation is in the second
-   section, that is RELA.  */
-#define MIPS_RELOC_RELA_P(abfd, sec, rel_idx)				\
-  ((NUM_SHDR_ENTRIES (&elf_section_data (sec)->rel_hdr)			\
-    * get_elf_backend_data (abfd)->s->int_rels_per_ext_rel		\
-    > (bfd_vma)(rel_idx))						\
-   == (elf_section_data (sec)->rel_hdr.sh_entsize			\
-       == (ABI_64_P (abfd) ? sizeof (Elf64_External_Rela)		\
-	   : sizeof (Elf32_External_Rela))))
-
 /* The name of the dynamic relocation section.  */
 #define MIPS_ELF_REL_DYN_NAME(INFO) \
   (mips_elf_hash_table (INFO)->is_vxworks ? ".rela.dyn" : ".rel.dyn")
@@ -1072,6 +1061,7 @@ mips_elf_link_hash_newfunc (struct bfd_hash_entry *entry,
       ret->call_fp_stub = NULL;
       ret->tls_type = GOT_NORMAL;
       ret->global_got_area = GGA_NONE;
+      ret->got_only_for_calls = TRUE;
       ret->readonly_reloc = FALSE;
       ret->has_static_relocs = FALSE;
       ret->no_fn_stub = FALSE;
@@ -3202,8 +3192,8 @@ mips_elf_got_page (bfd *abfd, bfd *ibfd, struct bfd_link_info *info,
 }
 
 /* Find a local GOT entry for an R_MIPS*_GOT16 relocation against VALUE.
-   EXTERNAL is true if the relocation was against a global symbol
-   that has been forced local.  */
+   EXTERNAL is true if the relocation was originally against a global
+   symbol that binds locally.  */
 
 static bfd_vma
 mips_elf_got16_entry (bfd *abfd, bfd *ibfd, struct bfd_link_info *info,
@@ -3281,11 +3271,9 @@ mips_elf_create_local_got_entry (bfd *abfd, struct bfd_link_info *info,
       BFD_ASSERT (g != NULL);
     }
 
-  /* We might have a symbol, H, if it has been forced local.  Use the
-     global entry then.  It doesn't matter whether an entry is local
-     or global for TLS, since the dynamic linker does not
-     automatically relocate TLS GOT entries.  */
-  BFD_ASSERT (h == NULL || h->root.forced_local);
+  /* This function shouldn't be called for symbols that live in the global
+     area of the GOT.  */
+  BFD_ASSERT (h == NULL || h->global_got_area == GGA_NONE);
   if (TLS_RELOC_P (r_type))
     {
       struct mips_got_entry *p;
@@ -3478,11 +3466,13 @@ mips_elf_sort_hash_table_f (struct mips_elf_link_hash_entry *h, void *data)
 
 /* If H is a symbol that needs a global GOT entry, but has a dynamic
    symbol table index lower than any we've seen to date, record it for
-   posterity.  */
+   posterity.  FOR_CALL is true if the caller is only interested in
+   using the GOT entry for calls.  */
 
 static bfd_boolean
 mips_elf_record_global_got_symbol (struct elf_link_hash_entry *h,
 				   bfd *abfd, struct bfd_link_info *info,
+				   bfd_boolean for_call,
 				   unsigned char tls_flag)
 {
   struct mips_elf_link_hash_table *htab;
@@ -3494,6 +3484,8 @@ mips_elf_record_global_got_symbol (struct elf_link_hash_entry *h,
   BFD_ASSERT (htab != NULL);
 
   hmips = (struct mips_elf_link_hash_entry *) h;
+  if (!for_call)
+    hmips->got_only_for_calls = FALSE;
 
   /* A global symbol in the GOT must also be in the dynamic symbol
      table.  */
@@ -3850,25 +3842,49 @@ mips_elf_resolve_final_got_entries (struct mips_got_info *g)
 }
 
 /* A mips_elf_link_hash_traverse callback for which DATA points
-   to a mips_got_info.  Count the number of type (3) entries.  */
+   to the link_info structure.  Count the number of type (3) entries
+   in the master GOT.  */
 
 static int
 mips_elf_count_got_symbols (struct mips_elf_link_hash_entry *h, void *data)
 {
+  struct bfd_link_info *info;
+  struct mips_elf_link_hash_table *htab;
   struct mips_got_info *g;
 
-  g = (struct mips_got_info *) data;
+  info = (struct bfd_link_info *) data;
+  htab = mips_elf_hash_table (info);
+  g = htab->got_info;
   if (h->global_got_area != GGA_NONE)
     {
-      if (h->root.forced_local || h->root.dynindx == -1)
+      /* Make a final decision about whether the symbol belongs in the
+	 local or global GOT.  Symbols that bind locally can (and in the
+	 case of forced-local symbols, must) live in the local GOT.
+	 Those that are aren't in the dynamic symbol table must also
+	 live in the local GOT.
+
+	 Note that the former condition does not always imply the
+	 latter: symbols do not bind locally if they are completely
+	 undefined.  We'll report undefined symbols later if appropriate.  */
+      if (h->root.dynindx == -1
+	  || (h->got_only_for_calls
+	      ? SYMBOL_CALLS_LOCAL (info, &h->root)
+	      : SYMBOL_REFERENCES_LOCAL (info, &h->root)))
 	{
-	  /* We no longer need this entry if it was only used for
-	     relocations; those relocations will be against the
-	     null or section symbol instead of H.  */
+	  /* The symbol belongs in the local GOT.  We no longer need this
+	     entry if it was only used for relocations; those relocations
+	     will be against the null or section symbol instead of H.  */
 	  if (h->global_got_area != GGA_RELOC_ONLY)
 	    g->local_gotno++;
 	  h->global_got_area = GGA_NONE;
 	}
+      else if (htab->is_vxworks
+	       && h->got_only_for_calls
+	       && h->root.plt.offset != MINUS_ONE)
+	/* On VxWorks, calls can refer directly to the .got.plt entry;
+	   they don't need entries in the regular GOT.  .got.plt entries
+	   will be allocated by _bfd_mips_elf_adjust_dynamic_symbol.  */
+	h->global_got_area = GGA_NONE;
       else
 	{
 	  g->global_gotno++;
@@ -4010,7 +4026,7 @@ mips_elf_make_got_per_bfd (void **entryp, void *p)
       if (entry->tls_type & GOT_TLS_IE)
 	g->tls_gotno += 1;
     }
-  else if (entry->symndx >= 0 || entry->d.h->root.forced_local)
+  else if (entry->symndx >= 0 || entry->d.h->global_got_area == GGA_NONE)
     ++g->local_gotno;
   else
     ++g->global_gotno;
@@ -4557,17 +4573,15 @@ mips_elf_next_relocation (bfd *abfd ATTRIBUTE_UNUSED, unsigned int r_type,
   return NULL;
 }
 
-/* Return whether a relocation is against a local symbol.  */
+/* Return whether an input relocation is against a local symbol.  */
 
 static bfd_boolean
 mips_elf_local_relocation_p (bfd *input_bfd,
 			     const Elf_Internal_Rela *relocation,
-			     asection **local_sections,
-			     bfd_boolean check_forced)
+			     asection **local_sections)
 {
   unsigned long r_symndx;
   Elf_Internal_Shdr *symtab_hdr;
-  struct mips_elf_link_hash_entry *h;
   size_t extsymoff;
 
   r_symndx = ELF_R_SYM (input_bfd, relocation->r_info);
@@ -4578,20 +4592,6 @@ mips_elf_local_relocation_p (bfd *input_bfd,
     return TRUE;
   if (elf_bad_symtab (input_bfd) && local_sections[r_symndx] != NULL)
     return TRUE;
-
-  if (check_forced)
-    {
-      /* Look up the hash table to check whether the symbol
- 	 was forced local.  */
-      h = (struct mips_elf_link_hash_entry *)
-	elf_sym_hashes (input_bfd) [r_symndx - extsymoff];
-      /* Find the real hash-table entry for this symbol.  */
-      while (h->root.root.type == bfd_link_hash_indirect
- 	     || h->root.root.type == bfd_link_hash_warning)
-	h = (struct mips_elf_link_hash_entry *) h->root.root.u.i.link;
-      if (h->root.forced_local)
-	return TRUE;
-    }
 
   return FALSE;
 }
@@ -4900,7 +4900,7 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
      used in the array of hash table entries.  */
   symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
   local_p = mips_elf_local_relocation_p (input_bfd, relocation,
-					 local_sections, FALSE);
+					 local_sections);
   was_local_p = local_p;
   if (! elf_bad_symtab (input_bfd))
     extsymoff = symtab_hdr->sh_info;
@@ -5134,8 +5134,7 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
 			   || ((r_type == R_MIPS_26 || r_type == R_MIPS_JALR)
 			       && target_is_16_bit_code_p));
 
-  local_p = mips_elf_local_relocation_p (input_bfd, relocation,
-					 local_sections, TRUE);
+  local_p = h == NULL || SYMBOL_REFERENCES_LOCAL (info, &h->root);
 
   gp0 = _bfd_get_gp_value (input_bfd);
   gp = _bfd_get_gp_value (abfd);
@@ -5145,19 +5144,18 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
   if (gnu_local_gp_p)
     symbol = gp;
 
-  /* If we haven't already determined the GOT offset, oand we're going
+  /* Global R_MIPS_GOT_PAGE relocations are equivalent to R_MIPS_GOT_DISP.
+     The addend is applied by the corresponding R_MIPS_GOT_OFST.  */
+  if (r_type == R_MIPS_GOT_PAGE && !local_p)
+    {
+      r_type = R_MIPS_GOT_DISP;
+      addend = 0;
+    }
+
+  /* If we haven't already determined the GOT offset, and we're going
      to need it, get it now.  */
   switch (r_type)
     {
-    case R_MIPS_GOT_PAGE:
-    case R_MIPS_GOT_OFST:
-      /* We need to decay to GOT_DISP/addend if the symbol doesn't
-	 bind locally.  */
-      local_p = local_p || _bfd_elf_symbol_refs_local_p (&h->root, info, 1);
-      if (local_p || r_type == R_MIPS_GOT_OFST)
-	break;
-      /* Fall through.  */
-
     case R_MIPS16_CALL16:
     case R_MIPS16_GOT16:
     case R_MIPS_CALL16:
@@ -5193,21 +5191,12 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
 	    }
 	  else
 	    {
-	      /* GOT_PAGE may take a non-zero addend, that is ignored in a
-		 GOT_PAGE relocation that decays to GOT_DISP because the
-		 symbol turns out to be global.  The addend is then added
-		 as GOT_OFST.  */
-	      BFD_ASSERT (addend == 0 || r_type == R_MIPS_GOT_PAGE);
+	      BFD_ASSERT (addend == 0);
 	      g = mips_elf_global_got_index (dynobj, input_bfd,
 					     &h->root, r_type, info);
 	      if (h->tls_type == GOT_NORMAL
-		  && (! elf_hash_table(info)->dynamic_sections_created
-		      || (info->shared
-			  && (info->symbolic || h->root.forced_local)
-			  && h->root.def_regular)))
-		/* This is a static link or a -Bsymbolic link.  The
-		   symbol is defined locally, or was forced to be local.
-		   We must initialize this entry in the GOT.  */
+		  && !elf_hash_table (info)->dynamic_sections_created)
+		/* This is a static link.  We must initialize the GOT entry.  */
 		MIPS_ELF_PUT_WORD (dynobj, symbol, htab->sgot->contents + g);
 	    }
 	}
@@ -5276,7 +5265,7 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
 	       && h->root.def_dynamic
 	       && !h->root.def_regular
 	       && !h->has_static_relocs))
-	  && r_symndx != 0
+	  && r_symndx != STN_UNDEF
 	  && (h == NULL
 	      || h->root.root.type != bfd_link_hash_undefweak
 	      || ELF_ST_VISIBILITY (h->root.other) == STV_DEFAULT)
@@ -5321,7 +5310,7 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
 	 mips_elf_perform_relocation.  So, we just fall through to the
 	 R_MIPS_26 case here.  */
     case R_MIPS_26:
-      if (local_p)
+      if (was_local_p)
 	value = ((addend | ((p + 4) & 0xf0000000)) + symbol) >> 2;
       else
 	{
@@ -5447,12 +5436,8 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
 	 R_MIPS*_GOT16; every relocation evaluates to "G".  */
       if (!htab->is_vxworks && local_p)
 	{
-	  bfd_boolean forced;
-
-	  forced = ! mips_elf_local_relocation_p (input_bfd, relocation,
-						  local_sections, FALSE);
 	  value = mips_elf_got16_entry (abfd, input_bfd, info,
-					symbol + addend, forced);
+					symbol + addend, !was_local_p);
 	  if (value == MINUS_ONE)
 	    return bfd_reloc_outofrange;
 	  value
@@ -5467,7 +5452,6 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
     case R_MIPS_TLS_GOTTPREL:
     case R_MIPS_TLS_LDM:
     case R_MIPS_GOT_DISP:
-    got_disp:
       value = g;
       overflowed_p = mips_elf_overflow_p (value, 16);
       break;
@@ -5502,11 +5486,6 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
       break;
 
     case R_MIPS_GOT_PAGE:
-      /* GOT_PAGE relocations that reference non-local symbols decay
-	 to GOT_DISP.  The corresponding GOT_OFST relocation decays to
-	 0.  */
-      if (! local_p)
-	goto got_disp;
       value = mips_elf_got_page (abfd, input_bfd, info, symbol + addend, NULL);
       if (value == MINUS_ONE)
 	return bfd_reloc_outofrange;
@@ -5641,7 +5620,7 @@ mips_elf_perform_relocation (struct bfd_link_info *info,
       if (!ok)
 	{
 	  (*_bfd_error_handler)
-	    (_("%B: %A+0x%lx: jump to stub routine which is not jal"),
+	    (_("%B: %A+0x%lx: Direct jumps between ISA modes are not allowed; consider recompiling with interlinking enabled."),
 	     input_bfd,
 	     input_section,
 	     (unsigned long) relocation->r_offset);
@@ -5757,6 +5736,7 @@ mips_elf_create_dynamic_relocation (bfd *output_bfd,
      in the relocation.  */
   if (h != NULL && ! SYMBOL_REFERENCES_LOCAL (info, &h->root))
     {
+      BFD_ASSERT (htab->is_vxworks || h->global_got_area != GGA_NONE);
       indx = h->root.dynindx;
       if (SGI_COMPAT (output_bfd))
 	defined_p = h->root.def_regular;
@@ -5965,6 +5945,9 @@ _bfd_elf_mips_mach (flagword flags)
 
     case E_MIPS_MACH_LS2F:
       return bfd_mach_mips_loongson_2f;
+
+    case E_MIPS_MACH_LS3A:
+      return bfd_mach_mips_loongson_3a;
 
     case E_MIPS_MACH_OCTEON:
       return bfd_mach_mips_octeon;
@@ -7113,14 +7096,14 @@ mips_elf_rel_relocation_p (bfd *abfd, asection *sec,
   Elf_Internal_Shdr *rel_hdr;
   const struct elf_backend_data *bed;
 
-  /* To determine which flavor or relocation this is, we depend on the
-     fact that the INPUT_SECTION's REL_HDR is read before its REL_HDR2.  */
-  rel_hdr = &elf_section_data (sec)->rel_hdr;
+  /* To determine which flavor of relocation this is, we depend on the
+     fact that the INPUT_SECTION's REL_HDR is read before RELA_HDR.  */
+  rel_hdr = elf_section_data (sec)->rel.hdr;
+  if (rel_hdr == NULL)
+    return FALSE;
   bed = get_elf_backend_data (abfd);
-  if ((size_t) (rel - relocs)
-      >= (NUM_SHDR_ENTRIES (rel_hdr) * bed->s->int_rels_per_ext_rel))
-    rel_hdr = elf_section_data (sec)->rel_hdr2;
-  return rel_hdr->sh_entsize == MIPS_ELF_REL_SIZE (abfd);
+  return ((size_t) (rel - relocs)
+	  < NUM_SHDR_ENTRIES (rel_hdr) * bed->s->int_rels_per_ext_rel);
 }
 
 /* Read the addend for REL relocation REL, which belongs to bfd ABFD.
@@ -7603,6 +7586,25 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		elf_hash_table (info)->dynobj = dynobj = abfd;
 	      break;
 	    }
+	  /* For sections that are not SEC_ALLOC a copy reloc would be
+	     output if possible (implying questionable semantics for
+	     read-only data objects) or otherwise the final link would
+	     fail as ld.so will not process them and could not therefore
+	     handle any outstanding dynamic relocations.
+
+	     For such sections that are also SEC_DEBUGGING, we can avoid
+	     these problems by simply ignoring any relocs as these
+	     sections have a predefined use and we know it is safe to do
+	     so.
+
+	     This is needed in cases such as a global symbol definition
+	     in a shared library causing a common symbol from an object
+	     file to be converted to an undefined reference.  If that
+	     happens, then all the relocations against this symbol from
+	     SEC_DEBUGGING sections in the object file will resolve to
+	     nil.  */
+	  if ((sec->flags & SEC_DEBUGGING) != 0)
+	    break;
 	  /* Fall through.  */
 
 	default:
@@ -7679,11 +7681,10 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_MIPS_CALL_LO16:
 	  if (h != NULL)
 	    {
-	      /* VxWorks call relocations point at the function's .got.plt
-		 entry, which will be allocated by adjust_dynamic_symbol.
-		 Otherwise, this symbol requires a global GOT entry.  */
-	      if ((!htab->is_vxworks || h->forced_local)
-		  && !mips_elf_record_global_got_symbol (h, abfd, info, 0))
+	      /* Make sure there is room in the regular GOT to hold the
+		 function's address.  We may eliminate it in favour of
+		 a .got.plt entry later; see mips_elf_count_got_symbols.  */
+	      if (!mips_elf_record_global_got_symbol (h, abfd, info, TRUE, 0))
 		return FALSE;
 
 	      /* We need a stub, not a plt entry for the undefined
@@ -7743,7 +7744,8 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  /* Fall through.  */
 
 	case R_MIPS_GOT_DISP:
-	  if (h && !mips_elf_record_global_got_symbol (h, abfd, info, 0))
+	  if (h && !mips_elf_record_global_got_symbol (h, abfd, info,
+						       FALSE, 0))
 	    return FALSE;
 	  break;
 
@@ -7755,7 +7757,7 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_MIPS_TLS_LDM:
 	  if (r_type == R_MIPS_TLS_LDM)
 	    {
-	      r_symndx = 0;
+	      r_symndx = STN_UNDEF;
 	      h = NULL;
 	    }
 	  /* Fall through */
@@ -7775,13 +7777,13 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		  (struct mips_elf_link_hash_entry *) h;
 		hmips->tls_type |= flag;
 
-		if (h && !mips_elf_record_global_got_symbol (h, abfd,
-							     info, flag))
+		if (h && !mips_elf_record_global_got_symbol (h, abfd, info,
+							     FALSE, flag))
 		  return FALSE;
 	      }
 	    else
 	      {
-		BFD_ASSERT (flag == GOT_TLS_LDM || r_symndx != 0);
+		BFD_ASSERT (flag == GOT_TLS_LDM || r_symndx != STN_UNDEF);
 
 		if (!mips_elf_record_local_got_symbol (abfd, r_symndx,
 						       rel->r_addend,
@@ -7921,13 +7923,17 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    case R_MIPS_HIGHEST:
 	      /* Don't refuse a high part relocation if it's against
 		 no symbol (e.g. part of a compound relocation).  */
-	      if (r_symndx == 0)
+	      if (r_symndx == STN_UNDEF)
 		break;
 
 	      /* R_MIPS_HI16 against _gp_disp is used for $gp setup,
 		 and has a special meaning.  */
 	      if (!NEWABI_P (abfd) && h != NULL
 		  && strcmp (h->root.root.string, "_gp_disp") == 0)
+		break;
+
+	      /* Likewise __GOTT_BASE__ and __GOTT_INDEX__ on VxWorks.  */
+	      if (is_gott_symbol (info, h))
 		break;
 
 	      /* FALLTHROUGH */
@@ -8168,10 +8174,19 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
       if (do_copy)
 	{
 	  /* Even though we don't directly need a GOT entry for this symbol,
-	     a symbol must have a dynamic symbol table index greater that
-	     DT_MIPS_GOTSYM if there are dynamic relocations against it.  */
-	  if (hmips->global_got_area > GGA_RELOC_ONLY)
-	    hmips->global_got_area = GGA_RELOC_ONLY;
+	     the SVR4 psABI requires it to have a dynamic symbol table
+	     index greater that DT_MIPS_GOTSYM if there are dynamic
+	     relocations against it.
+
+	     VxWorks does not enforce the same mapping between the GOT
+	     and the symbol table, so the same requirement does not
+	     apply there.  */
+	  if (!htab->is_vxworks)
+	    {
+	      if (hmips->global_got_area > GGA_RELOC_ONLY)
+		hmips->global_got_area = GGA_RELOC_ONLY;
+	      hmips->got_only_for_calls = FALSE;
+	    }
 
 	  mips_elf_allocate_dynamic_relocations
 	    (dynobj, info, hmips->possibly_dynamic_relocs);
@@ -8454,7 +8469,7 @@ mips_elf_lay_out_got (bfd *output_bfd, struct bfd_link_info *info)
     return FALSE;
 
   /* Count the number of GOT symbols.  */
-  mips_elf_link_hash_traverse (htab, mips_elf_count_got_symbols, g);
+  mips_elf_link_hash_traverse (htab, mips_elf_count_got_symbols, info);
 
   /* Calculate the total loadable size of the output.  That
      will give us the maximum number of GOT_PAGE entries
@@ -8913,7 +8928,7 @@ mips_elf_adjust_addend (bfd *output_bfd, struct bfd_link_info *info,
   Elf_Internal_Sym *sym;
   asection *sec;
 
-  if (mips_elf_local_relocation_p (input_bfd, rel, local_sections, FALSE))
+  if (mips_elf_local_relocation_p (input_bfd, rel, local_sections))
     {
       r_type = ELF_R_TYPE (output_bfd, rel->r_info);
       if (r_type == R_MIPS16_GPREL
@@ -8973,17 +8988,17 @@ _bfd_mips_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
       asection *sec;
       Elf_Internal_Shdr *symtab_hdr;
       struct elf_link_hash_entry *h;
+      bfd_boolean rel_reloc;
 
+      rel_reloc = (NEWABI_P (input_bfd)
+		   && mips_elf_rel_relocation_p (input_bfd, input_section,
+						 relocs, rel));
       /* Find the relocation howto for this relocation.  */
-      howto = MIPS_ELF_RTYPE_TO_HOWTO (input_bfd, r_type,
-				       NEWABI_P (input_bfd)
-				       && (MIPS_RELOC_RELA_P
-					   (input_bfd, input_section,
-					    rel - relocs)));
+      howto = MIPS_ELF_RTYPE_TO_HOWTO (input_bfd, r_type, !rel_reloc);
 
       r_symndx = ELF_R_SYM (input_bfd, rel->r_info);
       symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
-      if (mips_elf_local_relocation_p (input_bfd, rel, local_sections, FALSE))
+      if (mips_elf_local_relocation_p (input_bfd, rel, local_sections))
 	{
 	  sec = local_sections[r_symndx];
 	  h = NULL;
@@ -9007,15 +9022,8 @@ _bfd_mips_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	}
 
       if (sec != NULL && elf_discarded_section (sec))
-	{
-	  /* For relocs against symbols from removed linkonce sections,
-	     or sections discarded by a linker script, we just want the
-	     section contents zeroed.  Avoid any special processing.  */
-	  _bfd_clear_contents (howto, input_bfd, contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend, howto, contents);
 
       if (r_type == R_MIPS_64 && ! NEWABI_P (input_bfd))
 	{
@@ -9048,7 +9056,7 @@ _bfd_mips_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	      if (hi16_reloc_p (r_type)
 		  || (got16_reloc_p (r_type)
 		      && mips_elf_local_relocation_p (input_bfd, rel,
-						      local_sections, FALSE)))
+						      local_sections)))
 		{
 		  if (!mips_elf_add_lo16_rel_addend (input_bfd, rel, relend,
 						     contents, &addend))
@@ -9574,8 +9582,7 @@ _bfd_mips_elf_finish_dynamic_symbol (bfd *output_bfd,
 
   /* Run through the global symbol table, creating GOT entries for all
      the symbols that need them.  */
-  if (g->global_gotsym != NULL
-      && h->dynindx >= g->global_gotsym->dynindx)
+  if (hmips->global_got_area != GGA_NONE)
     {
       bfd_vma offset;
       bfd_vma value;
@@ -9586,7 +9593,7 @@ _bfd_mips_elf_finish_dynamic_symbol (bfd *output_bfd,
       MIPS_ELF_PUT_WORD (output_bfd, value, sgot->contents + offset);
     }
 
-  if (g->next && h->dynindx != -1 && h->type != STT_TLS)
+  if (hmips->global_got_area != GGA_NONE && g->next && h->type != STT_TLS)
     {
       struct mips_got_entry e, *p;
       bfd_vma entry;
@@ -9752,10 +9759,12 @@ _bfd_mips_vxworks_finish_dynamic_symbol (bfd *output_bfd,
   asection *sgot;
   struct mips_got_info *g;
   struct mips_elf_link_hash_table *htab;
+  struct mips_elf_link_hash_entry *hmips;
 
   htab = mips_elf_hash_table (info);
   BFD_ASSERT (htab != NULL);
   dynobj = elf_hash_table (info)->dynobj;
+  hmips = (struct mips_elf_link_hash_entry *) h;
 
   if (h->plt.offset != (bfd_vma) -1)
     {
@@ -9861,8 +9870,7 @@ _bfd_mips_vxworks_finish_dynamic_symbol (bfd *output_bfd,
   BFD_ASSERT (g != NULL);
 
   /* See if this symbol has an entry in the GOT.  */
-  if (g->global_gotsym != NULL
-      && h->dynindx >= g->global_gotsym->dynindx)
+  if (hmips->global_got_area != GGA_NONE)
     {
       bfd_vma offset;
       Elf_Internal_Rela outrel;
@@ -10549,6 +10557,10 @@ mips_set_isa_flags (bfd *abfd)
 
     case bfd_mach_mips_loongson_2f:
       val = E_MIPS_ARCH_3 | E_MIPS_MACH_LS2F;
+      break;
+
+    case bfd_mach_mips_loongson_3a:
+      val = E_MIPS_ARCH_64 | E_MIPS_MACH_LS3A;
       break;
 
     case bfd_mach_mips_sb1:
@@ -11520,15 +11532,6 @@ error_return:
   return NULL;
 }
 
-/* Allocate ABFD's target-dependent data.  */
-
-bfd_boolean
-_bfd_mips_elf_mkobject (bfd *abfd)
-{
-  return bfd_elf_allocate_object (abfd, sizeof (struct elf_obj_tdata),
-				  MIPS_ELF_DATA);
-}
-
 /* Create a MIPS ELF linker hash table.  */
 
 struct bfd_link_hash_table *
@@ -12262,6 +12265,7 @@ static const struct mips_mach_extension mips_mach_extensions[] = {
   { bfd_mach_mipsisa64r2, bfd_mach_mipsisa64 },
   { bfd_mach_mips_sb1, bfd_mach_mipsisa64 },
   { bfd_mach_mips_xlr, bfd_mach_mipsisa64 },
+  { bfd_mach_mips_loongson_3a, bfd_mach_mipsisa64 },
 
   /* MIPS V extensions.  */
   { bfd_mach_mipsisa64, bfd_mach_mips5 },

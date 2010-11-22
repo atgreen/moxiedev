@@ -2598,16 +2598,9 @@ get_reloc_section (bfd *abfd,
 
   srel_name = (bfd_elf_string_from_elf_section
 	       (abfd, elf_elfheader(abfd)->e_shstrndx,
-		elf_section_data(sec)->rel_hdr.sh_name));
+		_bfd_elf_single_rel_hdr (sec)->sh_name));
   if (srel_name == NULL)
     return NULL;
-
-  BFD_ASSERT ((CONST_STRNEQ (srel_name, ".rela")
-	       && strcmp (bfd_get_section_name (abfd, sec),
-			  srel_name+5) == 0)
-	      || (CONST_STRNEQ (srel_name, ".rel")
-		  && strcmp (bfd_get_section_name (abfd, sec),
-			     srel_name+4) == 0));
 
   dynobj = ia64_info->root.dynobj;
   if (!dynobj)
@@ -4662,16 +4655,9 @@ elfNN_ia64_relocate_section (bfd *output_bfd,
 	    continue;
 	}
 
-      /* For relocs against symbols from removed linkonce sections,
-	 or sections discarded by a linker script, we just want the
-	 section contents zeroed.  Avoid any special processing.  */
       if (sym_sec != NULL && elf_discarded_section (sym_sec))
-	{
-	  _bfd_clear_contents (howto, input_bfd, contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend, howto, contents);
 
       if (info->relocatable)
 	continue;
@@ -4695,7 +4681,7 @@ elfNN_ia64_relocate_section (bfd *output_bfd,
 	case R_IA64_DIR64LSB:
 	  /* Install a dynamic relocation for this reloc.  */
 	  if ((dynamic_symbol_p || info->shared)
-	      && r_symndx != 0
+	      && r_symndx != STN_UNDEF
 	      && (input_section->flags & SEC_ALLOC) != 0)
 	    {
 	      unsigned int dyn_r_type;
@@ -4924,7 +4910,7 @@ elfNN_ia64_relocate_section (bfd *output_bfd,
 	case R_IA64_PCREL64MSB:
 	case R_IA64_PCREL64LSB:
 	  /* Install a dynamic relocation for this reloc.  */
-	  if (dynamic_symbol_p && r_symndx != 0)
+	  if (dynamic_symbol_p && r_symndx != STN_UNDEF)
 	    {
 	      BFD_ASSERT (srel != NULL);
 
@@ -5996,6 +5982,7 @@ elfNN_vms_close_and_cleanup (bfd *abfd)
 #define TARGET_BIG_SYM			bfd_elfNN_ia64_big_vec
 #define TARGET_BIG_NAME			"elfNN-ia64-big"
 #define ELF_ARCH			bfd_arch_ia64
+#define ELF_TARGET_ID			IA64_ELF_DATA
 #define ELF_MACHINE_CODE		EM_IA_64
 #define ELF_MACHINE_ALT1		1999	/* EAS2.3 */
 #define ELF_MACHINE_ALT2		1998	/* EAS2.2 */

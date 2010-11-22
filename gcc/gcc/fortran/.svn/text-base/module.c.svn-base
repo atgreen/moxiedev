@@ -2343,7 +2343,7 @@ static void mio_formal_arglist (gfc_formal_arglist **formal);
 static void mio_typebound_proc (gfc_typebound_proc** proc);
 
 static void
-mio_component (gfc_component *c)
+mio_component (gfc_component *c, int vtype)
 {
   pointer_info *p;
   int n;
@@ -2373,7 +2373,8 @@ mio_component (gfc_component *c)
   mio_symbol_attribute (&c->attr);
   c->attr.access = MIO_NAME (gfc_access) (c->attr.access, access_types); 
 
-  mio_expr (&c->initializer);
+  if (!vtype)
+    mio_expr (&c->initializer);
 
   if (c->attr.proc_pointer)
     {
@@ -2408,7 +2409,7 @@ mio_component (gfc_component *c)
 
 
 static void
-mio_component_list (gfc_component **cp)
+mio_component_list (gfc_component **cp, int vtype)
 {
   gfc_component *c, *tail;
 
@@ -2417,7 +2418,7 @@ mio_component_list (gfc_component **cp)
   if (iomode == IO_OUTPUT)
     {
       for (c = *cp; c; c = c->next)
-	mio_component (c);
+	mio_component (c, vtype);
     }
   else
     {
@@ -2430,7 +2431,7 @@ mio_component_list (gfc_component **cp)
 	    break;
 
 	  c = gfc_get_component ();
-	  mio_component (c);
+	  mio_component (c, vtype);
 
 	  if (tail == NULL)
 	    *cp = c;
@@ -3597,7 +3598,7 @@ mio_symbol (gfc_symbol *sym)
   /* Note that components are always saved, even if they are supposed
      to be private.  Component access is checked during searching.  */
 
-  mio_component_list (&sym->components);
+  mio_component_list (&sym->components, sym->attr.vtype);
 
   if (sym->components != NULL)
     sym->component_access
@@ -4368,6 +4369,11 @@ read_module (void)
 	  p = find_use_name_n (name, &j, false);
 
 	  if (p == NULL && strcmp (name, module_name) == 0)
+	    p = name;
+
+	  /* Exception: Always import vtabs & vtypes.  */
+	  if (p == NULL && (strncmp (name, "__vtab_", 5) == 0
+			    || strncmp (name, "__vtype_", 6) == 0))
 	    p = name;
 
 	  /* Skip symtree nodes not in an ONLY clause, unless there
@@ -5201,6 +5207,38 @@ gfc_dump_module (const char *name, int dump_flag)
 }
 
 
+static void
+create_intrinsic_function (const char *name, gfc_isym_id id,
+			   const char *modname, intmod_id module)
+{
+  gfc_intrinsic_sym *isym;
+  gfc_symtree *tmp_symtree;
+  gfc_symbol *sym;
+
+  tmp_symtree = gfc_find_symtree (gfc_current_ns->sym_root, name);
+  if (tmp_symtree)
+    {
+      if (strcmp (modname, tmp_symtree->n.sym->module) == 0)
+        return;
+      gfc_error ("Symbol '%s' already declared", name);
+    }
+
+  gfc_get_sym_tree (name, gfc_current_ns, &tmp_symtree, false);
+  sym = tmp_symtree->n.sym;
+
+  isym = gfc_intrinsic_function_by_id (id);
+  gcc_assert (isym);
+
+  sym->attr.flavor = FL_PROCEDURE;
+  sym->attr.intrinsic = 1;
+
+  sym->module = gfc_get_string (modname);
+  sym->attr.use_assoc = 1;
+  sym->from_intmod = module;
+  sym->intmod_sym_id = id;
+}
+
+
 /* Import the intrinsic ISO_C_BINDING module, generating symbols in
    the current namespace for all named constants, pointer types, and
    procedures in the module unless the only clause was used or a rename
@@ -5246,14 +5284,45 @@ import_iso_c_binding_module (void)
 	  {
 	    u->found = 1;
 	    found = true;
-	    generate_isocbinding_symbol (iso_c_module_name,
-					 (iso_c_binding_symbol) i,
-					 u->local_name);
+	    switch (i)
+	      {
+#define NAMED_FUNCTION(a,b,c,d) \
+	        case a: \
+		  create_intrinsic_function (u->local_name[0] ? u->local_name \
+							      : u->use_name, \
+					     (gfc_isym_id) c, \
+                                             iso_c_module_name, \
+                                             INTMOD_ISO_C_BINDING); \
+		  break;
+#include "iso-c-binding.def"
+#undef NAMED_FUNCTION
+
+		default:
+		  generate_isocbinding_symbol (iso_c_module_name,
+					       (iso_c_binding_symbol) i,
+					       u->local_name[0] ? u->local_name
+								: u->use_name);
+	      }
 	  }
 
       if (!found && !only_flag)
-	generate_isocbinding_symbol (iso_c_module_name,
-				     (iso_c_binding_symbol) i, NULL);
+	switch (i)
+	  {
+#define NAMED_FUNCTION(a,b,c,d) \
+	    case a: \
+	      if ((gfc_option.allow_std & d) == 0) \
+		continue; \
+	      create_intrinsic_function (b, (gfc_isym_id) c, \
+					 iso_c_module_name, \
+					 INTMOD_ISO_C_BINDING); \
+		  break;
+#include "iso-c-binding.def"
+#undef NAMED_FUNCTION
+
+	    default:
+	      generate_isocbinding_symbol (iso_c_module_name,
+					   (iso_c_binding_symbol) i, NULL);
+	  }
    }
 
    for (u = gfc_rename_list; u; u = u->next)
@@ -5299,6 +5368,49 @@ create_int_parameter (const char *name, int value, const char *modname,
 }
 
 
+/* Value is already contained by the array constructor, but not
+   yet the shape.  */
+
+static void
+create_int_parameter_array (const char *name, int size, gfc_expr *value,
+			    const char *modname, intmod_id module, int id)
+{
+  gfc_symtree *tmp_symtree;
+  gfc_symbol *sym;
+
+  tmp_symtree = gfc_find_symtree (gfc_current_ns->sym_root, name);
+  if (tmp_symtree != NULL)
+    {
+      if (strcmp (modname, tmp_symtree->n.sym->module) == 0)
+	return;
+      else
+	gfc_error ("Symbol '%s' already declared", name);
+    }
+
+  gfc_get_sym_tree (name, gfc_current_ns, &tmp_symtree, false);
+  sym = tmp_symtree->n.sym;
+
+  sym->module = gfc_get_string (modname);
+  sym->attr.flavor = FL_PARAMETER;
+  sym->ts.type = BT_INTEGER;
+  sym->ts.kind = gfc_default_integer_kind;
+  sym->attr.use_assoc = 1;
+  sym->from_intmod = module;
+  sym->intmod_sym_id = id;
+  sym->attr.dimension = 1;
+  sym->as = gfc_get_array_spec ();
+  sym->as->rank = 1;
+  sym->as->type = AS_EXPLICIT;
+  sym->as->lower[0] = gfc_get_int_expr (gfc_default_integer_kind, NULL, 1);
+  sym->as->upper[0] = gfc_get_int_expr (gfc_default_integer_kind, NULL, size); 
+
+  sym->value = value;
+  sym->value->shape = gfc_get_shape (1);
+  mpz_init_set_ui (sym->value->shape[0], size);
+}
+
+
+
 /* USE the ISO_FORTRAN_ENV intrinsic module.  */
 
 static void
@@ -5308,12 +5420,19 @@ use_iso_fortran_env_module (void)
   gfc_use_rename *u;
   gfc_symbol *mod_sym;
   gfc_symtree *mod_symtree;
-  int i;
+  gfc_expr *expr;
+  int i, j;
 
   intmod_sym symbol[] = {
 #define NAMED_INTCST(a,b,c,d) { a, b, 0, d },
 #include "iso-fortran-env.def"
 #undef NAMED_INTCST
+#define NAMED_KINDARRAY(a,b,c,d) { a, b, 0, d },
+#include "iso-fortran-env.def"
+#undef NAMED_KINDARRAY
+#define NAMED_FUNCTION(a,b,c,d) { a, b, c, d },
+#include "iso-fortran-env.def"
+#undef NAMED_FUNCTION
     { ISOFORTRANENV_INVALID, NULL, -1234, 0 } };
 
   i = 0;
@@ -5365,10 +5484,49 @@ use_iso_fortran_env_module (void)
 				 gfc_option.flag_default_integer
 				   ? "-fdefault-integer-8"
 				   : "-fdefault-real-8");
+	      switch (symbol[i].id)
+		{
+#define NAMED_INTCST(a,b,c,d) \
+		case a:
+#include "iso-fortran-env.def"
+#undef NAMED_INTCST
+		  create_int_parameter (u->local_name[0] ? u->local_name
+							 : u->use_name,
+					symbol[i].value, mod,
+					INTMOD_ISO_FORTRAN_ENV, symbol[i].id);
+		  break;
 
-	      create_int_parameter (u->local_name[0] ? u->local_name : u->use_name,
-				    symbol[i].value, mod,
-				    INTMOD_ISO_FORTRAN_ENV, symbol[i].id);
+#define NAMED_KINDARRAY(a,b,KINDS,d) \
+		case a:\
+		  expr = gfc_get_array_expr (BT_INTEGER, \
+					     gfc_default_integer_kind,\
+					     NULL); \
+		  for (j = 0; KINDS[j].kind != 0; j++) \
+		    gfc_constructor_append_expr (&expr->value.constructor, \
+			gfc_get_int_expr (gfc_default_integer_kind, NULL, \
+					  KINDS[j].kind), NULL); \
+		  create_int_parameter_array (u->local_name[0] ? u->local_name \
+							 : u->use_name, \
+					      j, expr, mod, \
+					      INTMOD_ISO_FORTRAN_ENV, \
+					      symbol[i].id); \
+		  break;
+#include "iso-fortran-env.def"
+#undef NAMED_KINDARRAY
+
+#define NAMED_FUNCTION(a,b,c,d) \
+		case a:
+#include "iso-fortran-env.def"
+#undef NAMED_FUNCTION
+		  create_intrinsic_function (u->local_name[0] ? u->local_name
+							      : u->use_name,
+					     (gfc_isym_id) symbol[i].value, mod,
+					     INTMOD_ISO_FORTRAN_ENV);
+		  break;
+
+		default:
+		  gcc_unreachable ();
+		}
 	    }
 	}
 
@@ -5385,8 +5543,42 @@ use_iso_fortran_env_module (void)
 			     gfc_option.flag_default_integer
 				? "-fdefault-integer-8" : "-fdefault-real-8");
 
-	  create_int_parameter (symbol[i].name, symbol[i].value, mod,
-				INTMOD_ISO_FORTRAN_ENV, symbol[i].id);
+	  switch (symbol[i].id)
+	    {
+#define NAMED_INTCST(a,b,c,d) \
+	    case a:
+#include "iso-fortran-env.def"
+#undef NAMED_INTCST
+	      create_int_parameter (symbol[i].name, symbol[i].value, mod,
+				    INTMOD_ISO_FORTRAN_ENV, symbol[i].id);
+	      break;
+
+#define NAMED_KINDARRAY(a,b,KINDS,d) \
+	    case a:\
+	      expr = gfc_get_array_expr (BT_INTEGER, gfc_default_integer_kind, \
+					 NULL); \
+	      for (j = 0; KINDS[j].kind != 0; j++) \
+		gfc_constructor_append_expr (&expr->value.constructor, \
+                      gfc_get_int_expr (gfc_default_integer_kind, NULL, \
+                                        KINDS[j].kind), NULL); \
+            create_int_parameter_array (symbol[i].name, j, expr, mod, \
+                                        INTMOD_ISO_FORTRAN_ENV, symbol[i].id);\
+            break;
+#include "iso-fortran-env.def"
+#undef NAMED_KINDARRAY
+
+#define NAMED_FUNCTION(a,b,c,d) \
+		case a:
+#include "iso-fortran-env.def"
+#undef NAMED_FUNCTION
+		  create_intrinsic_function (symbol[i].name,
+					     (gfc_isym_id) symbol[i].value, mod,
+					     INTMOD_ISO_FORTRAN_ENV);
+		  break;
+
+	  default:
+	    gcc_unreachable ();
+	  }
 	}
     }
 
@@ -5495,6 +5687,8 @@ gfc_use_module (void)
 			       "for file '%s' opened at %C", atom_string,
 			       MOD_VERSION, filename);
 	    }
+
+	  gfc_free (atom_string);
 	}
 
       if (c == '\n')

@@ -87,9 +87,10 @@ init_c_lex (void)
   cb->read_pch = c_common_read_pch;
 
   /* Set the debug callbacks if we can use them.  */
-  if (debug_info_level == DINFO_LEVEL_VERBOSE
-      && (write_symbols == DWARF2_DEBUG
-	  || write_symbols == VMS_AND_DWARF2_DEBUG))
+  if ((debug_info_level == DINFO_LEVEL_VERBOSE
+       && (write_symbols == DWARF2_DEBUG
+	   || write_symbols == VMS_AND_DWARF2_DEBUG))
+      || flag_dump_go_spec != NULL)
     {
       cb->define = cb_define;
       cb->undef = cb_undef;
@@ -366,9 +367,16 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
 
 	    case CPP_NAME:
 	      *value = HT_IDENT_TO_GCC_IDENT (HT_NODE (tok->val.node.node));
-	      if (objc_is_reserved_word (*value))
+	      if (OBJC_IS_AT_KEYWORD (C_RID_CODE (*value))
+		  || OBJC_IS_CXX_KEYWORD (C_RID_CODE (*value)))
 		{
 		  type = CPP_AT_NAME;
+		  /* Note the complication: if we found an OBJC_CXX
+		     keyword, for example, 'class', we will be
+		     returning a token of type CPP_AT_NAME and rid
+		     code RID_CLASS (not RID_AT_CLASS).  The language
+		     parser needs to convert that to RID_AT_CLASS.
+		  */
 		  break;
 		}
 	      /* FALLTHROUGH */

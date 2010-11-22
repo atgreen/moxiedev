@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/xml/stream
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 
 
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-XMLStreamReader.java
-file
-
-
-
-
-2009-04-24T17:47:25.000000Z
-37b55be273b16bd671075da43afd95ae
-2006-03-10T21:46:48.115162Z
-111942
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7770
 
 XMLEventWriter.java
 file
@@ -94,6 +60,40 @@ mark
 
 3349
 
+XMLStreamReader.java
+file
+
+
+
+
+2009-04-24T17:47:25.000000Z
+37b55be273b16bd671075da43afd95ae
+2006-03-10T21:46:48.115162Z
+111942
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7770
+
 StreamFilter.java
 file
 
@@ -127,40 +127,6 @@ mark
 
 
 2012
-
-XMLInputFactory.java
-file
-
-
-
-
-2009-04-24T17:47:25.000000Z
-965b61d3da525585520862d134a07590
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-13025
 
 Location.java
 file
@@ -196,14 +162,48 @@ mark
 
 2550
 
-XMLStreamWriter.java
+XMLInputFactory.java
+file
+
+
+
+
+2010-11-22T19:18:49.648786Z
+c22b471b8d0d40caf5c69994234eb0ed
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+13280
+
+FactoryConfigurationError.java
 file
 
 
 
 
 2009-04-24T17:47:25.000000Z
-4a614e3cafea159a53d5fe50f1f0043f
+58dea61ec531844ca7062193d8b2f8f3
 2005-09-23T19:36:46.000000Z
 104578
 tromey
@@ -228,7 +228,41 @@ tromey
 
 
 
-6196
+2512
+
+XMLOutputFactory.java
+file
+
+
+
+
+2010-11-22T19:18:49.649786Z
+9055649177027bf8c834f652ba7e6038
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8817
 
 XMLStreamConstants.java
 file
@@ -264,48 +298,14 @@ mark
 
 3033
 
-XMLOutputFactory.java
+XMLStreamWriter.java
 file
 
 
 
 
 2009-04-24T17:47:25.000000Z
-7f1ea3ebaecae26bd214f1418cf9f2a6
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8577
-
-FactoryConfigurationError.java
-file
-
-
-
-
-2009-04-24T17:47:25.000000Z
-58dea61ec531844ca7062193d8b2f8f3
+4a614e3cafea159a53d5fe50f1f0043f
 2005-09-23T19:36:46.000000Z
 104578
 tromey
@@ -330,7 +330,7 @@ tromey
 
 
 
-2512
+6196
 
 XMLResolver.java
 file
@@ -477,11 +477,11 @@ file
 
 
 
-2009-04-24T17:47:25.000000Z
-0a52f0d372ea168c1dcbff6c98f45ab0
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2010-11-22T19:18:49.650786Z
+fd545b37568ff516df475c6cf4e56f08
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 
 
 
@@ -503,7 +503,7 @@ doko
 
 
 
-11110
+11424
 
 XMLStreamException.java
 file

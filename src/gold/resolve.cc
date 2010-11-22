@@ -195,7 +195,7 @@ symbol_to_bits(elfcpp::STB binding, bool is_dynamic,
     default:
       // Any target which wants to handle STB_LOOS, etc., needs to
       // define a resolve method.
-      gold_error(_("unsupported symbol binding"));
+      gold_error(_("unsupported symbol binding %d"), static_cast<int>(binding));
       bits = global_flag;
     }
 
@@ -576,6 +576,11 @@ Symbol_table::should_override(const Symbol* to, unsigned int frombits,
       return false;
 
     case UNDEF * 16 + DYN_WEAK_DEF:
+      // When overriding an undef by a dynamic weak definition,
+      // we need to remember that the original undef was not weak.
+      *adjust_dyndef = true;
+      return true;
+
     case DYN_UNDEF * 16 + DYN_WEAK_DEF:
     case DYN_WEAK_UNDEF * 16 + DYN_WEAK_DEF:
       // Use a weak dynamic definition if we have a reference.
@@ -625,13 +630,20 @@ Symbol_table::should_override(const Symbol* to, unsigned int frombits,
     case UNDEF * 16 + WEAK_UNDEF:
     case WEAK_UNDEF * 16 + WEAK_UNDEF:
     case DYN_UNDEF * 16 + WEAK_UNDEF:
-    case DYN_WEAK_UNDEF * 16 + WEAK_UNDEF:
     case COMMON * 16 + WEAK_UNDEF:
     case WEAK_COMMON * 16 + WEAK_UNDEF:
     case DYN_COMMON * 16 + WEAK_UNDEF:
     case DYN_WEAK_COMMON * 16 + WEAK_UNDEF:
-      // A new weak undefined reference tells us nothing.
+      // A new weak undefined reference tells us nothing unless the
+      // exisiting symbol is a dynamic weak reference.
       return false;
+
+    case DYN_WEAK_UNDEF * 16 + WEAK_UNDEF:
+      // A new weak reference overrides an existing dynamic weak reference.
+      // This is necessary because a dynamic weak reference remembers
+      // the old binding, which may not be weak.  If we keeps the existing
+      // dynamic weak reference, the weakness may be dropped in the output.
+      return true;
 
     case DYN_DEF * 16 + WEAK_UNDEF:
     case DYN_WEAK_DEF * 16 + WEAK_UNDEF:

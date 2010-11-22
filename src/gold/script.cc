@@ -700,7 +700,7 @@ Lex::gather_token(Token::Classification classification,
 		  const char* (Lex::*can_continue_fn)(const char*),
 		  const char* start,
 		  const char* match,
-		  const char **pp)
+		  const char** pp)
 {
   const char* new_match = NULL;
   while ((new_match = (this->*can_continue_fn)(match)))
@@ -1045,9 +1045,23 @@ Script_assertion::print(FILE* f) const
 // Class Script_options.
 
 Script_options::Script_options()
-  : entry_(), symbol_assignments_(), version_script_info_(),
-    script_sections_()
+  : entry_(), symbol_assignments_(), symbol_definitions_(),
+    symbol_references_(), version_script_info_(), script_sections_()
 {
+}
+
+// Returns true if NAME is on the list of symbol assignments waiting
+// to be processed.
+
+bool
+Script_options::is_pending_assignment(const char* name)
+{
+  for (Symbol_assignments::iterator p = this->symbol_assignments_.begin();
+       p != this->symbol_assignments_.end();
+       ++p)
+    if ((*p)->name() == name)
+      return true;
+  return false;
 }
 
 // Add a symbol to be defined.
@@ -1071,6 +1085,13 @@ Script_options::add_symbol_assignment(const char* name, size_t length,
 						       value, provide, hidden);
 	  this->symbol_assignments_.push_back(p);
 	}
+
+      if (!provide)
+	{
+	  std::string n(name, length);
+	  this->symbol_definitions_.insert(n);
+	  this->symbol_references_.erase(n);
+	}
     }
   else
     {
@@ -1081,6 +1102,19 @@ Script_options::add_symbol_assignment(const char* name, size_t length,
       // clauses and treats them as occurring inside, so we don't
       // check in_sections_clause here.
       this->script_sections_.add_dot_assignment(value);
+    }
+}
+
+// Add a reference to a symbol.
+
+void
+Script_options::add_symbol_reference(const char* name, size_t length)
+{
+  if (length != 1 || name[0] != '.')
+    {
+      std::string n(name, length);
+      if (this->symbol_definitions_.find(n) == this->symbol_definitions_.end())
+	this->symbol_references_.insert(n);
     }
 }
 
@@ -1442,16 +1476,16 @@ read_input_script(Workqueue* workqueue, Symbol_table* symtab, Layout* layout,
       this_blocker = nb;
     }
 
-  if (layout->incremental_inputs())
+  if (layout->incremental_inputs() != NULL)
     {
-      // Like new Read_symbols(...) above, we rely on close.inputs()
+      // Like new Read_symbols(...) above, we rely on closure.inputs()
       // getting leaked by closure.
+      const std::string& filename = input_file->filename();
       Script_info* info = new Script_info(closure.inputs());
-      layout->incremental_inputs()->report_script(
-          input_argument,
-          input_file->file().get_mtime(),
-          info);
+      Timespec mtime = input_file->file().get_mtime();
+      layout->incremental_inputs()->report_script(filename, info, mtime);
     }
+
   *used_next_blocker = true;
 
   return true;
@@ -1863,12 +1897,12 @@ class Lazy_demangler
 
  private:
   // The symbol to demangle.
-  const char *symbol_;
+  const char* symbol_;
   // Option flags to pass to cplus_demagle.
   const int options_;
   // The cached demangled value, or NULL if demangling didn't happen yet or
   // failed.
-  char *demangled_;
+  char* demangled_;
   // Whether we already called cplus_demangle
   bool did_demangle_;
 };
@@ -2098,7 +2132,7 @@ void
 Version_script_info::add_exact_match(const std::string& match,
 				     const Version_tree* v, bool is_global,
 				     const Version_expression* ve,
-				     Exact *pe)
+				     Exact* pe)
 {
   std::pair<Exact::iterator, bool> ins =
     pe->insert(std::make_pair(match, Version_tree_match(v, is_global, ve)));
@@ -2577,7 +2611,7 @@ script_add_file(void* closurev, const char* name, size_t length)
     {
       // In addition to checking the normal library search path, we
       // also want to check in the script-directory.
-      const char *slash = strrchr(closure->filename(), '/');
+      const char* slash = strrchr(closure->filename(), '/');
       if (slash != NULL)
 	{
 	  script_directory.assign(closure->filename(),
@@ -2677,6 +2711,17 @@ script_set_common_allocation(void* closurev, int set)
 {
   const char* arg = set != 0 ? "--define-common" : "--no-define-common";
   script_parse_option(closurev, arg, strlen(arg));
+}
+
+// Called by the bison parser to refer to a symbol.
+
+extern "C" Expression*
+script_symbol(void* closurev, const char* name, size_t length)
+{
+  Parser_closure* closure = static_cast<Parser_closure*>(closurev);
+  if (length != 1 || name[0] != '.')
+    closure->script_options()->add_symbol_reference(name, length);
+  return script_exp_string(name, length);
 }
 
 // Called by the bison parser to define a symbol.
@@ -2838,8 +2883,8 @@ extern "C" void
 script_register_vers_node(void*,
 			  const char* tag,
 			  int taglen,
-			  struct Version_tree *tree,
-			  struct Version_dependency_list *deps)
+			  struct Version_tree* tree,
+			  struct Version_dependency_list* deps)
 {
   gold_assert(tree != NULL);
   tree->dependencies = deps;
@@ -2850,10 +2895,10 @@ script_register_vers_node(void*,
 // Add a dependencies to the list of existing dependencies, if any,
 // and return the expanded list.
 
-extern "C" struct Version_dependency_list *
+extern "C" struct Version_dependency_list*
 script_add_vers_depend(void* closurev,
-		       struct Version_dependency_list *all_deps,
-		       const char *depend_to_add, int deplen)
+		       struct Version_dependency_list* all_deps,
+		       const char* depend_to_add, int deplen)
 {
   Parser_closure* closure = static_cast<Parser_closure*>(closurev);
   if (all_deps == NULL)
@@ -2864,10 +2909,10 @@ script_add_vers_depend(void* closurev,
 
 // Add a pattern expression to an existing list of expressions, if any.
 
-extern "C" struct Version_expression_list *
+extern "C" struct Version_expression_list*
 script_new_vers_pattern(void* closurev,
-			struct Version_expression_list *expressions,
-			const char *pattern, int patlen, int exact_match)
+			struct Version_expression_list* expressions,
+			const char* pattern, int patlen, int exact_match)
 {
   Parser_closure* closure = static_cast<Parser_closure*>(closurev);
   if (expressions == NULL)
@@ -2882,8 +2927,8 @@ script_new_vers_pattern(void* closurev,
 // Attaches b to the end of a, and clears b.  So a = a + b and b = {}.
 
 extern "C" struct Version_expression_list*
-script_merge_expressions(struct Version_expression_list *a,
-                         struct Version_expression_list *b)
+script_merge_expressions(struct Version_expression_list* a,
+                         struct Version_expression_list* b)
 {
   a->expressions.insert(a->expressions.end(),
                         b->expressions.begin(), b->expressions.end());
@@ -2895,10 +2940,10 @@ script_merge_expressions(struct Version_expression_list *a,
 
 // Combine the global and local expressions into a a Version_tree.
 
-extern "C" struct Version_tree *
+extern "C" struct Version_tree*
 script_new_vers_node(void* closurev,
-		     struct Version_expression_list *global,
-		     struct Version_expression_list *local)
+		     struct Version_expression_list* global,
+		     struct Version_expression_list* local)
 {
   Parser_closure* closure = static_cast<Parser_closure*>(closurev);
   Version_tree* tree = closure->version_script()->allocate_version_tree();
@@ -3188,4 +3233,123 @@ script_saw_segment_start_expression(void* closurev)
   Parser_closure* closure = static_cast<Parser_closure*>(closurev);
   Script_sections* ss = closure->script_options()->script_sections();
   ss->set_saw_segment_start_expression(true);
+}
+
+extern "C" void
+script_set_section_region(void* closurev, const char* name, size_t namelen,
+			  int set_vma)
+{
+  Parser_closure* closure = static_cast<Parser_closure*>(closurev);
+  if (!closure->script_options()->saw_sections_clause())
+    {
+      gold_error(_("%s:%d:%d: MEMORY region '%.*s' referred to outside of "
+		   "SECTIONS clause"),
+		 closure->filename(), closure->lineno(), closure->charpos(),
+		 static_cast<int>(namelen), name);
+      return;
+    }
+
+  Script_sections* ss = closure->script_options()->script_sections();
+  Memory_region* mr = ss->find_memory_region(name, namelen);
+  if (mr == NULL)
+    {
+      gold_error(_("%s:%d:%d: MEMORY region '%.*s' not declared"),
+		 closure->filename(), closure->lineno(), closure->charpos(),
+		 static_cast<int>(namelen), name);
+      return;
+    }
+
+  ss->set_memory_region(mr, set_vma);
+}
+
+extern "C" void
+script_add_memory(void* closurev, const char* name, size_t namelen,
+		  unsigned int attrs, Expression* origin, Expression* length)
+{
+  Parser_closure* closure = static_cast<Parser_closure*>(closurev);
+  Script_sections* ss = closure->script_options()->script_sections();
+  ss->add_memory_region(name, namelen, attrs, origin, length);
+}
+
+extern "C" unsigned int
+script_parse_memory_attr(void* closurev, const char* attrs, size_t attrlen,
+			 int invert)
+{
+  int attributes = 0;
+
+  while (attrlen--)
+    switch (*attrs++)
+      {
+      case 'R':
+      case 'r':
+	attributes |= MEM_READABLE; break;
+      case 'W':
+      case 'w':
+	attributes |= MEM_READABLE | MEM_WRITEABLE; break;
+      case 'X':
+      case 'x':
+	attributes |= MEM_EXECUTABLE; break;
+      case 'A':
+      case 'a':
+	attributes |= MEM_ALLOCATABLE; break;
+      case 'I':
+      case 'i':
+      case 'L':
+      case 'l':
+	attributes |= MEM_INITIALIZED; break;
+      default:
+	yyerror(closurev, _("unknown MEMORY attribute"));
+      }
+
+  if (invert)
+    attributes = (~ attributes) & MEM_ATTR_MASK;
+
+  return attributes;
+}
+
+extern "C" void
+script_include_directive(void* closurev, const char*, size_t)
+{
+  // FIXME: Implement ?
+  yyerror (closurev, _("GOLD does not currently support INCLUDE directives"));
+}
+
+// Functions for memory regions.
+
+extern "C" Expression*
+script_exp_function_origin(void* closurev, const char* name, size_t namelen)
+{
+  Parser_closure* closure = static_cast<Parser_closure*>(closurev);
+  Script_sections* ss = closure->script_options()->script_sections();
+  Expression* origin = ss->find_memory_region_origin(name, namelen);
+
+  if (origin == NULL)
+    {
+      gold_error(_("undefined memory region '%s' referenced "
+		   "in ORIGIN expression"),
+		 name);
+      // Create a dummy expression to prevent crashes later on.
+      origin = script_exp_integer(0);
+    }
+
+  return origin;
+}
+
+extern "C" Expression*
+script_exp_function_length(void* closurev, const char* name, size_t namelen)
+{
+  Parser_closure* closure = static_cast<Parser_closure*>(closurev);
+  Script_sections* ss = closure->script_options()->script_sections();
+  Expression* length = ss->find_memory_region_length(name, namelen);
+
+  if (length == NULL)
+    {
+      gold_error(_("undefined memory region '%s' referenced "
+		   "in LENGTH expression"),
+		 name);
+      // Create a dummy expression to prevent crashes later on.
+      length = script_exp_integer(0);
+    }
+
+  return length;
 }

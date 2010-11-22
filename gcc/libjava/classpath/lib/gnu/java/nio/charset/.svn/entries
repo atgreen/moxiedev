@@ -1,7 +1,7 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/nio/charset
 svn://gcc.gnu.org/svn/gcc
 
@@ -332,40 +332,6 @@ has-props
 
 2428
 
-US_ASCII.class
-file
-
-
-
-
-2009-04-24T17:47:35.000000Z
-a65b7cb58fa4b01de108eae42c57f8ee
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1301
-
 Cp850.class
 file
 
@@ -400,14 +366,14 @@ has-props
 
 2399
 
-Cp437.class
+US_ASCII.class
 file
 
 
 
 
 2009-04-24T17:47:35.000000Z
-bc7f702a9f5268ccec37529b4c436045
+a65b7cb58fa4b01de108eae42c57f8ee
 2008-06-28T13:29:13.958049Z
 137223
 doko
@@ -432,50 +398,16 @@ has-props
 
 
 
-2399
+1301
 
-ByteDecodeLoopHelper.class
+Cp437.class
 file
 
 
 
 
 2009-04-24T17:47:35.000000Z
-1aacfbf0c84f6aced82f6b4178fe2975
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2171
-
-Cp852.class
-file
-
-
-
-
-2009-04-24T17:47:35.000000Z
-a471c7c46d6ac448de5beced51e5f7a6
+bc7f702a9f5268ccec37529b4c436045
 2008-06-28T13:29:13.958049Z
 137223
 doko
@@ -535,6 +467,74 @@ has-props
 
 
 1016
+
+Cp852.class
+file
+
+
+
+
+2009-04-24T17:47:35.000000Z
+a471c7c46d6ac448de5beced51e5f7a6
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2399
+
+ByteDecodeLoopHelper.class
+file
+
+
+
+
+2009-04-24T17:47:35.000000Z
+1aacfbf0c84f6aced82f6b4178fe2975
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2171
 
 Windows1250.class
 file
@@ -1182,40 +1182,6 @@ has-props
 
 1974
 
-ISO_8859_1$2.class
-file
-
-
-
-
-2010-02-03T11:42:23.310559Z
-6f67b988ba8a052323810bf83484582f
-2010-01-06T17:46:48.717189Z
-155678
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-682
-
 MacRoman.class
 file
 
@@ -1249,6 +1215,40 @@ has-props
 
 
 2428
+
+ISO_8859_1$2.class
+file
+
+
+
+
+2010-02-03T11:42:23.310559Z
+6f67b988ba8a052323810bf83484582f
+2010-01-06T17:46:48.717189Z
+155678
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+682
 
 Cp861.class
 file
@@ -1284,16 +1284,16 @@ has-props
 
 2416
 
-ByteCharset$2.class
+Cp863.class
 file
 
 
 
 
-2010-02-03T11:42:23.311496Z
-cd1323bab1beeb7ddb6800f47f02daea
-2010-01-06T17:46:48.717189Z
-155678
+2009-04-24T17:47:35.000000Z
+4e5359df7c3899b9eae05f53be79b52f
+2008-06-28T13:29:13.958049Z
+137223
 doko
 has-props
 
@@ -1316,7 +1316,7 @@ has-props
 
 
 
-909
+2416
 
 US_ASCII$Encoder.class
 file
@@ -1352,16 +1352,16 @@ has-props
 
 1391
 
-Cp863.class
+ByteCharset$2.class
 file
 
 
 
 
-2009-04-24T17:47:35.000000Z
-4e5359df7c3899b9eae05f53be79b52f
-2008-06-28T13:29:13.958049Z
-137223
+2010-02-03T11:42:23.311496Z
+cd1323bab1beeb7ddb6800f47f02daea
+2010-01-06T17:46:48.717189Z
+155678
 doko
 has-props
 
@@ -1384,41 +1384,7 @@ has-props
 
 
 
-2416
-
-UnicodeLittle.class
-file
-
-
-
-
-2009-04-24T17:47:35.000000Z
-6df70ffe0c50b2682727cb8479ffc3fc
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1218
+909
 
 UTF_16Encoder.class
 file
@@ -1453,6 +1419,40 @@ has-props
 
 
 2258
+
+UnicodeLittle.class
+file
+
+
+
+
+2009-04-24T17:47:35.000000Z
+6df70ffe0c50b2682727cb8479ffc3fc
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1218
 
 Cp865.class
 file
@@ -1590,40 +1590,6 @@ has-props
 
 2759
 
-US_ASCII$Decoder.class
-file
-
-
-
-
-2009-04-24T17:47:35.000000Z
-db2e4bd072f282b9a7c6b284cff98dc5
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1006
-
 MacCentralEurope.class
 file
 
@@ -1658,17 +1624,17 @@ has-props
 
 2448
 
-UTF_16Decoder.class
+US_ASCII$Decoder.class
 file
 
 
 
 
 2009-04-24T17:47:35.000000Z
-700a11dc3a2d110c52051df56d66ec5d
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+db2e4bd072f282b9a7c6b284cff98dc5
+2008-06-28T13:29:13.958049Z
+137223
+doko
 has-props
 
 
@@ -1690,7 +1656,7 @@ has-props
 
 
 
-2427
+1006
 
 ISO_8859_13.class
 file
@@ -1725,6 +1691,40 @@ has-props
 
 
 2657
+
+UTF_16Decoder.class
+file
+
+
+
+
+2009-04-24T17:47:35.000000Z
+700a11dc3a2d110c52051df56d66ec5d
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2427
 
 ISO_8859_15.class
 file
@@ -1794,40 +1794,6 @@ has-props
 
 2577
 
-UTF_16.class
-file
-
-
-
-
-2009-04-24T17:47:35.000000Z
-c47a0b667953e1e837638e04e3182250
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1283
-
 Cp855.class
 file
 
@@ -1862,17 +1828,17 @@ has-props
 
 2416
 
-Cp874.class
+UTF_16.class
 file
 
 
 
 
 2009-04-24T17:47:35.000000Z
-7b1d693b75415b4d6667cffcb93bc951
-2008-06-28T13:29:13.958049Z
-137223
-doko
+c47a0b667953e1e837638e04e3182250
+2006-12-12T18:41:51.528840Z
+119793
+tromey
 has-props
 
 
@@ -1894,7 +1860,7 @@ has-props
 
 
 
-2373
+1283
 
 Windows1253.class
 file
@@ -1930,6 +1896,40 @@ has-props
 
 2561
 
+Cp874.class
+file
+
+
+
+
+2009-04-24T17:47:35.000000Z
+7b1d693b75415b4d6667cffcb93bc951
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2373
+
 Cp857.class
 file
 
@@ -1963,40 +1963,6 @@ has-props
 
 
 2418
-
-ISO_8859_1.class
-file
-
-
-
-
-2009-04-24T17:47:35.000000Z
-2ffc0e8256229eaa7d84770518c3d787
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1348
 
 Windows1255.class
 file
@@ -2032,14 +1998,14 @@ has-props
 
 2555
 
-KOI_8.class
+ISO_8859_1.class
 file
 
 
 
 
 2009-04-24T17:47:35.000000Z
-ecfce74f85972d34f5c636c2261181b6
+2ffc0e8256229eaa7d84770518c3d787
 2008-06-28T13:29:13.958049Z
 137223
 doko
@@ -2064,7 +2030,41 @@ has-props
 
 
 
-2568
+1348
+
+Windows1257.class
+file
+
+
+
+
+2009-04-24T17:47:35.000000Z
+dc66edab96b4b92a04dd7abf4f4f39e4
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2566
 
 ISO_8859_3.class
 file
@@ -2100,14 +2100,14 @@ has-props
 
 2789
 
-Windows1257.class
+KOI_8.class
 file
 
 
 
 
 2009-04-24T17:47:35.000000Z
-dc66edab96b4b92a04dd7abf4f4f39e4
+ecfce74f85972d34f5c636c2261181b6
 2008-06-28T13:29:13.958049Z
 137223
 doko
@@ -2132,7 +2132,7 @@ has-props
 
 
 
-2566
+2568
 
 ISO_8859_5.class
 file

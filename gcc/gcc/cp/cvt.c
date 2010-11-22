@@ -88,7 +88,7 @@ cp_convert_to_pointer (tree type, tree expr)
       intype = complete_type (intype);
       if (!COMPLETE_TYPE_P (intype))
 	{
-	  error ("can't convert from incomplete type %qT to %qT",
+	  error ("can%'t convert from incomplete type %qT to %qT",
 		 intype, type);
 	  return error_mark_node;
 	}
@@ -314,7 +314,7 @@ build_up_reference (tree type, tree arg, int flags, tree decl)
 	 here because it needs to live as long as DECL.  */
       tree targ = arg;
 
-      arg = make_temporary_var_for_ref_to_temp (decl, TREE_TYPE (arg));
+      arg = make_temporary_var_for_ref_to_temp (decl, target_type);
 
       /* Process the initializer for the declaration.  */
       DECL_INITIAL (arg) = targ;
@@ -327,7 +327,7 @@ build_up_reference (tree type, tree arg, int flags, tree decl)
   /* If we had a way to wrap this up, and say, if we ever needed its
      address, transform all occurrences of the register, into a memory
      reference we could win better.  */
-  rval = cp_build_unary_op (ADDR_EXPR, arg, 1, tf_warning_or_error);
+  rval = cp_build_addr_expr (arg, tf_warning_or_error);
   if (rval == error_mark_node)
     return error_mark_node;
 
@@ -471,7 +471,7 @@ convert_to_reference (tree reftype, tree expr, int convtype,
 	warning (0, "casting %qT to %qT does not dereference pointer",
 		 intype, reftype);
 
-      rval = cp_build_unary_op (ADDR_EXPR, expr, 0, tf_warning_or_error);
+      rval = cp_build_addr_expr (expr, tf_warning_or_error);
       if (rval != error_mark_node)
 	rval = convert_force (build_pointer_type (TREE_TYPE (reftype)),
 			      rval, 0);
@@ -543,12 +543,35 @@ force_rvalue (tree expr)
 }
 
 
-/* Fold away simple conversions, but make sure the result is an rvalue.  */
+/* If EXPR and ORIG are INTEGER_CSTs, return a version of EXPR that has
+   TREE_OVERFLOW set only if it is set in ORIG.  Otherwise, return EXPR
+   unchanged.  */
+
+static tree
+ignore_overflows (tree expr, tree orig)
+{
+  if (TREE_CODE (expr) == INTEGER_CST
+      && TREE_CODE (orig) == INTEGER_CST
+      && TREE_OVERFLOW (expr) != TREE_OVERFLOW (orig))
+    {
+      gcc_assert (!TREE_OVERFLOW (orig));
+      /* Ensure constant sharing.  */
+      expr = build_int_cst_wide (TREE_TYPE (expr),
+				 TREE_INT_CST_LOW (expr),
+				 TREE_INT_CST_HIGH (expr));
+    }
+  return expr;
+}
+
+/* Fold away simple conversions, but make sure TREE_OVERFLOW is set
+   properly.  */
 
 tree
 cp_fold_convert (tree type, tree expr)
 {
-  return rvalue (fold_convert (type, expr));
+  tree conv = fold_convert (type, expr);
+  conv = ignore_overflows (conv, expr);
+  return conv;
 }
 
 /* C++ conversions, preference to static cast conversions.  */
@@ -609,7 +632,10 @@ ocp_convert (tree type, tree expr, int convtype, int flags)
       return error_mark_node;
     }
 
-  e = integral_constant_value (e);
+  /* FIXME remove when moving to c_fully_fold model.  */
+  /* FIXME do we still need this test?  */
+  if (!CLASS_TYPE_P (type))
+    e = integral_constant_value (e);
   if (error_operand_p (e))
     return error_mark_node;
 
@@ -658,6 +684,7 @@ ocp_convert (tree type, tree expr, int convtype, int flags)
   if (INTEGRAL_CODE_P (code))
     {
       tree intype = TREE_TYPE (e);
+      tree converted;
 
       if (TREE_CODE (type) == ENUMERAL_TYPE)
 	{
@@ -702,7 +729,10 @@ ocp_convert (tree type, tree expr, int convtype, int flags)
       if (code == BOOLEAN_TYPE)
 	return cp_truthvalue_conversion (e);
 
-      return fold_if_not_in_template (convert_to_integer (type, e));
+      converted = fold_if_not_in_template (convert_to_integer (type, e));
+
+      /* Ignore any integer overflow caused by the conversion.  */
+      return ignore_overflows (converted, e);
     }
   if (NULLPTR_TYPE_P (type) && e && null_ptr_cst_p (e))
     return nullptr_node;
@@ -1468,7 +1498,7 @@ build_expr_type_conversion (int desires, tree expr, bool complain)
 
   /* The code for conversions from class type is currently only used for
      delete expressions.  Other expressions are handled by build_new_op.  */
-  if (!complete_type_or_else (basetype, expr))
+  if (!complete_type_or_maybe_complain (basetype, expr, complain))
     return error_mark_node;
   if (!TYPE_HAS_CONVERSION (basetype))
     return NULL_TREE;

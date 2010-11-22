@@ -287,6 +287,7 @@ EXTRA_libopcodes_la_SOURCES = $(LIBOPCODES_CFILES)
 # should be removed if everything else starts using libtool.  FIXME.
 
 noinst_LIBRARIES = libopcodes.a
+libopcodes_a_SOURCES =
 
 stamp-lib: libopcodes.la
 	libtooldir=`$(LIBTOOL) --config | sed -n -e 's/^objdir=//p'`; \
@@ -305,9 +306,10 @@ po/POTFILES.in: @MAINT@ Makefile
 	  && mv tmp $(srcdir)/po/POTFILES.in
 
 CLEANFILES = \
-	stamp-ip2k stamp-m32c stamp-m32r stamp-fr30 stamp-frv \
-	stamp-openrisc stamp-iq2000 stamp-mep stamp-mt stamp-xstormy16 stamp-xc16x\
-	libopcodes.a stamp-lib dep.sed DEP DEPA DEP1 DEP2
+	stamp-fr30 stamp-frv stamp-ip2k stamp-iq2000 stamp-lm32 \
+	stamp-m32c stamp-m32r stamp-mep stamp-mt \
+	stamp-openrisc stamp-xc16x stamp-xstormy16 \
+	libopcodes.a stamp-lib
 
 
 CGENDIR = @cgendir@

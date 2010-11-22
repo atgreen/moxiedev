@@ -426,8 +426,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size,
 	       || (start >= vaddr && end <= vaddr + size))
 	      && !(bfd_get_file_flags (abfd) & BFD_IN_MEMORY))
 	    {
-	      flags &= ~SEC_LOAD;
-	      flags |= SEC_NEVER_LOAD;
+	      flags &= ~(SEC_LOAD | SEC_HAS_CONTENTS);
 	      goto keep;	/* break out of two nested for loops */
 	    }
 	}
@@ -462,9 +461,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size,
 }
 
 static int
-objfile_find_memory_regions (int (*func) (CORE_ADDR, unsigned long,
-					  int, int, int, void *),
-			     void *obfd)
+objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 {
   /* Use objfile data to create memory sections.  */
   struct objfile *objfile;

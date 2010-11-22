@@ -116,15 +116,19 @@ reg_save_code (int reg, enum machine_mode mode)
   if (cached_reg_save_code[reg][mode])
      return cached_reg_save_code[reg][mode];
   if (!HARD_REGNO_MODE_OK (reg, mode))
-     {
-       cached_reg_save_code[reg][mode] = -1;
-       cached_reg_restore_code[reg][mode] = -1;
-       return -1;
-     }
+    {
+      /* Depending on how HARD_REGNO_MODE_OK is defined, range propagation
+	 might deduce here that reg >= FIRST_PSEUDO_REGISTER.  So the assert
+	 below silences a warning.  */
+      gcc_assert (reg < FIRST_PSEUDO_REGISTER);
+      cached_reg_save_code[reg][mode] = -1;
+      cached_reg_restore_code[reg][mode] = -1;
+      return -1;
+    }
 
   /* Update the register number and modes of the register
      and memory operand.  */
-  SET_REGNO (test_reg, reg);
+  SET_REGNO_RAW (test_reg, reg);
   PUT_MODE (test_reg, mode);
   PUT_MODE (test_mem, mode);
 
@@ -763,6 +767,7 @@ save_call_clobbered_regs (void)
 	  if (n_regs_saved)
 	    {
 	      int regno;
+	      HARD_REG_SET this_insn_sets;
 
 	      if (code == JUMP_INSN)
 		/* Restore all registers if this is a JUMP_INSN.  */
@@ -777,7 +782,17 @@ save_call_clobbered_regs (void)
 
 	      for (regno = 0; regno < FIRST_PSEUDO_REGISTER; regno++)
 		if (TEST_HARD_REG_BIT (referenced_regs, regno))
-		  regno += insert_restore (chain, 1, regno, MOVE_MAX_WORDS, save_mode);
+		  regno += insert_restore (chain, 1, regno, MOVE_MAX_WORDS,
+					   save_mode);
+	      /* If a saved register is set after the call, this means we no
+		 longer should restore it.  This can happen when parts of a
+		 multi-word pseudo do not conflict with other pseudos, so
+		 IRA may allocate the same hard register for both.  One may
+		 be live across the call, while the other is set
+		 afterwards.  */
+	      CLEAR_HARD_REG_SET (this_insn_sets);
+	      note_stores (PATTERN (insn), mark_set_regs, &this_insn_sets);
+	      AND_COMPL_HARD_REG_SET (hard_regs_saved, this_insn_sets);
 	    }
 
 	  if (code == CALL_INSN
@@ -857,7 +872,10 @@ save_call_clobbered_regs (void)
 	     remain saved.  If the last insn in the block is a JUMP_INSN, put
 	     the restore before the insn, otherwise, put it after the insn.  */
 
-	  if (DEBUG_INSN_P (insn) && last && last->block == chain->block)
+	  if (n_regs_saved
+	      && DEBUG_INSN_P (insn)
+	      && last
+	      && last->block == chain->block)
 	    {
 	      rtx ins, prev;
 	      basic_block bb = BLOCK_FOR_INSN (insn);

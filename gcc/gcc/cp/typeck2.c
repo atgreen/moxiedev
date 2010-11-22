@@ -412,7 +412,7 @@ abstract_virtuals_error (tree decl, tree type)
 	      "  because the following virtual functions are pure within %qT:",
 	      type);
 
-      for (ix = 0; VEC_iterate (tree, pure, ix, fn); ix++)
+      FOR_EACH_VEC_ELT (tree, pure, ix, fn)
 	inform (input_location, "\t%+#D", fn);
       /* Now truncate the vector.  This leaves it non-null, so we know
 	 there are pure virtuals, but empty so we don't list them out
@@ -714,9 +714,6 @@ store_init_value (tree decl, tree init, int flags)
 
   if (MAYBE_CLASS_TYPE_P (type))
     {
-      gcc_assert (!type_has_nontrivial_copy_init (type)
-		  || TREE_CODE (init) == CONSTRUCTOR);
-
       if (TREE_CODE (init) == TREE_LIST)
 	{
 	  error ("constructor syntax used, but no constructor declared "
@@ -743,8 +740,32 @@ store_init_value (tree decl, tree init, int flags)
 
   /* End of special C++ code.  */
 
-  /* Digest the specified initializer into an expression.  */
-  value = digest_init_flags (type, init, flags);
+  if (flags & LOOKUP_ALREADY_DIGESTED)
+    value = init;
+  else
+    /* Digest the specified initializer into an expression.  */
+    value = digest_init_flags (type, init, flags);
+
+  /* In C++0x constant expression is a semantic, not syntactic, property.
+     In C++98, make sure that what we thought was a constant expression at
+     template definition time is still constant.  */
+  if ((cxx_dialect >= cxx0x
+       || DECL_INITIALIZED_BY_CONSTANT_EXPRESSION_P (decl))
+      && (decl_maybe_constant_var_p (decl)
+	  || TREE_STATIC (decl)))
+    {
+      bool const_init;
+      value = fold_non_dependent_expr (value);
+      value = maybe_constant_init (value);
+      if (DECL_DECLARED_CONSTEXPR_P (decl))
+	/* Diagnose a non-constant initializer for constexpr.  */
+	value = cxx_constant_value (value);
+      const_init = (reduced_constant_expression_p (value)
+		    || error_operand_p (value));
+      DECL_INITIALIZED_BY_CONSTANT_EXPRESSION_P (decl) = const_init;
+      TREE_CONSTANT (decl) = const_init && decl_maybe_constant_var_p (decl);
+    }
+
   /* If the initializer is not a constant, fill in DECL_INITIAL with
      the bits that are constant, and then return an expression that
      will perform the dynamic initialization.  */
@@ -769,8 +790,7 @@ check_narrowing (tree type, tree init)
   bool ok = true;
   REAL_VALUE_TYPE d;
 
-  if (DECL_P (init))
-    init = decl_constant_value (init);
+  init = maybe_constant_value (init);
 
   if (TREE_CODE (type) == INTEGER_TYPE
       && TREE_CODE (ftype) == REAL_TYPE)
@@ -1035,7 +1055,7 @@ process_init_constructor_array (tree type, tree init)
   if (!unbounded && VEC_length (constructor_elt, v)  > len)
     error ("too many initializers for %qT", type);
 
-  for (i = 0; VEC_iterate (constructor_elt, v, i, ce); ++i)
+  FOR_EACH_VEC_ELT (constructor_elt, v, i, ce)
     {
       if (ce->index)
 	{
@@ -1606,7 +1626,7 @@ build_functional_cast (tree exp, tree parms, tsubst_flags_t complain)
 
      then the slot being initialized will be filled in.  */
 
-  if (!complete_type_or_else (type, NULL_TREE))
+  if (!complete_type_or_maybe_complain (type, NULL_TREE, complain))
     return error_mark_node;
   if (abstract_virtuals_error (NULL_TREE, type))
     return error_mark_node;
@@ -1631,8 +1651,12 @@ build_functional_cast (tree exp, tree parms, tsubst_flags_t complain)
 	 just calling the constructor, so fall through.  */
       && !TYPE_HAS_USER_CONSTRUCTOR (type))
     {
-      exp = build_value_init (type);
-      return get_target_expr (exp);
+      exp = build_value_init (type, complain);
+      exp = get_target_expr (exp);
+      /* FIXME this is wrong */
+      if (literal_type_p (type))
+	TREE_CONSTANT (exp) = true;
+      return exp;
     }
 
   /* Call the constructor.  */

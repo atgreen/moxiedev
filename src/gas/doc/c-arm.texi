@@ -115,8 +115,10 @@ recognized:
 @code{cortex-a5},
 @code{cortex-a8},
 @code{cortex-a9},
+@code{cortex-a15},
 @code{cortex-r4},
 @code{cortex-r4f},
+@code{cortex-m4},
 @code{cortex-m3},
 @code{cortex-m1},
 @code{cortex-m0},
@@ -131,12 +133,33 @@ assembler to accept instructions valid for any ARM processor.
 In addition to the basic instruction set, the assembler can be told to 
 accept various extension mnemonics that extend the processor using the 
 co-processor instruction space.  For example, @code{-mcpu=arm920+maverick}
-is equivalent to specifying @code{-mcpu=ep9312}.  The following extensions
-are currently supported: 
-@code{+maverick}
-@code{+iwmmxt}
+is equivalent to specifying @code{-mcpu=ep9312}.  
+
+Multiple extensions may be specified, separated by a @code{+}.  The 
+extensions should be specified in ascending alphabetical order.
+
+Some extensions may be restricted to particular architectures; this is 
+documented in the list of extensions below.
+
+Extension mnemonics may also be removed from those the assembler accepts.  
+This is done be prepending @code{no} to the option that adds the extension.  
+Extensions that are removed should be listed after all extensions which have 
+been added, again in ascending alphabetical order.  For example, 
+@code{-mcpu=ep9312+nomaverick} is equivalent to specifying @code{-mcpu=arm920}.
+
+
+The following extensions are currently supported:
+@code{idiv}, (Integer Divide Extensions for v7-A architecture),
+@code{iwmmxt},
+@code{iwmmxt2},
+@code{maverick},
+@code{mp} (Multiprocessing Extensions for v7-A and v7-R architectures),
+@code{os} (Operating System for v6M architecture),
+@code{sec} (Security Extensions for v6K and v7-A architectures),
+@code{virt} (Virtualization Extensions for v7-A architecture, implies 
+@code{idiv}),
 and
-@code{+xscale}.
+@code{xscale}.
 
 @cindex @code{-march=} command line option, ARM
 @item -march=@var{architecture}[+@var{extension}@dots{}]
@@ -164,6 +187,8 @@ names are recognized:
 @code{armv6k},
 @code{armv6z},
 @code{armv6zk},
+@code{armv6-m},
+@code{armv6s-m},
 @code{armv7},
 @code{armv7-a},
 @code{armv7-r},
@@ -210,6 +235,7 @@ The following format options are recognized:
 @code{vfpv3xd-d16},
 @code{vfpv4},
 @code{vfpv4-d16},
+@code{fpv4-sp-d16},
 @code{arm1020t},
 @code{arm1020e},
 @code{arm1136jf-s},
@@ -500,6 +526,18 @@ boundary).  This is for compatibility with ARM's own assembler.
 Select the target architecture.  Valid values for @var{name} are the same as
 for the @option{-march} commandline option.
 
+Specifying @code{.arch} clears any previously selected architecture 
+extensions.
+
+@cindex @code{.arch_extension} directive, ARM
+@item .arch_extension @var{name}
+Add or remove an architecture extension to the target architecture.  Valid 
+values for @var{name} are the same as those accepted as architectural 
+extensions by the @option{-mcpu} commandline option.
+
+@code{.arch_extension} may be used multiple times to add or remove extensions
+incrementally to the architecture being compiled for.
+
 @cindex @code{.arm} directive, ARM
 @item .arm
 This performs the same action as @var{.code 32}.
@@ -533,6 +571,9 @@ selects Thumb, with the value 32 selecting ARM.
 @item .cpu @var{name}
 Select the target processor.  Valid values for @var{name} are the same as
 for the @option{-mcpu} commandline option.
+
+Specifying @code{.cpu} clears any previously selected architecture 
+extensions.
 
 @c DDDDDDDDDDDDDDDDDDDDDDDDDD
 

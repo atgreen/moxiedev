@@ -117,9 +117,6 @@ static void crash_signal (int) ATTRIBUTE_NORETURN;
 static void setup_core_dumping (void);
 static void compile_file (void);
 
-/* Nonzero to dump debug info whilst parsing (-dy option).  */
-static int set_yydebug;
-
 /* True if we don't need a backend (e.g. preprocessing only).  */
 static bool no_backend;
 
@@ -127,8 +124,8 @@ static bool no_backend;
 #define MAX_LINE 75
 
 /* Decoded options, and number of such options.  */
-static struct cl_decoded_option *save_decoded_options;
-static unsigned int save_decoded_options_count;
+struct cl_decoded_option *save_decoded_options;
+unsigned int save_decoded_options_count;
 
 /* Name of top-level original source file (what was input to cpp).
    This comes from the #-command at the beginning of the actual input.
@@ -136,29 +133,18 @@ static unsigned int save_decoded_options_count;
 
 const char *main_input_filename;
 
+/* Pointer to base name in main_input_filename, with directories and a
+   single final extension removed, and the length of this base
+   name.  */
+const char *main_input_basename;
+int main_input_baselength;
+
 /* Used to enable -fvar-tracking, -fweb and -frename-registers according
    to optimize in process_options ().  */
 #define AUTODETECT_VALUE 2
 
-/* Name to use as base of names for dump output files.  */
-
-const char *dump_base_name;
-
-/* Directory used for dump output files.  */
-
-const char *dump_dir_name;
-
-/* Name to use as a base for auxiliary output files.  */
-
-const char *aux_base_name;
-
 /* Prefix for profile data files */
 const char *profile_data_prefix;
-
-/* A mask of target_flags that includes bit X if X was set or cleared
-   on the command line.  */
-
-int target_flags_explicit;
 
 /* Debug hooks - dependent upon command line options.  */
 
@@ -170,36 +156,12 @@ int rtl_dump_and_exit;
 int flag_print_asm_name;
 enum graph_dump_types graph_dump_format;
 
-/* Name for output file of assembly code, specified with -o.  */
-
-const char *asm_file_name;
-
-/* Nonzero means do optimizations.  -O.
-   Particular numeric values stand for particular amounts of optimization;
-   thus, -O2 stores 2 here.  However, the optimizations beyond the basic
-   ones are not controlled directly by this variable.  Instead, they are
-   controlled by individual `flag_...' variables that are defaulted
-   based on this variable.  */
-
-int optimize = 0;
-
-/* Nonzero means optimize for size.  -Os.
-   The only valid values are zero and nonzero. When optimize_size is
-   nonzero, optimize defaults to 2, but certain individual code
-   bloating optimizations are disabled.  */
-
-int optimize_size = 0;
-
 /* True if this is the lto front end.  This is used to disable
    gimple generation and lowering passes that are normally run on the
    output of a front end.  These passes must be bypassed for lto since
    they have already been done before the gimple was written.  */
 
 bool in_lto_p = false;
-
-/* Nonzero if we should write GIMPLE bytecode for link-time optimization.  */
-
-int flag_generate_lto;
 
 /* The FUNCTION_DECL for the function currently being compiled,
    or 0 if between functions.  */
@@ -219,25 +181,6 @@ unsigned local_tick;
 
 /* -f flags.  */
 
-/* 0 means straightforward implementation of complex divide acceptable.
-   1 means wide ranges of inputs must work for complex divide.
-   2 means C99-like requirements for complex multiply and divide.  */
-
-int flag_complex_method = 1;
-
-/* Nonzero means we should be saving declaration info into a .X file.  */
-
-int flag_gen_aux_info = 0;
-
-/* Specified name of aux-info file.  */
-
-const char *aux_info_file_name;
-
-/* Nonzero if we are compiling code for a shared library, zero for
-   executable.  */
-
-int flag_shlib;
-
 /* Generate code for GNU or NeXT Objective-C runtime environment.  */
 
 #ifdef NEXT_OBJC_RUNTIME
@@ -245,25 +188,6 @@ int flag_next_runtime = 1;
 #else
 int flag_next_runtime = 0;
 #endif
-
-/* Set to the default thread-local storage (tls) model to use.  */
-
-enum tls_model flag_tls_default = TLS_MODEL_GLOBAL_DYNAMIC;
-
-/* Set the default region and algorithm for the integrated register
-   allocator.  */
-
-enum ira_algorithm flag_ira_algorithm = IRA_ALGORITHM_CB;
-enum ira_region flag_ira_region = IRA_REGION_MIXED;
-
-/* Set the default for excess precision.  */
-
-enum excess_precision flag_excess_precision_cmdline = EXCESS_PRECISION_DEFAULT;
-
-/* Nonzero means change certain warnings into errors.
-   Usually these are warnings about failure to conform to some standard.  */
-
-int flag_pedantic_errors = 0;
 
 /* Nonzero means make permerror produce warnings instead of errors.  */
 
@@ -291,23 +215,6 @@ int flag_dump_rtl_in_asm = 0;
    the support provided depends on the backend.  */
 rtx stack_limit_rtx;
 
-/* Positive if we should track variables, negative if we should run
-   the var-tracking pass only to discard debug annotations, zero if
-   we're not to run it.  When flag_var_tracking == AUTODETECT_VALUE it
-   will be set according to optimize, debug_info_level and debug_hooks
-   in process_options ().  */
-int flag_var_tracking = AUTODETECT_VALUE;
-
-/* Positive if we should track variables at assignments, negative if
-   we should run the var-tracking pass only to discard debug
-   annotations.  When flag_var_tracking_assignments ==
-   AUTODETECT_VALUE it will be set according to flag_var_tracking.  */
-int flag_var_tracking_assignments = AUTODETECT_VALUE;
-
-/* Nonzero if we should toggle flag_var_tracking_assignments after
-   processing options and computing its default.  */
-int flag_var_tracking_assignments_toggle = 0;
-
 /* Type of stack check.  */
 enum stack_check_type flag_stack_check = NO_STACK_CHECK;
 
@@ -331,18 +238,15 @@ typedef struct
 }
 lang_independent_options;
 
-/* Nonzero if subexpressions must be evaluated from left-to-right.  */
-int flag_evaluation_order = 0;
-
 /* The user symbol prefix after having resolved same.  */
 const char *user_label_prefix;
 
 static const param_info lang_independent_params[] = {
 #define DEFPARAM(ENUM, OPTION, HELP, DEFAULT, MIN, MAX) \
-  { OPTION, DEFAULT, false, MIN, MAX, HELP },
+  { OPTION, DEFAULT, MIN, MAX, HELP },
 #include "params.def"
 #undef DEFPARAM
-  { NULL, 0, false, 0, 0, NULL }
+  { NULL, 0, 0, 0, NULL }
 };
 
 /* Output files for assembler code (real compiler output)
@@ -350,6 +254,7 @@ static const param_info lang_independent_params[] = {
 
 FILE *asm_out_file;
 FILE *aux_info_file;
+FILE *stack_usage_file = NULL;
 FILE *dump_file = NULL;
 const char *dump_file_name;
 
@@ -484,9 +389,9 @@ set_random_seed (const char *val)
 
 #if GCC_VERSION < 3004
 
-/* The functions floor_log2 and exact_log2 are defined as inline
-   functions in toplev.h if GCC_VERSION >= 3004.  The definitions here
-   are used for older versions of gcc.  */
+/* The functions clz_hwi, ctz_hwi, ffs_hwi, floor_log2 and exact_log2
+   are defined as inline functions in toplev.h if GCC_VERSION >= 3004.
+   The definitions here are used for older versions of gcc.  */
 
 /* Given X, an unsigned number, return the largest int Y such that 2**Y <= X.
    If X is 0, return -1.  */
@@ -528,6 +433,32 @@ exact_log2 (unsigned HOST_WIDE_INT x)
   if (x != (x & -x))
     return -1;
   return floor_log2 (x);
+}
+
+/* Given X, an unsigned number, return the number of least significant bits
+   that are zero.  When X == 0, the result is the word size.  */
+
+int
+ctz_hwi (unsigned HOST_WIDE_INT x)
+{
+  return x ? floor_log2 (x & -x) : HOST_BITS_PER_WIDE_INT;
+}
+
+/* Similarly for most significant bits.  */
+
+int
+clz_hwi (unsigned HOST_WIDE_INT x)
+{
+  return HOST_BITS_PER_WIDE_INT - 1 - floor_log2(x);
+}
+
+/* Similar to ctz_hwi, except that the least significant bit is numbered
+   starting from 1, and X == 0 yields 0.  */
+
+int
+ffs_hwi (unsigned HOST_WIDE_INT x)
+{
+  return 1 + floor_log2 (x & -x);
 }
 
 #endif /* GCC_VERSION < 3004 */
@@ -942,7 +873,7 @@ compile_file (void)
 
   /* Call the parser, which parses the entire file (calling
      rest_of_compilation for each function).  */
-  lang_hooks.parse_file (set_yydebug);
+  lang_hooks.parse_file ();
 
   /* Compilation is now finished except for writing
      what's left of the symbol table output.  */
@@ -1064,9 +995,6 @@ decode_d_option (const char *arg)
 	break;
       case 'x':
 	rtl_dump_and_exit = 1;
-	break;
-      case 'y':
-	set_yydebug = 1;
 	break;
       case 'D':	/* These are handled by the preprocessor.  */
       case 'I':
@@ -1306,7 +1234,7 @@ print_switch_values (print_switch_fn_type print_fn)
 
   for (j = 0; j < cl_options_count; j++)
     if ((cl_options[j].flags & CL_REPORT)
-	&& option_enabled (j) > 0)
+	&& option_enabled (j, &global_options) > 0)
       pos = print_single_switch (print_fn, pos,
 				 SWITCH_TYPE_ENABLED, cl_options[j].opt_text);
 
@@ -1385,10 +1313,10 @@ option_affects_pch_p (int option, struct cl_option_state *state)
 {
   if ((cl_options[option].flags & CL_TARGET) == 0)
     return false;
-  if (cl_options[option].flag_var == &target_flags)
+  if (option_flag_var (option, &global_options) == &target_flags)
     if (targetm.check_pch_target_flags)
       return false;
-  return get_option_state (option, state);
+  return get_option_state (&global_options, option, state);
 }
 
 /* Default version of get_pch_validity.
@@ -1558,6 +1486,88 @@ alloc_for_identifier_to_locale (size_t len)
   return ggc_alloc_atomic (len);
 }
 
+/* Output stack usage information.  */
+void
+output_stack_usage (void)
+{
+  static bool warning_issued = false;
+  enum stack_usage_kind_type { STATIC = 0, DYNAMIC, DYNAMIC_BOUNDED };
+  const char *stack_usage_kind_str[] = {
+    "static",
+    "dynamic",
+    "dynamic,bounded"
+  };
+  HOST_WIDE_INT stack_usage = current_function_static_stack_size;
+  enum stack_usage_kind_type stack_usage_kind;
+  expanded_location loc;
+  const char *raw_id, *id;
+
+  if (stack_usage < 0)
+    {
+      if (!warning_issued)
+	{
+	  warning (0, "-fstack-usage not supported for this target");
+	  warning_issued = true;
+	}
+      return;
+    }
+
+  stack_usage_kind = STATIC;
+
+  /* Add the maximum amount of space pushed onto the stack.  */
+  if (current_function_pushed_stack_size > 0)
+    {
+      stack_usage += current_function_pushed_stack_size;
+      stack_usage_kind = DYNAMIC_BOUNDED;
+    }
+
+  /* Now on to the tricky part: dynamic stack allocation.  */
+  if (current_function_allocates_dynamic_stack_space)
+    {
+      if (current_function_has_unbounded_dynamic_stack_size)
+	stack_usage_kind = DYNAMIC;
+      else
+	stack_usage_kind = DYNAMIC_BOUNDED;
+
+      /* Add the size even in the unbounded case, this can't hurt.  */
+      stack_usage += current_function_dynamic_stack_size;
+    }
+
+  loc = expand_location (DECL_SOURCE_LOCATION (current_function_decl));
+
+  /* Strip the scope prefix if any.  */
+  raw_id = lang_hooks.decl_printable_name (current_function_decl, 2);
+  id = strrchr (raw_id, '.');
+  if (id)
+    id++;
+  else
+    id = raw_id;
+
+  fprintf (stack_usage_file,
+	   "%s:%d:%d:%s\t"HOST_WIDE_INT_PRINT_DEC"\t%s\n",
+	   lbasename (loc.file),
+	   loc.line,
+	   loc.column,
+	   id,
+	   stack_usage,
+	   stack_usage_kind_str[stack_usage_kind]);
+}
+
+/* Open an auxiliary output file.  */
+static FILE *
+open_auxiliary_file (const char *ext)
+{
+  char *filename;
+  FILE *file;
+
+  filename = concat (aux_base_name, ".", ext, NULL);
+  file = fopen (filename, "w");
+  if (!file)
+    fatal_error ("can%'t open %s for writing: %m", filename);
+  free (filename);
+  return file;
+}
+
 /* Initialization of the front end environment, before command line
    options are parsed.  Signal handlers, internationalization etc.
    ARGV0 is main's argv[0].  */
@@ -1590,10 +1600,13 @@ general_init (const char *argv0)
   /* Set a default printer.  Language specific initializations will
      override it later.  */
   pp_format_decoder (global_dc->printer) = &default_tree_printer;
-  global_dc->show_option_requested = flag_diagnostics_show_option;
-  global_dc->show_column = flag_show_column;
+  global_dc->show_option_requested
+    = global_options_init.x_flag_diagnostics_show_option;
+  global_dc->show_column
+    = global_options_init.x_flag_show_column;
   global_dc->internal_error = plugins_internal_error_function;
   global_dc->option_enabled = option_enabled;
+  global_dc->option_state = &global_options;
   global_dc->option_name = option_name;
 
   /* Trap fatal signals, e.g. SIGSEGV, and convert them to ICE messages.  */
@@ -1633,11 +1646,13 @@ general_init (const char *argv0)
 
   /* Register the language-independent parameters.  */
   add_params (lang_independent_params, LAST_PARAM);
+  targetm.target_option.default_params ();
 
   /* This must be done after add_params but before argument processing.  */
   init_ggc_heuristics();
   init_optimization_passes ();
   statistics_early_init ();
+  finish_params ();
 }
 
 /* Return true if the current target supports -fsection-anchors.  */
@@ -1761,11 +1776,7 @@ process_options (void)
   if (flag_unroll_all_loops)
     flag_unroll_loops = 1;
 
-  /* The loop unrolling code assumes that cse will be run after loop.
-     web and rename-registers also help when run after loop unrolling.  */
-  if (flag_rerun_cse_after_loop == AUTODETECT_VALUE)
-    flag_rerun_cse_after_loop = flag_unroll_loops || flag_peel_loops;
-
+  /* web and rename-registers help when run after loop unrolling.  */
   if (flag_web == AUTODETECT_VALUE)
     flag_web = flag_unroll_loops || flag_peel_loops;
 
@@ -1904,6 +1915,12 @@ process_options (void)
       flag_var_tracking = 0;
       flag_var_tracking_uninit = 0;
     }
+
+  /* The debug hooks are used to implement -fdump-go-spec because it
+     gives a simple and stable API for all the information we need to
+     dump.  */
+  if (flag_dump_go_spec != NULL)
+    debug_hooks = dump_go_spec_init (flag_dump_go_spec, debug_hooks);
 
   /* If the user specifically requested variable tracking with tagging
      uninitialized variables, we need to turn on variable tracking.
@@ -2173,6 +2190,10 @@ lang_dependent_init (const char *name)
 
   init_asm_output (name);
 
+  /* If stack usage information is desired, open the output file.  */
+  if (flag_stack_usage)
+    stack_usage_file = open_auxiliary_file ("su");
+
   /* This creates various _DECL nodes, so needs to be called after the
      front end is initialized.  */
   init_eh ();
@@ -2254,6 +2275,9 @@ finalize (void)
 	unlink_if_ordinary (asm_file_name);
     }
 
+  if (stack_usage_file)
+    fclose (stack_usage_file);
+
   statistics_fini ();
   finish_optimization_passes ();
 
@@ -2316,10 +2340,32 @@ toplev_main (int argc, char **argv)
   /* Initialization of GCC's environment, and diagnostics.  */
   general_init (argv[0]);
 
+  /* One-off initialization of options that does not need to be
+     repeated when options are added for particular functions.  */
+  init_options_once ();
+
+  /* Initialize global options structures; this must be repeated for
+     each structure used for parsing options.  */
+  init_options_struct (&global_options, &global_options_set);
+  lang_hooks.init_options_struct (&global_options);
+
+  /* Convert the options to an array.  */
+  decode_cmdline_options_to_array_default_mask (argc,
+						CONST_CAST2 (const char **,
+							     char **, argv),
+						&save_decoded_options,
+						&save_decoded_options_count);
+
+  /* Perform language-specific options initialization.  */
+  lang_hooks.init_options (save_decoded_options_count, save_decoded_options);
+
   /* Parse the options and do minimal processing; basically just
      enough to default flags appropriately.  */
-  decode_options (argc, CONST_CAST2 (const char **, char **, argv),
-		  &save_decoded_options, &save_decoded_options_count);
+  decode_options (&global_options, &global_options_set,
+		  save_decoded_options, save_decoded_options_count,
+		  UNKNOWN_LOCATION, global_dc);
+
+  handle_common_deferred_options ();
 
   init_local_tick ();
 

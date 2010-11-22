@@ -36,6 +36,7 @@ AC_ARG_PROGRAM
 
 AC_HEADER_STDC
 
+AC_FUNC_ALLOCA
 AC_CHECK_HEADERS(sgtty.h termio.h termios.h sys/reg.h string.h dnl
 		 proc_service.h sys/procfs.h thread_db.h linux/elf.h dnl
 		 stdlib.h unistd.h dnl
@@ -43,7 +44,7 @@ AC_CHECK_HEADERS(sgtty.h termio.h termios.h sys/reg.h string.h dnl
 		 sys/ioctl.h netinet/in.h sys/socket.h netdb.h dnl
 		 netinet/tcp.h arpa/inet.h sys/wait.h)
 AC_CHECK_FUNCS(pread pwrite pread64)
-AC_REPLACE_FUNCS(memmem)
+AC_REPLACE_FUNCS(memmem vasprintf vsnprintf)
 
 # Check for UST
 ustlibs=""
@@ -93,6 +94,48 @@ fi
 AC_SUBST(ustlibs)
 AC_SUBST(ustinc)
 
+AC_ARG_ENABLE(werror,
+  AS_HELP_STRING([--enable-werror], [treat compile warnings as errors]),
+  [case "${enableval}" in
+     yes | y) ERROR_ON_WARNING="yes" ;;
+     no | n)  ERROR_ON_WARNING="no" ;;
+     *) AC_MSG_ERROR(bad value ${enableval} for --enable-werror) ;;
+   esac])
+
+# Enable -Werror by default when using gcc
+if test "${GCC}" = yes -a -z "${ERROR_ON_WARNING}" ; then
+    ERROR_ON_WARNING=yes
+fi
+
+WERROR_CFLAGS=""
+if test "${ERROR_ON_WARNING}" = yes ; then
+    WERROR_CFLAGS="-Werror"
+fi
+
+build_warnings="-Wall -Wdeclaration-after-statement -Wpointer-arith \
+-Wformat-nonliteral -Wno-char-subscripts"
+
+WARN_CFLAGS=""
+if test "x$GCC" = xyes
+then
+    AC_MSG_CHECKING(compiler warning flags)
+    # Separate out the -Werror flag as some files just cannot be
+    # compiled with it enabled.
+    for w in ${build_warnings}; do
+	case $w in
+	-Werr*) WERROR_CFLAGS=-Werror ;;
+	*) # Check that GCC accepts it
+	    saved_CFLAGS="$CFLAGS"
+	    CFLAGS="$CFLAGS $w"
+	    AC_TRY_COMPILE([],[],WARN_CFLAGS="${WARN_CFLAGS} $w",)
+	    CFLAGS="$saved_CFLAGS"
+	esac
+    done
+    AC_MSG_RESULT(${WARN_CFLAGS} ${WERROR_CFLAGS})
+fi
+AC_SUBST(WARN_CFLAGS)
+AC_SUBST(WERROR_CFLAGS)
+
 dnl dladdr is glibc-specific.  It is used by thread-db.c but only for
 dnl debugging messages.  It lives in -ldl which is handled below so we don't
 dnl use AC_CHECK_LIB (or AC_SEARCH_LIBS) here.  Instead we just temporarily
@@ -118,7 +161,7 @@ AC_TRY_LINK([
   [AC_MSG_RESULT(no)])
 fi
 
-AC_CHECK_DECLS([strerror, perror, memmem])
+AC_CHECK_DECLS([strerror, perror, memmem, vasprintf, vsnprintf])
 
 AC_CHECK_TYPES(socklen_t, [], [],
 [#include <sys/types.h>
@@ -169,6 +212,8 @@ elif test "${srv_mingw}" = "yes"; then
   LIBS="$LIBS -lws2_32"
 elif test "${srv_qnx}" = "yes"; then
   LIBS="$LIBS -lsocket"
+elif test "${srv_lynxos}" = "yes"; then
+  LIBS="$LIBS -lnetinet"
 fi
 
 if test "${srv_mingw}" = "yes"; then
@@ -312,15 +357,35 @@ AC_COMPILE_IFELSE(AC_LANG_PROGRAM([]),
 	        	[gdbsrv_cv_have_visibility_hidden=no])
 CFLAGS="$saved_cflags"
 
-IPA_DEPFILES=""
 
-# Rather than allowing to build a broken IPA, we simply disable it if
-# we don't find a compiler supporting all the features we need.
+IPA_DEPFILES=""
+extra_libraries=""
+
+# check whether to enable the inprocess agent
 if test "$ipa_obj" != "" \
    -a "$gdbsrv_cv_have_sync_builtins" = yes \
    -a "$gdbsrv_cv_have_visibility_hidden" = yes; then
-   IPA_DEPFILES="$ipa_obj"
-   extra_libraries="libinproctrace.so"
+   have_ipa=true
+else
+   have_ipa=false
+fi
+
+AC_ARG_ENABLE(inprocess-agent,
+AS_HELP_STRING([--enable-inprocess-agent], [inprocess agent]),
+[case "$enableval" in
+  yes) want_ipa=true ;;
+  no) want_ipa=false ;;
+  *) AC_MSG_ERROR([bad value $enableval for inprocess-agent]) ;;
+esac],
+[want_ipa=$have_ipa])
+
+if $want_ipa ; then
+   if $have_ipa ; then
+     IPA_DEPFILES="$ipa_obj"
+     extra_libraries="$extra_libraries libinproctrace.so"
+   else
+     AC_MSG_ERROR([inprocess agent not supported for this target])
+   fi
 fi
 
 AC_SUBST(GDBSERVER_DEPFILES)

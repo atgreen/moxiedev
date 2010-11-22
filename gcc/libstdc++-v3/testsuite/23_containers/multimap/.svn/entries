@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/multimap
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-27T17:27:06.727889Z
-162578
+2010-11-10T19:08:49.065029Z
+166551
 paolo
 
 
@@ -94,9 +94,6 @@ jakub
 
 1800
 
-invalidation
-dir
-
 modifiers
 dir
 
@@ -141,6 +138,9 @@ operations
 dir
 
 requirements
+dir
+
+debug
 dir
 
 23781.cc

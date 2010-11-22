@@ -340,22 +340,74 @@ gdb_mangle_name (struct type *type, int method_id, int signature_id)
   return (mangled_name);
 }
 
+/* Initialize the cplus_specific structure.  'cplus_specific' should
+   only be allocated for use with cplus symbols.  */
+
+static void
+symbol_init_cplus_specific (struct general_symbol_info *gsymbol,
+                           struct objfile *objfile)
+{
+  /* A language_specific structure should not have been previously
+     initialized.  */
+  gdb_assert (gsymbol->language_specific.cplus_specific == NULL);
+  gdb_assert (objfile != NULL);
+
+  gsymbol->language_specific.cplus_specific =
+      OBSTACK_ZALLOC (&objfile->objfile_obstack, struct cplus_specific);
+}
+
+/* Set the demangled name of GSYMBOL to NAME.  NAME must be already
+   correctly allocated.  For C++ symbols a cplus_specific struct is
+   allocated so OBJFILE must not be NULL. If this is a non C++ symbol
+   OBJFILE can be NULL.  */
+void
+symbol_set_demangled_name (struct general_symbol_info *gsymbol,
+                           char *name,
+                           struct objfile *objfile)
+{
+  if (gsymbol->language == language_cplus)
+    {
+      if (gsymbol->language_specific.cplus_specific == NULL)
+	symbol_init_cplus_specific (gsymbol, objfile);
+
+      gsymbol->language_specific.cplus_specific->demangled_name = name;
+    }
+  else
+    gsymbol->language_specific.mangled_lang.demangled_name = name;
+}
+
+/* Return the demangled name of GSYMBOL.  */
+char *
+symbol_get_demangled_name (const struct general_symbol_info *gsymbol)
+{
+  if (gsymbol->language == language_cplus)
+    {
+      if (gsymbol->language_specific.cplus_specific != NULL)
+	return gsymbol->language_specific.cplus_specific->demangled_name;
+      else
+	return NULL;
+    }
+  else
+    return gsymbol->language_specific.mangled_lang.demangled_name;
+}
+
 
 /* Initialize the language dependent portion of a symbol
    depending upon the language for the symbol. */
 void
-symbol_init_language_specific (struct general_symbol_info *gsymbol,
-			       enum language language)
+symbol_set_language (struct general_symbol_info *gsymbol,
+                     enum language language)
 {
   gsymbol->language = language;
-  if (gsymbol->language == language_cplus
-      || gsymbol->language == language_d
+  if (gsymbol->language == language_d
       || gsymbol->language == language_java
       || gsymbol->language == language_objc
       || gsymbol->language == language_fortran)
     {
-      gsymbol->language_specific.cplus_specific.demangled_name = NULL;
+      symbol_set_demangled_name (gsymbol, NULL, NULL);
     }
+  else if (gsymbol->language == language_cplus)
+    gsymbol->language_specific.cplus_specific = NULL;
   else
     {
       memset (&gsymbol->language_specific, 0,
@@ -537,7 +589,7 @@ symbol_set_names (struct general_symbol_info *gsymbol,
 	  memcpy (gsymbol->name, linkage_name, len);
 	  gsymbol->name[len] = '\0';
 	}
-      gsymbol->language_specific.cplus_specific.demangled_name = NULL;
+      symbol_set_demangled_name (gsymbol, NULL, NULL);
 
       return;
     }
@@ -633,10 +685,9 @@ symbol_set_names (struct general_symbol_info *gsymbol,
 
   gsymbol->name = (*slot)->mangled + lookup_len - len;
   if ((*slot)->demangled[0] != '\0')
-    gsymbol->language_specific.cplus_specific.demangled_name
-      = (*slot)->demangled;
+    symbol_set_demangled_name (gsymbol, (*slot)->demangled, objfile);
   else
-    gsymbol->language_specific.cplus_specific.demangled_name = NULL;
+    symbol_set_demangled_name (gsymbol, NULL, objfile);
 }
 
 /* Return the source code name of a symbol.  In languages where
@@ -652,12 +703,12 @@ symbol_natural_name (const struct general_symbol_info *gsymbol)
     case language_java:
     case language_objc:
     case language_fortran:
-      if (gsymbol->language_specific.cplus_specific.demangled_name != NULL)
-	return gsymbol->language_specific.cplus_specific.demangled_name;
+      if (symbol_get_demangled_name (gsymbol) != NULL)
+	return symbol_get_demangled_name (gsymbol);
       break;
     case language_ada:
-      if (gsymbol->language_specific.cplus_specific.demangled_name != NULL)
-	return gsymbol->language_specific.cplus_specific.demangled_name;
+      if (symbol_get_demangled_name (gsymbol) != NULL)
+	return symbol_get_demangled_name (gsymbol);
       else
 	return ada_decode_symbol (gsymbol);
       break;
@@ -679,12 +730,12 @@ symbol_demangled_name (const struct general_symbol_info *gsymbol)
     case language_java:
     case language_objc:
     case language_fortran:
-      if (gsymbol->language_specific.cplus_specific.demangled_name != NULL)
-	return gsymbol->language_specific.cplus_specific.demangled_name;
+      if (symbol_get_demangled_name (gsymbol) != NULL)
+	return symbol_get_demangled_name (gsymbol);
       break;
     case language_ada:
-      if (gsymbol->language_specific.cplus_specific.demangled_name != NULL)
-	return gsymbol->language_specific.cplus_specific.demangled_name;
+      if (symbol_get_demangled_name (gsymbol) != NULL)
+	return symbol_get_demangled_name (gsymbol);
       else
 	return ada_decode_symbol (gsymbol);
       break;
@@ -1176,12 +1227,8 @@ lookup_symbol_aux_local (const char *name, const struct block *block,
 
       if (language == language_cplus || language == language_fortran)
         {
-          sym = cp_lookup_symbol_imports (scope,
-                                          name,
-                                          block,
-                                          domain,
-                                          1,
-                                          1);
+          sym = cp_lookup_symbol_imports_or_template (scope, name, block,
+						      domain);
           if (sym != NULL)
             return sym;
         }
@@ -1295,16 +1342,25 @@ lookup_symbol_aux_symtabs (int block_index, const char *name,
   const struct block *block;
   struct symtab *s;
 
-  ALL_PRIMARY_SYMTABS (objfile, s)
+  ALL_OBJFILES (objfile)
   {
-    bv = BLOCKVECTOR (s);
-    block = BLOCKVECTOR_BLOCK (bv, block_index);
-    sym = lookup_block_symbol (block, name, domain);
-    if (sym)
-      {
-	block_found = block;
-	return fixup_symbol_section (sym, objfile);
-      }
+    if (objfile->sf)
+      objfile->sf->qf->pre_expand_symtabs_matching (objfile,
+						    block_index,
+						    name, domain);
+
+    ALL_OBJFILE_SYMTABS (objfile, s)
+      if (s->primary)
+	{
+	  bv = BLOCKVECTOR (s);
+	  block = BLOCKVECTOR_BLOCK (bv, block_index);
+	  sym = lookup_block_symbol (block, name, domain);
+	  if (sym)
+	    {
+	      block_found = block;
+	      return fixup_symbol_section (sym, objfile);
+	    }
+	}
   }
 
   return NULL;
@@ -1547,15 +1603,24 @@ basic_lookup_transparent_type (const char *name)
      of the desired name as a global, then do psymtab-to-symtab
      conversion on the fly and return the found symbol.  */
 
-  ALL_PRIMARY_SYMTABS (objfile, s)
+  ALL_OBJFILES (objfile)
   {
-    bv = BLOCKVECTOR (s);
-    block = BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK);
-    sym = lookup_block_symbol (block, name, STRUCT_DOMAIN);
-    if (sym && !TYPE_IS_OPAQUE (SYMBOL_TYPE (sym)))
-      {
-	return SYMBOL_TYPE (sym);
-      }
+    if (objfile->sf)
+      objfile->sf->qf->pre_expand_symtabs_matching (objfile,
+						    GLOBAL_BLOCK,
+						    name, STRUCT_DOMAIN);
+
+    ALL_OBJFILE_SYMTABS (objfile, s)
+      if (s->primary)
+	{
+	  bv = BLOCKVECTOR (s);
+	  block = BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK);
+	  sym = lookup_block_symbol (block, name, STRUCT_DOMAIN);
+	  if (sym && !TYPE_IS_OPAQUE (SYMBOL_TYPE (sym)))
+	    {
+	      return SYMBOL_TYPE (sym);
+	    }
+	}
   }
 
   ALL_OBJFILES (objfile)
@@ -1573,14 +1638,21 @@ basic_lookup_transparent_type (const char *name)
      conversion on the fly and return the found symbol.
    */
 
-  ALL_PRIMARY_SYMTABS (objfile, s)
+  ALL_OBJFILES (objfile)
   {
-    bv = BLOCKVECTOR (s);
-    block = BLOCKVECTOR_BLOCK (bv, STATIC_BLOCK);
-    sym = lookup_block_symbol (block, name, STRUCT_DOMAIN);
-    if (sym && !TYPE_IS_OPAQUE (SYMBOL_TYPE (sym)))
+    if (objfile->sf)
+      objfile->sf->qf->pre_expand_symtabs_matching (objfile, STATIC_BLOCK,
+						    name, STRUCT_DOMAIN);
+
+    ALL_OBJFILE_SYMTABS (objfile, s)
       {
-	return SYMBOL_TYPE (sym);
+	bv = BLOCKVECTOR (s);
+	block = BLOCKVECTOR_BLOCK (bv, STATIC_BLOCK);
+	sym = lookup_block_symbol (block, name, STRUCT_DOMAIN);
+	if (sym && !TYPE_IS_OPAQUE (SYMBOL_TYPE (sym)))
+	  {
+	    return SYMBOL_TYPE (sym);
+	  }
       }
   }
 
@@ -1599,14 +1671,16 @@ basic_lookup_transparent_type (const char *name)
 /* FIXME:  What about languages without main() or specially linked
    executables that have no main() ? */
 
-char *
+const char *
 find_main_filename (void)
 {
   struct objfile *objfile;
-  char *result, *name = main_name ();
+  char *name = main_name ();
 
   ALL_OBJFILES (objfile)
   {
+    const char *result;
+
     if (!objfile->sf)
       continue;
     result = objfile->sf->qf->find_symbol_file (objfile, name);
@@ -2907,13 +2981,13 @@ search_symbols (char *regexp, domain_enum kind, int nfiles, char *files[],
   struct minimal_symbol *msymbol;
   char *val;
   int found_misc = 0;
-  static enum minimal_symbol_type types[]
+  static const enum minimal_symbol_type types[]
     = {mst_data, mst_text, mst_abs, mst_unknown};
-  static enum minimal_symbol_type types2[]
+  static const enum minimal_symbol_type types2[]
     = {mst_bss, mst_file_text, mst_abs, mst_unknown};
-  static enum minimal_symbol_type types3[]
+  static const enum minimal_symbol_type types3[]
     = {mst_file_data, mst_solib_trampoline, mst_abs, mst_unknown};
-  static enum minimal_symbol_type types4[]
+  static const enum minimal_symbol_type types4[]
     = {mst_file_bss, mst_text, mst_abs, mst_unknown};
   enum minimal_symbol_type ourtype;
   enum minimal_symbol_type ourtype2;
@@ -3219,7 +3293,8 @@ print_msymbol_info (struct minimal_symbol *msymbol)
 static void
 symtab_symbol_info (char *regexp, domain_enum kind, int from_tty)
 {
-  static char *classnames[] = {"variable", "function", "type", "method"};
+  static const char * const classnames[] =
+    {"variable", "function", "type", "method"};
   struct symbol_search *symbols;
   struct symbol_search *p;
   struct cleanup *old_chain;
@@ -3997,7 +4072,7 @@ struct add_partial_filename_data
 
 /* A callback for map_partial_symbol_filenames.  */
 static void
-maybe_add_partial_symtab_filename (const char *fullname, const char *filename,
+maybe_add_partial_symtab_filename (const char *filename, const char *fullname,
 				   void *user_data)
 {
   struct add_partial_filename_data *data = user_data;
@@ -4314,6 +4389,7 @@ decode_line_spec (char *string, int funfirstline)
 
 /* Track MAIN */
 static char *name_of_main;
+enum language language_of_main = language_unknown;
 
 void
 set_main_name (const char *name)
@@ -4322,10 +4398,12 @@ set_main_name (const char *name)
     {
       xfree (name_of_main);
       name_of_main = NULL;
+      language_of_main = language_unknown;
     }
   if (name != NULL)
     {
       name_of_main = xstrdup (name);
+      language_of_main = language_unknown;
     }
 }
 

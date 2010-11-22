@@ -55,6 +55,7 @@
 #include "elf-bfd.h"
 #include "progress.h"
 #include "bucomm.h"
+#include "elfcomm.h"
 #include "dwarf.h"
 #include "getopt.h"
 #include "safe-ctype.h"
@@ -393,7 +394,8 @@ free_only_list (void)
     {
       if (! at_least_one_seen)
 	{
-	  non_fatal (_("Section '%s' mentioned in a -j option, but not found in any input file"),
+	  non_fatal (_("section '%s' mentioned in a -j option, "
+		       "but not found in any input file"),
 		     only->name);
 	  exit_status = 1;
 	}
@@ -510,8 +512,6 @@ dump_headers (bfd *abfd)
 
   if (wide_output)
     printf (_("  Flags"));
-  if (abfd->flags & HAS_LOAD_PAGE)
-    printf (_("  Pg"));
   printf ("\n");
 
   bfd_map_over_sections (abfd, dump_section_header, NULL);
@@ -555,6 +555,7 @@ slurp_dynamic_symtab (bfd *abfd)
       if (!(bfd_get_file_flags (abfd) & DYNAMIC))
 	{
 	  non_fatal (_("%s: not a dynamic object"), bfd_get_filename (abfd));
+	  exit_status = 1;
 	  dynsymcount = 0;
 	  return NULL;
 	}
@@ -1210,9 +1211,6 @@ update_source_path (const char *filename)
   const char *fname;
   int i;
 
-  if (filename == NULL)
-    return NULL;
-
   p = try_print_file_open (filename, filename);
   if (p != NULL)
     return p;
@@ -1626,10 +1624,16 @@ disassemble_bytes (struct disassemble_info * inf,
 	      inf->stream = stdout;
 	      if (insn_width == 0 && inf->bytes_per_line != 0)
 		octets_per_line = inf->bytes_per_line;
-	      if (octets < 0)
+	      if (octets < (int) opb)
 		{
 		  if (sfile.pos)
 		    printf ("%s\n", sfile.buffer);
+		  if (octets >= 0)
+		    {
+		      non_fatal (_("disassemble_fn returned length %d"),
+				 octets);
+		      exit_status = 1;
+		    }
 		  break;
 		}
 	    }
@@ -2107,7 +2111,7 @@ disassemble_data (bfd *abfd)
       const bfd_arch_info_type *inf = bfd_scan_arch (machine);
 
       if (inf == NULL)
-	fatal (_("Can't use supplied machine %s"), machine);
+	fatal (_("can't use supplied machine %s"), machine);
 
       abfd->arch_info = inf;
     }
@@ -2126,7 +2130,7 @@ disassemble_data (bfd *abfd)
   aux.disassemble_fn = disassembler (abfd);
   if (!aux.disassemble_fn)
     {
-      non_fatal (_("Can't disassemble for architecture %s\n"),
+      non_fatal (_("can't disassemble for architecture %s\n"),
 		 bfd_printable_arch_mach (bfd_get_arch (abfd), 0));
       exit_status = 1;
       return;
@@ -2193,20 +2197,15 @@ load_specific_debug_section (enum dwarf_section_display_enum debug,
   struct dwarf_section *section = &debug_displays [debug].section;
   bfd *abfd = (bfd *) file;
   bfd_boolean ret;
-  int section_is_compressed;
 
   /* If it is already loaded, do nothing.  */
   if (section->start != NULL)
     return 1;
 
-  section_is_compressed = section->name == section->compressed_name;
-
   section->address = 0;
   section->size = bfd_get_section_size (sec);
-  section->start = (unsigned char *) xmalloc (section->size);
-
-  ret = bfd_get_section_contents (abfd, sec, section->start, 0,
-				  section->size);
+  section->start = NULL;
+  ret = bfd_get_full_section_contents (abfd, sec, &section->start);
 
   if (! ret)
     {
@@ -2214,18 +2213,6 @@ load_specific_debug_section (enum dwarf_section_display_enum debug,
       printf (_("\nCan't get contents for section '%s'.\n"),
 	      section->name);
       return 0;
-    }
-
-  if (section_is_compressed)
-    {
-      bfd_size_type size = section->size;
-      if (! bfd_uncompress_section_contents (&section->start, &size))
-        {
-          free_debug_section (debug);
-          printf (_("\nCan't uncompress section '%s'.\n"), section->name);
-          return 0;
-        }
-      section->size = size;
     }
 
   if (is_relocatable && debug_displays [debug].relocate)
@@ -2340,9 +2327,7 @@ dump_dwarf (bfd *abfd)
 {
   is_relocatable = (abfd->flags & (EXEC_P | DYNAMIC)) == 0;
 
-  /* FIXME: bfd_get_arch_size may return -1.  We assume that 64bit
-     targets will return 64.  */
-  eh_addr_size = bfd_get_arch_size (abfd) == 64 ? 8 : 4;
+  eh_addr_size = bfd_arch_bits_per_address (abfd) / 8;
 
   if (bfd_big_endian (abfd))
     byte_get = byte_get_big_endian;
@@ -2351,10 +2336,24 @@ dump_dwarf (bfd *abfd)
   else
     abort ();
 
-  if (bfd_get_flavour (abfd) == bfd_target_elf_flavour)
+  switch (bfd_get_arch (abfd))
     {
-      const struct elf_backend_data *bed = get_elf_backend_data (abfd);
-      init_dwarf_regnames (bed->elf_machine_code);
+    case bfd_arch_i386:
+      switch (bfd_get_mach (abfd))
+	{
+	case bfd_mach_x86_64:
+	case bfd_mach_x86_64_intel_syntax:
+	  init_dwarf_regnames_x86_64 ();
+	  break;
+
+	default:
+	  init_dwarf_regnames_i386 ();
+	  break;
+	}
+      break;
+
+    default:
+      break;
     }
 
   bfd_map_over_sections (abfd, dump_dwarf_section, NULL);
@@ -2384,11 +2383,11 @@ read_section_stabs (bfd *abfd, const char *sect_name, bfd_size_type *size_ptr)
 
   if (! bfd_get_section_contents (abfd, stabsect, contents, 0, size))
     {
-      non_fatal (_("Reading %s section of %s failed: %s"),
+      non_fatal (_("reading %s section of %s failed: %s"),
 		 sect_name, bfd_get_filename (abfd),
 		 bfd_errmsg (bfd_get_error ()));
-      free (contents);
       exit_status = 1;
+      free (contents);
       return NULL;
     }
 
@@ -2562,7 +2561,7 @@ dump_bfd_header (bfd *abfd)
   printf (_("architecture: %s, "),
 	  bfd_printable_arch_mach (bfd_get_arch (abfd),
 				   bfd_get_mach (abfd)));
-  printf (_("flags 0x%08x:\n"), abfd->flags);
+  printf (_("flags 0x%08x:\n"), abfd->flags & ~BFD_FLAGS_FOR_BFD_USE_MASK);
 
 #define PF(x, y)    if (abfd->flags & x) {printf("%s%s", comma, y); comma=", ";}
   PF (HAS_RELOC, "HAS_RELOC");
@@ -2645,9 +2644,11 @@ dump_section (bfd *abfd, asection *section, void *dummy ATTRIBUTE_UNUSED)
 	    (unsigned long) (section->filepos + start_offset));
   printf ("\n");
 
-  data = (bfd_byte *) xmalloc (datasize);
-
-  bfd_get_section_contents (abfd, section, data, 0, datasize);
+  if (!bfd_get_full_section_contents (abfd, section, &data))
+    {
+      non_fatal (_("Reading section failed"));
+      return;
+    }
 
   width = 4;
 
@@ -3191,6 +3192,10 @@ display_file (char *filename, char *target)
       return;
     }
 
+  /* Decompress sections unless dumping the section contents.  */
+  if (!dump_section_contents)
+    file->flags |= BFD_DECOMPRESS;
+
   /* If the file is an archive, process all of its elements.  */
   if (bfd_check_format (file, bfd_archive))
     {
@@ -3338,7 +3343,7 @@ main (int argc, char **argv)
 	    endian = BFD_ENDIAN_LITTLE;
 	  else
 	    {
-	      non_fatal (_("unrecognized -E option"));
+	      nonfatal (_("unrecognized -E option"));
 	      usage (stderr, 1);
 	    }
 	  break;
@@ -3350,6 +3355,7 @@ main (int argc, char **argv)
 	  else
 	    {
 	      non_fatal (_("unrecognized --endian type `%s'"), optarg);
+	      exit_status = 1;
 	      usage (stderr, 1);
 	    }
 	  break;

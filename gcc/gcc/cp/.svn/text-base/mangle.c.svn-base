@@ -307,7 +307,7 @@ dump_substitution_candidates (void)
   tree el;
 
   fprintf (stderr, "  ++ substitutions  ");
-  for (i = 0; VEC_iterate (tree, G.substitutions, i, el); ++i)
+  FOR_EACH_VEC_ELT (tree, G.substitutions, i, el)
     {
       const char *name = "???";
 
@@ -387,7 +387,7 @@ add_substitution (tree node)
     int i;
     tree candidate;
 
-    for (i = 0; VEC_iterate (tree, G.substitutions, i, candidate); i++)
+    FOR_EACH_VEC_ELT (tree, G.substitutions, i, candidate)
       {
 	gcc_assert (!(DECL_P (node) && node == candidate));
 	gcc_assert (!(TYPE_P (node) && TYPE_P (candidate)
@@ -1943,17 +1943,16 @@ write_type (tree type)
               write_char ('E');
               break;
 
+	    case NULLPTR_TYPE:
+	      write_string ("Dn");
+	      break;
+
 	    case TYPEOF_TYPE:
 	      sorry ("mangling typeof, use decltype instead");
 	      break;
 
 	    case LANG_TYPE:
-	      if (NULLPTR_TYPE_P (type))
-		{
-		  write_string ("Dn");
-		  break;
-		}
-	      /* else fall through.  */
+	      /* fall through.  */
 
 	    default:
 	      gcc_unreachable ();
@@ -2491,7 +2490,7 @@ write_expression (tree expr)
       tree scope = TREE_OPERAND (expr, 0);
       tree member = TREE_OPERAND (expr, 1);
 
-      if (!abi_version_at_least (2))
+      if (!abi_version_at_least (2) && DECL_P (member))
 	{
 	  write_string ("sr");
 	  write_type (scope);

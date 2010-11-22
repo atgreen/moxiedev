@@ -1,3 +1,155 @@
+2010-11-19  Andy Koppe <andy.koppe@gmail.com>
+
+	* libc/locale/locale.c (loadlocale): Recognise the "cjknarrow"
+	modifier on "C.<charset>" locales too.
+
+2010-11-18  Andy Koppe <andy.koppe@gmail.com>
+
+	* libc/locale/locale.c (loadlocale): Fix width of CJK ambigous
+	characters to 1 for singlebyte charsets and 2 for non-Unicode
+	multibyte charsets. Change documentation accordingly.
+
+2010-11-17  Bernd Schmidt  <bernds@codesourcery.com>
+
+	* configure.host (newlib_cflags): For tic6x, add -DCLOCK_PROVIDED.
+
+2010-11-16  Andrew Makhorin <mao@gnu.org>
+
+	* libc/machine/i386/setjmp.S (longjmp): Per POSIX, return 1 if second
+	argument is 0.
+
+2010-11-16  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* libc/include/sys/types.h: Add _mode_t for __rtems__.
+	* libc/sys/rtems/machine/_types.h: Provide _mode_t, _fpos_t, _off_t.
+	Add _ssize_t for 64bit sparc.
+	Let arm, i386, m68k, mips, PPC, sparc use 64bit _off_t, _fpos_t.
+
+2010-11-16  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* configure.host: Add -D_COMPILING_NEWLIB to newlib_cflags.
+
+2010-11-04  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* libm/complex/cacos.c: Reorder function calls to work around ICE
+	in arm/thumb-gcc.
+
+2010-10-27  Maurice Baijens  <maurice.baijens@ellips.nl>
+
+	* libc/stdlib/strtol.c: Make sure signed characters are not
+	sign-extended when converted to int and passed to ctype macros.
+	* libc/stdlib/strtoul.c: Ditto.
+	* libc/stdlib/strtoll_r.c: Ditto.
+	* libc/stdlib/strtoull_r.c: Ditto.
+
+2010-10-18  Marco Atzeri  <marco_atzeri@yahoo.it>
+
+	* libm/Makefile.am: added complex functions documentation
+	* libm/libm.texinfo: ditto
+	* libm/complex/Makefile.am: Ditto
+	* libm/complex/complex.tex: Ditto
+	* libm/complex/(cabs.c, cacos.c, cacosh.c, carg.c,
+     	casin.c, casinh.c, catan.c, catanh.c, ccos.c, ccosh.c,
+     	cexp.c, cimag.c, clog.c, conj.c, cpow.c, cproj.c, creal.c,
+     	csin.c, csinh.c, csqrt.c, ctan.c, ctanh.c): Ditto
+	* libm/Makefile.in: Regenerate
+	* libm/complex/Makefile.in: Ditto 
+
+2010-10-14  Craig Howland <howland@LGSInnovations.com>
+
+	* libc/include/math.h:  Delete cabs() and cabs() prototypes
+	(c.f. 2010-10-08 change by Corinna).
+
+2010-10-08  Bernd Schmidt  <bernds@codesourcery.com>
+	Joseph Myers  <joseph@codesourcery.com>
+
+	* configure.host: Handle tic6x targets.
+	* libc/include/machine/ieeefp.h: Define endianness for C6X.
+	* libc/include/machine/setjmp.h: Add __TMS320C6X__ case.
+	* libc/machine/configure.in: Handle tic6x targets.
+	* libc/machine/configure: Regenerate.
+	* libc/machine/tic6x/Makefile.am, libc/machine/tic6x/configure.in,
+	libc/machine/tic6x/setjmp.S: New.
+	* libc/machine/tic6x/Makefile.in, libc/machine/tic6x/aclocal.m4,
+	libc/machine/tic6x/configure: New (generated).
+
+2010-10-08  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* libc/include/sys/unistd.h: Declare getsid, setegid, seteuid for RTEMS.
+
+2010-10-08  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* libm/common/sf_llrint.c, libm/common/sf_round.c: Add explicit casts
+	to __uint32_t to avoid overflows on implicit casts.
+
+2010-10-08  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* libm/complex/complex.tex: Add empty stub.
+
+2010-10-08  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libm/math/w_cabs.c: Delete.
+	* libm/math/wf_cabs.c: Delete.
+	* libm/math/Makefile.am (src): Remove w_cabs.c.
+	(fsrc): Remove wf_cabs.c.
+	* libm/math/Makefile.in: Regenerate.
+
+2010-10-08  Marco Atzeri  <marco_atzeri@yahoo.it>
+
+	* libc/include/complex.h: New complex header.
+	* libm/common/fdlibm.h: Added ifdef _COMPLEX_H.
+	* libm/complex/*: New complex functions imported from NetBSD.
+	* libm/Makefile.am: Added complex subdir.
+	* libm/Makefile.in: Regenerate.
+	* libm/configure.in: Added complex subdir.
+	* libm/configure: Regenerate.
+
+2010-10-06  Eric Blake  <eblake@redhat.com>
+
+	* lib/str-two-way.h (two_way_long_needle): Avoid bug with long
+	periodic needle having false positive.  Affects memmem, strstr,
+	strcasestr.
+
+2010-09-21  Craig Howland <howland@LGSInnovations.com>
+
+	* libc/string/memcpy.c: Do not assign size_t parameter to int.
+	Use parameter directly, instead.
+	* libc/string/memccpy.c:  Likewise.
+	* libc/string/mempcpy.c:  Likewise.
+	* libc/string/memmove.c:  Likewise.
+
+2010-09-09  Kevin Buettner  <kevinb@redhat.com>
+
+	* libc/sys/sysnecv850/Makefile.am (lib_a_SOURCES): Provide an
+	empty definition.
+	* libc/sys/sysnecv850/Makefile.in: Regenerate.
+
+2010-08-25  Sebastian Huber  <sebastian.huber@embedded-brains.de>
+
+	* libc/posix/opendir.c (opendir): Fix potential memory leak.
+
+2010-08-10  Yaakov Selkowitz  <yselkowitz@users.sourceforge.net>
+
+	* libc/include/sys/dir.h: New BSD-compatibility header.
+
+2010-08-02  Yaakov Selkowitz  <yselkowitz@users.sourceforge.net>
+
+	* libc/include/sys/features.h: Define _POSIX_MONOTONIC_CLOCK for Cygwin.
+
+2010-08-06  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/include/sys/stat.h: Move all POSIX-defined symbolic constants
+	out of `#ifndef _POSIX_SOURCE' guard.
+
+2010-08-03  Craig Howland <howland@LGSInnovations.com>
+
+	* libm/common/s_lrint.c (lrint):  Annotate shift operations with
+	possible shift amount ranges, and use SAFE_RIGHT_SHIFT to avoid
+	undefined behaviour.
+	* libm/common/s_llrint.c (llrint):  Likewise.
+	* libm/common/s_lround.c (lround):  Correct some comments on ranges.
+	* libm/common/s_llround.c (llround):  Likewise.
+
 2010-07-30  Anthony Green  <green@moxielogic.com>
 
 	* libc/sys/rtems/machine/_types.h: Add moxie support.

@@ -124,7 +124,12 @@ extern struct cmd_list_element *setchecklist;
 
 extern struct cmd_list_element *showchecklist;
 
+/* Chain containing all defined "save" subcommands.  */
+
+extern struct cmd_list_element *save_cmdlist;
+
 extern void execute_command (char *, int);
+extern char *execute_command_to_string (char *p, int from_tty);
 
 enum command_control_type execute_control_command (struct command_line *);
 

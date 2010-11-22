@@ -18,6 +18,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include "config.h"
 #include <stdio.h>
 #include <assert.h>
 #include <signal.h>
@@ -36,6 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "load.h"
 #include "syscalls.h"
 #include "err.h"
+#include "trace.h"
 
 /* Ideally, we'd wrap up all the minisim's data structures in an
    object and pass that around.  However, neither GDB nor run needs
@@ -245,7 +247,7 @@ sim_read (SIM_DESC sd, SIM_ADDR mem, unsigned char *buf, int length)
 }
 
 int
-sim_write (SIM_DESC sd, SIM_ADDR mem, unsigned char *buf, int length)
+sim_write (SIM_DESC sd, SIM_ADDR mem, const unsigned char *buf, int length)
 {
   int i;
 
@@ -403,6 +405,9 @@ reg_size (enum sim_rx_regnum regno)
     case sim_rx_fpsw_regnum:
       size = sizeof (regs.r_fpsw);
       break;
+    case sim_rx_acc_regnum:
+      size = sizeof (regs.r_acc);
+      break;
     default:
       size = 0;
       break;
@@ -502,6 +507,9 @@ sim_fetch_register (SIM_DESC sd, int regno, unsigned char *buf, int length)
       break;
     case sim_rx_fpsw_regnum:
       val = get_reg (fpsw);
+      break;
+    case sim_rx_acc_regnum:
+      val = ((DI) get_reg (acchi) << 32) | get_reg (acclo);
       break;
     default:
       fprintf (stderr, "rx minisim: unrecognized register number: %d\n",
@@ -615,6 +623,10 @@ sim_store_register (SIM_DESC sd, int regno, unsigned char *buf, int length)
     case sim_rx_fpsw_regnum:
       put_reg (fpsw, val);
       break;
+    case sim_rx_acc_regnum:
+      put_reg (acclo, val & 0xffffffff);
+      put_reg (acchi, (val >> 32) & 0xffffffff);
+      break;
     default:
       fprintf (stderr, "rx minisim: unrecognized register number: %d\n",
 	       regno);
@@ -722,6 +734,8 @@ handle_step (int rc)
 void
 sim_resume (SIM_DESC sd, int step, int sig_to_deliver)
 {
+  int rc;
+
   check_desc (sd);
 
   if (sig_to_deliver != 0)
@@ -734,7 +748,12 @@ sim_resume (SIM_DESC sd, int step, int sig_to_deliver)
   execution_error_clear_last_error ();
 
   if (step)
-    handle_step (decode_opcode ());
+    {
+      rc = setjmp (decode_jmp_buf);
+      if (rc == 0)
+	rc = decode_opcode ();
+      handle_step (rc);
+    }
   else
     {
       /* We don't clear 'stop' here, because then we would miss
@@ -751,7 +770,9 @@ sim_resume (SIM_DESC sd, int step, int sig_to_deliver)
 	      break;
 	    }
 
-	  int rc = decode_opcode ();
+	  rc = setjmp (decode_jmp_buf);
+	  if (rc == 0)
+	    rc = decode_opcode ();
 
 	  if (execution_error_get_last_error () != SIM_ERR_NONE)
 	    {
@@ -829,10 +850,12 @@ sim_do_command (SIM_DESC sd, char *cmd)
     {
       if (strcmp (args, "on") == 0)
 	verbose = 1;
+      else if (strcmp (args, "noisy") == 0)
+	verbose = 2;
       else if (strcmp (args, "off") == 0)
 	verbose = 0;
       else
-	printf ("The 'sim verbose' command expects 'on' or 'off'"
+	printf ("The 'sim verbose' command expects 'on', 'noisy', or 'off'"
 		" as an argument.\n");
     }
   else

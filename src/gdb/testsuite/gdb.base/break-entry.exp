@@ -21,6 +21,20 @@ if { [prepare_for_testing ${testfile}.exp ${testfile} start.c {additional_flags=
     return -1
 }
 
+# If we're using a stub, we'll already be debugging a live program and
+# stopped at the entry point when we connect, and so the runto below
+# will issue a "continue", which always skips any breakpoint at PC.
+# When testing with a native target (or some other target that supports
+# "run"), runto will do a "run", which first creates the process,
+# leaving the PC at the entry point, just like the stub case, but then
+# continues the process with the equivalent of "jump *$PC", which
+# triggers any breakpoint at $PC.  The latter is what we want to test.
+
+if [target_info exists use_gdb_stub] {
+    untested ${testfile}.exp
+    return
+}
+
 set test "info files"
 set entry ""
 gdb_test_multiple $test $test {
@@ -34,10 +48,20 @@ if {$entry == ""} {
     return
 }
 
+if {[istarget powerpc64-*] && [is_lp64_target]} {
+    set test "convert entry point"
+    gdb_test_multiple "p *(void(*)(void) *) $entry" $test {
+	-re " =( \\(\[^0-9\]*\\))? (0x\[0-9a-f\]+)( <.*)?\r\n$gdb_prompt $" {
+	    set entry $expect_out(2,string)
+	    pass $test
+	}
+    }
+}
+
 if ![runto "*$entry"] {
     return
 }
 gdb_test {p/x $pc} " = $entry"
 
 gdb_breakpoint "main"
-gdb_continue_to_breakpoint "main" "main.*"
+gdb_continue_to_breakpoint "main" "\\.?main.*"

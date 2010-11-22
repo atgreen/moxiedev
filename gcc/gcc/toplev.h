@@ -29,6 +29,10 @@ along with GCC; see the file COPYING3.  If not see
 #define skip_leading_substring(whole,  part) \
    (strncmp (whole, part, strlen (part)) ? NULL : whole + strlen (part))
 
+/* Decoded options, and number of such options.  */
+extern struct cl_decoded_option *save_decoded_options;
+extern unsigned int save_decoded_options_count;
+
 extern int toplev_main (int, char **);
 extern void strip_off_ending (char *, int);
 extern void rest_of_decl_compilation (tree, int, int);
@@ -69,13 +73,10 @@ extern unsigned local_tick;
 
 /* Top-level source file.  */
 extern const char *main_input_filename;
+extern const char *main_input_basename;
+extern int main_input_baselength;
 
-extern const char *dump_base_name;
-extern const char *dump_dir_name;
-extern const char *aux_base_name;
-extern const char *aux_info_file_name;
 extern const char *profile_data_prefix;
-extern const char *asm_file_name;
 extern bool exit_after_options;
 
 /* True if the user has tagged the function with the 'section'
@@ -94,13 +95,6 @@ extern const char * default_pch_valid_p (const void *, size_t);
 /* The hashtable, so that the C front ends can pass it to cpplib.  */
 extern struct ht *ident_hash;
 
-/* This function can be used by targets to set the flags originally
-    implied by -ffast-math and -fno-fast-math.  */
-
-extern void set_fast_math_flags         (int);
-
-extern void set_unsafe_math_optimizations_flags (int);
-
 /* Handle -d switch.  */
 extern void decode_d_option		(const char *);
 
@@ -111,6 +105,10 @@ extern bool fast_math_flags_struct_set_p (struct cl_optimization *);
 /* Inline versions of the above for speed.  */
 #if GCC_VERSION < 3004
 
+extern int clz_hwi (unsigned HOST_WIDE_INT x);
+extern int ctz_hwi (unsigned HOST_WIDE_INT x);
+extern int ffs_hwi (unsigned HOST_WIDE_INT x);
+
 /* Return log2, or -1 if not exact.  */
 extern int exact_log2                  (unsigned HOST_WIDE_INT);
 
@@ -119,27 +117,57 @@ extern int floor_log2                  (unsigned HOST_WIDE_INT);
 
 #else /* GCC_VERSION >= 3004 */
 
+/* For convenience, define 0 -> word_size.  */
+static inline int
+clz_hwi (unsigned HOST_WIDE_INT x)
+{
+  if (x == 0)
+    return HOST_BITS_PER_WIDE_INT;
 # if HOST_BITS_PER_WIDE_INT == HOST_BITS_PER_LONG
-#  define CLZ_HWI __builtin_clzl
-#  define CTZ_HWI __builtin_ctzl
+  return __builtin_clzl (x);
 # elif HOST_BITS_PER_WIDE_INT == HOST_BITS_PER_LONGLONG
-#  define CLZ_HWI __builtin_clzll
-#  define CTZ_HWI __builtin_ctzll
+  return __builtin_clzll (x);
 # else
-#  define CLZ_HWI __builtin_clz
-#  define CTZ_HWI __builtin_ctz
+  return __builtin_clz (x);
 # endif
+}
+
+static inline int
+ctz_hwi (unsigned HOST_WIDE_INT x)
+{
+  if (x == 0)
+    return HOST_BITS_PER_WIDE_INT;
+# if HOST_BITS_PER_WIDE_INT == HOST_BITS_PER_LONG
+  return __builtin_ctzl (x);
+# elif HOST_BITS_PER_WIDE_INT == HOST_BITS_PER_LONGLONG
+  return __builtin_ctzll (x);
+# else
+  return __builtin_ctz (x);
+# endif
+}
+
+static inline int
+ffs_hwi (unsigned HOST_WIDE_INT x)
+{
+# if HOST_BITS_PER_WIDE_INT == HOST_BITS_PER_LONG
+  return __builtin_ffsl (x);
+# elif HOST_BITS_PER_WIDE_INT == HOST_BITS_PER_LONGLONG
+  return __builtin_ffsll (x);
+# else
+  return __builtin_ffs (x);
+# endif
+}
 
 static inline int
 floor_log2 (unsigned HOST_WIDE_INT x)
 {
-  return x ? HOST_BITS_PER_WIDE_INT - 1 - (int) CLZ_HWI (x) : -1;
+  return HOST_BITS_PER_WIDE_INT - 1 - clz_hwi (x);
 }
 
 static inline int
 exact_log2 (unsigned HOST_WIDE_INT x)
 {
-  return x == (x & -x) && x ? (int) CTZ_HWI (x) : -1;
+  return x == (x & -x) && x ? ctz_hwi (x) : -1;
 }
 
 #endif /* GCC_VERSION >= 3004 */

@@ -100,7 +100,7 @@ static void init_core_ops (void);
 
 void _initialize_corelow (void);
 
-struct target_ops core_ops;
+static struct target_ops core_ops;
 
 /* An arbitrary identifier for the core inferior.  */
 #define CORELOW_PID 1
@@ -252,28 +252,14 @@ add_to_thread_list (bfd *abfd, asection *asect, void *reg_sect_arg)
 
   core_tid = atoi (bfd_section_name (abfd, asect) + 5);
 
-  if (core_gdbarch
-      && gdbarch_core_reg_section_encodes_pid (core_gdbarch))
-    {
-      uint32_t merged_pid = core_tid;
-      pid = merged_pid & 0xffff;
-      lwpid = merged_pid >> 16;
-
-      /* This can happen on solaris core, for example, if we don't
-	 find a NT_PSTATUS note in the core, but do find NT_LWPSTATUS
-	 notes.  */
-      if (pid == 0)
-	{
-	  core_has_fake_pid = 1;
-	  pid = CORELOW_PID;
-	}
-    }
-  else
+  pid = bfd_core_file_pid (core_bfd);
+  if (pid == 0)
     {
       core_has_fake_pid = 1;
       pid = CORELOW_PID;
-      lwpid = core_tid;
     }
+
+  lwpid = core_tid;
 
   if (current_inferior ()->pid == 0)
     inferior_appeared (current_inferior (), pid);
@@ -443,15 +429,18 @@ core_open (char *filename, int from_tty)
 
   siggy = bfd_core_file_failing_signal (core_bfd);
   if (siggy > 0)
-    /* NOTE: target_signal_from_host() converts a target signal value
-       into gdb's internal signal value.  Unfortunately gdb's internal
-       value is called ``target_signal'' and this function got the
-       name ..._from_host(). */
-    printf_filtered (_("Program terminated with signal %d, %s.\n"), siggy,
-		     target_signal_to_string (
-		       (core_gdbarch != NULL) ?
-			gdbarch_target_signal_from_host (core_gdbarch, siggy)
-			: siggy));
+    {
+      /* NOTE: target_signal_from_host() converts a target signal value
+	 into gdb's internal signal value.  Unfortunately gdb's internal
+	 value is called ``target_signal'' and this function got the
+	 name ..._from_host(). */
+      enum target_signal sig = (core_gdbarch != NULL
+		       ? gdbarch_target_signal_from_host (core_gdbarch, siggy)
+		       : target_signal_from_host (siggy));
+
+      printf_filtered (_("Program terminated with signal %d, %s.\n"), siggy,
+		       target_signal_to_string (sig));
+    }
 
   /* Fetch all registers from core file.  */
   target_fetch_registers (get_current_regcache (), -1);
@@ -520,21 +509,7 @@ get_core_register_section (struct regcache *regcache,
 
   xfree (section_name);
 
-  if (core_gdbarch
-      && gdbarch_core_reg_section_encodes_pid (core_gdbarch))
-    {
-      uint32_t merged_pid;
-      int pid = ptid_get_pid (inferior_ptid);
-
-      if (core_has_fake_pid)
-	pid = 0;
-
-      merged_pid = ptid_get_lwp (inferior_ptid);
-      merged_pid = merged_pid << 16 | pid;
-
-      section_name = xstrprintf ("%s/%s", name, plongest (merged_pid));
-    }
-  else if (ptid_get_lwp (inferior_ptid))
+  if (ptid_get_lwp (inferior_ptid))
     section_name = xstrprintf ("%s/%ld", name, ptid_get_lwp (inferior_ptid));
   else
     section_name = xstrdup (name);
@@ -853,21 +828,29 @@ static char *
 core_pid_to_str (struct target_ops *ops, ptid_t ptid)
 {
   static char buf[64];
+  int pid;
 
+  /* The preferred way is to have a gdbarch/OS specific
+     implementation.  */
   if (core_gdbarch
       && gdbarch_core_pid_to_str_p (core_gdbarch))
-    {
-      char *ret = gdbarch_core_pid_to_str (core_gdbarch, ptid);
+    return gdbarch_core_pid_to_str (core_gdbarch, ptid);
 
-      if (ret != NULL)
-	return ret;
-    }
+  /* Otherwise, if we don't have one, we'll just fallback to
+     "process", with normal_pid_to_str.  */
 
-  if (ptid_get_lwp (ptid) == 0)
-    xsnprintf (buf, sizeof buf, "<main task>");
-  else
-    xsnprintf (buf, sizeof buf, "Thread %ld", ptid_get_lwp (ptid));
+  /* Try the LWPID field first.  */
+  pid = ptid_get_lwp (ptid);
+  if (pid != 0)
+    return normal_pid_to_str (pid_to_ptid (pid));
 
+  /* Otherwise, this isn't a "threaded" core -- use the PID field, but
+     only if it isn't a fake PID.  */
+  if (!core_has_fake_pid)
+    return normal_pid_to_str (ptid);
+
+  /* No luck.  We simply don't have a valid PID to print.  */
+  xsnprintf (buf, sizeof buf, "<main task>");
   return buf;
 }
 
@@ -911,11 +894,17 @@ init_core_ops (void)
   core_ops.to_thread_alive = core_thread_alive;
   core_ops.to_read_description = core_read_description;
   core_ops.to_pid_to_str = core_pid_to_str;
-  core_ops.to_stratum = core_stratum;
+  core_ops.to_stratum = process_stratum;
   core_ops.to_has_memory = core_has_memory;
   core_ops.to_has_stack = core_has_stack;
   core_ops.to_has_registers = core_has_registers;
   core_ops.to_magic = OPS_MAGIC;
+
+  if (core_target)
+    internal_error (__FILE__, __LINE__, 
+		    _("init_core_ops: core target already exists (\"%s\")."),
+		    core_target->to_longname);
+  core_target = &core_ops;
 }
 
 void

@@ -336,15 +336,6 @@ struct elf32_hppa_link_hash_table
 #define eh_name(eh) \
   (eh ? eh->root.root.string : "<undef>")
 
-/* Override the generic function because we want to mark our BFDs.  */
-
-static bfd_boolean
-elf32_hppa_mkobject (bfd *abfd)
-{
-  return bfd_elf_allocate_object (abfd, sizeof (struct elf_obj_tdata),
-				  HPPA32_ELF_DATA);
-}
-
 /* Assorted hash table functions.  */
 
 /* Initialize an entry in the stub hash table.  */
@@ -1736,7 +1727,7 @@ elf32_hppa_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
 	elf_tdata (abfd)->core_signal = bfd_get_16 (abfd, note->descdata + 12);
 
 	/* pr_pid */
-	elf_tdata (abfd)->core_pid = bfd_get_32 (abfd, note->descdata + 24);
+	elf_tdata (abfd)->core_lwpid = bfd_get_32 (abfd, note->descdata + 24);
 
 	/* pr_reg */
 	offset = 72;
@@ -3750,17 +3741,10 @@ elf32_hppa_relocate_section (bfd *output_bfd,
 	}
 
       if (sym_sec != NULL && elf_discarded_section (sym_sec))
-	{
-	  /* For relocs against symbols from removed linkonce
-	     sections, or sections discarded by a linker script,
-	     we just want the section contents zeroed.  Avoid any
-	     special processing.  */
-	  _bfd_clear_contents (elf_hppa_howto_table + r_type, input_bfd,
-			       contents + rela->r_offset);
-	  rela->r_info = 0;
-	  rela->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rela, relend,
+					 elf_hppa_howto_table + r_type,
+					 contents);
 
       if (info->relocatable)
 	continue;
@@ -4481,7 +4465,7 @@ static enum elf_reloc_type_class
 elf32_hppa_reloc_type_class (const Elf_Internal_Rela *rela)
 {
   /* Handle TLS relocs first; we don't want them to be marked
-     relative by the "if (ELF32_R_SYM (rela->r_info) == 0)"
+     relative by the "if (ELF32_R_SYM (rela->r_info) == STN_UNDEF)"
      check below.  */
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {
@@ -4491,7 +4475,7 @@ elf32_hppa_reloc_type_class (const Elf_Internal_Rela *rela)
         return reloc_class_normal;
     }
 
-  if (ELF32_R_SYM (rela->r_info) == 0)
+  if (ELF32_R_SYM (rela->r_info) == STN_UNDEF)
     return reloc_class_relative;
 
   switch ((int) ELF32_R_TYPE (rela->r_info))
@@ -4649,7 +4633,6 @@ elf32_hppa_elf_get_symbol_type (Elf_Internal_Sym *elf_sym, int type)
 #define elf_info_to_howto_rel		     elf_hppa_info_to_howto_rel
 
 /* Stuff for the BFD linker.  */
-#define bfd_elf32_mkobject		     elf32_hppa_mkobject
 #define bfd_elf32_bfd_final_link	     elf32_hppa_final_link
 #define bfd_elf32_bfd_link_hash_table_create elf32_hppa_link_hash_table_create
 #define bfd_elf32_bfd_link_hash_table_free   elf32_hppa_link_hash_table_free
@@ -4687,6 +4670,7 @@ elf32_hppa_elf_get_symbol_type (Elf_Internal_Sym *elf_sym, int type)
 #define TARGET_BIG_SYM		bfd_elf32_hppa_vec
 #define TARGET_BIG_NAME		"elf32-hppa"
 #define ELF_ARCH		bfd_arch_hppa
+#define ELF_TARGET_ID		HPPA32_ELF_DATA
 #define ELF_MACHINE_CODE	EM_PARISC
 #define ELF_MAXPAGESIZE		0x1000
 #define ELF_OSABI		ELFOSABI_HPUX

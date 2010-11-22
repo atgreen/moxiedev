@@ -314,11 +314,13 @@ BFD_JUMP_TABLE macros.
 .#define BFD_JUMP_TABLE_CORE(NAME) \
 .  NAME##_core_file_failing_command, \
 .  NAME##_core_file_failing_signal, \
-.  NAME##_core_file_matches_executable_p
+.  NAME##_core_file_matches_executable_p, \
+.  NAME##_core_file_pid
 .
 .  char *      (*_core_file_failing_command) (bfd *);
 .  int         (*_core_file_failing_signal) (bfd *);
 .  bfd_boolean (*_core_file_matches_executable_p) (bfd *, bfd *);
+.  int         (*_core_file_pid) (bfd *);
 .
 .  {* Archive entry points.  *}
 .#define BFD_JUMP_TABLE_ARCHIVE(NAME) \
@@ -674,6 +676,7 @@ extern const bfd_target bfd_elf32_shlvxworks_vec;
 extern const bfd_target bfd_elf32_shnbsd_vec;
 extern const bfd_target bfd_elf32_shvxworks_vec;
 extern const bfd_target bfd_elf32_sparc_vec;
+extern const bfd_target bfd_elf32_sparc_sol2_vec;
 extern const bfd_target bfd_elf32_sparc_vxworks_vec;
 extern const bfd_target bfd_elf32_spu_vec;
 extern const bfd_target bfd_elf32_tic6x_be_vec;
@@ -711,6 +714,7 @@ extern const bfd_target bfd_elf64_sh64lnbsd_vec;
 extern const bfd_target bfd_elf64_sh64nbsd_vec;
 extern const bfd_target bfd_elf64_sparc_vec;
 extern const bfd_target bfd_elf64_sparc_freebsd_vec;
+extern const bfd_target bfd_elf64_sparc_sol2_vec;
 extern const bfd_target bfd_elf64_tradbigmips_vec;
 extern const bfd_target bfd_elf64_tradlittlemips_vec;
 extern const bfd_target bfd_elf64_x86_64_freebsd_vec;
@@ -1023,6 +1027,7 @@ static const bfd_target * const _bfd_target_vector[] =
 	&bfd_elf32_sh64blin_vec,
 #endif
 	&bfd_elf32_sparc_vec,
+	&bfd_elf32_sparc_sol2_vec,
 	&bfd_elf32_sparc_vxworks_vec,
 	&bfd_elf32_spu_vec,
 	&bfd_elf32_tic6x_be_vec,
@@ -1061,6 +1066,7 @@ static const bfd_target * const _bfd_target_vector[] =
 	&bfd_elf64_sh64blin_vec,
 	&bfd_elf64_sparc_vec,
 	&bfd_elf64_sparc_freebsd_vec,
+	&bfd_elf64_sparc_sol2_vec,
 	&bfd_elf64_tradbigmips_vec,
 	&bfd_elf64_tradlittlemips_vec,
 	&bfd_elf64_x86_64_freebsd_vec,

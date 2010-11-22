@@ -423,6 +423,11 @@ proc runto { function args } {
 	    unsupported "Non-stop mode not supported"
 	    return 0
 	}
+	-re ".*A problem internal to GDB has been detected" {
+	    fail "running to $function in runto (GDB internal error)"
+	    gdb_internal_error_resync
+	    return 0
+	}
 	-re "$gdb_prompt $" { 
 	    fail "running to $function in runto"
 	    return 0
@@ -1454,6 +1459,83 @@ proc skip_shlib_tests {} {
     return 1
 }
 
+# Return 1 if target is ILP32.
+# This cannot be decided simply from looking at the target string,
+# as it might depend on externally passed compiler options like -m64.
+proc is_ilp32_target {} {
+    global is_ilp32_target_saved
+
+    # Use the cached value, if it exists.  Cache value per "board" to handle
+    # runs with multiple options (e.g. unix/{-m32,-64}) correctly.
+    set me "is_ilp32_target"
+    set board [target_info name]
+    if [info exists is_ilp32_target_saved($board)] {
+        verbose "$me:  returning saved $is_ilp32_target_saved($board)" 2
+        return $is_ilp32_target_saved($board)
+    }
+
+
+    set src ilp32[pid].c
+    set obj ilp32[pid].o
+
+    set f [open $src "w"]
+    puts $f "int dummy\[sizeof (int) == 4"
+    puts $f "           && sizeof (void *) == 4"
+    puts $f "           && sizeof (long) == 4 ? 1 : -1\];"
+    close $f
+
+    verbose "$me:  compiling testfile $src" 2
+    set lines [gdb_compile $src $obj object {quiet}]
+    file delete $src
+    file delete $obj
+
+    if ![string match "" $lines] then {
+        verbose "$me:  testfile compilation failed, returning 0" 2
+        return [set is_ilp32_target_saved($board) 0]
+    }
+
+    verbose "$me:  returning 1" 2
+    return [set is_ilp32_target_saved($board) 1]
+}
+
+# Return 1 if target is LP64.
+# This cannot be decided simply from looking at the target string,
+# as it might depend on externally passed compiler options like -m64.
+proc is_lp64_target {} {
+    global is_lp64_target_saved
+
+    # Use the cached value, if it exists.  Cache value per "board" to handle
+    # runs with multiple options (e.g. unix/{-m32,-64}) correctly.
+    set me "is_lp64_target"
+    set board [target_info name]
+    if [info exists is_lp64_target_saved($board)] {
+        verbose "$me:  returning saved $is_lp64_target_saved($board)" 2
+        return $is_lp64_target_saved($board)
+    }
+
+    set src lp64[pid].c
+    set obj lp64[pid].o
+
+    set f [open $src "w"]
+    puts $f "int dummy\[sizeof (int) == 4"
+    puts $f "           && sizeof (void *) == 8"
+    puts $f "           && sizeof (long) == 8 ? 1 : -1\];"
+    close $f
+
+    verbose "$me:  compiling testfile $src" 2
+    set lines [gdb_compile $src $obj object {quiet}]
+    file delete $src
+    file delete $obj
+
+    if ![string match "" $lines] then {
+        verbose "$me:  testfile compilation failed, returning 0" 2
+        return [set is_lp64_target_saved($board) 0]
+    }
+
+    verbose "$me:  returning 1" 2
+    return [set is_lp64_target_saved($board) 1]
+}
+
 # Run a test on the target to see if it supports vmx hardware.  Return 0 if so, 
 # 1 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
@@ -1928,7 +2010,7 @@ proc gdb_compile {source dest type options} {
 	      || [istarget hppa*-*-hpux*])} {
 	    # Do not need anything.
 	} elseif { [istarget *-*-openbsd*] } {
-	    lappend new_options "additional_flags=-Wl,-rpath,${outdir}"
+	    lappend new_options "ldflags=-Wl,-rpath,${outdir}"
 	} elseif { [istarget arm*-*-symbianelf*] } {
 	    if { $shlib_load } {
 		lappend new_options "libs=-ldl"
@@ -1937,7 +2019,7 @@ proc gdb_compile {source dest type options} {
 	    if { $shlib_load } {
 		lappend new_options "libs=-ldl"
 	    }
-	    lappend new_options "additional_flags=-Wl,-rpath,\\\$ORIGIN"
+	    lappend new_options "ldflags=-Wl,-rpath,\\\$ORIGIN"
 	}
     }
     set options $new_options
@@ -2605,6 +2687,11 @@ proc gdb_init { args } {
 	set banned_variables_traced 1
     }
 
+    # We set LC_ALL and LANG to C so that we get the same messages as
+    # expected.
+    setenv LC_ALL C
+    setenv LANG C
+
     return [eval default_gdb_init $args];
 }
 
@@ -3170,7 +3257,11 @@ proc build_executable { testname executable {sources ""} {options {debug}} } {
         return -1
     }
 
-    if [get_compiler_info ${binfile}] {
+    set info_options ""
+    if { [lsearch -exact $options "c++"] >= 0 } {
+	set info_options "c++"
+    }
+    if [get_compiler_info ${binfile} ${info_options}] {
         return -1
     }
     return 0

@@ -1,5 +1,5 @@
 /* Target definitions for PowerPC running Darwin (Mac OS X).
-   Copyright (C) 1997, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008
+   Copyright (C) 1997, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2010
    Free Software Foundation, Inc.
    Contributed by Apple Computer Inc.
 
@@ -18,6 +18,9 @@
    You should have received a copy of the GNU General Public License
    along with GCC; see the file COPYING3.  If not see
    <http://www.gnu.org/licenses/>.  */
+
+#undef DARWIN_PPC
+#define DARWIN_PPC 1
 
 #undef  TARGET_VERSION
 #define TARGET_VERSION fprintf (stderr, " (Darwin/PowerPC)");
@@ -50,9 +53,6 @@
 /* Override the default rs6000 definition.  */
 #undef  PTRDIFF_TYPE
 #define PTRDIFF_TYPE (TARGET_64BIT ? "long int" : "int")
-
-/* Translate config/rs6000/darwin.opt to config/darwin.h.  */
-#define TARGET_DYNAMIC_NO_PIC (TARGET_MACHO_DYNAMIC_NO_PIC)
 
 #define TARGET_OS_CPP_BUILTINS()			\
   do							\
@@ -90,14 +90,18 @@ extern int darwin_emit_branch_islands;
 
 
 /* We want -fPIC by default, unless we're using -static to compile for
-   the kernel or some such.  */
+   the kernel or some such.  The "-faltivec" option should have been
+   called "-maltivec" all along.  */
 
 #define CC1_SPEC "\
   %(cc1_cpu) \
   %{g: %{!fno-eliminate-unused-debug-symbols: -feliminate-unused-debug-symbols }} \
   %{static: %{Zdynamic: %e conflicting code gen style switches are used}}\
   %{!mmacosx-version-min=*:-mmacosx-version-min=%(darwin_minversion)} \
-  %{!mkernel:%{!static:%{!mdynamic-no-pic:-fPIC}}}"
+  %{!mkernel:%{!static:%{!mdynamic-no-pic:-fPIC}}} \
+  %{faltivec:-maltivec -include altivec.h} %{fno-altivec:-mno-altivec} \
+  %<faltivec %<fno-altivec " \
+  DARWIN_CC1_SPEC
 
 #define DARWIN_ARCH_SPEC "%{m64:ppc64;:ppc}"
 
@@ -146,18 +150,6 @@ extern int darwin_emit_branch_islands;
 #undef TARGET_ASM_FILE_START
 #define TARGET_ASM_FILE_START rs6000_darwin_file_start
 
-/* The "-faltivec" option should have been called "-maltivec" all
-   along.  -ffix-and-continue and -findirect-data is for compatibility
-   for old compilers.  */
-
-#define SUBTARGET_OPTION_TRANSLATE_TABLE				\
-  { "-ffix-and-continue", "-mfix-and-continue" },			\
-  { "-findirect-data", "-mfix-and-continue" },				\
-  { "-faltivec", "-maltivec -include altivec.h" },			\
-  { "-fno-altivec", "-mno-altivec" },					\
-  { "-Waltivec-long-deprecated",	"-mwarn-altivec-long" },	\
-  { "-Wno-altivec-long-deprecated", "-mno-warn-altivec-long" }
-
 /* Make both r2 and r13 available for allocation.  */
 #define FIXED_R2 0
 #define FIXED_R13 0
@@ -183,11 +175,6 @@ extern int darwin_emit_branch_islands;
 #define STACK_DYNAMIC_OFFSET(FUNDECL)					\
   (RS6000_ALIGN (crtl->outgoing_args_size, 16)		\
    + (STACK_POINTER_OFFSET))
-
-/* These are used by -fbranch-probabilities */
-#define HOT_TEXT_SECTION_NAME "__TEXT,__text,regular,pure_instructions"
-#define UNLIKELY_EXECUTED_TEXT_SECTION_NAME \
-                              "__TEXT,__unlikely,regular,pure_instructions"
 
 /* Define cutoff for using external functions to save floating point.
    Currently on Darwin, always use inline stores.  */
@@ -436,5 +423,10 @@ extern int darwin_emit_branch_islands;
    default, as kernel code doesn't save/restore those registers.  */
 #define OS_MISSING_ALTIVEC (flag_mkernel || flag_apple_kext)
 
-/* Darwin has to rename some of the long double builtins.  */
-#define SUBTARGET_INIT_BUILTINS darwin_patch_builtins ()
+/* PPC Darwin has to rename some of the long double builtins.  */
+#undef  SUBTARGET_INIT_BUILTINS
+#define SUBTARGET_INIT_BUILTINS						\
+do {									\
+  darwin_patch_builtins ();						\
+  darwin_init_cfstring_builtins ((unsigned) (RS6000_BUILTIN_COUNT));	\
+} while(0)

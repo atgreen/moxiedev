@@ -136,8 +136,9 @@ extern void deprecated_set_value_modifiable (struct value *value,
    normally.  */
 
 extern struct type *value_enclosing_type (struct value *);
-extern struct value *value_change_enclosing_type (struct value *val,
-						  struct type *new_type);
+extern void set_value_enclosing_type (struct value *val,
+				      struct type *new_type);
+
 extern int value_pointed_to_offset (struct value *value);
 extern void set_value_pointed_to_offset (struct value *value, int val);
 extern int value_embedded_offset (struct value *value);
@@ -687,7 +688,8 @@ extern int common_val_print (struct value *val,
 			     const struct value_print_options *options,
 			     const struct language_defn *language);
 
-extern int val_print_string (struct type *elttype, CORE_ADDR addr, int len,
+extern int val_print_string (struct type *elttype, const char *encoding,
+			     CORE_ADDR addr, int len,
 			     struct ui_file *stream,
 			     const struct value_print_options *options);
 
@@ -709,6 +711,8 @@ extern void preserve_values (struct objfile *);
 /* From values.c */
 
 extern struct value *value_copy (struct value *);
+
+extern struct value *value_non_lval (struct value *);
 
 extern void preserve_one_value (struct value *, struct objfile *, htab_t);
 

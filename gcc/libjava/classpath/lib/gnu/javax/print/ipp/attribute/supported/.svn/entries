@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/javax/print/ipp/attribute/supported
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-2c32b315f6492a9bcc7fc3bd47bc2bb3
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.758784Z
+d0356de1a12642447db616568f2eea46
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -58,41 +58,7 @@ has-props
 
 
 
-2459
-
-SidesSupported.class
-file
-
-
-
-
-2009-04-24T17:47:45.000000Z
-65161fe036b9b2a10fe6c86717c89831
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1511
+2773
 
 PrinterResolutionSupported.class
 file
@@ -100,11 +66,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-39d6fa27ec63e514f5a35ffa32fe821e
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.759789Z
+123f092e83461172a113a80243ce73e1
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -126,7 +92,41 @@ has-props
 
 
 
-1820
+2139
+
+SidesSupported.class
+file
+
+
+
+
+2010-11-22T19:18:53.759789Z
+45c5142d47d941b4f36aff277b9576af
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1589
 
 MultipleDocumentJobsSupported.class
 file
@@ -134,11 +134,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-2c6ece86107dc46bc8c2c5c1344028b1
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.760799Z
+2649ecdb16d394cad274114507a9c1b4
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -160,7 +160,7 @@ has-props
 
 
 
-1375
+1453
 
 PageRangesSupported.class
 file
@@ -168,11 +168,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-4075d42d4373b9cfdd7fcb4df622d881
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.760799Z
+0fd890b4ca914684b1fdc3fa940bf1c8
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -194,7 +194,7 @@ has-props
 
 
 
-1332
+1410
 
 OrientationRequestedSupported.class
 file
@@ -202,11 +202,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-0f3e221813b570c9b1d08b87bf6df053
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.761789Z
+e98db6cb86df0067f704e00b400a3c4f
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -228,7 +228,7 @@ has-props
 
 
 
-2679
+3001
 
 MediaSupported.class
 file
@@ -236,11 +236,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-796f70b8739368dbc89aa55f1d6c167f
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.761789Z
+ca75f21db9244aa7b013a32608b12655
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -262,7 +262,7 @@ has-props
 
 
 
-1762
+2161
 
 IppVersionsSupported.class
 file
@@ -270,11 +270,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-94b2c147d99a27c58b556b89dddba722
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.762799Z
+3af08e510ebcfb6bfb549c196bcdf4af
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -296,7 +296,7 @@ has-props
 
 
 
-1309
+1387
 
 OperationsSupported.class
 file
@@ -304,11 +304,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-2f7eca250b65b67c2d42d1fd47e66fa6
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.762799Z
+aae263dcff024397962b7ec006c563fd
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -330,7 +330,7 @@ has-props
 
 
 
-2682
+2760
 
 JobSheetsSupported.class
 file
@@ -338,11 +338,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-f9822f349ff1421a729977324a0ad8a5
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.762799Z
+d6578a9e13230a1cfb579a68232947fb
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -364,41 +364,7 @@ has-props
 
 
 
-2290
-
-UriSecuritySupported.class
-file
-
-
-
-
-2009-04-24T17:47:45.000000Z
-b94bc8a3981bca0b57560acd29545740
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1372
+2644
 
 DocumentFormatSupported.class
 file
@@ -406,11 +372,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-80e5a5455bbd430be0291a90ff603d54
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.763793Z
+9b84bc67127a08f12a334ded893580e1
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -432,19 +398,19 @@ has-props
 
 
 
-783
+861
 
-CharsetSupported.class
+UriSecuritySupported.class
 file
 
 
 
 
-2009-04-24T17:47:45.000000Z
-08cf90ff676cbc3554559490129f7eee
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.763793Z
+2441a80cbb15ef503dc24fc11cadc8e7
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -466,7 +432,7 @@ has-props
 
 
 
-706
+1450
 
 GeneratedNaturalLanguageSupported.class
 file
@@ -474,11 +440,45 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-d4330ad1a53f8c48f08c452c4690f3ae
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.764794Z
+1c18c10fbb8aa081c4ed155926121de6
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+862
+
+CharsetSupported.class
+file
+
+
+
+
+2010-11-22T19:18:53.764794Z
+efca6ea4eeb1b431db9bd9284039ac58
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -508,11 +508,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-102eba29d94e443e5d04d0a1e8f08799
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.765794Z
+a7c038c94b6cbd7ced466adae11b70a3
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -534,7 +534,7 @@ has-props
 
 
 
-1363
+1441
 
 MultipleDocumentHandlingSupported.class
 file
@@ -542,11 +542,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-1898579731bdabef25b7b6a0713d4318
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.765794Z
+1fabff4c6cffc8db11ade386749982d8
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -568,7 +568,7 @@ has-props
 
 
 
-2774
+3100
 
 UriAuthenticationSupported.class
 file
@@ -576,11 +576,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-ea29aa4cc16bc30da1e4de2c52779f06
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.766794Z
+f7b5703939a31b826296880c2a16da08
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -602,7 +602,7 @@ has-props
 
 
 
-1598
+1676
 
 FinishingsSupported.class
 file
@@ -610,11 +610,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-cdaa8f8ba6d54a4dae7741fe338e84c3
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.766794Z
+647f6952ee64e829ab9d827ede721ba7
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -636,7 +636,7 @@ has-props
 
 
 
-3892
+4204
 
 CompressionSupported.class
 file
@@ -644,11 +644,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-aaa524b0a47f1762b08a1803986d8972
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.766794Z
+319ac47dbf1d44278863fa82bba169f9
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -670,7 +670,7 @@ has-props
 
 
 
-2442
+2755
 
 PrinterUriSupported.class
 file
@@ -678,11 +678,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-dabc48c82aa13909c72b6ffd77fcef1b
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.767793Z
+c423864b966acddadd27f31bb4f3df5a
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -704,5 +704,5 @@ has-props
 
 
 
-697
+775
 

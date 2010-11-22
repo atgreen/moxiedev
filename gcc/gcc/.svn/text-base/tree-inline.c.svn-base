@@ -242,10 +242,9 @@ remap_ssa_name (tree name, copy_body_data *id)
 	    {
 	      gimple_stmt_iterator gsi = gsi_last_bb (id->entry_bb);
 	      gimple init_stmt;
+	      tree zero = build_zero_cst (TREE_TYPE (new_tree));
 
-	      init_stmt = gimple_build_assign (new_tree,
-		                               fold_convert (TREE_TYPE (new_tree),
-					       		    integer_zero_node));
+	      init_stmt = gimple_build_assign (new_tree, zero);
 	      gsi_insert_after (&gsi, init_stmt, GSI_NEW_STMT);
 	      SSA_NAME_IS_DEFAULT_DEF (new_tree) = 0;
 	    }
@@ -858,6 +857,7 @@ remap_gimple_op_r (tree *tp, int *walk_subtrees, void *data)
 		  *tp = fold_build2 (MEM_REF, TREE_TYPE (*tp),
 				     ptr, TREE_OPERAND (*tp, 1));
 		  TREE_THIS_VOLATILE (*tp) = TREE_THIS_VOLATILE (old);
+		  TREE_THIS_NOTRAP (*tp) = TREE_THIS_NOTRAP (old);
 		}
 	      TREE_NO_WARNING (*tp) = TREE_NO_WARNING (old);
 	      *walk_subtrees = 0;
@@ -1087,6 +1087,8 @@ copy_tree_body_r (tree *tp, int *walk_subtrees, void *data)
 	              *tp = build1 (INDIRECT_REF, type, new_tree);
 		      TREE_THIS_VOLATILE (*tp) = TREE_THIS_VOLATILE (old);
 		      TREE_SIDE_EFFECTS (*tp) = TREE_SIDE_EFFECTS (old);
+		      TREE_READONLY (*tp) = TREE_READONLY (old);
+		      TREE_THIS_NOTRAP (*tp) = TREE_THIS_NOTRAP (old);
 		    }
 		}
 	      *walk_subtrees = 0;
@@ -1558,7 +1560,8 @@ copy_bb (copy_body_data *id, basic_block bb, int frequency_scale,
 	  tree new_rhs;
 	  new_rhs = force_gimple_operand_gsi (&seq_gsi,
 					      gimple_assign_rhs1 (stmt),
-					      true, NULL, false, GSI_NEW_STMT);
+					      true, NULL, false,
+					      GSI_CONTINUE_LINKING);
 	  gimple_assign_set_rhs1 (stmt, new_rhs);
 	  id->regimplify = false;
 	}
@@ -1741,7 +1744,8 @@ copy_bb (copy_body_data *id, basic_block bb, int frequency_scale,
 		     most common reason for missing edges).  */
 		  gcc_assert (dest->needed || !dest->analyzed
 			      || dest->address_taken
-		  	      || !id->src_node->analyzed);
+		  	      || !id->src_node->analyzed
+			      || !id->dst_node->analyzed);
 		  if (id->transform_call_graph_edges == CB_CGE_MOVE_CLONES)
 		    cgraph_create_edge_including_clones
 		      (id->dst_node, dest, orig_stmt, stmt, bb->count,
@@ -1976,12 +1980,13 @@ copy_phis_for_bb (basic_block bb, copy_body_data *id)
   edge_iterator ei;
   gimple phi;
   gimple_stmt_iterator si;
+  edge new_edge;
+  bool inserted = false;
 
   for (si = gsi_start (phi_nodes (bb)); !gsi_end_p (si); gsi_next (&si))
     {
       tree res, new_res;
       gimple new_phi;
-      edge new_edge;
 
       phi = gsi_stmt (si);
       res = PHI_RESULT (phi);
@@ -2021,13 +2026,19 @@ copy_phis_for_bb (basic_block bb, copy_body_data *id)
 		{
 		  gimple_seq stmts = NULL;
 		  new_arg = force_gimple_operand (new_arg, &stmts, true, NULL);
-		  gsi_insert_seq_on_edge_immediate (new_edge, stmts);
+		  gsi_insert_seq_on_edge (new_edge, stmts);
+		  inserted = true;
 		}
 	      add_phi_arg (new_phi, new_arg, new_edge,
 			   gimple_phi_arg_location_from_edge (phi, old_edge));
 	    }
 	}
     }
+
+  /* Commit the delayed edge insertions.  */
+  if (inserted)
+    FOR_EACH_EDGE (new_edge, ei, new_bb->preds)
+      gsi_commit_one_edge_insert (new_edge, NULL);
 }
 
 
@@ -2370,7 +2381,7 @@ copy_debug_stmts (copy_body_data *id)
   if (!id->debug_stmts)
     return;
 
-  for (i = 0; VEC_iterate (gimple, id->debug_stmts, i, stmt); i++)
+  FOR_EACH_VEC_ELT (gimple, id->debug_stmts, i, stmt)
     copy_debug_stmt (stmt, id);
 
   VEC_free (gimple, heap, id->debug_stmts);
@@ -3197,12 +3208,6 @@ tree_inlinable_function_p (tree fn)
       inlinable = false;
     }
 
-  /* Don't auto-inline anything that might not be bound within
-     this unit of translation.  */
-  else if (!DECL_DECLARED_INLINE_P (fn)
-	   && DECL_REPLACEABLE_P (fn))
-    inlinable = false;
-
   else if (!function_attribute_inlinable_p (fn))
     {
       if (do_warning)
@@ -3244,6 +3249,16 @@ estimate_move_cost (tree type)
 
   gcc_assert (!VOID_TYPE_P (type));
 
+  if (TREE_CODE (type) == VECTOR_TYPE)
+    {
+      enum machine_mode inner = TYPE_MODE (TREE_TYPE (type));
+      enum machine_mode simd
+	= targetm.vectorize.preferred_simd_mode (inner);
+      int simd_mode_size = GET_MODE_SIZE (simd);
+      return ((GET_MODE_SIZE (TYPE_MODE (type)) + simd_mode_size - 1)
+	      / simd_mode_size);
+    }
+
   size = int_size_in_bytes (type);
 
   if (size < 0 || size > MOVE_MAX_PIECES * MOVE_RATIO (!optimize_size))
@@ -3278,6 +3293,7 @@ estimate_operator_cost (enum tree_code code, eni_weights *weights,
     case POINTER_PLUS_EXPR:
     case MINUS_EXPR:
     case MULT_EXPR:
+    case FMA_EXPR:
 
     case ADDR_SPACE_CONVERT_EXPR:
     case FIXED_CONVERT_EXPR:
@@ -3478,10 +3494,16 @@ estimate_num_insns (gimple stmt, eni_weights *weights)
 	if (POINTER_TYPE_P (funtype))
 	  funtype = TREE_TYPE (funtype);
 
-	if (is_simple_builtin (decl))
+	/* Do not special case builtins where we see the body.
+	   This just confuse inliner.  */
+	if (!decl || cgraph_node (decl)->analyzed)
+	  cost = weights->call_cost;
+	/* For buitins that are likely expanded to nothing or
+	   inlined do not account operand costs.  */
+	else if (is_simple_builtin (decl))
 	  return 0;
 	else if (is_inexpensive_builtin (decl))
-	  cost = weights->target_builtin_call_cost;
+	  return weights->target_builtin_call_cost;
 	else
 	  cost = weights->call_cost;
 
@@ -3530,11 +3552,13 @@ estimate_num_insns (gimple stmt, eni_weights *weights)
 	break;
       }
 
+    case GIMPLE_RETURN:
+      return weights->return_cost;
+
     case GIMPLE_GOTO:
     case GIMPLE_LABEL:
     case GIMPLE_NOP:
     case GIMPLE_PHI:
-    case GIMPLE_RETURN:
     case GIMPLE_PREDICT:
     case GIMPLE_DEBUG:
       return 0;
@@ -3634,16 +3658,18 @@ init_inline_once (void)
   eni_size_weights.div_mod_cost = 1;
   eni_size_weights.omp_cost = 40;
   eni_size_weights.time_based = false;
+  eni_size_weights.return_cost = 1;
 
   /* Estimating time for call is difficult, since we have no idea what the
      called function does.  In the current uses of eni_time_weights,
      underestimating the cost does less harm than overestimating it, so
      we choose a rather small value here.  */
   eni_time_weights.call_cost = 10;
-  eni_time_weights.target_builtin_call_cost = 10;
+  eni_time_weights.target_builtin_call_cost = 1;
   eni_time_weights.div_mod_cost = 10;
   eni_time_weights.omp_cost = 40;
   eni_time_weights.time_based = true;
+  eni_time_weights.return_cost = 2;
 }
 
 /* Estimate the number of instructions in a gimple_seq. */
@@ -3707,20 +3733,6 @@ add_local_variables (struct function *callee, struct function *caller,
       }
 }
 
-/* Fetch callee declaration from the call graph edge going from NODE and
-   associated with STMR call statement.  Return NULL_TREE if not found.  */
-static tree
-get_indirect_callee_fndecl (struct cgraph_node *node, gimple stmt)
-{
-  struct cgraph_edge *cs;
-
-  cs = cgraph_edge (node, stmt);
-  if (cs && !cs->indirect_unknown_callee)
-    return cs->callee->decl;
-
-  return NULL_TREE;
-}
-
 /* If STMT is a GIMPLE_CALL, replace it with its inline expansion.  */
 
 static bool
@@ -3754,11 +3766,7 @@ expand_call_inline (basic_block bb, gimple stmt, copy_body_data *id)
      If we cannot, then there is no hope of inlining the function.  */
   fn = gimple_call_fndecl (stmt);
   if (!fn)
-    {
-      fn = get_indirect_callee_fndecl (id->dst_node, stmt);
-      if (!fn)
-	goto egress;
-    }
+    goto egress;
 
   /* Turn forward declarations into real ones.  */
   fn = cgraph_node (fn)->decl;
@@ -4022,7 +4030,10 @@ expand_call_inline (basic_block bb, gimple stmt, copy_body_data *id)
     }
 
   if (purge_dead_abnormal_edges)
-    gimple_purge_dead_abnormal_call_edges (return_block);
+    {
+      gimple_purge_dead_eh_edges (return_block);
+      gimple_purge_dead_abnormal_call_edges (return_block);
+    }
 
   /* If the value of the new expression is ignored, that's OK.  We
      don't warn about this for CALL_EXPRs, so we shouldn't warn about
@@ -4178,6 +4189,7 @@ optimize_inline_calls (tree fn)
   basic_block bb;
   int last = n_basic_blocks;
   struct gimplify_ctx gctx;
+  bool inlined_p = false;
 
   /* There is no point in performing inlining if errors have already
      occurred -- and we might crash if we try to inline invalid
@@ -4217,7 +4229,7 @@ optimize_inline_calls (tree fn)
      follow it; we'll trudge through them, processing their CALL_EXPRs
      along the way.  */
   FOR_EACH_BB (bb)
-    gimple_expand_calls_inline (bb, &id);
+    inlined_p |= gimple_expand_calls_inline (bb, &id);
 
   pop_gimplify_context (NULL);
 
@@ -4233,18 +4245,19 @@ optimize_inline_calls (tree fn)
     }
 #endif
 
-  /* Fold the statements before compacting/renumbering the basic blocks.  */
+  /* Fold queued statements.  */
   fold_marked_statements (last, id.statements_to_fold);
   pointer_set_destroy (id.statements_to_fold);
 
   gcc_assert (!id.debug_stmts);
 
-  /* Renumber the (code) basic_blocks consecutively.  */
-  compact_blocks ();
+  /* If we didn't inline into the function there is nothing to do.  */
+  if (!inlined_p)
+    return 0;
+
   /* Renumber the lexical scoping (non-code) blocks consecutively.  */
   number_blocks (fn);
 
-  fold_cond_expr_cond ();
   delete_unreachable_blocks_update_callgraph (&id);
 #ifdef ENABLE_CHECKING
   verify_cgraph_node (id.dst_node);
@@ -4257,6 +4270,7 @@ optimize_inline_calls (tree fn)
   return (TODO_update_ssa
 	  | TODO_cleanup_cfg
 	  | (gimple_in_ssa_p (cfun) ? TODO_remove_unused_locals : 0)
+	  | (gimple_in_ssa_p (cfun) ? TODO_update_address_taken : 0)
 	  | (profile_status != PROFILE_ABSENT ? TODO_rebuild_frequencies : 0));
 }
 
@@ -5133,9 +5147,6 @@ tree_function_versioning (tree old_decl, tree new_decl,
       				     args_to_skip, &vars);
 
   DECL_INITIAL (new_decl) = remap_blocks (DECL_INITIAL (id.src_fn), &id);
-
-  /* Renumber the lexical scoping (non-code) blocks consecutively.  */
-  number_blocks (id.dst_fn);
 
   declare_inline_vars (DECL_INITIAL (new_decl), vars);
 

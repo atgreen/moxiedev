@@ -190,6 +190,11 @@ along with GCC; see the file COPYING3.  If not see
 
 #define VEC_iterate(T,V,I,P)	(VEC_OP(T,base,iterate)(VEC_BASE(V),I,&(P)))
 
+/* Convenience macro for forward iteration.  */
+
+#define FOR_EACH_VEC_ELT(T, V, I, P)		\
+  for (I = 0; VEC_iterate (T, (V), (I), (P)); ++(I))
+
 /* Convenience macro for reverse iteration.  */
 
 #define FOR_EACH_VEC_ELT_REVERSE(T,V,I,P) \
@@ -436,6 +441,12 @@ along with GCC; see the file COPYING3.  If not see
    want to feed it to qsort), use this accessor.  */
 
 #define VEC_address(T,V)		(VEC_OP(T,base,address)(VEC_BASE(V)))
+
+/* Conveniently sort the contents of the vector with qsort.
+   void VEC_qsort (VEC(T) *v, int (*cmp_func)(const void *, const void *))  */
+
+#define VEC_qsort(T,V,CMP) qsort(VEC_address (T,V), VEC_length(T,V),	\
+				 sizeof (T), CMP)
 
 /* Find the first index in the vector not less than the object.
    unsigned VEC_T_lower_bound (VEC(T) *v, const T val,

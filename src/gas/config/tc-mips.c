@@ -786,6 +786,9 @@ static int mips_fix_vr4130;
 /* ...likewise -mfix-24k.  */
 static int mips_fix_24k;
 
+/* ...likewise -mfix-cn63xxp1 */
+static bfd_boolean mips_fix_cn63xxp1;
+
 /* We don't relax branches by default, since this causes us to expand
    `la .l2 - .l1' if there's a branch between .l1 and .l2, because we
    fail to compute the offset before expanding the macro to the most
@@ -1069,9 +1072,6 @@ static void macro_start (void);
 static void macro_end (void);
 static void macro (struct mips_cl_insn * ip);
 static void mips16_macro (struct mips_cl_insn * ip);
-#ifdef LOSING_COMPILER
-static void macro2 (struct mips_cl_insn * ip);
-#endif
 static void mips_ip (char *str, struct mips_cl_insn * ip);
 static void mips16_ip (char *str, struct mips_cl_insn * ip);
 static void mips16_immed
@@ -1187,6 +1187,9 @@ static const pseudo_typeS mips_pseudo_table[] =
   {"weakext", s_mips_weakext, 0},
   {"origin", s_org, 0},
   {"repeat", s_rept, 0},
+
+  /* For MIPS this is non-standard, but we define it for consistency.  */
+  {"sbss", s_change_sec, 'B'},
 
   /* These pseudo-ops are defined in read.c, but must be overridden
      here for one reason or another.  */
@@ -3762,20 +3765,16 @@ macro_build (expressionS *ep, const char *name, const char *fmt, ...)
 
 	case 'i':
 	case 'j':
-	case 'o':
 	  macro_read_relocs (&args, r);
 	  gas_assert (*r == BFD_RELOC_GPREL16
-		  || *r == BFD_RELOC_MIPS_LITERAL
-		  || *r == BFD_RELOC_MIPS_HIGHER
-		  || *r == BFD_RELOC_HI16_S
-		  || *r == BFD_RELOC_LO16
-		  || *r == BFD_RELOC_MIPS_GOT16
-		  || *r == BFD_RELOC_MIPS_CALL16
-		  || *r == BFD_RELOC_MIPS_GOT_DISP
-		  || *r == BFD_RELOC_MIPS_GOT_PAGE
-		  || *r == BFD_RELOC_MIPS_GOT_OFST
-		  || *r == BFD_RELOC_MIPS_GOT_LO16
-		  || *r == BFD_RELOC_MIPS_CALL_LO16);
+		      || *r == BFD_RELOC_MIPS_HIGHER
+		      || *r == BFD_RELOC_HI16_S
+		      || *r == BFD_RELOC_LO16
+		      || *r == BFD_RELOC_MIPS_GOT_OFST);
+	  continue;
+
+	case 'o':
+	  macro_read_relocs (&args, r);
 	  continue;
 
 	case 'u':
@@ -7197,26 +7196,7 @@ macro (struct mips_cl_insn *ip)
 
 	      relax_switch ();
 
-	      /* We just generated two relocs.  When tc_gen_reloc
-		 handles this case, it will skip the first reloc and
-		 handle the second.  The second reloc already has an
-		 extra addend of 4, which we added above.  We must
-		 subtract it out, and then subtract another 4 to make
-		 the first reloc come out right.  The second reloc
-		 will come out right because we are going to add 4 to
-		 offset_expr when we build its instruction below.
-
-		 If we have a symbol, then we don't want to include
-		 the offset, because it will wind up being included
-		 when we generate the reloc.  */
-
-	      if (offset_expr.X_op == O_constant)
-		offset_expr.X_add_number -= 8;
-	      else
-		{
-		  offset_expr.X_add_number = -4;
-		  offset_expr.X_op = O_constant;
-		}
+	      offset_expr.X_add_number -= 4;
 	    }
 	  used_at = 1;
 	  macro_build_lui (&offset_expr, AT);
@@ -7361,15 +7341,21 @@ macro (struct mips_cl_insn *ip)
       break;
 
     case M_LD_OB:
-      s = "lw";
+      s = HAVE_64BIT_GPRS ? "ld" : "lw";
       goto sd_ob;
     case M_SD_OB:
-      s = "sw";
+      s = HAVE_64BIT_GPRS ? "sd" : "sw";
     sd_ob:
-      gas_assert (HAVE_32BIT_ADDRESSES);
-      macro_build (&offset_expr, s, "t,o(b)", treg, BFD_RELOC_LO16, breg);
-      offset_expr.X_add_number += 4;
-      macro_build (&offset_expr, s, "t,o(b)", treg + 1, BFD_RELOC_LO16, breg);
+      macro_build (&offset_expr, s, "t,o(b)", treg,
+		   -1, offset_reloc[0], offset_reloc[1], offset_reloc[2],
+		   breg);
+      if (!HAVE_64BIT_GPRS)
+	{
+	  offset_expr.X_add_number += 4;
+	  macro_build (&offset_expr, s, "t,o(b)", treg + 1,
+		       -1, offset_reloc[0], offset_reloc[1], offset_reloc[2],
+		       breg);
+	}
       break;
 
    /* New code added to support COPZ instructions.
@@ -7417,66 +7403,6 @@ macro (struct mips_cl_insn *ip)
     case M_MOVE:
       move_register (dreg, sreg);
       break;
-
-#ifdef LOSING_COMPILER
-    default:
-      /* Try and see if this is a new itbl instruction.
-         This code builds table entries out of the macros in mip_opcodes.
-         FIXME: For now we just assemble the expression and pass it's
-         value along as a 32-bit immediate.
-         We may want to have the assembler assemble this value,
-         so that we gain the assembler's knowledge of delay slots,
-         symbols, etc.
-         Would it be more efficient to use mask (id) here? */
-      if (itbl_have_entries
-	  && (immed_expr = itbl_assemble (ip->insn_mo->name, "")))
-	{
-	  s = ip->insn_mo->name;
-	  s2 = "cop3";
-	  coproc = ITBL_DECODE_PNUM (immed_expr);;
-	  macro_build (&immed_expr, s, "C");
-	  break;
-	}
-      macro2 (ip);
-      break;
-    }
-  if (!mips_opts.at && used_at)
-    as_bad (_("Macro used $at after \".set noat\""));
-}
-
-static void
-macro2 (struct mips_cl_insn *ip)
-{
-  unsigned int treg, sreg, dreg, breg;
-  unsigned int tempreg;
-  int mask;
-  int used_at;
-  expressionS expr1;
-  const char *s;
-  const char *s2;
-  const char *fmt;
-  int likely = 0;
-  int dbl = 0;
-  int coproc = 0;
-  int lr = 0;
-  int imm = 0;
-  int off;
-  offsetT maxnum;
-  bfd_reloc_code_real_type r;
-
-  treg = (ip->insn_opcode >> 16) & 0x1f;
-  dreg = (ip->insn_opcode >> 11) & 0x1f;
-  sreg = breg = (ip->insn_opcode >> 21) & 0x1f;
-  mask = ip->insn_mo->mask;
-
-  expr1.X_op = O_constant;
-  expr1.X_op_symbol = NULL;
-  expr1.X_add_symbol = NULL;
-  expr1.X_add_number = 1;
-
-  switch (mask)
-    {
-#endif /* LOSING_COMPILER */
 
     case M_DMUL:
       dbl = 1;
@@ -9401,7 +9327,26 @@ do_msbd:
 			 ip->insn_mo->name,
 			 (unsigned long) imm_expr.X_add_number);
 	      if (*args == 'k')
-		INSERT_OPERAND (CACHE, *ip, imm_expr.X_add_number);
+		{
+		  if (mips_fix_cn63xxp1 && strcmp ("pref", insn->name) == 0)
+		    switch (imm_expr.X_add_number)
+		      {
+		      case 5:
+		      case 25:
+		      case 26:
+		      case 27:
+		      case 28:
+		      case 29:
+		      case 30:
+		      case 31:  /* These are ok.  */
+			break;
+
+		      default:  /* The rest must be changed to 28.  */
+			imm_expr.X_add_number = 28;
+			break;
+		      }
+		  INSERT_OPERAND (CACHE, *ip, imm_expr.X_add_number);
+		}
 	      else if (*args == 'h')
 		INSERT_OPERAND (PREFX, *ip, imm_expr.X_add_number);
 	      else
@@ -10014,9 +9959,16 @@ do_msbd:
 	      continue;
 
 	    case 'o':		/* 16 bit offset */
+	      offset_reloc[0] = BFD_RELOC_LO16;
+	      offset_reloc[1] = BFD_RELOC_UNUSED;
+	      offset_reloc[2] = BFD_RELOC_UNUSED;
+
 	      /* Check whether there is only a single bracketed expression
 		 left.  If so, it must be the base register and the
 		 constant must be zero.  */
+	      offset_reloc[0] = BFD_RELOC_LO16;
+	      offset_reloc[1] = BFD_RELOC_UNUSED;
+	      offset_reloc[2] = BFD_RELOC_UNUSED;
 	      if (*s == '(' && strchr (s + 1, '(') == 0)
 		{
 		  offset_expr.X_op = O_constant;
@@ -11285,6 +11237,8 @@ enum options
     OPTION_NO_FIX_VR4120,
     OPTION_FIX_VR4130,
     OPTION_NO_FIX_VR4130,
+    OPTION_FIX_CN63XXP1,
+    OPTION_NO_FIX_CN63XXP1,
     OPTION_TRAP,
     OPTION_BREAK,
     OPTION_EB,
@@ -11379,6 +11333,8 @@ struct option md_longopts[] =
   {"mno-fix-vr4130", no_argument, NULL, OPTION_NO_FIX_VR4130},
   {"mfix-24k",    no_argument, NULL, OPTION_FIX_24K},
   {"mno-fix-24k", no_argument, NULL, OPTION_NO_FIX_24K},
+  {"mfix-cn63xxp1", no_argument, NULL, OPTION_FIX_CN63XXP1},
+  {"mno-fix-cn63xxp1", no_argument, NULL, OPTION_NO_FIX_CN63XXP1},
 
   /* Miscellaneous options.  */
   {"trap", no_argument, NULL, OPTION_TRAP},
@@ -11670,6 +11626,14 @@ md_parse_option (int c, char *arg)
 
     case OPTION_NO_FIX_VR4130:
       mips_fix_vr4130 = 0;
+      break;
+
+    case OPTION_FIX_CN63XXP1:
+      mips_fix_cn63xxp1 = TRUE;
+      break;
+
+    case OPTION_NO_FIX_CN63XXP1:
+      mips_fix_cn63xxp1 = FALSE;
       break;
 
     case OPTION_RELAX_BRANCH:
@@ -12639,6 +12603,17 @@ s_change_sec (int sec)
 	{
 	  bfd_set_section_flags (stdoutput, seg,
 				 SEC_ALLOC | SEC_LOAD | SEC_RELOC | SEC_DATA);
+	  if (strncmp (TARGET_OS, "elf", 3) != 0)
+	    record_alignment (seg, 4);
+	}
+      demand_empty_rest_of_line ();
+      break;
+
+    case 'B':
+      seg = subseg_new (".sbss", (subsegT) get_absolute_expression ());
+      if (IS_ELF)
+	{
+	  bfd_set_section_flags (stdoutput, seg, SEC_ALLOC);
 	  if (strncmp (TARGET_OS, "elf", 3) != 0)
 	    record_alignment (seg, 4);
 	}
@@ -15383,6 +15358,7 @@ static const struct mips_cpu_info mips_cpu_info_table[] =
   { "5kf",            0,			ISA_MIPS64,	CPU_MIPS64 },
   { "20kc",           MIPS_CPU_ASE_MIPS3D,	ISA_MIPS64,	CPU_MIPS64 },
   { "25kf",           MIPS_CPU_ASE_MIPS3D,	ISA_MIPS64,     CPU_MIPS64 },
+  { "loongson3a",     0,			ISA_MIPS64,	CPU_LOONGSON_3A },
 
   /* Broadcom SB-1 CPU core */
   { "sb1",            MIPS_CPU_ASE_MIPS3D | MIPS_CPU_ASE_MDMX,
@@ -15623,6 +15599,7 @@ MIPS options:\n\
 -mfix-vr4120		work around certain VR4120 errata\n\
 -mfix-vr4130		work around VR4130 mflo/mfhi errata\n\
 -mfix-24k		insert a nop after ERET and DERET instructions\n\
+-mfix-cn63xxp1		work around CN63XXP1 PREF errata\n\
 -mgp32			use 32-bit GPRs, regardless of the chosen ISA\n\
 -mfp32			use 32-bit FPRs, regardless of the chosen ISA\n\
 -msym32			assume all symbols have 32-bit values\n\

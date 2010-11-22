@@ -20,12 +20,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #define DV_SOCKSER_H
 
 /* bits in result of dev_sockser_status */
-#define DV_SOCKSER_INPUT_EMPTY  1
-#define DV_SOCKSER_OUTPUT_EMPTY 2
+#define DV_SOCKSER_INPUT_EMPTY  0x1
+#define DV_SOCKSER_OUTPUT_EMPTY 0x2
+#define DV_SOCKSER_DISCONNECTED 0x4
 
 /* FIXME: later add a device ptr arg */
 extern int dv_sockser_status (SIM_DESC);
 int dv_sockser_write (SIM_DESC, unsigned char);
+int dv_sockser_write_buffer (SIM_DESC, const unsigned char *, unsigned);
 int dv_sockser_read (SIM_DESC);
 
 #endif /* DV_SOCKSER_H */

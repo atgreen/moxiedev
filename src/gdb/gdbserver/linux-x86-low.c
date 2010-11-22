@@ -461,30 +461,55 @@ x86_linux_dr_set (ptid_t ptid, int regnum, unsigned long value)
     error ("Couldn't write debug register");
 }
 
+static int
+update_debug_registers_callback (struct inferior_list_entry *entry,
+				 void *pid_p)
+{
+  struct lwp_info *lwp = (struct lwp_info *) entry;
+  int pid = *(int *) pid_p;
+
+  /* Only update the threads of this process.  */
+  if (pid_of (lwp) == pid)
+    {
+      /* The actual update is done later just before resuming the lwp,
+	 we just mark that the registers need updating.  */
+      lwp->arch_private->debug_registers_changed = 1;
+
+      /* If the lwp isn't stopped, force it to momentarily pause, so
+	 we can update its debug registers.  */
+      if (!lwp->stopped)
+	linux_stop_lwp (lwp);
+    }
+
+  return 0;
+}
+
 /* Update the inferior's debug register REGNUM from STATE.  */
 
 void
 i386_dr_low_set_addr (const struct i386_debug_reg_state *state, int regnum)
 {
-  struct inferior_list_entry *lp;
-  CORE_ADDR addr;
-  /* Only need to update the threads of this process.  */
+  /* Only update the threads of this process.  */
   int pid = pid_of (get_thread_lwp (current_inferior));
 
   if (! (regnum >= 0 && regnum <= DR_LASTADDR - DR_FIRSTADDR))
     fatal ("Invalid debug register %d", regnum);
 
-  addr = state->dr_mirror[regnum];
+  find_inferior (&all_lwps, update_debug_registers_callback, &pid);
+}
 
-  for (lp = all_lwps.head; lp; lp = lp->next)
-    {
-      struct lwp_info *lwp = (struct lwp_info *) lp;
+/* Return the inferior's debug register REGNUM.  */
 
-      /* The actual update is done later, we just mark that the register
-	 needs updating.  */
-      if (pid_of (lwp) == pid)
-	lwp->arch_private->debug_registers_changed = 1;
-    }
+CORE_ADDR
+i386_dr_low_get_addr (int regnum)
+{
+  struct lwp_info *lwp = get_thread_lwp (current_inferior);
+  ptid_t ptid = ptid_of (lwp);
+
+  /* DR6 and DR7 are retrieved with some other way.  */
+  gdb_assert (DR_FIRSTADDR <= regnum && regnum < DR_LASTADDR);
+
+  return x86_linux_dr_get (ptid, regnum);
 }
 
 /* Update the inferior's DR7 debug control register from STATE.  */
@@ -492,34 +517,36 @@ i386_dr_low_set_addr (const struct i386_debug_reg_state *state, int regnum)
 void
 i386_dr_low_set_control (const struct i386_debug_reg_state *state)
 {
-  struct inferior_list_entry *lp;
-  /* Only need to update the threads of this process.  */
+  /* Only update the threads of this process.  */
   int pid = pid_of (get_thread_lwp (current_inferior));
 
-  for (lp = all_lwps.head; lp; lp = lp->next)
-    {
-      struct lwp_info *lwp = (struct lwp_info *) lp;
+  find_inferior (&all_lwps, update_debug_registers_callback, &pid);
+}
 
-      /* The actual update is done later, we just mark that the register
-	 needs updating.  */
-      if (pid_of (lwp) == pid)
-	lwp->arch_private->debug_registers_changed = 1;
-    }
+/* Return the inferior's DR7 debug control register.  */
+
+unsigned
+i386_dr_low_get_control (void)
+{
+  struct lwp_info *lwp = get_thread_lwp (current_inferior);
+  ptid_t ptid = ptid_of (lwp);
+
+  return x86_linux_dr_get (ptid, DR_CONTROL);
 }
 
 /* Get the value of the DR6 debug status register from the inferior
    and record it in STATE.  */
 
-void
-i386_dr_low_get_status (struct i386_debug_reg_state *state)
+unsigned
+i386_dr_low_get_status (void)
 {
   struct lwp_info *lwp = get_thread_lwp (current_inferior);
   ptid_t ptid = ptid_of (lwp);
 
-  state->dr_status_mirror = x86_linux_dr_get (ptid, DR_STATUS);
+  return x86_linux_dr_get (ptid, DR_STATUS);
 }
 
-/* Watchpoint support.  */
+/* Breakpoint/Watchpoint support.  */
 
 static int
 x86_insert_point (char type, CORE_ADDR addr, int len)
@@ -528,7 +555,16 @@ x86_insert_point (char type, CORE_ADDR addr, int len)
   switch (type)
     {
     case '0':
-      return set_gdb_breakpoint_at (addr);
+      {
+	int ret;
+
+	ret = prepare_to_access_memory ();
+	if (ret)
+	  return -1;
+	ret = set_gdb_breakpoint_at (addr);
+	done_accessing_memory ();
+	return ret;
+      }
     case '2':
     case '3':
     case '4':
@@ -547,7 +583,16 @@ x86_remove_point (char type, CORE_ADDR addr, int len)
   switch (type)
     {
     case '0':
-      return delete_gdb_breakpoint_at (addr);
+      {
+	int ret;
+
+	ret = prepare_to_access_memory ();
+	if (ret)
+	  return -1;
+	ret = delete_gdb_breakpoint_at (addr);
+	done_accessing_memory ();
+	return ret;
+      }
     case '2':
     case '3':
     case '4':
@@ -747,8 +792,10 @@ compat_siginfo_from_siginfo (compat_siginfo_t *to, siginfo_t *from)
   to->si_errno = from->si_errno;
   to->si_code = from->si_code;
 
-  if (to->si_code < 0)
+  if (to->si_code == SI_TIMER)
     {
+      to->cpt_si_timerid = from->si_timerid;
+      to->cpt_si_overrun = from->si_overrun;
       to->cpt_si_ptr = (intptr_t) from->si_ptr;
     }
   else if (to->si_code == SI_USER)
@@ -756,10 +803,10 @@ compat_siginfo_from_siginfo (compat_siginfo_t *to, siginfo_t *from)
       to->cpt_si_pid = from->si_pid;
       to->cpt_si_uid = from->si_uid;
     }
-  else if (to->si_code == SI_TIMER)
+  else if (to->si_code < 0)
     {
-      to->cpt_si_timerid = from->si_timerid;
-      to->cpt_si_overrun = from->si_overrun;
+      to->cpt_si_pid = from->si_pid;
+      to->cpt_si_uid = from->si_uid;
       to->cpt_si_ptr = (intptr_t) from->si_ptr;
     }
   else
@@ -801,8 +848,10 @@ siginfo_from_compat_siginfo (siginfo_t *to, compat_siginfo_t *from)
   to->si_errno = from->si_errno;
   to->si_code = from->si_code;
 
-  if (to->si_code < 0)
+  if (to->si_code == SI_TIMER)
     {
+      to->si_timerid = from->cpt_si_timerid;
+      to->si_overrun = from->cpt_si_overrun;
       to->si_ptr = (void *) (intptr_t) from->cpt_si_ptr;
     }
   else if (to->si_code == SI_USER)
@@ -810,10 +859,10 @@ siginfo_from_compat_siginfo (siginfo_t *to, compat_siginfo_t *from)
       to->si_pid = from->cpt_si_pid;
       to->si_uid = from->cpt_si_uid;
     }
-  else if (to->si_code == SI_TIMER)
+  else if (to->si_code < 0)
     {
-      to->si_timerid = from->cpt_si_timerid;
-      to->si_overrun = from->cpt_si_overrun;
+      to->si_pid = from->cpt_si_pid;
+      to->si_uid = from->cpt_si_uid;
       to->si_ptr = (void *) (intptr_t) from->cpt_si_ptr;
     }
   else

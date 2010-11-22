@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/forward_list/capacity
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-06-18T18:07:45.307398Z
-161009
+2010-10-17T14:49:11.086756Z
+165587
 paolo
 
 
@@ -66,10 +66,10 @@ file
 
 
 
-2010-07-08T15:19:33.973108Z
-a6d0d52d97c94a5dfc8c3eccd14ae0eb
-2010-03-15T17:02:16.668718Z
-157462
+2010-11-22T19:18:29.682039Z
+ea476ab27c8ea1db3c2f24306c6b3a72
+2010-10-17T14:49:11.086756Z
+165587
 paolo
 
 
@@ -92,5 +92,5 @@ paolo
 
 
 
-1328
+1430
 

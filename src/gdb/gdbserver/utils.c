@@ -24,9 +24,6 @@
 #if HAVE_ERRNO_H
 #include <errno.h>
 #endif
-#if HAVE_MALLOC_H
-#include <malloc.h>
-#endif
 
 #ifdef IN_PROCESS_AGENT
 #  define PREFIX "ipa: "
@@ -244,7 +241,7 @@ get_cell (void)
 /* Stdarg wrapper around vsnprintf.
    SIZE is the size of the buffer pointed to by STR.  */
 
-static int
+int
 xsnprintf (char *str, size_t size, const char *format, ...)
 {
   va_list args;
@@ -255,17 +252,6 @@ xsnprintf (char *str, size_t size, const char *format, ...)
   va_end (args);
 
   return ret;
-}
-
-/* Convert a CORE_ADDR into a HEX string, like %lx.
-   The result is stored in a circular static buffer, NUMCELLS deep.  */
-
-char *
-paddress (CORE_ADDR addr)
-{
-  char *str = get_cell ();
-  xsnprintf (str, CELLSIZE, "%lx", (long) addr);
-  return str;
 }
 
 static char *
@@ -371,4 +357,25 @@ phex_nz (ULONGEST l, int sizeof_l)
     }
 
   return str;
+}
+
+/* Convert a CORE_ADDR into a HEX string, like %lx.
+   The result is stored in a circular static buffer, NUMCELLS deep.  */
+
+char *
+paddress (CORE_ADDR addr)
+{
+  return phex_nz (addr, sizeof (CORE_ADDR));
+}
+
+/* Convert a file descriptor into a printable string.  */
+
+char *
+pfildes (gdb_fildes_t fd)
+{
+#if USE_WIN32API
+  return phex_nz (fd, sizeof (gdb_fildes_t));
+#else
+  return plongest (fd);
+#endif
 }

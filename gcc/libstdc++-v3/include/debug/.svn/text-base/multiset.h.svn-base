@@ -79,7 +79,9 @@ namespace __debug
         multiset(_InputIterator __first, _InputIterator __last,
 		 const _Compare& __comp = _Compare(),
 		 const _Allocator& __a = _Allocator())
-	: _Base(__gnu_debug::__check_valid_range(__first, __last), __last,
+	: _Base(__gnu_debug::__base(__gnu_debug::__check_valid_range(__first,
+								     __last)),
+		__gnu_debug::__base(__last),
 		__comp, __a) { }
 
       multiset(const multiset& __x)
@@ -90,7 +92,7 @@ namespace __debug
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       multiset(multiset&& __x)
-      : _Base(std::forward<multiset>(__x)), _Safe_base()
+      : _Base(std::move(__x)), _Safe_base()
       { this->_M_swap(__x); }
 
       multiset(initializer_list<value_type> __l,
@@ -192,20 +194,37 @@ namespace __debug
       insert(const value_type& __x)
       { return iterator(_Base::insert(__x), this); }
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
       iterator
-      insert(iterator __position, const value_type& __x)
+      insert(value_type&& __x)
+      { return iterator(_Base::insert(std::move(__x)), this); }
+#endif
+
+      iterator
+      insert(const_iterator __position, const value_type& __x)
       {
 	__glibcxx_check_insert(__position);
 	return iterator(_Base::insert(__position.base(), __x), this);
       }
 
-      template<typename _InputIterator>
-      void
-      insert(_InputIterator __first, _InputIterator __last)
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+      iterator
+      insert(const_iterator __position, value_type&& __x)
       {
-	__glibcxx_check_valid_range(__first, __last);
-	_Base::insert(__first, __last);
+	__glibcxx_check_insert(__position);
+	return iterator(_Base::insert(__position.base(), std::move(__x)),
+			this);
       }
+#endif
+
+      template<typename _InputIterator>
+	void
+	insert(_InputIterator __first, _InputIterator __last)
+	{
+	  __glibcxx_check_valid_range(__first, __last);
+	  _Base::insert(__gnu_debug::__base(__first),
+			__gnu_debug::__base(__last));
+	}
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       void
@@ -215,7 +234,7 @@ namespace __debug
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       iterator
-      erase(iterator __position)
+      erase(const_iterator __position)
       {
 	__glibcxx_check_erase(__position);
 	__position._M_invalidate();
@@ -248,14 +267,14 @@ namespace __debug
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       iterator
-      erase(iterator __first, iterator __last)
+      erase(const_iterator __first, const_iterator __last)
       {
 	// _GLIBCXX_RESOLVE_LIB_DEFECTS
 	// 151. can't currently clear() empty container
 	__glibcxx_check_erase_range(__first, __last);
 	while (__first != __last)
 	  this->erase(__first++);
-	return __last;
+	return __last; // iterator == const_iterator
       }
 #else
       void

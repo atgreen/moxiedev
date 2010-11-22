@@ -1,3 +1,424 @@
+2010-11-21  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/12235
+	* elfcomm.c: New.
+	* elfcomm.h: Likewise.
+
+	* Makefile.am (HFILES): Add elfcomm.h.
+	(CFILES): Add elfcomm.c.
+	(ELFLIBS): New.
+	(readelf_SOURCES): Add $(ELFLIBS).
+	(elfedit_SOURCES): Likewise.
+	(objdump_SOURCES): Likewise.
+	* Makefile.in: Regenerated.
+
+	* dwarf.c: Include "elfcomm.h".
+	(byte_get): Removed.
+	(byte_get_little_endian): Likewise.
+	(byte_get_big_endian): Likewise.
+	(byte_get_signed): Likewise.
+	(error): Likewise.
+	(warn): Likewise.
+
+	* dwarf.h (dwarf_vma): Defined with HOST_WIDEST_INT.
+	(dwarf_size_type): Likewise.
+	(byte_get): Removed.
+	(byte_get_signed): Likewise.
+	(byte_get_little_endian): Likewise.
+	(byte_get_big_endian): Likewise.
+	(error): Likewise.
+	(warn): Likewise.
+
+	* elfedit.c: Include "elfcomm.h".  Don't include "aout/ar.h".
+	Call error () instead of non_fatal ().
+	(streq): Removed.
+	(strneq): Likewise.
+	(const_strneq): Likewise.
+	(non_fatal): Likewise.
+	(BYTE_GET): Likewise.
+	(BYTE_PUT): Likewise.
+	(byte_get): Likewise.
+	(byte_put): Likewise.
+	(byte_get_little_endian): Likewise.
+	(byte_get_big_endian): Likewise.
+	(byte_put_little_endian): Likewise.
+	(byte_put_big_endian): Likewise.
+	(adjust_relative_path): Likewise.
+	(archive_info): Likewise.
+	(setup_archive): Likewise.
+	(release_archive): Likewise.
+	(setup_nested_archive): Likewise.
+	(get_archive_member_name): Likewise.
+	(get_archive_member_name_at): Likewise.
+	(make_qualified_name): Likewise.
+
+	* objdump.c: Include "elfcomm.h".
+
+	* readelf.c: Include "elfcomm.h".  Don't include "aout/ar.h".
+	(BYTE_GET): Removed.
+	(BYTE_GET_SIGNED): Removed.
+	(streq): Likewise.
+	(strneq): Likewise.
+	(const_strneq): Likewise.
+	(byte_put): Likewise.
+	(byte_put_little_endian): Likewise.
+	(byte_put_big_endian): Likewise.
+	(adjust_relative_path): Likewise.
+	(archive_info): Likewise.
+	(setup_archive): Likewise.
+	(release_archive): Likewise.
+	(setup_nested_archive): Likewise.
+	(get_archive_member_name): Likewise.
+	(get_archive_member_name_at): Likewise.
+	(make_qualified_name): Likewise.
+
+2010-11-18  Alan Modra  <amodra@gmail.com>
+
+	PR binutils/11742
+	* readelf.c (get_archive_member_name): Formatting.  Properly
+	handle full size ar_name.
+
+2010-11-17  Alan Modra  <amodra@gmail.com>
+
+	* ar.c (print_contents): Don't internationalize strings without words.
+	* dwarf.c (process_extended_line_op): Likewise.
+	(process_debug_info): Likwise.
+	(display_debug_lines_raw): Likewise.
+	(display_debug_lines_decoded): Likewise.
+	(display_debug_abbrev): Likewise.
+	* readelf.c (process_file_header): Likewise.
+	(GET_OP): Likewise.
+	(decode_arm_unwind): Likewise.
+	(process_mips_specific): Likewise.
+	* resrc.c (run_cmd): Likewise.
+	(rcparse_warning): Likewise.
+	* objdump.c (dump_headers): Don't print "Pg".
+
+2010-11-16  Jorma Karvonen  <karvonen.jorma@gmail.com>
+
+	* windmc.c: ,%s' -> `%s' in a number of strings.
+
+2010-11-16  Jie Zhang  <jie.zhang@analog.com>
+
+	* readelf.c (get_machine_flags): Deal with Blackfin specific flags.
+
+2010-11-11  Mingming Sun  <mingm.sun@gmail.com>
+
+	* readelf.c (get_machine_flags): Add loongson-3a.
+
+2010-11-10  Nick Clifton  <nickc@redhat.com>
+
+	* po/ja.po: Updated Japanese translation.
+	* po/fr.po: Updated French translation.
+
+2010-11-08  Nick Clifton  <nickc@redhat.com>
+
+	* po/ja.po: Updated Japanese translation.
+
+2010-11-08  Alan Modra  <amodra@gmail.com>
+
+	* objcopy.c (copy_main): No need to rename sections when compressing
+	or decompressing.
+
+2010-11-05  Alan Modra  <amodra@gmail.com>
+
+	* bin2c.c: Remove internationalization and version report.
+	* Makefile.am: Update bin2c rule.
+	* Makefile.in: Regenerate.
+
+2010-11-05  Tristan Gingold  <gingold@adacore.com>
+
+	* po/binutils.pot: Regenerate
+
+2010-11-05  Tristan Gingold  <gingold@adacore.com>
+
+	* NEWS: Add marker for 2.21.
+
+2010-11-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* objdump.c (dump_bfd_header): Don't display
+	BFD_FLAGS_FOR_BFD_USE_MASK bits in abfd->flags.
+
+2010-11-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* readelf.c (display_tic6x_attribute): Handle more attributes.
+
+2010-10-30  Kai Tietz  <kai.tietz@onevision.com>
+
+	* dlltool.c (scan_drectve_symbols): Allow quoted strings for -export
+	directives.
+
+2010-10-29  Joseph Myers  <joseph@codesourcery.com>
+
+	* readelf.c (display_tic6x_attribute): Use Tag_ABI_compatibility
+	not hardcoded 32.  Display name of this attribute.
+
+2010-10-29  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* addr2line.c (process_file): Set BFD_DECOMPRESS.
+
+	* objcopy.c (do_debug_sections): New.
+	(OPTION_COMPRESS_DEBUG_SECTIONS): New.
+	(OPTION_DECOMPRESS_DEBUG_SECTIONS): Likewise.
+	(copy_options): Add OPTION_COMPRESS_DEBUG_SECTIONS and
+	OPTION_DECOMPRESS_DEBUG_SECTIONS.
+	(copy_usage): Add --compress-debug-sections and
+	--decompress-debug-sections.
+	(copy_file): Set BFD_COMPRESS or BFD_DECOMPRESS.
+	(copy_section): Replace bfd_get_section_contents with
+	bfd_get_full_section_contents.
+	(copy_main): Handle OPTION_COMPRESS_DEBUG_SECTIONS and
+	OPTION_DECOMPRESS_DEBUG_SECTIONS.  Check do_debug_sections to
+	rename DWARF debug sections.
+
+	* objdump.c (load_specific_debug_section): Replace
+	bfd_get_section_contents with bfd_get_full_section_contents.
+	Remove bfd_uncompress_section_contents.
+	(dump_section): Replace bfd_get_section_contents with
+	bfd_get_full_section_contents.
+	(display_file): Set BFD_DECOMPRESS if needed.
+
+	* readelf.c (uncompress_section_contents): Set buffer to NULL
+	to indiate decompression failure.
+	(load_specific_debug_section): Always call
+	uncompress_section_contents.
+
+	* doc/binutils.texi: Document --compress-debug-sections and
+	--decompress-debug-sections.
+
+2010-10-29  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/12058
+	* ar.c (usage): Revert previous change.  Describe how 's' can be
+	used as a command letter.
+	* doc/binutils.texi (ar cmdline): Describe how 's' can be used as
+	a command letter.
+
+2010-10-29  Bernd Schmidt  <bernds@codesourcery.com>
+            Joseph Myers  <joseph@codesourcery.com>
+
+	* readelf.c (display_tic6x_attribute): Handle Tag_ABI_DSBT.
+
+2010-10-28  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/12058
+	* ar.c (usage): Remove spurious 's' from list of accepted command
+	letters.
+
+2010-10-28  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (is_32bit_abs_reloc): Support i960 and microblaze.
+	(is_32bit_pcrel_reloc): Support microblaze.
+
+2010-10-26  Nick Clifton  <nickc@redhat.com>
+
+	* po/ja.po: Updated Japanese transaltion.
+
+2010-10-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* readelf.c (display_tic6x_attribute): Update for attribute
+	renaming.
+
+2010-10-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* dwarf.c (byte_get_signed): Make it extern.
+
+	* dwarf.h (byte_get_signed): New.
+
+	* readelf.c (BYTE_GET_SIGNED): New.
+	(slurp_rela_relocs): Use BYTE_GET_SIGNED on r_addend.
+	(dump_relocations): Properly dump r_addend.
+
+2010-10-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* nm.c (value_format_64bit): Define appropriately for __MSVCRT__.
+	(set_print_radix): Update for __MSVCRT__ definition of
+	value_format_64bit.
+
+2010-10-08  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	Fix build with -DDEBUG=7
+	* nlmheader.y (DEBUG token): Rename to DEBUG_K.
+
+2010-10-06  Alan Modra  <amodra@gmail.com>
+
+	* bucomm.c (bfd_nonfatal, bfd_nonfatal_message): Don't clobber errno.
+
+2010-10-05  Alan Modra  <amodra@gmail.com>
+
+	* bucomm.c (bfd_nonfatal): Flush stdout before output to stderr.
+	(bfd_nonfatal_message, report, list_matching_formats): Likewise.
+	(list_supported_targets): Tidy.
+	* objdump.c (free_only_list): Formatting.
+	(slurp_dynamic_symtab): Non-zero exit status for "not a dynamic
+	object".
+	(update_source_path): Delete redundant check for NULL filename.
+	(disassemble_bytes): Error if disassemble_fn returns a value
+	that won't increment address.
+	(disassemble_data): Don't capitalize error message.
+	(read_section_stabs): Likewise.
+	(main): Return non-zero exit status on bad options.
+
+2010-10-03  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/12088
+	* nm.c (plugin_target): New.
+	(main): Set plugin_target to "plugin" for --plugin.
+	(display_file): Pass plugin_target to bfd_openr if target
+	isn't set.
+
+2010-09-27  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure: Regenerate.
+
+2010-09-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* MAINTAINERS: Add self as ADI Blackfin maintainer.
+
+2010-09-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* emul_aix.c (ar_emul_aix_append): Add a target argument
+	and ignore it if it is set.
+	(ar_emul_aix5_append): Likewise.
+	(ar_emul_aix_replace): Likewise.
+	(ar_emul_aix5_replace): Likewise.
+
+2010-09-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ar.c (plugin_target): New.
+	(main): Set plugin_target to "plugin" for --plugin.
+	(open_inarch): Initialize target to plugin_target.
+	(replace_members): Pass plugin_target to ar_emul_replace
+	and ar_emul_append.
+
+	* binemul.h (ar_emul_append): Add a target argument.
+	(ar_emul_default_append): Likewise.
+	(ar_emul_replace): Likewise.
+	(ar_emul_default_replace): Likewise.
+	(bin_emulation_xfer_struct): Add a target argument to
+	ar_append and ar_replace.
+
+	* binemul.c (ar_emul_append): Updated.  Pass target to bfd_openr.
+	(do_ar_emul_default_append): Likewise.
+	(ar_emul_default_append): Likewise.
+	(ar_emul_replace): Likewise.
+	(ar_emul_default_replace): Likewise.
+
+2010-09-10  Ben Gardiner  <bengardiner@nanometrics.ca>
+
+	* objcopy.c: Add --interleave-width option to allow interleaving
+	of more than one byte at a time.
+	(copy_width): New variable.
+	(copy_options): Add --interleave-width.
+	(copy_section): When interleaving copy in units of copy_width
+	bytes.
+	(copy_main): Parse the new option.
+	* doc/binutils: Document the new option.
+	* NEWS: Mention the new feature.
+
+2010-09-09  Jakub Jelinek  <jakub@redhat.com>
+
+	* dwarf.c (decode_location_expression): Fix data adjustment
+	for DW_OP_GNU_implicit_pointer in v3+.
+
+2010-09-09  Tristan Gingold  <gingold@adacore.com>
+
+	* NEWS: Add entry to NEWS for hppa/som.
+
+2010-09-09  Jakub Jelinek  <jakub@redhat.com>
+
+	* dwarf.h (debug_info): Add offset_info and dwarf_version fields.
+	* dwarf.c (decode_location_expression): Add offset_size and
+	dwarf_version arguments.  Prefix DIE offset with 0x for
+	DW_OP_call{2,4,_ref}.  Fix up DW_OP_call_ref operand size,
+	complain if in frame info section.  Handle
+	DW_OP_GNU_implicit_pointer.
+	(read_and_display_attr_value, display_debug_loc,
+	display_debug_frames): Adjust decode_location_expression callers.
+	(process_debug_info): Save offset_size and dwarf_version values
+	into debug_information array.
+
+2010-09-07  Nick Clifton  <nickc@redhat.com>
+
+	* readelf.c (process_section_headers): Mention meaning of 'l'
+	section flag for x86-64 targets.
+
+2010-09-03  Jan Kratochvil  <jan.kratochvil@redhat.com>
+	    Jakub Jelinek  <jakub@redhat.com>
+
+	* dwarf.c (regname): New declaration.
+	(decode_location_expression): Print for registers also regname output.
+
+2010-09-02  Richard Henderson  <rth@redhat.com>
+
+	* dwarf.c (init_dwarf_regnames_i386, init_dwarf_regnames_x86_64): New.
+	(init_dwarf_regnames): Use them.
+	* dwarf.h: Declare them.
+	* objdump.c (dump_dwarf): Use bfd_get_arch + bfd_get_mach to set up
+	the regnames, rather than using elf_machine_code.
+
+2010-09-02  Richard Henderson  <rth@redhat.com>
+
+	* objdump.c (dump_dwarf): Use bfd_arch_bits_per_address.
+
+2010-08-23  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elfedit.c (input_elf_osabi): New.
+	(output_elf_osbi): Likewise.
+	(osabis): Likewise.
+	(elf_osabi): Likewise.
+	(update_elf_header): Support updating ELF OSABI.
+	(make_qualified_name): Break long line.
+	(command_line_switch): Add OPTION_INPUT_OSABI and
+	OPTION_OUTPUT_OSABI.
+	(options): Likewise.
+	(usage): Add --input-osabi and --output-osabi.
+	(main): Handle OPTION_INPUT_OSABI and OPTION_OUTPUT_OSABI.
+
+	* doc/binutils.texi: Document --input-osabi and --output-osabi
+	for elfedit.
+
+2010-08-23  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* readelf.c (display_mips_gnu_attribute): Replace GCC options
+	with a textual description of a MIPS32r2 64-bit FPU.
+
+2010-08-13  Dan Rosenberg  <dan.j.rosenberg@gmail.com>
+
+	PR binutils/11889
+	* readelf.c (get_32bit_elf_symbols): Check for a corrupt
+	sh_entsize.
+	(get_64bit_elf_symbols): Likewise.
+	(process_symbol_table): Likewise.
+	(process_section_groups): Check for corrupt headers.
+	(process_version_sections): Check for corrupt indicies.
+	(process_corefile_note_segment): Likewise.
+
+2010-08-13  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* readelf.c (get_machine_flags): Detect CF ISA C and EMAC_B
+	variants.
+
+2010-08-13  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf.c (process_debug_info): Don't subtract section address
+	when calculating location of cu abbrev within section.
+
+2010-08-12  Michael Haubenwallner  <haubi@gentoo.org>
+
+	PR binutils/11742
+	* readelf.c (get_archive_member_name): Do not read beyond the end
+	of the ar_name field.
+
+2010-08-03  Tristan Gingold  <gingold@adacore.com>
+
+	* dwarf.c (display_debug_lines): Mark file argument unused.
+	Do not try to load .debug_info section.
+
+2010-08-02  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (apply_relocations): D30V is really REL.
+
 2010-07-23  Naveen.H.S  <naveen.S@kpitcummins.com>
 	    Ina Pandit  <ina.pandit@kpitcummins.com>
 
@@ -42,7 +463,7 @@
 
 2010-06-29  Alan Modra  <amodra@gmail.com>
 
-   	PR binutils/3166
+	PR binutils/3166
 	* objcopy.c (is_strip_section): Revert 2006-09-05.
 	(setup_section): Make SHT_GROUP section nobits.
 
@@ -196,6 +617,9 @@
 
 	* readelf.c: Add _() macros to constant strings that are
 	translatable.
+
+	* readelf.c (display_mips_gnu_attribute): Replace GCC options
+	with a textual description of single and double precision float.
 
 2010-04-15  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
 
@@ -408,7 +832,7 @@
 2010-01-19  Daisuke Hatayama  <d.hatayama@jp.fujitsu.com>
 	    Alan Modra <amodra@gmail.com>
 
-        * readelf.c (process_file_header): Handle e_phnum extension.
+	* readelf.c (process_file_header): Handle e_phnum extension.
 
 2010-01-14  Tristan Gingold  <gingold@adacore.com>
 

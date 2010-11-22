@@ -32,16 +32,30 @@
 #include "command.h"
 #include "readline/readline.h"
 #include "gdb_regex.h"
+#include "dictionary.h"
 
 #ifndef DEV_TTY
 #define DEV_TTY "/dev/tty"
 #endif
 
+struct psymbol_bcache
+{
+  struct bcache *bcache;
+};
+
 /* A fast way to get from a psymtab to its symtab (after the first time).  */
 #define PSYMTAB_TO_SYMTAB(pst)  \
     ((pst) -> symtab != NULL ? (pst) -> symtab : psymtab_to_symtab (pst))
 
-/* Lookup a partial symbol.  */
+static struct partial_symbol *match_partial_symbol (struct partial_symtab *,
+						    int,
+						    const char *, domain_enum,
+						    int (*) (const char *,
+							     const char *),
+						    int (*) (const char *,
+							     const char *));
+
+
 static struct partial_symbol *lookup_partial_symbol (struct partial_symtab *,
 						     const char *, int,
 						     domain_enum);
@@ -421,8 +435,95 @@ lookup_symbol_aux_psymtabs (struct objfile *objfile,
   return NULL;
 }
 
+/* Look in PST for a symbol in DOMAIN whose name matches NAME.  Search
+   the global block of PST if GLOBAL, and otherwise the static block.
+   MATCH is the comparison operation that returns true iff MATCH (s,
+   NAME), where s is a SYMBOL_SEARCH_NAME.  If ORDERED_COMPARE is
+   non-null, the symbols in the block are assumed to be ordered
+   according to it (allowing binary search).  It must be compatible
+   with MATCH.  Returns the symbol, if found, and otherwise NULL.  */
+
+static struct partial_symbol *
+match_partial_symbol (struct partial_symtab *pst, int global,
+		      const char *name, domain_enum domain,
+		      int (*match) (const char *, const char *),
+		      int (*ordered_compare) (const char *, const char *))
+{
+  struct partial_symbol **start, **psym;
+  struct partial_symbol **top, **real_top, **bottom, **center;
+  int length = (global ? pst->n_global_syms : pst->n_static_syms);
+  int do_linear_search = 1;
+
+  if (length == 0)
+      return NULL;
+  start = (global ?
+	   pst->objfile->global_psymbols.list + pst->globals_offset :
+	   pst->objfile->static_psymbols.list + pst->statics_offset);
+
+  if (global && ordered_compare)  /* Can use a binary search.  */
+    {
+      do_linear_search = 0;
+
+      /* Binary search.  This search is guaranteed to end with center
+         pointing at the earliest partial symbol whose name might be
+         correct.  At that point *all* partial symbols with an
+         appropriate name will be checked against the correct
+         domain.  */
+
+      bottom = start;
+      top = start + length - 1;
+      real_top = top;
+      while (top > bottom)
+	{
+	  center = bottom + (top - bottom) / 2;
+	  gdb_assert (center < top);
+	  if (!do_linear_search
+	      && (SYMBOL_LANGUAGE (*center) == language_java))
+	    do_linear_search = 1;
+	  if (ordered_compare (SYMBOL_SEARCH_NAME (*center), name) >= 0)
+	    top = center;
+	  else
+	    bottom = center + 1;
+	}
+      gdb_assert (top == bottom);
+
+      while (top <= real_top
+	     && match (SYMBOL_SEARCH_NAME (*top), name) == 0)
+	{
+	  if (symbol_matches_domain (SYMBOL_LANGUAGE (*top),
+				     SYMBOL_DOMAIN (*top), domain))
+	    return *top;
+	  top++;
+	}
+    }
+
+  /* Can't use a binary search or else we found during the binary search that
+     we should also do a linear search.  */
+
+  if (do_linear_search)
+    {
+      for (psym = start; psym < start + length; psym++)
+	{
+	  if (symbol_matches_domain (SYMBOL_LANGUAGE (*psym),
+				     SYMBOL_DOMAIN (*psym), domain)
+	      && match (SYMBOL_SEARCH_NAME (*psym), name) == 0)
+	    return *psym;
+	}
+    }
+
+  return NULL;
+}
+
+static void
+pre_expand_symtabs_matching_psymtabs (struct objfile *objfile,
+				      int kind, const char *name,
+				      domain_enum domain)
+{
+  /* Nothing.  */
+}
+
 /* Look, in partial_symtab PST, for symbol whose natural name is NAME.
-   Check the global symbols if GLOBAL, the static symbols if not. */
+   Check the global symbols if GLOBAL, the static symbols if not.  */
 
 static struct partial_symbol *
 lookup_partial_symbol (struct partial_symtab *pst, const char *name,
@@ -460,7 +561,7 @@ lookup_partial_symbol (struct partial_symtab *pst, const char *name,
 	  if (!(center < top))
 	    internal_error (__FILE__, __LINE__, _("failed internal consistency check"));
 	  if (!do_linear_search
-	      && (SYMBOL_LANGUAGE (*center) == language_java))
+	      && SYMBOL_LANGUAGE (*center) == language_java)
 	    {
 	      do_linear_search = 1;
 	    }
@@ -487,7 +588,7 @@ lookup_partial_symbol (struct partial_symtab *pst, const char *name,
     }
 
   /* Can't use a binary search or else we found during the binary search that
-     we should also do a linear search. */
+     we should also do a linear search.  */
 
   if (do_linear_search)
     {
@@ -905,7 +1006,7 @@ map_symbol_filenames_psymtab (struct objfile *objfile,
 	continue;
 
       fullname = psymtab_to_fullname (ps);
-      (*fun) (fullname, ps->filename, data);
+      (*fun) (ps->filename, fullname, data);
     }
 }
 
@@ -941,7 +1042,7 @@ psymtab_to_fullname (struct partial_symtab *ps)
   return NULL;
 }
 
-static char *
+static const char *
 find_symbol_file_from_partial (struct objfile *objfile, const char *name)
 {
   struct partial_symtab *pst;
@@ -954,174 +1055,72 @@ find_symbol_file_from_partial (struct objfile *objfile, const char *name)
   return NULL;
 }
 
-/* Look, in partial_symtab PST, for symbol NAME in given namespace.
-   Check the global symbols if GLOBAL, the static symbols if not.
-   Do wild-card match if WILD.  */
+/*  For all symbols, s, in BLOCK that are in NAMESPACE and match NAME
+    according to the function MATCH, call CALLBACK(BLOCK, s, DATA).
+    BLOCK is assumed to come from OBJFILE.  Returns 1 iff CALLBACK
+    ever returns non-zero, and otherwise returns 0.  */
 
-static struct partial_symbol *
-ada_lookup_partial_symbol (struct partial_symtab *pst, const char *name,
-                           int global, domain_enum namespace, int wild,
-			   int (*wild_match) (const char *, int, const char *),
-			   int (*is_name_suffix) (const char *))
+static int
+map_block (const char *name, domain_enum namespace, struct objfile *objfile,
+	   struct block *block,
+	   int (*callback) (struct block *, struct symbol *, void *),
+	   void *data,
+	   int (*match) (const char *, const char *))
 {
-  struct partial_symbol **start;
-  int name_len = strlen (name);
-  int length = (global ? pst->n_global_syms : pst->n_static_syms);
-  int i;
+  struct dict_iterator iter;
+  struct symbol *sym;
 
-  if (length == 0)
+  for (sym = dict_iter_match_first (BLOCK_DICT (block), name, match, &iter);
+       sym != NULL; sym = dict_iter_match_next (name, match, &iter))
     {
-      return (NULL);
+      if (symbol_matches_domain (SYMBOL_LANGUAGE (sym), 
+				 SYMBOL_DOMAIN (sym), namespace))
+	{
+	  if (callback (block, sym, data))
+	    return 1;
+	}
     }
 
-  start = (global ?
-           pst->objfile->global_psymbols.list + pst->globals_offset :
-           pst->objfile->static_psymbols.list + pst->statics_offset);
-
-  if (wild)
-    {
-      for (i = 0; i < length; i += 1)
-        {
-          struct partial_symbol *psym = start[i];
-
-          if (symbol_matches_domain (SYMBOL_LANGUAGE (psym),
-                                     SYMBOL_DOMAIN (psym), namespace)
-              && (*wild_match) (name, name_len, SYMBOL_LINKAGE_NAME (psym)))
-            return psym;
-        }
-      return NULL;
-    }
-  else
-    {
-      if (global)
-        {
-          int U;
-
-          i = 0;
-          U = length - 1;
-          while (U - i > 4)
-            {
-              int M = (U + i) >> 1;
-              struct partial_symbol *psym = start[M];
-
-              if (SYMBOL_LINKAGE_NAME (psym)[0] < name[0])
-                i = M + 1;
-              else if (SYMBOL_LINKAGE_NAME (psym)[0] > name[0])
-                U = M - 1;
-              else if (strcmp (SYMBOL_LINKAGE_NAME (psym), name) < 0)
-                i = M + 1;
-              else
-                U = M;
-            }
-        }
-      else
-        i = 0;
-
-      while (i < length)
-        {
-          struct partial_symbol *psym = start[i];
-
-          if (symbol_matches_domain (SYMBOL_LANGUAGE (psym),
-                                     SYMBOL_DOMAIN (psym), namespace))
-            {
-              int cmp = strncmp (name, SYMBOL_LINKAGE_NAME (psym), name_len);
-
-              if (cmp < 0)
-                {
-                  if (global)
-                    break;
-                }
-              else if (cmp == 0
-                       && (*is_name_suffix) (SYMBOL_LINKAGE_NAME (psym)
-					     + name_len))
-                return psym;
-            }
-          i += 1;
-        }
-
-      if (global)
-        {
-          int U;
-
-          i = 0;
-          U = length - 1;
-          while (U - i > 4)
-            {
-              int M = (U + i) >> 1;
-              struct partial_symbol *psym = start[M];
-
-              if (SYMBOL_LINKAGE_NAME (psym)[0] < '_')
-                i = M + 1;
-              else if (SYMBOL_LINKAGE_NAME (psym)[0] > '_')
-                U = M - 1;
-              else if (strcmp (SYMBOL_LINKAGE_NAME (psym), "_ada_") < 0)
-                i = M + 1;
-              else
-                U = M;
-            }
-        }
-      else
-        i = 0;
-
-      while (i < length)
-        {
-          struct partial_symbol *psym = start[i];
-
-          if (symbol_matches_domain (SYMBOL_LANGUAGE (psym),
-                                     SYMBOL_DOMAIN (psym), namespace))
-            {
-              int cmp;
-
-              cmp = (int) '_' - (int) SYMBOL_LINKAGE_NAME (psym)[0];
-              if (cmp == 0)
-                {
-                  cmp = strncmp ("_ada_", SYMBOL_LINKAGE_NAME (psym), 5);
-                  if (cmp == 0)
-                    cmp = strncmp (name, SYMBOL_LINKAGE_NAME (psym) + 5,
-                                   name_len);
-                }
-
-              if (cmp < 0)
-                {
-                  if (global)
-                    break;
-                }
-              else if (cmp == 0
-                       && (*is_name_suffix) (SYMBOL_LINKAGE_NAME (psym)
-					     + name_len + 5))
-                return psym;
-            }
-          i += 1;
-        }
-    }
-  return NULL;
+  return 0;
 }
 
+/*  Psymtab version of map_matching_symbols.  See its definition in
+    the definition of quick_symbol_functions in symfile.h.  */
+
 static void
-map_ada_symtabs (struct objfile *objfile,
-		 int (*wild_match) (const char *, int, const char *),
-		 int (*is_name_suffix) (const char *),
-		 void (*callback) (struct objfile *, struct symtab *, void *),
-		 const char *name, int global, domain_enum namespace, int wild,
-		 void *data)
+map_matching_symbols_psymtab (const char *name, domain_enum namespace,
+			      struct objfile *objfile, int global,
+			      int (*callback) (struct block *,
+					       struct symbol *, void *),
+			      void *data,
+			      int (*match) (const char *, const char *),
+			      int (*ordered_compare) (const char *,
+						      const char *))
 {
+  const int block_kind = global ? GLOBAL_BLOCK : STATIC_BLOCK;
   struct partial_symtab *ps;
 
   ALL_OBJFILE_PSYMTABS (objfile, ps)
     {
       QUIT;
       if (ps->readin
-	  || ada_lookup_partial_symbol (ps, name, global, namespace, wild,
-					wild_match, is_name_suffix))
+	  || match_partial_symbol (ps, global, name, namespace, match,
+				   ordered_compare))
 	{
 	  struct symtab *s = PSYMTAB_TO_SYMTAB (ps);
+	  struct block *block;
 
 	  if (s == NULL || !s->primary)
 	    continue;
-	  (*callback) (objfile, s, data);
+	  block = BLOCKVECTOR_BLOCK (BLOCKVECTOR (s), block_kind);
+	  if (map_block (name, namespace, objfile, block,
+			 callback, data, match))
+	    return;
+	  if (callback (block, NULL, data))
+	    return;
 	}
     }
-}
+}	    
 
 static void
 expand_symtabs_matching_via_partial (struct objfile *objfile,
@@ -1199,6 +1198,7 @@ const struct quick_symbol_functions psym_functions =
   forget_cached_source_info_partial,
   lookup_symtab_via_partial_symtab,
   lookup_symbol_aux_psymtabs,
+  pre_expand_symtabs_matching_psymtabs,
   print_psymtab_stats_for_objfile,
   dump_psymtabs_for_objfile,
   relocate_psymtabs,
@@ -1206,7 +1206,7 @@ const struct quick_symbol_functions psym_functions =
   expand_partial_symbol_tables,
   read_psymtabs_with_filename,
   find_symbol_file_from_partial,
-  map_ada_symtabs,
+  map_matching_symbols_psymtab,
   expand_symtabs_matching_via_partial,
   find_pc_sect_symtab_from_partial,
   map_symbol_names_psymtab,
@@ -1261,6 +1261,92 @@ start_psymtab_common (struct objfile *objfile,
   return (psymtab);
 }
 
+/* Calculate a hash code for the given partial symbol.  The hash is
+   calculated using the symbol's value, language, domain, class
+   and name. These are the values which are set by
+   add_psymbol_to_bcache.  */
+
+static unsigned long
+psymbol_hash (const void *addr, int length)
+{
+  unsigned long h = 0;
+  struct partial_symbol *psymbol = (struct partial_symbol *) addr;
+  unsigned int lang = psymbol->ginfo.language;
+  unsigned int domain = PSYMBOL_DOMAIN (psymbol);
+  unsigned int class = PSYMBOL_CLASS (psymbol);
+
+  h = hash_continue (&psymbol->ginfo.value, sizeof (psymbol->ginfo.value), h);
+  h = hash_continue (&lang, sizeof (unsigned int), h);
+  h = hash_continue (&domain, sizeof (unsigned int), h);
+  h = hash_continue (&class, sizeof (unsigned int), h);
+  h = hash_continue (psymbol->ginfo.name, strlen (psymbol->ginfo.name), h);
+
+  return h;
+}
+
+/* Returns true if the symbol at addr1 equals the symbol at addr2.
+   For the comparison this function uses a symbols value,
+   language, domain, class and name.  */
+
+static int
+psymbol_compare (const void *addr1, const void *addr2, int length)
+{
+  struct partial_symbol *sym1 = (struct partial_symbol *) addr1;
+  struct partial_symbol *sym2 = (struct partial_symbol *) addr2;
+
+  return (memcmp (&sym1->ginfo.value, &sym1->ginfo.value,
+                  sizeof (sym1->ginfo.value)) == 0
+	  && sym1->ginfo.language == sym2->ginfo.language
+          && PSYMBOL_DOMAIN (sym1) == PSYMBOL_DOMAIN (sym2)
+          && PSYMBOL_CLASS (sym1) == PSYMBOL_CLASS (sym2)
+          && sym1->ginfo.name == sym2->ginfo.name);
+}
+
+/* Initialize a partial symbol bcache.  */
+
+struct psymbol_bcache *
+psymbol_bcache_init (void)
+{
+  struct psymbol_bcache *bcache = XCALLOC (1, struct psymbol_bcache);
+  bcache->bcache = bcache_xmalloc (psymbol_hash, psymbol_compare);
+  return bcache;
+}
+
+/* Free a partial symbol bcache.  */
+void
+psymbol_bcache_free (struct psymbol_bcache *bcache)
+{
+  if (bcache == NULL)
+    return;
+
+  bcache_xfree (bcache->bcache);
+  xfree (bcache);
+}
+
+/* Return the internal bcache of the psymbol_bcache BCACHE*/
+
+struct bcache *
+psymbol_bcache_get_bcache (struct psymbol_bcache *bcache)
+{
+  return bcache->bcache;
+}
+
+/* Find a copy of the SYM in BCACHE.  If BCACHE has never seen this
+   symbol before, add a copy to BCACHE.  In either case, return a pointer
+   to BCACHE's copy of the symbol.  If optional ADDED is not NULL, return
+   1 in case of new entry or 0 if returning an old entry.  */
+
+static const struct partial_symbol *
+psymbol_bcache_full (struct partial_symbol *sym,
+                     struct psymbol_bcache *bcache,
+                     int *added)
+{
+  return bcache_full (sym,
+                      sizeof (struct partial_symbol),
+                      bcache->bcache,
+                      added);
+}
+
 /* Helper function, initialises partial symbol structure and stashes 
    it into objfile's bcache.  Note that our caching mechanism will
    use all fields of struct partial_symbol to determine hash value of the
@@ -1268,7 +1354,7 @@ start_psymtab_common (struct objfile *objfile,
    different domain (or address) is possible and correct.  */
 
 static const struct partial_symbol *
-add_psymbol_to_bcache (char *name, int namelength, int copy_name,
+add_psymbol_to_bcache (const char *name, int namelength, int copy_name,
 		       domain_enum domain,
 		       enum address_class class,
 		       long val,	/* Value as a long */
@@ -1276,15 +1362,13 @@ add_psymbol_to_bcache (char *name, int namelength, int copy_name,
 		       enum language language, struct objfile *objfile,
 		       int *added)
 {
-  /* psymbol is static so that there will be no uninitialized gaps in the
-     structure which might contain random data, causing cache misses in
-     bcache. */
-  static struct partial_symbol psymbol;
+  struct partial_symbol psymbol;
 
-  /* However, we must ensure that the entire 'value' field has been
-     zeroed before assigning to it, because an assignment may not
-     write the entire field.  */
+  /* We must ensure that the entire 'value' field has been zeroed
+     before assigning to it, because an assignment may not write the
+     entire field.  */
   memset (&psymbol.ginfo.value, 0, sizeof (psymbol.ginfo.value));
+
   /* val and coreaddr are mutually exclusive, one of them *will* be zero */
   if (val != 0)
     {
@@ -1295,15 +1379,46 @@ add_psymbol_to_bcache (char *name, int namelength, int copy_name,
       SYMBOL_VALUE_ADDRESS (&psymbol) = coreaddr;
     }
   SYMBOL_SECTION (&psymbol) = 0;
-  SYMBOL_LANGUAGE (&psymbol) = language;
+  SYMBOL_OBJ_SECTION (&psymbol) = NULL;
+  SYMBOL_SET_LANGUAGE (&psymbol, language);
   PSYMBOL_DOMAIN (&psymbol) = domain;
   PSYMBOL_CLASS (&psymbol) = class;
 
   SYMBOL_SET_NAMES (&psymbol, name, namelength, copy_name, objfile);
 
   /* Stash the partial symbol away in the cache */
-  return bcache_full (&psymbol, sizeof (struct partial_symbol),
-		      objfile->psymbol_cache, added);
+  return psymbol_bcache_full (&psymbol,
+                              objfile->psymbol_cache,
+                              added);
+}
+
+/* Increase the space allocated for LISTP, which is probably
+   global_psymbols or static_psymbols. This space will eventually
+   be freed in free_objfile().  */
+
+static void
+extend_psymbol_list (struct psymbol_allocation_list *listp,
+		     struct objfile *objfile)
+{
+  int new_size;
+
+  if (listp->size == 0)
+    {
+      new_size = 255;
+      listp->list = (struct partial_symbol **)
+	xmalloc (new_size * sizeof (struct partial_symbol *));
+    }
+  else
+    {
+      new_size = listp->size * 2;
+      listp->list = (struct partial_symbol **)
+	xrealloc ((char *) listp->list,
+		  new_size * sizeof (struct partial_symbol *));
+    }
+  /* Next assumes we only went one over.  Should be good if
+     program works correctly */
+  listp->next = listp->list + listp->size;
+  listp->size = new_size;
 }
 
 /* Helper function, adds partial symbol to the given partial symbol
@@ -1336,7 +1451,7 @@ append_psymbol_to_list (struct psymbol_allocation_list *list,
    cache.  */
 
 const struct partial_symbol *
-add_psymbol_to_list (char *name, int namelength, int copy_name,
+add_psymbol_to_list (const char *name, int namelength, int copy_name,
 		     domain_enum domain,
 		     enum address_class class,
 		     struct psymbol_allocation_list *list, 
@@ -1455,35 +1570,6 @@ discard_psymtab (struct partial_symtab *pst)
 
   pst->next = pst->objfile->free_psymtabs;
   pst->objfile->free_psymtabs = pst;
-}
-
-/* Increase the space allocated for LISTP, which is probably
-   global_psymbols or static_psymbols. This space will eventually
-   be freed in free_objfile().  */
-
-void
-extend_psymbol_list (struct psymbol_allocation_list *listp,
-		     struct objfile *objfile)
-{
-  int new_size;
-
-  if (listp->size == 0)
-    {
-      new_size = 255;
-      listp->list = (struct partial_symbol **)
-	xmalloc (new_size * sizeof (struct partial_symbol *));
-    }
-  else
-    {
-      new_size = listp->size * 2;
-      listp->list = (struct partial_symbol **)
-	xrealloc ((char *) listp->list,
-		  new_size * sizeof (struct partial_symbol *));
-    }
-  /* Next assumes we only went one over.  Should be good if
-     program works correctly */
-  listp->next = listp->list + listp->size;
-  listp->size = new_size;
 }
 
 

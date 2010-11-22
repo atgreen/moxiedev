@@ -210,7 +210,8 @@ const struct gcc_debug_hooks vmsdbg_debug_hooks
    debug_nothing_rtx_rtx,	  /* copy_call_info */
    debug_nothing_uid,		  /* virtual_call */
    debug_nothing_tree_tree,	  /* set_name */
-   0                              /* start_end_main_source_file */
+   0,                             /* start_end_main_source_file */
+   TYPE_SYMTAB_IS_ADDRESS         /* tree_type_symtab_field */
 };
 
 /* Definitions of defaults for assembler-dependent names of various
@@ -1589,7 +1590,7 @@ vmsdbgout_finish (const char *main_input_filename ATTRIBUTE_UNUSED)
   ASM_OUTPUT_ALIGN (asm_out_file, 0);
 
   totsize = write_modbeg (1);
-  for (i = 0; VEC_iterate (unsigned, funcnum_table, i, ifunc); i++)
+  FOR_EACH_VEC_ELT (unsigned, funcnum_table, i, ifunc)
     {
       totsize += write_rtnbeg (i, 1);
       totsize += write_rtnend (i, 1);
@@ -1597,7 +1598,7 @@ vmsdbgout_finish (const char *main_input_filename ATTRIBUTE_UNUSED)
   totsize += write_pclines (1);
 
   write_modbeg (0);
-  for (i = 0; VEC_iterate (unsigned, funcnum_table, i, ifunc); i++)
+  FOR_EACH_VEC_ELT (unsigned, funcnum_table, i, ifunc)
     {
       write_rtnbeg (i, 0);
       write_rtnend (i, 0);

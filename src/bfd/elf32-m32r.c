@@ -2626,15 +2626,8 @@ m32r_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	}
 
       if (sec != NULL && elf_discarded_section (sec))
-	{
-	  /* For relocs against symbols from removed linkonce sections,
-	     or sections discarded by a linker script, we just want the
-	     section contents zeroed.  Avoid any special processing.  */
-	  _bfd_clear_contents (howto, input_bfd, contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend, howto, contents);
 
       if (info->relocatable && !use_rel)
 	{
@@ -2897,7 +2890,7 @@ m32r_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
             case R_M32R_HI16_ULO_RELA:
             case R_M32R_LO16_RELA:
               if (info->shared
-                  && r_symndx != 0
+                  && r_symndx != STN_UNDEF
                   && (input_section->flags & SEC_ALLOC) != 0
                   && ((   r_type != R_M32R_10_PCREL_RELA
                        && r_type != R_M32R_18_PCREL_RELA
@@ -4034,39 +4027,6 @@ static const struct bfd_elf_special_section m32r_elf_special_sections[] =
   { NULL,                     0,  0, 0,            0 }
 };
 
-static bfd_boolean
-m32r_elf_fake_sections (bfd *abfd,
-			Elf_Internal_Shdr *hdr ATTRIBUTE_UNUSED,
-			asection *sec)
-{
-  /* The generic elf_fake_sections will set up REL_HDR using the
-     default kind of relocations.  But, we may actually need both
-     kinds of relocations, so we set up the second header here.
-
-     This is not necessary for the O32 ABI since that only uses Elf32_Rel
-     relocations (cf. System V ABI, MIPS RISC Processor Supplement,
-     3rd Edition, p. 4-17).  It breaks the IRIX 5/6 32-bit ld, since one
-     of the resulting empty .rela.<section> sections starts with
-     sh_offset == object size, and ld doesn't allow that.  While the check
-     is arguably bogus for empty or SHT_NOBITS sections, it can easily be
-     avoided by not emitting those useless sections in the first place.  */
-  if ((sec->flags & SEC_RELOC) != 0)
-    {
-      struct bfd_elf_section_data *esd;
-      bfd_size_type amt = sizeof (Elf_Internal_Shdr);
-
-      esd = elf_section_data (sec);
-      BFD_ASSERT (esd->rel_hdr2 == NULL);
-      esd->rel_hdr2 = bfd_zalloc (abfd, amt);
-      if (!esd->rel_hdr2)
-        return FALSE;
-      _bfd_elf_init_reloc_shdr (abfd, esd->rel_hdr2, sec,
-                                !sec->use_rela_p);
-    }
-
-  return TRUE;
-}
-
 static enum elf_reloc_type_class
 m32r_elf_reloc_type_class (const Elf_Internal_Rela *rela)
 {
@@ -4080,6 +4040,7 @@ m32r_elf_reloc_type_class (const Elf_Internal_Rela *rela)
 }
 
 #define ELF_ARCH		bfd_arch_m32r
+#define ELF_TARGET_ID		M32R_ELF_DATA
 #define ELF_MACHINE_CODE	EM_M32R
 #define ELF_MACHINE_ALT1	EM_CYGNUS_M32R
 #define ELF_MAXPAGESIZE		0x1 /* Explicitly requested by Mitsubishi.  */
@@ -4127,7 +4088,6 @@ m32r_elf_reloc_type_class (const Elf_Internal_Rela *rela)
 #else
 #define elf_backend_default_use_rela_p  1
 #define elf_backend_may_use_rela_p      1
-#define elf_backend_fake_sections       m32r_elf_fake_sections
 #endif
 
 #define elf_backend_object_p			m32r_elf_object_p

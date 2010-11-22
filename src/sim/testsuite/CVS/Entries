@@ -8,7 +8,7 @@ D/mips64el-elf////
 D/sim////
 D/d30v-elf////
 D/fr30-elf////
-/ChangeLog/1.63/Thu Jan 28 00:24:39 2010/-ko/
-/Makefile.in/1.6/Thu Jan 28 00:24:39 2010/-ko/
-/configure/1.5/Thu Jan 28 00:24:39 2010/-ko/
-/configure.ac/1.1/Thu Jan 28 00:24:39 2010//
+/ChangeLog/1.66/Mon Nov 22 20:13:00 2010/-ko/
+/Makefile.in/1.7/Mon Nov 22 20:13:00 2010/-ko/
+/configure/1.6/Mon Nov 22 20:13:00 2010/-ko/
+/configure.ac/1.2/Mon Nov 22 20:13:00 2010//

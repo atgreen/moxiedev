@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-27T21:06:31.046607Z
-162600
-mkuvyrkov
+2010-11-20T22:01:48.504857Z
+166986
+ebotcazou
 
 
 
@@ -26,25 +26,28 @@ mkuvyrkov
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-arm
-dir
-
 powerpc
 dir
 
-alpha
+arm
 dir
 
 m68k
 dir
 
+alpha
+dir
+
+microblaze
+dir
+
 avr
 dir
 
-i386
+rx
 dir
 
-rx
+i386
 dir
 
 xstormy16
@@ -53,10 +56,10 @@ dir
 frv
 dir
 
-s390
+x86_64
 dir
 
-x86_64
+s390
 dir
 
 cris

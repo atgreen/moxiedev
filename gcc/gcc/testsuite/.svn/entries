@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-30T06:56:17.911845Z
-162705
-amodra
+2010-11-22T19:08:59.082342Z
+167046
+ro
 
 
 
@@ -26,39 +26,8 @@ amodra
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-ChangeLog-2009
-file
-
-
-
-
-2010-01-06T00:59:19.413645Z
-31f1e2e69afabe472403fa35f4718c35
-2010-01-01T17:08:32.733548Z
-155556
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-378405
+gcc.c-torture
+dir
 
 README.compat
 file
@@ -94,8 +63,39 @@ jsm28
 
 4059
 
-gcc.c-torture
-dir
+ChangeLog-2009
+file
+
+
+
+
+2010-01-06T00:59:19.413645Z
+31f1e2e69afabe472403fa35f4718c35
+2010-01-01T17:08:32.733548Z
+155556
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+378405
 
 ChangeLog-1993-2007
 file
@@ -137,10 +137,10 @@ dir
 gnat.dg
 dir
 
-gcc.dg
+ada
 dir
 
-ada
+gcc.dg
 dir
 
 gcc.misc-tests
@@ -152,11 +152,11 @@ file
 
 
 
-2010-07-30T08:37:34.396087Z
-eb2a742e9fff84cdcebdca25580fe2ed
-2010-07-30T06:56:17.911845Z
-162705
-amodra
+2010-11-22T19:15:07.910815Z
+bf605ce0e7f4f25413503adc8ad18648
+2010-11-22T19:08:59.082342Z
+167046
+ro
 
 
 
@@ -178,7 +178,7 @@ amodra
 
 
 
-242664
+411575
 
 README.gcc
 file

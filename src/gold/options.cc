@@ -205,7 +205,7 @@ parse_int(const char* option_name, const char* arg, int* retval)
 }
 
 void
-parse_uint64(const char* option_name, const char* arg, uint64_t *retval)
+parse_uint64(const char* option_name, const char* arg, uint64_t* retval)
 {
   char* endptr;
   *retval = strtoull(arg, &endptr, 0);
@@ -317,6 +317,34 @@ General_options::parse_defsym(const char*, const char* arg,
 }
 
 void
+General_options::parse_incremental(const char*, const char*,
+                                   Command_line*)
+{
+  this->incremental_mode_ = INCREMENTAL_AUTO;
+}
+
+void
+General_options::parse_no_incremental(const char*, const char*,
+                                      Command_line*)
+{
+  this->incremental_mode_ = INCREMENTAL_OFF;
+}
+
+void
+General_options::parse_incremental_full(const char*, const char*,
+					Command_line*)
+{
+  this->incremental_mode_ = INCREMENTAL_FULL;
+}
+
+void
+General_options::parse_incremental_update(const char*, const char*,
+					  Command_line*)
+{
+  this->incremental_mode_ = INCREMENTAL_UPDATE;
+}
+
+void
 General_options::parse_incremental_changed(const char*, const char*,
                                            Command_line*)
 {
@@ -345,7 +373,7 @@ General_options::parse_library(const char*, const char* arg,
                                Command_line* cmdline)
 {
   Input_file_argument::Input_file_type type;
-  const char *name;
+  const char* name;
   if (arg[0] == ':')
     {
       type = Input_file_argument::INPUT_FILE_TYPE_SEARCHED_FILE;
@@ -522,7 +550,7 @@ void
 General_options::parse_exclude_libs(const char*, const char* arg,
                                     Command_line*)
 {
-  const char *p = arg;
+  const char* p = arg;
 
   while (*p != '\0')
     {
@@ -542,7 +570,7 @@ General_options::parse_exclude_libs(const char*, const char* arg,
 // wild-card and matches any given name.
 
 bool
-General_options::check_excluded_libs (const std::string &name) const
+General_options::check_excluded_libs(const std::string &name) const
 {
   Unordered_set<std::string>::const_iterator p;
 
@@ -556,7 +584,7 @@ General_options::check_excluded_libs (const std::string &name) const
     return true;
 
   // First strip off any directories in name.
-  const char *basename = lbasename(name.c_str());
+  const char* basename = lbasename(name.c_str());
 
   // Try finding an exact match.
   p = excluded_libs_.find(std::string(basename));
@@ -641,7 +669,7 @@ usage()
 }
 
 void
-usage(const char* msg, const char *opt)
+usage(const char* msg, const char* opt)
 {
   fprintf(stderr,
           _("%s: %s: %s\n"),
@@ -852,6 +880,7 @@ General_options::General_options()
     do_demangle_(false),
     plugins_(NULL),
     dynamic_list_(),
+    incremental_mode_(INCREMENTAL_OFF),
     incremental_disposition_(INCREMENTAL_CHECK),
     implicit_incremental_(false),
     excluded_libs_(),
@@ -1137,7 +1166,7 @@ General_options::finalize()
 		 "[0.0, 1.0)"),
 	       this->hash_bucket_empty_fraction());
 
-  if (this->implicit_incremental_ && !this->incremental())
+  if (this->implicit_incremental_ && this->incremental_mode_ == INCREMENTAL_OFF)
     gold_fatal(_("Options --incremental-changed, --incremental-unchanged, "
                  "--incremental-unknown require the use of --incremental"));
 

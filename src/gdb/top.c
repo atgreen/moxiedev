@@ -47,6 +47,7 @@
 #include "main.h"
 #include "event-loop.h"
 #include "gdbthread.h"
+#include "python/python.h"
 
 /* readline include files */
 #include "readline/readline.h"
@@ -456,6 +457,50 @@ execute_command (char *p, int from_tty)
 	  warned = 1;
 	}
     }
+}
+
+/* Run execute_command for P and FROM_TTY.  Capture its output into the
+   returned string, do not display it to the screen.  BATCH_FLAG will be
+   temporarily set to true.  */
+
+char *
+execute_command_to_string (char *p, int from_tty)
+{
+  struct ui_file *str_file;
+  struct cleanup *cleanup;
+  char *retval;
+
+  /* GDB_STDOUT should be better already restored during these
+     restoration callbacks.  */
+  cleanup = set_batch_flag_and_make_cleanup_restore_page_info ();
+
+  str_file = mem_fileopen ();
+
+  make_cleanup_ui_file_delete (str_file);
+  make_cleanup_restore_ui_file (&gdb_stdout);
+  make_cleanup_restore_ui_file (&gdb_stderr);
+  make_cleanup_restore_ui_file (&gdb_stdlog);
+  make_cleanup_restore_ui_file (&gdb_stdtarg);
+  make_cleanup_restore_ui_file (&gdb_stdtargerr);
+
+  if (ui_out_redirect (uiout, str_file) < 0)
+    warning (_("Current output protocol does not support redirection"));
+  else
+    make_cleanup_ui_out_redirect_pop (uiout);
+
+  gdb_stdout = str_file;
+  gdb_stderr = str_file;
+  gdb_stdlog = str_file;
+  gdb_stdtarg = str_file;
+  gdb_stdtargerr = str_file;
+
+  execute_command (p, from_tty);
+
+  retval = ui_file_xstrdup (str_file, NULL);
+
+  do_cleanups (cleanup);
+
+  return retval;
 }
 
 /* Read commands from `instream' and execute them
@@ -1242,6 +1287,9 @@ input_from_terminal_p (void)
   if (interactive_mode != AUTO_BOOLEAN_AUTO)
     return interactive_mode == AUTO_BOOLEAN_TRUE;
 
+  if (batch_flag)
+    return 0;
+
   if (gdb_has_a_terminal () && instream == stdin)
     return 1;
 
@@ -1610,7 +1658,10 @@ gdb_init (char *argv0)
   init_cmd_lists ();		/* This needs to be done first */
   initialize_targets ();	/* Setup target_terminal macros for utils.c */
   initialize_utils ();		/* Make errors and warnings possible */
+
+  /* Here is where we call all the _initialize_foo routines.  */
   initialize_all_files ();
+
   /* This creates the current_program_space.  Do this after all the
      _initialize_foo routines have had a chance to install their
      per-sspace data keys.  Also do this before
@@ -1637,4 +1688,12 @@ gdb_init (char *argv0)
      deprecated_init_ui_hook.  */
   if (deprecated_init_ui_hook)
     deprecated_init_ui_hook (argv0);
+
+#ifdef HAVE_PYTHON
+  /* Python initialization can require various commands to be installed.
+     For example "info pretty-printer" needs the "info" prefix to be
+     installed.  Keep things simple and just do final python initialization
+     here.  */
+  finish_python_initialization ();
+#endif
 }

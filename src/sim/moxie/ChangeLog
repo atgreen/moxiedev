@@ -1,5 +1,5 @@
 2010-10-11  Anthony Green  <green@moxielogic.com>
-	    Albery Cahalan <acahalan@gmail.com>
+	    Albert Cahalan <acahalan@gmail.com>
 
 	* Makefile.in (SIM_CFLAGS): Build with -D_GNU_SOURCE.
 	* interp.c: Many style adjustments.
@@ -7,6 +7,14 @@
 2010-07-12  Anthony Green  <green@moxielogic.com>
 
 	* interp.c (sim_write): buffer is const.
+
+2010-04-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* interp.c (sim_write): Add const to buffer arg.
+
+2010-02-27  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* interp.c (sim_create_inferior): Fix crashes on zero PROG_BFD or ARGV.
 
 2010-02-03  Anthony Green  <green@moxielogic.com>
 

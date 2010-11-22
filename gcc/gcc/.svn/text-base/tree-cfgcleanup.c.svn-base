@@ -279,9 +279,7 @@ tree_forwarder_block_p (basic_block bb, bool phi_wanted)
       || (single_succ_edge (bb)->flags & EDGE_ABNORMAL))
     return false;
 
-#if ENABLE_CHECKING
-  gcc_assert (bb != ENTRY_BLOCK_PTR);
-#endif
+  gcc_checking_assert (bb != ENTRY_BLOCK_PTR);
 
   locus = single_succ_edge (bb)->goto_locus;
 
@@ -336,21 +334,6 @@ tree_forwarder_block_p (basic_block bb, bool phi_wanted)
 	return false;
     }
   return true;
-}
-
-/* Return true if BB has at least one abnormal incoming edge.  */
-
-static inline bool
-has_abnormal_incoming_edge_p (basic_block bb)
-{
-  edge e;
-  edge_iterator ei;
-
-  FOR_EACH_EDGE (e, ei, bb->preds)
-    if (e->flags & EDGE_ABNORMAL)
-      return true;
-
-  return false;
 }
 
 /* If all the PHI nodes in DEST have alternatives for E1 and E2 and
@@ -418,8 +401,8 @@ remove_forwarder_block (basic_block bb)
 
      So if there is an abnormal edge to BB, proceed only if there is
      no abnormal edge to DEST and there are no phi nodes in DEST.  */
-  if (has_abnormal_incoming_edge_p (bb)
-      && (has_abnormal_incoming_edge_p (dest)
+  if (bb_has_abnormal_pred (bb)
+      && (bb_has_abnormal_pred (dest)
 	  || !gimple_seq_empty_p (phi_nodes (dest))))
     return false;
 
@@ -794,7 +777,10 @@ cleanup_tree_cfg_noloop (void)
 static void
 repair_loop_structures (void)
 {
-  bitmap changed_bbs = BITMAP_ALLOC (NULL);
+  bitmap changed_bbs;
+
+  timevar_push (TV_REPAIR_LOOPS);
+  changed_bbs = BITMAP_ALLOC (NULL);
   fix_loop_structure (changed_bbs);
 
   /* This usually does nothing.  But sometimes parts of cfg that originally
@@ -811,6 +797,7 @@ repair_loop_structures (void)
   scev_reset ();
 
   loops_state_clear (LOOPS_NEED_FIXUP);
+  timevar_pop (TV_REPAIR_LOOPS);
 }
 
 /* Cleanup cfg and repair loop structures.  */
@@ -901,7 +888,7 @@ remove_forwarder_block_with_phi (basic_block bb)
 		 redirection, replace it with the PHI argument that used
 		 to be on E.  */
 	      head = redirect_edge_var_map_vector (e);
-	      for (i = 0; VEC_iterate (edge_var_map, head, i, vm); ++i)
+	      FOR_EACH_VEC_ELT (edge_var_map, head, i, vm)
 		{
 		  tree old_arg = redirect_edge_var_map_result (vm);
 		  tree new_arg = redirect_edge_var_map_def (vm);
@@ -990,7 +977,7 @@ merge_phi_nodes (void)
       if (gimple_seq_empty_p (phi_nodes (dest))
 	  /* We don't want to deal with a basic block with
 	     abnormal edges.  */
-	  || has_abnormal_incoming_edge_p (bb))
+	  || bb_has_abnormal_pred (bb))
 	continue;
 
       if (!dominated_by_p (CDI_DOMINATORS, dest, bb))

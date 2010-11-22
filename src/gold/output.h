@@ -1,6 +1,6 @@
 // output.h -- manage the output file for gold   -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -56,7 +56,7 @@ class Output_data
     : address_(0), data_size_(0), offset_(-1),
       is_address_valid_(false), is_data_size_valid_(false),
       is_offset_valid_(false), is_data_size_fixed_(false),
-      dynamic_reloc_count_(0)
+      has_dynamic_reloc_(false)
   { }
 
   virtual
@@ -233,15 +233,15 @@ class Output_data
   is_layout_complete()
   { return Output_data::allocated_sizes_are_fixed; }
 
-  // Count the number of dynamic relocations applied to this section.
+  // Note that a dynamic reloc has been applied to this data.
   void
   add_dynamic_reloc()
-  { ++this->dynamic_reloc_count_; }
+  { this->has_dynamic_reloc_ = true; }
 
-  // Return the number of dynamic relocations applied to this section.
-  unsigned int
-  dynamic_reloc_count() const
-  { return this->dynamic_reloc_count_; }
+  // Return whether a dynamic reloc has been applied.
+  bool
+  has_dynamic_reloc() const
+  { return this->has_dynamic_reloc_; }
 
   // Whether the address is valid.
   bool
@@ -424,15 +424,15 @@ class Output_data
   // File offset of contents in output file.
   off_t offset_;
   // Whether address_ is valid.
-  bool is_address_valid_;
+  bool is_address_valid_ : 1;
   // Whether data_size_ is valid.
-  bool is_data_size_valid_;
+  bool is_data_size_valid_ : 1;
   // Whether offset_ is valid.
-  bool is_offset_valid_;
+  bool is_offset_valid_ : 1;
   // Whether data size is fixed.
-  bool is_data_size_fixed_;
-  // Count of dynamic relocations applied to this section.
-  unsigned int dynamic_reloc_count_;
+  bool is_data_size_fixed_ : 1;
+  // Whether any dynamic relocs have been applied to this section.
+  bool has_dynamic_reloc_ : 1;
 };
 
 // Output the section headers.
@@ -605,6 +605,10 @@ class Output_section_data : public Output_data
   { }
 
   // Return the output section.
+  Output_section*
+  output_section()
+  { return this->output_section_; }
+
   const Output_section*
   output_section() const
   { return this->output_section_; }
@@ -628,7 +632,7 @@ class Output_section_data : public Output_data
   bool
   output_offset(const Relobj* object, unsigned int shndx,
 		section_offset_type offset,
-		section_offset_type *poutput) const
+		section_offset_type* poutput) const
   { return this->do_output_offset(object, shndx, offset, poutput); }
 
   // Return whether this is the merge section for the input section
@@ -1369,7 +1373,7 @@ class Output_data_reloc_base : public Output_data_reloc_generic
 
   // Set the entry size and the link.
   void
-  do_adjust_output_section(Output_section *os);
+  do_adjust_output_section(Output_section* os);
 
   // Write to a map file.
   void
@@ -1383,7 +1387,7 @@ class Output_data_reloc_base : public Output_data_reloc_generic
 
   // Add a relocation entry.
   void
-  add(Output_data *od, const Output_reloc_type& reloc)
+  add(Output_data* od, const Output_reloc_type& reloc)
   {
     this->relocs_.push_back(reloc);
     this->set_current_data_size(this->relocs_.size() * reloc_size);
@@ -1913,6 +1917,11 @@ class Output_data_got : public Output_section_data_build
   bool
   add_global(Symbol* gsym, unsigned int got_type);
 
+  // Like add_global, but use the PLT offset of the global symbol if
+  // it has one.
+  bool
+  add_global_plt(Symbol* gsym, unsigned int got_type);
+
   // Add an entry for a global symbol to the GOT, and add a dynamic
   // relocation of type R_TYPE for the GOT entry.
   void
@@ -1941,6 +1950,12 @@ class Output_data_got : public Output_section_data_build
   bool
   add_local(Sized_relobj<size, big_endian>* object, unsigned int sym_index,
             unsigned int got_type);
+
+  // Like add_local, but use the PLT offset of the local symbol if it
+  // has one.
+  bool
+  add_local_plt(Sized_relobj<size, big_endian>* object, unsigned int sym_index,
+		unsigned int got_type);
 
   // Add an entry for a local symbol to the GOT, and add a dynamic
   // relocation of type R_TYPE for the GOT entry.
@@ -1995,28 +2010,29 @@ class Output_data_got : public Output_section_data_build
    public:
     // Create a zero entry.
     Got_entry()
-      : local_sym_index_(CONSTANT_CODE)
+      : local_sym_index_(CONSTANT_CODE), use_plt_offset_(false)
     { this->u_.constant = 0; }
 
     // Create a global symbol entry.
-    explicit Got_entry(Symbol* gsym)
-      : local_sym_index_(GSYM_CODE)
+    Got_entry(Symbol* gsym, bool use_plt_offset)
+      : local_sym_index_(GSYM_CODE), use_plt_offset_(use_plt_offset)
     { this->u_.gsym = gsym; }
 
     // Create a local symbol entry.
     Got_entry(Sized_relobj<size, big_endian>* object,
-              unsigned int local_sym_index)
-      : local_sym_index_(local_sym_index)
+              unsigned int local_sym_index, bool use_plt_offset)
+      : local_sym_index_(local_sym_index), use_plt_offset_(use_plt_offset)
     {
       gold_assert(local_sym_index != GSYM_CODE
-		  && local_sym_index != CONSTANT_CODE);
+		  && local_sym_index != CONSTANT_CODE
+		  && local_sym_index == this->local_sym_index_);
       this->u_.object = object;
     }
 
     // Create a constant entry.  The constant is a host value--it will
     // be swapped, if necessary, when it is written out.
     explicit Got_entry(Valtype constant)
-      : local_sym_index_(CONSTANT_CODE)
+      : local_sym_index_(CONSTANT_CODE), use_plt_offset_(false)
     { this->u_.constant = constant; }
 
     // Write the GOT entry to an output view.
@@ -2026,8 +2042,8 @@ class Output_data_got : public Output_section_data_build
    private:
     enum
     {
-      GSYM_CODE = -1U,
-      CONSTANT_CODE = -2U
+      GSYM_CODE = 0x7fffffff,
+      CONSTANT_CODE = 0x7ffffffe
     };
 
     union
@@ -2041,7 +2057,9 @@ class Output_data_got : public Output_section_data_build
     } u_;
     // For a local symbol, the local symbol index.  This is GSYM_CODE
     // for a global symbol, or CONSTANT_CODE for a constant.
-    unsigned int local_sym_index_;
+    unsigned int local_sym_index_ : 31;
+    // Whether to use the PLT offset of the symbol if it has one.
+    bool use_plt_offset_ : 1;
   };
 
   typedef std::vector<Got_entry> Got_entries;
@@ -2516,7 +2534,7 @@ class Output_section : public Output_data
   template<int size, bool big_endian>
   off_t
   add_input_section(Layout* layout, Sized_relobj<size, big_endian>* object,
-                    unsigned int shndx, const char *name,
+                    unsigned int shndx, const char* name,
 		    const elfcpp::Shdr<size, big_endian>& shdr,
 		    unsigned int reloc_shndx, bool have_sections_script);
 
@@ -2524,9 +2542,12 @@ class Output_section : public Output_data
   void
   add_output_section_data(Output_section_data* posd);
 
-  // Add a relaxed input section PORIS to this output section.
+  // Add a relaxed input section PORIS called NAME to this output section
+  // with LAYOUT.
   void
-  add_relaxed_input_section(Output_relaxed_input_section* poris);
+  add_relaxed_input_section(Layout* layout,
+			    Output_relaxed_input_section* poris,
+			    const std::string& name);
 
   // Return the section name.
   const char*
@@ -2761,6 +2782,17 @@ class Output_section : public Output_data
   set_must_sort_attached_input_sections()
   { this->must_sort_attached_input_sections_ = true; }
 
+  // Get the order in which this section appears in the PT_LOAD output
+  // segment.
+  Output_section_order
+  order() const
+  { return this->order_; }
+
+  // Set the order for this section.
+  void
+  set_order(Output_section_order order)
+  { this->order_ = order; }
+
   // Return whether this section holds relro data--data which has
   // dynamic relocations but which may be marked read-only after the
   // dynamic relocations have been completed.
@@ -2777,46 +2809,6 @@ class Output_section : public Output_data
   void
   clear_is_relro()
   { this->is_relro_ = false; }
-
-  // True if this section holds relro local data--relro data for which
-  // the dynamic relocations are all RELATIVE relocations.
-  bool
-  is_relro_local() const
-  { return this->is_relro_local_; }
-
-  // Record that this section holds relro local data.
-  void
-  set_is_relro_local()
-  { this->is_relro_local_ = true; }
-
-  // True if this must be the last relro section.
-  bool
-  is_last_relro() const
-  { return this->is_last_relro_; }
-
-  // Record that this must be the last relro section.
-  void
-  set_is_last_relro()
-  {
-    gold_assert(this->is_relro_);
-    this->is_last_relro_ = true;
-  }
-
-  // True if this must be the first section following the relro sections.
-  bool
-  is_first_non_relro() const
-  {
-    gold_assert(!this->is_relro_);
-    return this->is_first_non_relro_;
-  }
-
-  // Record that this must be the first non-relro section.
-  void
-  set_is_first_non_relro()
-  {
-    gold_assert(!this->is_relro_);
-    this->is_first_non_relro_ = true;
-  }
 
   // True if this is a small section: a section which holds small
   // variables.
@@ -2844,27 +2836,6 @@ class Output_section : public Output_data
   bool
   is_large_data_section()
   { return this->is_large_section_ && this->type_ != elfcpp::SHT_NOBITS; }
-
-  // True if this is the .interp section which goes into the PT_INTERP
-  // segment.
-  bool
-  is_interp() const
-  { return this->is_interp_; }
-
-  // Record that this is the interp section.
-  void
-  set_is_interp()
-  { this->is_interp_ = true; }
-
-  // True if this is a section used by the dynamic linker.
-  bool
-  is_dynamic_linker_section() const
-  { return this->is_dynamic_linker_section_; }
-
-  // Record that this is a section used by the dynamic linker.
-  void
-  set_is_dynamic_linker_section()
-  { this->is_dynamic_linker_section_ = true; }
 
   // Return whether this section should be written after all the input
   // sections are complete.
@@ -3017,7 +2988,7 @@ class Output_section : public Output_data
     }
 
     // For a relaxed input section.
-    Input_section(Output_relaxed_input_section *psection)
+    Input_section(Output_relaxed_input_section* psection)
       : shndx_(RELAXED_INPUT_SECTION_CODE), p2align_(0),
 	section_order_index_(0)
     {
@@ -3149,7 +3120,7 @@ class Output_section : public Output_data
     set_output_section(Output_section* os)
     {
       gold_assert(!this->is_input_section());
-      Output_section_data *posd = 
+      Output_section_data* posd = 
         this->is_relaxed_input_section() ? this->u2_.poris : this->u2_.posd;
       posd->set_output_section(os);
     }
@@ -3188,7 +3159,7 @@ class Output_section : public Output_data
     bool
     output_offset(const Relobj* object, unsigned int shndx,
 		  section_offset_type offset,
-		  section_offset_type *poutput) const;
+		  section_offset_type* poutput) const;
 
     // Return whether this is the merge section for the input section
     // SHNDX in OBJECT.
@@ -3707,6 +3678,8 @@ class Output_section : public Output_data
   const elfcpp::Elf_Word type_;
   // The section flags.
   elfcpp::Elf_Xword flags_;
+  // The order of this section in the output segment.
+  Output_section_order order_;
   // The section index.
   unsigned int out_shndx_;
   // If there is a STT_SECTION for this output section in the normal
@@ -3774,21 +3747,10 @@ class Output_section : public Output_data
   bool attached_input_sections_are_sorted_ : 1;
   // True if this section holds relro data.
   bool is_relro_ : 1;
-  // True if this section holds relro local data.
-  bool is_relro_local_ : 1;
-  // True if this must be the last relro section.
-  bool is_last_relro_ : 1;
-  // True if this must be the first section after the relro sections.
-  bool is_first_non_relro_ : 1;
   // True if this is a small section.
   bool is_small_section_ : 1;
   // True if this is a large section.
   bool is_large_section_ : 1;
-  // True if this is the .interp section going into the PT_INTERP
-  // segment.
-  bool is_interp_ : 1;
-  // True if this is section is read by the dynamic linker.
-  bool is_dynamic_linker_section_ : 1;
   // Whether code-fills are generated at write.
   bool generate_code_fills_at_write_ : 1;
   // Whether the entry size field should be zero.
@@ -3874,12 +3836,17 @@ class Output_segment
   uint64_t
   maximum_alignment();
 
-  // Add the Output_section OS to this segment.  SEG_FLAGS is the
-  // segment flags to use.  DO_SORT is true if we should sort the
-  // placement of the input section for more efficient generated code.
+  // Add the Output_section OS to this PT_LOAD segment.  SEG_FLAGS is
+  // the segment flags to use.
   void
-  add_output_section(Output_section* os, elfcpp::Elf_Word seg_flags,
-		     bool do_sort);
+  add_output_section_to_load(Layout* layout, Output_section* os,
+			     elfcpp::Elf_Word seg_flags);
+
+  // Add the Output_section OS to this non-PT_LOAD segment.  SEG_FLAGS
+  // is the segment flags to use.
+  void
+  add_output_section_to_nonload(Output_section* os,
+				elfcpp::Elf_Word seg_flags);
 
   // Remove an Output_section from this segment.  It is an error if it
   // is not present.
@@ -3894,12 +3861,11 @@ class Output_segment
   // Return true if this segment has any sections which hold actual
   // data, rather than being a BSS section.
   bool
-  has_any_data_sections() const
-  { return !this->output_data_.empty(); }
+  has_any_data_sections() const;
 
-  // Return the number of dynamic relocations applied to this segment.
-  unsigned int
-  dynamic_reloc_count() const;
+  // Whether this segment has a dynamic relocs.
+  bool
+  has_dynamic_reloc() const;
 
   // Return the address of the first section.
   uint64_t
@@ -3945,8 +3911,8 @@ class Output_segment
   // *PSHNDX.  This should only be called for a PT_LOAD segment.
   uint64_t
   set_section_addresses(const Layout*, bool reset, uint64_t addr,
-			unsigned int increase_relro, off_t* poff,
-			unsigned int* pshndx);
+			unsigned int* increase_relro, bool* has_relro,
+			off_t* poff, unsigned int* pshndx);
 
   // Set the minimum alignment of this segment.  This may be adjusted
   // upward based on the section alignments.
@@ -3992,7 +3958,7 @@ class Output_segment
   print_sections_to_mapfile(Mapfile*) const;
 
  private:
-  typedef std::list<Output_data*> Output_data_list;
+  typedef std::vector<Output_data*> Output_data_list;
 
   // Find the maximum alignment in an Output_data_list.
   static uint64_t
@@ -4012,9 +3978,9 @@ class Output_segment
   unsigned int
   output_section_count_list(const Output_data_list*) const;
 
-  // Return the number of dynamic relocs in an Output_data_list.
-  unsigned int
-  dynamic_reloc_count_list(const Output_data_list*) const;
+  // Return whether an Output_data_list has a dynamic reloc.
+  bool
+  has_dynamic_reloc_list(const Output_data_list*) const;
 
   // Find the section with the lowest load address in an
   // Output_data_list.
@@ -4022,6 +3988,12 @@ class Output_segment
   lowest_load_address_in_list(const Output_data_list* pdl,
 			      Output_section** found,
 			      uint64_t* found_lma) const;
+
+  // Find the first and last entries by address.
+  void
+  find_first_and_last_list(const Output_data_list* pdl,
+			   const Output_data** pfirst,
+			   const Output_data** plast) const;
 
   // Write the section headers in the list into V.
   template<int size, bool big_endian>
@@ -4037,10 +4009,8 @@ class Output_segment
   // NOTE: We want to use the copy constructor.  Currently, shallow copy
   // works for us so we do not need to write our own copy constructor.
   
-  // The list of output data with contents attached to this segment.
-  Output_data_list output_data_;
-  // The list of output data without contents attached to this segment.
-  Output_data_list output_bss_;
+  // The list of output data attached to this segment.
+  Output_data_list output_lists_[ORDER_MAX];
   // The segment virtual address.
   uint64_t vaddr_;
   // The segment physical address.

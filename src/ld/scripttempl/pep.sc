@@ -23,13 +23,14 @@ if test "${RELOCATING}"; then
     R_RDATA='*(.rdata)
              *(SORT(.rdata$*))'
   fi
-  R_IDATA='
+  R_IDATA234='
     SORT(*)(.idata$2)
     SORT(*)(.idata$3)
     /* These zeroes mark the end of the import list.  */
     LONG (0); LONG (0); LONG (0); LONG (0); LONG (0);
-    SORT(*)(.idata$4)
-    SORT(*)(.idata$5)
+    SORT(*)(.idata$4)'
+  R_IDATA5='SORT(*)(.idata$5)'
+  R_IDATA67='
     SORT(*)(.idata$6)
     SORT(*)(.idata$7)'
   R_CRT_XC='*(SORT(.CRT$XC*))  /* C initialization */'
@@ -46,7 +47,9 @@ else
   R_TEXT=
   R_DATA=
   R_RDATA='*(.rdata)'
-  R_IDATA=
+  R_IDATA234=
+  R_IDATA5=
+  R_IDATA67=
   R_CRT=
   R_RSRC=
 fi
@@ -118,7 +121,12 @@ SECTIONS
 
   .pdata ${RELOCATING+BLOCK(__section_alignment__)} :
   {
-    *(.pdata)
+    *(.pdata*)
+  }
+
+  .xdata ${RELOCATING+BLOCK(__section_alignment__)} :
+  {
+    *(.xdata*)
   }
 
   .bss ${RELOCATING+BLOCK(__section_alignment__)} :
@@ -148,7 +156,11 @@ SECTIONS
   {
     /* This cannot currently be handled with grouped sections.
 	See pep.em:sort_sections.  */
-    ${R_IDATA}
+    ${R_IDATA234}
+    ${RELOCATING+__IAT_start__ = .;}
+    ${R_IDATA5}
+    ${RELOCATING+__IAT_end__ = .;}
+    ${R_IDATA67}
   }
   .CRT ${RELOCATING+BLOCK(__section_alignment__)} :
   { 					
@@ -287,6 +299,12 @@ SECTIONS
   .debug_ranges ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
   {
     *(.debug_ranges)
+  }
+
+  /* DWARF 4.  */
+  .debug_types ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
+  {
+    *(.debug_types) *(.gnu.linkonce.wt.*)
   }
 }
 EOF

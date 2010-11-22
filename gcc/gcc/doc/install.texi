@@ -355,17 +355,6 @@ not installed in your default library search path.
 
 Necessary to build libgcj, the GCJ runtime.
 
-@item libelf version 0.8.12 (or later)
-
-Necessary to build link-time optimization (LTO) support.  It can be
-downloaded from @uref{http://www.mr511.de/software/libelf-0.8.12.tar.gz},
-though it is commonly available in several systems.  The version in
-IRIX 6.5 doesn't work since it lacks @file{gelf.h}.  The version in
-Solaris 2 does work.
-
-The @option{--with-libelf} configure option should be used if libelf is
-not installed in your default library search patch.
-
 @end table
 
 @heading Tools/packages necessary for modifying GCC
@@ -1177,10 +1166,11 @@ of the arguments depend on the target.
 Specify if the compiler should default to @option{-marm} or @option{-mthumb}.
 This option is only supported on ARM targets.
 
-@item --with-fpmath=sse
-Specify if the compiler should default to @option{-msse2} and
-@option{-mfpmath=sse}.  This option is only supported on i386 and
-x86-64 targets.
+@item --with-fpmath=@var{isa}
+This options sets @option{-mfpmath=sse} by default and specifies the default
+ISA for floating-point arithmetics.  You can select either @samp{sse} which
+enables @option{-msse2} or @samp{avx} which enables @option{-mavx} by default.
+This option is only supported on i386 and x86-64 targets.
 
 @item --with-divide=@var{type}
 Specify how the compiler should generate code for checking for
@@ -1228,6 +1218,10 @@ This is essential for fully standards-compliant handling of
 destructors, but requires __cxa_atexit in libc.  This option is currently
 only available on systems with GNU libc.  When enabled, this will cause
 @option{-fuse-cxa-atexit} to be passed by default.
+
+@item --enable-indirect-function
+Define if you want to enable the @code{ifunc} attribute.  This option is
+currently only available on systems with GNU libc on certain targets.
 
 @item --enable-target-optspace
 Specify that target
@@ -1570,7 +1564,10 @@ they are installed (@samp{--with-gmp=@var{gmpinstalldir}},
 @option{--with-mpc-lib=@var{mpcinstalldir}/lib} and
 @option{--with-mpc-include=@var{mpcinstalldir}/include}.  If these
 shorthand assumptions are not correct, you can use the explicit
-include and lib options directly.
+include and lib options directly.  You might also need to ensure the
+shared libraries can be found by the dynamic linker when building and
+using GCC, for example by setting the runtime shared library path
+variable (@env{LD_LIBRARY_PATH} on GNU/Linux and Solaris systems).
 
 @item --with-ppl=@var{pathname}
 @itemx --with-ppl-include=@var{pathname}
@@ -1643,20 +1640,9 @@ default for a native toolchain with an assembler that accepts it and
 GLIBC 2.11 or above, otherwise disabled.
 
 @item --enable-lto
+@itemx --disable-lto
 Enable support for link-time optimization (LTO).  This is enabled by
-default if a working libelf implementation is found (see
-@option{--with-libelf}).
-
-@item --with-libelf=@var{pathname}
-@itemx --with-libelf-include=@var{pathname}
-@itemx --with-libelf-lib=@var{pathname}
-If you do not have libelf installed in a standard location and you
-want to enable support for link-time optimization (LTO), you can
-explicitly specify the directory where libelf is installed
-(@samp{--with-libelf=@var{libelfinstalldir}}).  The
-@option{--with-libelf=@var{libelfinstalldir}} option is shorthand for
-@option{--with-libelf-include=@var{libelfinstalldir}/include}
-@option{--with-libelf-lib=@var{libelfinstalldir}/lib}.
+default, and may be disabled using @option{--disable-lto}.
 
 @item --enable-gold
 Enable support for using @command{gold} as the linker.  If gold support is
@@ -1673,8 +1659,8 @@ The following options only apply to building cross compilers.
 @table @code
 @item --with-sysroot
 @itemx --with-sysroot=@var{dir}
-Tells GCC to consider @var{dir} as the root of a tree that contains a
-(subset of) the root filesystem of the target operating system.
+Tells GCC to consider @var{dir} as the root of a tree that contains
+(a subset of) the root filesystem of the target operating system.
 Target system headers, libraries and run-time object files will be
 searched in there.  More specifically, this acts as if
 @option{--sysroot=@var{dir}} was added to the default options of the built
@@ -1983,6 +1969,36 @@ Exec prefix where libart is installed (optional).
 Do not try to compile and run a test libart program.
 
 @end table
+
+@subsubheading Overriding @command{configure} test results
+
+Sometimes, it might be necessary to override the result of some
+@command{configure} test, for example in order to ease porting to a new
+system or work around a bug in a test.  The toplevel @command{configure}
+script provides three variables for this:
+
+@table @code
+
+@item build_configargs
+@cindex @code{build_configargs}
+The contents of this variable is passed to all build @command{configure}
+scripts.
+
+@item host_configargs
+@cindex @code{host_configargs}
+The contents of this variable is passed to all host @command{configure}
+scripts.
+
+@item target_configargs
+@cindex @code{target_configargs}
+The contents of this variable is passed to all target @command{configure}
+scripts.
+
+@end table
+
+In order to avoid shell and @command{make} quoting issues for complex
+overrides, you can pass a setting for @env{CONFIG_SITE} and set
+variables in the site file.
 
 @html
 <hr />
@@ -2601,7 +2617,7 @@ messages may be automatically processed.
 
 Now that GCC has been built (and optionally tested), you can install it with
 @smallexample
-cd @var{objdir}; make install
+cd @var{objdir} && make install
 @end smallexample
 
 We strongly recommend to install into a target directory where there is
@@ -2637,7 +2653,8 @@ jail can be achieved with the command
 make DESTDIR=@var{path-to-rootdir} install
 @end smallexample
 
-@noindent where @var{path-to-rootdir} is the absolute path of
+@noindent
+where @var{path-to-rootdir} is the absolute path of
 a directory relative to which all installation paths will be
 interpreted.  Note that the directory specified by @code{DESTDIR}
 need not exist yet; it will be created if necessary.
@@ -2650,6 +2667,12 @@ be filled with duplicated GCC executables only if it already exists,
 it will not be created otherwise.  This is regarded as a feature,
 not as a bug, because it gives slightly more control to the packagers
 using the @code{DESTDIR} feature.
+
+You can install stripped programs and libraries with
+
+@smallexample
+make install-strip
+@end smallexample
 
 If you are bootstrapping a released version of GCC then please
 quickly review the build status page for your release, available from
@@ -2787,7 +2810,7 @@ Development Tools for the Renesas H8/300[HS] Series}.
 HP-UX:
 @itemize
 @item
-@uref{http://hpux.cs.utah.edu/,,HP-UX Porting Center};
+@uref{http://hpux.connect.org.uk/,,HP-UX Porting Center};
 
 @item
 @uref{ftp://sunsite.informatik.rwth-aachen.de/pub/packages/gcc_hpux/,,Binaries for HP-UX 11.00 at Aachen University of Technology}.
@@ -2802,10 +2825,30 @@ Development Tools for the Motorola 68HC11/68HC12}.
 OpenServer/Unixware}.
 
 @item
-Solaris 2 (SPARC, Intel)---@uref{http://www.sunfreeware.com/,,Sunfreeware}.
+Solaris 2 (SPARC, Intel):
+@itemize
+@item
+@uref{http://www.sunfreeware.com/,,Sunfreeware}
 
 @item
-SGI---@uref{http://freeware.sgi.com/,,SGI Freeware}.
+@uref{http://www.blastwave.org/,,Blastwave}
+
+@item
+@uref{http://www.opencsw.org/,,OpenCSW}
+
+@item
+@uref{http://jupiterrise.com/tgcware/,,TGCware}
+@end itemize
+
+@item
+SGI IRIX:
+@itemize
+@item
+@uref{http://nekochan.net/,,Nekoware}
+
+@item
+@uref{http://jupiterrise.com/tgcware/,,TGCware}
+@end itemize
 
 @item
 Microsoft Windows:
@@ -2928,6 +2971,8 @@ information are.
 @item
 @uref{#mep-x-elf,,mep-*-elf}
 @item
+@uref{#microblaze-x-elf,,microblaze-*-elf}
+@item
 @uref{#mips-x-x,,mips-*-*}
 @item
 @uref{#mips-sgi-irix5,,mips-sgi-irix5}
@@ -2961,6 +3006,8 @@ information are.
 @uref{#s390x-ibm-tpf,,s390x-ibm-tpf*}
 @item
 @uref{#x-x-solaris2,,*-*-solaris2*}
+@item
+@uref{#sparc-x-x,,sparc*-*-*}
 @item
 @uref{#sparc-sun-solaris2,,sparc-sun-solaris2*}
 @item
@@ -3796,6 +3843,13 @@ This configuration is intended for embedded systems.
 @html
 <hr />
 @end html
+@heading @anchor{microblaze-x-elf}microblaze-*-elf
+Xilinx MicroBlaze processor.
+This configuration is intended for embedded systems.
+
+@html
+<hr />
+@end html
 @heading @anchor{mips-x-x}mips-*-*
 If on a MIPS system you get an error message saying ``does not have gp
 sections for all it's [sic] sectons [sic]'', don't worry about it.  This
@@ -4192,6 +4246,21 @@ additional bug fixes.
 @html
 <hr />
 @end html
+@heading @anchor{sparc-x-x}sparc*-*-*
+
+This section contains general configuration information for all
+SPARC-based platforms.  In addition to reading this section, please
+read all other sections that match your target.
+
+Newer versions of the GNU Multiple Precision Library (GMP), the MPFR
+library and the MPC library are known to be miscompiled by earlier
+versions of GCC on these platforms.  We therefore recommend the use
+of the exact versions of these libraries listed as minimal versions
+in @uref{prerequisites.html,,the prerequisites}.
+
+@html
+<hr />
+@end html
 @heading @anchor{sparc-sun-solaris2}sparc-sun-solaris2*
 
 When GCC is configured to use GNU binutils 2.14 or later, the binaries
@@ -4241,12 +4310,11 @@ ld: warning: relocation error: R_SPARC_UA32: @dots{}
 To work around this problem, compile with @option{-gstabs+} instead of
 plain @option{-g}.
 
-When configuring the GNU Multiple Precision Library (GMP) or the MPFR
-library on a Solaris 7 or later system, the canonical target triplet
-must be specified as the @command{build} parameter on the configure
-line.  This triplet can be obtained by invoking @command{./config.guess} in
-the toplevel source directory of GCC (and not that of GMP or MPFR).
-For example on a Solaris 9 system:
+When configuring the GNU Multiple Precision Library (GMP), the MPFR
+library or the MPC library on a Solaris 7 or later system, the canonical
+target triplet must be specified as the @command{build} parameter on the
+configure line.  This target triplet can be obtained by invoking @command{./config.guess} in the toplevel source directory of GCC (and
+not that of GMP or MPFR or MPC).  For example on a Solaris 9 system:
 
 @smallexample
    % ./configure --build=sparc-sun-solaris2.9 --prefix=xxx

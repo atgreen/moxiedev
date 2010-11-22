@@ -627,8 +627,7 @@ gnuv3_print_method_ptr (const gdb_byte *contents,
 static int
 gnuv3_method_ptr_size (struct type *type)
 {
-  struct type *domain_type = check_typedef (TYPE_DOMAIN_TYPE (type));
-  struct gdbarch *gdbarch = get_type_arch (domain_type);
+  struct gdbarch *gdbarch = get_type_arch (type);
 
   return 2 * TYPE_LENGTH (builtin_type (gdbarch)->builtin_data_ptr);
 }
@@ -639,8 +638,7 @@ static void
 gnuv3_make_method_ptr (struct type *type, gdb_byte *contents,
 		       CORE_ADDR value, int is_virtual)
 {
-  struct type *domain_type = check_typedef (TYPE_DOMAIN_TYPE (type));
-  struct gdbarch *gdbarch = get_type_arch (domain_type);
+  struct gdbarch *gdbarch = get_type_arch (type);
   int size = TYPE_LENGTH (builtin_type (gdbarch)->builtin_data_ptr);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
@@ -837,9 +835,10 @@ gnuv3_pass_by_reference (struct type *type)
      by reference, so does this class.  Similarly for members, which
      are constructed whenever this class is.  We do not need to worry
      about recursive loops here, since we are only looking at members
-     of complete class type.  */
+     of complete class type.  Also ignore any static members.  */
   for (fieldnum = 0; fieldnum < TYPE_NFIELDS (type); fieldnum++)
-    if (gnuv3_pass_by_reference (TYPE_FIELD_TYPE (type, fieldnum)))
+    if (! field_is_static (&TYPE_FIELD (type, fieldnum))
+        && gnuv3_pass_by_reference (TYPE_FIELD_TYPE (type, fieldnum)))
       return 1;
 
   return 0;

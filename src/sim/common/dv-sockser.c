@@ -55,6 +55,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "dv-sockser.h"
 
+#ifndef HAVE_SOCKLEN_T
+typedef int socklen_t;
+#endif
+
 /* Get definitions for both O_NONBLOCK and O_NDELAY.  */
 
 #ifndef O_NDELAY
@@ -100,8 +104,8 @@ static const OPTION sockser_options[] =
 {
   { { "sockser-addr", required_argument, NULL, OPTION_ADDR },
       '\0', "SOCKET ADDRESS", "Set serial emulation socket address",
-      sockser_option_handler },
-  { { NULL, no_argument, NULL, 0 }, '\0', NULL, NULL, NULL }
+      sockser_option_handler, NULL },
+  { { NULL, no_argument, NULL, 0 }, '\0', NULL, NULL, NULL, NULL }
 };
 
 static SIM_RC
@@ -162,7 +166,7 @@ dv_sockser_init (SIM_DESC sd)
     }
 
   sockser_listen_fd = socket (PF_INET, SOCK_STREAM, 0);
-  if (sockser_listen_fd < 0)
+  if (sockser_listen_fd == -1)
     {
       sim_io_eprintf (sd, "sockser init: unable to get socket: %s\n",
 		      strerror (errno));
@@ -243,7 +247,7 @@ connected_p (SIM_DESC sd)
   struct timeval tv;
   fd_set readfds;
   struct sockaddr sockaddr;
-  int addrlen;
+  socklen_t addrlen;
 
   if (sockser_listen_fd == -1)
     return 0;
@@ -270,7 +274,7 @@ connected_p (SIM_DESC sd)
 
   addrlen = sizeof (sockaddr);
   sockser_fd = accept (sockser_listen_fd, &sockaddr, &addrlen);
-  if (sockser_fd < 0)
+  if (sockser_fd == -1)
     return 0;
 
   /* Set non-blocking i/o.  */
@@ -294,7 +298,8 @@ dv_sockser_status (SIM_DESC sd)
   fd_set readfds,writefds;
 
   /* status to return if the socket isn't set up, or select fails */
-  status = DV_SOCKSER_INPUT_EMPTY | DV_SOCKSER_OUTPUT_EMPTY;
+  status = DV_SOCKSER_INPUT_EMPTY | DV_SOCKSER_OUTPUT_EMPTY |
+	   DV_SOCKSER_DISCONNECTED;
 
   if (! connected_p (sd))
     return status;
@@ -341,13 +346,14 @@ dv_sockser_status (SIM_DESC sd)
 }
 
 int
-dv_sockser_write (SIM_DESC sd, unsigned char c)
+dv_sockser_write_buffer (SIM_DESC sd, const unsigned char *buffer,
+			 unsigned nr_bytes)
 {
   int n;
 
   if (! connected_p (sd))
     return -1;
-  n = write (sockser_fd, &c, 1);
+  n = write (sockser_fd, buffer, nr_bytes);
   if (n == -1)
     {
       if (errno == EPIPE)
@@ -357,9 +363,15 @@ dv_sockser_write (SIM_DESC sd, unsigned char c)
 	}
       return -1;
     }
-  if (n != 1)
+  if (n != nr_bytes)
     return -1;
-  return 1;
+  return nr_bytes;
+}
+
+int
+dv_sockser_write (SIM_DESC sd, unsigned char c)
+{
+  return dv_sockser_write_buffer (sd, &c, 1);
 }
 
 int

@@ -494,7 +494,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_bitfield, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "REFLONG",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffffffff,		/* src_mask */
@@ -509,7 +509,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_bitfield, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "REFQUAD",		/* name */
 	 FALSE,			/* partial_inplace */
 	 MINUS_ONE,		/* src_mask */
@@ -526,7 +526,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_bitfield, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "GPREL32",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffffffff,		/* src_mask */
@@ -541,7 +541,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "ELF_LITERAL",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -607,7 +607,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 TRUE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "BRADDR",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0x1fffff,		/* src_mask */
@@ -622,7 +622,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 TRUE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_dont, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "HINT",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0x3fff,		/* src_mask */
@@ -637,7 +637,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 TRUE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "SREL16",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -652,7 +652,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 TRUE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "SREL32",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffffffff,		/* src_mask */
@@ -667,7 +667,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 TRUE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "SREL64",		/* name */
 	 FALSE,			/* partial_inplace */
 	 MINUS_ONE,		/* src_mask */
@@ -689,7 +689,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "GPRELHIGH",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -704,7 +704,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_dont, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "GPRELLOW",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -719,7 +719,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "GPREL16",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -805,7 +805,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 TRUE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "BRSGP",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0x1fffff,		/* src_mask */
@@ -820,7 +820,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "TLSGD",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -835,7 +835,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "TLSLDM",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -850,7 +850,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_bitfield, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "DTPMOD64",		/* name */
 	 FALSE,			/* partial_inplace */
 	 MINUS_ONE,		/* src_mask */
@@ -866,7 +866,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "GOTDTPREL",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -881,7 +881,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_bitfield, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "DTPREL64",		/* name */
 	 FALSE,			/* partial_inplace */
 	 MINUS_ONE,		/* src_mask */
@@ -896,7 +896,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "DTPRELHI",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -911,7 +911,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_dont, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "DTPRELLO",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -926,7 +926,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "DTPREL16",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -942,7 +942,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "GOTTPREL",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -957,7 +957,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_bitfield, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "TPREL64",		/* name */
 	 FALSE,			/* partial_inplace */
 	 MINUS_ONE,		/* src_mask */
@@ -972,7 +972,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "TPRELHI",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -987,7 +987,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_dont, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "TPRELLO",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -1002,7 +1002,7 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
-	 0,			/* special_function */
+	 bfd_elf_generic_reloc,	/* special_function */
 	 "TPREL16",		/* name */
 	 FALSE,			/* partial_inplace */
 	 0xffff,		/* src_mask */
@@ -1866,8 +1866,8 @@ elf64_alpha_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	case R_ALPHA_TLSLDM:
 	  /* The symbol for a TLSLDM reloc is ignored.  Collapse the
-	     reloc to the 0 symbol so that they all match.  */
-	  r_symndx = 0;
+	     reloc to the STN_UNDEF (0) symbol so that they all match.  */
+	  r_symndx = STN_UNDEF;
 	  h = 0;
 	  maybe_dynamic = FALSE;
 	  /* FALLTHRU */
@@ -3382,9 +3382,9 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
 				Elf_Internal_Rela *irel, bfd_boolean is_gd)
 {
   bfd_byte *pos[5];
-  unsigned int insn;
+  unsigned int insn, tlsgd_reg;
   Elf_Internal_Rela *gpdisp, *hint;
-  bfd_boolean dynamic, use_gottprel, pos1_unusable;
+  bfd_boolean dynamic, use_gottprel;
   unsigned long new_symndx;
 
   dynamic = alpha_elf_dynamic_symbol_p (&info->h->root, info->link_info);
@@ -3425,7 +3425,6 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
   pos[2] = info->contents + irel[2].r_offset;
   pos[3] = info->contents + gpdisp->r_offset;
   pos[4] = pos[3] + gpdisp->r_addend;
-  pos1_unusable = FALSE;
 
   /* Generally, the positions are not allowed to be out of order, lest the
      modified insn sequence have different register lifetimes.  We can make
@@ -3436,8 +3435,6 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
       pos[0] = pos[1];
       pos[1] = tmp;
     }
-  else if (pos[1] < pos[0])
-    pos1_unusable = TRUE;
   if (pos[1] >= pos[2] || pos[2] >= pos[3])
     return TRUE;
 
@@ -3494,7 +3491,15 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
      as appropriate.  */
 
   use_gottprel = FALSE;
-  new_symndx = is_gd ? ELF64_R_SYM (irel->r_info) : 0;
+  new_symndx = is_gd ? ELF64_R_SYM (irel->r_info) : STN_UNDEF;
+
+  /* Beware of the compiler hoisting part of the sequence out a loop
+     and adjusting the destination register for the TLSGD insn.  If this
+     happens, there will be a move into $16 before the JSR insn, so only
+     transformations of the first insn pair should use this register.  */
+  tlsgd_reg = bfd_get_32 (info->abfd, pos[0]);
+  tlsgd_reg = (tlsgd_reg >> 21) & 31;
+
   switch (!dynamic && !info->link_info->shared)
     {
     case 1:
@@ -3508,7 +3513,7 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
 
 	if (disp >= -0x8000 && disp < 0x8000)
 	  {
-	    insn = (OP_LDA << 26) | (16 << 21) | (31 << 16);
+	    insn = (OP_LDA << 26) | (tlsgd_reg << 21) | (31 << 16);
 	    bfd_put_32 (info->abfd, (bfd_vma) insn, pos[0]);
 	    bfd_put_32 (info->abfd, (bfd_vma) INSN_UNOP, pos[1]);
 
@@ -3519,11 +3524,11 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
 	  }
 	else if (disp >= -(bfd_signed_vma) 0x80000000
 		 && disp < (bfd_signed_vma) 0x7fff8000
-		 && !pos1_unusable)
+		 && pos[0] + 4 == pos[1])
 	  {
-	    insn = (OP_LDAH << 26) | (16 << 21) | (31 << 16);
+	    insn = (OP_LDAH << 26) | (tlsgd_reg << 21) | (31 << 16);
 	    bfd_put_32 (info->abfd, (bfd_vma) insn, pos[0]);
-	    insn = (OP_LDA << 26) | (16 << 21) | (16 << 16);
+	    insn = (OP_LDA << 26) | (tlsgd_reg << 21) | (tlsgd_reg << 16);
 	    bfd_put_32 (info->abfd, (bfd_vma) insn, pos[1]);
 
 	    irel[0].r_offset = pos[0] - info->contents;
@@ -3538,7 +3543,7 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
     default:
       use_gottprel = TRUE;
 
-      insn = (OP_LDQ << 26) | (16 << 21) | (29 << 16);
+      insn = (OP_LDQ << 26) | (tlsgd_reg << 21) | (29 << 16);
       bfd_put_32 (info->abfd, (bfd_vma) insn, pos[0]);
       bfd_put_32 (info->abfd, (bfd_vma) INSN_UNOP, pos[1]);
 
@@ -3719,8 +3724,8 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
 
 	case R_ALPHA_TLSLDM:
 	  /* The symbol for a TLSLDM reloc is ignored.  Collapse the
-             reloc to the 0 symbol so that they all match.  */
-	  r_symndx = 0;
+             reloc to the STN_UNDEF (0) symbol so that they all match.  */
+	  r_symndx = STN_UNDEF;
 	  break;
 
 	default:
@@ -4020,16 +4025,10 @@ elf64_alpha_relocate_section_r (bfd *output_bfd ATTRIBUTE_UNUSED,
 	}
 
       if (sec != NULL && elf_discarded_section (sec))
-	{
-	  /* For relocs against symbols from removed linkonce sections,
-	     or sections discarded by a linker script, we just want the
-	     section contents zeroed.  */
-	  _bfd_clear_contents (elf64_alpha_howto_table + r_type,
-			       input_bfd, contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend,
+					 elf64_alpha_howto_table + r_type,
+					 contents);
 
       if (sym != NULL && ELF_ST_TYPE (sym->st_info) == STT_SECTION)
 	rel->r_addend += sec->output_offset;
@@ -4081,7 +4080,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
       const char *section_name;
       section_name = (bfd_elf_string_from_elf_section
 		      (input_bfd, elf_elfheader(input_bfd)->e_shstrndx,
-		       elf_section_data(input_section)->rel_hdr.sh_name));
+		       _bfd_elf_single_rel_hdr (input_section)->sh_name));
       BFD_ASSERT(section_name != NULL);
       srel = bfd_get_section_by_name (dynobj, section_name);
     }
@@ -4149,9 +4148,9 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
       r_symndx = ELF64_R_SYM(rel->r_info);
 
       /* The symbol for a TLSLDM reloc is ignored.  Collapse the
-	 reloc to the 0 symbol so that they all match.  */
+	 reloc to the STN_UNDEF (0) symbol so that they all match.  */
       if (r_type == R_ALPHA_TLSLDM)
-	r_symndx = 0;
+	r_symndx = STN_UNDEF;
 
       if (r_symndx < symtab_hdr->sh_info)
 	{
@@ -4161,10 +4160,10 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	  msec = sec;
 	  value = _bfd_elf_rela_local_sym (output_bfd, sym, &msec, rel);
 
-	  /* If this is a tp-relative relocation against sym 0,
+	  /* If this is a tp-relative relocation against sym STN_UNDEF (0),
 	     this is hackery from relax_section.  Force the value to
 	     be the tls module base.  */
-	  if (r_symndx == 0
+	  if (r_symndx == STN_UNDEF
 	      && (r_type == R_ALPHA_TLSLDM
 		  || r_type == R_ALPHA_GOTTPREL
 		  || r_type == R_ALPHA_TPREL64
@@ -4235,15 +4234,8 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	}
 
       if (sec != NULL && elf_discarded_section (sec))
-	{
-	  /* For relocs against symbols from removed linkonce sections,
-	     or sections discarded by a linker script, we just want the
-	     section contents zeroed.  Avoid any special processing.  */
-	  _bfd_clear_contents (howto, input_bfd, contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend, howto, contents);
 
       addend = rel->r_addend;
       value += addend;
@@ -4450,7 +4442,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		dynaddend = value - dtp_base;
 	      }
 	    else if (info->shared
-		     && r_symndx != 0
+		     && r_symndx != STN_UNDEF
 		     && (input_section->flags & SEC_ALLOC)
 		     && !undef_weak_ref)
 	      {
@@ -4498,7 +4490,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	  /* ??? .eh_frame references to discarded sections will be smashed
 	     to relocations against SHN_UNDEF.  The .eh_frame format allows
 	     NULL to be encoded as 0 in any format, so this works here.  */
-	  if (r_symndx == 0)
+	  if (r_symndx == STN_UNDEF)
 	    howto = (elf64_alpha_howto_table
 		     + (r_type - R_ALPHA_SREL32 + R_ALPHA_REFLONG));
 	  goto default_reloc;
@@ -5329,6 +5321,7 @@ static const struct elf_size_info alpha_elf_size_info =
 #define TARGET_LITTLE_SYM	bfd_elf64_alpha_vec
 #define TARGET_LITTLE_NAME	"elf64-alpha"
 #define ELF_ARCH		bfd_arch_alpha
+#define ELF_TARGET_ID		ALPHA_ELF_DATA
 #define ELF_MACHINE_CODE	EM_ALPHA
 #define ELF_MAXPAGESIZE	0x10000
 #define ELF_COMMONPAGESIZE	0x2000

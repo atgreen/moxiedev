@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/org/ietf/jgss
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 
 
 
@@ -270,11 +270,11 @@ file
 
 
 
-2009-04-24T17:48:25.000000Z
-54e3283ecb9a7160dc4909dc5a4ff326
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:53.095794Z
+d3648aee48e3c9a56e443465e3c53dc7
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -296,5 +296,5 @@ has-props
 
 
 
-2374
+2440
 

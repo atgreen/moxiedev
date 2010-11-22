@@ -20,9 +20,15 @@ if $tracelevel then {
     strace $tracelevel
 }
 
+load_lib gdb-python.exp
+
 set testfile "py-type"
 set srcfile ${testfile}.c
 set binfile ${objdir}/${subdir}/${testfile}
+
+if [get_compiler_info not-used c++] {
+    return -1;
+}
 
 # Build inferior to language specification.
 proc build_inferior {lang} {
@@ -55,17 +61,6 @@ proc runto_bp {bp} {
   gdb_continue_to_breakpoint $bp
 }
 
-# Run a command in GDB, and report a failure if a Python exception is thrown.
-# If report_pass is true, report a pass if no exception is thrown.
-proc gdb_py_test_silent_cmd {cmd name report_pass} {
-  global gdb_prompt
-
-  gdb_test_multiple $cmd $name {
-      -re "Traceback.*$gdb_prompt $"  { fail $name }
-      -re "$gdb_prompt $"	      { if $report_pass { pass $name } }
-  }
-}
-
 proc test_fields {lang} {
   global gdb_prompt
 
@@ -77,6 +72,10 @@ proc test_fields {lang} {
       gdb_test "python print len(fields)" "2" "Check number of fields"
       gdb_test "python print fields\[0\].name" "c" "Check class field c name"
       gdb_test "python print fields\[1\].name" "d" "Check class field d name"
+
+      gdb_test "python print c.type == gdb.parse_and_eval('d').type" "False"
+      gdb_test "python print c.type == gdb.parse_and_eval('d').type.fields()\[0\].type" \
+	  "True"
   }
 
   # Test normal fields usage in structs.
@@ -93,6 +92,13 @@ proc test_fields {lang} {
   gdb_test "python fields = ar.type.fields()"
   gdb_test "python print len(fields)" "1" "Check the number of fields"
   gdb_test "python print fields\[0\].type" "<range type>" "Check array field type"
+
+  gdb_test "python print ar\[0\].cast(ar\[0\].type.array(1))" \
+      ".1, 2." "cast to array with one argument"
+  gdb_test "python print ar\[0\].cast(ar\[0\].type.array(0, 1))" \
+      ".1, 2." "cast to array with two arguments"
+
+  gdb_test "python print ar\[0\].type == ar\[0\].type" "True"
 }
 
 proc test_base_class {} {
@@ -126,6 +132,33 @@ proc test_range {} {
   gdb_test "python print st.type.range()" "RuntimeError: This type does not have a range.*" "Check range for non ranged type."
 }
 
+# Some tests of template arguments.
+proc test_template {} {
+    gdb_py_test_silent_cmd \
+	"python ttype = gdb.parse_and_eval('temvar').type" \
+	"get type of temvar" \
+	1
+
+    gdb_test "python print ttype.template_argument(0)" "D"
+    gdb_test "python print isinstance(ttype.template_argument(0), gdb.Type)" \
+	"True"
+
+    # The next two tests require a GCC that emits DW_TAG_template_*.
+    # GCC 4.4 does not emit it, 4.5 and 6 do emit it.
+    set have_older_gcc 0
+    if {[test_compiler_info {gcc-[0-3]-*}]
+	|| [test_compiler_info {gcc-4-[0-4]-*}]} {
+	set have_older_gcc 1
+    }
+    if $have_older_gcc { setup_xfail *-*-* }
+    gdb_test "python print ttype.template_argument(1)" "23"
+    if $have_older_gcc { setup_xfail *-*-* }
+    gdb_test "python print isinstance(ttype.template_argument(1), gdb.Value)" \
+	"True"
+
+    setup_kfail "gcc/41736" *-*-*
+    gdb_test "python print ttype.template_argument(2)" "&C::c"
+}
 
 # Perform C Tests.
 build_inferior "c"
@@ -144,3 +177,4 @@ runto_bp "break to inspect struct and array."
 test_fields "c++"
 test_base_class
 test_range
+test_template

@@ -1,6 +1,6 @@
 // layout.h -- lay out output file sections for gold  -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -58,6 +58,7 @@ class Output_reduced_debug_abbrev_section;
 class Output_reduced_debug_info_section;
 class Eh_frame;
 class Target;
+struct Timespec;
 
 // Return TRUE if SECNAME is the name of a compressed debug section.
 extern bool
@@ -214,8 +215,8 @@ class Kept_section
   // Look for a section name in the group list, and return whether it
   // was found.  If found, returns the section index and size.
   bool
-  find_comdat_section(const std::string& name, unsigned int *pshndx,
-		      uint64_t *psize) const
+  find_comdat_section(const std::string& name, unsigned int* pshndx,
+		      uint64_t* psize) const
   {
     gold_assert(this->is_comdat_);
     Comdat_group::const_iterator p = this->u_.group_sections->find(name);
@@ -229,7 +230,7 @@ class Kept_section
   // If there is only one section in the group list, return true, and
   // return the section index and size.
   bool
-  find_single_comdat_section(unsigned int *pshndx, uint64_t *psize) const
+  find_single_comdat_section(unsigned int* pshndx, uint64_t* psize) const
   {
     gold_assert(this->is_comdat_);
     if (this->u_.group_sections->size() != 1)
@@ -284,6 +285,107 @@ class Kept_section
     // single section.
     uint64_t linkonce_size;
   } u_;
+};
+
+// The ordering for output sections.  This controls how output
+// sections are ordered within a PT_LOAD output segment.
+
+enum Output_section_order
+{
+  // Unspecified.  Used for non-load segments.  Also used for the file
+  // and segment headers.
+  ORDER_INVALID,
+
+  // The PT_INTERP section should come first, so that the dynamic
+  // linker can pick it up quickly.
+  ORDER_INTERP,
+
+  // Loadable read-only note sections come next so that the PT_NOTE
+  // segment is on the first page of the executable.
+  ORDER_RO_NOTE,
+
+  // Put read-only sections used by the dynamic linker early in the
+  // executable to minimize paging.
+  ORDER_DYNAMIC_LINKER,
+
+  // Put reloc sections used by the dynamic linker after other
+  // sections used by the dynamic linker; otherwise, objcopy and strip
+  // get confused.
+  ORDER_DYNAMIC_RELOCS,
+
+  // Put the PLT reloc section after the other dynamic relocs;
+  // otherwise, prelink gets confused.
+  ORDER_DYNAMIC_PLT_RELOCS,
+
+  // The .init section.
+  ORDER_INIT,
+
+  // The PLT.
+  ORDER_PLT,
+
+  // The regular text sections.
+  ORDER_TEXT,
+
+  // The .fini section.
+  ORDER_FINI,
+
+  // The read-only sections.
+  ORDER_READONLY,
+
+  // The exception frame sections.
+  ORDER_EHFRAME,
+
+  // The TLS sections come first in the data section.
+  ORDER_TLS_DATA,
+  ORDER_TLS_BSS,
+
+  // Local RELRO (read-only after relocation) sections come before
+  // non-local RELRO sections.  This data will be fully resolved by
+  // the prelinker.
+  ORDER_RELRO_LOCAL,
+
+  // Non-local RELRO sections are grouped together after local RELRO
+  // sections.  All RELRO sections must be adjacent so that they can
+  // all be put into a PT_GNU_RELRO segment.
+  ORDER_RELRO,
+
+  // We permit marking exactly one output section as the last RELRO
+  // section.  We do this so that the read-only GOT can be adjacent to
+  // the writable GOT.
+  ORDER_RELRO_LAST,
+
+  // Similarly, we permit marking exactly one output section as the
+  // first non-RELRO section.
+  ORDER_NON_RELRO_FIRST,
+
+  // The regular data sections come after the RELRO sections.
+  ORDER_DATA,
+
+  // Large data sections normally go in large data segments.
+  ORDER_LARGE_DATA,
+
+  // Group writable notes so that we can have a single PT_NOTE
+  // segment.
+  ORDER_RW_NOTE,
+
+  // The small data sections must be at the end of the data sections,
+  // so that they can be adjacent to the small BSS sections.
+  ORDER_SMALL_DATA,
+
+  // The BSS sections start here.
+
+  // The small BSS sections must be at the start of the BSS sections,
+  // so that they can be adjacent to the small data sections.
+  ORDER_SMALL_BSS,
+
+  // The regular BSS sections.
+  ORDER_BSS,
+
+  // The large BSS sections come after the other BSS sections.
+  ORDER_LARGE_BSS,
+
+  // Maximum value.
+  ORDER_MAX
 };
 
 // This class handles the details of laying out input sections.
@@ -371,18 +473,14 @@ class Layout
   layout_gnu_stack(bool seen_gnu_stack, uint64_t gnu_stack_flags);
 
   // Add an Output_section_data to the layout.  This is used for
-  // special sections like the GOT section.  IS_DYNAMIC_LINKER_SECTION
-  // is true for sections which are used by the dynamic linker, such
-  // as dynamic reloc sections.  IS_RELRO is true for relro sections.
-  // IS_LAST_RELRO is true for the last relro section.
-  // IS_FIRST_NON_RELRO is true for the first section after the relro
-  // sections.
+  // special sections like the GOT section.  ORDER is where the
+  // section should wind up in the output segment.  IS_RELRO is true
+  // for relro sections.
   Output_section*
   add_output_section_data(const char* name, elfcpp::Elf_Word type,
 			  elfcpp::Elf_Xword flags,
-			  Output_section_data*, bool is_dynamic_linker_section,
-			  bool is_relro, bool is_last_relro,
-			  bool is_first_non_relro);
+			  Output_section_data*, Output_section_order order,
+			  bool is_relro);
 
   // Increase the size of the relro segment by this much.
   void
@@ -565,7 +663,7 @@ class Layout
   // Return the object managing inputs in incremental build. NULL in
   // non-incremental builds.
   Incremental_inputs*
-  incremental_inputs()
+  incremental_inputs() const
   { return this->incremental_inputs_; }
 
   // For the target-specific code to add dynamic tags which are common
@@ -681,7 +779,7 @@ class Layout
 
   // Create a note section, filling in the header.
   Output_section*
-  create_note(const char* name, int note_type, const char *section_name,
+  create_note(const char* name, int note_type, const char* section_name,
 	      size_t descsz, bool allocate, size_t* trailing_padding);
 
   // Create a note section for gold version.
@@ -703,7 +801,7 @@ class Layout
   // Create .gnu_incremental_inputs and .gnu_incremental_strtab sections needed
   // for the next run of incremental linking to check what has changed.
   void
-  create_incremental_info_sections();
+  create_incremental_info_sections(Symbol_table*);
 
   // Find the first read-only PT_LOAD segment, creating one if
   // necessary.
@@ -788,28 +886,28 @@ class Layout
   Output_section*
   get_output_section(const char* name, Stringpool::Key name_key,
 		     elfcpp::Elf_Word type, elfcpp::Elf_Xword flags,
-		     bool is_interp, bool is_dynamic_linker_section,
-		     bool is_relro, bool is_last_relro,
-		     bool is_first_non_relro);
+		     Output_section_order order, bool is_relro);
 
   // Choose the output section for NAME in RELOBJ.
   Output_section*
   choose_output_section(const Relobj* relobj, const char* name,
 			elfcpp::Elf_Word type, elfcpp::Elf_Xword flags,
-			bool is_input_section, bool is_interp,
-			bool is_dynamic_linker_section, bool is_relro,
-			bool is_last_relro, bool is_first_non_relro);
+			bool is_input_section, Output_section_order order,
+			bool is_relro);
 
   // Create a new Output_section.
   Output_section*
   make_output_section(const char* name, elfcpp::Elf_Word type,
-		      elfcpp::Elf_Xword flags, bool is_interp,
-		      bool is_dynamic_linker_section, bool is_relro,
-		      bool is_last_relro, bool is_first_non_relro);
+		      elfcpp::Elf_Xword flags, Output_section_order order,
+		      bool is_relro);
 
   // Attach a section to a segment.
   void
   attach_section_to_segment(Output_section*);
+
+  // Get section order.
+  Output_section_order
+  default_section_order(Output_section*, bool is_relro_local);
 
   // Attach an allocated section to a segment.
   void

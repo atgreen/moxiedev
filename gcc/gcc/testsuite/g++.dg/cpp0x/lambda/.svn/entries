@@ -1,7 +1,7 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/cpp0x/lambda
 svn://gcc.gnu.org/svn/gcc
 
@@ -570,40 +570,6 @@ jason
 
 371
 
-lambda-ref-default.C
-file
-
-
-
-
-2009-10-08T17:29:59.000000Z
-adaf529f1ac6bad3dcb03b2d5469284c
-2009-04-21T19:45:49.620131Z
-146536
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-209
-
 lambda-deduce-ext-neg.C
 file
 
@@ -637,6 +603,40 @@ jason
 
 
 385
+
+lambda-ref-default.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+adaf529f1ac6bad3dcb03b2d5469284c
+2009-04-21T19:45:49.620131Z
+146536
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+209
 
 lambda-mangle.C
 file
@@ -706,40 +706,6 @@ jason
 
 844
 
-lambda-nested3.C
-file
-
-
-
-
-2010-02-25T22:33:03.378293Z
-fc8b20e80b7a3acae5bba366690c4d56
-2010-02-10T22:45:07.138280Z
-156673
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-127
-
 lambda-conv.C
 file
 
@@ -774,16 +740,16 @@ jason
 
 296
 
-lambda-mixed.C
+lambda-nested3.C
 file
 
 
 
 
-2009-10-08T17:29:59.000000Z
-5babfcba950d470d72ed8a0814f18e31
-2009-04-21T19:45:49.620131Z
-146536
+2010-02-25T22:33:03.378293Z
+fc8b20e80b7a3acae5bba366690c4d56
+2010-02-10T22:45:07.138280Z
+156673
 jason
 
 
@@ -806,7 +772,7 @@ jason
 
 
 
-206
+127
 
 lambda-pass.C
 file
@@ -842,6 +808,40 @@ jason
 
 420
 
+lambda-mixed.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+5babfcba950d470d72ed8a0814f18e31
+2009-04-21T19:45:49.620131Z
+146536
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+206
+
 lambda-this.C
 file
 
@@ -876,40 +876,6 @@ jason
 
 236
 
-lambda-errloc2.C
-file
-
-
-
-
-2010-07-08T15:18:18.147357Z
-035ed5dbced8eb3d7fe8b180244d8231
-2010-06-30T00:51:13.110470Z
-161580
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-266
-
 lambda-capture-const-ref-neg.C
 file
 
@@ -943,6 +909,40 @@ jason
 
 
 280
+
+lambda-errloc2.C
+file
+
+
+
+
+2010-07-08T15:18:18.147357Z
+035ed5dbced8eb3d7fe8b180244d8231
+2010-06-30T00:51:13.110470Z
+161580
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+266
 
 lambda-copy.C
 file

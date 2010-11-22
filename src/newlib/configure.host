@@ -249,6 +249,9 @@ case "${host_cpu}" in
   tic4x|c4x)
 	machine_dir=tic4x
 	;;
+  tic6x)
+	machine_dir=tic6x
+	;;
   tic80*)
 	machine_dir=tic80
 	;;
@@ -496,6 +499,10 @@ case "${host}" in
 	  have_crt0="no"
 	fi
 	;;
+  tic6x*)
+	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES"
+	have_crt0="no"
+	;;
   tic80*)
 	sys_dir=tic80
 	;;
@@ -551,6 +558,7 @@ case "${host}" in
   *-*-rtems*)
 	default_newlib_io_long_long="yes"
 	default_newlib_io_c99_formats="yes"
+	newlib_cflags="${newlib_cflags} -D_COMPILING_NEWLIB"
 	newlib_cflags="${newlib_cflags} -DMALLOC_PROVIDED -DEXIT_PROVIDED -DSIGNAL_PROVIDED -DREENTRANT_SYSCALLS_PROVIDED -DHAVE_NANOSLEEP -DHAVE_BLKSIZE -DHAVE_FCNTL -DHAVE_ASSERT_FUNC"
         # turn off unsupported items in posix directory 
 	newlib_cflags="${newlib_cflags} -D_NO_GETLOGIN -D_NO_GETPWENT -D_NO_GETUT -D_NO_GETPASS -D_NO_SIGSET -D_NO_WORDEXP -D_NO_POPEN"
@@ -761,6 +769,10 @@ case "${host}" in
 #         newlib_cflags="${newlib_cflags} -DARM_RDP_MONITOR"
 	  newlib_cflags="${newlib_cflags} -DARM_RDI_MONITOR"
 	fi
+	;;
+  tic6x*)
+	syscall_dir=
+	newlib_cflags="${newlib_cflags} -DCLOCK_PROVIDED"
 	;;
   tic80*)
 	syscall_dir=syscalls

@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util/unique_ptr
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-06-30T00:51:13.110470Z
-161580
-jason
+2010-11-10T10:09:03.020546Z
+166525
+redi
 
 
 
@@ -42,5 +42,8 @@ assign
 dir
 
 specialized_algorithms
+dir
+
+comparison
 dir
 

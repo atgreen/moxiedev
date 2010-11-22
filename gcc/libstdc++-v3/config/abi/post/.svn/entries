@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/config/abi/post
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-17T12:10:22.036580Z
-146252
-uros
+2010-10-01T11:58:21.760705Z
+164879
+ro
 
 
 
@@ -26,19 +26,28 @@ uros
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+x86_64-linux-gnu
+dir
+
 s390-linux-gnu
 dir
 
-x86_64-linux-gnu
+ia64-linux-gnu
+dir
+
+sparc-linux-gnu
+dir
+
+mips-linux-gnu
 dir
 
 powerpc-linux-gnu
 dir
 
-mips64-linux-gnu
+solaris2.8
 dir
 
-ia64-linux-gnu
+mips64-linux-gnu
 dir
 
 alpha-linux-gnu
@@ -50,16 +59,13 @@ dir
 hppa-linux-gnu
 dir
 
-mips-linux-gnu
-dir
-
-sparc-linux-gnu
-dir
-
-i386-linux-gnu
+solaris2.10
 dir
 
 powerpc64-linux-gnu
+dir
+
+i386-linux-gnu
 dir
 
 i486-linux-gnu

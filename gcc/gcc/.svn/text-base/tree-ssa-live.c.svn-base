@@ -362,13 +362,13 @@ mark_all_vars_used_1 (tree *tp, int *walk_subtrees, void *data)
       && (b = TREE_BLOCK (t)) != NULL)
     TREE_USED (b) = true;
 
-  /* Ignore TREE_ORIGINAL for TARGET_MEM_REFS, as well as other
-     fields that do not contain vars.  */
+  /* Ignore TMR_OFFSET and TMR_STEP for TARGET_MEM_REFS, as those
+     fields do not contain vars.  */
   if (TREE_CODE (t) == TARGET_MEM_REF)
     {
-      mark_all_vars_used (&TMR_SYMBOL (t), data);
       mark_all_vars_used (&TMR_BASE (t), data);
       mark_all_vars_used (&TMR_INDEX (t), data);
+      mark_all_vars_used (&TMR_INDEX2 (t), data);
       *walk_subtrees = 0;
       return NULL;
     }
@@ -377,11 +377,8 @@ mark_all_vars_used_1 (tree *tp, int *walk_subtrees, void *data)
      eliminated as unused.  */
   if (TREE_CODE (t) == VAR_DECL)
     {
-      if (data != NULL && bitmap_bit_p ((bitmap) data, DECL_UID (t)))
-	{
-	  bitmap_clear_bit ((bitmap) data, DECL_UID (t));
-	  mark_all_vars_used (&DECL_INITIAL (t), data);
-	}
+      if (data != NULL && bitmap_clear_bit ((bitmap) data, DECL_UID (t)))
+	mark_all_vars_used (&DECL_INITIAL (t), data);
       set_is_used (t);
     }
   /* remove_unused_scope_block_p requires information about labels
@@ -698,6 +695,8 @@ remove_unused_locals (void)
   if (!optimize)
     return;
 
+  timevar_push (TV_REMOVE_UNUSED);
+
   mark_scope_block_unused (DECL_INITIAL (current_function_decl));
 
   /* Assume all locals are unused.  */
@@ -816,18 +815,13 @@ remove_unused_locals (void)
       BITMAP_FREE (global_unused_vars);
     }
 
-  /* Remove unused variables from REFERENCED_VARs.  As a special
-     exception keep the variables that are believed to be aliased.
-     Those can't be easily removed from the alias sets and operand
-     caches.  They will be removed shortly after the next may_alias
-     pass is performed.  */
+  /* Remove unused variables from REFERENCED_VARs.  */
   FOR_EACH_REFERENCED_VAR (t, rvi)
     if (!is_global_var (t)
 	&& TREE_CODE (t) != PARM_DECL
 	&& TREE_CODE (t) != RESULT_DECL
 	&& !(ann = var_ann (t))->used
-	&& !ann->is_heapvar
-	&& !TREE_ADDRESSABLE (t))
+	&& !ann->is_heapvar)
       remove_referenced_var (t);
   remove_unused_scope_block_p (DECL_INITIAL (current_function_decl));
   if (dump_file && (dump_flags & TDF_DETAILS))
@@ -835,6 +829,8 @@ remove_unused_locals (void)
       fprintf (dump_file, "Scope blocks after cleanups:\n");
       dump_scope_blocks (dump_file, dump_flags);
     }
+
+  timevar_pop (TV_REMOVE_UNUSED);
 }
 
 
@@ -1253,8 +1249,8 @@ dump_enumerated_decls (FILE *file, int flags)
   struct walk_stmt_info wi;
   VEC (numbered_tree, heap) *decl_list = VEC_alloc (numbered_tree, heap, 40);
 
+  memset (&wi, '\0', sizeof (wi));
   wi.info = (void*) decl_list;
-  wi.pset = NULL;
   FOR_EACH_BB (bb)
     {
       gimple_stmt_iterator gsi;
@@ -1264,9 +1260,7 @@ dump_enumerated_decls (FILE *file, int flags)
 	  walk_gimple_stmt (&gsi, NULL, dump_enumerated_decls_push, &wi);
     }
   decl_list = (VEC (numbered_tree, heap) *) wi.info;
-  qsort (VEC_address (numbered_tree, decl_list),
-	 VEC_length (numbered_tree, decl_list),
-	 sizeof (numbered_tree), compare_decls_by_uid);
+  VEC_qsort (numbered_tree, decl_list, compare_decls_by_uid);
   if (VEC_length (numbered_tree, decl_list))
     {
       unsigned ix;
@@ -1275,7 +1269,7 @@ dump_enumerated_decls (FILE *file, int flags)
 
       fprintf (file, "Declarations used by %s, sorted by DECL_UID:\n",
 	       current_function_name ());
-      for (ix = 0; VEC_iterate (numbered_tree, decl_list, ix, ntp); ix++)
+      FOR_EACH_VEC_ELT (numbered_tree, decl_list, ix, ntp)
 	{
 	  if (ntp->t == last)
 	    continue;

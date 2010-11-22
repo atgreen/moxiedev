@@ -12,7 +12,7 @@
 
 /*
 ** Include appropriate header file for platform.
-** Copyright (C) 2008, 2009 Analog Devices, Inc.
+** Copyright (C) 2004-2009 Analog Devices Inc. All Rights Reserved.
 */
 
 #ifndef __ADI_PLATFORM_H
@@ -62,10 +62,10 @@
 #include <cdefMT6906.h>
 #elif defined (__ADSPBF504__)
 #include <cdefBF504.h>
-#elif defined (__ADSPBF505__)
-#include <cdefBF505.h>
-#elif defined (__ADSPBF506__)
-#include <cdefBF506.h>
+#elif defined (__ADSPBF504F__)
+#include <cdefBF504F.h>
+#elif defined (__ADSPBF506__) || defined (__ADSPBF506F__)
+#include <cdefBF506F.h>
 #elif defined (__ADSPBF512__)
 #include <cdefBF512.h>
 #elif defined (__ADSPBF514__)
@@ -86,7 +86,7 @@
 #include <cdefBF526.h>
 #elif defined (__ADSPBF527__)
 #include <cdefBF527.h>
-#elif defined (__ADSPBF542__) || defined (__ADSPBF541__)
+#elif defined (__ADSPBF542__)
 #include <cdefBF542.h>
 #elif defined (__ADSPBF542M__)
 #include <cdefBF542M.h>
@@ -106,6 +106,8 @@
 #include <cdefBF549.h>
 #elif defined (__ADSPBF549M__)
 #include <cdefBF549M.h>
+#elif defined (__ADSPBF592A__)
+#include <cdefBF592-A.h>
 #else
 #error Processor Type Not Supported
 #endif
@@ -155,10 +157,10 @@
 #include <defMT6906.h>
 #elif defined (__ADSPBF504__)
 #include <defBF504.h>
-#elif defined (__ADSPBF505__)
-#include <defBF505.h>
-#elif defined (__ADSPBF506__)
-#include <defBF506.h>
+#elif defined (__ADSPBF504F__)
+#include <defBF504F.h>
+#elif defined (__ADSPBF506__) || defined (__ADSPBF506F__)
+#include <defBF506F.h>
 #elif defined (__ADSPBF512__)
 #include <defBF512.h>
 #elif defined (__ADSPBF514__)
@@ -179,7 +181,7 @@
 #include <defBF526.h>
 #elif defined (__ADSPBF527__)
 #include <defBF527.h>
-#elif defined (__ADSPBF542__) || defined (__ADSPBF541__)
+#elif defined (__ADSPBF542__)
 #include <defBF542.h>
 #elif defined (__ADSPBF542M__)
 #include <defBF542M.h>
@@ -199,6 +201,8 @@
 #include <defBF549.h>
 #elif defined (__ADSPBF549M__)
 #include <defBF549M.h>
+#elif defined (__ADSPBF592A__)
+#include <defBF592-A.h>
 
 #else
 #error Processor Type Not Supported

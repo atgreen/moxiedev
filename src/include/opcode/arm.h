@@ -33,7 +33,7 @@
 #define ARM_EXT_V5J	 0x00000800	/* Jazelle extension.	   */
 #define ARM_EXT_V6       0x00001000     /* ARM V6.                 */
 #define ARM_EXT_V6K      0x00002000     /* ARM V6K.                */
-#define ARM_EXT_V6Z      0x00004000     /* ARM V6Z.                */
+/*			 0x00004000	   Was ARM V6Z.            */
 #define ARM_EXT_V6T2	 0x00008000	/* Thumb-2.                */
 #define ARM_EXT_DIV	 0x00010000	/* Integer division.       */
 /* The 'M' in Arm V7M stands for Microcontroller.
@@ -49,6 +49,12 @@
 #define ARM_EXT_THUMB_MSR 0x02000000	/* Thumb MSR/MRS.	    */
 #define ARM_EXT_V6_DSP 0x04000000	/* ARM v6 (DSP-related),
 					   not in v7-M.  */
+#define ARM_EXT_MP       0x08000000     /* Multiprocessing Extensions.  */
+#define ARM_EXT_SEC	 0x10000000	/* Security extensions.  */
+#define ARM_EXT_OS	 0x20000000	/* OS Extensions.  */
+#define ARM_EXT_ADIV	 0x40000000	/* Integer divide extensions in ARM 
+					   state.  */
+#define ARM_EXT_VIRT	 0x80000000	/* Virtualization extensions.  */
 
 /* Co-processor space extensions.  */
 #define ARM_CEXT_XSCALE   0x00000001	/* Allow MIA etc.          */
@@ -95,23 +101,25 @@
 #define ARM_AEXT_V5TEJ	(ARM_AEXT_V5TE	| ARM_EXT_V5J)
 #define ARM_AEXT_V6     (ARM_AEXT_V5TEJ | ARM_EXT_V6)
 #define ARM_AEXT_V6K    (ARM_AEXT_V6    | ARM_EXT_V6K)
-#define ARM_AEXT_V6Z    (ARM_AEXT_V6    | ARM_EXT_V6Z)
-#define ARM_AEXT_V6ZK   (ARM_AEXT_V6    | ARM_EXT_V6K | ARM_EXT_V6Z)
+#define ARM_AEXT_V6Z    (ARM_AEXT_V6K	| ARM_EXT_SEC)
+#define ARM_AEXT_V6ZK   (ARM_AEXT_V6K	| ARM_EXT_SEC)
 #define ARM_AEXT_V6T2   (ARM_AEXT_V6 \
     | ARM_EXT_V6T2 | ARM_EXT_V6_NOTM | ARM_EXT_THUMB_MSR \
     | ARM_EXT_V6_DSP )
 #define ARM_AEXT_V6KT2  (ARM_AEXT_V6T2 | ARM_EXT_V6K)
-#define ARM_AEXT_V6ZT2  (ARM_AEXT_V6T2 | ARM_EXT_V6Z)
-#define ARM_AEXT_V6ZKT2 (ARM_AEXT_V6T2 | ARM_EXT_V6K | ARM_EXT_V6Z)
-#define ARM_AEXT_V7_ARM	(ARM_AEXT_V6ZKT2 | ARM_EXT_V7 | ARM_EXT_BARRIER)
+#define ARM_AEXT_V6ZT2  (ARM_AEXT_V6T2 | ARM_EXT_SEC)
+#define ARM_AEXT_V6ZKT2 (ARM_AEXT_V6T2 | ARM_EXT_V6K | ARM_EXT_SEC)
+#define ARM_AEXT_V7_ARM	(ARM_AEXT_V6KT2 | ARM_EXT_V7 | ARM_EXT_BARRIER)
 #define ARM_AEXT_V7A	(ARM_AEXT_V7_ARM | ARM_EXT_V7A)
 #define ARM_AEXT_V7R	(ARM_AEXT_V7_ARM | ARM_EXT_V7R | ARM_EXT_DIV)
 #define ARM_AEXT_NOTM \
   (ARM_AEXT_V4 | ARM_EXT_V5ExP | ARM_EXT_V5J | ARM_EXT_V6_NOTM \
    | ARM_EXT_V6_DSP )
+#define ARM_AEXT_V6M_ONLY \
+  ((ARM_EXT_BARRIER | ARM_EXT_V6M | ARM_EXT_THUMB_MSR) & ~(ARM_AEXT_NOTM))
 #define ARM_AEXT_V6M \
-  ((ARM_AEXT_V6K | ARM_EXT_BARRIER | ARM_EXT_V6M | ARM_EXT_THUMB_MSR) \
-   & ~(ARM_AEXT_NOTM))
+  ((ARM_AEXT_V6K | ARM_AEXT_V6M_ONLY) & ~(ARM_AEXT_NOTM))
+#define ARM_AEXT_V6SM (ARM_AEXT_V6M | ARM_EXT_OS)
 #define ARM_AEXT_V7M \
   ((ARM_AEXT_V7_ARM | ARM_EXT_V6M | ARM_EXT_V7M | ARM_EXT_DIV) \
    & ~(ARM_AEXT_NOTM))
@@ -197,6 +205,7 @@
 #define ARM_ARCH_V6ZT2	ARM_FEATURE (ARM_AEXT_V6ZT2, 0)
 #define ARM_ARCH_V6ZKT2	ARM_FEATURE (ARM_AEXT_V6ZKT2, 0)
 #define ARM_ARCH_V6M	ARM_FEATURE (ARM_AEXT_V6M, 0)
+#define ARM_ARCH_V6SM	ARM_FEATURE (ARM_AEXT_V6SM, 0)
 #define ARM_ARCH_V7	ARM_FEATURE (ARM_AEXT_V7, 0)
 #define ARM_ARCH_V7A	ARM_FEATURE (ARM_AEXT_V7A, 0)
 #define ARM_ARCH_V7R	ARM_FEATURE (ARM_AEXT_V7R, 0)
@@ -209,6 +218,19 @@
 #define ARM_ANY		ARM_FEATURE (-1, 0)	/* Any basic core.  */
 #define FPU_ANY_HARD	ARM_FEATURE (0, FPU_FPA | FPU_VFP_HARD | FPU_MAVERICK)
 #define ARM_ARCH_THUMB2 ARM_FEATURE (ARM_EXT_V6T2 | ARM_EXT_V7 | ARM_EXT_V7A | ARM_EXT_V7R | ARM_EXT_V7M | ARM_EXT_DIV, 0)
+/* v7-a+sec.  */
+#define ARM_ARCH_V7A_SEC ARM_FEATURE (ARM_AEXT_V7A | ARM_EXT_SEC, 0)
+/* v7-a+mp+sec.  */
+#define ARM_ARCH_V7A_MP_SEC \
+			ARM_FEATURE (ARM_AEXT_V7A | ARM_EXT_MP | ARM_EXT_SEC, \
+				     0)
+/* v7-a+idiv+mp+sec+virt.  */
+#define ARM_ARCH_V7A_IDIV_MP_SEC_VIRT \
+			ARM_FEATURE (ARM_AEXT_V7A | ARM_EXT_MP | ARM_EXT_SEC \
+				     | ARM_EXT_DIV | ARM_EXT_ADIV \
+				     | ARM_EXT_VIRT, 0)
+/* Features that are present in v6M and v6S-M but not other v6 cores.  */
+#define ARM_ARCH_V6M_ONLY ARM_FEATURE (ARM_AEXT_V6M_ONLY, 0)
 
 /* There are too many feature bits to fit in a single word, so use a
    structure.  For simplicity we put all core features in one word and

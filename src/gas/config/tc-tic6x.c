@@ -1,6 +1,8 @@
 /* TI C6X assembler.
    Copyright 2010
    Free Software Foundation, Inc.
+   Contributed by Joseph Myers <joseph@codesourcery.com>
+   		  Bernd Schmidt  <bernds@codesourcery.com>
 
    This file is part of GAS, the GNU Assembler.
 
@@ -48,6 +50,11 @@ enum
     OPTION_MNO_ATOMIC,
     OPTION_MBIG_ENDIAN,
     OPTION_MLITTLE_ENDIAN,
+    OPTION_MDSBT,
+    OPTION_MNO_DSBT,
+    OPTION_MPID,
+    OPTION_MPIC,
+    OPTION_MNO_PIC,
     OPTION_MGENERATE_REL
   };
 
@@ -58,6 +65,11 @@ struct option md_longopts[] =
     { "mno-atomic", no_argument, NULL, OPTION_MNO_ATOMIC },
     { "mbig-endian", no_argument, NULL, OPTION_MBIG_ENDIAN },
     { "mlittle-endian", no_argument, NULL, OPTION_MLITTLE_ENDIAN },
+    { "mdsbt", no_argument, NULL, OPTION_MDSBT },
+    { "mno-dsbt", no_argument, NULL, OPTION_MNO_DSBT },
+    { "mpid", required_argument, NULL, OPTION_MPID },
+    { "mpic", no_argument, NULL, OPTION_MPIC },
+    { "mno-pic", no_argument, NULL, OPTION_MNO_PIC },
     { "mgenerate-rel", no_argument, NULL, OPTION_MGENERATE_REL },
     { NULL, no_argument, NULL, 0 }
   };
@@ -82,9 +94,9 @@ static unsigned short tic6x_arch_enable = (TIC6X_INSN_C62X
    (architecture, as modified by other options).  */
 static unsigned short tic6x_features;
 
-/* The architecture attribute value, or C6XABI_Tag_CPU_arch_none if
+/* The architecture attribute value, or C6XABI_Tag_ISA_none if
    not yet set.  */
-static int tic6x_arch_attribute = C6XABI_Tag_CPU_arch_none;
+static int tic6x_arch_attribute = C6XABI_Tag_ISA_none;
 
 /* Whether any instructions at all have been seen.  Once any
    instructions have been seen, architecture attributes merge into the
@@ -111,6 +123,24 @@ static bfd_boolean tic6x_compact_insns;
 /* Whether to generate RELA relocations.  */
 static bfd_boolean tic6x_generate_rela = TRUE;
 
+/* Whether the code uses DSBT addressing.  */
+static bfd_boolean tic6x_dsbt;
+
+/* Types of position-independent data (attribute values for
+   Tag_ABI_PID).  */
+typedef enum
+  {
+    tic6x_pid_no = 0,
+    tic6x_pid_near = 1,
+    tic6x_pid_far = 2
+  } tic6x_pid_type;
+
+/* The type of data addressing used in this code.  */
+static tic6x_pid_type tic6x_pid;
+
+/* Whether the code uses position-independent code.  */
+static bfd_boolean tic6x_pic;
+
 /* Table of supported architecture variants.  */
 typedef struct
 {
@@ -120,21 +150,21 @@ typedef struct
 } tic6x_arch_table;
 static const tic6x_arch_table tic6x_arches[] =
   {
-    { "c62x", C6XABI_Tag_CPU_arch_C62X, TIC6X_INSN_C62X },
-    { "c64x", C6XABI_Tag_CPU_arch_C64X, TIC6X_INSN_C62X | TIC6X_INSN_C64X },
-    { "c64x+", C6XABI_Tag_CPU_arch_C64XP, (TIC6X_INSN_C62X
-					   | TIC6X_INSN_C64X
-					   | TIC6X_INSN_C64XP) },
-    { "c67x", C6XABI_Tag_CPU_arch_C67X, TIC6X_INSN_C62X | TIC6X_INSN_C67X },
-    { "c67x+", C6XABI_Tag_CPU_arch_C67XP, (TIC6X_INSN_C62X
-					   | TIC6X_INSN_C67X
-					   | TIC6X_INSN_C67XP) },
-    { "c674x", C6XABI_Tag_CPU_arch_C674X, (TIC6X_INSN_C62X
-					   | TIC6X_INSN_C64X
-					   | TIC6X_INSN_C64XP
-					   | TIC6X_INSN_C67X
-					   | TIC6X_INSN_C67XP
-					   | TIC6X_INSN_C674X) }
+    { "c62x", C6XABI_Tag_ISA_C62X, TIC6X_INSN_C62X },
+    { "c64x", C6XABI_Tag_ISA_C64X, TIC6X_INSN_C62X | TIC6X_INSN_C64X },
+    { "c64x+", C6XABI_Tag_ISA_C64XP, (TIC6X_INSN_C62X
+				      | TIC6X_INSN_C64X
+				      | TIC6X_INSN_C64XP) },
+    { "c67x", C6XABI_Tag_ISA_C67X, TIC6X_INSN_C62X | TIC6X_INSN_C67X },
+    { "c67x+", C6XABI_Tag_ISA_C67XP, (TIC6X_INSN_C62X
+				      | TIC6X_INSN_C67X
+				      | TIC6X_INSN_C67XP) },
+    { "c674x", C6XABI_Tag_ISA_C674X, (TIC6X_INSN_C62X
+				      | TIC6X_INSN_C64X
+				      | TIC6X_INSN_C64XP
+				      | TIC6X_INSN_C67X
+				      | TIC6X_INSN_C67XP
+				      | TIC6X_INSN_C674X) }
   };
 
 /* Update the selected architecture based on ARCH, giving an error if
@@ -160,6 +190,36 @@ tic6x_use_arch (const char *arch)
       }
 
   as_bad (_("unknown architecture '%s'"), arch);
+}
+
+/* Table of supported -mpid arguments.  */
+typedef struct
+{
+  const char *arg;
+  tic6x_pid_type attr;
+} tic6x_pid_type_table;
+static const tic6x_pid_type_table tic6x_pid_types[] =
+  {
+    { "no", tic6x_pid_no },
+    { "near", tic6x_pid_near },
+    { "far", tic6x_pid_far }
+  };
+
+/* Handle -mpid=ARG.  */
+
+static void
+tic6x_use_pid (const char *arg)
+{
+  unsigned int i;
+
+  for (i = 0; i < ARRAY_SIZE (tic6x_pid_types); i++)
+    if (strcmp (arg, tic6x_pid_types[i].arg) == 0)
+      {
+	tic6x_pid = tic6x_pid_types[i].attr;
+	return;
+      }
+
+  as_bad (_("unknown -mpid= argument '%s'"), arg);
 }
 
 /* Parse a target-specific option.  */
@@ -189,6 +249,26 @@ md_parse_option (int c, char *arg)
       target_big_endian = 0;
       break;
 
+    case OPTION_MDSBT:
+      tic6x_dsbt = 1;
+      break;
+
+    case OPTION_MNO_DSBT:
+      tic6x_dsbt = 0;
+      break;
+
+    case OPTION_MPID:
+      tic6x_use_pid (arg);
+      break;
+
+    case OPTION_MPIC:
+      tic6x_pic = 1;
+      break;
+
+    case OPTION_MNO_PIC:
+      tic6x_pic = 0;
+      break;
+
     case OPTION_MGENERATE_REL:
       tic6x_generate_rela = FALSE;
       break;
@@ -211,6 +291,15 @@ md_show_usage (FILE *stream ATTRIBUTE_UNUSED)
   fprintf (stream, _("  -mno-atomic             disable atomic operation instructions\n"));
   fprintf (stream, _("  -mbig-endian            generate big-endian code\n"));
   fprintf (stream, _("  -mlittle-endian         generate little-endian code\n"));
+  fprintf (stream, _("  -mdsbt                  code uses DSBT addressing\n"));
+  fprintf (stream, _("  -mno-dsbt               code does not use DSBT addressing\n"));
+  fprintf (stream, _("  -mpid=no                code uses position-dependent data addressing\n"));
+  fprintf (stream, _("  -mpid=near              code uses position-independent data addressing,\n"
+		     "                            GOT accesses use near DP addressing\n"));
+  fprintf (stream, _("  -mpid=far               code uses position-independent data addressing,\n"
+		     "                            GOT accesses use far DP addressing\n"));
+  fprintf (stream, _("  -mpic                   code addressing is position-independent\n"));
+  fprintf (stream, _("  -mno-pic                code addressing is position-dependent\n"));
   /* -mgenerate-rel is only for testsuite use and is deliberately
       undocumented.  */
 
@@ -339,7 +428,7 @@ typedef struct
 
 static const tic6x_attribute_table tic6x_attributes[] =
   {
-#define TAG(tag, value) { #tag, tag }
+#define TAG(tag, value) { #tag, tag },
 #include "elf/tic6x-attrs.h"
 #undef TAG
   };
@@ -1591,6 +1680,25 @@ tic6x_init_fix_data (fixS *fixP)
   fixP->tc_fix_data.fix_adda = FALSE;
 }
 
+/* Return true if the fix can be handled by GAS, false if it must
+   be passed through to the linker.  */
+
+bfd_boolean
+tic6x_fix_adjustable (fixS *fixP)
+{
+  switch (fixP->fx_r_type)
+    {
+      /* Adjust_reloc_syms doesn't know about the GOT.  */
+    case BFD_RELOC_C6000_SBR_GOT_U15_W:
+    case BFD_RELOC_C6000_SBR_GOT_H16_W:
+    case BFD_RELOC_C6000_SBR_GOT_L16_W:
+      return 0;
+
+    default:
+      return 1;
+    }
+}
+
 /* Given the fine-grained form of an operand, return the coarse
    (bit-mask) form.  */
 
@@ -2484,6 +2592,7 @@ tic6x_try_encode (tic6x_opcode_id id, tic6x_operand *operands,
 
 	  if (opct->variable_fields[fld].coding_method == tic6x_coding_fstg)
 	    {
+	      int i, t;
 	      if (operands[opno].value.exp.X_add_number < 0
 		  || (operands[opno].value.exp.X_add_number
 		      >= (1 << (fldd->width - fcyc_bits))))
@@ -2494,7 +2603,13 @@ tic6x_try_encode (tic6x_opcode_id id, tic6x_operand *operands,
 		  *ok = FALSE;
 		  return 0;
 		}
-	      value = operands[opno].value.exp.X_add_number << fcyc_bits;
+	      value = operands[opno].value.exp.X_add_number;
+	      for (t = 0, i = fcyc_bits; i < fldd->width; i++)
+		{
+		  t = (t << 1) | (value & 1);
+		  value >>= 1;
+		}
+	      value = t << fcyc_bits;
 	    }
 	  else
 	    {
@@ -2659,8 +2774,8 @@ md_assemble (char *str)
   /* If no .arch directives or -march options have been seen, we are
      assessing instruction validity based on the C674X default, so set
      the attribute accordingly.  */
-  if (tic6x_arch_attribute == C6XABI_Tag_CPU_arch_none)
-    tic6x_arch_attribute = C6XABI_Tag_CPU_arch_C674X;
+  if (tic6x_arch_attribute == C6XABI_Tag_ISA_none)
+    tic6x_arch_attribute = C6XABI_Tag_ISA_C674X;
 
   /* Reset global settings for parallel bars and predicates now to
      avoid extra errors if there are problems with this opcode.  */
@@ -3865,10 +3980,13 @@ tic6x_set_attribute_int (int tag, int value)
 static void
 tic6x_set_attributes (void)
 {
-  if (tic6x_arch_attribute == C6XABI_Tag_CPU_arch_none)
-    tic6x_arch_attribute = C6XABI_Tag_CPU_arch_C674X;
+  if (tic6x_arch_attribute == C6XABI_Tag_ISA_none)
+    tic6x_arch_attribute = C6XABI_Tag_ISA_C674X;
 
-  tic6x_set_attribute_int (Tag_C6XABI_Tag_CPU_arch, tic6x_arch_attribute);
+  tic6x_set_attribute_int (Tag_ISA, tic6x_arch_attribute);
+  tic6x_set_attribute_int (Tag_ABI_DSBT, tic6x_dsbt);
+  tic6x_set_attribute_int (Tag_ABI_PID, tic6x_pid);
+  tic6x_set_attribute_int (Tag_ABI_PIC, tic6x_pic);
 }
 
 /* Do machine-dependent manipulations of the frag chains after all

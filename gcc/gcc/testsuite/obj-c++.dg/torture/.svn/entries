@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/obj-c++.dg/torture
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-27T12:02:50.754510Z
-162563
+2010-11-06T10:48:18.045546Z
+166398
 iains
 
 
@@ -96,4 +96,7 @@ iains
 
 
 390
+
+strings
+dir
 

@@ -155,7 +155,8 @@ WERROR_CFLAGS = @WERROR_CFLAGS@
 GDB_WARN_CFLAGS = $(WARN_CFLAGS)
 GDB_WERROR_CFLAGS = $(WERROR_CFLAGS)
 
-GDB_WARN_CFLAGS_NO_FORMAT = `echo " $(GDB_WARN_CFLAGS) " | sed "s/ -Wformat-nonliteral / /g"`
+GDB_WARN_CFLAGS_NO_FORMAT = `echo " $(GDB_WARN_CFLAGS) " \
+		   | sed "s/ -Wformat-nonliteral / -Wno-format-nonliteral /g"`
 
 RDYNAMIC = @RDYNAMIC@
 
@@ -688,11 +689,11 @@ SFILES = ada-exp.y ada-lang.c ada-typeprint.c ada-valprint.c ada-tasks.c \
 	mi/mi-common.c \
 	objc-exp.y objc-lang.c \
 	objfiles.c osabi.c observer.c osdata.c \
+	opencl-lang.c \
 	p-exp.y p-lang.c p-typeprint.c p-valprint.c parse.c printcmd.c \
 	proc-service.list progspace.c \
 	prologue-value.c psymtab.c \
 	regcache.c reggroups.c remote.c remote-fileio.c reverse.c \
-	scm-exp.c scm-lang.c scm-valprint.c \
 	sentinel-frame.c \
 	serial.c ser-base.c ser-unix.c \
 	solib.c solib-target.c source.c \
@@ -737,7 +738,7 @@ ia64-tdep.h ada-lang.h varobj.h frv-tdep.h nto-tdep.h serial.h \
 c-lang.h d-lang.h frame.h event-loop.h block.h cli/cli-setshow.h	\
 cli/cli-decode.h cli/cli-cmds.h cli/cli-dump.h \
 cli/cli-script.h macrotab.h symtab.h version.h gnulib/wchar.in.h \
-gnulib/string.in.h gnulib/str-two-way.h gnulib/extra/link-warning.h \
+gnulib/string.in.h gnulib/str-two-way.h \
 gnulib/stdint.in.h remote.h gdb.h sparc-nat.h gdbserver/win32-low.h \
 gdbserver/i387-fp.h gdbserver/server.h gdbserver/terminal.h \
 gdbserver/mem-break.h gdbserver/wincecompat.h gdbserver/target.h \
@@ -746,7 +747,7 @@ gdbserver/regcache.h gdbthread.h dwarf2-frame.h nbsd-nat.h dcache.h \
 amd64-nat.h s390-tdep.h arm-linux-tdep.h exceptions.h macroscope.h \
 gdbarch.h bsd-uthread.h gdb_thread_db.h gdb_stat.h memory-map.h	\
 mdebugread.h m88k-tdep.h stabsread.h hppa-linux-offsets.h linux-fork.h \
-ser-unix.h scm-lang.h inf-ptrace.h terminal.h ui-out.h frame-base.h \
+ser-unix.h inf-ptrace.h terminal.h ui-out.h frame-base.h \
 f-lang.h dwarf2loc.h value.h sparc-tdep.h defs.h target-descriptions.h \
 objfiles.h vec.h disasm.h mips-tdep.h ser-base.h \
 gdb_curses.h bfd-target.h memattr.h inferior.h ax.h dummy-frame.h \
@@ -772,7 +773,7 @@ doublest.h regset.h hppa-tdep.h ppc-linux-tdep.h rs6000-tdep.h \
 gdb_locale.h gdb_dirent.h arch-utils.h trad-frame.h gnu-nat.h \
 language.h nbsd-tdep.h wrapper.h solib-svr4.h \
 macroexp.h ui-file.h regcache.h gdb_string.h tracepoint.h i386-tdep.h \
-inf-child.h p-lang.h event-top.h gdbtypes.h scm-tags.h user-regs.h \
+inf-child.h p-lang.h event-top.h gdbtypes.h user-regs.h \
 regformats/regdef.h config/alpha/nm-osf3.h  config/i386/nm-i386gnu.h \
 config/i386/nm-fbsd.h \
 config/nm-nto.h config/sparc/nm-sol2.h config/nm-linux.h \
@@ -781,7 +782,7 @@ annotate.h sim-regno.h dictionary.h dfp.h main.h frame-unwind.h	\
 remote-fileio.h i386-linux-tdep.h vax-tdep.h objc-lang.h \
 sentinel-frame.h bcache.h symfile.h windows-tdep.h linux-tdep.h \
 gdb_usleep.h jit.h xml-syscall.h ada-operator.inc microblaze-tdep.h \
-psymtab.h psympriv.h
+psymtab.h psympriv.h progspace.h
 
 # Header files that already have srcdir in them, or which are in objdir.
 
@@ -845,8 +846,7 @@ COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	ui-out.o cli-out.o \
 	varobj.o vec.o wrapper.o \
 	jv-lang.o jv-valprint.o jv-typeprint.o \
-	m2-lang.o p-lang.o p-typeprint.o p-valprint.o \
-	scm-exp.o scm-lang.o scm-valprint.o \
+	m2-lang.o opencl-lang.o p-lang.o p-typeprint.o p-valprint.o \
 	sentinel-frame.o \
 	complaints.o typeprint.o \
 	ada-typeprint.o c-typeprint.o f-typeprint.o m2-typeprint.o \
@@ -869,17 +869,16 @@ COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	inferior.o osdata.o gdb_usleep.o record.o gcore.o \
 	jit.o progspace.o
 
-# Definitions for the syscall's XML files and dir
-XML_SYSCALLS_DIR = syscalls/
-XML_SYSCALLS_FILES = gdb-syscalls.dtd \
-		     ppc-linux.xml ppc64-linux.xml \
-		     i386-linux.xml amd64-linux.xml \
-		     sparc-linux.xml sparc64-linux.xml
-
 TSOBS = inflow.o
 
-SUBDIRS = @subdirs@
+SUBDIRS = @subdirs@ data-directory
 CLEANDIRS = $(SUBDIRS) gnulib
+
+# List of subdirectories in the build tree that must exist.
+# This is used to force build failures in existing trees when
+# a new directory is added.
+# The format here is for the `case' shell command.
+REQUIRED_SUBDIRS = doc | testsuite | gnulib | data-directory
 
 # For now, shortcut the "configure GDB for fewer languages" stuff.
 YYFILES = c-exp.c \
@@ -909,40 +908,10 @@ generated_files = config.h observer.h observer.inc ada-lex.c \
 	$(COMPILE) $<
 	$(POSTCOMPILE)
 
-all: gdb$(EXEEXT) $(CONFIG_ALL) xml-syscall-copy
+all: gdb$(EXEEXT) $(CONFIG_ALL)
 	@$(MAKE) $(FLAGS_TO_PASS) DO=all "DODIRS=`echo $(SUBDIRS) | sed 's/testsuite//'`" subdir_do
 .PHONY: all-tui
 all-tui: $(TUI)$(EXEEXT)
-
-# This is needed for running GDB from the build directory
-.PHONY: xml-syscall-copy
-xml-syscall-copy:
-	if [ "`cd $(srcdir) && pwd`" != "`pwd`" ] ; then \
-	  mkdir -p ./$(XML_SYSCALLS_DIR) ; \
-	  list='$(XML_SYSCALLS_FILES)' ; \
- 	  for file in $$list ; do \
-	    f=$(srcdir)/$(XML_SYSCALLS_DIR)/$$file ; \
-	    if test -f $$f ; then \
-	      $(INSTALL_DATA) $$f \
-	    	  ./$(XML_SYSCALLS_DIR) ; \
-	    fi ; \
-	  done ; \
-	fi ;
-
-# This target is responsible for properly installing the syscalls'
-# XML files in the system.
-.PHONY: xml-syscall-install
-xml-syscall-install:
-	$(SHELL) $(srcdir)/../mkinstalldirs \
-		$(DESTDIR)$(GDB_DATADIR)/$(XML_SYSCALLS_DIR) ; \
-	list='$(XML_SYSCALLS_FILES)' ; \
-	for file in $$list ; do \
-	  f=$(srcdir)/$(XML_SYSCALLS_DIR)/$$file ; \
-	  if test -f $$f ; then \
-	    $(INSTALL_DATA) $$f \
-	    	$(DESTDIR)$(GDB_DATADIR)/$(XML_SYSCALLS_DIR) ; \
-	  fi ; \
-	done ;
 
 installcheck:
 
@@ -1000,11 +969,10 @@ gdb.z:gdb.1
 # source file and doesn't care about rebuilding or just wants to save the
 # time it takes for make to check that all is up to date.
 # install-only is intended to address that need.
-install: all install-only 
+install: all
+	@$(MAKE) $(FLAGS_TO_PASS) install-only
 
-# The "install-only" target also installs the syscalls' XML files in
-# the system.
-install-only: $(CONFIG_INSTALL) xml-syscall-install
+install-only: $(CONFIG_INSTALL)
 	transformed_name=`t='$(program_transform_name)'; \
 			  echo gdb | sed -e "$$t"` ; \
 		if test "x$$transformed_name" = x; then \
@@ -1037,6 +1005,8 @@ install-tui:
 		$(INSTALL_DATA) $(srcdir)/gdb.1 \
 			$(DESTDIR)$(man1dir)/$$transformed_name.1
 
+install-python:
+	$(SHELL) $(srcdir)/../mkinstalldirs $(DESTDIR)$(GDB_DATADIR)/python/gdb
 
 uninstall: force $(CONFIG_UNINSTALL)
 	transformed_name=`t='$(program_transform_name)'; \
@@ -1175,6 +1145,11 @@ all-lib: gnulib/Makefile
 	@$(MAKE) $(FLAGS_TO_PASS) DO=all DODIRS=gnulib subdir_do
 .PHONY: all-lib
 
+# Convenience rule to handle recursion.
+.PHONY: all-data-directory
+all-data-directory: data-directory/Makefile
+	@$(MAKE) $(FLAGS_TO_PASS) DO=all DODIRS=data-directory subdir_do
+
 # Create a library of the gdb object files and build GDB by linking
 # against that.
 #
@@ -1270,6 +1245,13 @@ diststuff: $(DISTSTUFF) $(PACKAGE).pot $(CATALOGS)
 
 subdir_do: force
 	@for i in $(DODIRS); do \
+		case $$i in \
+		$(REQUIRED_SUBDIRS)) \
+			if [ ! -f ./$$i/Makefile ] ; then \
+				echo "Missing $$i/Makefile" >&2 ; \
+				exit 1 ; \
+			fi ;; \
+		esac ; \
 		if [ -f ./$$i/Makefile ] ; then \
 			if (cd ./$$i; \
 				$(MAKE) $(FLAGS_TO_PASS) $(DO)) ; then true ; \
@@ -1286,6 +1268,13 @@ Makefile: Makefile.in config.status @frags@
 
 gnulib/Makefile: gnulib/Makefile.in gnulib/Makefile.in config.status @frags@
 	CONFIG_FILES="gnulib/Makefile" \
+	  CONFIG_COMMANDS="depfiles" \
+	  CONFIG_HEADERS= \
+	  CONFIG_LINKS= \
+	  $(SHELL) config.status
+
+data-directory/Makefile: data-directory/Makefile.in config.status @frags@
+	CONFIG_FILES="data-directory/Makefile" \
 	  CONFIG_COMMANDS="depfiles" \
 	  CONFIG_HEADERS= \
 	  CONFIG_LINKS= \
@@ -1529,14 +1518,15 @@ main.o: $(srcdir)/main.c
 # definitly will not work.  "monitor.c" needs to be rewritten so that
 # it doesn't use format strings and instead uses callbacks.
 monitor.o: $(srcdir)/monitor.c
-	$(COMPILE.pre) $(INTERNAL_WARN_CFLAGS) $(COMPILE.post) $(srcdir)/monitor.c
+	$(COMPILE.pre) $(INTERNAL_CFLAGS) $(GDB_WARN_CFLAGS_NO_FORMAT) \
+		$(COMPILE.post) $(srcdir)/monitor.c
 	$(POSTCOMPILE)
 
 # Do not try to build "printcmd.c" with -Wformat-nonliteral.  It manually
 # checks format strings.
 printcmd.o: $(srcdir)/printcmd.c
-	$(COMPILE.pre) $(INTERNAL_CFLAGS_BASE) $(GDB_WARN_CFLAGS_NO_FORMAT) \
-		$(GDB_WERROR_CFLAGS) $(COMPILE.post) $(srcdir)/printcmd.c
+	$(COMPILE.pre) $(INTERNAL_CFLAGS) $(GDB_WARN_CFLAGS_NO_FORMAT) \
+		$(COMPILE.post) $(srcdir)/printcmd.c
 	$(POSTCOMPILE)
 
 # Message files.  Based on code in gcc/Makefile.in.
@@ -1625,8 +1615,10 @@ po/$(PACKAGE).pot: force
 
 .SUFFIXES: .y .l
 .y.c:
-	$(SHELL) $(YLWRAP) $< y.tab.c $@.tmp -- $(YACC) $(YFLAGS)
-	-sed -e '/extern.*malloc/d' \
+	rm -f $@ $@.tmp
+	$(SHELL) $(YLWRAP) $< y.tab.c $@ -- $(YACC) $(YFLAGS) && mv $@ $@.tmp \
+		|| (rm -f $@; false)
+	sed -e '/extern.*malloc/d' \
 	     -e '/extern.*realloc/d' \
 	     -e '/extern.*free/d' \
 	     -e '/include.*malloc.h/d' \
@@ -1635,9 +1627,9 @@ po/$(PACKAGE).pot: force
 	     -e 's/\([ \t;,(]\)free\([ \t]*[&(),]\)/\1xfree\2/g' \
 	     -e 's/\([ \t;,(]\)free$$/\1xfree/g' \
 	     -e '/^#line.*y.tab.c/d' \
-	  < $@.tmp > $@.new
-	-rm $@.tmp
-	mv $@.new ./$*.c
+	     -e "s/^\(#line.*\)`basename $<`/\1`echo $<|sed 's/\//\\\\\//g'`/" \
+	  < $@.tmp > $@
+	rm -f $@.tmp
 .l.c:
 	if [ "$(FLEX)" ] && $(FLEX) --version >/dev/null 2>&1; then \
 	    $(FLEX) -o$@ $< && \
@@ -1661,13 +1653,7 @@ po/$(PACKAGE).pot: force
 	    false; \
 	fi
 
-.PRECIOUS: ada-exp.c ada-lex.c
-.PRECIOUS: c-exp.c
-.PRECIOUS: f-exp.c
-.PRECIOUS: jv-exp.c
-.PRECIOUS: m2-exp.c
-.PRECIOUS: objc-exp.c
-.PRECIOUS: p-exp.c
+.PRECIOUS: ada-exp.c
 
 # XML rules
 

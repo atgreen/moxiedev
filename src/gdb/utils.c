@@ -311,6 +311,26 @@ make_cleanup_ui_file_delete (struct ui_file *arg)
   return make_my_cleanup (&cleanup_chain, do_ui_file_delete, arg);
 }
 
+/* Helper function for make_cleanup_ui_out_redirect_pop.  */
+
+static void
+do_ui_out_redirect_pop (void *arg)
+{
+  struct ui_out *uiout = arg;
+
+  if (ui_out_redirect (uiout, NULL) < 0)
+    warning (_("Cannot restore redirection of the current output protocol"));
+}
+
+/* Return a new cleanup that pops the last redirection by ui_out_redirect
+   with NULL parameter.  */
+
+struct cleanup *
+make_cleanup_ui_out_redirect_pop (struct ui_out *uiout)
+{
+  return make_my_cleanup (&cleanup_chain, do_ui_out_redirect_pop, uiout);
+}
+
 static void
 do_free_section_addr_info (void *arg)
 {
@@ -339,6 +359,7 @@ restore_integer (void *p)
 
 /* Remember the current value of *VARIABLE and make it restored when the cleanup
    is run.  */
+
 struct cleanup *
 make_cleanup_restore_integer (int *variable)
 {
@@ -350,6 +371,61 @@ make_cleanup_restore_integer (int *variable)
 
   return make_my_cleanup2 (&cleanup_chain, restore_integer, (void *)c,
 			   xfree);
+}
+
+/* Remember the current value of *VARIABLE and make it restored when the cleanup
+   is run.  */
+
+struct cleanup *
+make_cleanup_restore_uinteger (unsigned int *variable)
+{
+  return make_cleanup_restore_integer ((int *) variable);
+}
+
+/* Helper for make_cleanup_unpush_target.  */
+
+static void
+do_unpush_target (void *arg)
+{
+  struct target_ops *ops = arg;
+
+  unpush_target (ops);
+}
+
+/* Return a new cleanup that unpushes OPS.  */
+
+struct cleanup *
+make_cleanup_unpush_target (struct target_ops *ops)
+{
+  return make_my_cleanup (&cleanup_chain, do_unpush_target, ops);
+}
+
+struct restore_ui_file_closure
+{
+  struct ui_file **variable;
+  struct ui_file *value;
+};
+
+static void
+do_restore_ui_file (void *p)
+{
+  struct restore_ui_file_closure *closure = p;
+
+  *(closure->variable) = closure->value;
+}
+
+/* Remember the current value of *VARIABLE and make it restored when
+   the cleanup is run.  */
+
+struct cleanup *
+make_cleanup_restore_ui_file (struct ui_file **variable)
+{
+  struct restore_ui_file_closure *c = XNEW (struct restore_ui_file_closure);
+
+  c->variable = variable;
+  c->value = *variable;
+
+  return make_cleanup_dtor (do_restore_ui_file, (void *) c, xfree);
 }
 
 struct cleanup *
@@ -1616,7 +1692,7 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
      question we're asking, and then answer the default automatically.  This
      way, important error messages don't get lost when talking to GDB
      over a pipe.  */
-  if (batch_flag || ! input_from_terminal_p ())
+  if (! input_from_terminal_p ())
     {
       wrap_here ("");
       vfprintf_filtered (gdb_stdout, ctlstr, args);
@@ -2034,6 +2110,12 @@ static int wrap_column;
 void
 init_page_info (void)
 {
+  if (batch_flag)
+    {
+      lines_per_page = UINT_MAX;
+      chars_per_line = UINT_MAX;
+    }
+  else
 #if defined(TUI)
   if (!tui_get_command_dimension (&chars_per_line, &lines_per_page))
 #endif
@@ -2076,6 +2158,44 @@ init_page_info (void)
 
   set_screen_size ();
   set_width ();
+}
+
+/* Helper for make_cleanup_restore_page_info.  */
+
+static void
+do_restore_page_info_cleanup (void *arg)
+{
+  set_screen_size ();
+  set_width ();
+}
+
+/* Provide cleanup for restoring the terminal size.  */
+
+struct cleanup *
+make_cleanup_restore_page_info (void)
+{
+  struct cleanup *back_to;
+
+  back_to = make_cleanup (do_restore_page_info_cleanup, NULL);
+  make_cleanup_restore_uinteger (&lines_per_page);
+  make_cleanup_restore_uinteger (&chars_per_line);
+
+  return back_to;
+}
+
+/* Temporarily set BATCH_FLAG and the associated unlimited terminal size.
+   Provide cleanup for restoring the original state.  */
+
+struct cleanup *
+set_batch_flag_and_make_cleanup_restore_page_info (void)
+{
+  struct cleanup *back_to = make_cleanup_restore_page_info ();
+  
+  make_cleanup_restore_integer (&batch_flag);
+  batch_flag = 1;
+  init_page_info ();
+
+  return back_to;
 }
 
 /* Set the screen size based on LINES_PER_PAGE and CHARS_PER_LINE.  */
@@ -2334,7 +2454,8 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
 
   /* Don't do any filtering if it is disabled.  */
   if (stream != gdb_stdout
-      || !pagination_enabled
+      || ! pagination_enabled
+      || ! input_from_terminal_p ()
       || (lines_per_page == UINT_MAX && chars_per_line == UINT_MAX)
       || top_level_interpreter () == NULL
       || ui_out_is_mi_like_p (interp_ui_out (top_level_interpreter ())))

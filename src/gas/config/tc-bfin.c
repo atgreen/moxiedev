@@ -1,5 +1,5 @@
 /* tc-bfin.c -- Assembler for the ADI Blackfin.
-   Copyright 2005, 2006, 2007, 2008, 2009
+   Copyright 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -136,7 +136,7 @@ const pseudo_typeS md_pseudo_table[] = {
 };
 
 /* Characters that are used to denote comments and line separators. */
-const char comment_chars[] = "";
+const char comment_chars[] = "#";
 const char line_comment_chars[] = "#";
 const char line_separator_chars[] = ";";
 
@@ -181,7 +181,8 @@ typedef enum bfin_cpu_type
   BFIN_CPU_BF548M,
   BFIN_CPU_BF549,
   BFIN_CPU_BF549M,
-  BFIN_CPU_BF561
+  BFIN_CPU_BF561,
+  BFIN_CPU_BF592,
 } bfin_cpu_t;
 
 bfin_cpu_t bfin_cpu_type = BFIN_CPU_UNKNOWN;
@@ -206,15 +207,19 @@ struct bfin_cpu bfin_cpus[] =
 
   {"bf506", BFIN_CPU_BF506, 0x0000, AC_05000074},
 
+  {"bf512", BFIN_CPU_BF512, 0x0002, AC_05000074},
   {"bf512", BFIN_CPU_BF512, 0x0001, AC_05000074},
   {"bf512", BFIN_CPU_BF512, 0x0000, AC_05000074},
 
+  {"bf514", BFIN_CPU_BF514, 0x0002, AC_05000074},
   {"bf514", BFIN_CPU_BF514, 0x0001, AC_05000074},
   {"bf514", BFIN_CPU_BF514, 0x0000, AC_05000074},
 
+  {"bf516", BFIN_CPU_BF516, 0x0002, AC_05000074},
   {"bf516", BFIN_CPU_BF516, 0x0001, AC_05000074},
   {"bf516", BFIN_CPU_BF516, 0x0000, AC_05000074},
 
+  {"bf518", BFIN_CPU_BF518, 0x0002, AC_05000074},
   {"bf518", BFIN_CPU_BF518, 0x0001, AC_05000074},
   {"bf518", BFIN_CPU_BF518, 0x0000, AC_05000074},
 
@@ -312,6 +317,9 @@ struct bfin_cpu bfin_cpus[] =
   {"bf561", BFIN_CPU_BF561, 0x0005, AC_05000074},
   {"bf561", BFIN_CPU_BF561, 0x0003, AC_05000074},
   {"bf561", BFIN_CPU_BF561, 0x0002, AC_05000074},
+
+  {"bf592", BFIN_CPU_BF592, 0x0001, AC_05000074},
+  {"bf592", BFIN_CPU_BF592, 0x0000, AC_05000074},
 
   {NULL, 0, 0, 0}
 };
@@ -1812,6 +1820,16 @@ bfin_gen_pseudodbg_assert (int dbgop, REG_T regtest, int expected)
   return GEN_OPCODE32 ();
 }
 
+INSTR_T
+bfin_gen_pseudochr (int ch)
+{
+  INIT (PseudoChr);
+
+  ASSIGN (ch);
+
+  return GEN_OPCODE16 ();
+}
+
 /* Multiple instruction generation.  */
 
 INSTR_T
@@ -1856,6 +1874,7 @@ bfin_gen_loop (Expr_Node *exp, REG_T reg, int rop, REG_T preg)
   char *lbeginsym, *lendsym;
   Expr_Node_Value lbeginval, lendval;
   Expr_Node *lbegin, *lend;
+  symbolS *sym;
 
   loopsym = exp->value.s_value;
   lbeginsym = (char *) xmalloc (strlen (loopsym) + strlen ("__BEGIN") + 5);
@@ -1878,9 +1897,20 @@ bfin_gen_loop (Expr_Node *exp, REG_T reg, int rop, REG_T preg)
   lbegin = Expr_Node_Create (Expr_Node_Reloc, lbeginval, NULL, NULL);
   lend   = Expr_Node_Create (Expr_Node_Reloc, lendval, NULL, NULL);
 
-  symbol_remove (symbol_find (loopsym), &symbol_rootP, &symbol_lastP);
+  sym = symbol_find(loopsym);
+  if (!S_IS_LOCAL (sym) || (S_IS_LOCAL (sym) && !symbol_used_p (sym)))
+    symbol_remove (sym, &symbol_rootP, &symbol_lastP);
 
-  return bfin_gen_loopsetup(lbegin, reg, rop, lend, preg);
+  return bfin_gen_loopsetup (lbegin, reg, rop, lend, preg);
+}
+
+void
+bfin_loop_attempt_create_label (Expr_Node *exp, int is_begin)
+{
+  char *name;
+  name = fb_label_name (exp->value.i_value, is_begin);
+  exp->value.s_value = xstrdup (name);
+  exp->type = Expr_Node_Reloc;
 }
 
 void

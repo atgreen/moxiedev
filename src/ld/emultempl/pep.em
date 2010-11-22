@@ -8,7 +8,7 @@ fi
 rm -f e${EMULATION_NAME}.c
 (echo;echo;echo;echo;echo)>e${EMULATION_NAME}.c # there, now line numbers match ;-)
 fragment <<EOF
-/* Copyright 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+/* Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
    Written by Kai Tietz, OneVision Software GmbH&CoKg.
 
    This file is part of the GNU Binutils.
@@ -383,7 +383,7 @@ gld_${EMULATION_NAME}_list_options (FILE *file)
   fprintf (file, _("  --dll-search-prefix=<string>       When linking dynamically to a dll without\n\
                                        an importlib, use <string><basename>.dll\n\
                                        in preference to lib<basename>.dll \n"));
-  fprintf (file, _("  --enable-auto-import               Do sophistcated linking of _sym to\n\
+  fprintf (file, _("  --enable-auto-import               Do sophisticated linking of _sym to\n\
                                        __imp_sym for DATA references\n"));
   fprintf (file, _("  --disable-auto-import              Do not auto-import DATA items from DLLs\n"));
   fprintf (file, _("  --enable-runtime-pseudo-reloc      Work around auto-import limitations by\n\
@@ -1677,6 +1677,9 @@ gld_${EMULATION_NAME}_place_orphan (asection *s,
 	  { ".text",
 	    SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_READONLY | SEC_CODE,
 	    0, 0, 0, 0 },
+	  { ".idata",
+	    SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_READONLY | SEC_DATA,
+	    0, 0, 0, 0 },
 	  { ".rdata",
 	    SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_READONLY | SEC_DATA,
 	    0, 0, 0, 0 },
@@ -1690,6 +1693,7 @@ gld_${EMULATION_NAME}_place_orphan (asection *s,
       enum orphan_save_index
 	{
 	  orphan_text = 0,
+	  orphan_idata,
 	  orphan_rodata,
 	  orphan_data,
 	  orphan_bss
@@ -1723,7 +1727,10 @@ gld_${EMULATION_NAME}_place_orphan (asection *s,
       else if ((s->flags & SEC_READONLY) == 0)
 	place = &hold[orphan_data];
       else if ((s->flags & SEC_CODE) == 0)
-	place = &hold[orphan_rodata];
+	{
+	  place = (!strncmp (secname, ".idata\$", 7) ? &hold[orphan_idata]
+						     : &hold[orphan_rodata]);
+	}
       else
 	place = &hold[orphan_text];
 

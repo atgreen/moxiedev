@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/swing/text/html
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-06T17:46:48.717189Z
-155678
-doko
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 
 
 
@@ -94,40 +94,6 @@ has-props
 
 1075
 
-HTMLEditorKit$HTMLTextAction.class
-file
-
-
-
-
-2009-04-24T17:48:24.000000Z
-57ef514fab3df382ec2c1e92d412a87f
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3359
-
 HTMLDocument$HTMLReader.class
 file
 
@@ -161,6 +127,40 @@ has-props
 
 
 15608
+
+HTMLEditorKit$HTMLTextAction.class
+file
+
+
+
+
+2009-04-24T17:48:24.000000Z
+57ef514fab3df382ec2c1e92d412a87f
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3359
 
 HTMLEditorKit$ParserCallback.class
 file
@@ -230,40 +230,6 @@ has-props
 
 2542
 
-HTMLEditorKit.class
-file
-
-
-
-
-2009-04-24T17:48:24.000000Z
-017f6155a5383caf87b62c363c3c2371
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-10427
-
 FormView$MouseEventListener.class
 file
 
@@ -297,6 +263,40 @@ has-props
 
 
 941
+
+HTMLEditorKit.class
+file
+
+
+
+
+2010-11-22T19:18:54.393794Z
+08b04c131d5a745df36ba200d98ba81a
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+10493
 
 ResetableToggleButtonModel.class
 file
@@ -338,11 +338,11 @@ file
 
 
 
-2009-04-24T17:48:24.000000Z
-f7167928b0a078fbe78e85a48de7111b
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2010-11-22T19:18:54.394800Z
+555343ee0cd27e4dc0446512c4106b94
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -468,6 +468,40 @@ has-props
 
 567
 
+HTMLWriter.class
+file
+
+
+
+
+2010-11-22T19:18:54.394800Z
+b908714b7ad96b6b076c18c7762d25a6
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+13569
+
 FrameSetView.class
 file
 
@@ -501,40 +535,6 @@ has-props
 
 
 3661
-
-HTMLWriter.class
-file
-
-
-
-
-2009-04-24T17:48:24.000000Z
-e24b86cb845935a07d1961642deea65e
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-13208
 
 HTMLDocument$HTMLReader$StyleAction.class
 file
@@ -746,11 +746,11 @@ file
 
 
 
-2009-04-24T17:48:24.000000Z
-eb96aa9dbb00fac0e1c8050752ac5f22
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2010-11-22T19:18:54.395784Z
+6ba0085e42ad978da04500c45dea8653
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -772,7 +772,7 @@ has-props
 
 
 
-3280
+3273
 
 ViewAttributeSet.class
 file
@@ -848,11 +848,11 @@ file
 
 
 
-2009-04-24T17:48:24.000000Z
-068b810266457fb0257fbfd569a07562
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:54.395784Z
+e57ca3dca774c961a51f9ef3c4614994
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -874,7 +874,7 @@ has-props
 
 
 
-1245
+1366
 
 HTMLDocument$HTMLReader$TitleAction.class
 file
@@ -1015,40 +1015,6 @@ has-props
 
 1468
 
-HTMLDocument$BlockElement.class
-file
-
-
-
-
-2009-04-24T17:48:24.000000Z
-d2bb3e3003f8067cf4f4185a7b8aed10
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1389
-
 SelectListModel.class
 file
 
@@ -1082,6 +1048,40 @@ has-props
 
 
 1125
+
+HTMLDocument$BlockElement.class
+file
+
+
+
+
+2009-04-24T17:48:24.000000Z
+d2bb3e3003f8067cf4f4185a7b8aed10
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1389
 
 HTMLDocument$HTMLReader$HiddenAction.class
 file
@@ -1219,40 +1219,6 @@ has-props
 
 14688
 
-HTMLEditorKit$InsertHTMLTextAction.class
-file
-
-
-
-
-2009-04-24T17:48:24.000000Z
-788fc05a86f7f62c1030b4062cb8ce52
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5755
-
 HTML.class
 file
 
@@ -1286,6 +1252,40 @@ has-props
 
 
 2647
+
+HTMLEditorKit$InsertHTMLTextAction.class
+file
+
+
+
+
+2009-04-24T17:48:24.000000Z
+788fc05a86f7f62c1030b4062cb8ce52
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5755
 
 HTMLDocument$RunElement.class
 file
@@ -1395,11 +1395,11 @@ file
 
 
 
-2009-04-24T17:48:24.000000Z
-33df007ebc2d27122bc0d67010333d8b
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:54.396793Z
+5c3cb6f995b0b2edf992240cafa56cb7
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -1421,7 +1421,7 @@ has-props
 
 
 
-1900
+2024
 
 ImageView.class
 file
@@ -1429,11 +1429,11 @@ file
 
 
 
-2009-04-24T17:48:24.000000Z
-6e22a807b756505b06ef83d10541216a
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2010-11-22T19:18:54.396793Z
+e6ae534974baafe1b9f3975747d8a65e
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -1455,7 +1455,7 @@ has-props
 
 
 
-8916
+8898
 
 HTMLDocument$HTMLReader$MapAction.class
 file
@@ -1531,11 +1531,11 @@ file
 
 
 
-2009-04-24T17:48:24.000000Z
-ac81e29c49b0e585a474ccf8c6dafd3b
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2010-11-22T19:18:54.396793Z
+b8d01b231a97fd7bbb9172c0183e3319
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -1729,40 +1729,6 @@ has-props
 
 1541
 
-ImageView$Observer.class
-file
-
-
-
-
-2009-04-24T17:48:24.000000Z
-8b252a6b2f21563d8a671d6eb7e4b773
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1079
-
 ResetablePlainDocument.class
 file
 
@@ -1797,6 +1763,74 @@ has-props
 
 1046
 
+ImageView$Observer.class
+file
+
+
+
+
+2009-04-24T17:48:24.000000Z
+8b252a6b2f21563d8a671d6eb7e4b773
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1079
+
+MultiAttributeSet.class
+file
+
+
+
+
+2010-11-22T19:18:54.397794Z
+9e85b4a9b3b50086e1a9ae7414e9aba7
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2914
+
 BlockView$PositionInfo.class
 file
 
@@ -1830,40 +1864,6 @@ has-props
 
 
 998
-
-MultiAttributeSet.class
-file
-
-
-
-
-2009-04-24T17:48:24.000000Z
-876f72f9711c26afd0a0fc91de4036e1
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2791
 
 HTMLDocument$HTMLReader$BlockAction.class
 file
@@ -1973,11 +1973,11 @@ file
 
 
 
-2010-02-03T11:42:33.365602Z
-d1905c9e3285fcb1bcaf4830679c2bd9
-2010-01-06T17:46:48.717189Z
-155678
-doko
+2010-11-22T19:18:54.397794Z
+c78f1ee4cea28151e9b40feb100131e6
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -2035,40 +2035,6 @@ has-props
 
 1965
 
-HTMLFrameHyperlinkEvent.class
-file
-
-
-
-
-2009-04-24T17:48:24.000000Z
-a1006102a61d2d9d7fbc809150be07a2
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1844
-
 HTMLDocument$HTMLReader$ParagraphAction.class
 file
 
@@ -2102,6 +2068,40 @@ has-props
 
 
 1190
+
+HTMLFrameHyperlinkEvent.class
+file
+
+
+
+
+2009-04-24T17:48:24.000000Z
+a1006102a61d2d9d7fbc809150be07a2
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1844
 
 Option.class
 file
@@ -2211,11 +2211,11 @@ file
 
 
 
-2009-04-24T17:48:24.000000Z
-ca97e1f4c8767f0cff2241f9ca5accff
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2010-11-22T19:18:54.398793Z
+5f1ae4f3de608aa0736cfce2558bc1bd
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -2313,11 +2313,11 @@ file
 
 
 
-2010-02-03T11:42:33.371564Z
-4a05eac792e6a1ff7390abea0f3eeea7
-2010-01-06T17:46:48.717189Z
-155678
-doko
+2010-11-22T19:18:54.398793Z
+76d7564a78c5ca687f831541fd0bc2db
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -2585,11 +2585,11 @@ file
 
 
 
-2009-04-24T17:48:24.000000Z
-33008581f9f2b4b89dbb11eb2595f8e9
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2010-11-22T19:18:54.399794Z
+ee680e705073f3d85c1c09d99dfb234f
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -2611,7 +2611,7 @@ has-props
 
 
 
-17636
+18289
 
 FormView.class
 file
@@ -2687,11 +2687,11 @@ file
 
 
 
-2009-04-24T17:48:24.000000Z
-4045b67e403481cdf1d977ed22a9e211
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:54.399794Z
+f75d5548c6543f2cf079eeab208756e0
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -2713,7 +2713,7 @@ has-props
 
 
 
-1388
+1454
 
 HTMLEditorKit$Parser.class
 file
@@ -2823,11 +2823,11 @@ file
 
 
 
-2009-04-24T17:48:24.000000Z
-9c5dcb537c4d817deda28348a550344f
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-11-22T19:18:54.400794Z
+c7ee99430373278b1ab3a52651b6e9fb
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
 has-props
 
 
@@ -2849,7 +2849,7 @@ has-props
 
 
 
-9010
+9209
 
 HRuleView.class
 file

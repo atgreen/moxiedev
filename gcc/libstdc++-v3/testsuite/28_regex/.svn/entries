@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/28_regex
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-27T17:27:06.727889Z
-162578
-paolo
+2010-11-14T20:05:12.353083Z
+166736
+doko
 
 
 
@@ -36,9 +36,6 @@ dir
 dir
 
 04_header
-dir
-
-13_ecmascript
 dir
 
 init-list.cc
@@ -121,13 +118,10 @@ dir
 07_traits
 dir
 
-02_definitions
+09_sub_match
 dir
 
 10_match_results
-dir
-
-09_sub_match
 dir
 
 12_iterators

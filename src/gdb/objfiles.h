@@ -188,8 +188,8 @@ struct objfile
 
     struct objfile *next;
 
-    /* The object file's name, tilde-expanded and absolute.
-       Malloc'd; free it if you free this struct.  */
+    /* The object file's name, tilde-expanded and absolute.  Malloc'd; free it
+       if you free this struct.  This pointer is never NULL.  */
 
     char *name;
 
@@ -249,7 +249,7 @@ struct objfile
     /* A byte cache where we can stash arbitrary "chunks" of bytes that
        will not change. */
 
-    struct bcache *psymbol_cache;	/* Byte cache for partial syms */
+    struct psymbol_bcache *psymbol_cache; /* Byte cache for partial syms */
     struct bcache *macro_cache;          /* Byte cache for macros */
     struct bcache *filename_cache;	 /* Byte cache for file names.  */
 
@@ -293,7 +293,7 @@ struct objfile
        allocated memory, and is shared by all objfiles that use the
        object module reader of this type. */
 
-    struct sym_fns *sf;
+    const struct sym_fns *sf;
 
     /* The per-objfile information about the entry point, the scope (file/func)
        containing the entry point, and the scope of the user's main() func. */
@@ -391,6 +391,12 @@ struct objfile
     /* FIXME/carlton-2003-06-27: Delete this in a few years once
        "possible namespace symbols" go away.  */
     struct symtab *cp_namespace_symtab;
+
+    /* A linked list of symbols created when reading template types or
+       function templates.  These symbols are not stored in any symbol
+       table, so we have to keep them here to relocate them
+       properly.  */
+    struct symbol *template_symbols;
   };
 
 /* Defines for the objfile flag word. */
@@ -605,9 +611,44 @@ extern int gdb_bfd_close_or_warn (struct bfd *abfd);
 #define ALL_OBJFILE_OSECTIONS(objfile, osect)	\
   for (osect = objfile->sections; osect < objfile->sections_end; osect++)
 
-#define ALL_OBJSECTIONS(objfile, osect)		\
-  ALL_OBJFILES (objfile)			\
-    ALL_OBJFILE_OSECTIONS (objfile, osect)
+/* Traverse all obj_sections in all objfiles in the current program
+   space.
+
+   Note that this detects a "break" in the inner loop, and exits
+   immediately from the outer loop as well, thus, client code doesn't
+   need to know that this is implemented with a double for.  The extra
+   hair is to make sure that a "break;" stops the outer loop iterating
+   as well, and both OBJFILE and OSECT are left unmodified:
+
+    - The outer loop learns about the inner loop's end condition, and
+      stops iterating if it detects the inner loop didn't reach its
+      end.  In other words, the outer loop keeps going only if the
+      inner loop reached its end cleanly [(osect) ==
+      (objfile)->sections_end].
+
+    - OSECT is initialized in the outer loop initialization
+      expressions, such as if the inner loop has reached its end, so
+      the check mentioned above succeeds the first time.
+
+    - The trick to not clearing OBJFILE on a "break;" is, in the outer
+      loop's loop expression, advance OBJFILE, but iff the inner loop
+      reached its end.  If not, there was a "break;", so leave OBJFILE
+      as is; the outer loop's conditional will break immediately as
+      well (as OSECT will be different from OBJFILE->sections_end).
+*/
+
+#define ALL_OBJSECTIONS(objfile, osect)					\
+  for ((objfile) = current_program_space->objfiles,			\
+	 (objfile) != NULL ? ((osect) = (objfile)->sections_end) : 0;	\
+       (objfile) != NULL						\
+	 && (osect) == (objfile)->sections_end;				\
+       ((osect) == (objfile)->sections_end				\
+	? ((objfile) = (objfile)->next,					\
+	   (objfile) != NULL ? (osect) = (objfile)->sections_end : 0)	\
+	: 0))								\
+    for ((osect) = (objfile)->sections;					\
+	 (osect) < (objfile)->sections_end;				\
+	 (osect)++)
 
 #define SECT_OFF_DATA(objfile) \
      ((objfile->sect_index_data == -1) \

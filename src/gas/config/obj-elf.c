@@ -1,6 +1,6 @@
 /* ELF object file format
    Copyright 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -420,7 +420,7 @@ obj_elf_local (int ignore ATTRIBUTE_UNUSED)
 
   do
     {
-      symbolP = get_sym_from_input_line_and_check (); 
+      symbolP = get_sym_from_input_line_and_check ();
       c = *input_line_pointer;
       S_CLEAR_EXTERNAL (symbolP);
       symbol_get_obj (symbolP)->local = 1;
@@ -444,7 +444,7 @@ obj_elf_weak (int ignore ATTRIBUTE_UNUSED)
 
   do
     {
-      symbolP = get_sym_from_input_line_and_check (); 
+      symbolP = get_sym_from_input_line_and_check ();
       c = *input_line_pointer;
       S_SET_WEAK (symbolP);
       symbol_get_obj (symbolP)->local = 1;
@@ -741,9 +741,10 @@ obj_elf_change_section (const char *name,
 }
 
 static bfd_vma
-obj_elf_parse_section_letters (char *str, size_t len)
+obj_elf_parse_section_letters (char *str, size_t len, bfd_boolean *clone)
 {
   bfd_vma attr = 0;
+  *clone = FALSE;
 
   while (len > 0)
     {
@@ -773,6 +774,9 @@ obj_elf_parse_section_letters (char *str, size_t len)
 	case 'T':
 	  attr |= SHF_TLS;
 	  break;
+	case '?':
+	  *clone = TRUE;
+	  break;
 	/* Compatibility.  */
 	case 'm':
 	  if (*(str - 1) == 'a')
@@ -790,7 +794,7 @@ obj_elf_parse_section_letters (char *str, size_t len)
 	    char *bad_msg = _("unrecognized .section attribute: want a,e,w,x,M,S,G,T");
 #ifdef md_elf_section_letter
 	    bfd_vma md_attr = md_elf_section_letter (*str, &bad_msg);
-	    if (md_attr > 0)
+	    if (md_attr != (bfd_vma) -1)
 	      attr |= md_attr;
 	    else
 #endif
@@ -974,13 +978,15 @@ obj_elf_section (int push)
 
       if (*input_line_pointer == '"')
 	{
+	  bfd_boolean clone;
+
 	  beg = demand_copy_C_string (&dummy);
 	  if (beg == NULL)
 	    {
 	      ignore_rest_of_line ();
 	      return;
 	    }
-	  attr |= obj_elf_parse_section_letters (beg, strlen (beg));
+	  attr |= obj_elf_parse_section_letters (beg, strlen (beg), &clone);
 
 	  SKIP_WHITESPACE ();
 	  if (*input_line_pointer == ',')
@@ -1032,6 +1038,11 @@ obj_elf_section (int push)
 	      attr &= ~SHF_MERGE;
 	    }
 
+	  if ((attr & SHF_GROUP) != 0 && clone)
+	    {
+	      as_warn (_("? section flag ignored with G present"));
+	      clone = FALSE;
+	    }
 	  if ((attr & SHF_GROUP) != 0 && *input_line_pointer == ',')
 	    {
 	      ++input_line_pointer;
@@ -1050,6 +1061,16 @@ obj_elf_section (int push)
 	    {
 	      as_warn (_("group name for SHF_GROUP not specified"));
 	      attr &= ~SHF_GROUP;
+	    }
+
+	  if (clone)
+	    {
+	      const char *now_group = elf_group_name (now_seg);
+	      if (now_group != NULL)
+		{
+		  group_name = xstrdup (now_group);
+		  linkonce = (now_seg->flags & SEC_LINK_ONCE) != 0;
+		}
 	    }
 	}
       else
@@ -1774,7 +1795,7 @@ obj_elf_init_stab_section (segT seg)
   strcpy (stabstr_name, segment_name (seg));
   strcat (stabstr_name, "str");
   stroff = get_stab_string_offset (file, stabstr_name);
-  know (stroff == 1);
+  know (stroff == 1 || (stroff == 0 && file[0] == '\0'));
   md_number_to_chars (p, stroff, 4);
   seg_info (seg)->stabu.p = p;
 }
@@ -2060,32 +2081,29 @@ static void free_section_idx (const char *key ATTRIBUTE_UNUSED, void *val)
 }
 
 void
-elf_frob_file (void)
+elf_adjust_symtab (void)
 {
   struct group_list list;
   unsigned int i;
-
-  bfd_map_over_sections (stdoutput, adjust_stab_sections, NULL);
 
   /* Go find section groups.  */
   list.num_group = 0;
   list.head = NULL;
   list.elt_count = NULL;
-  list.indexes  = hash_new ();
+  list.indexes = hash_new ();
   bfd_map_over_sections (stdoutput, build_group_lists, &list);
-
+  
   /* Make the SHT_GROUP sections that describe each section group.  We
      can't set up the section contents here yet, because elf section
      indices have yet to be calculated.  elf.c:set_group_contents does
      the rest of the work.  */
-  for (i = 0; i < list.num_group; i++)
+ for (i = 0; i < list.num_group; i++)
     {
       const char *group_name = elf_group_name (list.head[i]);
       const char *sec_name;
       asection *s;
       flagword flags;
       struct symbol *sy;
-      int has_sym;
       bfd_size_type size;
 
       flags = SEC_READONLY | SEC_HAS_CONTENTS | SEC_IN_MEMORY | SEC_GROUP;
@@ -2101,17 +2119,7 @@ elf_frob_file (void)
 	      }
 	  }
 
-      sec_name = group_name;
-      sy = symbol_find_exact (group_name);
-      has_sym = 0;
-      if (sy != NULL
-	  && (sy == symbol_lastP
-	      || (sy->sy_next != NULL
-		  && sy->sy_next->sy_previous == sy)))
-	{
-	  has_sym = 1;
-	  sec_name = ".group";
-	}
+      sec_name = ".group";
       s = subseg_force_new (sec_name, 0);
       if (s == NULL
 	  || !bfd_set_section_flags (stdoutput, s, flags)
@@ -2124,8 +2132,27 @@ elf_frob_file (void)
 
       /* Pass a pointer to the first section in this group.  */
       elf_next_in_group (s) = list.head[i];
-      if (has_sym)
-	elf_group_id (s) = sy->bsym;
+      /* Make sure that the signature symbol for the group has the
+	 name of the group.  */
+      sy = symbol_find_exact (group_name);
+      if (!sy
+	  || (sy != symbol_lastP
+	      && (sy->sy_next == NULL
+		  || sy->sy_next->sy_previous != sy)))
+	{
+	  /* Create the symbol now.  */
+	  sy = symbol_new (group_name, now_seg, (valueT) 0, frag_now);
+#ifdef TE_SOLARIS
+	  /* Before Solaris 11 build 154, Sun ld rejects local group
+	     signature symbols, so make them weak hidden instead.  */
+	  symbol_get_bfdsym (sy)->flags |= BSF_WEAK;
+	  S_SET_OTHER (sy, STV_HIDDEN);
+#else
+	  symbol_get_obj (sy)->local = 1;
+#endif
+	  symbol_table_insert (sy);
+	}
+      elf_group_id (s) = symbol_get_bfdsym (sy);
 
       size = 4 * (list.elt_count[i] + 1);
       bfd_set_section_size (stdoutput, s, size);
@@ -2134,13 +2161,19 @@ elf_frob_file (void)
       frag_wane (frag_now);
     }
 
-#ifdef elf_tc_final_processing
-  elf_tc_final_processing ();
-#endif
-
   /* Cleanup hash.  */
   hash_traverse (list.indexes, free_section_idx);
   hash_die (list.indexes);
+}
+
+void
+elf_frob_file (void)
+{
+  bfd_map_over_sections (stdoutput, adjust_stab_sections, NULL);
+
+#ifdef elf_tc_final_processing
+  elf_tc_final_processing ();
+#endif
 }
 
 /* It removes any unneeded versioned symbols from the symbol table.  */
@@ -2362,6 +2395,29 @@ sco_id (void)
 
 #endif /* SCO_ELF */
 
+static void
+elf_generate_asm_lineno (void)
+{
+#ifdef NEED_ECOFF_DEBUG
+  if (ECOFF_DEBUGGING)
+    ecoff_generate_asm_lineno ();
+#endif
+}
+
+static void
+elf_process_stab (segT sec ATTRIBUTE_UNUSED,
+		  int what ATTRIBUTE_UNUSED,
+		  const char *string ATTRIBUTE_UNUSED,
+		  int type ATTRIBUTE_UNUSED,
+		  int other ATTRIBUTE_UNUSED,
+		  int desc ATTRIBUTE_UNUSED)
+{
+#ifdef NEED_ECOFF_DEBUG
+  if (ECOFF_DEBUGGING)
+    ecoff_stab (sec, what, string, type, other, desc);
+#endif
+}
+
 static int
 elf_separate_stab_sections (void)
 {
@@ -2402,13 +2458,8 @@ const struct format_ops elf_format_ops =
   0,	/* s_get_type */
   0,	/* s_set_type */
   elf_copy_symbol_attributes,
-#ifdef NEED_ECOFF_DEBUG
-  ecoff_generate_asm_lineno,
-  ecoff_stab,
-#else
-  0,	/* generate_asm_lineno */
-  0,	/* process_stab */
-#endif
+  elf_generate_asm_lineno,
+  elf_process_stab,
   elf_separate_stab_sections,
   elf_init_stab_section,
   elf_sec_sym_ok_for_reloc,
@@ -2420,5 +2471,6 @@ const struct format_ops elf_format_ops =
 #endif
   elf_obj_read_begin_hook,
   elf_obj_symbol_new_hook,
-  0
+  0,
+  elf_adjust_symtab
 };

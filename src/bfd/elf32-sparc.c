@@ -1,6 +1,6 @@
 /* SPARC-specific support for 32-bit ELF
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007 Free Software Foundation, Inc.
+   2003, 2004, 2005, 2006, 2007, 2010 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -188,6 +188,7 @@ elf32_sparc_add_symbol_hook (bfd * abfd,
 #define TARGET_BIG_SYM	bfd_elf32_sparc_vec
 #define TARGET_BIG_NAME	"elf32-sparc"
 #define ELF_ARCH	bfd_arch_sparc
+#define ELF_TARGET_ID	SPARC_ELF_DATA
 #define ELF_MACHINE_CODE EM_SPARC
 #define ELF_MACHINE_ALT1 EM_SPARC32PLUS
 #define ELF_MAXPAGESIZE 0x10000
@@ -242,6 +243,23 @@ elf32_sparc_add_symbol_hook (bfd * abfd,
 
 #define elf_backend_post_process_headers	_bfd_elf_set_osabi
 #define elf_backend_add_symbol_hook		elf32_sparc_add_symbol_hook
+
+#include "elf32-target.h"
+
+/* Solaris 2.  */
+
+#undef	TARGET_BIG_SYM
+#define	TARGET_BIG_SYM				bfd_elf32_sparc_sol2_vec
+#undef	TARGET_BIG_NAME
+#define	TARGET_BIG_NAME				"elf32-sparc-sol2"
+
+#undef elf32_bed
+#define elf32_bed				elf32_sparc_sol2_bed
+
+/* The 32-bit static TLS arena size is rounded to the nearest 8-byte
+   boundary.  */
+#undef elf_backend_static_tls_alignment
+#define elf_backend_static_tls_alignment	8
 
 #include "elf32-target.h"
 
@@ -304,6 +322,7 @@ elf32_sparc_vxworks_final_write_processing (bfd *abfd, bfd_boolean linker)
 #undef elf_backend_final_write_processing
 #define elf_backend_final_write_processing \
   elf32_sparc_vxworks_final_write_processing
+#undef elf_backend_static_tls_alignment
 
 #undef elf32_bed
 #define elf32_bed				sparc_elf_vxworks_bed

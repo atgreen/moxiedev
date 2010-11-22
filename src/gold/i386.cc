@@ -1,6 +1,6 @@
 // i386.cc -- i386 target support for gold.
 
-// Copyright 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -45,7 +45,113 @@ namespace
 
 using namespace gold;
 
-class Output_data_plt_i386;
+// A class to handle the PLT data.
+
+class Output_data_plt_i386 : public Output_section_data
+{
+ public:
+  typedef Output_data_reloc<elfcpp::SHT_REL, true, 32, false> Reloc_section;
+
+  Output_data_plt_i386(Symbol_table*, Layout*, Output_data_space*);
+
+  // Add an entry to the PLT.
+  void
+  add_entry(Symbol* gsym);
+
+  // Add an entry to the PLT for a local STT_GNU_IFUNC symbol.
+  unsigned int
+  add_local_ifunc_entry(Sized_relobj<32, false>* relobj,
+			unsigned int local_sym_index);
+
+  // Return the .rel.plt section data.
+  Reloc_section*
+  rel_plt() const
+  { return this->rel_; }
+
+  // Return where the TLS_DESC relocations should go.
+  Reloc_section*
+  rel_tls_desc(Layout*);
+
+  // Return the number of PLT entries.
+  unsigned int
+  entry_count() const
+  { return this->count_; }
+
+  // Return the offset of the first non-reserved PLT entry.
+  static unsigned int
+  first_plt_entry_offset()
+  { return plt_entry_size; }
+
+  // Return the size of a PLT entry.
+  static unsigned int
+  get_plt_entry_size()
+  { return plt_entry_size; }
+
+ protected:
+  void
+  do_adjust_output_section(Output_section* os);
+
+  // Write to a map file.
+  void
+  do_print_to_mapfile(Mapfile* mapfile) const
+  { mapfile->print_output_data(this, _("** PLT")); }
+
+ private:
+  // The size of an entry in the PLT.
+  static const int plt_entry_size = 16;
+
+  // The first entry in the PLT for an executable.
+  static unsigned char exec_first_plt_entry[plt_entry_size];
+
+  // The first entry in the PLT for a shared object.
+  static unsigned char dyn_first_plt_entry[plt_entry_size];
+
+  // Other entries in the PLT for an executable.
+  static unsigned char exec_plt_entry[plt_entry_size];
+
+  // Other entries in the PLT for a shared object.
+  static unsigned char dyn_plt_entry[plt_entry_size];
+
+  // Set the final size.
+  void
+  set_final_data_size()
+  { this->set_data_size((this->count_ + 1) * plt_entry_size); }
+
+  // Write out the PLT data.
+  void
+  do_write(Output_file*);
+
+  // We keep a list of global STT_GNU_IFUNC symbols, each with its
+  // offset in the GOT.
+  struct Global_ifunc
+  {
+    Symbol* sym;
+    unsigned int got_offset;
+  };
+
+  // We keep a list of local STT_GNU_IFUNC symbols, each with its
+  // offset in the GOT.
+  struct Local_ifunc
+  {
+    Sized_relobj<32, false>* object;
+    unsigned int local_sym_index;
+    unsigned int got_offset;
+  };
+
+  // The reloc section.
+  Reloc_section* rel_;
+  // The TLS_DESC relocations, if necessary.  These must follow the
+  // regular PLT relocs.
+  Reloc_section* tls_desc_rel_;
+  // The .got.plt section.
+  Output_data_space* got_plt_;
+  // The number of PLT entries.
+  unsigned int count_;
+  // Global STT_GNU_IFUNC symbols.
+  std::vector<Global_ifunc> global_ifuncs_;
+  // Local STT_GNU_IFUNC symbols.
+  std::vector<Local_ifunc> local_ifuncs_;
+};
 
 // The i386 target class.
 // TLS info comes from
@@ -59,13 +165,18 @@ class Target_i386 : public Target_freebsd<32, false>
 
   Target_i386()
     : Target_freebsd<32, false>(&i386_info),
-      got_(NULL), plt_(NULL), got_plt_(NULL), global_offset_table_(NULL),
-      rel_dyn_(NULL), copy_relocs_(elfcpp::R_386_COPY), dynbss_(NULL),
+      got_(NULL), plt_(NULL), got_plt_(NULL), got_tlsdesc_(NULL),
+      global_offset_table_(NULL), rel_dyn_(NULL),
+      copy_relocs_(elfcpp::R_386_COPY), dynbss_(NULL),
       got_mod_index_offset_(-1U), tls_base_symbol_defined_(false)
   { }
 
   inline bool
   can_check_for_function_pointers() const
+  { return true; }
+
+  virtual bool
+  can_icf_inline_merge_sections () const
   { return true; }
 
   // Process the relocations to determine unreferenced sections for 
@@ -171,6 +282,15 @@ class Target_i386 : public Target_freebsd<32, false>
     return Target::do_is_local_label_name(name);
   }
 
+  // Return the PLT section.
+  Output_data*
+  do_plt_section_for_global(const Symbol*) const
+  { return this->plt_section(); }
+
+  Output_data*
+  do_plt_section_for_local(const Relobj*, unsigned int) const
+  { return this->plt_section(); }
+
   // Return whether SYM is call to a non-split function.
   bool
   do_is_call_to_non_split(const Symbol* sym, unsigned int) const;
@@ -184,16 +304,41 @@ class Target_i386 : public Target_freebsd<32, false>
 
   // Return the size of the GOT section.
   section_size_type
-  got_size()
+  got_size() const
   {
     gold_assert(this->got_ != NULL);
     return this->got_->data_size();
   }
 
+  // Return the number of entries in the GOT.
+  unsigned int
+  got_entry_count() const
+  {
+    if (this->got_ == NULL)
+      return 0;
+    return this->got_size() / 4;
+  }
+
+  // Return the number of entries in the PLT.
+  unsigned int
+  plt_entry_count() const;
+
+  // Return the offset of the first non-reserved PLT entry.
+  unsigned int
+  first_plt_entry_offset() const;
+
+  // Return the size of each PLT entry.
+  unsigned int
+  plt_entry_size() const;
+
  private:
   // The class which scans relocations.
   struct Scan
   {
+    static inline int
+
+    get_reference_flags(unsigned int r_type);
+
     inline void
     local(Symbol_table* symtab, Layout* layout, Target_i386* target,
 	  Sized_relobj<32, false>* object,
@@ -233,6 +378,9 @@ class Target_i386 : public Target_freebsd<32, false>
     inline bool
     possible_function_pointer_reloc(unsigned int r_type);
 
+    bool
+    reloc_needs_plt_for_ifunc(Sized_relobj<32, false>*, unsigned int r_type);
+
     static void
     unsupported_reloc_local(Sized_relobj<32, false>*, unsigned int r_type);
 
@@ -262,7 +410,7 @@ class Target_i386 : public Target_freebsd<32, false>
     // Return whether the static relocation needs to be applied.
     inline bool
     should_apply_static_reloc(const Sized_symbol<32>* gsym,
-                              int ref_flags,
+                              unsigned int r_type,
                               bool is_32bit,
 			      Output_section* output_section);
 
@@ -385,9 +533,27 @@ class Target_i386 : public Target_freebsd<32, false>
     return this->got_plt_;
   }
 
+  // Get the GOT section for TLSDESC entries.
+  Output_data_got<32, false>*
+  got_tlsdesc_section() const
+  {
+    gold_assert(this->got_tlsdesc_ != NULL);
+    return this->got_tlsdesc_;
+  }
+
+  // Create the PLT section.
+  void
+  make_plt_section(Symbol_table* symtab, Layout* layout);
+
   // Create a PLT entry for a global symbol.
   void
   make_plt_entry(Symbol_table*, Layout*, Symbol*);
+
+  // Create a PLT entry for a local STT_GNU_IFUNC symbol.
+  void
+  make_local_ifunc_plt_entry(Symbol_table*, Layout*,
+			     Sized_relobj<32, false>* relobj,
+			     unsigned int local_sym_index);
 
   // Define the _TLS_MODULE_BASE_ symbol in the TLS segment.
   void
@@ -432,6 +598,9 @@ class Target_i386 : public Target_freebsd<32, false>
   static const Target::Target_info i386_info;
 
   // The types of GOT entries needed for this platform.
+  // These values are exposed to the ABI in an incremental link.
+  // Do not renumber existing values without changing the version
+  // number of the .gnu_incremental_inputs section.
   enum Got_type
   {
     GOT_TYPE_STANDARD = 0,      // GOT entry for a regular symbol
@@ -447,6 +616,8 @@ class Target_i386 : public Target_freebsd<32, false>
   Output_data_plt_i386* plt_;
   // The GOT PLT section.
   Output_data_space* got_plt_;
+  // The GOT section for TLSDESC relocations.
+  Output_data_got<32, false>* got_tlsdesc_;
   // The _GLOBAL_OFFSET_TABLE_ symbol.
   Symbol* global_offset_table_;
   // The dynamic reloc section.
@@ -497,14 +668,14 @@ Target_i386::got_section(Symbol_table* symtab, Layout* layout)
       layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
 				      (elfcpp::SHF_ALLOC
 				       | elfcpp::SHF_WRITE),
-				      this->got_, false, true, true, false);
+				      this->got_, ORDER_RELRO_LAST, true);
 
       this->got_plt_ = new Output_data_space(4, "** GOT PLT");
       layout->add_output_section_data(".got.plt", elfcpp::SHT_PROGBITS,
 				      (elfcpp::SHF_ALLOC
 				       | elfcpp::SHF_WRITE),
-				      this->got_plt_, false, false, false,
-				      true);
+				      this->got_plt_, ORDER_NON_RELRO_FIRST,
+				      false);
 
       // The first three entries are reserved.
       this->got_plt_->set_current_data_size(3 * 4);
@@ -521,6 +692,15 @@ Target_i386::got_section(Symbol_table* symtab, Layout* layout)
 				      elfcpp::STB_LOCAL,
 				      elfcpp::STV_HIDDEN, 0,
 				      false, false);
+
+      // If there are any TLSDESC relocations, they get GOT entries in
+      // .got.plt after the jump slot entries.
+      this->got_tlsdesc_ = new Output_data_got<32, false>();
+      layout->add_output_section_data(".got.plt", elfcpp::SHT_PROGBITS,
+				      (elfcpp::SHF_ALLOC
+				       | elfcpp::SHF_WRITE),
+				      this->got_tlsdesc_,
+				      ORDER_NON_RELRO_FIRST, false);
     }
 
   return this->got_;
@@ -536,91 +716,44 @@ Target_i386::rel_dyn_section(Layout* layout)
       gold_assert(layout != NULL);
       this->rel_dyn_ = new Reloc_section(parameters->options().combreloc());
       layout->add_output_section_data(".rel.dyn", elfcpp::SHT_REL,
-				      elfcpp::SHF_ALLOC, this->rel_dyn_, true,
-				      false, false, false);
+				      elfcpp::SHF_ALLOC, this->rel_dyn_,
+				      ORDER_DYNAMIC_RELOCS, false);
     }
   return this->rel_dyn_;
 }
-
-// A class to handle the PLT data.
-
-class Output_data_plt_i386 : public Output_section_data
-{
- public:
-  typedef Output_data_reloc<elfcpp::SHT_REL, true, 32, false> Reloc_section;
-
-  Output_data_plt_i386(Layout*, Output_data_space*);
-
-  // Add an entry to the PLT.
-  void
-  add_entry(Symbol* gsym);
-
-  // Return the .rel.plt section data.
-  const Reloc_section*
-  rel_plt() const
-  { return this->rel_; }
-
-  // Return where the TLS_DESC relocations should go.
-  Reloc_section*
-  rel_tls_desc(Layout*);
-
- protected:
-  void
-  do_adjust_output_section(Output_section* os);
-
-  // Write to a map file.
-  void
-  do_print_to_mapfile(Mapfile* mapfile) const
-  { mapfile->print_output_data(this, _("** PLT")); }
-
- private:
-  // The size of an entry in the PLT.
-  static const int plt_entry_size = 16;
-
-  // The first entry in the PLT for an executable.
-  static unsigned char exec_first_plt_entry[plt_entry_size];
-
-  // The first entry in the PLT for a shared object.
-  static unsigned char dyn_first_plt_entry[plt_entry_size];
-
-  // Other entries in the PLT for an executable.
-  static unsigned char exec_plt_entry[plt_entry_size];
-
-  // Other entries in the PLT for a shared object.
-  static unsigned char dyn_plt_entry[plt_entry_size];
-
-  // Set the final size.
-  void
-  set_final_data_size()
-  { this->set_data_size((this->count_ + 1) * plt_entry_size); }
-
-  // Write out the PLT data.
-  void
-  do_write(Output_file*);
-
-  // The reloc section.
-  Reloc_section* rel_;
-  // The TLS_DESC relocations, if necessary.  These must follow the
-  // regular PLT relocs.
-  Reloc_section* tls_desc_rel_;
-  // The .got.plt section.
-  Output_data_space* got_plt_;
-  // The number of PLT entries.
-  unsigned int count_;
-};
 
 // Create the PLT section.  The ordinary .got section is an argument,
 // since we need to refer to the start.  We also create our own .got
 // section just for PLT entries.
 
-Output_data_plt_i386::Output_data_plt_i386(Layout* layout,
+Output_data_plt_i386::Output_data_plt_i386(Symbol_table* symtab,
+					   Layout* layout,
 					   Output_data_space* got_plt)
-  : Output_section_data(4), tls_desc_rel_(NULL), got_plt_(got_plt), count_(0)
+  : Output_section_data(4), tls_desc_rel_(NULL), got_plt_(got_plt), count_(0),
+    global_ifuncs_(), local_ifuncs_()
 {
   this->rel_ = new Reloc_section(false);
   layout->add_output_section_data(".rel.plt", elfcpp::SHT_REL,
-				  elfcpp::SHF_ALLOC, this->rel_, true,
-				  false, false, false);
+				  elfcpp::SHF_ALLOC, this->rel_,
+				  ORDER_DYNAMIC_PLT_RELOCS, false);
+
+  if (parameters->doing_static_link())
+    {
+      // A statically linked executable will only have a .rel.plt
+      // section to hold R_386_IRELATIVE relocs for STT_GNU_IFUNC
+      // symbols.  The library will use these symbols to locate the
+      // IRELATIVE relocs at program startup time.
+      symtab->define_in_output_data("__rel_iplt_start", NULL,
+				    Symbol_table::PREDEFINED,
+				    this->rel_, 0, 0, elfcpp::STT_NOTYPE,
+				    elfcpp::STB_GLOBAL, elfcpp::STV_HIDDEN,
+				    0, false, true);
+      symtab->define_in_output_data("__rel_iplt_end", NULL,
+				    Symbol_table::PREDEFINED,
+				    this->rel_, 0, 0, elfcpp::STT_NOTYPE,
+				    elfcpp::STB_GLOBAL, elfcpp::STV_HIDDEN,
+				    0, true, true);
+    }
 }
 
 void
@@ -652,13 +785,56 @@ Output_data_plt_i386::add_entry(Symbol* gsym)
   this->got_plt_->set_current_data_size(got_offset + 4);
 
   // Every PLT entry needs a reloc.
-  gsym->set_needs_dynsym_entry();
-  this->rel_->add_global(gsym, elfcpp::R_386_JUMP_SLOT, this->got_plt_,
-			 got_offset);
+  if (gsym->type() == elfcpp::STT_GNU_IFUNC
+      && gsym->can_use_relative_reloc(false))
+    {
+      this->rel_->add_symbolless_global_addend(gsym, elfcpp::R_386_IRELATIVE,
+					       this->got_plt_, got_offset);
+      struct Global_ifunc gi;
+      gi.sym = gsym;
+      gi.got_offset = got_offset;
+      this->global_ifuncs_.push_back(gi);
+    }
+  else
+    {
+      gsym->set_needs_dynsym_entry();
+      this->rel_->add_global(gsym, elfcpp::R_386_JUMP_SLOT, this->got_plt_,
+			     got_offset);
+    }
 
   // Note that we don't need to save the symbol.  The contents of the
   // PLT are independent of which symbols are used.  The symbols only
   // appear in the relocations.
+}
+
+// Add an entry to the PLT for a local STT_GNU_IFUNC symbol.  Return
+// the PLT offset.
+
+unsigned int
+Output_data_plt_i386::add_local_ifunc_entry(Sized_relobj<32, false>* relobj,
+					    unsigned int local_sym_index)
+{
+  unsigned int plt_offset = (this->count_ + 1) * plt_entry_size;
+  ++this->count_;
+
+  section_offset_type got_offset = this->got_plt_->current_data_size();
+
+  // Every PLT entry needs a GOT entry which points back to the PLT
+  // entry.
+  this->got_plt_->set_current_data_size(got_offset + 4);
+
+  // Every PLT entry needs a reloc.
+  this->rel_->add_symbolless_local_addend(relobj, local_sym_index,
+					  elfcpp::R_386_IRELATIVE,
+					  this->got_plt_, got_offset);
+
+  struct Local_ifunc li;
+  li.object = relobj;
+  li.local_sym_index = local_sym_index;
+  li.got_offset = got_offset;
+  this->local_ifuncs_.push_back(li);
+
+  return plt_offset;
 }
 
 // Return where the TLS_DESC relocations should go, creating it if
@@ -672,7 +848,7 @@ Output_data_plt_i386::rel_tls_desc(Layout* layout)
       this->tls_desc_rel_ = new Reloc_section(false);
       layout->add_output_section_data(".rel.plt", elfcpp::SHT_REL,
 				      elfcpp::SHF_ALLOC, this->tls_desc_rel_,
-				      true, false, false, false);
+				      ORDER_DYNAMIC_PLT_RELOCS, false);
       gold_assert(this->tls_desc_rel_->output_section() ==
 		  this->rel_->output_section());
     }
@@ -799,11 +975,59 @@ Output_data_plt_i386::do_write(Output_file* of)
       elfcpp::Swap<32, false>::writeval(got_pov, plt_address + plt_offset + 6);
     }
 
+  // If any STT_GNU_IFUNC symbols have PLT entries, we need to change
+  // the GOT to point to the actual symbol value, rather than point to
+  // the PLT entry.  That will let the dynamic linker call the right
+  // function when resolving IRELATIVE relocations.
+  for (std::vector<Global_ifunc>::const_iterator p =
+	 this->global_ifuncs_.begin();
+       p != this->global_ifuncs_.end();
+       ++p)
+    {
+      const Sized_symbol<32>* ssym =
+	static_cast<const Sized_symbol<32>*>(p->sym);
+      elfcpp::Swap<32, false>::writeval(got_view + p->got_offset,
+					ssym->value());
+    }
+
+  for (std::vector<Local_ifunc>::const_iterator p =
+	 this->local_ifuncs_.begin();
+       p != this->local_ifuncs_.end();
+       ++p)
+    {
+      const Symbol_value<32>* psymval =
+	p->object->local_symbol(p->local_sym_index);
+      elfcpp::Swap<32, false>::writeval(got_view + p->got_offset,
+					psymval->value(p->object, 0));
+    }
+
   gold_assert(static_cast<section_size_type>(pov - oview) == oview_size);
   gold_assert(static_cast<section_size_type>(got_pov - got_view) == got_size);
 
   of->write_output_view(offset, oview_size, oview);
   of->write_output_view(got_file_offset, got_size, got_view);
+}
+
+// Create the PLT section.
+
+void
+Target_i386::make_plt_section(Symbol_table* symtab, Layout* layout)
+{
+  if (this->plt_ == NULL)
+    {
+      // Create the GOT sections first.
+      this->got_section(symtab, layout);
+
+      this->plt_ = new Output_data_plt_i386(symtab, layout, this->got_plt_);
+      layout->add_output_section_data(".plt", elfcpp::SHT_PROGBITS,
+				      (elfcpp::SHF_ALLOC
+				       | elfcpp::SHF_EXECINSTR),
+				      this->plt_, ORDER_PLT, false);
+
+      // Make the sh_info field of .rel.plt point to .plt.
+      Output_section* rel_plt_os = this->plt_->rel_plt()->output_section();
+      rel_plt_os->set_info_section(this->plt_->output_section());
+    }
 }
 
 // Create a PLT entry for a global symbol.
@@ -813,20 +1037,51 @@ Target_i386::make_plt_entry(Symbol_table* symtab, Layout* layout, Symbol* gsym)
 {
   if (gsym->has_plt_offset())
     return;
-
   if (this->plt_ == NULL)
-    {
-      // Create the GOT sections first.
-      this->got_section(symtab, layout);
-
-      this->plt_ = new Output_data_plt_i386(layout, this->got_plt_);
-      layout->add_output_section_data(".plt", elfcpp::SHT_PROGBITS,
-				      (elfcpp::SHF_ALLOC
-				       | elfcpp::SHF_EXECINSTR),
-				      this->plt_, false, false, false, false);
-    }
-
+    this->make_plt_section(symtab, layout);
   this->plt_->add_entry(gsym);
+}
+
+// Make a PLT entry for a local STT_GNU_IFUNC symbol.
+
+void
+Target_i386::make_local_ifunc_plt_entry(Symbol_table* symtab, Layout* layout,
+					Sized_relobj<32, false>* relobj,
+					unsigned int local_sym_index)
+{
+  if (relobj->local_has_plt_offset(local_sym_index))
+    return;
+  if (this->plt_ == NULL)
+    this->make_plt_section(symtab, layout);
+  unsigned int plt_offset = this->plt_->add_local_ifunc_entry(relobj,
+							      local_sym_index);
+  relobj->set_local_plt_offset(local_sym_index, plt_offset);
+}
+
+// Return the number of entries in the PLT.
+
+unsigned int
+Target_i386::plt_entry_count() const
+{
+  if (this->plt_ == NULL)
+    return 0;
+  return this->plt_->entry_count();
+}
+
+// Return the offset of the first non-reserved PLT entry.
+
+unsigned int
+Target_i386::first_plt_entry_offset() const
+{
+  return Output_data_plt_i386::first_plt_entry_offset();
+}
+
+// Return the size of each PLT entry.
+
+unsigned int
+Target_i386::plt_entry_size() const
+{
+  return Output_data_plt_i386::get_plt_entry_size();
 }
 
 // Get the section to use for TLS_DESC relocations.
@@ -940,6 +1195,76 @@ Target_i386::optimize_tls_reloc(bool is_final, int r_type)
     }
 }
 
+// Get the Reference_flags for a particular relocation.
+
+int
+Target_i386::Scan::get_reference_flags(unsigned int r_type)
+{
+  switch (r_type)
+    {
+    case elfcpp::R_386_NONE:
+    case elfcpp::R_386_GNU_VTINHERIT:
+    case elfcpp::R_386_GNU_VTENTRY:
+    case elfcpp::R_386_GOTPC:
+      // No symbol reference.
+      return 0;
+
+    case elfcpp::R_386_32:
+    case elfcpp::R_386_16:
+    case elfcpp::R_386_8:
+      return Symbol::ABSOLUTE_REF;
+
+    case elfcpp::R_386_PC32:
+    case elfcpp::R_386_PC16:
+    case elfcpp::R_386_PC8:
+    case elfcpp::R_386_GOTOFF:
+      return Symbol::RELATIVE_REF;
+
+    case elfcpp::R_386_PLT32:
+      return Symbol::FUNCTION_CALL | Symbol::RELATIVE_REF;
+
+    case elfcpp::R_386_GOT32:
+      // Absolute in GOT.
+      return Symbol::ABSOLUTE_REF;
+
+    case elfcpp::R_386_TLS_GD:            // Global-dynamic
+    case elfcpp::R_386_TLS_GOTDESC:       // Global-dynamic (from ~oliva url)
+    case elfcpp::R_386_TLS_DESC_CALL:
+    case elfcpp::R_386_TLS_LDM:           // Local-dynamic
+    case elfcpp::R_386_TLS_LDO_32:        // Alternate local-dynamic
+    case elfcpp::R_386_TLS_IE:            // Initial-exec
+    case elfcpp::R_386_TLS_IE_32:
+    case elfcpp::R_386_TLS_GOTIE:
+    case elfcpp::R_386_TLS_LE:            // Local-exec
+    case elfcpp::R_386_TLS_LE_32:
+      return Symbol::TLS_REF;
+
+    case elfcpp::R_386_COPY:
+    case elfcpp::R_386_GLOB_DAT:
+    case elfcpp::R_386_JUMP_SLOT:
+    case elfcpp::R_386_RELATIVE:
+    case elfcpp::R_386_IRELATIVE:
+    case elfcpp::R_386_TLS_TPOFF:
+    case elfcpp::R_386_TLS_DTPMOD32:
+    case elfcpp::R_386_TLS_DTPOFF32:
+    case elfcpp::R_386_TLS_TPOFF32:
+    case elfcpp::R_386_TLS_DESC:
+    case elfcpp::R_386_32PLT:
+    case elfcpp::R_386_TLS_GD_32:
+    case elfcpp::R_386_TLS_GD_PUSH:
+    case elfcpp::R_386_TLS_GD_CALL:
+    case elfcpp::R_386_TLS_GD_POP:
+    case elfcpp::R_386_TLS_LDM_32:
+    case elfcpp::R_386_TLS_LDM_PUSH:
+    case elfcpp::R_386_TLS_LDM_CALL:
+    case elfcpp::R_386_TLS_LDM_POP:
+    case elfcpp::R_386_USED_BY_INTEL_200:
+    default:
+      // Not expected.  We will give an error later.
+      return 0;
+    }
+}
+
 // Report an unsupported relocation against a local symbol.
 
 void
@@ -948,6 +1273,20 @@ Target_i386::Scan::unsupported_reloc_local(Sized_relobj<32, false>* object,
 {
   gold_error(_("%s: unsupported reloc %u against local symbol"),
 	     object->name().c_str(), r_type);
+}
+
+// Return whether we need to make a PLT entry for a relocation of a
+// given type against a STT_GNU_IFUNC symbol.
+
+bool
+Target_i386::Scan::reloc_needs_plt_for_ifunc(Sized_relobj<32, false>* object,
+					     unsigned int r_type)
+{
+  int flags = Scan::get_reference_flags(r_type);
+  if (flags & Symbol::TLS_REF)
+    gold_error(_("%s: unsupported TLS reloc %u for IFUNC symbol"),
+               object->name().c_str(), r_type);
+  return flags != 0;
 }
 
 // Scan a relocation for a local symbol.
@@ -963,6 +1302,14 @@ Target_i386::Scan::local(Symbol_table* symtab,
 			 unsigned int r_type,
 			 const elfcpp::Sym<32, false>& lsym)
 {
+  // A local STT_GNU_IFUNC symbol may require a PLT entry.
+  if (lsym.get_st_type() == elfcpp::STT_GNU_IFUNC
+      && this->reloc_needs_plt_for_ifunc(object, r_type))
+    {
+      unsigned int r_sym = elfcpp::elf_r_sym<32>(reloc.get_r_info());
+      target->make_local_ifunc_plt_entry(symtab, layout, object, r_sym);
+    }
+
   switch (r_type)
     {
     case elfcpp::R_386_NONE:
@@ -981,9 +1328,9 @@ Target_i386::Scan::local(Symbol_table* symtab,
         {
           Reloc_section* rel_dyn = target->rel_dyn_section(layout);
           unsigned int r_sym = elfcpp::elf_r_sym<32>(reloc.get_r_info());
-          rel_dyn->add_local_relative(object, r_sym, elfcpp::R_386_RELATIVE,
-                                      output_section, data_shndx,
-                                      reloc.get_r_offset());
+	  rel_dyn->add_local_relative(object, r_sym, elfcpp::R_386_RELATIVE,
+				      output_section, data_shndx,
+				      reloc.get_r_offset());
         }
       break;
 
@@ -1040,17 +1387,27 @@ Target_i386::Scan::local(Symbol_table* symtab,
         // The symbol requires a GOT entry.
         Output_data_got<32, false>* got = target->got_section(symtab, layout);
         unsigned int r_sym = elfcpp::elf_r_sym<32>(reloc.get_r_info());
-        if (got->add_local(object, r_sym, GOT_TYPE_STANDARD))
+
+	// For a STT_GNU_IFUNC symbol we want the PLT offset.  That
+	// lets function pointers compare correctly with shared
+	// libraries.  Otherwise we would need an IRELATIVE reloc.
+	bool is_new;
+	if (lsym.get_st_type() == elfcpp::STT_GNU_IFUNC)
+	  is_new = got->add_local_plt(object, r_sym, GOT_TYPE_STANDARD);
+	else
+	  is_new = got->add_local(object, r_sym, GOT_TYPE_STANDARD);
+        if (is_new)
           {
             // If we are generating a shared object, we need to add a
             // dynamic RELATIVE relocation for this symbol's GOT entry.
             if (parameters->options().output_is_position_independent())
               {
                 Reloc_section* rel_dyn = target->rel_dyn_section(layout);
-                unsigned int r_sym = elfcpp::elf_r_sym<32>(reloc.get_r_info());
-                rel_dyn->add_local_relative(
-                    object, r_sym, elfcpp::R_386_RELATIVE, got,
-                    object->local_got_offset(r_sym, GOT_TYPE_STANDARD));
+		unsigned int got_offset =
+		  object->local_got_offset(r_sym, GOT_TYPE_STANDARD);
+		rel_dyn->add_local_relative(object, r_sym,
+					    elfcpp::R_386_RELATIVE,
+					    got, got_offset);
               }
           }
       }
@@ -1062,6 +1419,7 @@ Target_i386::Scan::local(Symbol_table* symtab,
     case elfcpp::R_386_GLOB_DAT:
     case elfcpp::R_386_JUMP_SLOT:
     case elfcpp::R_386_RELATIVE:
+    case elfcpp::R_386_IRELATIVE:
     case elfcpp::R_386_TLS_TPOFF:
     case elfcpp::R_386_TLS_DTPMOD32:
     case elfcpp::R_386_TLS_DTPOFF32:
@@ -1117,9 +1475,13 @@ Target_i386::Scan::local(Symbol_table* symtab,
 	    target->define_tls_base_symbol(symtab, layout);
             if (optimized_type == tls::TLSOPT_NONE)
               {
-                // Create a double GOT entry with an R_386_TLS_DESC reloc.
-                Output_data_got<32, false>* got
-                    = target->got_section(symtab, layout);
+                // Create a double GOT entry with an R_386_TLS_DESC
+                // reloc.  The R_386_TLS_DESC reloc is resolved
+                // lazily, so the GOT entry needs to be in an area in
+                // .got.plt, not .got.  Call got_section to make sure
+                // the section has been created.
+		target->got_section(symtab, layout);
+                Output_data_got<32, false>* got = target->got_tlsdesc_section();
                 unsigned int r_sym = elfcpp::elf_r_sym<32>(reloc.get_r_info());
 		if (!object->local_has_got_offset(r_sym, GOT_TYPE_TLS_DESC))
 		  {
@@ -1305,6 +1667,11 @@ Target_i386::Scan::global(Symbol_table* symtab,
 			  unsigned int r_type,
 			  Symbol* gsym)
 {
+  // A STT_GNU_IFUNC symbol may require a PLT entry.
+  if (gsym->type() == elfcpp::STT_GNU_IFUNC
+      && this->reloc_needs_plt_for_ifunc(object, r_type))
+    target->make_plt_entry(symtab, layout, gsym);
+
   switch (r_type)
     {
     case elfcpp::R_386_NONE:
@@ -1328,20 +1695,38 @@ Target_i386::Scan::global(Symbol_table* symtab,
               gsym->set_needs_dynsym_value();
           }
         // Make a dynamic relocation if necessary.
-        if (gsym->needs_dynamic_reloc(Symbol::ABSOLUTE_REF))
+        if (gsym->needs_dynamic_reloc(Scan::get_reference_flags(r_type)))
           {
             if (gsym->may_need_copy_reloc())
               {
 	        target->copy_reloc(symtab, layout, object,
 	                           data_shndx, output_section, gsym, reloc);
               }
+	    else if (r_type == elfcpp::R_386_32
+		     && gsym->type() == elfcpp::STT_GNU_IFUNC
+		     && gsym->can_use_relative_reloc(false)
+		     && !gsym->is_from_dynobj()
+		     && !gsym->is_undefined()
+		     && !gsym->is_preemptible())
+	      {
+		// Use an IRELATIVE reloc for a locally defined
+		// STT_GNU_IFUNC symbol.  This makes a function
+		// address in a PIE executable match the address in a
+		// shared library that it links against.
+		Reloc_section* rel_dyn = target->rel_dyn_section(layout);
+		rel_dyn->add_symbolless_global_addend(gsym,
+						      elfcpp::R_386_IRELATIVE,
+						      output_section,
+						      object, data_shndx,
+						      reloc.get_r_offset());
+	      }
             else if (r_type == elfcpp::R_386_32
                      && gsym->can_use_relative_reloc(false))
               {
                 Reloc_section* rel_dyn = target->rel_dyn_section(layout);
-                rel_dyn->add_global_relative(gsym, elfcpp::R_386_RELATIVE,
-                                             output_section, object,
-                                             data_shndx, reloc.get_r_offset());
+		rel_dyn->add_global_relative(gsym, elfcpp::R_386_RELATIVE,
+					     output_section, object,
+					     data_shndx, reloc.get_r_offset());
               }
             else
               {
@@ -1371,10 +1756,7 @@ Target_i386::Scan::global(Symbol_table* symtab,
               target->make_plt_entry(symtab, layout, gsym);
           }
         // Make a dynamic relocation if necessary.
-        int flags = Symbol::NON_PIC_REF;
-        if (gsym->is_func())
-          flags |= Symbol::FUNCTION_CALL;
-        if (gsym->needs_dynamic_reloc(flags))
+        if (gsym->needs_dynamic_reloc(Scan::get_reference_flags(r_type)))
           {
             if (gsym->may_need_copy_reloc())
               {
@@ -1396,7 +1778,13 @@ Target_i386::Scan::global(Symbol_table* symtab,
         // The symbol requires a GOT entry.
         Output_data_got<32, false>* got = target->got_section(symtab, layout);
         if (gsym->final_value_is_known())
-          got->add_global(gsym, GOT_TYPE_STANDARD);
+	  {
+	    // For a STT_GNU_IFUNC symbol we want the PLT address.
+	    if (gsym->type() == elfcpp::STT_GNU_IFUNC)
+	      got->add_global_plt(gsym, GOT_TYPE_STANDARD);
+	    else
+	      got->add_global(gsym, GOT_TYPE_STANDARD);
+	  }
         else
           {
             // If this symbol is not fully resolved, we need to add a
@@ -1404,15 +1792,34 @@ Target_i386::Scan::global(Symbol_table* symtab,
             Reloc_section* rel_dyn = target->rel_dyn_section(layout);
             if (gsym->is_from_dynobj()
                 || gsym->is_undefined()
-                || gsym->is_preemptible())
+                || gsym->is_preemptible()
+		|| (gsym->type() == elfcpp::STT_GNU_IFUNC
+		    && parameters->options().output_is_position_independent()))
               got->add_global_with_rel(gsym, GOT_TYPE_STANDARD,
                                        rel_dyn, elfcpp::R_386_GLOB_DAT);
             else
               {
-                if (got->add_global(gsym, GOT_TYPE_STANDARD))
-                  rel_dyn->add_global_relative(
-                      gsym, elfcpp::R_386_RELATIVE, got,
-                      gsym->got_offset(GOT_TYPE_STANDARD));
+		// For a STT_GNU_IFUNC symbol we want to write the PLT
+		// offset into the GOT, so that function pointer
+		// comparisons work correctly.
+		bool is_new;
+		if (gsym->type() != elfcpp::STT_GNU_IFUNC)
+		  is_new = got->add_global(gsym, GOT_TYPE_STANDARD);
+		else
+		  {
+		    is_new = got->add_global_plt(gsym, GOT_TYPE_STANDARD);
+		    // Tell the dynamic linker to use the PLT address
+		    // when resolving relocations.
+		    if (gsym->is_from_dynobj()
+			&& !parameters->options().shared())
+		      gsym->set_needs_dynsym_value();
+		  }
+                if (is_new)
+		  {
+		    unsigned int got_off = gsym->got_offset(GOT_TYPE_STANDARD);
+		    rel_dyn->add_global_relative(gsym, elfcpp::R_386_RELATIVE,
+						 got, got_off);
+		  }
               }
           }
       }
@@ -1445,6 +1852,7 @@ Target_i386::Scan::global(Symbol_table* symtab,
     case elfcpp::R_386_GLOB_DAT:
     case elfcpp::R_386_JUMP_SLOT:
     case elfcpp::R_386_RELATIVE:
+    case elfcpp::R_386_IRELATIVE:
     case elfcpp::R_386_TLS_TPOFF:
     case elfcpp::R_386_TLS_DTPMOD32:
     case elfcpp::R_386_TLS_DTPOFF32:
@@ -1501,9 +1909,13 @@ Target_i386::Scan::global(Symbol_table* symtab,
 	    target->define_tls_base_symbol(symtab, layout);
             if (optimized_type == tls::TLSOPT_NONE)
               {
-                // Create a double GOT entry with an R_386_TLS_DESC reloc.
-                Output_data_got<32, false>* got
-                    = target->got_section(symtab, layout);
+                // Create a double GOT entry with an R_386_TLS_DESC
+                // reloc.  The R_386_TLS_DESC reloc is resolved
+                // lazily, so the GOT entry needs to be in an area in
+                // .got.plt, not .got.  Call got_section to make sure
+                // the section has been created.
+		target->got_section(symtab, layout);
+                Output_data_got<32, false>* got = target->got_tlsdesc_section();
 		Reloc_section* rt = target->rel_tls_desc_section(layout);
                 got->add_global_pair_with_rel(gsym, GOT_TYPE_TLS_DESC, rt,
                                              elfcpp::R_386_TLS_DESC, 0);
@@ -1713,7 +2125,7 @@ Target_i386::do_finalize_sections(
 
 inline bool
 Target_i386::Relocate::should_apply_static_reloc(const Sized_symbol<32>* gsym,
-                                                 int ref_flags,
+                                                 unsigned int r_type,
                                                  bool is_32bit,
 						 Output_section* output_section)
 {
@@ -1722,6 +2134,8 @@ Target_i386::Relocate::should_apply_static_reloc(const Sized_symbol<32>* gsym,
   // the reloc here.
   if ((output_section->flags() & elfcpp::SHF_ALLOC) == 0)
     return true;
+
+  int ref_flags = Scan::get_reference_flags(r_type);
 
   // For local symbols, we will have created a non-RELATIVE dynamic
   // relocation only if (a) the output is position independent,
@@ -1748,7 +2162,7 @@ Target_i386::Relocate::should_apply_static_reloc(const Sized_symbol<32>* gsym,
 inline bool
 Target_i386::Relocate::relocate(const Relocate_info<32, false>* relinfo,
 				Target_i386* target,
-				Output_section *output_section,
+				Output_section* output_section,
 				size_t relnum,
 				const elfcpp::Rel<32, false>& rel,
 				unsigned int r_type,
@@ -1773,19 +2187,39 @@ Target_i386::Relocate::relocate(const Relocate_info<32, false>* relinfo,
 	}
     }
 
+  const Sized_relobj<32, false>* object = relinfo->object;
+
   // Pick the value to use for symbols defined in shared objects.
   Symbol_value<32> symval;
   if (gsym != NULL
-      && gsym->use_plt_offset(r_type == elfcpp::R_386_PC8
-			      || r_type == elfcpp::R_386_PC16
-			      || r_type == elfcpp::R_386_PC32))
+      && gsym->type() == elfcpp::STT_GNU_IFUNC
+      && r_type == elfcpp::R_386_32
+      && gsym->needs_dynamic_reloc(Scan::get_reference_flags(r_type))
+      && gsym->can_use_relative_reloc(false)
+      && !gsym->is_from_dynobj()
+      && !gsym->is_undefined()
+      && !gsym->is_preemptible())
+    {
+      // In this case we are generating a R_386_IRELATIVE reloc.  We
+      // want to use the real value of the symbol, not the PLT offset.
+    }
+  else if (gsym != NULL
+	   && gsym->use_plt_offset(Scan::get_reference_flags(r_type)))
     {
       symval.set_output_value(target->plt_section()->address()
 			      + gsym->plt_offset());
       psymval = &symval;
     }
-
-  const Sized_relobj<32, false>* object = relinfo->object;
+  else if (gsym == NULL && psymval->is_ifunc_symbol())
+    {
+      unsigned int r_sym = elfcpp::elf_r_sym<32>(rel.get_r_info());
+      if (object->local_has_plt_offset(r_sym))
+	{
+	  symval.set_output_value(target->plt_section()->address()
+				  + object->local_plt_offset(r_sym));
+	  psymval = &symval;
+	}
+    }
 
   // Get the GOT offset if needed.
   // The GOT pointer points to the end of the GOT section.
@@ -1824,52 +2258,33 @@ Target_i386::Relocate::relocate(const Relocate_info<32, false>* relinfo,
       break;
 
     case elfcpp::R_386_32:
-      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, true,
-				    output_section))
+      if (should_apply_static_reloc(gsym, r_type, true, output_section))
         Relocate_functions<32, false>::rel32(view, object, psymval);
       break;
 
     case elfcpp::R_386_PC32:
-      {
-        int ref_flags = Symbol::NON_PIC_REF;
-        if (gsym != NULL && gsym->is_func())
-          ref_flags |= Symbol::FUNCTION_CALL;
-        if (should_apply_static_reloc(gsym, ref_flags, true, output_section))
-          Relocate_functions<32, false>::pcrel32(view, object, psymval, address);
-      }
+      if (should_apply_static_reloc(gsym, r_type, true, output_section))
+        Relocate_functions<32, false>::pcrel32(view, object, psymval, address);
       break;
 
     case elfcpp::R_386_16:
-      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, false,
-				    output_section))
+      if (should_apply_static_reloc(gsym, r_type, false, output_section))
         Relocate_functions<32, false>::rel16(view, object, psymval);
       break;
 
     case elfcpp::R_386_PC16:
-      {
-        int ref_flags = Symbol::NON_PIC_REF;
-        if (gsym != NULL && gsym->is_func())
-          ref_flags |= Symbol::FUNCTION_CALL;
-        if (should_apply_static_reloc(gsym, ref_flags, false, output_section))
-          Relocate_functions<32, false>::pcrel16(view, object, psymval, address);
-      }
+      if (should_apply_static_reloc(gsym, r_type, false, output_section))
+        Relocate_functions<32, false>::pcrel16(view, object, psymval, address);
       break;
 
     case elfcpp::R_386_8:
-      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, false,
-				    output_section))
+      if (should_apply_static_reloc(gsym, r_type, false, output_section))
         Relocate_functions<32, false>::rel8(view, object, psymval);
       break;
 
     case elfcpp::R_386_PC8:
-      {
-        int ref_flags = Symbol::NON_PIC_REF;
-        if (gsym != NULL && gsym->is_func())
-          ref_flags |= Symbol::FUNCTION_CALL;
-        if (should_apply_static_reloc(gsym, ref_flags, false,
-				      output_section))
-          Relocate_functions<32, false>::pcrel8(view, object, psymval, address);
-      }
+      if (should_apply_static_reloc(gsym, r_type, false, output_section))
+        Relocate_functions<32, false>::pcrel8(view, object, psymval, address);
       break;
 
     case elfcpp::R_386_PLT32:
@@ -1908,6 +2323,7 @@ Target_i386::Relocate::relocate(const Relocate_info<32, false>* relinfo,
     case elfcpp::R_386_GLOB_DAT:
     case elfcpp::R_386_JUMP_SLOT:
     case elfcpp::R_386_RELATIVE:
+    case elfcpp::R_386_IRELATIVE:
       // These are outstanding tls relocs, which are unexpected when
       // linking.
     case elfcpp::R_386_TLS_TPOFF:
@@ -2046,18 +2462,27 @@ Target_i386::Relocate::relocate_tls(const Relocate_info<32, false>* relinfo,
           unsigned int got_type = (optimized_type == tls::TLSOPT_TO_IE
                                    ? GOT_TYPE_TLS_NOFFSET
                                    : GOT_TYPE_TLS_DESC);
-          unsigned int got_offset;
+          unsigned int got_offset = 0;
+	  if (r_type == elfcpp::R_386_TLS_GOTDESC
+	      && optimized_type == tls::TLSOPT_NONE)
+	    {
+	      // We created GOT entries in the .got.tlsdesc portion of
+	      // the .got.plt section, but the offset stored in the
+	      // symbol is the offset within .got.tlsdesc.
+	      got_offset = (target->got_size()
+			    + target->got_plt_section()->data_size());
+	    }
           if (gsym != NULL)
             {
               gold_assert(gsym->has_got_offset(got_type));
-              got_offset = gsym->got_offset(got_type) - target->got_size();
+              got_offset += gsym->got_offset(got_type) - target->got_size();
             }
           else
             {
               unsigned int r_sym = elfcpp::elf_r_sym<32>(rel.get_r_info());
               gold_assert(object->local_has_got_offset(r_sym, got_type));
-              got_offset = (object->local_got_offset(r_sym, got_type)
-			    - target->got_size());
+              got_offset += (object->local_got_offset(r_sym, got_type)
+			     - target->got_size());
             }
           if (optimized_type == tls::TLSOPT_TO_IE)
 	    {
@@ -2611,6 +3036,7 @@ Target_i386::Relocatable_size_for_reloc::get_size_for_reloc(
     case elfcpp::R_386_GLOB_DAT:
     case elfcpp::R_386_JUMP_SLOT:
     case elfcpp::R_386_RELATIVE:
+    case elfcpp::R_386_IRELATIVE:
     case elfcpp::R_386_TLS_TPOFF:
     case elfcpp::R_386_TLS_DTPMOD32:
     case elfcpp::R_386_TLS_DTPOFF32:

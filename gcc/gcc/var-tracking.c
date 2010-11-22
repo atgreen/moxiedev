@@ -92,6 +92,7 @@
 #include "tm.h"
 #include "rtl.h"
 #include "tree.h"
+#include "tm_p.h"
 #include "hard-reg-set.h"
 #include "basic-block.h"
 #include "flags.h"
@@ -408,7 +409,6 @@ static void stack_adjust_offset_pre_post (rtx, HOST_WIDE_INT *,
 static void insn_stack_adjust_offset_pre_post (rtx, HOST_WIDE_INT *,
 					       HOST_WIDE_INT *);
 static bool vt_stack_adjustments (void);
-static rtx compute_cfa_pointer (HOST_WIDE_INT);
 static hashval_t variable_htab_hash (const void *);
 static int variable_htab_eq (const void *, const void *);
 static void variable_htab_free (void *);
@@ -695,22 +695,17 @@ vt_stack_adjustments (void)
   return true;
 }
 
+/* arg_pointer_rtx resp. frame_pointer_rtx if stack_pointer_rtx or
+   hard_frame_pointer_rtx is being mapped to it and offset for it.  */
+static rtx cfa_base_rtx;
+static HOST_WIDE_INT cfa_base_offset;
+
 /* Compute a CFA-based value for the stack pointer.  */
 
-static rtx
+static inline rtx
 compute_cfa_pointer (HOST_WIDE_INT adjustment)
 {
-  rtx cfa;
-
-#ifdef FRAME_POINTER_CFA_OFFSET
-  adjustment -= FRAME_POINTER_CFA_OFFSET (current_function_decl);
-  cfa = plus_constant (frame_pointer_rtx, adjustment);
-#else
-  adjustment -= ARG_POINTER_CFA_OFFSET (current_function_decl);
-  cfa = plus_constant (arg_pointer_rtx, adjustment);
-#endif
-
-  return cfa;
+  return plus_constant (cfa_base_rtx, adjustment + cfa_base_offset);
 }
 
 /* Adjustment for hard_frame_pointer_rtx to cfa base reg,
@@ -803,11 +798,13 @@ adjust_mems (rtx loc, const_rtx old_rtx, void *data)
       if (amd->mem_mode == VOIDmode && amd->store)
 	return loc;
       if (loc == stack_pointer_rtx
-	  && !frame_pointer_needed)
+	  && !frame_pointer_needed
+	  && cfa_base_rtx)
 	return compute_cfa_pointer (amd->stack_adjust);
       else if (loc == hard_frame_pointer_rtx
 	       && frame_pointer_needed
-	       && hard_frame_pointer_adjustment != -1)
+	       && hard_frame_pointer_adjustment != -1
+	       && cfa_base_rtx)
 	return compute_cfa_pointer (hard_frame_pointer_adjustment);
       return loc;
     case MEM:
@@ -1075,9 +1072,7 @@ dv_is_value_p (decl_or_value dv)
 static inline tree
 dv_as_decl (decl_or_value dv)
 {
-#ifdef ENABLE_CHECKING
-  gcc_assert (dv_is_decl_p (dv));
-#endif
+  gcc_checking_assert (dv_is_decl_p (dv));
   return (tree) dv;
 }
 
@@ -1085,9 +1080,7 @@ dv_as_decl (decl_or_value dv)
 static inline rtx
 dv_as_value (decl_or_value dv)
 {
-#ifdef ENABLE_CHECKING
-  gcc_assert (dv_is_value_p (dv));
-#endif
+  gcc_checking_assert (dv_is_value_p (dv));
   return (rtx)dv;
 }
 
@@ -1136,9 +1129,7 @@ dv_from_decl (tree decl)
 {
   decl_or_value dv;
   dv = decl;
-#ifdef ENABLE_CHECKING
-  gcc_assert (dv_is_decl_p (dv));
-#endif
+  gcc_checking_assert (dv_is_decl_p (dv));
   return dv;
 }
 
@@ -1148,9 +1139,7 @@ dv_from_value (rtx value)
 {
   decl_or_value dv;
   dv = value;
-#ifdef ENABLE_CHECKING
-  gcc_assert (dv_is_value_p (dv));
-#endif
+  gcc_checking_assert (dv_is_value_p (dv));
   return dv;
 }
 
@@ -2182,10 +2171,8 @@ variable_union (variable src, dataflow_set *set)
 	      nnode->next = dnode;
 	      dnode = nnode;
 	    }
-#ifdef ENABLE_CHECKING
 	  else if (r == 0)
-	    gcc_assert (rtx_equal_p (dnode->loc, snode->loc));
-#endif
+	    gcc_checking_assert (rtx_equal_p (dnode->loc, snode->loc));
 
 	  if (r >= 0)
 	    snode = snode->next;
@@ -2549,17 +2536,13 @@ find_loc_in_1pdv (rtx loc, variable var, htab_t vars)
   if (!var)
     return NULL;
 
-#ifdef ENABLE_CHECKING
-  gcc_assert (dv_onepart_p (var->dv));
-#endif
+  gcc_checking_assert (dv_onepart_p (var->dv));
 
   if (!var->n_var_parts)
     return NULL;
 
-#ifdef ENABLE_CHECKING
-  gcc_assert (var->var_part[0].offset == 0);
-  gcc_assert (loc != dv_as_opaque (var->dv));
-#endif
+  gcc_checking_assert (var->var_part[0].offset == 0);
+  gcc_checking_assert (loc != dv_as_opaque (var->dv));
 
   loc_code = GET_CODE (loc);
   for (node = var->var_part[0].loc_chain; node; node = node->next)
@@ -2591,20 +2574,16 @@ find_loc_in_1pdv (rtx loc, variable var, htab_t vars)
 	  while (node->next && GET_CODE (node->next->loc) == VALUE)
 	    {
 	      node = node->next;
-#ifdef ENABLE_CHECKING
-	      gcc_assert (!canon_value_cmp (node->loc,
-					    dv_as_value (var->dv)));
-#endif
+	      gcc_checking_assert (!canon_value_cmp (node->loc,
+						     dv_as_value (var->dv)));
 	      if (loc == node->loc)
 		return node;
 	    }
 	  continue;
 	}
 
-#ifdef ENABLE_CHECKING
-      gcc_assert (node == var->var_part[0].loc_chain);
-      gcc_assert (!node->next);
-#endif
+      gcc_checking_assert (node == var->var_part[0].loc_chain);
+      gcc_checking_assert (!node->next);
 
       dv = dv_from_value (node->loc);
       rvar = (variable) htab_find_with_hash (vars, dv, dv_htab_hash (dv));
@@ -2672,15 +2651,11 @@ intersect_loc_chains (rtx val, location_chain *dest, struct dfset_merge *dsm,
     {
       location_chain s2node;
 
-#ifdef ENABLE_CHECKING
-      gcc_assert (dv_onepart_p (s2var->dv));
-#endif
+      gcc_checking_assert (dv_onepart_p (s2var->dv));
 
       if (s2var->n_var_parts)
 	{
-#ifdef ENABLE_CHECKING
-	  gcc_assert (s2var->var_part[0].offset == 0);
-#endif
+	  gcc_checking_assert (s2var->var_part[0].offset == 0);
 	  s2node = s2var->var_part[0].loc_chain;
 
 	  for (; s1node && s2node;
@@ -2829,10 +2804,8 @@ loc_cmp (rtx x, rtx y)
       if (DEBUG_TEMP_UID (DEBUG_EXPR_TREE_DECL (x))
 	  < DEBUG_TEMP_UID (DEBUG_EXPR_TREE_DECL (y)))
 	return -1;
-#ifdef ENABLE_CHECKING
-      gcc_assert (DEBUG_TEMP_UID (DEBUG_EXPR_TREE_DECL (x))
-		  > DEBUG_TEMP_UID (DEBUG_EXPR_TREE_DECL (y)));
-#endif
+      gcc_checking_assert (DEBUG_TEMP_UID (DEBUG_EXPR_TREE_DECL (x))
+			   > DEBUG_TEMP_UID (DEBUG_EXPR_TREE_DECL (y)));
       return 1;
     }
 
@@ -3592,10 +3565,9 @@ variable_merge_over_cur (variable s1var, struct dfset_merge *dsm)
       dstslot = shared_hash_find_slot_noinsert_1 (dst->vars, dv, dvhash);
       gcc_assert (*dstslot == dvar);
       canonicalize_values_star (dstslot, dst);
-#ifdef ENABLE_CHECKING
-      gcc_assert (dstslot
-		  == shared_hash_find_slot_noinsert_1 (dst->vars, dv, dvhash));
-#endif
+      gcc_checking_assert (dstslot
+			   == shared_hash_find_slot_noinsert_1 (dst->vars,
+								dv, dvhash));
       dvar = (variable)*dstslot;
     }
   else
@@ -3660,11 +3632,9 @@ variable_merge_over_cur (variable s1var, struct dfset_merge *dsm)
 	  dstslot = shared_hash_find_slot_noinsert_1 (dst->vars, dv, dvhash);
 	  gcc_assert (*dstslot == dvar);
 	  canonicalize_values_star (dstslot, dst);
-#ifdef ENABLE_CHECKING
-	  gcc_assert (dstslot
-		      == shared_hash_find_slot_noinsert_1 (dst->vars,
-							   dv, dvhash));
-#endif
+	  gcc_checking_assert (dstslot
+			       == shared_hash_find_slot_noinsert_1 (dst->vars,
+								    dv, dvhash));
 	  dvar = (variable)*dstslot;
 	}
     }
@@ -4784,10 +4754,6 @@ var_lowpart (enum machine_mode mode, rtx loc)
   return gen_rtx_REG_offset (loc, mode, regno, offset);
 }
 
-/* arg_pointer_rtx resp. frame_pointer_rtx if stack_pointer_rtx or
-   hard_frame_pointer_rtx is being mapped to it.  */
-static rtx cfa_base_rtx;
-
 /* Carry information about uses and stores while walking rtx.  */
 
 struct count_use_info
@@ -5758,7 +5724,7 @@ compute_bb_dataflow (basic_block bb)
   dataflow_set_copy (&old_out, out);
   dataflow_set_copy (out, in);
 
-  for (i = 0; VEC_iterate (micro_operation, VTI (bb)->mos, i, mo); i++)
+  FOR_EACH_VEC_ELT (micro_operation, VTI (bb)->mos, i, mo)
     {
       rtx insn = mo->insn;
 
@@ -7133,6 +7099,19 @@ vt_expand_loc_dummy (rtx loc, htab_t vars, bool *pcur_loc_changed)
 #ifdef ENABLE_RTL_CHECKING
 /* Used to verify that cur_loc_changed updating is safe.  */
 static struct pointer_map_t *emitted_notes;
+
+/* Strip REG_POINTER from REGs and MEM_POINTER from MEMs in order to
+   avoid differences in commutative operand simplification.  */
+static rtx
+strip_pointer_flags (rtx x, const_rtx old_rtx ATTRIBUTE_UNUSED,
+		     void *data ATTRIBUTE_UNUSED)
+{
+  if (REG_P (x) && REG_POINTER (x))
+    return gen_rtx_REG (GET_MODE (x), REGNO (x));
+  if (MEM_P (x) && MEM_POINTER (x))
+    return gen_rtx_MEM (GET_MODE (x), XEXP (x, 0));
+  return NULL_RTX;
+}
 #endif
 
 /* Emit the NOTE_INSN_VAR_LOCATION for variable *VARP.  DATA contains
@@ -7331,9 +7310,22 @@ emit_note_insn_var_location (void **varp, void *data)
       rtx pnote = (rtx) *note_slot;
       if (!var->cur_loc_changed && (pnote || PAT_VAR_LOCATION_LOC (note_vl)))
 	{
+	  rtx old_vl, new_vl;
 	  gcc_assert (pnote);
-	  gcc_assert (rtx_equal_p (PAT_VAR_LOCATION_LOC (pnote),
-				   PAT_VAR_LOCATION_LOC (note_vl)));
+	  old_vl = PAT_VAR_LOCATION_LOC (pnote);
+	  new_vl = PAT_VAR_LOCATION_LOC (note_vl);
+	  if (!rtx_equal_p (old_vl, new_vl))
+	    {
+	      /* There might be differences caused by REG_POINTER
+		 differences.  REG_POINTER affects
+		 swap_commutative_operands_p.  */
+	      old_vl = simplify_replace_fn_rtx (old_vl, NULL_RTX,
+						strip_pointer_flags, NULL);
+	      new_vl = simplify_replace_fn_rtx (new_vl, NULL_RTX,
+						strip_pointer_flags, NULL);
+	      gcc_assert (rtx_equal_p (old_vl, new_vl));
+	      PAT_VAR_LOCATION_LOC (note_vl) = new_vl;
+	    }
 	}
       *note_slot = (void *) note_vl;
     }
@@ -7348,7 +7340,17 @@ emit_note_insn_var_location (void **varp, void *data)
 	NOTE_DURING_CALL_P (note) = true;
     }
   else
-    note = emit_note_before (NOTE_INSN_VAR_LOCATION, insn);
+    {
+      /* Make sure that the call related notes come first.  */
+      while (NEXT_INSN (insn)
+	     && NOTE_P (insn)
+	     && NOTE_DURING_CALL_P (insn))
+	insn = NEXT_INSN (insn);
+      if (NOTE_P (insn) && NOTE_DURING_CALL_P (insn))
+	note = emit_note_after (NOTE_INSN_VAR_LOCATION, insn);
+      else
+	note = emit_note_before (NOTE_INSN_VAR_LOCATION, insn);
+    }
   NOTE_VAR_LOCATION (note) = note_vl;
 
  clear:
@@ -7683,7 +7685,7 @@ emit_notes_in_bb (basic_block bb, dataflow_set *set)
   dataflow_set_clear (set);
   dataflow_set_copy (set, &VTI (bb)->in);
 
-  for (i = 0; VEC_iterate (micro_operation, VTI (bb)->mos, i, mo); i++)
+  FOR_EACH_VEC_ELT (micro_operation, VTI (bb)->mos, i, mo)
     {
       rtx insn = mo->insn;
 
@@ -7978,7 +7980,7 @@ vt_emit_notes (void)
       unsigned int i;
       rtx val;
 
-      for (i = 0; VEC_iterate (rtx, preserved_values, i, val); i++)
+      FOR_EACH_VEC_ELT (rtx, preserved_values, i, val)
 	add_cselib_value_chains (dv_from_value (val));
       changed_variables_stack = VEC_alloc (variable, heap, 40);
       changed_values_stack = VEC_alloc (rtx, heap, 40);
@@ -8008,7 +8010,7 @@ vt_emit_notes (void)
       unsigned int i;
       rtx val;
 
-      for (i = 0; VEC_iterate (rtx, preserved_values, i, val); i++)
+      FOR_EACH_VEC_ELT (rtx, preserved_values, i, val)
 	remove_cselib_value_chains (dv_from_value (val));
       gcc_assert (htab_elements (value_chains) == 0);
     }
@@ -8214,8 +8216,10 @@ vt_init_cfa_base (void)
 
 #ifdef FRAME_POINTER_CFA_OFFSET
   cfa_base_rtx = frame_pointer_rtx;
+  cfa_base_offset = -FRAME_POINTER_CFA_OFFSET (current_function_decl);
 #else
   cfa_base_rtx = arg_pointer_rtx;
+  cfa_base_offset = -ARG_POINTER_CFA_OFFSET (current_function_decl);
 #endif
   if (cfa_base_rtx == hard_frame_pointer_rtx
       || !fixed_regs[REGNO (cfa_base_rtx)])
@@ -8226,6 +8230,11 @@ vt_init_cfa_base (void)
   if (!MAY_HAVE_DEBUG_INSNS)
     return;
 
+  /* Tell alias analysis that cfa_base_rtx should share
+     find_base_term value with stack pointer or hard frame pointer.  */
+  vt_equate_reg_base_value (cfa_base_rtx,
+			    frame_pointer_needed
+			    ? hard_frame_pointer_rtx : stack_pointer_rtx);
   val = cselib_lookup_from_insn (cfa_base_rtx, GET_MODE (cfa_base_rtx), 1,
 				 get_insns ());
   preserve_value (val);

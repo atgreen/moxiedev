@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale/collate_byname
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-09-15T10:46:39.518825Z
+164300
+paolo
 
 
 
@@ -35,11 +35,11 @@ file
 
 
 
-2009-04-24T17:50:11.000000Z
-045ca392eea50fd200be26bbadd55a56
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-11-22T19:18:27.330044Z
+8618fd37d1f2522fb8963a98e3293fca
+2010-09-15T10:46:39.518825Z
+164300
+paolo
 
 
 
@@ -61,5 +61,5 @@ jakub
 
 
 
-4385
+4390
 

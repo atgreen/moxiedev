@@ -376,10 +376,10 @@ static void alpha_vms_add_fixup_lp (struct bfd_link_info *, bfd *, bfd *);
 static void alpha_vms_add_fixup_ca (struct bfd_link_info *, bfd *, bfd *);
 static void alpha_vms_add_fixup_qr (struct bfd_link_info *, bfd *, bfd *,
                                     bfd_vma);
+static void alpha_vms_add_fixup_lr (struct bfd_link_info *, unsigned int,
+                                    bfd_vma);
 static void alpha_vms_add_lw_reloc (struct bfd_link_info *info);
 static void alpha_vms_add_qw_reloc (struct bfd_link_info *info);
-static void alpha_vms_add_lw_fixup (struct bfd_link_info *, unsigned int,
-                                    bfd_vma);
 
 struct vector_type
 {
@@ -939,60 +939,60 @@ struct sec_flags_struct
 static const struct sec_flags_struct evax_section_flags[] =
   {
     { EVAX_ABS_NAME,
-      (EGPS__V_SHR),
-      (SEC_DATA),
-      (EGPS__V_SHR),
-      (SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD) },
+      EGPS__V_SHR,
+      0,
+      EGPS__V_SHR,
+      0 },
     { EVAX_CODE_NAME,
-      (EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_EXE),
-      (SEC_CODE),
-      (EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_EXE),
-      (SEC_CODE | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD) },
+      EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_EXE,
+      SEC_CODE,
+      EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_EXE,
+      SEC_CODE | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD },
     { EVAX_LITERAL_NAME,
-      (EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_RD | EGPS__V_NOMOD),
-      (SEC_DATA | SEC_READONLY),
-      (EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_RD),
-      (SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_READONLY | SEC_LOAD) },
+      EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_RD | EGPS__V_NOMOD,
+      SEC_DATA | SEC_READONLY,
+      EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_RD,
+      SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_READONLY | SEC_LOAD },
     { EVAX_LINK_NAME,
-      (EGPS__V_REL | EGPS__V_RD),
-      (SEC_DATA | SEC_READONLY),
-      (EGPS__V_REL | EGPS__V_RD),
-      (SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_READONLY | SEC_LOAD) },
+      EGPS__V_REL | EGPS__V_RD,
+      SEC_DATA | SEC_READONLY,
+      EGPS__V_REL | EGPS__V_RD,
+      SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_READONLY | SEC_LOAD },
     { EVAX_DATA_NAME,
-      (EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT | EGPS__V_NOMOD),
-      (SEC_DATA),
-      (EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT),
-      (SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD) },
+      EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT | EGPS__V_NOMOD,
+      SEC_DATA,
+      EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT,
+      SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD },
     { EVAX_BSS_NAME,
-      (EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT | EGPS__V_NOMOD),
-      (SEC_NO_FLAGS),
-      (EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT | EGPS__V_NOMOD),
-      (SEC_ALLOC) },
+      EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT | EGPS__V_NOMOD,
+      SEC_NO_FLAGS,
+      EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT | EGPS__V_NOMOD,
+      SEC_ALLOC },
     { EVAX_READONLYADDR_NAME,
-      (EGPS__V_PIC | EGPS__V_REL | EGPS__V_RD),
-      (SEC_DATA | SEC_READONLY),
-      (EGPS__V_PIC | EGPS__V_REL | EGPS__V_RD),
-      (SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_READONLY | SEC_LOAD) },
+      EGPS__V_PIC | EGPS__V_REL | EGPS__V_RD,
+      SEC_DATA | SEC_READONLY,
+      EGPS__V_PIC | EGPS__V_REL | EGPS__V_RD,
+      SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_READONLY | SEC_LOAD },
     { EVAX_READONLY_NAME,
-      (EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_RD | EGPS__V_NOMOD),
-      (SEC_DATA | SEC_READONLY),
-      (EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_RD),
-      (SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_READONLY | SEC_LOAD) },
+      EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_RD | EGPS__V_NOMOD,
+      SEC_DATA | SEC_READONLY,
+      EGPS__V_PIC | EGPS__V_REL | EGPS__V_SHR | EGPS__V_RD,
+      SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_READONLY | SEC_LOAD },
     { EVAX_LOCAL_NAME,
-      (EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT),
-      (SEC_DATA),
-      (EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT),
-      (SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD) },
+      EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT,
+      SEC_DATA,
+      EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT,
+      SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD },
     { EVAX_LITERALS_NAME,
-      (EGPS__V_PIC | EGPS__V_OVR),
-      (SEC_DATA | SEC_READONLY),
-      (EGPS__V_PIC | EGPS__V_OVR),
-      (SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_READONLY | SEC_LOAD) },
+      EGPS__V_PIC | EGPS__V_OVR,
+      SEC_DATA | SEC_READONLY,
+      EGPS__V_PIC | EGPS__V_OVR,
+      SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_READONLY | SEC_LOAD },
     { NULL,
-      (EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT),
-      (SEC_DATA),
-      (EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT),
-      (SEC_IN_MEMORY | SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD) }
+      EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT,
+      SEC_DATA,
+      EGPS__V_REL | EGPS__V_RD | EGPS__V_WRT,
+      SEC_IN_MEMORY | SEC_DATA | SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD }
   };
 
 /* Retrieve BFD section flags by name and size.  */
@@ -1103,12 +1103,8 @@ static bfd_boolean
 _bfd_vms_slurp_egsd (bfd *abfd)
 {
   int gsd_type, gsd_size;
-  asection *section;
   unsigned char *vms_rec;
-  flagword new_flags, old_flags;
-  char *name;
   unsigned long base_addr;
-  unsigned long align_addr;
 
   vms_debug2 ((2, "EGSD\n"));
 
@@ -1130,32 +1126,48 @@ _bfd_vms_slurp_egsd (bfd *abfd)
       switch (gsd_type)
 	{
 	case EGSD__C_PSC:
+          /* Program section definition.  */
 	  {
-	    /* Program section definition.  */
             struct vms_egps *egps = (struct vms_egps *)vms_rec;
-
-	    name = _bfd_vms_save_counted_string (&egps->namlng);
-	    section = bfd_make_section (abfd, name);
-	    if (!section)
-	      return FALSE;
+            flagword new_flags, old_flags;
+            asection *section;
 
 	    old_flags = bfd_getl16 (egps->flags);
-            vms_section_data (section)->flags = old_flags;
-            vms_section_data (section)->no_flags = 0;
-	    section->size = bfd_getl32 (egps->alloc);
-	    new_flags = vms_secflag_by_name (evax_section_flags, name,
-					     section->size > 0);
-            if (!(old_flags & EGPS__V_NOMOD))
+
+            if ((old_flags & EGPS__V_REL) == 0)
               {
-                new_flags |= SEC_HAS_CONTENTS;
-                if (old_flags & EGPS__V_REL)
-                  new_flags |= SEC_RELOC;
+                /* Use the global absolute section for all absolute sections.  */
+                section = bfd_abs_section_ptr;
               }
-	    if (!bfd_set_section_flags (abfd, section, new_flags))
-	      return FALSE;
-	    section->alignment_power = egps->align;
-            if ((old_flags & EGPS__V_REL) != 0)
+            else
               {
+                char *name;
+                unsigned long align_addr;
+
+                name = _bfd_vms_save_counted_string (&egps->namlng);
+
+                section = bfd_make_section (abfd, name);
+                if (!section)
+                  return FALSE;
+
+                section->filepos = 0;
+                section->size = bfd_getl32 (egps->alloc);
+                section->alignment_power = egps->align;
+
+                vms_section_data (section)->flags = old_flags;
+                vms_section_data (section)->no_flags = 0;
+
+                new_flags = vms_secflag_by_name (evax_section_flags, name,
+                                                 section->size > 0);
+                if (!(old_flags & EGPS__V_NOMOD) && section->size > 0)
+                  {
+                    new_flags |= SEC_HAS_CONTENTS;
+                    if (old_flags & EGPS__V_REL)
+                      new_flags |= SEC_RELOC;
+                  }
+                if (!bfd_set_section_flags (abfd, section, new_flags))
+                  return FALSE;
+
                 /* Give a non-overlapping vma to non absolute sections.  */
                 align_addr = (1 << section->alignment_power);
                 if ((base_addr % align_addr) != 0)
@@ -1163,9 +1175,6 @@ _bfd_vms_slurp_egsd (bfd *abfd)
                 section->vma = (bfd_vma)base_addr;
                 base_addr += section->size;
               }
-            else
-              section->vma = 0;
-	    section->filepos = 0;
 
             /* Append it to the section array.  */
             if (PRIV (section_count) >= PRIV (section_max))
@@ -1182,14 +1191,6 @@ _bfd_vms_slurp_egsd (bfd *abfd)
 
             PRIV (sections)[PRIV (section_count)] = section;
             PRIV (section_count)++;
-
-#if VMS_DEBUG
-	    vms_debug (4, "EGSD P-section %d (%s, flags %04x) ",
-		       section->index, name, old_flags);
-	    vms_debug (4, "%lu bytes at 0x%08lx (mem %p)\n",
-		       (unsigned long)section->size,
-                       (unsigned long)section->vma, section->contents);
-#endif
 	  }
 	  break;
 
@@ -1198,6 +1199,7 @@ _bfd_vms_slurp_egsd (bfd *abfd)
             int nameoff;
             struct vms_symbol_entry *entry;
             struct vms_egsy *egsy = (struct vms_egsy *) vms_rec;
+            flagword old_flags;
 
 	    old_flags = bfd_getl16 (egsy->flags);
 	    if (old_flags & EGSY__V_DEF)
@@ -1243,6 +1245,7 @@ _bfd_vms_slurp_egsd (bfd *abfd)
 	  {
             struct vms_symbol_entry *entry;
             struct vms_egst *egst = (struct vms_egst *)vms_rec;
+            flagword old_flags;
 
 	    old_flags = bfd_getl16 (egst->header.flags);
 
@@ -1796,7 +1799,7 @@ _bfd_vms_slurp_etir (bfd *abfd, struct bfd_link_info *info)
             }
           else if (rel1 & RELC_SHR_BASE)
             {
-              alpha_vms_add_lw_fixup (info, rel1 & RELC_MASK, op1);
+              alpha_vms_add_fixup_lr (info, rel1 & RELC_MASK, op1);
               rel1 = RELC_NONE;
             }
           if (rel1 != RELC_NONE)
@@ -2898,7 +2901,11 @@ alpha_vms_create_eisd_for_section (bfd *abfd, asection *sec)
 
   if (sec->flags & SEC_CODE)
     eisd->u.eisd.flags |= EISD__M_EXE;
-  if (!(sec->flags & SEC_READONLY))
+  else if (!(sec->flags & SEC_READONLY))
+    eisd->u.eisd.flags |= EISD__M_WRT | EISD__M_CRF;
+
+  /* If relocations or fixup will be applied, make this isect writeable.  */
+  if (sec->flags & SEC_RELOC)
     eisd->u.eisd.flags |= EISD__M_WRT | EISD__M_CRF;
 
   if (!(sec->flags & SEC_LOAD))
@@ -8014,7 +8021,10 @@ alpha_vms_add_fixup_lp (struct bfd_link_info *info, bfd *src, bfd *shlib)
   sl->has_fixups = TRUE;
   VEC_APPEND_EL (sl->lp, bfd_vma,
                  sect->output_section->vma + sect->output_offset + offset);
+  sect->output_section->flags |= SEC_RELOC;
 }
+
+/* Add a code address fixup at address SECT + OFFSET to SHLIB. */
 
 static void
 alpha_vms_add_fixup_ca (struct bfd_link_info *info, bfd *src, bfd *shlib)
@@ -8028,7 +8038,10 @@ alpha_vms_add_fixup_ca (struct bfd_link_info *info, bfd *src, bfd *shlib)
   sl->has_fixups = TRUE;
   VEC_APPEND_EL (sl->ca, bfd_vma,
                  sect->output_section->vma + sect->output_offset + offset);
+  sect->output_section->flags |= SEC_RELOC;
 }
+
+/* Add a quad word relocation fixup at address SECT + OFFSET to SHLIB. */
 
 static void
 alpha_vms_add_fixup_qr (struct bfd_link_info *info, bfd *src,
@@ -8045,25 +8058,19 @@ alpha_vms_add_fixup_qr (struct bfd_link_info *info, bfd *src,
   r = VEC_APPEND (sl->qr, struct alpha_vms_vma_ref);
   r->vma = sect->output_section->vma + sect->output_offset + offset;
   r->ref = vec;
+  sect->output_section->flags |= SEC_RELOC;
 }
 
 static void
-alpha_vms_add_lw_fixup (struct bfd_link_info *info ATTRIBUTE_UNUSED,
+alpha_vms_add_fixup_lr (struct bfd_link_info *info ATTRIBUTE_UNUSED,
                         unsigned int shr ATTRIBUTE_UNUSED,
                         bfd_vma vec ATTRIBUTE_UNUSED)
 {
+  /* Not yet supported.  */
   abort ();
 }
 
-#if 0
-static void
-alpha_vms_add_qw_fixup (struct bfd_link_info *info ATTRIBUTE_UNUSED,
-                        unsigned int shr ATTRIBUTE_UNUSED,
-                        bfd_vma vec ATTRIBUTE_UNUSED)
-{
-  abort ();
-}
-#endif
+/* Add relocation.  FIXME: Not yet emitted.  */
 
 static void
 alpha_vms_add_lw_reloc (struct bfd_link_info *info ATTRIBUTE_UNUSED)
@@ -8213,6 +8220,7 @@ alpha_vms_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
       symindex symidx;
       bfd *element;
       bfd *orig_element;
+      bfd *subsbfd;
 
       h = *pundef;
       next_pundef = &(*pundef)->u.undef.next;
@@ -8270,10 +8278,14 @@ alpha_vms_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
       /* Unlike the generic linker, we know that this element provides
 	 a definition for an undefined symbol and we know that we want
 	 to include it.  We don't need to check anything.  */
-      if (! (*info->callbacks->add_archive_element) (info, element,
-                                                     h->root.string))
+      subsbfd = NULL;
+      if (! (*info->callbacks->add_archive_element)
+				(info, element, h->root.string, &subsbfd))
 	return FALSE;
-      if (! alpha_vms_link_add_object_symbols (element, info))
+      /* Potentially, the add_archive_element hook may have set a
+	 substitute BFD for us.  */
+      if (! alpha_vms_link_add_object_symbols (subsbfd ? subsbfd : element,
+				info))
 	return FALSE;
 
       orig_element->archive_pass = pass;
@@ -8314,6 +8326,8 @@ alpha_vms_build_fixups (struct bfd_link_info *info)
   unsigned int ca_sz = 0;
   unsigned int qr_sz = 0;
   unsigned int shrimg_cnt = 0;
+  unsigned int chgprt_num = 0;
+  unsigned int chgprt_sz = 0;
   struct vms_eiaf *eiaf;
   unsigned int off;
   asection *sec;
@@ -8361,9 +8375,20 @@ alpha_vms_build_fixups (struct bfd_link_info *info)
   if (ca_sz + lp_sz + qr_sz == 0)
     return TRUE;
 
+  /* Add an eicp entry for the fixup itself.  */
+  chgprt_num = 1;
+  for (sec = info->output_bfd->sections; sec != NULL; sec = sec->next)
+    {
+      /* This isect could be made RO or EXE after relocations are applied.  */
+      if ((sec->flags & SEC_RELOC) != 0
+          && (sec->flags & (SEC_CODE | SEC_READONLY)) != 0)
+        chgprt_num++;
+    }
+  chgprt_sz = 4 + chgprt_num * sizeof (struct vms_eicp);
+
   /* Allocate section content (round-up size)  */
   sz = sizeof (struct vms_eiaf) + shrimg_cnt * sizeof (struct vms_shl)
-    + ca_sz + lp_sz + qr_sz;
+    + ca_sz + lp_sz + qr_sz + chgprt_sz;
   sz = (sz + VMS_BLOCK_SIZE - 1) & ~(VMS_BLOCK_SIZE - 1);
   content = bfd_zalloc (info->output_bfd, sz);
   if (content == NULL)
@@ -8526,8 +8551,33 @@ alpha_vms_build_fixups (struct bfd_link_info *info)
           bfd_putl32 (0, content + off + 4);
           off += 8;
         }
+    }
 
-      /* CA fixups.  */
+  /* Write the change protection table.  */
+  bfd_putl32 (off, eiaf->chgprtoff);
+  bfd_putl32 (chgprt_num, content + off);
+  off += 4;
+
+  for (sec = info->output_bfd->sections; sec != NULL; sec = sec->next)
+    {
+      struct vms_eicp *eicp;
+      unsigned int prot;
+
+      if ((sec->flags & SEC_LINKER_CREATED) != 0 &&
+          strcmp (sec->name, "$FIXUP$") == 0)
+        prot = PRT__C_UREW;
+      else if ((sec->flags & SEC_RELOC) != 0
+               && (sec->flags & (SEC_CODE | SEC_READONLY)) != 0)
+        prot = PRT__C_UR;
+      else
+        continue;
+
+      eicp = (struct vms_eicp *)(content + off);
+      bfd_putl64 (sec->vma - t->base_addr, eicp->baseva);
+      bfd_putl32 ((sec->size + VMS_BLOCK_SIZE - 1) & ~(VMS_BLOCK_SIZE - 1),
+                  eicp->size);
+      bfd_putl32 (prot, eicp->newprt);
+      off += sizeof (struct vms_eicp);
     }
 
   return TRUE;
@@ -8618,6 +8668,14 @@ alpha_vms_bfd_final_link (bfd *abfd, struct bfd_link_info *info)
   bfd_vma last_addr;
   asection *dst;
   asection *dmt;
+
+  if (info->relocatable)
+    {
+      /* FIXME: we do not yet support relocatable link.  It is not obvious
+         how to do it for debug infos.  */
+      (*info->callbacks->einfo)(_("%P: relocatable link is not supported\n"));
+      return FALSE;
+    }
 
   bfd_get_outsymbols (abfd) = NULL;
   bfd_get_symcount (abfd) = 0;
@@ -8721,7 +8779,8 @@ alpha_vms_bfd_final_link (bfd *abfd, struct bfd_link_info *info)
       PRIV (transfer_address[i++]) = 0;
   }
 
-  /* Allocate contents.  */
+  /* Allocate contents.
+     Also compute the virtual base address.  */
   base_addr = (bfd_vma)-1;
   last_addr = 0;
   for (o = abfd->sections; o != NULL; o = o->next)
@@ -8739,6 +8798,9 @@ alpha_vms_bfd_final_link (bfd *abfd, struct bfd_link_info *info)
           if (o->vma + o->size > last_addr)
             last_addr = o->vma + o->size;
         }
+      /* Clear the RELOC flags.  Currently we don't support incremental
+         linking.  We use the RELOC flag for computing the eicp entries.  */
+      o->flags &= ~SEC_RELOC;
     }
 
   /* Create the fixup section.  */
@@ -9112,7 +9174,7 @@ vms_get_symbol_info (bfd * abfd ATTRIBUTE_UNUSED,
   else if (bfd_get_section_flags (abfd, sec) & SEC_ALLOC)
     ret->type = 'B';
   else
-    ret->type = '-';
+    ret->type = '?';
 
   if (ret->type != 'U')
     ret->value = symbol->value + symbol->section->vma;

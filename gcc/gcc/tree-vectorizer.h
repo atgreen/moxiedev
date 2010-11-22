@@ -353,6 +353,7 @@ enum stmt_vec_info_type {
   undef_vec_info_type = 0,
   load_vec_info_type,
   store_vec_info_type,
+  shift_vec_info_type,
   op_vec_info_type,
   call_vec_info_type,
   assignment_vec_info_type,
@@ -582,6 +583,8 @@ extern VEC(vec_void_p,heap) *stmt_vec_info_vec;
 void init_stmt_vec_info_vec (void);
 void free_stmt_vec_info_vec (void);
 
+/* Return a stmt_vec_info corresponding to STMT.  */
+
 static inline stmt_vec_info
 vinfo_for_stmt (gimple stmt)
 {
@@ -591,6 +594,8 @@ vinfo_for_stmt (gimple stmt)
 
   return (stmt_vec_info) VEC_index (vec_void_p, stmt_vec_info_vec, uid - 1);
 }
+
+/* Set vectorizer information INFO for STMT.  */
 
 static inline void
 set_vinfo_for_stmt (gimple stmt, stmt_vec_info info)
@@ -606,6 +611,8 @@ set_vinfo_for_stmt (gimple stmt, stmt_vec_info info)
   else
     VEC_replace (vec_void_p, stmt_vec_info_vec, uid - 1, (vec_void_p) info);
 }
+
+/* Return the earlier statement between STMT1 and STMT2.  */
 
 static inline gimple
 get_earlier_stmt (gimple stmt1, gimple stmt2)
@@ -633,6 +640,37 @@ get_earlier_stmt (gimple stmt1, gimple stmt2)
     return stmt2;
 }
 
+/* Return the later statement between STMT1 and STMT2.  */
+
+static inline gimple
+get_later_stmt (gimple stmt1, gimple stmt2)
+{
+  unsigned int uid1, uid2;
+
+  if (stmt1 == NULL)
+    return stmt2;
+
+  if (stmt2 == NULL)
+    return stmt1;
+
+  uid1 = gimple_uid (stmt1);
+  uid2 = gimple_uid (stmt2);
+
+  if (uid1 == 0 || uid2 == 0)
+    return NULL;
+
+  gcc_assert (uid1 <= VEC_length (vec_void_p, stmt_vec_info_vec));
+  gcc_assert (uid2 <= VEC_length (vec_void_p, stmt_vec_info_vec));
+
+  if (uid1 > uid2)
+    return stmt1;
+  else
+    return stmt2;
+}
+
+/* Return TRUE if a statement represented by STMT_INFO is a part of a
+   pattern.  */
+
 static inline bool
 is_pattern_stmt_p (stmt_vec_info stmt_info)
 {
@@ -648,6 +686,8 @@ is_pattern_stmt_p (stmt_vec_info stmt_info)
   return false;
 }
 
+/* Return true if BB is a loop header.  */
+
 static inline bool
 is_loop_header_bb_p (basic_block bb)
 {
@@ -656,6 +696,8 @@ is_loop_header_bb_p (basic_block bb)
   gcc_checking_assert (EDGE_COUNT (bb->preds) == 1);
   return false;
 }
+
+/* Set inside loop vectorization cost.  */
 
 static inline void
 stmt_vinfo_set_inside_of_loop_cost (stmt_vec_info stmt_info, slp_tree slp_node,
@@ -667,6 +709,8 @@ stmt_vinfo_set_inside_of_loop_cost (stmt_vec_info stmt_info, slp_tree slp_node,
     STMT_VINFO_INSIDE_OF_LOOP_COST (stmt_info) = cost;
 }
 
+/* Set inside loop vectorization cost.  */
+
 static inline void
 stmt_vinfo_set_outside_of_loop_cost (stmt_vec_info stmt_info, slp_tree slp_node,
 				     int cost)
@@ -676,6 +720,8 @@ stmt_vinfo_set_outside_of_loop_cost (stmt_vec_info stmt_info, slp_tree slp_node,
   else
     STMT_VINFO_OUTSIDE_OF_LOOP_COST (stmt_info) = cost;
 }
+
+/* Return pow2 (X).  */
 
 static inline int
 vect_pow2 (int x)
@@ -697,11 +743,16 @@ vect_pow2 (int x)
 #define DR_MISALIGNMENT(DR)   ((int) (size_t) (DR)->aux)
 #define SET_DR_MISALIGNMENT(DR, VAL)   ((DR)->aux = (void *) (size_t) (VAL))
 
+/* Return TRUE if the data access is aligned, and FALSE otherwise.  */
+
 static inline bool
 aligned_access_p (struct data_reference *data_ref_info)
 {
   return (DR_MISALIGNMENT (data_ref_info) == 0);
 }
+
+/* Return TRUE if the alignment of the data access is known, and FALSE
+   otherwise.  */
 
 static inline bool
 known_alignment_for_access_p (struct data_reference *data_ref_info)
@@ -729,6 +780,7 @@ extern LOC find_loop_location (struct loop *);
 extern bool vect_can_advance_ivs_p (loop_vec_info);
 
 /* In tree-vect-stmts.c.  */
+extern unsigned int current_vector_size;
 extern tree get_vectype_for_scalar_type (tree);
 extern tree get_same_sized_vectype (tree, tree);
 extern bool vect_is_simple_use (tree, loop_vec_info, bb_vec_info, gimple *,
@@ -776,7 +828,7 @@ extern enum dr_alignment_support vect_supportable_dr_alignment
 extern tree vect_get_smallest_scalar_type (gimple, HOST_WIDE_INT *,
                                            HOST_WIDE_INT *);
 extern bool vect_analyze_data_ref_dependences (loop_vec_info, bb_vec_info,
-					       int *);
+					       int *, bool *);
 extern bool vect_enhance_data_refs_alignment (loop_vec_info);
 extern bool vect_analyze_data_refs_alignment (loop_vec_info, bb_vec_info);
 extern bool vect_verify_datarefs_alignment (loop_vec_info, bb_vec_info);
@@ -833,7 +885,7 @@ extern void vect_update_slp_costs_according_to_vf (loop_vec_info);
 extern bool vect_analyze_slp (loop_vec_info, bb_vec_info);
 extern void vect_make_slp_decision (loop_vec_info);
 extern void vect_detect_hybrid_slp (loop_vec_info);
-extern void vect_get_slp_defs (slp_tree, VEC (tree,heap) **,
+extern void vect_get_slp_defs (tree, tree, slp_tree, VEC (tree,heap) **,
                                VEC (tree,heap) **, int);
 extern LOC find_bb_location (basic_block);
 extern bb_vec_info vect_slp_analyze_bb (basic_block);

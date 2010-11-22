@@ -1,3 +1,198 @@
+2010-11-17  Joseph Myers  <joseph@codesourcery.com>
+
+	* lto.c (lto_main): Take no arguments.
+	* lto.h (lto_main): Update prototype.
+
+2010-11-16  Ian Lance Taylor  <iant@google.com>
+
+	* lto-object.c (lto_obj_file_open): Call
+	simple_object_attributes_merge rather than
+	simple_object_attributes_compare.
+
+2010-11-12  Joseph Myers  <joseph@codesourcery.com>
+
+	* Make-lang.in (lto/lto.o): Use $(OPTS_H).
+	* lto-lang.c (lto_handle_option): Take location_t parameter.
+
+2010-11-10  Joseph Myers  <joseph@codesourcery.com>
+
+	* lto.c (lto_resolution_read): Start diagnostics with lowercase
+	letters and remove trailing '.'.
+	(lto_file_finalize): Start diagnostic with a lowercase letter.
+
+2010-11-02  Ian Lance Taylor  <iant@google.com>
+
+	* lto-object.c: New file.
+	* lto-elf.c: Remove file.
+	* lto-macho.c: Remove file.
+	* lto-macho.h: Remove file.
+	* lto-coff.c: Remove file.
+	* lto-coff.h: Remove file.
+	* Make-lang.in (LTO_OBJS): Change lto/$(LTO_BINARY_READER).o to
+	lto/lto-object.o.
+	($(LTO_EXE)): Remove $(LTO_USE_LIBELF)
+	(lto/lto-objfile.o): New target.
+	(lto/lto-elf.o, lto/lto-coff.o, lto/lto-macho.o): Remove targets.
+	(lto/lto.o): Remove $(LIBIBERTY_H).
+
+2010-10-22  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (add_cgraph_node_to_partition,
+	add_varpool_node_to_partition): Add debug info.
+	(lto_1_to_1_map, lto_balanced_map): Do not re-add already
+	partitioned nodes.
+	(do_whole_program_analysis): Set function flags before dumping.
+
+2010-10-22  Richard Guenther  <rguenther@suse.de>
+
+	* lto.c (lto_fixup_type): Fixup TYPE_CANONICAL again, via
+	the new gimple_register_canonical_type.
+
+2010-10-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR bootstrap/45954
+	* config-lang.in (boot_language): Set to $enable_lto.
+
+2010-10-18  Jakub Jelinek  <jakub@redhat.com>
+
+	PR lto/45638
+	* Make-lang.in (check-lto): New dummy target.
+
+2010-10-14  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* lto-elf.c (SHN_XINDEX): Define if not already defined.
+
+2010-10-08  Joseph Myers  <joseph@codesourcery.com>
+
+	* lto-lang.c (lto_init_options): Change to
+	lto_init_options_struct.  Update parameters.
+	(LANG_HOOKS_INIT_OPTIONS): Don't define.
+	(LANG_HOOKS_INIT_OPTIONS_STRUCT): Define.
+
+2010-10-06  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (lto_balanced_map): Fix accounting of program size.
+
+2010-10-06  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (lto_balanced_map): Do not produce empty partitions.
+
+2010-10-06  Andi Kleen <ak@linux.intel.com>
+
+	* lto.c (lto_process_name): Add.
+	(lto_main): Call lto_process_name.
+
+2010-10-06  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (partition_cgraph_node_p, partition_varpool_node_p): Handle
+	COMDATs required by the linker.
+
+2010-10-05  Ian Lance Taylor  <iant@google.com>
+
+	* lto.c (lto_section_with_id): Make s a const pointer.
+
+2010-10-05  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c:  Include params.h.
+	(add_cgraph_node_to_partition, add_varpool_node_to_partition): Do
+	refcounting in aux field.
+	(undo_partition, partition_cgraph_node_p, partition_varpool_node_p):
+	New functions.
+	(lto_1_to_1_map): Simplify.
+	(lto_balanced_map): New function.
+	(do_whole_program_analysis): Chose proper partitioning alg.
+	* Make-lang.in (lto.o): Add dependency on params.h
+
+2010-10-04  Andi Kleen <ak@linux.intel.com>
+
+	* Make-lang.in (lto1): Add + to build rule.
+
+2010-10-03  Andi Kleen <ak@linux.intel.com>
+
+    	* lto.c (lto_file_finalize): Replace gcc_assert for missing section
+          with fatal_error.
+
+2010-09-28  Jan Hubicka  <jh@suse.cz>
+
+	* lto-lang.c (handle_leaf_attribute): New function.
+	(lto_attribute_tables): Add leaf.
+
+2010-09-25  Jie Zhang  <jie@codesourcery.com>
+
+	* lto.c (lto_read_all_file_options): Start a new line after
+	printing out file names.
+
+2010-09-24  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (lto_promote_cross_file_statics): Use const_value_known_p.
+
+2010-09-20  Jan Hubicka  <jh@suse.cz>
+
+	PR tree-optimize/45605
+	* lto.c (lto_promote_cross_file_statics): Use const_value_known_p.
+
+2010-09-18  Gerald Pfeifer  <gerald@pfeifer.com>
+
+	* lto-elf.c (lto_obj_file_open): Also provide filename when
+	elf_begin fails.
+
+2010-09-17  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (lto_promote_cross_file_statics): Use const_value_known.
+
+2010-09-17  Richard Guenther  <rguenther@suse.de>
+
+	* lang.opt (flag_wpa): Also enable for the driver.
+
+2010-09-16  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (lto_materialize_function): Do not tamper with STATIC and
+	EXTERNAL flags. 
+
+2010-09-15  Laurynas Biveinis  <laurynas.biveinis@gmail.com>
+
+	* lto-tree.h (struct lang_type): Add variable_size GTY option.
+
+2010-09-08  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (real_file_count, real_file_decl_data): New static vars.
+	(read_cgraph_and_symbols): Use it.
+
+2010-09-08  Richard Guenther  <rguenther@suse.de>
+
+	* lto.c (read_cgraph_and_symbols): Collect again after each
+	file.
+
+2010-09-07  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (promote_var, promote_fn): Set DECL_VISIBILITY_SPECIFIED.
+
+2010-09-03  Richard Guenther  <rguenther@suse.de>
+
+	* lto-elf.c (validate_file): Always error if validation fails.
+
+2010-08-20  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (lto_1_to_1_map): Be prepared for node to have no file data.
+	(lto_wpa_write_files): Update comments.
+
+2010-08-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR bootstrap/45357
+	* lto.c (lto_materialize_function): Replace has_analyzed_clone
+	with has_analyzed_clone_p.
+
+2010-08-20  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (has_analyzed_clone_p): New function
+	(lto_materialize_function): Use callgraph to determine if
+	body is needed.
+	(materialize_cgraph): Remove DECL_IS_BUILTIN check.
+
+2010-08-20  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* lto.c: Use FOR_EACH_VEC_ELT.
+
 2010-07-27  Andi Kleen <ak@linux.intel.com>
 
 	* Make-lang.in (lto.o): Add dependency to splay-tree.h

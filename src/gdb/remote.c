@@ -2353,7 +2353,7 @@ remote_get_threadlist (int startflag, threadref *nextthread, int result_limit,
   getpkt (&rs->buf, &rs->buf_size, 0);
 
   if (*rs->buf == '\0')
-    *result_count = 0;
+    return 0;
   else
     *result_count =
       parse_threadlist_response (rs->buf + 2, result_limit, &echo_nextthread,
@@ -6667,7 +6667,8 @@ readchar (int timeout)
       error (_("Remote connection closed"));
       /* no return */
     case SERIAL_ERROR:
-      perror_with_name (_("Remote communication error"));
+      pop_target ();
+      perror_with_name (_("Remote communication error.  Target disconnected."));
       /* no return */
     case SERIAL_TIMEOUT:
       break;
@@ -9746,7 +9747,7 @@ remote_download_tracepoint (struct breakpoint *t)
 	      if (target_static_tracepoint_marker_at (tpaddr, &marker))
 		strcat (buf, ":S");
 	      else
-		error ("Static tracepoint not valid during download");
+		error (_("Static tracepoint not valid during download"));
 	    }
 	  else
 	    /* Fast tracepoints are functionally identical to regular
@@ -9877,7 +9878,7 @@ remote_trace_set_readonly_regions (void)
 {
   asection *s;
   bfd_size_type size;
-  bfd_vma lma;
+  bfd_vma vma;
   int anysecs = 0;
 
   if (!exec_bfd)
@@ -9894,10 +9895,10 @@ remote_trace_set_readonly_regions (void)
 	continue;
 
       anysecs = 1;
-      lma = s->lma;
+      vma = bfd_get_section_vma (,s);
       size = bfd_get_section_size (s);
-      sprintf_vma (tmp1, lma);
-      sprintf_vma (tmp2, lma + size);
+      sprintf_vma (tmp1, vma);
+      sprintf_vma (tmp2, vma + size);
       sprintf (target_buf + strlen (target_buf), 
 	       ":%s,%s", tmp1, tmp2);
     }

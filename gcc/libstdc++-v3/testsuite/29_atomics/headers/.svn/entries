@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/29_atomics/headers
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-12-21T19:00:34.247142Z
-155377
-bkoz
+2010-11-14T20:05:12.353083Z
+166736
+doko
 
 
 
@@ -27,8 +27,5 @@ bkoz
 138bc75d-0d04-0410-961f-82ee72b054a4
 
 atomic
-dir
-
-stdatomic.h
 dir
 

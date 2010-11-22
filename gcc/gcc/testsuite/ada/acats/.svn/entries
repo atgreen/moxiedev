@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/ada/acats
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-05-03T16:40:54.578203Z
-158994
-ro
+2010-09-30T06:35:09.392372Z
+164742
+ebotcazou
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2010-07-08T15:18:12.590357Z
-f6f86b9b7018a5ef0f12b8fefd9b4795
-2010-05-03T16:40:54.578203Z
-158994
-ro
+2010-11-22T19:14:48.816794Z
+7ca4f6d0568ed85d236c51482e64aea6
+2010-09-30T06:35:09.392372Z
+164742
+ebotcazou
 has-props
 
 
@@ -58,7 +58,7 @@ has-props
 
 
 
-1925
+1918
 
 tests
 dir

@@ -519,7 +519,7 @@ value_entirely_optimized_out (const struct value *value)
   if (!value->optimized_out)
     return 0;
   if (value->lval != lval_computed
-      || !value->location.computed.funcs->check_validity)
+      || !value->location.computed.funcs->check_any_valid)
     return 1;
   return !value->location.computed.funcs->check_any_valid (value);
 }
@@ -747,6 +747,7 @@ release_value (struct value *val)
   if (all_values == val)
     {
       all_values = val->next;
+      val->next = NULL;
       return;
     }
 
@@ -755,6 +756,7 @@ release_value (struct value *val)
       if (v->next == val)
 	{
 	  v->next = val->next;
+	  val->next = NULL;
 	  break;
 	}
     }
@@ -822,6 +824,26 @@ value_copy (struct value *arg)
         val->location.computed.closure = funcs->copy_closure (val);
     }
   return val;
+}
+
+/* Return a version of ARG that is non-lvalue.  */
+
+struct value *
+value_non_lval (struct value *arg)
+{
+  if (VALUE_LVAL (arg) != not_lval)
+    {
+      struct type *enc_type = value_enclosing_type (arg);
+      struct value *val = allocate_value (enc_type);
+
+      memcpy (value_contents_all_raw (val), value_contents_all (arg),
+	      TYPE_LENGTH (enc_type));
+      val->type = arg->type;
+      set_value_embedded_offset (val, value_embedded_offset (arg));
+      set_value_pointed_to_offset (val, value_pointed_to_offset (arg));
+      return val;
+    }
+   return arg;
 }
 
 void
@@ -1901,41 +1923,30 @@ value_static_field (struct type *type, int fieldno)
 	    }
 	}
       else
-	{
-	  /* SYM should never have a SYMBOL_CLASS which will require
-	     read_var_value to use the FRAME parameter.  */
-	  if (symbol_read_needs_frame (sym))
-	    warning (_("static field's value depends on the current "
-		     "frame - bad debug info?"));
-	  retval = read_var_value (sym, NULL);
- 	}
-      if (retval && VALUE_LVAL (retval) == lval_memory)
-	SET_FIELD_PHYSADDR (TYPE_FIELD (type, fieldno),
-			    value_address (retval));
+	retval = value_of_variable (sym, NULL);
       break;
     }
     default:
-      gdb_assert (0);
+      gdb_assert_not_reached ("unexpected field location kind");
     }
 
   return retval;
 }
 
-/* Change the enclosing type of a value object VAL to NEW_ENCL_TYPE.  
-   You have to be careful here, since the size of the data area for the value 
-   is set by the length of the enclosing type.  So if NEW_ENCL_TYPE is bigger 
-   than the old enclosing type, you have to allocate more space for the data.  
-   The return value is a pointer to the new version of this value structure. */
+/* Change the enclosing type of a value object VAL to NEW_ENCL_TYPE.
+   You have to be careful here, since the size of the data area for the value
+   is set by the length of the enclosing type.  So if NEW_ENCL_TYPE is bigger
+   than the old enclosing type, you have to allocate more space for the
+   data.  */
 
-struct value *
-value_change_enclosing_type (struct value *val, struct type *new_encl_type)
+void
+set_value_enclosing_type (struct value *val, struct type *new_encl_type)
 {
   if (TYPE_LENGTH (new_encl_type) > TYPE_LENGTH (value_enclosing_type (val))) 
     val->contents =
       (gdb_byte *) xrealloc (val->contents, TYPE_LENGTH (new_encl_type));
 
   val->enclosing_type = new_encl_type;
-  return val;
 }
 
 /* Given a value ARG1 (offset by OFFSET bytes)
@@ -1981,8 +1992,9 @@ value_primitive_field (struct value *arg1, int offset,
 	v->bitpos = bitpos % container_bitsize;
       else
 	v->bitpos = bitpos % 8;
-      v->offset = value_embedded_offset (arg1)
-	+ (bitpos - v->bitpos) / 8;
+      v->offset = (value_embedded_offset (arg1)
+		   + offset
+		   + (bitpos - v->bitpos) / 8);
       v->parent = arg1;
       value_incref (v->parent);
       if (!value_lazy (arg1))
@@ -2190,7 +2202,7 @@ unpack_field_as_long (struct type *type, const gdb_byte *valaddr, int fieldno)
    target byte order; the bitfield starts in the byte pointed to.  FIELDVAL
    is the desired value of the field, in host byte order.  BITPOS and BITSIZE
    indicate which bits (in target bit order) comprise the bitfield.  
-   Requires 0 < BITSIZE <= lbits, 0 <= BITPOS+BITSIZE <= lbits, and
+   Requires 0 < BITSIZE <= lbits, 0 <= BITPOS % 8 + BITSIZE <= lbits, and
    0 <= BITPOS, where lbits is the size of a LONGEST in bits.  */
 
 void
@@ -2200,6 +2212,11 @@ modify_field (struct type *type, gdb_byte *addr,
   enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
   ULONGEST oword;
   ULONGEST mask = (ULONGEST) -1 >> (8 * sizeof (ULONGEST) - bitsize);
+  int bytesize;
+
+  /* Normalize BITPOS.  */
+  addr += bitpos / 8;
+  bitpos %= 8;
 
   /* If a negative fieldval fits in the field in question, chop
      off the sign extension bits.  */
@@ -2217,16 +2234,20 @@ modify_field (struct type *type, gdb_byte *addr,
       fieldval &= mask;
     }
 
-  oword = extract_unsigned_integer (addr, sizeof oword, byte_order);
+  /* Ensure no bytes outside of the modified ones get accessed as it may cause
+     false valgrind reports.  */
+
+  bytesize = (bitpos + bitsize + 7) / 8;
+  oword = extract_unsigned_integer (addr, bytesize, byte_order);
 
   /* Shifting for bit field depends on endianness of the target machine.  */
   if (gdbarch_bits_big_endian (get_type_arch (type)))
-    bitpos = sizeof (oword) * 8 - bitpos - bitsize;
+    bitpos = bytesize * 8 - bitpos - bitsize;
 
   oword &= ~(mask << bitpos);
   oword |= fieldval << bitpos;
 
-  store_unsigned_integer (addr, sizeof oword, byte_order, oword);
+  store_unsigned_integer (addr, bytesize, byte_order, oword);
 }
 
 /* Pack NUM into BUF using a target format of TYPE.  */
@@ -2407,7 +2428,7 @@ coerce_array (struct value *arg)
   switch (TYPE_CODE (type))
     {
     case TYPE_CODE_ARRAY:
-      if (current_language->c_style_arrays)
+      if (!TYPE_VECTOR (type) && current_language->c_style_arrays)
 	arg = value_coerce_array (arg);
       break;
     case TYPE_CODE_FUNC:

@@ -394,7 +394,8 @@ NATIVE=yes
 # Which gcj and host gcj (for ecjx) do we use?
 which_gcj=default
 host_exeext=${ac_exeext}
-GCJ_FOR_ECJX=
+GCJ_FOR_ECJX='$(GCJ)'
+GCC_FOR_ECJX='$(CXX)'
 built_gcc_dir="`cd ${builddotdot}/../../${host_subdir}/gcc && ${PWDCMD-pwd}`"
 if test -n "${with_cross_host}"; then
   # We are being configured with a cross compiler. We can't
@@ -402,6 +403,7 @@ if test -n "${with_cross_host}"; then
   NATIVE=no
   cross_host_exeext=
   GCJ_FOR_ECJX="${with_cross_host}-gcj"
+  GCC_FOR_ECJX="${with_cross_host}-gcc"
   case "${with_cross_host}" in
      *mingw* | *cygwin*)
          cross_host_exeext=.exe
@@ -467,6 +469,7 @@ JAVAC="$GCJ -C"
 export JAVAC
 
 AC_SUBST(GCJ_FOR_ECJX)
+AC_SUBST(GCC_FOR_ECJX)
 AC_SUBST(GCJH)
 AC_SUBST(host_exeext)
 
@@ -928,6 +931,16 @@ arm*linux*eabi)
     ;;
 esac
 
+LIBMATHSPEC=
+# extra LD Flags which are required for targets
+case "${host}" in
+*-*-darwin*)
+     ;;
+*)
+     LIBMATHSPEC=-lm
+     ;;
+esac
+
 # Check for --no-merge-exidx-entries, an ARM-specific linker option.
 AC_CACHE_CHECK([for --no-merge-exidx-entries], [libgcj_cv_exidx],
   [saved_ldflags="$LDFLAGS"
@@ -953,6 +966,7 @@ fi
 AC_SUBST(extra_ldflags_libjava)
 AC_SUBST(extra_ldflags)
 AC_SUBST(LIBSTDCXXSPEC)
+AC_SUBST(LIBMATHSPEC)
 
 AC_SUBST(LIBGCJTESTSPEC)
 
@@ -1076,6 +1090,10 @@ case "$THREADS" in
 	# As on Solaris 8, need libthread for TLS support.
 	THREADLIBS='-lpthread -lthread'
 	THREADSPEC='-lpthread -lthread'
+	;;
+     *-*-darwin*)
+	# Don't set THREADLIBS or THREADSPEC as Darwin already
+	# provides pthread via libSystem.
 	;;
      *)
 	THREADLIBS=-lpthread
@@ -1444,6 +1462,8 @@ else
 	    # IRIX 6 lacks a N64 libdl.so, but only the N32 (default multilib)
 	    # libgcj.spec is used, so override here
 	    SYSTEMSPEC="$SYSTEMSPEC %{!mabi=64:-ldl}"
+	  ;;
+	  *-*-darwin*)
 	  ;;
 	  *)
             AC_CHECK_LIB(dl, main, SYSTEMSPEC="$SYSTEMSPEC -ldl")

@@ -199,9 +199,9 @@ allocate_objfile (bfd *abfd, int flags)
   struct objfile *objfile;
 
   objfile = (struct objfile *) xzalloc (sizeof (struct objfile));
-  objfile->psymbol_cache = bcache_xmalloc ();
-  objfile->macro_cache = bcache_xmalloc ();
-  objfile->filename_cache = bcache_xmalloc ();
+  objfile->psymbol_cache = psymbol_bcache_init ();
+  objfile->macro_cache = bcache_xmalloc (NULL, NULL);
+  objfile->filename_cache = bcache_xmalloc (NULL, NULL);
   /* We could use obstack_specify_allocation here instead, but
      gdb_obstack.h specifies the alloc/dealloc functions.  */
   obstack_init (&objfile->objfile_obstack);
@@ -214,10 +214,6 @@ allocate_objfile (bfd *abfd, int flags)
      region. */
 
   objfile->obfd = gdb_bfd_ref (abfd);
-  if (objfile->name != NULL)
-    {
-      xfree (objfile->name);
-    }
   if (abfd != NULL)
     {
       /* Look up the gdbarch associated with the BFD.  */
@@ -376,7 +372,7 @@ terminate_minimal_symbol_table (struct objfile *objfile)
     memset (m, 0, sizeof (*m));
     /* Don't rely on these enumeration values being 0's.  */
     MSYMBOL_TYPE (m) = mst_unknown;
-    SYMBOL_INIT_LANGUAGE_SPECIFIC (m, language_unknown);
+    SYMBOL_SET_LANGUAGE (m, language_unknown);
   }
 }
 
@@ -649,16 +645,13 @@ free_objfile (struct objfile *objfile)
 
   /* The last thing we do is free the objfile struct itself. */
 
-  if (objfile->name != NULL)
-    {
-      xfree (objfile->name);
-    }
+  xfree (objfile->name);
   if (objfile->global_psymbols.list)
     xfree (objfile->global_psymbols.list);
   if (objfile->static_psymbols.list)
     xfree (objfile->static_psymbols.list);
   /* Free the obstacks for non-reusable objfiles */
-  bcache_xfree (objfile->psymbol_cache);
+  psymbol_bcache_free (objfile->psymbol_cache);
   bcache_xfree (objfile->macro_cache);
   bcache_xfree (objfile->filename_cache);
   if (objfile->demangled_names_hash)
@@ -699,9 +692,30 @@ free_all_objfiles (void)
   {
     free_objfile (objfile);
   }
-  clear_symtab_users ();
+  clear_symtab_users (0);
 }
 
+/* A helper function for objfile_relocate1 that relocates a single
+   symbol.  */
+
+static void
+relocate_one_symbol (struct symbol *sym, struct objfile *objfile,
+		     struct section_offsets *delta)
+{
+  fixup_symbol_section (sym, objfile);
+
+  /* The RS6000 code from which this was taken skipped
+     any symbols in STRUCT_DOMAIN or UNDEF_DOMAIN.
+     But I'm leaving out that test, on the theory that
+     they can't possibly pass the tests below.  */
+  if ((SYMBOL_CLASS (sym) == LOC_LABEL
+       || SYMBOL_CLASS (sym) == LOC_STATIC)
+      && SYMBOL_SECTION (sym) >= 0)
+    {
+      SYMBOL_VALUE_ADDRESS (sym) += ANOFFSET (delta, SYMBOL_SECTION (sym));
+    }
+}
+
 /* Relocate OBJFILE to NEW_OFFSETS.  There should be OBJFILE->NUM_SECTIONS
    entries in new_offsets.  SEPARATE_DEBUG_OBJFILE is not touched here.
    Return non-zero iff any change happened.  */
@@ -767,22 +781,18 @@ objfile_relocate1 (struct objfile *objfile,
 
 	  ALL_BLOCK_SYMBOLS (b, iter, sym)
 	    {
-	      fixup_symbol_section (sym, objfile);
-
-	      /* The RS6000 code from which this was taken skipped
-	         any symbols in STRUCT_DOMAIN or UNDEF_DOMAIN.
-	         But I'm leaving out that test, on the theory that
-	         they can't possibly pass the tests below.  */
-	      if ((SYMBOL_CLASS (sym) == LOC_LABEL
-		   || SYMBOL_CLASS (sym) == LOC_STATIC)
-		  && SYMBOL_SECTION (sym) >= 0)
-		{
-		  SYMBOL_VALUE_ADDRESS (sym) +=
-		    ANOFFSET (delta, SYMBOL_SECTION (sym));
-		}
+	      relocate_one_symbol (sym, objfile, delta);
 	    }
 	}
     }
+  }
+
+  /* Relocate isolated symbols.  */
+  {
+    struct symbol *iter;
+
+    for (iter = objfile->template_symbols; iter; iter = iter->hash_next)
+      relocate_one_symbol (iter, objfile, delta);
   }
 
   if (objfile->psymtabs_addrmap)
@@ -1051,7 +1061,7 @@ qsort_cmp (const void *a, const void *b)
 	      return 1;
 
 	  /* We should have found one of the sections before getting here.  */
-	  gdb_assert (0);
+	  gdb_assert_not_reached ("section not found");
 	}
       else
 	{
@@ -1066,12 +1076,12 @@ qsort_cmp (const void *a, const void *b)
 	      return 1;
 
 	  /* We should have found one of the objfiles before getting here.  */
-	  gdb_assert (0);
+	  gdb_assert_not_reached ("objfile not found");
 	}
     }
 
   /* Unreachable.  */
-  gdb_assert (0);
+  gdb_assert_not_reached ("unexpected code path");
   return 0;
 }
 

@@ -252,6 +252,9 @@ AM_CONDITIONAL(NATIVE_LINKER,
   test "x$target_alias" = "x" -o "x$host_alias" = "x$target_alias")
 AM_CONDITIONAL(GCC, test "$GCC" = yes)
 
+AM_CONDITIONAL(NATIVE_OR_CROSS_LINKER,
+  test "x$target_alias" = "x" -o "x$host_alias" = "x$target_alias" -o "x$host_alias" = "x$build_alias")
+
 dnl Some architectures do not support taking pointers of functions
 dnl defined in shared libraries except in -fPIC mode.  We need to
 dnl tell the unittest framework if we're compiling for one of those
@@ -358,6 +361,20 @@ if test "$gold_cv_c_random_seed" = "yes"; then
   RANDOM_SEED_CFLAGS=-frandom-seed=\$@
 fi
 AC_SUBST(RANDOM_SEED_CFLAGS)
+
+dnl On GNU/Linux ifunc is supported by the dynamic linker in glibc
+dnl 2.11 or later.
+AC_CACHE_CHECK([for glibc >= 2.11], [gold_cv_lib_glibc2_11],
+[AC_COMPILE_IFELSE([
+#include <features.h>
+#if !defined __GLIBC__
+error
+#elif __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 11)
+error
+#endif
+], [gold_cv_lib_glibc2_11=yes], [gold_cv_lib_glibc2_11=no])])
+
+AM_CONDITIONAL(IFUNC, test "$gold_cv_lib_glibc2_11" = "yes")
 
 AM_BINUTILS_WARNINGS
 

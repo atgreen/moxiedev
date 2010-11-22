@@ -68,8 +68,7 @@ enum strata
   {
     dummy_stratum,		/* The lowest of the low */
     file_stratum,		/* Executable files, etc */
-    core_stratum,		/* Core dump files */
-    process_stratum,		/* Executing processes */
+    process_stratum,		/* Executing processes or core dump files */
     thread_stratum,		/* Executing threads */
     record_stratum,		/* Support record debugging */
     arch_stratum		/* Architecture overrides */
@@ -300,10 +299,23 @@ extern LONGEST target_read (struct target_ops *ops,
 			    const char *annex, gdb_byte *buf,
 			    ULONGEST offset, LONGEST len);
 
-extern LONGEST target_read_until_error (struct target_ops *ops,
-					enum target_object object,
-					const char *annex, gdb_byte *buf,
-					ULONGEST offset, LONGEST len);
+struct memory_read_result
+  {
+    /* First address that was read. */
+    ULONGEST begin;
+    /* Past-the-end address.  */
+    ULONGEST end;
+    /* The data.  */
+    gdb_byte *data;
+};
+typedef struct memory_read_result memory_read_result_s;
+DEF_VEC_O(memory_read_result_s);
+
+extern void free_memory_read_result_vector (void *);
+
+extern VEC(memory_read_result_s)* read_memory_robust (struct target_ops *ops,
+						      ULONGEST offset,
+						      LONGEST len);
   
 extern LONGEST target_write (struct target_ops *ops,
 			     enum target_object object,
@@ -492,11 +504,7 @@ struct target_ops
     int (*to_async_mask) (int);
     int (*to_supports_non_stop) (void);
     /* find_memory_regions support method for gcore */
-    int (*to_find_memory_regions) (int (*) (CORE_ADDR,
-					    unsigned long,
-					    int, int, int,
-					    void *),
-				   void *);
+    int (*to_find_memory_regions) (find_memory_region_ftype func, void *data);
     /* make_corefile_notes support method for gcore */
     char * (*to_make_corefile_notes) (bfd *, int *);
     /* get_bookmark support method for bookmarks */
@@ -1485,6 +1493,8 @@ extern void pop_all_targets (int quitting);
    strictly above ABOVE_STRATUM.  */
 extern void pop_all_targets_above (enum strata above_stratum, int quitting);
 
+extern int target_is_pushed (struct target_ops *t);
+
 extern CORE_ADDR target_translate_tls_address (struct objfile *objfile,
 					       CORE_ADDR offset);
 
@@ -1545,8 +1555,6 @@ extern void find_default_create_inferior (struct target_ops *,
 					  char *, char *, char **, int);
 
 extern struct target_ops *find_run_target (void);
-
-extern struct target_ops *find_core_target (void);
 
 extern struct target_ops *find_target_beneath (struct target_ops *);
 

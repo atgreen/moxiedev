@@ -37,6 +37,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "toplev.h"
 #include "params.h"
 #include "df.h"
+#include "sbitmap.h"
 #include "sparseset.h"
 #include "ira-int.h"
 
@@ -328,6 +329,21 @@ mark_hard_reg_live (rtx reg)
     }
 }
 
+/* Mark a pseudo, or one of its subwords, as live.  REGNO is the pseudo's
+   register number; ORIG_REG is the access in the insn, which may be a
+   subreg.  */
+static void
+mark_pseudo_reg_live (rtx orig_reg, unsigned regno)
+{
+  if (df_read_modify_subreg_p (orig_reg))
+    {
+      mark_pseudo_regno_subword_live (regno,
+				      subreg_lowpart_p (orig_reg) ? 0 : 1);
+    }
+  else
+    mark_pseudo_regno_live (regno);
+}
+
 /* Mark the register referenced by use or def REF as live.  */
 static void
 mark_ref_live (df_ref ref)
@@ -339,15 +355,7 @@ mark_ref_live (df_ref ref)
     reg = SUBREG_REG (reg);
 
   if (REGNO (reg) >= FIRST_PSEUDO_REGISTER)
-    {
-      if (df_read_modify_subreg_p (orig_reg))
-	{
-	  mark_pseudo_regno_subword_live (REGNO (reg),
-					  subreg_lowpart_p (orig_reg) ? 0 : 1);
-	}
-      else
-	mark_pseudo_regno_live (REGNO (reg));
-    }
+    mark_pseudo_reg_live (orig_reg, REGNO (reg));
   else
     mark_hard_reg_live (reg);
 }
@@ -444,6 +452,21 @@ mark_hard_reg_dead (rtx reg)
     }
 }
 
+/* Mark a pseudo, or one of its subwords, as dead.  REGNO is the pseudo's
+   register number; ORIG_REG is the access in the insn, which may be a
+   subreg.  */
+static void
+mark_pseudo_reg_dead (rtx orig_reg, unsigned regno)
+{
+  if (df_read_modify_subreg_p (orig_reg))
+    {
+      mark_pseudo_regno_subword_dead (regno,
+				      subreg_lowpart_p (orig_reg) ? 0 : 1);
+    }
+  else
+    mark_pseudo_regno_dead (regno);
+}
+
 /* Mark the register referenced by definition DEF as dead, if the
    definition is a total one.  */
 static void
@@ -465,26 +488,22 @@ mark_ref_dead (df_ref def)
     return;
 
   if (REGNO (reg) >= FIRST_PSEUDO_REGISTER)
-    {
-      if (df_read_modify_subreg_p (orig_reg))
-	{
-	  mark_pseudo_regno_subword_dead (REGNO (reg),
-					  subreg_lowpart_p (orig_reg) ? 0 : 1);
-	}
-      else
-	mark_pseudo_regno_dead (REGNO (reg));
-    }
+    mark_pseudo_reg_dead (orig_reg, REGNO (reg));
   else
     mark_hard_reg_dead (reg);
 }
 
-/* Make pseudo REG conflicting with pseudo DREG, if the 1st pseudo
-   class is intersected with class CL.  Advance the current program
-   point before making the conflict if ADVANCE_P.  Return TRUE if we
-   will need to advance the current program point.  */
+/* If REG is a pseudo or a subreg of it, and the class of its allocno
+   intersects CL, make a conflict with pseudo DREG.  ORIG_DREG is the
+   rtx actually accessed, it may be indentical to DREG or a subreg of it.
+   Advance the current program point before making the conflict if
+   ADVANCE_P.  Return TRUE if we will need to advance the current
+   program point.  */
 static bool
-make_pseudo_conflict (rtx reg, enum reg_class cl, rtx dreg, bool advance_p)
+make_pseudo_conflict (rtx reg, enum reg_class cl, rtx dreg, rtx orig_dreg,
+		      bool advance_p)
 {
+  rtx orig_reg = reg;
   ira_allocno_t a;
 
   if (GET_CODE (reg) == SUBREG)
@@ -500,29 +519,31 @@ make_pseudo_conflict (rtx reg, enum reg_class cl, rtx dreg, bool advance_p)
   if (advance_p)
     curr_point++;
 
-  mark_pseudo_regno_live (REGNO (reg));
-  mark_pseudo_regno_live (REGNO (dreg));
-  mark_pseudo_regno_dead (REGNO (reg));
-  mark_pseudo_regno_dead (REGNO (dreg));
+  mark_pseudo_reg_live (orig_reg, REGNO (reg));
+  mark_pseudo_reg_live (orig_dreg, REGNO (dreg));
+  mark_pseudo_reg_dead (orig_reg, REGNO (reg));
+  mark_pseudo_reg_dead (orig_dreg, REGNO (dreg));
 
   return false;
 }
 
 /* Check and make if necessary conflicts for pseudo DREG of class
    DEF_CL of the current insn with input operand USE of class USE_CL.
-   Advance the current program point before making the conflict if
-   ADVANCE_P.  Return TRUE if we will need to advance the current
-   program point.  */
+   ORIG_DREG is the rtx actually accessed, it may be indentical to
+   DREG or a subreg of it.  Advance the current program point before
+   making the conflict if ADVANCE_P.  Return TRUE if we will need to
+   advance the current program point.  */
 static bool
-check_and_make_def_use_conflict (rtx dreg, enum reg_class def_cl,
-				 int use, enum reg_class use_cl,
-				 bool advance_p)
+check_and_make_def_use_conflict (rtx dreg, rtx orig_dreg,
+				 enum reg_class def_cl, int use,
+				 enum reg_class use_cl, bool advance_p)
 {
   if (! reg_classes_intersect_p (def_cl, use_cl))
     return advance_p;
 
   advance_p = make_pseudo_conflict (recog_data.operand[use],
-				    use_cl, dreg, advance_p);
+				    use_cl, dreg, orig_dreg, advance_p);
+
   /* Reload may end up swapping commutative operands, so you
      have to take both orderings into account.  The
      constraints for the two operands can be completely
@@ -533,12 +554,12 @@ check_and_make_def_use_conflict (rtx dreg, enum reg_class def_cl,
       && recog_data.constraints[use][0] == '%')
     advance_p
       = make_pseudo_conflict (recog_data.operand[use + 1],
-			      use_cl, dreg, advance_p);
+			      use_cl, dreg, orig_dreg, advance_p);
   if (use >= 1
       && recog_data.constraints[use - 1][0] == '%')
     advance_p
       = make_pseudo_conflict (recog_data.operand[use - 1],
-			      use_cl, dreg, advance_p);
+			      use_cl, dreg, orig_dreg, advance_p);
   return advance_p;
 }
 
@@ -553,6 +574,7 @@ check_and_make_def_conflict (int alt, int def, enum reg_class def_cl)
   enum reg_class use_cl, acl;
   bool advance_p;
   rtx dreg = recog_data.operand[def];
+  rtx orig_dreg = dreg;
 
   if (def_cl == NO_REGS)
     return;
@@ -598,8 +620,8 @@ check_and_make_def_conflict (int alt, int def, enum reg_class def_cl)
       if (alt1 < recog_data.n_alternatives)
 	continue;
 
-      advance_p = check_and_make_def_use_conflict (dreg, def_cl, use,
-						   use_cl, advance_p);
+      advance_p = check_and_make_def_use_conflict (dreg, orig_dreg, def_cl,
+						   use, use_cl, advance_p);
 
       if ((use_match = recog_op_alt[use][alt].matches) >= 0)
 	{
@@ -610,8 +632,8 @@ check_and_make_def_conflict (int alt, int def, enum reg_class def_cl)
 	    use_cl = ALL_REGS;
 	  else
 	    use_cl = recog_op_alt[use_match][alt].cl;
-	  advance_p = check_and_make_def_use_conflict (dreg, def_cl, use,
-						       use_cl, advance_p);
+	  advance_p = check_and_make_def_use_conflict (dreg, orig_dreg, def_cl,
+						       use, use_cl, advance_p);
 	}
     }
 }
@@ -896,7 +918,7 @@ ira_implicitly_set_insn_hard_regs (HARD_REG_SET *set)
 static void
 process_single_reg_class_operands (bool in_p, int freq)
 {
-  int i, regno, cost;
+  int i, regno;
   unsigned int px;
   enum reg_class cl;
   rtx operand;
@@ -923,32 +945,46 @@ process_single_reg_class_operands (bool in_p, int freq)
       if (REG_P (operand)
 	  && (regno = REGNO (operand)) >= FIRST_PSEUDO_REGISTER)
 	{
-	  enum machine_mode mode;
 	  enum reg_class cover_class;
 
 	  operand_a = ira_curr_regno_allocno_map[regno];
-	  mode = ALLOCNO_MODE (operand_a);
 	  cover_class = ALLOCNO_COVER_CLASS (operand_a);
 	  if (ira_class_subset_p[cl][cover_class]
-	      && ira_class_hard_regs_num[cl] != 0
-	      && (ira_class_hard_reg_index[cover_class]
-		  [ira_class_hard_regs[cl][0]]) >= 0
-	      && reg_class_size[cl] <= (unsigned) CLASS_MAX_NREGS (cl, mode))
+	      && ira_class_hard_regs_num[cl] != 0)
 	    {
-	      int i, size;
-	      cost
-		= (freq
-		   * (in_p
-		      ? ira_get_register_move_cost (mode, cover_class, cl)
-		      : ira_get_register_move_cost (mode, cl, cover_class)));
-	      ira_allocate_and_set_costs
-		(&ALLOCNO_CONFLICT_HARD_REG_COSTS (operand_a), cover_class, 0);
-	      size = ira_reg_class_nregs[cover_class][mode];
-	      for (i = 0; i < size; i++)
-	        ALLOCNO_CONFLICT_HARD_REG_COSTS (operand_a)
-		  [ira_class_hard_reg_index
-		   [cover_class][ira_class_hard_regs[cl][i]]]
-		  -= cost;
+	      /* View the desired allocation of OPERAND as:
+
+		    (REG:YMODE YREGNO),
+
+		 a simplification of:
+
+		    (subreg:YMODE (reg:XMODE XREGNO) OFFSET).  */
+	      enum machine_mode ymode, xmode;
+	      int xregno, yregno;
+	      HOST_WIDE_INT offset;
+
+	      xmode = recog_data.operand_mode[i];
+	      xregno = ira_class_hard_regs[cl][0];
+	      ymode = ALLOCNO_MODE (operand_a);
+	      offset = subreg_lowpart_offset (ymode, xmode);
+	      yregno = simplify_subreg_regno (xregno, xmode, offset, ymode);
+	      if (yregno >= 0
+		  && ira_class_hard_reg_index[cover_class][yregno] >= 0)
+		{
+		  int cost;
+
+		  ira_allocate_and_set_costs
+		    (&ALLOCNO_CONFLICT_HARD_REG_COSTS (operand_a),
+		     cover_class, 0);
+		  cost
+		    = (freq
+		       * (in_p
+			  ? ira_get_register_move_cost (xmode, cover_class, cl)
+			  : ira_get_register_move_cost (xmode, cl,
+							cover_class)));
+		  ALLOCNO_CONFLICT_HARD_REG_COSTS (operand_a)
+		    [ira_class_hard_reg_index[cover_class][yregno]] -= cost;
+		}
 	    }
 	}
 
@@ -1308,25 +1344,43 @@ remove_some_program_points_and_update_live_ranges (void)
   ira_object_t obj;
   ira_object_iterator oi;
   live_range_t r;
-  bitmap born_or_died;
-  bitmap_iterator bi;
-
-  born_or_died = ira_allocate_bitmap ();
+  sbitmap born_or_dead, born, dead;
+  sbitmap_iterator sbi;
+  bool born_p, dead_p, prev_born_p, prev_dead_p;
+  
+  born = sbitmap_alloc (ira_max_point);
+  dead = sbitmap_alloc (ira_max_point);
+  sbitmap_zero (born);
+  sbitmap_zero (dead);
   FOR_EACH_OBJECT (obj, oi)
     for (r = OBJECT_LIVE_RANGES (obj); r != NULL; r = r->next)
       {
 	ira_assert (r->start <= r->finish);
-	bitmap_set_bit (born_or_died, r->start);
-	bitmap_set_bit (born_or_died, r->finish);
+	SET_BIT (born, r->start);
+	SET_BIT (dead, r->finish);
       }
 
+  born_or_dead = sbitmap_alloc (ira_max_point);
+  sbitmap_a_or_b (born_or_dead, born, dead);
   map = (int *) ira_allocate (sizeof (int) * ira_max_point);
-  n = 0;
-  EXECUTE_IF_SET_IN_BITMAP(born_or_died, 0, i, bi)
+  n = -1;
+  prev_born_p = prev_dead_p = false;
+  EXECUTE_IF_SET_IN_SBITMAP (born_or_dead, 0, i, sbi)
     {
-      map[i] = n++;
+      born_p = TEST_BIT (born, i);
+      dead_p = TEST_BIT (dead, i);
+      if ((prev_born_p && ! prev_dead_p && born_p && ! dead_p)
+	  || (prev_dead_p && ! prev_born_p && dead_p && ! born_p))
+	map[i] = n;
+      else
+	map[i] = ++n;
+      prev_born_p = born_p;
+      prev_dead_p = dead_p;
     }
-  ira_free_bitmap (born_or_died);
+  sbitmap_free (born_or_dead);
+  sbitmap_free (born);
+  sbitmap_free (dead);
+  n++;
   if (internal_flag_ira_verbose > 1 && ira_dump_file != NULL)
     fprintf (ira_dump_file, "Compressing live ranges: from %d to %d - %d%%\n",
 	     ira_max_point, n, 100 * n / ira_max_point);

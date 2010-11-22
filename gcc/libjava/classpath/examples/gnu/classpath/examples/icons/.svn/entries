@@ -1,7 +1,7 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/examples/gnu/classpath/examples/icons
 svn://gcc.gnu.org/svn/gcc
 
@@ -366,40 +366,6 @@ has-props
 
 328
 
-stock-save.png
-file
-
-
-
-
-2009-04-24T17:46:44.000000Z
-41065ed0692113e917d50f1651643fd1
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-539
-
 palme.gif
 file
 
@@ -434,14 +400,14 @@ has-props
 
 502
 
-stock-save-as.png
+stock-save.png
 file
 
 
 
 
 2009-04-24T17:46:44.000000Z
-184fed19d2372d74107f333a0e139229
+41065ed0692113e917d50f1651643fd1
 2005-09-23T17:31:48.000000Z
 104575
 tromey
@@ -466,7 +432,7 @@ has-props
 
 
 
-751
+539
 
 aicas.png
 file
@@ -501,6 +467,40 @@ has-props
 
 
 2320
+
+stock-save-as.png
+file
+
+
+
+
+2009-04-24T17:46:44.000000Z
+184fed19d2372d74107f333a0e139229
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+751
 
 stock-open.png
 file

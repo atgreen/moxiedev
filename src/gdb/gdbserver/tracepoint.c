@@ -22,9 +22,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <stddef.h>
-#if HAVE_MALLOC_H
-#include <malloc.h>
-#endif
 #if HAVE_STDINT_H
 #include <stdint.h>
 #endif
@@ -4129,13 +4126,10 @@ do_action_at_tracepoint (struct tracepoint_hit_ctx *ctx,
       }
     case 'R':
       {
-	struct collect_registers_action *raction;
-
 	unsigned char *regspace;
 	struct regcache tregcache;
 	struct regcache *context_regcache;
 
-	raction = (struct collect_registers_action *) taction;
 
 	trace_debug ("Want to collect registers");
 
@@ -6723,7 +6717,7 @@ gdb_ust_connect_sync_socket (int pid)
   int res, fd;
   char path[UNIX_PATH_MAX];
 
-  res = snprintf (path, UNIX_PATH_MAX, "%s/gdb_ust%d", SOCK_DIR, pid);
+  res = xsnprintf (path, UNIX_PATH_MAX, "%s/gdb_ust%d", SOCK_DIR, pid);
   if (res >= UNIX_PATH_MAX)
     {
       trace_debug ("string overflow allocating socket name");
@@ -6739,7 +6733,7 @@ gdb_ust_connect_sync_socket (int pid)
 
   addr.sun_family = AF_UNIX;
 
-  res = snprintf (addr.sun_path, UNIX_PATH_MAX, "%s", path);
+  res = xsnprintf (addr.sun_path, UNIX_PATH_MAX, "%s", path);
   if (res >= UNIX_PATH_MAX)
     {
       warning ("string overflow allocating socket name\n");
@@ -6964,8 +6958,8 @@ gdb_ust_socket_init (void)
   int result, fd;
   char name[UNIX_PATH_MAX];
 
-  result = snprintf (name, UNIX_PATH_MAX, "%s/gdb_ust%d",
-		     SOCK_DIR, getpid ());
+  result = xsnprintf (name, UNIX_PATH_MAX, "%s/gdb_ust%d",
+		      SOCK_DIR, getpid ());
   if (result >= UNIX_PATH_MAX)
     {
       trace_debug ("string overflow allocating socket name");

@@ -36,6 +36,11 @@
 #undef _POSIX_C_SOURCE
 #undef _XOPEN_SOURCE
 
+/* On sparc-solaris, /usr/include/sys/feature_tests.h defines
+   _FILE_OFFSET_BITS, which pyconfig.h also defines.  Same work
+   around technique as above.  */
+#undef _FILE_OFFSET_BITS
+
 #if HAVE_LIBPYTHON2_4
 #include "python2.4/Python.h"
 #include "python2.4/frameobject.h"
@@ -63,10 +68,9 @@ typedef int Py_ssize_t;
 #ifndef WITH_THREAD
 #define PyGILState_Ensure() ((PyGILState_STATE) 0)
 #define PyGILState_Release(ARG) ((void)(ARG))
-#define PyEval_InitThreads() 0
+#define PyEval_InitThreads()
 #define PyThreadState_Swap(ARG) ((void)(ARG))
-#define PyEval_InitThreads() 0
-#define PyEval_ReleaseLock() 0
+#define PyEval_ReleaseLock()
 #endif
 
 /* In order to be able to parse symtab_and_line_to_sal_object function 
@@ -75,6 +79,8 @@ typedef int Py_ssize_t;
 
 /* Also needed to parse enum var_types. */
 #include "command.h"
+
+#include "exceptions.h"
 
 struct block;
 struct value;
@@ -112,7 +118,6 @@ PyObject *gdbpy_create_lazy_string_object (CORE_ADDR address, long length,
 PyObject *gdbpy_inferiors (PyObject *unused, PyObject *unused2);
 PyObject *gdbpy_selected_thread (PyObject *self, PyObject *args);
 PyObject *gdbpy_string_to_argv (PyObject *self, PyObject *args);
-PyObject *gdbpy_get_hook_function (const char *);
 PyObject *gdbpy_parameter (PyObject *self, PyObject *args);
 PyObject *gdbpy_parameter_value (enum var_types type, void *var);
 char *gdbpy_parse_command_name (char *text,
@@ -176,9 +181,7 @@ extern const struct language_defn *python_language;
 #define GDB_PY_HANDLE_EXCEPTION(Exception)				\
     do {								\
       if (Exception.reason < 0)						\
-	return PyErr_Format (Exception.reason == RETURN_QUIT		\
-			     ? PyExc_KeyboardInterrupt : PyExc_RuntimeError, \
-			     "%s", Exception.message);			\
+	return gdbpy_convert_exception (Exception);			\
     } while (0)
 
 /* Use this after a TRY_EXCEPT to throw the appropriate Python
@@ -187,9 +190,7 @@ extern const struct language_defn *python_language;
     do {								\
       if (Exception.reason < 0)						\
         {								\
-	  PyErr_Format (Exception.reason == RETURN_QUIT			\
-			? PyExc_KeyboardInterrupt : PyExc_RuntimeError, \
-			"%s", Exception.message);			\
+	  gdbpy_convert_exception (Exception);				\
 	  return -1;							\
 	}								\
     } while (0)
@@ -210,16 +211,17 @@ char *gdbpy_obj_to_string (PyObject *obj);
 char *gdbpy_exception_to_string (PyObject *ptype, PyObject *pvalue);
 
 int gdbpy_is_lazy_string (PyObject *result);
-gdb_byte *gdbpy_extract_lazy_string (PyObject *string,
-				     struct type **str_type, 
-				     long *length, char **encoding);
+void gdbpy_extract_lazy_string (PyObject *string, CORE_ADDR *addr,
+				struct type **str_type, 
+				long *length, char **encoding);
 
 int gdbpy_is_value_object (PyObject *obj);
 
 /* Note that these are declared here, and not in python.h with the
    other pretty-printer functions, because they refer to PyObject.  */
 PyObject *apply_varobj_pretty_printer (PyObject *print_obj,
-				       struct value **replacement);
+				       struct value **replacement,
+				       struct ui_file *stream);
 PyObject *gdbpy_get_varobj_pretty_printer (struct value *value);
 char *gdbpy_get_display_hint (PyObject *printer);
 PyObject *gdbpy_default_visualizer (PyObject *self, PyObject *args);
@@ -230,7 +232,12 @@ extern PyObject *gdbpy_to_string_cst;
 extern PyObject *gdbpy_display_hint_cst;
 extern PyObject *gdbpy_enabled_cst;
 
+/* Exception types.  */
+extern PyObject *gdbpy_gdb_error;
+extern PyObject *gdbpy_gdb_memory_error;
 extern PyObject *gdbpy_gdberror_exc;
+
+extern PyObject *gdbpy_convert_exception (struct gdb_exception);
 
 int get_addr_from_python (PyObject *obj, CORE_ADDR *addr);
 

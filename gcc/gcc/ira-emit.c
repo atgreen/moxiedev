@@ -323,7 +323,7 @@ setup_entered_from_non_parent_p (void)
   unsigned int i;
   loop_p loop;
 
-  for (i = 0; VEC_iterate (loop_p, ira_loops.larray, i, loop); i++)
+  FOR_EACH_VEC_ELT (loop_p, ira_loops.larray, i, loop)
     if (ira_loop_nodes[i].regno_allocno_map != NULL)
       ira_loop_nodes[i].entered_from_non_parent_p
 	= entered_from_non_parent_p (&ira_loop_nodes[i]);
@@ -367,7 +367,8 @@ store_can_be_removed_p (ira_allocno_t src_allocno, ira_allocno_t dest_allocno)
 	   prohibit removal of the store in such complicated case.  */
 	return false;
     }
-  gcc_unreachable ();
+  /* It is actually a loop entry -- do not remove the store.  */
+  return false;
 }
 
 /* Generate and attach moves to the edge E.  This looks at the final
@@ -521,8 +522,7 @@ change_loop (ira_loop_tree_node_t node)
       regno = ALLOCNO_REGNO (allocno);
       if (ALLOCNO_CAP_MEMBER (allocno) != NULL)
 	continue;
-      used_p = bitmap_bit_p (used_regno_bitmap, regno);
-      bitmap_set_bit (used_regno_bitmap, regno);
+      used_p = !bitmap_set_bit (used_regno_bitmap, regno);
       ALLOCNO_SOMEWHERE_RENAMED_P (allocno) = true;
       if (! used_p)
 	continue;

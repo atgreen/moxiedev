@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/manipulators/extended/get_money/char
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-03-01T19:12:39.086894Z
-157153
+2010-09-15T10:46:39.518825Z
+164300
 paolo
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2010-03-13T05:48:42.132710Z
-0485649bf37ae856e875ce576556674d
-2010-03-01T19:12:39.086894Z
-157153
+2010-11-22T19:18:16.798783Z
+d9d5512bc8a22c7098a4b6ede9fadba4
+2010-09-15T10:46:39.518825Z
+164300
 paolo
 
 
@@ -58,5 +58,5 @@ paolo
 
 
 
-1292
+1302
 

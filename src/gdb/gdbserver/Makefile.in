@@ -86,15 +86,18 @@ INCLUDE_CFLAGS = -I. -I${srcdir} -I$(srcdir)/../common \
 GLOBAL_CFLAGS = ${MT_CFLAGS} ${MH_CFLAGS}
 #PROFILE_CFLAGS = -pg
 
-WARN_CFLAGS = -Wall
+WARN_CFLAGS = @WARN_CFLAGS@
+WERROR_CFLAGS = @WERROR_CFLAGS@
 
 # CFLAGS is specifically reserved for setting from the command line
 # when running make.  I.E.  "make CFLAGS=-Wmissing-prototypes".
 CFLAGS = @CFLAGS@
 
 # INTERNAL_CFLAGS is the aggregate of all other *CFLAGS macros.
-INTERNAL_CFLAGS =  $(WARN_CFLAGS) ${CFLAGS} ${GLOBAL_CFLAGS} \
+INTERNAL_CFLAGS_BASE =  ${CFLAGS} ${GLOBAL_CFLAGS} \
 	${PROFILE_CFLAGS} ${INCLUDE_CFLAGS}
+INTERNAL_WARN_CFLAGS =  ${INTERNAL_CFLAGS_BASE} $(WARN_CFLAGS)
+INTERNAL_CFLAGS =  ${INTERNAL_WARN_CFLAGS} $(WERROR_CFLAGS)
 
 # LDFLAGS is specifically reserved for setting from the command line
 # when running make.
@@ -148,6 +151,38 @@ XML_BUILTIN = @srv_xmlbuiltin@
 IPA_DEPFILES = @IPA_DEPFILES@
 extra_libraries = @extra_libraries@
 
+FLAGS_TO_PASS = \
+	"prefix=$(prefix)" \
+	"exec_prefix=$(exec_prefix)" \
+	"infodir=$(infodir)" \
+	"datarootdir=$(datarootdir)" \
+	"docdir=$(docdir)" \
+	"htmldir=$(htmldir)" \
+	"pdfdir=$(pdfdir)" \
+	"libdir=$(libdir)" \
+	"mandir=$(mandir)" \
+	"datadir=$(datadir)" \
+	"includedir=$(includedir)" \
+	"against=$(against)" \
+	"DESTDIR=$(DESTDIR)" \
+	"AR=$(AR)" \
+	"AR_FLAGS=$(AR_FLAGS)" \
+	"CC=$(CC)" \
+	"CFLAGS=$(CFLAGS)" \
+	"CXX=$(CXX)" \
+	"CXXFLAGS=$(CXXFLAGS)" \
+	"DLLTOOL=$(DLLTOOL)" \
+	"LDFLAGS=$(LDFLAGS)" \
+	"RANLIB=$(RANLIB)" \
+	"MAKEINFO=$(MAKEINFO)" \
+	"MAKEHTML=$(MAKEHTML)" \
+	"MAKEHTMLFLAGS=$(MAKEHTMLFLAGS)" \
+	"INSTALL=$(INSTALL)" \
+	"INSTALL_PROGRAM=$(INSTALL_PROGRAM)" \
+	"INSTALL_DATA=$(INSTALL_DATA)" \
+	"RUNTEST=$(RUNTEST)" \
+	"RUNTESTFLAGS=$(RUNTESTFLAGS)"
+
 # Prevent Sun make from putting in the machine type.  Setting
 # TARGET_ARCH to nothing works for SunOS 3, 4.0, but not for 4.1.
 .c.o:
@@ -160,11 +195,13 @@ all: gdbserver$(EXEEXT) gdbreplay$(EXEEXT) $(extra_libraries)
 # source file and doesn't care about rebuilding or just wants to save the
 # time it takes for make to check that all is up to date.
 # install-only is intended to address that need.
-install: all install-only
+install: all
+	@$(MAKE) $(FLAGS_TO_PASS) install-only
+
 install-only:
 	n=`echo gdbserver | sed '$(program_transform_name)'`; \
 	if [ x$$n = x ]; then n=gdbserver; else true; fi; \
-	if [ x$IPA_DEPFILES != x ]; then \
+	if [ x"$(IPA_DEPFILES)" != x ]; then \
 		$(SHELL) $(srcdir)/../../mkinstalldirs $(DESTDIR)$(libdir); \
 		$(INSTALL_PROGRAM) $(IPA_LIB) $(DESTDIR)$(libdir)/$(IPA_LIB); \
 	fi; \
@@ -176,7 +213,7 @@ install-only:
 uninstall: force
 	n=`echo gdbserver | sed '$(program_transform_name)'`; \
 	if [ x$$n = x ]; then n=gdbserver; else true; fi; \
-	rm -f $(bindir)/$$n$(EXEEXT) $(DESTDIR)$(man1dir)/$$n.1
+	rm -f $(DESTDIR)/$(bindir)/$$n$(EXEEXT) $(DESTDIR)$(man1dir)/$$n.1
 
 installcheck:
 check:
@@ -232,7 +269,7 @@ clean:
 	rm -f arm-with-iwmmxt.c
 	rm -f arm-with-vfpv2.c arm-with-vfpv3.c arm-with-neon.c
 	rm -f mips-linux.c mips64-linux.c
-	rm -f powerpc-32l.c powerpc-64l.c powerpc-e500l.c
+	rm -f powerpc-32.c powerpc-32l.c powerpc-64l.c powerpc-e500l.c
 	rm -f powerpc-altivec32l.c powerpc-cell32l.c powerpc-vsx32l.c
 	rm -f powerpc-altivec64l.c powerpc-cell64l.c powerpc-vsx64l.c
 	rm -f powerpc-isa205-32l.c powerpc-isa205-64l.c
@@ -292,10 +329,15 @@ gdb_proc_service_h = $(srcdir)/gdb_proc_service.h
 regdat_sh = $(srcdir)/../regformats/regdat.sh
 regdef_h = $(srcdir)/../regformats/regdef.h
 regcache_h = $(srcdir)/regcache.h
+signals_def = $(srcdir)/../../include/gdb/signals.def
+signals_h = $(srcdir)/../../include/gdb/signals.h $(signals_def)
 server_h = $(srcdir)/server.h $(regcache_h) config.h $(srcdir)/target.h \
-		$(srcdir)/mem-break.h $(srcdir)/../common/gdb_signals.h
+		$(srcdir)/mem-break.h $(srcdir)/../common/gdb_signals.h \
+		$(signals_h)
 
 linux_low_h = $(srcdir)/linux-low.h
+
+lynx_low_h = $(srcdir)/lynx-low.h $(srcdir)/server.h
 
 nto_low_h = $(srcdir)/nto-low.h
 
@@ -340,11 +382,25 @@ tracepoint.o: tracepoint.c $(server_h)
 utils.o: utils.c $(server_h)
 gdbreplay.o: gdbreplay.c config.h
 
-signals.o: ../common/signals.c $(server_h)
+signals.o: ../common/signals.c $(server_h) $(signals_def)
 	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
 
+# We build memmem.c without -Werror because this file is not under
+# our control.  On LynxOS, the compiler generates some warnings
+# because str-two-way.h uses a constant (MAX_SIZE) whose definition
+# makes it ambiguous whether it is signed or unsigned ("warning: this
+# decimal constant is unsigned only in ISO C90").
 memmem.o: ../gnulib/memmem.c
-	$(CC) -o memmem.o -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $<
+	$(CC) -o memmem.o -c $(CPPFLAGS) $(INTERNAL_WARN_CFLAGS) $<
+
+# We build vasprintf with -DHAVE_CONFIG_H because we want that unit to
+# include our config.h file.  Otherwise, some system headers do not get
+# included, and the compiler emits a warning about implicitly defined
+# functions (missing declaration).
+vasprintf.o: $(srcdir)/../../libiberty/vasprintf.c
+	$(CC) -o vasprintf.o -c $(CPPFLAGS) $(INTERNAL_CFLAGS) -DHAVE_CONFIG_H $<
+vsnprintf.o: $(srcdir)/../../libiberty/vsnprintf.c
+	$(CC) -o vsnprintf.o -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $<
 
 i386_low_h = $(srcdir)/i386-low.h
 
@@ -370,6 +426,8 @@ linux-x86-low.o: linux-x86-low.c $(linux_low_h) $(server_h) \
 	$(gdb_proc_service_h) $(i386_low_h)
 linux-xtensa-low.o: linux-xtensa-low.c xtensa-xtregs.c $(linux_low_h) $(server_h)
 
+lynx-low.o: lynx-low.c $(server_h) $(target_h) $(lynx_low_h)
+lynx-ppc-low.o: lynx-ppc-low.c $(server_h) $(lynx_low_h)
 nto-low.o: nto-low.c $(server_h) $(nto_low_h)
 nto-x86-low.o: nto-x86-low.c $(server_h) $(nto_low_h) $(regdef_h) $(regcache_h)
 
@@ -439,6 +497,9 @@ mips-linux.c : $(srcdir)/../regformats/mips-linux.dat $(regdat_sh)
 mips64-linux.o : mips64-linux.c $(regdef_h)
 mips64-linux.c : $(srcdir)/../regformats/mips64-linux.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/mips64-linux.dat mips64-linux.c
+powerpc-32.o : powerpc-32.c $(regdef_h)
+powerpc-32.c : $(srcdir)/../regformats/rs6000/powerpc-32.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/rs6000/powerpc-32.dat powerpc-32.c
 powerpc-32l.o : powerpc-32l.c $(regdef_h)
 powerpc-32l.c : $(srcdir)/../regformats/rs6000/powerpc-32l.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/rs6000/powerpc-32l.dat powerpc-32l.c

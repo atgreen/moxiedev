@@ -24,6 +24,7 @@
 #include "filenames.h"		/* For DOSish file names.  */
 #include "language.h"
 #include "gdb_assert.h"
+#include "exceptions.h"
 
 #include "cli/cli-decode.h"
 
@@ -350,7 +351,15 @@ count_struct_fields (struct type *type)
       if (i < TYPE_N_BASECLASSES (type))
 	result += count_struct_fields (TYPE_BASECLASS (type, i));
       else if (TYPE_FIELD_NAME (type, i))
-	++result;
+	{
+	  if (TYPE_FIELD_NAME (type, i)[0] != '\0')
+	    ++result;
+	  else if (TYPE_CODE (TYPE_FIELD_TYPE (type, i)) == TYPE_CODE_UNION)
+	    {
+	      /* Recurse into anonymous unions.  */
+	      result += count_struct_fields (TYPE_FIELD_TYPE (type, i));
+	    }
+	}
     }
 
   for (i = TYPE_NFN_FIELDS (type) - 1; i >= 0; --i)
@@ -379,11 +388,22 @@ add_struct_fields (struct type *type, int *nextp, char **output,
       if (i < TYPE_N_BASECLASSES (type))
 	add_struct_fields (TYPE_BASECLASS (type, i), nextp, output,
 			   fieldname, namelen);
-      else if (TYPE_FIELD_NAME (type, i)
-	       && ! strncmp (TYPE_FIELD_NAME (type, i), fieldname, namelen))
+      else if (TYPE_FIELD_NAME (type, i))
 	{
-	  output[*nextp] = xstrdup (TYPE_FIELD_NAME (type, i));
-	  ++*nextp;
+	  if (TYPE_FIELD_NAME (type, i)[0] != '\0')
+	    {
+	      if (! strncmp (TYPE_FIELD_NAME (type, i), fieldname, namelen))
+		{
+		  output[*nextp] = xstrdup (TYPE_FIELD_NAME (type, i));
+		  ++*nextp;
+		}
+	    }
+	  else if (TYPE_CODE (TYPE_FIELD_TYPE (type, i)) == TYPE_CODE_UNION)
+	    {
+	      /* Recurse into anonymous unions.  */
+	      add_struct_fields (TYPE_FIELD_TYPE (type, i), nextp, output,
+				 fieldname, namelen);
+	    }
 	}
     }
 
@@ -414,13 +434,19 @@ add_struct_fields (struct type *type, int *nextp, char **output,
 char **
 expression_completer (struct cmd_list_element *ignore, char *text, char *word)
 {
-  struct type *type;
+  struct type *type = NULL;
   char *fieldname, *p;
+  volatile struct gdb_exception except;
 
   /* Perform a tentative parse of the expression, to see whether a
      field completion is required.  */
   fieldname = NULL;
-  type = parse_field_expression (text, &fieldname);
+  TRY_CATCH (except, RETURN_MASK_ERROR)
+    {
+      type = parse_field_expression (text, &fieldname);
+    }
+  if (except.reason < 0)
+    return NULL;
   if (fieldname && type)
     {
       for (;;)

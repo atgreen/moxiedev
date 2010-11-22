@@ -80,7 +80,7 @@ struct lm_info
    SVR4 systems will fall back to using a symbol as the "startup
    mapping complete" breakpoint address.  */
 
-static char *solib_break_names[] =
+static const char * const solib_break_names[] =
 {
   "r_debug_state",
   "_r_debug_state",
@@ -92,7 +92,7 @@ static char *solib_break_names[] =
   NULL
 };
 
-static char *bkpt_names[] =
+static const char * const bkpt_names[] =
 {
   "_start",
   "__start",
@@ -100,7 +100,7 @@ static char *bkpt_names[] =
   NULL
 };
 
-static char *main_name_list[] =
+static const  char * const main_name_list[] =
 {
   "main_$main",
   NULL
@@ -357,9 +357,7 @@ get_svr4_info (void)
 
 /* Local function prototypes */
 
-static int match_main (char *);
-
-static CORE_ADDR bfd_lookup_symbol (bfd *, char *);
+static int match_main (const char *);
 
 /*
 
@@ -387,7 +385,7 @@ static CORE_ADDR bfd_lookup_symbol (bfd *, char *);
  */
 
 static CORE_ADDR
-bfd_lookup_symbol (bfd *abfd, char *symname)
+bfd_lookup_symbol (bfd *abfd, const char *symname)
 {
   long storage_needed;
   asymbol *sym;
@@ -1253,9 +1251,9 @@ svr4_fetch_objfile_link_map (struct objfile *objfile)
    non-zero iff SONAME matches one of the known main executable names.  */
 
 static int
-match_main (char *soname)
+match_main (const char *soname)
 {
-  char **mainp;
+  const char * const *mainp;
 
   for (mainp = main_name_list; *mainp != NULL; mainp++)
     {
@@ -1347,7 +1345,7 @@ static int
 enable_break (struct svr4_info *info, int from_tty)
 {
   struct minimal_symbol *msymbol;
-  char **bkpt_namep;
+  const char * const *bkpt_namep;
   asection *interp_sect;
   gdb_byte *interp_name;
   CORE_ADDR sym_addr;
@@ -1846,6 +1844,7 @@ svr4_exec_displacement (CORE_ADDR *displacementp)
 		  Elf32_External_Phdr *phdr2p;
 		  gdb_byte *buf_vaddr_p, *buf_paddr_p;
 		  CORE_ADDR vaddr, paddr;
+		  asection *plt2_asect;
 
 		  phdrp = &((Elf32_External_Phdr *) buf)[i];
 		  buf_vaddr_p = (gdb_byte *) &phdrp->p_vaddr;
@@ -1870,6 +1869,34 @@ svr4_exec_displacement (CORE_ADDR *displacementp)
 
 		  if (memcmp (phdrp, phdr2p, sizeof (*phdrp)) == 0)
 		    continue;
+
+		  /* prelink can convert .plt SHT_NOBITS to SHT_PROGBITS.  */
+		  plt2_asect = bfd_get_section_by_name (exec_bfd, ".plt");
+		  if (plt2_asect)
+		    {
+		      int content2;
+		      gdb_byte *buf_filesz_p = (gdb_byte *) &phdrp->p_filesz;
+		      CORE_ADDR filesz;
+
+		      content2 = (bfd_get_section_flags (exec_bfd, plt2_asect)
+				  & SEC_HAS_CONTENTS) != 0;
+
+		      filesz = extract_unsigned_integer (buf_filesz_p, 4,
+							 byte_order);
+
+		      /* PLT2_ASECT is from on-disk file (exec_bfd) while
+			 FILESZ is from the in-memory image.  */
+		      if (content2)
+			filesz += bfd_get_section_size (plt2_asect);
+		      else
+			filesz -= bfd_get_section_size (plt2_asect);
+
+		      store_unsigned_integer (buf_filesz_p, 4, byte_order,
+					      filesz);
+
+		      if (memcmp (phdrp, phdr2p, sizeof (*phdrp)) == 0)
+			continue;
+		    }
 
 		  ok = 0;
 		  break;
@@ -1923,6 +1950,7 @@ svr4_exec_displacement (CORE_ADDR *displacementp)
 		  Elf64_External_Phdr *phdr2p;
 		  gdb_byte *buf_vaddr_p, *buf_paddr_p;
 		  CORE_ADDR vaddr, paddr;
+		  asection *plt2_asect;
 
 		  phdrp = &((Elf64_External_Phdr *) buf)[i];
 		  buf_vaddr_p = (gdb_byte *) &phdrp->p_vaddr;
@@ -1947,6 +1975,34 @@ svr4_exec_displacement (CORE_ADDR *displacementp)
 
 		  if (memcmp (phdrp, phdr2p, sizeof (*phdrp)) == 0)
 		    continue;
+
+		  /* prelink can convert .plt SHT_NOBITS to SHT_PROGBITS.  */
+		  plt2_asect = bfd_get_section_by_name (exec_bfd, ".plt");
+		  if (plt2_asect)
+		    {
+		      int content2;
+		      gdb_byte *buf_filesz_p = (gdb_byte *) &phdrp->p_filesz;
+		      CORE_ADDR filesz;
+
+		      content2 = (bfd_get_section_flags (exec_bfd, plt2_asect)
+				  & SEC_HAS_CONTENTS) != 0;
+
+		      filesz = extract_unsigned_integer (buf_filesz_p, 8,
+							 byte_order);
+
+		      /* PLT2_ASECT is from on-disk file (exec_bfd) while
+			 FILESZ is from the in-memory image.  */
+		      if (content2)
+			filesz += bfd_get_section_size (plt2_asect);
+		      else
+			filesz -= bfd_get_section_size (plt2_asect);
+
+		      store_unsigned_integer (buf_filesz_p, 8, byte_order,
+					      filesz);
+
+		      if (memcmp (phdrp, phdr2p, sizeof (*phdrp)) == 0)
+			continue;
+		    }
 
 		  ok = 0;
 		  break;

@@ -474,6 +474,7 @@ static const struct opcode32 coprocessor_opcodes[] =
   {ARM_EXT_V5E, 0x0c400000, 0x0ff00000, "mcrr%c\t%8-11d, %4-7d, %12-15R, %16-19r, cr%0-3d"},
   {ARM_EXT_V5E, 0x0c500000, 0x0ff00000, "mrrc%c\t%8-11d, %4-7d, %12-15Ru, %16-19Ru, cr%0-3d"},
   {ARM_EXT_V2, 0x0e000000, 0x0f000010, "cdp%c\t%8-11d, %20-23d, cr%12-15d, cr%16-19d, cr%0-3d, {%5-7d}"},
+  {ARM_EXT_V2, 0x0e10f010, 0x0f10f010, "mrc%c\t%8-11d, %21-23d, APSR_nzcv, cr%16-19d, cr%0-3d, {%5-7d}"},
   {ARM_EXT_V2, 0x0e100010, 0x0f100010, "mrc%c\t%8-11d, %21-23d, %12-15r, cr%16-19d, cr%0-3d, {%5-7d}"},
   {ARM_EXT_V2, 0x0e000010, 0x0f100010, "mcr%c\t%8-11d, %21-23d, %12-15R, cr%16-19d, cr%0-3d, {%5-7d}"},
   {ARM_EXT_V2, 0x0c000000, 0x0e100000, "stc%22'l%c\t%8-11d, cr%12-15d, %A"},
@@ -815,7 +816,8 @@ static const struct opcode32 neon_opcodes[] =
 
    %e                   print arm SMI operand (bits 0..7,8..19).
    %E			print the LSB and WIDTH fields of a BFI or BFC instruction.
-   %V                   print the 16-bit immediate field of a MOVT or MOVW instruction.  */
+   %V                   print the 16-bit immediate field of a MOVT or MOVW instruction.
+   %R			print the SPSR/CPSR or banked register of an MRS.  */
 
 static const struct opcode32 arm_opcodes[] =
 {
@@ -827,6 +829,17 @@ static const struct opcode32 arm_opcodes[] =
   {ARM_EXT_V2S, 0x01000090, 0x0fb00ff0, "swp%22'b%c\t%12-15RU, %0-3Ru, [%16-19RuU]"},
   {ARM_EXT_V3M, 0x00800090, 0x0fa000f0, "%22?sumull%20's%c\t%12-15Ru, %16-19Ru, %0-3R, %8-11R"},
   {ARM_EXT_V3M, 0x00a00090, 0x0fa000f0, "%22?sumlal%20's%c\t%12-15Ru, %16-19Ru, %0-3R, %8-11R"},
+
+  /* Virtualization Extension instructions.  */
+  {ARM_EXT_VIRT, 0x0160006e, 0x0fffffff, "eret%c"},
+  {ARM_EXT_VIRT, 0x01400070, 0x0ff000f0, "hvc%c\t%e"},
+
+  /* Integer Divide Extension instructions.  */
+  {ARM_EXT_ADIV, 0x0710f010, 0x0ff0f0f0, "sdiv%c\t%16-19r, %0-3r, %8-11r"},
+  {ARM_EXT_ADIV, 0x0730f010, 0x0ff0f0f0, "udiv%c\t%16-19r, %0-3r, %8-11r"},
+
+  /* MP Extension instructions.  */
+  {ARM_EXT_MP, 0xf410f000, 0xfc70f000, "pldw\t%a"},
 
   /* V7 instructions.  */
   {ARM_EXT_V7, 0xf450f000, 0xfd70f000, "pli\t%P"},
@@ -849,8 +862,8 @@ static const struct opcode32 arm_opcodes[] =
   {ARM_EXT_V6T2, 0x06ff0f30, 0x0fff0ff0, "rbit%c\t%12-15R, %0-3R"},
   {ARM_EXT_V6T2, 0x07a00050, 0x0fa00070, "%22?usbfx%c\t%12-15r, %0-3r, #%7-11d, #%16-20W"},
 
-  /* ARM V6Z instructions.  */
-  {ARM_EXT_V6Z, 0x01600070, 0x0ff000f0, "smc%c\t%e"},
+  /* ARM Security extension instructions.  */
+  {ARM_EXT_SEC, 0x01600070, 0x0ff000f0, "smc%c\t%e"},
 
   /* ARM V6K instructions.  */
   {ARM_EXT_V6K, 0xf57ff01f, 0xffffffff, "clrex"},
@@ -1083,8 +1096,9 @@ static const struct opcode32 arm_opcodes[] =
   {ARM_EXT_V1, 0x00e00000, 0x0fe00010, "rsc%20's%c\t%12-15r, %16-19r, %o"},
   {ARM_EXT_V1, 0x00e00010, 0x0fe00090, "rsc%20's%c\t%12-15R, %16-19R, %o"},
 
-  {ARM_EXT_V3, 0x0120f000, 0x0db0f000, "msr%c\t%22?SCPSR%C, %o"},
-  {ARM_EXT_V3, 0x010f0000, 0x0fbf0fff, "mrs%c\t%12-15R, %22?SCPSR"},
+  {ARM_EXT_VIRT, 0x0120f200, 0x0fb0f200, "msr%c\t%C, %0-3r"},
+  {ARM_EXT_V3, 0x0120f000, 0x0db0f000, "msr%c\t%C, %o"},
+  {ARM_EXT_V3, 0x01000000, 0x0fb00cff, "mrs%c\t%12-15R, %R"},
 
   {ARM_EXT_V1, 0x03000000, 0x0fe00000, "tst%p%c\t%16-19r, %o"},
   {ARM_EXT_V1, 0x01000000, 0x0fe00010, "tst%p%c\t%16-19r, %o"},
@@ -1095,7 +1109,6 @@ static const struct opcode32 arm_opcodes[] =
   {ARM_EXT_V1, 0x01200010, 0x0fe00090, "teq%p%c\t%16-19R, %o"},
 
   {ARM_EXT_V1, 0x03400000, 0x0fe00000, "cmp%p%c\t%16-19r, %o"},
-  {ARM_EXT_V3, 0x01400000, 0x0ff00010, "mrs%c\t%12-15R, %22?SCPSR"},
   {ARM_EXT_V1, 0x01400000, 0x0fe00010, "cmp%p%c\t%16-19r, %o"},
   {ARM_EXT_V1, 0x01400010, 0x0fe00090, "cmp%p%c\t%16-19R, %o"},
 
@@ -1305,6 +1318,7 @@ static const struct opcode16 thumb_opcodes[] =
        %M		print a modified 12-bit immediate (same location)
        %J		print a 16-bit immediate from hw1[3:0,10],hw2[14:12,7:0]
        %K		print a 16-bit immediate from hw2[3:0],hw1[3:0],hw2[11:4]
+       %H		print a 16-bit immediate from hw2[3:0],hw1[11:0]
        %S		print a possibly-shifted Rm
 
        %a		print the address of a plain load/store
@@ -1352,6 +1366,16 @@ static const struct opcode32 thumb32_opcodes[] =
   {ARM_EXT_DIV, 0xfb90f0f0, 0xfff0f0f0, "sdiv%c\t%8-11r, %16-19r, %0-3r"},
   {ARM_EXT_DIV, 0xfbb0f0f0, 0xfff0f0f0, "udiv%c\t%8-11r, %16-19r, %0-3r"},
 
+  /* Virtualization Extension instructions.  */
+  {ARM_EXT_VIRT, 0xf7e08000, 0xfff0f000, "hvc%c\t%V"},
+  /* We skip ERET as that is SUBS pc, lr, #0.  */
+
+  /* MP Extension instructions.  */
+  {ARM_EXT_MP,   0xf830f000, 0xff70f000, "pldw%c\t%a"},
+
+  /* Security extension instructions.  */
+  {ARM_EXT_SEC,  0xf7f08000, 0xfff0f000, "smc%c\t%K"},
+
   /* Instructions defined in the basic V6T2 set.  */
   {ARM_EXT_V6T2, 0xf3af8000, 0xffffffff, "nop%c.w"},
   {ARM_EXT_V6T2, 0xf3af8001, 0xffffffff, "yield%c.w"},
@@ -1366,7 +1390,7 @@ static const struct opcode32 thumb32_opcodes[] =
   {ARM_EXT_V6T2, 0xf3c08f00, 0xfff0ffff, "bxj%c\t%16-19r%x"},
   {ARM_EXT_V6T2, 0xe810c000, 0xffd0ffff, "rfedb%c\t%16-19r%21'!"},
   {ARM_EXT_V6T2, 0xe990c000, 0xffd0ffff, "rfeia%c\t%16-19r%21'!"},
-  {ARM_EXT_V6T2, 0xf3ef8000, 0xffeff000, "mrs%c\t%8-11r, %D"},
+  {ARM_EXT_V6T2, 0xf3e08000, 0xffe0f000, "mrs%c\t%8-11r, %D"},
   {ARM_EXT_V6T2, 0xf3af8100, 0xffffffe0, "cps\t#%0-4d%X"},
   {ARM_EXT_V6T2, 0xe8d0f000, 0xfff0fff0, "tbb%c\t[%16-19r, %0-3r]%x"},
   {ARM_EXT_V6T2, 0xe8d0f010, 0xfff0fff0, "tbh%c\t[%16-19r, %0-3r, lsl #1]%x"},
@@ -1473,7 +1497,6 @@ static const struct opcode32 thumb32_opcodes[] =
   {ARM_EXT_V6T2, 0xfbe00000, 0xfff000f0, "umlal%c\t%12-15R, %8-11R, %16-19R, %0-3R"},
   {ARM_EXT_V6T2, 0xfbe00060, 0xfff000f0, "umaal%c\t%12-15R, %8-11R, %16-19R, %0-3R"},
   {ARM_EXT_V6T2, 0xe8500f00, 0xfff00f00, "ldrex%c\t%12-15r, [%16-19r, #%0-7W]"},
-  {ARM_EXT_V6T2, 0xf7f08000, 0xfff0f000, "smc%c\t%K"},
   {ARM_EXT_V6T2, 0xf04f0000, 0xfbef8000, "mov%20's%c.w\t%8-11r, %M"},
   {ARM_EXT_V6T2, 0xf06f0000, 0xfbef8000, "mvn%20's%c.w\t%8-11r, %M"},
   {ARM_EXT_V6T2, 0xf810f000, 0xff70f000, "pld%c\t%a"},
@@ -1887,8 +1910,12 @@ print_insn_coprocessor (bfd_vma pc,
 		    if (rn == 15 && (PRE_BIT_SET || WRITEBACK_BIT_SET))
 		      {
 			func (stream, "\t; ");
-			info->print_address_func (offset + pc
-						  + info->bytes_per_chunk * 2, info);
+			/* For unaligned PCs, apply off-by-alignment
+			   correction.  */
+			info->print_address_func (offset + pc 
+						  + info->bytes_per_chunk * 2
+						  - (pc & 3),
+				 		  info);
 		      }
 		  }
 		  break;
@@ -2849,6 +2876,52 @@ print_insn_neon (struct disassemble_info *info, long given, bfd_boolean thumb)
   return FALSE;
 }
 
+/* Return the name of a v7A special register.  */
+
+static const char * 
+banked_regname (unsigned reg)
+{
+  switch (reg)
+    {
+      case 15: return "CPSR";
+      case 32: return "R8_usr"; 
+      case 33: return "R9_usr";
+      case 34: return "R10_usr";
+      case 35: return "R11_usr";
+      case 36: return "R12_usr";
+      case 37: return "SP_usr";
+      case 38: return "LR_usr";
+      case 40: return "R8_fiq"; 
+      case 41: return "R9_fiq";
+      case 42: return "R10_fiq";
+      case 43: return "R11_fiq";
+      case 44: return "R12_fiq";
+      case 45: return "SP_fiq";
+      case 46: return "LR_fiq";
+      case 48: return "LR_irq";
+      case 49: return "SP_irq";
+      case 50: return "LR_svc";
+      case 51: return "SP_svc";
+      case 52: return "LR_abt";
+      case 53: return "SP_abt";
+      case 54: return "LR_und";
+      case 55: return "SP_und";
+      case 60: return "LR_mon";
+      case 61: return "SP_mon";
+      case 62: return "ELR_hyp";
+      case 63: return "SP_hyp";
+      case 79: return "SPSR";
+      case 110: return "SPSR_fiq";
+      case 112: return "SPSR_irq";
+      case 114: return "SPSR_svc";
+      case 116: return "SPSR_abt";
+      case 118: return "SPSR_und";
+      case 124: return "SPSR_mon";
+      case 126: return "SPSR_hyp";
+      default: return NULL;
+    }
+}
+
 /* Print one ARM instruction from PC on INFO->STREAM.  */
 
 static void
@@ -3143,15 +3216,32 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, long given)
 		      break;
 
 		    case 'C':
-		      func (stream, "_");
-		      if (given & 0x80000)
-			func (stream, "f");
-		      if (given & 0x40000)
-			func (stream, "s");
-		      if (given & 0x20000)
-			func (stream, "x");
-		      if (given & 0x10000)
-			func (stream, "c");
+		      if ((given & 0x02000200) == 0x200)
+			{
+			  const char * name;
+			  unsigned sysm = (given & 0x004f0000) >> 16;
+
+			  sysm |= (given & 0x300) >> 4;
+			  name = banked_regname (sysm);
+
+			  if (name != NULL)
+			    func (stream, "%s", name);
+			  else
+			    func (stream, "(UNDEF: %lu)", sysm);
+			}
+		      else
+			{
+			  func (stream, "%cPSR_", 
+				(given & 0x00400000) ? 'S' : 'C');
+			  if (given & 0x80000)
+			    func (stream, "f");
+			  if (given & 0x40000)
+			    func (stream, "s");
+			  if (given & 0x20000)
+			    func (stream, "x");
+			  if (given & 0x10000)
+			    func (stream, "c");
+			}
 		      break;
 
 		    case 'U':
@@ -3286,6 +3376,22 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, long given)
 			    func (stream, "#%lu, #%lu", lsb, w);
 			  else
 			    func (stream, "(invalid: %lu:%lu)", lsb, msb);
+			}
+			break;
+
+		      case 'R':
+			/* Get the PSR/banked register name.  */
+			{
+			  const char * name;
+			  unsigned sysm = (given & 0x004f0000) >> 16;
+
+			  sysm |= (given & 0x300) >> 4;
+			  name = banked_regname (sysm);
+
+			  if (name != NULL)
+			    func (stream, "%s", name);
+			  else
+			    func (stream, "(UNDEF: %lu)", sysm);
 			}
 			break;
 
@@ -3733,6 +3839,17 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, long given)
 		}
 		break;
 
+	      case 'V':
+		{
+		  unsigned int imm = 0;
+
+		  imm |= (given & 0x00000fffu);
+		  imm |= (given & 0x000f0000u) >> 4;
+		  func (stream, "#%u", imm);
+		  value_in_comment = imm;
+		}
+		break;
+
 	      case 'S':
 		{
 		  unsigned int reg = (given & 0x0000000fu);
@@ -4057,6 +4174,20 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, long given)
 		    if (given & 0x100)
 		      func (stream, "c");
 		  }
+		else if ((given & 0x20) == 0x20)
+		  {
+		    char const* name;
+		    unsigned sysm = (given & 0xf00) >> 8;
+
+		    sysm |= (given & 0x30);
+		    sysm |= (given & 0x00100000) >> 14;
+		    name = banked_regname (sysm);
+		    
+		    if (name != NULL)
+		      func (stream, "%s", name);
+		    else
+		      func (stream, "(UNDEF: %lu)", sysm);
+		  }
 		else
 		  {
 		    func (stream, psr_name (given & 0xff));
@@ -4064,8 +4195,21 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, long given)
 		break;
 
 	      case 'D':
-		if ((given & 0xff) == 0)
-		  func (stream, "%cPSR", (given & 0x100000) ? 'S' : 'C');
+		if (((given & 0xff) == 0)
+		    || ((given & 0x20) == 0x20))
+		  {
+		    char const* name;
+		    unsigned sm = (given & 0xf0000) >> 16;
+
+		    sm |= (given & 0x30);
+		    sm |= (given & 0x00100000) >> 14;
+		    name = banked_regname (sm);
+
+		    if (name != NULL)
+		      func (stream, "%s", name);
+		    else
+		      func (stream, "(UNDEF: %lu)", sm);
+		  }
 		else
 		  func (stream, psr_name (given & 0xff));
 		break;

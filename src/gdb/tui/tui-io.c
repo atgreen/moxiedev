@@ -545,6 +545,7 @@ tui_setup_io (int mode)
       gdb_stderr = tui_stderr;
       gdb_stdlog = gdb_stdout;	/* for moment */
       gdb_stdtarg = gdb_stderr;	/* for moment */
+      gdb_stdtargerr = gdb_stderr;	/* for moment */
       uiout = tui_out;
 
       /* Save tty for SIGCONT.  */
@@ -557,6 +558,7 @@ tui_setup_io (int mode)
       gdb_stderr = tui_old_stderr;
       gdb_stdlog = gdb_stdout;	/* for moment */
       gdb_stdtarg = gdb_stderr;	/* for moment */
+      gdb_stdtargerr = gdb_stderr;	/* for moment */
       uiout = tui_old_uiout;
 
       /* Restore readline.  */
@@ -711,6 +713,7 @@ tui_handle_resize_during_io (unsigned int original_ch)
 {
   if (tui_win_resized ())
     {
+      tui_resize_all ();
       tui_refresh_all_win ();
       dont_repeat ();
       tui_set_win_resized_to (FALSE);

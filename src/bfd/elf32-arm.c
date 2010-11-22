@@ -1829,7 +1829,7 @@ elf32_arm_nabi_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
 	elf_tdata (abfd)->core_signal = bfd_get_16 (abfd, note->descdata + 12);
 
 	/* pr_pid */
-	elf_tdata (abfd)->core_pid = bfd_get_32 (abfd, note->descdata + 24);
+	elf_tdata (abfd)->core_lwpid = bfd_get_32 (abfd, note->descdata + 24);
 
 	/* pr_reg */
 	offset = 72;
@@ -2106,7 +2106,7 @@ static const insn_sequence elf32_arm_stub_short_branch_v4t_thumb_arm[] =
    blx to reach the stub if necessary.  */
 static const insn_sequence elf32_arm_stub_long_branch_any_arm_pic[] =
   {
-    ARM_INSN(0xe59fc000),             /* ldr   r12, [pc] */
+    ARM_INSN(0xe59fc000),             /* ldr   ip, [pc] */
     ARM_INSN(0xe08ff00c),             /* add   pc, pc, ip */
     DATA_WORD(0, R_ARM_REL32, -4),    /* dcd   R_ARM_REL32(X-4) */
   };
@@ -2117,7 +2117,7 @@ static const insn_sequence elf32_arm_stub_long_branch_any_arm_pic[] =
    ARMv7).  */
 static const insn_sequence elf32_arm_stub_long_branch_any_thumb_pic[] =
   {
-    ARM_INSN(0xe59fc004),             /* ldr   r12, [pc, #4] */
+    ARM_INSN(0xe59fc004),             /* ldr   ip, [pc, #4] */
     ARM_INSN(0xe08fc00c),             /* add   ip, pc, ip */
     ARM_INSN(0xe12fff1c),             /* bx    ip */
     DATA_WORD(0, R_ARM_REL32, 0),     /* dcd   R_ARM_REL32(X) */
@@ -3269,9 +3269,7 @@ arm_type_of_stub (struct bfd_link_info *info,
 
   /* If a stub is needed, record the actual destination type.  */
   if (stub_type != arm_stub_none)
-    {
-      *actual_st_type = st_type;
-    }
+    *actual_st_type = st_type;
 
   return stub_type;
 }
@@ -3475,6 +3473,36 @@ static bfd_reloc_status_type elf32_arm_final_link_relocate
    Elf_Internal_Rela *, bfd_vma, struct bfd_link_info *, asection *,
    const char *, int, struct elf_link_hash_entry *, bfd_boolean *, char **);
 
+static unsigned int
+arm_stub_required_alignment (enum elf32_arm_stub_type stub_type)
+{
+  switch (stub_type)
+    {
+    case arm_stub_a8_veneer_b_cond:
+    case arm_stub_a8_veneer_b:
+    case arm_stub_a8_veneer_bl:
+      return 2;
+
+    case arm_stub_long_branch_any_any:
+    case arm_stub_long_branch_v4t_arm_thumb:
+    case arm_stub_long_branch_thumb_only:
+    case arm_stub_long_branch_v4t_thumb_thumb:
+    case arm_stub_long_branch_v4t_thumb_arm:
+    case arm_stub_short_branch_v4t_thumb_arm:
+    case arm_stub_long_branch_any_arm_pic:
+    case arm_stub_long_branch_any_thumb_pic:
+    case arm_stub_long_branch_v4t_thumb_thumb_pic:
+    case arm_stub_long_branch_v4t_arm_thumb_pic:
+    case arm_stub_long_branch_v4t_thumb_arm_pic:
+    case arm_stub_long_branch_thumb_only_pic:
+    case arm_stub_a8_veneer_blx:
+      return 4;
+    
+    default:
+      abort ();  /* Should be unreachable.  */
+    }
+}
+
 static bfd_boolean
 arm_build_one_stub (struct bfd_hash_entry *gen_entry,
 		    void * in_arg)
@@ -3506,9 +3534,8 @@ arm_build_one_stub (struct bfd_hash_entry *gen_entry,
   stub_sec = stub_entry->stub_sec;
 
   if ((globals->fix_cortex_a8 < 0)
-      != (stub_entry->stub_type >= arm_stub_a8_veneer_lwm))
-    /* We have to do the a8 fixes last, as they are less aligned than
-       the other veneers.  */
+      != (arm_stub_required_alignment (stub_entry->stub_type) == 2))
+    /* We have to do less-strictly-aligned fixes last.  */
     return TRUE;
 
   /* Make a note of the offset within the stubs for this entry.  */
@@ -3677,7 +3704,12 @@ find_stub_size_and_template (enum elf32_arm_stub_type stub_type,
   unsigned int size;
 
   template_sequence = stub_definitions[stub_type].template_sequence;
+  if (stub_template)
+    *stub_template = template_sequence;
+
   template_size = stub_definitions[stub_type].template_size;
+  if (stub_template_size)
+    *stub_template_size = template_size;
 
   size = 0;
   for (i = 0; i < template_size; i++)
@@ -3696,15 +3728,9 @@ find_stub_size_and_template (enum elf32_arm_stub_type stub_type,
 
 	default:
 	  BFD_FAIL ();
-	  return FALSE;
+	  return 0;
 	}
     }
-
-  if (stub_template)
-    *stub_template = template_sequence;
-
-  if (stub_template_size)
-    *stub_template_size = template_size;
 
   return size;
 }
@@ -4457,7 +4483,6 @@ elf32_arm_size_stubs (bfd *output_bfd,
 		    {
 		      /* It's a local symbol.  */
 		      Elf_Internal_Sym *sym;
-		      Elf_Internal_Shdr *hdr;
 
 		      if (local_syms == NULL)
 			{
@@ -4473,8 +4498,16 @@ elf32_arm_size_stubs (bfd *output_bfd,
 			}
 
 		      sym = local_syms + r_indx;
-		      hdr = elf_elfsections (input_bfd)[sym->st_shndx];
-		      sym_sec = hdr->bfd_section;
+		      if (sym->st_shndx == SHN_UNDEF)
+			sym_sec = bfd_und_section_ptr;
+		      else if (sym->st_shndx == SHN_ABS)
+			sym_sec = bfd_abs_section_ptr;
+		      else if (sym->st_shndx == SHN_COMMON)
+			sym_sec = bfd_com_section_ptr;
+		      else
+			sym_sec =
+			  bfd_section_from_elf_index (input_bfd, sym->st_shndx);
+
 		      if (!sym_sec)
 			/* This is an undefined symbol.  It can never
 			   be resolved. */
@@ -7195,12 +7228,12 @@ elf32_arm_final_link_relocate (reloc_howto_type *           howto,
 
 	  /* A branch to an undefined weak symbol is turned into a jump to
 	     the next instruction unless a PLT entry will be created.
-	     Do the same for local undefined symbols.
+	     Do the same for local undefined symbols (but not for STN_UNDEF).
 	     The jump to the next instruction is optimized as a NOP depending
 	     on the architecture.  */
 	  if (h ? (h->root.type == bfd_link_hash_undefweak
 		   && !(splt != NULL && h->plt.offset != (bfd_vma) -1))
-	      : bfd_is_und_section (sym_sec))
+	      : r_symndx != STN_UNDEF && bfd_is_und_section (sym_sec))
 	    {
 	      value = (bfd_get_32 (input_bfd, hit_data) & 0xf0000000);
 
@@ -8874,9 +8907,11 @@ elf32_arm_relocate_section (bfd *                  output_bfd,
 	     undefined symbol.  This is a daft object file, but we
 	     should at least do something about it.  V4BX & NONE
 	     relocations do not use the symbol and are explicitly
-	     allowed to use the undefined symbol, so allow those.  */
+	     allowed to use the undefined symbol, so allow those.
+	     Likewise for relocations against STN_UNDEF.  */
 	  if (r_type != R_ARM_V4BX
 	      && r_type != R_ARM_NONE
+	      && r_symndx != STN_UNDEF
 	      && bfd_is_und_section (sec)
 	      && ELF_ST_BIND (sym->st_info) != STB_WEAK)
 	    {
@@ -8997,15 +9032,8 @@ elf32_arm_relocate_section (bfd *                  output_bfd,
 	}
 
       if (sec != NULL && elf_discarded_section (sec))
-	{
-	  /* For relocs against symbols from removed linkonce sections,
-	     or sections discarded by a linker script, we just want the
-	     section contents zeroed.  Avoid any special processing.  */
-	  _bfd_clear_contents (howto, input_bfd, contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend, howto, contents);
 
       if (info->relocatable)
 	{
@@ -9034,7 +9062,7 @@ elf32_arm_relocate_section (bfd *                  output_bfd,
 	    name = bfd_section_name (input_bfd, sec);
 	}
 
-      if (r_symndx != 0
+      if (r_symndx != STN_UNDEF
 	  && r_type != R_ARM_NONE
 	  && (h == NULL
 	      || h->root.type == bfd_link_hash_defined
@@ -9414,16 +9442,19 @@ elf32_arm_final_link (bfd *abfd, struct bfd_link_info *info)
   /* Process stub sections (eg BE8 encoding, ...).  */
   struct elf32_arm_link_hash_table *htab = elf32_arm_hash_table (info);
   int i;
-  for(i=0; i<htab->top_id; i++) {
-    sec = htab->stub_group[i].stub_sec;
-    if (sec) {
-      osec = sec->output_section;
-      elf32_arm_write_section (abfd, info, sec, sec->contents);
-      if (! bfd_set_section_contents (abfd, osec, sec->contents,
-				      sec->output_offset, sec->size))
-	return FALSE;
+  for (i=0; i<htab->top_id; i++)
+    {
+      sec = htab->stub_group[i].stub_sec;
+      /* Only process it once, in its link_sec slot.  */
+      if (sec && i == htab->stub_group[i].link_sec->id)
+	{
+	  osec = sec->output_section;
+	  elf32_arm_write_section (abfd, info, sec, sec->contents);
+	  if (! bfd_set_section_contents (abfd, osec, sec->contents,
+					  sec->output_offset, sec->size))
+	    return FALSE;
+	}
     }
-  }
 
   /* Write out any glue sections now that we have created all the
      stubs.  */
@@ -9620,6 +9651,27 @@ elf32_arm_obj_attrs_order (int num)
   if ((num - 1) < Tag_conformance)
     return num - 1;
   return num;
+}
+
+/* Attribute numbers >=64 (mod 128) can be safely ignored.  */
+static bfd_boolean
+elf32_arm_obj_attrs_handle_unknown (bfd *abfd, int tag)
+{
+  if ((tag & 127) < 64)
+    {
+      _bfd_error_handler
+	(_("%B: Unknown mandatory EABI object attribute %d"),
+	 abfd, tag);
+      bfd_set_error (bfd_error_bad_value);
+      return FALSE;
+    }
+  else
+    {
+      _bfd_error_handler
+	(_("Warning: %B: Unknown EABI object attribute %d"),
+	 abfd, tag);
+      return TRUE;
+    }
 }
 
 /* Read the architecture from the Tag_also_compatible_with attribute, if any.
@@ -9852,9 +9904,6 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
 {
   obj_attribute *in_attr;
   obj_attribute *out_attr;
-  obj_attribute_list *in_list;
-  obj_attribute_list *out_list;
-  obj_attribute_list **out_listp;
   /* Some tags have 0 = don't care, 1 = strong requirement,
      2 = weak requirement.  */
   static const int order_021[3] = {0, 2, 1};
@@ -10351,45 +10400,8 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
 	  break;
 
 	default:
-	  {
-	    bfd *err_bfd = NULL;
-
-	    /* The "known_obj_attributes" table does contain some undefined
-	       attributes.  Ensure that there are unused.  */
-	    if (out_attr[i].i != 0 || out_attr[i].s != NULL)
-	      err_bfd = obfd;
-	    else if (in_attr[i].i != 0 || in_attr[i].s != NULL)
-	      err_bfd = ibfd;
-
-	    if (err_bfd != NULL)
-	      {
-		/* Attribute numbers >=64 (mod 128) can be safely ignored.  */
-		if ((i & 127) < 64)
-		  {
-		    _bfd_error_handler
-		      (_("%B: Unknown mandatory EABI object attribute %d"),
-		       err_bfd, i);
-		    bfd_set_error (bfd_error_bad_value);
-		    result = FALSE;
-		  }
-		else
-		  {
-		    _bfd_error_handler
-		      (_("Warning: %B: Unknown EABI object attribute %d"),
-		       err_bfd, i);
-		  }
-	      }
-
-	    /* Only pass on attributes that match in both inputs.  */
-	    if (in_attr[i].i != out_attr[i].i
-		|| in_attr[i].s != out_attr[i].s
-		|| (in_attr[i].s != NULL && out_attr[i].s != NULL
-		    && strcmp (in_attr[i].s, out_attr[i].s) != 0))
-	      {
-		out_attr[i].i = 0;
-		out_attr[i].s = NULL;
-	      }
-	  }
+	  result
+	    = result && _bfd_elf_merge_unknown_attribute_low (ibfd, obfd, i);
 	}
 
       /* If out_attr was copied from in_attr then it won't have a type yet.  */
@@ -10402,78 +10414,8 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
     return FALSE;
 
   /* Check for any attributes not known on ARM.  */
-  in_list = elf_other_obj_attributes_proc (ibfd);
-  out_listp = &elf_other_obj_attributes_proc (obfd);
-  out_list = *out_listp;
+  result &= _bfd_elf_merge_unknown_attribute_list (ibfd, obfd);
 
-  for (; in_list || out_list; )
-    {
-      bfd *err_bfd = NULL;
-      int err_tag = 0;
-
-      /* The tags for each list are in numerical order.  */
-      /* If the tags are equal, then merge.  */
-      if (out_list && (!in_list || in_list->tag > out_list->tag))
-	{
-	  /* This attribute only exists in obfd.  We can't merge, and we don't
-	     know what the tag means, so delete it.  */
-	  err_bfd = obfd;
-	  err_tag = out_list->tag;
-	  *out_listp = out_list->next;
-	  out_list = *out_listp;
-	}
-      else if (in_list && (!out_list || in_list->tag < out_list->tag))
-	{
-	  /* This attribute only exists in ibfd. We can't merge, and we don't
-	     know what the tag means, so ignore it.  */
-	  err_bfd = ibfd;
-	  err_tag = in_list->tag;
-	  in_list = in_list->next;
-	}
-      else /* The tags are equal.  */
-	{
-	  /* As present, all attributes in the list are unknown, and
-	     therefore can't be merged meaningfully.  */
-	  err_bfd = obfd;
-	  err_tag = out_list->tag;
-
-	  /*  Only pass on attributes that match in both inputs.  */
-	  if (in_list->attr.i != out_list->attr.i
-	      || in_list->attr.s != out_list->attr.s
-	      || (in_list->attr.s && out_list->attr.s
-		  && strcmp (in_list->attr.s, out_list->attr.s) != 0))
-	    {
-	      /* No match.  Delete the attribute.  */
-	      *out_listp = out_list->next;
-	      out_list = *out_listp;
-	    }
-	  else
-	    {
-	      /* Matched.  Keep the attribute and move to the next.  */
-	      out_list = out_list->next;
-	      in_list = in_list->next;
-	    }
-	}
-
-      if (err_bfd)
-	{
-	  /* Attribute numbers >=64 (mod 128) can be safely ignored.  */
-	  if ((err_tag & 127) < 64)
-	    {
-	      _bfd_error_handler
-		(_("%B: Unknown mandatory EABI object attribute %d"),
-		 err_bfd, err_tag);
-	      bfd_set_error (bfd_error_bad_value);
-	      result = FALSE;
-	    }
-	  else
-	    {
-	      _bfd_error_handler
-		(_("Warning: %B: Unknown EABI object attribute %d"),
-		 err_bfd, err_tag);
-	    }
-	}
-    }
   return result;
 }
 
@@ -10870,7 +10812,7 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  /* PR 9934: It is possible to have relocations that do not
 	     refer to symbols, thus it is also possible to have an
 	     object file containing relocations but no symbol table.  */
-	  && (r_symndx > 0 || nsyms > 0))
+	  && (r_symndx > STN_UNDEF || nsyms > 0))
 	{
 	  (*_bfd_error_handler) (_("%B: bad symbol index: %d"), abfd,
 				   r_symndx);
@@ -13356,7 +13298,7 @@ make_branch_to_a8_stub (struct bfd_hash_entry *gen_entry,
   data = (struct a8_branch_to_stub_data *) in_arg;
 
   if (stub_entry->target_section != data->writing_section
-      || stub_entry->stub_type < arm_stub_a8_veneer_b_cond)
+      || stub_entry->stub_type < arm_stub_a8_veneer_lwm)
     return TRUE;
 
   contents = data->contents;
@@ -13871,6 +13813,7 @@ const struct elf_size_info elf32_arm_size_info =
 };
 
 #define ELF_ARCH			bfd_arch_arm
+#define ELF_TARGET_ID			ARM_ELF_DATA
 #define ELF_MACHINE_CODE		EM_ARM
 #ifdef __QNXTARGET__
 #define ELF_MAXPAGESIZE			0x1000
@@ -13945,6 +13888,7 @@ const struct elf_size_info elf32_arm_size_info =
 #undef  elf_backend_obj_attrs_section_type
 #define elf_backend_obj_attrs_section_type	SHT_ARM_ATTRIBUTES
 #define elf_backend_obj_attrs_order	elf32_arm_obj_attrs_order
+#define elf_backend_obj_attrs_handle_unknown elf32_arm_obj_attrs_handle_unknown
 
 #include "elf32-target.h"
 

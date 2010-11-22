@@ -1,7 +1,7 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.test-framework
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ janis
 
 148
 
-dg-dox-run-exp-XF.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-57c10a0c0410d339d538a11cea5aa5cd
-2005-02-01T17:37:25.000000Z
-94550
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-177
-
 dg-do-run-xrif-exp-P.c
 file
 
@@ -604,16 +570,16 @@ janis
 
 167
 
-dg-outexistsnot-exp-F.c
+dg-dox-run-exp-XF.c
 file
 
 
 
 
-2009-04-24T17:45:53.000000Z
-381596e0a843e05ff4f4bab593d19210
-2006-11-07T00:08:32.048040Z
-118531
+2009-04-24T17:45:52.000000Z
+57c10a0c0410d339d538a11cea5aa5cd
+2005-02-01T17:37:25.000000Z
+94550
 janis
 
 
@@ -636,7 +602,7 @@ janis
 
 
 
-123
+177
 
 dg-output-exp-XF.c
 file
@@ -672,17 +638,17 @@ janis
 
 325
 
-dg-error-exp-F.c
+dg-outexistsnot-exp-F.c
 file
 
 
 
 
-2009-04-24T17:45:52.000000Z
-9ddd9da4202b9efba352007b834a2a0e
-2007-07-12T22:57:32.434972Z
-126606
-manu
+2009-04-24T17:45:53.000000Z
+381596e0a843e05ff4f4bab593d19210
+2006-11-07T00:08:32.048040Z
+118531
+janis
 
 
 
@@ -704,7 +670,7 @@ manu
 
 
 
-374
+123
 
 dg-nocache-sif-exp-P.c
 file
@@ -739,6 +705,40 @@ janis
 
 
 161
+
+dg-error-exp-F.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+9ddd9da4202b9efba352007b834a2a0e
+2007-07-12T22:57:32.434972Z
+126606
+manu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+374
 
 dg-dox-run-sf-exp-XF.c
 file
@@ -842,16 +842,16 @@ janis
 
 271
 
-dg-dot-run-xrif-exp-F.c
+dg-nocache-xif-exp-P.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-ecb1afd556af9881b1e42c62ed2f9047
-2008-05-21T18:03:32.231929Z
-135729
+f13be079e9b27bb8d986b0f715ba1241
+2009-01-07T18:31:27.382320Z
+143165
 janis
 
 
@@ -874,7 +874,7 @@ janis
 
 
 
-200
+162
 
 dg-nocache-sif-exp-U.c
 file
@@ -910,48 +910,14 @@ janis
 
 148
 
-dg-nocache-xif-exp-P.c
+dg-dot-run-xrif-exp-F.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-f13be079e9b27bb8d986b0f715ba1241
-2009-01-07T18:31:27.382320Z
-143165
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-162
-
-dg-do-run-xrif-exp-XF.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-6f754b5f1533f7cc8d4979e5e849914c
+ecb1afd556af9881b1e42c62ed2f9047
 2008-05-21T18:03:32.231929Z
 135729
 janis
@@ -976,7 +942,7 @@ janis
 
 
 
-176
+200
 
 dg-outexistsnot-exp-P.c
 file
@@ -1012,16 +978,16 @@ janis
 
 264
 
-dg-error-exp-P.c
+dg-do-run-xrif-exp-XF.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-b0b1b597ee8c8332ec789b02f501175d
-2005-02-28T23:43:05.000000Z
-95706
+6f754b5f1533f7cc8d4979e5e849914c
+2008-05-21T18:03:32.231929Z
+135729
 janis
 
 
@@ -1044,7 +1010,7 @@ janis
 
 
 
-230
+176
 
 gen_directive_tests
 file
@@ -1079,6 +1045,40 @@ has-props
 
 
 25319
+
+dg-error-exp-P.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+b0b1b597ee8c8332ec789b02f501175d
+2005-02-28T23:43:05.000000Z
+95706
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+230
 
 dg-dox-run-sf-exp-XP.c
 file

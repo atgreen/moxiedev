@@ -155,6 +155,7 @@ struct gdbarch
   const struct floatformat ** long_double_format;
   int ptr_bit;
   int addr_bit;
+  int dwarf2_addr_size;
   int char_signed;
   gdbarch_read_pc_ftype *read_pc;
   gdbarch_write_pc_ftype *write_pc;
@@ -233,7 +234,6 @@ struct gdbarch
   gdbarch_register_reggroup_p_ftype *register_reggroup_p;
   gdbarch_fetch_pointer_argument_ftype *fetch_pointer_argument;
   gdbarch_regset_from_core_section_ftype *regset_from_core_section;
-  int core_reg_section_encodes_pid;
   struct core_regset_section * core_regset_sections;
   gdbarch_core_xfer_shared_libraries_ftype *core_xfer_shared_libraries;
   gdbarch_core_pid_to_str_ftype *core_pid_to_str;
@@ -305,6 +305,7 @@ struct gdbarch startup_gdbarch =
   0,  /* long_double_format */
   8 * sizeof (void*),  /* ptr_bit */
   8 * sizeof (void*),  /* addr_bit */
+  sizeof (void*),  /* dwarf2_addr_size */
   1,  /* char_signed */
   0,  /* read_pc */
   0,  /* write_pc */
@@ -383,7 +384,6 @@ struct gdbarch startup_gdbarch =
   default_register_reggroup_p,  /* register_reggroup_p */
   0,  /* fetch_pointer_argument */
   0,  /* regset_from_core_section */
-  0,  /* core_reg_section_encodes_pid */
   0,  /* core_regset_sections */
   0,  /* core_xfer_shared_libraries */
   0,  /* core_pid_to_str */
@@ -582,6 +582,8 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of ptr_bit, invalid_p == 0 */
   if (gdbarch->addr_bit == 0)
     gdbarch->addr_bit = gdbarch_ptr_bit (gdbarch);
+  if (gdbarch->dwarf2_addr_size == 0)
+    gdbarch->dwarf2_addr_size = gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT;
   if (gdbarch->char_signed == -1)
     gdbarch->char_signed = 1;
   /* Skip verify of read_pc, has predicate */
@@ -663,7 +665,6 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of register_reggroup_p, invalid_p == 0 */
   /* Skip verify of fetch_pointer_argument, has predicate */
   /* Skip verify of regset_from_core_section, has predicate */
-  /* Skip verify of core_reg_section_encodes_pid, invalid_p == 0 */
   /* Skip verify of core_xfer_shared_libraries, has predicate */
   /* Skip verify of core_pid_to_str, has predicate */
   /* Skip verify of gcore_bfd_target, has predicate */
@@ -814,9 +815,6 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
                       "gdbarch_dump: core_read_description = <%s>\n",
                       host_address_to_string (gdbarch->core_read_description));
   fprintf_unfiltered (file,
-                      "gdbarch_dump: core_reg_section_encodes_pid = %s\n",
-                      plongest (gdbarch->core_reg_section_encodes_pid));
-  fprintf_unfiltered (file,
                       "gdbarch_dump: core_regset_sections = %s\n",
                       host_address_to_string (gdbarch->core_regset_sections));
   fprintf_unfiltered (file,
@@ -867,6 +865,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: dummy_id = <%s>\n",
                       host_address_to_string (gdbarch->dummy_id));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: dwarf2_addr_size = %s\n",
+                      plongest (gdbarch->dwarf2_addr_size));
   fprintf_unfiltered (file,
                       "gdbarch_dump: dwarf2_reg_to_regnum = <%s>\n",
                       host_address_to_string (gdbarch->dwarf2_reg_to_regnum));
@@ -1553,6 +1554,24 @@ set_gdbarch_addr_bit (struct gdbarch *gdbarch,
                       int addr_bit)
 {
   gdbarch->addr_bit = addr_bit;
+}
+
+int
+gdbarch_dwarf2_addr_size (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  /* Check variable changed from pre-default.  */
+  gdb_assert (gdbarch->dwarf2_addr_size != 0);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_dwarf2_addr_size called\n");
+  return gdbarch->dwarf2_addr_size;
+}
+
+void
+set_gdbarch_dwarf2_addr_size (struct gdbarch *gdbarch,
+                              int dwarf2_addr_size)
+{
+  gdbarch->dwarf2_addr_size = dwarf2_addr_size;
 }
 
 int
@@ -3068,23 +3087,6 @@ set_gdbarch_regset_from_core_section (struct gdbarch *gdbarch,
                                       gdbarch_regset_from_core_section_ftype regset_from_core_section)
 {
   gdbarch->regset_from_core_section = regset_from_core_section;
-}
-
-int
-gdbarch_core_reg_section_encodes_pid (struct gdbarch *gdbarch)
-{
-  gdb_assert (gdbarch != NULL);
-  /* Skip verify of core_reg_section_encodes_pid, invalid_p == 0 */
-  if (gdbarch_debug >= 2)
-    fprintf_unfiltered (gdb_stdlog, "gdbarch_core_reg_section_encodes_pid called\n");
-  return gdbarch->core_reg_section_encodes_pid;
-}
-
-void
-set_gdbarch_core_reg_section_encodes_pid (struct gdbarch *gdbarch,
-                                          int core_reg_section_encodes_pid)
-{
-  gdbarch->core_reg_section_encodes_pid = core_reg_section_encodes_pid;
 }
 
 struct core_regset_section *

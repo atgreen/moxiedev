@@ -98,7 +98,7 @@ mywait (ptid_t ptid, struct target_waitstatus *ourstatus, int options,
 
   if (ourstatus->kind == TARGET_WAITKIND_EXITED)
     fprintf (stderr,
-	     "\nChild exited with status %d\n", ourstatus->value.sig);
+	     "\nChild exited with status %d\n", ourstatus->value.integer);
   else if (ourstatus->kind == TARGET_WAITKIND_SIGNALLED)
     fprintf (stderr, "\nChild terminated with signal = 0x%x (%s)\n",
 	     target_signal_to_host (ourstatus->value.sig),
@@ -139,18 +139,18 @@ target_pid_to_str (ptid_t ptid)
   static char buf[80];
 
   if (ptid_equal (ptid, minus_one_ptid))
-    snprintf (buf, sizeof (buf), "<all threads>");
+    xsnprintf (buf, sizeof (buf), "<all threads>");
   else if (ptid_equal (ptid, null_ptid))
-    snprintf (buf, sizeof (buf), "<null thread>");
+    xsnprintf (buf, sizeof (buf), "<null thread>");
   else if (ptid_get_tid (ptid) != 0)
-    snprintf (buf, sizeof (buf), "Thread %d.0x%lx",
-	      ptid_get_pid (ptid), ptid_get_tid (ptid));
+    xsnprintf (buf, sizeof (buf), "Thread %d.0x%lx",
+	       ptid_get_pid (ptid), ptid_get_tid (ptid));
   else if (ptid_get_lwp (ptid) != 0)
-    snprintf (buf, sizeof (buf), "LWP %d.%ld",
-	      ptid_get_pid (ptid), ptid_get_lwp (ptid));
+    xsnprintf (buf, sizeof (buf), "LWP %d.%ld",
+	       ptid_get_pid (ptid), ptid_get_lwp (ptid));
   else
-    snprintf (buf, sizeof (buf), "Process %d",
-	      ptid_get_pid (ptid));
+    xsnprintf (buf, sizeof (buf), "Process %d",
+	       ptid_get_pid (ptid));
 
   return buf;
 }

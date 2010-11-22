@@ -17,22 +17,7 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-
-# Set the current language to Java.  This counts as a test.  If it
-# fails, then we skip the other tests.
-
-proc set_lang_java {} {
-    global gdb_prompt
-
-    if [gdb_test "set language java" "" "set language java"] {
-	return 0
-    }
-
-    if [gdb_test "show language" ".* source language is \"java\".*"] {
-	return 0
-    }
-    return 1;
-}
+load_lib "java.exp"
 
 proc test_comparisons {} {
     global gdb_prompt
@@ -56,5 +41,5 @@ gdb_test "set width 0" ""
 if [set_lang_java] then {
     test_comparisons
 } else {
-    fail "Java expression tests suppressed"
+    warning "Java expression tests suppressed"
 }

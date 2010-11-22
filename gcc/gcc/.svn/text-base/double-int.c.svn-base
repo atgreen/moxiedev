@@ -20,8 +20,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
-#include "tm.h"
+#include "tm.h"			/* For SHIFT_COUNT_TRUNCATED.  */
 #include "tree.h"
+#include "toplev.h"
 
 /* We know that A1 + B1 = SUM1, using 2's complement arithmetic and ignoring
    overflow.  Suppose A, B and SUM have the same respective signs as A1, B1,
@@ -717,6 +718,19 @@ double_int_mul (double_int a, double_int b)
   return ret;
 }
 
+/* Returns A * B. If the operation overflows according to UNSIGNED_P,
+   *OVERFLOW is set to nonzero.  */
+
+double_int
+double_int_mul_with_sign (double_int a, double_int b,
+                          bool unsigned_p, int *overflow)
+{
+  double_int ret;
+  *overflow = mul_double_with_sign (a.low, a.high, b.low, b.high,
+                                    &ret.low, &ret.high, unsigned_p);
+  return ret;
+}
+
 /* Returns A + B.  */
 
 double_int
@@ -848,6 +862,18 @@ double_int_setbit (double_int a, unsigned bitpos)
     a.high |= (HOST_WIDE_INT) 1 <<  (bitpos - HOST_BITS_PER_WIDE_INT);
  
   return a;
+}
+
+/* Count trailing zeros in A.  */
+int
+double_int_ctz (double_int a)
+{
+  unsigned HOST_WIDE_INT w = a.low ? a.low : (unsigned HOST_WIDE_INT) a.high;
+  unsigned bits = a.low ? 0 : HOST_BITS_PER_WIDE_INT;
+  if (!w)
+    return HOST_BITS_PER_DOUBLE_INT;
+  bits += ctz_hwi (w);
+  return bits;
 }
 
 /* Shift A left by COUNT places keeping only PREC bits of result.  Shift

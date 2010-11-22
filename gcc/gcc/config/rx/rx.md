@@ -24,6 +24,9 @@
 (define_code_iterator most_cond [eq ne gt ge lt le gtu geu ltu leu
 				 unordered ordered ])
 
+;; Likewise, but only the ones that use Z or S.
+(define_code_iterator zs_cond [eq ne gtu geu ltu leu ])
+
 ;; This code iterator is used for sign- and zero- extensions.
 (define_mode_iterator small_int_modes [(HI "") (QI "")])
 
@@ -157,9 +160,9 @@
 
 (define_expand "cbranchsi4"
   [(set (pc)
-	(if_then_else (match_operator:SI 0 "comparison_operator"
-					 [(match_operand:SI 1 "register_operand")
-					  (match_operand:SI 2 "rx_source_operand")])
+	(if_then_else (match_operator 0 "comparison_operator"
+				      [(match_operand:SI 1 "register_operand")
+				       (match_operand:SI 2 "rx_source_operand")])
 		      (label_ref (match_operand 3 ""))
 		      (pc)))
    ]
@@ -169,7 +172,7 @@
 
 (define_insn_and_split "*cbranchsi4_<code>"
   [(set (pc)
-	(if_then_else (most_cond:SI (match_operand:SI  0 "register_operand"  "r")
+	(if_then_else (most_cond (match_operand:SI  0 "register_operand"  "r")
 				    (match_operand:SI  1 "rx_source_operand" "riQ"))
 		      (label_ref (match_operand        2 "" ""))
 		      (pc)))
@@ -189,11 +192,106 @@
   "
 )
 
+;; -----------------------------------------------------------------------------
+;; These two are the canonical TST/branch insns.  However, GCC
+;; generates a wide variety of tst-like patterns, we catch those
+;; below.
+(define_insn_and_split "*tstbranchsi4_<code>"
+  [(set (pc)
+	(if_then_else (zs_cond (and:SI (match_operand:SI  0 "register_operand"  "r")
+				       (match_operand:SI  1 "rx_source_operand" "riQ"))
+			       (const_int 0))
+		      (label_ref (match_operand 2 "" ""))
+		      (pc)))
+   ]
+  ""
+  "#"
+  "reload_completed"
+  [(const_int 0)]
+  "
+  emit_insn (gen_tstsi (operands[0], operands[1]));
+  
+  emit_jump_insn (gen_conditional_branch (operands[2],
+  		 gen_rtx_fmt_ee (<zs_cond:CODE>, CCmode,
+				 gen_rtx_REG (CCmode, CC_REG), const0_rtx)));
+  "
+)
+
+;; Inverse of above
+(define_insn_and_split "*tstbranchsi4r_<code>"
+  [(set (pc)
+	(if_then_else (zs_cond (and:SI (match_operand:SI  0 "register_operand"  "r")
+				       (match_operand:SI  1 "rx_source_operand" "riQ"))
+			       (const_int 0))
+		      (pc)
+		      (label_ref (match_operand 2 "" ""))))
+   ]
+  ""
+  "#"
+  "reload_completed"
+  [(const_int 0)]
+  "
+  emit_insn (gen_tstsi (operands[0], operands[1]));
+  
+  emit_jump_insn (gen_conditional_branch (operands[2],
+  		 gen_rtx_fmt_ee (reverse_condition (<zs_cond:CODE>), CCmode,
+				 gen_rtx_REG (CCmode, CC_REG), const0_rtx)));
+  "
+)
+
+;; Various other ways that GCC codes "var & const"
+
+(define_insn_and_split "*tstbranchsi4m_eq"
+  [(set (pc)
+	(if_then_else (eq (zero_extract:SI (match_operand:SI  0 "register_operand"  "r")
+					   (match_operand  1 "rx_constshift_operand" "i")
+					   (match_operand  2 "rx_constshift_operand" "i"))
+			  (const_int 0))
+		      (label_ref (match_operand        3 "" ""))
+		      (pc)))
+   ]
+  ""
+  "#"
+  ""
+  [(set (pc)
+	(if_then_else (eq (and:SI (match_dup  0)
+				  (match_dup 4))
+			  (const_int 0))
+		      (label_ref (match_dup 3))
+		      (pc)))
+   ]
+  "operands[4] = GEN_INT (((1 << INTVAL (operands[1]))-1) << INTVAL (operands[2]));"
+)
+
+(define_insn_and_split "*tstbranchsi4m_ne"
+  [(set (pc)
+	(if_then_else (ne (zero_extract:SI (match_operand:SI  0 "register_operand"  "r")
+					   (match_operand  1 "rx_constshift_operand" "i")
+					   (match_operand  2 "rx_constshift_operand" "i"))
+			  (const_int 0))
+		      (label_ref (match_operand        3 "" ""))
+		      (pc)))
+   ]
+  ""
+  "#"
+  ""
+  [(set (pc)
+	(if_then_else (ne (and:SI (match_dup  0)
+				  (match_dup 4))
+			  (const_int 0))
+		      (label_ref (match_dup 3))
+		      (pc)))
+   ]
+  "operands[4] = GEN_INT (((1 << INTVAL (operands[1]))-1) << INTVAL (operands[2]));"
+)
+
+;; -----------------------------------------------------------------------------
+
 (define_expand "cbranchsf4"
   [(set (pc)
-	(if_then_else (match_operator:SF 0 "comparison_operator"
-					 [(match_operand:SF 1 "register_operand")
-					  (match_operand:SF 2 "rx_source_operand")])
+	(if_then_else (match_operator 0 "comparison_operator"
+				      [(match_operand:SF 1 "register_operand")
+				       (match_operand:SF 2 "rx_source_operand")])
 		      (label_ref (match_operand 3 ""))
 		      (pc)))
    ]
@@ -203,8 +301,8 @@
 
 (define_insn_and_split "*cbranchsf4_<code>"
   [(set (pc)
-	(if_then_else (most_cond:SF (match_operand:SF  0 "register_operand"  "r")
-				    (match_operand:SF  1 "rx_source_operand" "rFiQ"))
+	(if_then_else (most_cond (match_operand:SF  0 "register_operand"  "r")
+				 (match_operand:SF  1 "rx_source_operand" "rFiQ"))
 		      (label_ref (match_operand        2 "" ""))
 		      (pc)))
    ]
@@ -1271,7 +1369,7 @@
 )
 
 (define_insn "bitclr"
-  [(set:SI (match_operand:SI 0 "register_operand" "+r")
+  [(set:SI (match_operand:SI 0 "register_operand" "=r")
 	   (and:SI (match_operand:SI 1 "register_operand" "0")
 		   (not:SI (ashift:SI (const_int 1)
 				      (match_operand:SI 2 "nonmemory_operand" "ri")))))]
@@ -1281,7 +1379,7 @@
 )
 
 (define_insn "bitclr_in_memory"
-  [(set:QI (match_operand:QI 0 "memory_operand" "+m")
+  [(set:QI (match_operand:QI 0 "memory_operand" "=m")
 	   (and:QI (match_operand:QI 1 "memory_operand" "0")
 		   (not:QI (ashift:QI (const_int 1)
 				      (match_operand:QI 2 "nonmemory_operand" "ri")))))]
@@ -1705,7 +1803,7 @@
 
 ;; Clear Processor Status Word
 (define_insn "clrpsw"
-  [(unspec:SI [(match_operand:SI 0 "immediate_operand" "i")]
+  [(unspec_volatile:SI [(match_operand:SI 0 "immediate_operand" "i")]
 	      UNSPEC_BUILTIN_CLRPSW)
    (clobber (reg:CC CC_REG))]
   ""
@@ -1715,7 +1813,7 @@
 
 ;; Set Processor Status Word
 (define_insn "setpsw"
-  [(unspec:SI [(match_operand:SI 0 "immediate_operand" "i")]
+  [(unspec_volatile:SI [(match_operand:SI 0 "immediate_operand" "i")]
 	      UNSPEC_BUILTIN_SETPSW)
    (clobber (reg:CC CC_REG))]
   ""
@@ -1726,7 +1824,7 @@
 ;; Move from control register
 (define_insn "mvfc"
   [(set (match_operand:SI             0 "register_operand" "=r")
-	(unspec:SI [(match_operand:SI 1 "immediate_operand" "i")]
+	(unspec_volatile:SI [(match_operand:SI 1 "immediate_operand" "i")]
 		   UNSPEC_BUILTIN_MVFC))]
   ""
   "mvfc\t%C1, %0"
@@ -1735,7 +1833,7 @@
 
 ;; Move to control register
 (define_insn "mvtc"
-  [(unspec:SI [(match_operand:SI 0 "immediate_operand" "i,i")
+  [(unspec_volatile:SI [(match_operand:SI 0 "immediate_operand" "i,i")
 	       (match_operand:SI 1 "nonmemory_operand" "r,i")]
 	      UNSPEC_BUILTIN_MVTC)]
   ""
@@ -1750,7 +1848,7 @@
 
 ;; Move to interrupt priority level
 (define_insn "mvtipl"
-  [(unspec:SI [(match_operand:SI 0 "immediate_operand" "Uint04")]
+  [(unspec_volatile:SI [(match_operand:SI 0 "immediate_operand" "Uint04")]
 	      UNSPEC_BUILTIN_MVTIPL)]
   ""
   "mvtipl\t%0"

@@ -212,6 +212,7 @@ extern int yylex (void);
 #define uimm5(x) EXPR_VALUE (x)
 #define imm6(x) EXPR_VALUE (x)
 #define imm7(x) EXPR_VALUE (x)
+#define uimm8(x) EXPR_VALUE (x)
 #define imm16(x) EXPR_VALUE (x)
 #define uimm16s4(x) ((EXPR_VALUE (x)) >> 2)
 #define uimm16(x) EXPR_VALUE (x)
@@ -379,6 +380,36 @@ is_group2 (INSTR_T x)
   return 0;
 }
 
+static int
+is_store (INSTR_T x)
+{
+  if (!x)
+    return 0;
+
+  if ((x->value & 0xf000) == 0x8000)
+    {
+      int aop = ((x->value >> 9) & 0x3);
+      int w = ((x->value >> 11) & 0x1);
+      if (!w || aop == 3)
+	return 0;
+      return 1;
+    }
+
+  if (((x->value & 0xFF60) == 0x9E60) ||  /* dagMODim_0 */
+      ((x->value & 0xFFF0) == 0x9F60))    /* dagMODik_0 */
+    return 0;
+
+  /* decode_dspLDST_0 */
+  if ((x->value & 0xFC00) == 0x9C00)
+    {
+      int w = ((x->value >> 9) & 0x1);
+      if (w)
+	return 1;
+    }
+
+  return 0;
+}
+
 static INSTR_T
 gen_multi_instr_1 (INSTR_T dsp32, INSTR_T dsp16_grp1, INSTR_T dsp16_grp2)
 {
@@ -398,6 +429,9 @@ gen_multi_instr_1 (INSTR_T dsp32, INSTR_T dsp16_grp1, INSTR_T dsp16_grp2)
 	  || (dsp16_grp1->value & 0xfc00) == 0xbc00))
     yyerror ("anomaly 05000074 - Multi-Issue Instruction with \
 dsp32shiftimm in slot1 and P-reg Store in slot2 Not Supported");
+
+  if (is_store (dsp16_grp1) && is_store (dsp16_grp2))
+    yyerror ("Only one instruction in multi-issue instruction can be a store");
 
   return bfin_gen_multi_instr (dsp32, dsp16_grp1, dsp16_grp2);
 }
@@ -799,7 +833,7 @@ asm_1:
 	    return yyerror ("Bad dreg pair");
 	  else
 	    {
-	      notethat ("dsp32alu: (dregs , dregs ) = BYTEOP16P (dregs_pair , dregs_pair ) (half)\n");
+	      notethat ("dsp32alu: (dregs , dregs ) = BYTEOP16P (dregs_pair , dregs_pair ) (aligndir)\n");
 	      $$ = DSP32ALU (21, 0, &$2, &$4, &$9, &$13, $17.r0, 0, 0);
 	    }
 	}
@@ -1030,8 +1064,8 @@ asm_1:
 	    return yyerror ("Bad dreg pair");
 	  else
 	    {
-	      notethat ("dsp32alu: dregs = BYTEOP2P (dregs_pair , dregs_pair ) (rnd_op)\n");
-	      $$ = DSP32ALU (22, $13.r0, 0, &$1, &$5, &$9, $13.s0, 0, $13.x0);
+	      notethat ("dsp32alu: dregs = BYTEOP2M (dregs_pair , dregs_pair ) (rnd_op)\n");
+	      $$ = DSP32ALU (22, $13.r0, 0, &$1, &$5, &$9, $13.s0, $13.x0, $13.aop + 2);
 	    }
 	}
 
@@ -1727,16 +1761,18 @@ asm_1:
 	      || (IS_DAGREG ($1) && IS_DAGREG ($3))
 	      || (IS_GENREG ($1) && $3.regno == REG_USP)
 	      || ($1.regno == REG_USP && IS_GENREG ($3))
+	      || ($1.regno == REG_USP && $3.regno == REG_USP)
 	      || (IS_DREG ($1) && IS_SYSREG ($3))
 	      || (IS_PREG ($1) && IS_SYSREG ($3))
-	      || (IS_SYSREG ($1) && IS_DREG ($3))
-	      || (IS_SYSREG ($1) && IS_PREG ($3))
+	      || (IS_SYSREG ($1) && IS_GENREG ($3))
+	      || (IS_ALLREG ($1) && IS_EMUDAT ($3))
+	      || (IS_EMUDAT ($1) && IS_ALLREG ($3))
 	      || (IS_SYSREG ($1) && $3.regno == REG_USP))
 	    {
 	      $$ = bfin_gen_regmv (&$3, &$1);
 	    }
 	  else
-	    return yyerror ("Register mismatch");
+	    return yyerror ("Unsupported register move");
 	}
 
 	| CCREG ASSIGN REG
@@ -1747,7 +1783,7 @@ asm_1:
 	      $$ = bfin_gen_cc2dreg (1, &$3);
 	    }
 	  else
-	    return yyerror ("Register mismatch");
+	    return yyerror ("Only 'CC = Dreg' supported");
 	}
 
 	| REG ASSIGN CCREG
@@ -1758,7 +1794,7 @@ asm_1:
 	      $$ = bfin_gen_cc2dreg (0, &$1);
 	    }
 	  else
-	    return yyerror ("Register mismatch");
+	    return yyerror ("Only 'Dreg = CC' supported");
 	}
 
 	| CCREG _ASSIGN_BANG CCREG
@@ -3537,6 +3573,17 @@ asm_1:
 	}
 
 /* LOOP_BEGIN.  */
+	| LOOP_BEGIN NUMBER
+	{
+	  Expr_Node_Value val;
+	  val.i_value = $2;
+	  Expr_Node *tmp = Expr_Node_Create (Expr_Node_Constant, val, NULL, NULL);
+	  bfin_loop_attempt_create_label (tmp, 1);
+	  if (!IS_RELOC (tmp))
+	    return yyerror ("Invalid expression in LOOP_BEGIN statement");
+	  bfin_loop_beginend (tmp, 1);
+	  $$ = 0;
+	}
 	| LOOP_BEGIN expr
 	{
 	  if (!IS_RELOC ($2))
@@ -3547,6 +3594,17 @@ asm_1:
 	}
 
 /* LOOP_END.  */
+	| LOOP_END NUMBER
+	{
+	  Expr_Node_Value val;
+	  val.i_value = $2;
+	  Expr_Node *tmp = Expr_Node_Create (Expr_Node_Constant, val, NULL, NULL);
+	  bfin_loop_attempt_create_label (tmp, 1);
+	  if (!IS_RELOC (tmp))
+	    return yyerror ("Invalid expression in LOOP_END statement");
+	  bfin_loop_beginend (tmp, 0);
+	  $$ = 0;
+	}
 	| LOOP_END expr
 	{
 	  if (!IS_RELOC ($2))
@@ -3557,6 +3615,12 @@ asm_1:
 	}
 
 /* pseudoDEBUG.  */
+
+	| ABORT
+	{
+	  notethat ("psedoDEBUG: ABORT\n");
+	  $$ = bfin_gen_pseudodbg (3, 3, 0);
+	}
 
 	| DBG
 	{
@@ -3571,7 +3635,7 @@ asm_1:
 	| DBG REG
 	{
 	  notethat ("pseudoDEBUG: DBG allregs\n");
-	  $$ = bfin_gen_pseudodbg (0, $2.regno & CODE_MASK, $2.regno & CLASS_MASK);
+	  $$ = bfin_gen_pseudodbg (0, $2.regno & CODE_MASK, ($2.regno & CLASS_MASK) >> 4);
 	}
 
 	| DBGCMPLX LPAREN REG RPAREN
@@ -3579,7 +3643,7 @@ asm_1:
 	  if (!IS_DREG ($3))
 	    return yyerror ("Dregs expected");
 	  notethat ("pseudoDEBUG: DBGCMPLX (dregs )\n");
-	  $$ = bfin_gen_pseudodbg (3, 6, $3.regno & CODE_MASK);
+	  $$ = bfin_gen_pseudodbg (3, 6, ($3.regno & CODE_MASK) >> 4);
 	}
 
 	| DBGHALT
@@ -3612,6 +3676,21 @@ asm_1:
 	  $$ = bfin_gen_pseudodbg_assert (2, &$3, uimm16 ($5));
 	}
 
+	| OUTC expr
+	{
+	  if (!IS_UIMM ($2, 8))
+	    return yyerror ("Constant out of range");
+	  notethat ("psedodbg_assert: OUTC uimm8\n");
+	  $$ = bfin_gen_pseudochr (uimm8 ($2));
+	}
+
+	| OUTC REG
+	{
+	  if (!IS_DREG ($2))
+	    return yyerror ("Dregs expected");
+	  notethat ("psedodbg_assert: OUTC dreg\n");
+	  $$ = bfin_gen_pseudodbg (2, $2.regno & CODE_MASK, 0);
+	}
 
 ;
 

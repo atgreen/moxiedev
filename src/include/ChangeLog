@@ -1,3 +1,67 @@
+2010-11-16  Ian Lance Taylor  <iant@google.com>
+
+	* simple-object.h (simple_object_attributes_merge): Declare,
+	replacing simple_object_attributes_compare.
+
+2010-11-16  Jie Zhang  <jie.zhang@analog.com>
+
+	* elf/bfin.h (EF_BFIN_CODE_IN_L1): Define.
+	(EF_BFIN_DATA_IN_L1): Define.
+
+2010-11-04  Ian Lance Taylor  <iant@google.com>
+
+	* dwarf2.h (enum dwarf_source_language): Add DW_LANG_Go.
+
+2010-11-02  Ian Lance Taylor  <iant@google.com>
+
+	* simple-object.h: New file.
+
+2010-10-15  Dave Korn  <dave.korn.cygwin@gmail.com> 
+
+	Sync LD plugin patch series (part 1/6) with src/include/.
+	* plugin-api.h (LDPT_GNU_LD_VERSION): New ld_plugin_tag enum member.
+
+2010-10-14  Dave Korn  <dave.korn.cygwin@gmail.com> 
+
+	Apply LD plugin patch series (part 6/6).
+	* bfdlink.h (struct_bfd_link_callbacks): Document new argument
+	to add_archive_element callback used to return a replacement bfd which
+	is to be added to the hash table in place of the original element.
+
+2010-10-14  Dave Korn  <dave.korn.cygwin@gmail.com> 
+
+	Apply LD plugin patch series (part 1/6).
+	* plugin-api.h (LDPT_GNU_LD_VERSION): New ld_plugin_tag enum member.
+
+2010-10-06  Andi Kleen <ak@linux.intel.com>
+
+	* libiberty.h (setproctitle): Add prototype.
+
+2010-09-29  Bernd Schmidt  <bernds@codesourcery.com>
+
+	* opcode/tic6x-control-registers.h (tscl): Now read_write.
+
+2010-09-27  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+
+	* opcode/s390.h: Add S390_OPCODE_Z196 to enum s390_opcode_cpu_val.
+
+2010-09-23  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* arm.h (ARM_EXT_V6Z): Remove.
+	(ARM_EXT_SEC): New define.
+	(ARM_AEXT_V6Z): Use Security Extensions.
+	(ARM_AEXT_V6ZK): Likeiwse.
+	(ARM_AEXT_V6ZT2): Likewise.
+	(ARM_AEXT_V6ZKT2): Likewise.
+	(ARM_AEXT_V7_ARM): Base v7 does not have Security Extensions.
+	(ARM_ARCH_V7A_SEC): New define.
+	(ARM_ARCH_V7A_MP): Rename...
+	(ARM_ARCH_V7A_MP_SEC): ...to this and add Security Extensions.
+
+2010-09-09  Jakub Jelinek  <jakub@redhat.com>
+
+	* dwarf2.h (DW_OP_GNU_implicit_pointer): New.
+
 2010-07-06  Ken Werner  <ken.werner@de.ibm.com>
 
 	* floatformat.h (floatformat_ieee_half_big): Add declaration.

@@ -201,7 +201,7 @@ enum language
     language_asm,		/* Assembly language */
     language_pascal,		/* Pascal */
     language_ada,		/* Ada */
-    language_scm,		/* Guile Scheme */
+    language_opencl,		/* OpenCL */
     language_minimal,		/* All other languages, minimal support only */
     nr_languages
   };
@@ -337,6 +337,10 @@ extern struct cleanup *make_cleanup_freeargv (char **);
 struct ui_file;
 extern struct cleanup *make_cleanup_ui_file_delete (struct ui_file *);
 
+struct ui_out;
+extern struct cleanup *
+  make_cleanup_ui_out_redirect_pop (struct ui_out *uiout);
+
 struct section_addr_info;
 extern struct cleanup *(make_cleanup_free_section_addr_info 
                         (struct section_addr_info *));
@@ -351,6 +355,13 @@ struct obstack;
 extern struct cleanup *make_cleanup_obstack_free (struct obstack *obstack);
 
 extern struct cleanup *make_cleanup_restore_integer (int *variable);
+extern struct cleanup *make_cleanup_restore_uinteger (unsigned int *variable);
+
+struct target_ops;
+extern struct cleanup *make_cleanup_unpush_target (struct target_ops *ops);
+
+extern struct cleanup *
+  make_cleanup_restore_ui_file (struct ui_file **variable);
 
 extern struct cleanup *make_final_cleanup (make_cleanup_ftype *, void *);
 
@@ -382,6 +393,10 @@ extern int nquery (const char *, ...) ATTRIBUTE_PRINTF (1, 2);
 extern int yquery (const char *, ...) ATTRIBUTE_PRINTF (1, 2);
 
 extern void init_page_info (void);
+
+extern struct cleanup *make_cleanup_restore_page_info (void);
+extern struct cleanup *
+  set_batch_flag_and_make_cleanup_restore_page_info (void);
 
 extern char *gdb_realpath (const char *);
 extern char *xfullpath (const char *);
@@ -623,12 +638,13 @@ extern void init_source_path (void);
 
 /* From exec.c */
 
+typedef int (*find_memory_region_ftype) (CORE_ADDR addr, unsigned long size,
+					 int read, int write, int exec,
+					 void *data);
+
 /* Take over the 'find_mapped_memory' vector from exec.c. */
-extern void exec_set_find_memory_regions (int (*) (int (*) (CORE_ADDR, 
-							    unsigned long, 
-							    int, int, int, 
-							    void *),
-						   void *));
+extern void exec_set_find_memory_regions
+  (int (*func) (find_memory_region_ftype func, void *data));
 
 /* Possible lvalue types.  Like enum language, this should be in
    value.h, but needs to be here for the same reason. */
@@ -1021,7 +1037,7 @@ extern void *alloca ();
 /* Maximum size of a register.  Something small, but large enough for
    all known ISAs.  If it turns out to be too small, make it bigger.  */
 
-enum { MAX_REGISTER_SIZE = 32 };
+enum { MAX_REGISTER_SIZE = 64 };
 
 /* Static target-system-dependent parameters for GDB. */
 
@@ -1223,5 +1239,9 @@ void dummy_obstack_deallocate (void *object, void *data);
 
 extern void initialize_progspace (void);
 extern void initialize_inferiors (void);
+
+#ifndef HAVE_PYTHON
+typedef int PyObject;
+#endif
 
 #endif /* #ifndef DEFS_H */

@@ -345,6 +345,13 @@ output for each file inserted, along with one of the letters @samp{a} or
 @samp{r} to indicate whether the file was appended (no old member
 deleted) or replaced.
 
+@item s
+@cindex ranlib
+Add an index to the archive, or update it if it already exists.  Note
+this command is an exception to the rule that there can only be one
+command letter, as it is possible to use it as either a command or a
+modifier.  In either case it does the same thing.
+
 @item t
 @cindex contents of archive
 Display a @emph{table} listing the contents of @var{archive}, or those
@@ -1017,7 +1024,8 @@ objcopy [@option{-F} @var{bfdname}|@option{--target=}@var{bfdname}]
         [@option{-x}|@option{--discard-all}]
         [@option{-X}|@option{--discard-locals}]
         [@option{-b} @var{byte}|@option{--byte=}@var{byte}]
-        [@option{-i} @var{interleave}|@option{--interleave=}@var{interleave}]
+        [@option{-i} [@var{breadth}]|@option{--interleave}[=@var{breadth}]]
+        [@option{--interleave-width=}@var{width}]
         [@option{-j} @var{sectionname}|@option{--only-section=}@var{sectionname}]
         [@option{-R} @var{sectionname}|@option{--remove-section=}@var{sectionname}]
         [@option{-p}|@option{--preserve-dates}]
@@ -1066,6 +1074,8 @@ objcopy [@option{-F} @var{bfdname}|@option{--target=}@var{bfdname}]
         [@option{--section-alignment=}@var{num}]
         [@option{--stack=}@var{size}]
         [@option{--subsystem=}@var{which}:@var{major}.@var{minor}]
+        [@option{--compress-debug-sections}]
+        [@option{--decompress-debug-sections}]
         [@option{-v}|@option{--verbose}]
         [@option{-V}|@option{--version}]
         [@option{--help}] [@option{--info}]
@@ -1239,19 +1249,42 @@ Do not copy compiler-generated local symbols.
 
 @item -b @var{byte}
 @itemx --byte=@var{byte}
-Keep only every @var{byte}th byte of the input file (header data is not
-affected).  @var{byte} can be in the range from 0 to @var{interleave}-1,
-where @var{interleave} is given by the @option{-i} or @option{--interleave}
-option, or the default of 4.  This option is useful for creating files
-to program @sc{rom}.  It is typically used with an @code{srec} output
-target.
+If interleaving has been enabled via the @option{--interleave} option
+then start the range of bytes to keep at the @var{byte}th byte.
+@var{byte} can be in the range from 0 to @var{breadth}-1, where
+@var{breadth} is the value given by the @option{--interleave} option.
 
-@item -i @var{interleave}
-@itemx --interleave=@var{interleave}
-Only copy one out of every @var{interleave} bytes.  Select which byte to
-copy with the @option{-b} or @option{--byte} option.  The default is 4.
-@command{objcopy} ignores this option if you do not specify either @option{-b} or
-@option{--byte}.
+@item -i [@var{breadth}]
+@itemx --interleave[=@var{breadth}]
+Only copy a range out of every @var{breadth} bytes.  (Header data is
+not affected).  Select which byte in the range begins the copy with
+the @option{--byte} option.  Select the width of the range with the
+@option{--interleave-width} option.
+
+This option is useful for creating files to program @sc{rom}.  It is
+typically used with an @code{srec} output target.  Note that
+@command{objcopy} will complain if you do not specify the
+@option{--byte} option as well.
+
+The default interleave breadth is 4, so with @option{--byte} set to 0,
+@command{objcopy} would copy the first byte out of every four bytes
+from the input to the output.
+
+@item --interleave-width=@var{width}
+When used with the @option{--interleave} option, copy @var{width}
+bytes at a time.  The start of the range of bytes to be copied is set
+by the @option{--byte} option, and the extent of the range is set with
+the @option{--interleave} option.
+
+The default value for this option is 1.  The value of @var{width} plus
+the @var{byte} value set by the @option{--byte} option must not exceed
+the interleave breadth set by the @option{--interleave} option.
+
+This option can be used to create images for two 16-bit flashes interleaved
+in a 32-bit bus by passing @option{-b 0 -i 4 --interleave-width=2}
+and @option{-b 2 -i 4 --interleave-width=2} to two @command{objcopy}
+commands.  If the input was '12345678' then the outputs would be
+'1256' and '3478' respectively.
 
 @item -p
 @itemx --preserve-dates
@@ -1648,6 +1681,12 @@ Specifically, the option:
 This option is used to build a @file{.sym} file for a VxWorks kernel.
 It can also be a useful way of reducing the size of a @option{--just-symbols}
 linker input file.
+
+@item --compress-debug-sections
+Compress DWARF debug sections using zlib.
+
+@item --decompress-debug-sections
+Decompress DWARF debug sections using zlib.
 
 @item -V
 @itemx --version
@@ -4121,8 +4160,10 @@ objdump(1), and the Info entries for @file{binutils}.
 @c man begin SYNOPSIS elfedit
 elfedit [@option{--input-mach=}@var{machine}]
         [@option{--input-type=}@var{type}]
+        [@option{--input-osabi=}@var{osbi}]
         @option{--output-mach=}@var{machine}
         @option{--output-type=}@var{type}
+        @option{--output-osabi=}@var{osbi}
         [@option{-v}|@option{--version}]
         [@option{-h}|@option{--help}]
         @var{elffile}@dots{}
@@ -4142,8 +4183,8 @@ which fields in the ELF header should be updated.
 @c man begin OPTIONS elfedit
 
 The long and short forms of options, shown here as alternatives, are
-equivalent. At least one of the @option{--output-mach} and
-@option{--output-type} options must be given.
+equivalent. At least one of the @option{--output-mach},
+@option{--output-type} and @option{--output-osabi} options must be given.
 
 @table @env
 
@@ -4167,6 +4208,19 @@ The supported ELF file types are, @var{rel}, @var{exec} and @var{dyn}.
 @itemx --output-type=@var{type}
 Change the ELF file type in the ELF header to @var{type}.  The
 supported ELF types are the same as @option{--input-type}.
+
+@itemx --input-osabi=@var{osabi}
+Set the matching input ELF file OSABI to @var{osbi}.  If
+@option{--input-osabi} isn't specified, it will match any ELF OSABIs.
+
+The supported ELF OSABIs are, @var{none}, @var{HPUX}, @var{NetBSD},
+@var{Linux}, @var{Hurd}, @var{Solaris}, @var{AIX}, @var{Irix},
+@var{FreeBSD}, @var{TRU64}, @var{Modesto}, @var{OpenBSD}, @var{OpenVMS},
+@var{NSK}, @var{AROS} and @var{FenixOS}.
+
+@itemx --output-osabi=@var{osabi}
+Change the ELF OSABI in the ELF header to @var{type}.  The
+supported ELF OSABI are the same as @option{--input-osabi}.
 
 @item -v
 @itemx --version

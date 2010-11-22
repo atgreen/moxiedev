@@ -21,23 +21,6 @@ load_lib "java.exp"
 
 if { [skip_java_tests] } { continue }
 
-
-# Set the current language to Java.  This counts as a test.  If it
-# fails, then we skip the other tests.
-
-proc set_lang_java {} {
-    global gdb_prompt
-
-    if [gdb_test "set language java" "" "set language java"] {
-	return 0
-    }
-
-    if [gdb_test "show language" ".* source language is \"java\".*"] {
-	return 0
-    }
-    return 1;
-}
-
 proc test_integer_literals_accepted {} {
     global gdb_prompt
 
@@ -114,6 +97,39 @@ proc test_integer_literals_rejected {} {
     test_print_reject "p 0xAG" 
 }
 
+proc test_float_accepted {} {
+    global gdb_prompt
+
+    # Test parsing of fp value with legit text following.
+    gdb_test "p 1234.5+1" " = 1235.5" "check fp + text"
+
+    # Test all the suffixes (including no suffix).
+    gdb_test "p 1." " = 1"
+    gdb_test "p 1.5" " = 1.5"
+    gdb_test "p 1.f" " = 1"
+    gdb_test "p 1.5f" " = 1.5"
+    gdb_test "p 1.d" " = 1"
+    gdb_test "p 1.5d" " = 1.5"
+
+    # Test hexadecimal floating point.
+    set test "p 0x1.1"
+    gdb_test_multiple $test $test {
+	-re " = 1\\.0625\r\n$gdb_prompt $" {
+	    pass $test
+	}
+	-re "Invalid number \"0x1\\.1\"\r\n$gdb_prompt $" {
+	    # Older glibc does not support hex float, newer does.
+	    xfail $test
+	}
+    }
+}
+
+proc test_float_rejected {} {
+    # Test bad suffixes.
+    test_print_reject "p 1.1x"
+    test_print_reject "p 1.1ff"
+    test_print_reject "p 1.1dd"
+}
 
 
 # Start with a fresh gdb.
@@ -134,6 +150,8 @@ if [set_lang_java] then {
     test_integer_literals_accepted
     test_character_literals_accepted
     test_integer_literals_rejected
+    test_float_accepted
+    test_float_rejected
 } else {
-    fail "Java print command tests suppressed"
+    warning "Java print command tests suppressed"
 }

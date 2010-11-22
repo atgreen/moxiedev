@@ -734,48 +734,6 @@ avr_info_to_howto_rela (bfd *abfd ATTRIBUTE_UNUSED,
   cache_ptr->howto = &elf_avr_howto_table[r_type];
 }
 
-/* Look through the relocs for a section during the first phase.
-   Since we don't do .gots or .plts, we just need to consider the
-   virtual table relocs for gc.  */
-
-static bfd_boolean
-elf32_avr_check_relocs (bfd *abfd,
-			struct bfd_link_info *info,
-			asection *sec,
-			const Elf_Internal_Rela *relocs)
-{
-  Elf_Internal_Shdr *symtab_hdr;
-  struct elf_link_hash_entry **sym_hashes;
-  const Elf_Internal_Rela *rel;
-  const Elf_Internal_Rela *rel_end;
-
-  if (info->relocatable)
-    return TRUE;
-
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
-  sym_hashes = elf_sym_hashes (abfd);
-
-  rel_end = relocs + sec->reloc_count;
-  for (rel = relocs; rel < rel_end; rel++)
-    {
-      struct elf_link_hash_entry *h;
-      unsigned long r_symndx;
-
-      r_symndx = ELF32_R_SYM (rel->r_info);
-      if (r_symndx < symtab_hdr->sh_info)
-        h = NULL;
-      else
-	{
-	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	  while (h->root.type == bfd_link_hash_indirect
-		 || h->root.type == bfd_link_hash_warning)
-	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
-	}
-    }
-
-  return TRUE;
-}
-
 static bfd_boolean
 avr_stub_is_required_for_16_bit_reloc (bfd_vma relocation)
 {
@@ -1232,15 +1190,8 @@ elf32_avr_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	}
 
       if (sec != NULL && elf_discarded_section (sec))
-	{
-	  /* For relocs against symbols from removed linkonce sections,
-	     or sections discarded by a linker script, we just want the
-	     section contents zeroed.  Avoid any special processing.  */
-	  _bfd_clear_contents (howto, input_bfd, contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend, howto, contents);
 
       if (info->relocatable)
 	continue;
@@ -2991,6 +2942,7 @@ elf32_avr_build_stubs (struct bfd_link_info *info)
 }
 
 #define ELF_ARCH		bfd_arch_avr
+#define ELF_TARGET_ID		AVR_ELF_DATA
 #define ELF_MACHINE_CODE	EM_AVR
 #define ELF_MACHINE_ALT1	EM_AVR_OLD
 #define ELF_MAXPAGESIZE		1
@@ -3004,7 +2956,6 @@ elf32_avr_build_stubs (struct bfd_link_info *info)
 #define elf_info_to_howto	             avr_info_to_howto_rela
 #define elf_info_to_howto_rel	             NULL
 #define elf_backend_relocate_section         elf32_avr_relocate_section
-#define elf_backend_check_relocs             elf32_avr_check_relocs
 #define elf_backend_can_gc_sections          1
 #define elf_backend_rela_normal		     1
 #define elf_backend_final_write_processing \

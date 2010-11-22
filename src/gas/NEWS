@@ -1,5 +1,10 @@
 -*- text -*-
 
+Changes in 2.21:
+
+
+* Gas no longer requires doubling of ampersands in macros.
+
 * Add support for the TMS320C6000 (TI C6X) processor family.
 
 * GAS now understands an extended syntax in the .section directive flags

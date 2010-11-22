@@ -465,6 +465,9 @@ endif
 
 if USING_DARWIN_CRT
 libgcj_la_SOURCES += darwin.cc
+LIBJAVA_LDFLAGS_LIBMATH =
+else
+LIBJAVA_LDFLAGS_LIBMATH = -lm
 endif
 
 if USING_POSIX_THREADS
@@ -544,7 +547,9 @@ libgcj_tools_la_GCJFLAGS = $(AM_GCJFLAGS) -findirect-dispatch \
  -fsource-filename=$(here)/classpath/tools/all-classes.lst
 libgcj_tools_la_LDFLAGS = -rpath $(toolexeclibdir) \
  -version-info `grep -v '^\#' $(srcdir)/libtool-version` \
- $(LIBGCJ_LD_SYMBOLIC_FUNCTIONS) $(LIBJAVA_LDFLAGS_NOUNDEF) -lm
+ $(LIBGCJ_LD_SYMBOLIC_FUNCTIONS) $(LIBJAVA_LDFLAGS_NOUNDEF) \
+ $(LIBJAVA_LDFLAGS_LIBMATH)
+
 libgcj_tools_la_LIBADD = libgcj.la
 libgcj_tools_la_DEPENDENCIES = libgcj.la libgcj.spec \
  $(libgcj_tools_la_version_dep)
@@ -1165,6 +1170,8 @@ ecjx_LINK = $(GCJ_FOR_ECJX_LINK) $(ecjx_LDFLAGS)
 ecjx_LDFLAGS = $(ECJX_BASE_FLAGS) $(ECJ_BUILD_JAR)
 ecjx_LDADD = 
 ecjx_DEPENDENCIES = 
+ecjx.$(OBJEXT): ecjx.cc
+	$(GCC_FOR_ECJX) -c $<
 
 endif !NATIVE
 

@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/vector
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-27T17:27:06.727889Z
-162578
+2010-09-03T18:10:46.246406Z
+163837
 paolo
 
 
@@ -26,13 +26,13 @@ paolo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-invalidation
-dir
-
 modifiers
 dir
 
 requirements
+dir
+
+debug
 dir
 
 debug_mode_requires_reallocation-1.cc
@@ -180,11 +180,39 @@ paolo
 
 1080
 
-profile
-dir
-
-ext_pointer
-dir
+26412-1.cc
+file
+
+
+
+
+2009-04-24T17:50:18.000000Z
+f8174636c44aeac108055a53715459e1
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+869
 
 init-list.cc
 file
@@ -220,39 +248,11 @@ jakub
 
 1866
 
-26412-1.cc
-file
-
-
-
-
-2009-04-24T17:50:18.000000Z
-f8174636c44aeac108055a53715459e1
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-869
+ext_pointer
+dir
+
+profile
+dir
 
 26412-2.cc
 file

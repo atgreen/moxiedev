@@ -122,7 +122,7 @@ gdb_test "help disable breakpoints" "Disable some breakpoints\.\[\r\n\]+Argument
 # test help disable display
 gdb_test "help disable display" "Disable some expressions to be displayed when program stops\.\[\r\n\]+Arguments are the code numbers of the expressions to stop displaying\.\[\r\n\]+No argument means disable all automatic-display expressions\.\[\r\n\]+Do \"info display\" to see current list of code numbers\." "help disable display"
 # test help disassemble
-gdb_test "help disassemble" "Disassemble a specified section of memory\.\[\r\n\]+Default is the function surrounding the pc of the selected frame\.\[\r\n\]+With a /m modifier, source lines are included \\(if available\\)\.\[\r\n\]+With a /r modifier, raw instructions in hex are included\.\[\r\n\]+With a single argument, the function surrounding that address is dumped\.\[\r\n\]+Two arguments \\(separated by a comma\\) are taken as a range of memory to dump\." "help disassemble"
+gdb_test "help disassemble" "Disassemble a specified section of memory\.\[\r\n\]+Default is the function surrounding the pc of the selected frame\.\[\r\n\]+With a /m modifier, source lines are included \\(if available\\)\.\[\r\n\]+With a /r modifier, raw instructions in hex are included\.\[\r\n\]+With a single argument, the function surrounding that address is dumped\.\[\r\n\]+Two arguments \\(separated by a comma\\) are taken as a range of memory to dump,\[\r\n\]+  in the form of \"start,end\", or \"start,\\+length\"\." "help disassemble"
 # test help display
 gdb_test "help display" "Print value of expression EXP each time the program stops\.\[\r\n\]+/FMT may be used before EXP as in the \"print\" command\.\[\r\n\]+/FMT \"i\" or \"s\" or including a size-letter is allowed,\[\r\n\]+as in the \"x\" command, and then EXP is used to get the address to examine\[\r\n\]+and examining is done as in the \"x\" command\.\[\r\n\]+With no argument, display all currently requested auto-display expressions\.\[\r\n\]+Use \"undisplay\" to cancel display requests previously made\." "help display"
 # test help do
@@ -507,7 +507,7 @@ gdb_test "help show confirm" "Show whether to confirm potentially dangerous oper
 # test help show convenience
 gdb_test "help show convenience" "Debugger convenience \\(\"\\\$foo\"\\) variables\.\[\r\n\]+These variables are created when you assign them values;\[\r\n\]+thus, \"print \\\$foo=1\" gives \"\\\$foo\" the value 1\.  Values may be any type\.\[\r\n\]+A few convenience variables are given values automatically:\[\r\n\]+\"\\\$_\"holds the last address examined with \"x\" or \"info lines\",\[\r\n\]+\"\\\$__\" holds the contents of the last address examined with \"x\"\." "help show convenience"
 # test help show directories
-gdb_test "help show directories" "Current search path for finding source files\.\[\r\n\]+\\\$cwd in the path means the current working directory\.\[\r\n\]+\\\$cdir in the path means the compilation directory of the source file\." "help show directories"
+gdb_test "help show directories" "Show the search path for finding source files\.\[\r\n\]+\\\$cwd in the path means the current working directory\.\[\r\n\]+\\\$cdir in the path means the compilation directory of the source file\..*" "help show directories"
 # test help show editing
 gdb_test "help show editing" "Show editing of command lines as they are typed\.\[\r\n\]+Use \"on\" to enable the editing, and \"off\" to disable it\.\[\r\n\]+Without an argument, command line editing is enabled\.  To edit, use\[\r\n\]+EMACS-like or VI-like commands like control-P or ESC\." "help show editing"
 # test help show environment
@@ -669,7 +669,7 @@ test_class_help "user-defined" {
     "Use the \"define\" command to define a command\.\[\r\n\]+"
 }
 # test help watch
-gdb_test "help watch" "Set a watchpoint for an expression\.\[\r\n\]+A watchpoint stops execution of your program whenever the value of\[\r\n\]+an expression changes\." "help watch"
+gdb_test "help watch" "Set a watchpoint for an expression\.\[\r\n\]+Usage: watch .-l.-location. EXPRESSION\[\r\n\]+A watchpoint stops execution of your program whenever the value of\[\r\n\]+an expression changes\.\[\r\n\]+If -l or -location is given, this evaluates EXPRESSION and watches\[\r\n\]+the memory to which it refers\." "help watch"
 # test help whatis
 gdb_test "help whatis" "Print data type of expression EXP\." "help whatis"
 # test help where

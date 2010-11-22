@@ -1,6 +1,8 @@
 /* 32-bit ELF support for TI C6X
    Copyright 2010
    Free Software Foundation, Inc.
+   Contributed by Joseph Myers <joseph@codesourcery.com>
+   		  Bernd Schmidt  <bernds@codesourcery.com>
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -1383,14 +1385,13 @@ elf32_tic6x_rel_relocation_p (bfd *abfd, asection *sec,
   const struct elf_backend_data *bed;
 
   /* To determine which flavor of relocation this is, we depend on the
-     fact that the INPUT_SECTION's REL_HDR is read before its
-     REL_HDR2.  */
-  rel_hdr = &elf_section_data (sec)->rel_hdr;
+     fact that the INPUT_SECTION's REL_HDR is read before RELA_HDR.  */
+  rel_hdr = elf_section_data (sec)->rel.hdr;
+  if (rel_hdr == NULL)
+    return FALSE;
   bed = get_elf_backend_data (abfd);
-  if ((size_t) (rel - relocs)
-      >= (NUM_SHDR_ENTRIES (rel_hdr) * bed->s->int_rels_per_ext_rel))
-    rel_hdr = elf_section_data (sec)->rel_hdr2;
-  return rel_hdr->sh_entsize == bed->s->sizeof_rel;
+  return ((size_t) (rel - relocs)
+	  < NUM_SHDR_ENTRIES (rel_hdr) * bed->s->int_rels_per_ext_rel);
 }
 
 static bfd_boolean
@@ -1468,15 +1469,8 @@ elf32_tic6x_relocate_section (bfd *output_bfd,
 	}
 
       if (sec != NULL && elf_discarded_section (sec))
-	{
-	  /* For relocs against symbols from removed linkonce sections,
-	     or sections discarded by a linker script, we just want the
-	     section contents zeroed.  Avoid any special processing.  */
-	  _bfd_clear_contents (howto, input_bfd, contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend, howto, contents);
 
       if (info->relocatable)
 	{
@@ -1667,14 +1661,45 @@ elf32_tic6x_relocate_section (bfd *output_bfd,
 static int
 elf32_tic6x_obj_attrs_arg_type (int tag)
 {
-  if (tag == Tag_compatibility)
+  if (tag == Tag_ABI_compatibility)
     return ATTR_TYPE_FLAG_INT_VAL | ATTR_TYPE_FLAG_STR_VAL;
+  else if (tag & 1)
+    return ATTR_TYPE_FLAG_STR_VAL;
   else
-    /* Correct for known attributes, arbitrary for others.  */
     return ATTR_TYPE_FLAG_INT_VAL;
 }
 
-/* Merge the Tag_C6XABI_Tag_CPU_arch attribute values ARCH1 and ARCH2
+static int
+elf32_tic6x_obj_attrs_order (int num)
+{
+  if (num == LEAST_KNOWN_OBJ_ATTRIBUTE)
+    return Tag_ABI_conformance;
+  if ((num - 1) < Tag_ABI_conformance)
+    return num - 1;
+  return num;
+}
+
+static bfd_boolean
+elf32_tic6x_obj_attrs_handle_unknown (bfd *abfd, int tag)
+{
+  if ((tag & 127) < 64)
+    {
+      _bfd_error_handler
+	(_("%B: error: unknown mandatory EABI object attribute %d"),
+	 abfd, tag);
+      bfd_set_error (bfd_error_bad_value);
+      return FALSE;
+    }
+  else
+    {
+      _bfd_error_handler
+	(_("%B: warning: unknown EABI object attribute %d"),
+	 abfd, tag);
+      return TRUE;
+    }
+}
+
+/* Merge the Tag_ISA attribute values ARCH1 and ARCH2
    and return the merged value.  At present, all merges succeed, so no
    return value for errors is defined.  */
 
@@ -1688,13 +1713,60 @@ elf32_tic6x_merge_arch_attributes (int arch1, int arch2)
 
   /* In most cases, the numerically greatest value is the correct
      merged value, but merging C64 and C67 results in C674X.  */
-  if ((min_arch == C6XABI_Tag_CPU_arch_C67X
-       || min_arch == C6XABI_Tag_CPU_arch_C67XP)
-      && (max_arch == C6XABI_Tag_CPU_arch_C64X
-	  || max_arch == C6XABI_Tag_CPU_arch_C64XP))
-    return C6XABI_Tag_CPU_arch_C674X;
+  if ((min_arch == C6XABI_Tag_ISA_C67X
+       || min_arch == C6XABI_Tag_ISA_C67XP)
+      && (max_arch == C6XABI_Tag_ISA_C64X
+	  || max_arch == C6XABI_Tag_ISA_C64XP))
+    return C6XABI_Tag_ISA_C674X;
 
   return max_arch;
+}
+
+/* Convert a Tag_ABI_array_object_alignment or
+   Tag_ABI_array_object_align_expected tag value TAG to a
+   corresponding alignment value; return the alignment, or -1 for an
+   unknown tag value.  */
+
+static int
+elf32_tic6x_tag_to_array_alignment (int tag)
+{
+  switch (tag)
+    {
+    case 0:
+      return 8;
+
+    case 1:
+      return 4;
+
+    case 2:
+      return 16;
+
+    default:
+      return -1;
+    }
+}
+
+/* Convert a Tag_ABI_array_object_alignment or
+   Tag_ABI_array_object_align_expected alignment ALIGN to a
+   corresponding tag value; return the tag value.  */
+
+static int
+elf32_tic6x_array_alignment_to_tag (int align)
+{
+  switch (align)
+    {
+    case 8:
+      return 0;
+
+    case 4:
+      return 1;
+
+    case 16:
+      return 2;
+
+    default:
+      abort ();
+    }
 }
 
 /* Merge attributes from IBFD and OBFD, returning TRUE if the merge
@@ -1703,8 +1775,11 @@ elf32_tic6x_merge_arch_attributes (int arch1, int arch2)
 static bfd_boolean
 elf32_tic6x_merge_attributes (bfd *ibfd, bfd *obfd)
 {
+  bfd_boolean result = TRUE;
   obj_attribute *in_attr;
   obj_attribute *out_attr;
+  int i;
+  int array_align_in, array_align_out, array_expect_in, array_expect_out;
 
   if (!elf_known_obj_attributes_proc (obfd)[0].i)
     {
@@ -1725,14 +1800,185 @@ elf32_tic6x_merge_attributes (bfd *ibfd, bfd *obfd)
 
   /* No specification yet for handling of unknown attributes, so just
      ignore them and handle known ones.  */
-  out_attr[Tag_C6XABI_Tag_CPU_arch].i
-    = elf32_tic6x_merge_arch_attributes (in_attr[Tag_C6XABI_Tag_CPU_arch].i,
-					 out_attr[Tag_C6XABI_Tag_CPU_arch].i);
 
-  /* Merge Tag_compatibility attributes and any common GNU ones.  */
-  _bfd_elf_merge_object_attributes (ibfd, obfd);
+  if (out_attr[Tag_ABI_stack_align_preserved].i
+      < in_attr[Tag_ABI_stack_align_needed].i)
+    {
+      _bfd_error_handler
+	(_("error: %B requires more stack alignment than %B preserves"),
+	 ibfd, obfd);
+      result = FALSE;
+    }
+  if (in_attr[Tag_ABI_stack_align_preserved].i
+      < out_attr[Tag_ABI_stack_align_needed].i)
+    {
+      _bfd_error_handler
+	(_("error: %B requires more stack alignment than %B preserves"),
+	 obfd, ibfd);
+      result = FALSE;
+    }
 
-  return TRUE;
+  array_align_in = elf32_tic6x_tag_to_array_alignment
+    (in_attr[Tag_ABI_array_object_alignment].i);
+  if (array_align_in == -1)
+    {
+      _bfd_error_handler
+	(_("error: unknown Tag_ABI_array_object_alignment value in %B"),
+	 ibfd);
+      result = FALSE;
+    }
+  array_align_out = elf32_tic6x_tag_to_array_alignment
+    (out_attr[Tag_ABI_array_object_alignment].i);
+  if (array_align_out == -1)
+    {
+      _bfd_error_handler
+	(_("error: unknown Tag_ABI_array_object_alignment value in %B"),
+	 obfd);
+      result = FALSE;
+    }
+  array_expect_in = elf32_tic6x_tag_to_array_alignment
+    (in_attr[Tag_ABI_array_object_align_expected].i);
+  if (array_expect_in == -1)
+    {
+      _bfd_error_handler
+	(_("error: unknown Tag_ABI_array_object_align_expected value in %B"),
+	 ibfd);
+      result = FALSE;
+    }
+  array_expect_out = elf32_tic6x_tag_to_array_alignment
+    (out_attr[Tag_ABI_array_object_align_expected].i);
+  if (array_expect_out == -1)
+    {
+      _bfd_error_handler
+	(_("error: unknown Tag_ABI_array_object_align_expected value in %B"),
+	 obfd);
+      result = FALSE;
+    }
+
+  if (array_align_out < array_expect_in)
+    {
+      _bfd_error_handler
+	(_("error: %B requires more array alignment than %B preserves"),
+	 ibfd, obfd);
+      result = FALSE;
+    }
+  if (array_align_in < array_expect_out)
+    {
+      _bfd_error_handler
+	(_("error: %B requires more array alignment than %B preserves"),
+	 obfd, ibfd);
+      result = FALSE;
+    }
+
+  for (i = LEAST_KNOWN_OBJ_ATTRIBUTE; i < NUM_KNOWN_OBJ_ATTRIBUTES; i++)
+    {
+      switch (i)
+	{
+	case Tag_ISA:
+	  out_attr[i].i = elf32_tic6x_merge_arch_attributes (in_attr[i].i,
+							     out_attr[i].i);
+	  break;
+
+	case Tag_ABI_wchar_t:
+	  if (out_attr[i].i == 0)
+	    out_attr[i].i = in_attr[i].i;
+	  if (out_attr[i].i != 0
+	      && in_attr[i].i != 0
+	      && out_attr[i].i != in_attr[i].i)
+	    {
+	      _bfd_error_handler
+		(_("warning: %B and %B differ in wchar_t size"), obfd, ibfd);
+	    }
+	  break;
+
+	case Tag_ABI_stack_align_needed:
+	  if (out_attr[i].i < in_attr[i].i)
+	    out_attr[i].i = in_attr[i].i;
+	  break;
+
+	case Tag_ABI_stack_align_preserved:
+	  if (out_attr[i].i > in_attr[i].i)
+	    out_attr[i].i = in_attr[i].i;
+	  break;
+
+	case Tag_ABI_DSBT:
+	  if (out_attr[i].i != in_attr[i].i)
+	    {
+	      _bfd_error_handler
+		(_("warning: %B and %B differ in whether code is "
+		   "compiled for DSBT"),
+		 obfd, ibfd);
+	    }
+	  break;
+
+	case Tag_ABI_PID:
+	  if (out_attr[i].i != in_attr[i].i)
+	    {
+	      _bfd_error_handler
+		(_("warning: %B and %B differ in position-dependence of "
+		   "data addressing"),
+		 obfd, ibfd);
+	    }
+	  break;
+
+	case Tag_ABI_PIC:
+	  if (out_attr[i].i != in_attr[i].i)
+	    {
+	      _bfd_error_handler
+		(_("warning: %B and %B differ in position-dependence of "
+		   "code addressing"),
+		 obfd, ibfd);
+	    }
+	  break;
+
+	case Tag_ABI_array_object_alignment:
+	  if (array_align_out != -1
+	      && array_align_in != -1
+	      && array_align_out > array_align_in)
+	    out_attr[i].i
+	      = elf32_tic6x_array_alignment_to_tag (array_align_in);
+	  break;
+
+	case Tag_ABI_array_object_align_expected:
+	  if (array_expect_out != -1
+	      && array_expect_in != -1
+	      && array_expect_out < array_expect_in)
+	    out_attr[i].i
+	      = elf32_tic6x_array_alignment_to_tag (array_expect_in);
+	  break;
+
+	case Tag_ABI_conformance:
+	  /* Merging for this attribute is not specified.  As on ARM,
+	     treat a missing attribute as no claim to conform and only
+	     merge identical values.  */
+	  if (out_attr[i].s == NULL
+	      || in_attr[i].s == NULL
+	      || strcmp (out_attr[i].s,
+			 in_attr[i].s) != 0)
+	    out_attr[i].s = NULL;
+	  break;
+
+	case Tag_ABI_compatibility:
+	  /* Merged in _bfd_elf_merge_object_attributes.  */
+	  break;
+
+	default:
+	  result
+	    = result && _bfd_elf_merge_unknown_attribute_low (ibfd, obfd, i);
+	  break;
+	}
+
+      if (in_attr[i].type && !out_attr[i].type)
+	out_attr[i].type = in_attr[i].type;
+    }
+
+  /* Merge Tag_ABI_compatibility attributes and any common GNU ones.  */
+  if (!_bfd_elf_merge_object_attributes (ibfd, obfd))
+    return FALSE;
+
+  result &= _bfd_elf_merge_unknown_attribute_list (ibfd, obfd);
+
+  return result;
 }
 
 static bfd_boolean
@@ -1753,6 +1999,7 @@ elf32_tic6x_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
 #define TARGET_BIG_SYM		bfd_elf32_tic6x_be_vec
 #define TARGET_BIG_NAME		"elf32-tic6x-be"
 #define ELF_ARCH		bfd_arch_tic6x
+#define ELF_TARGET_ID		TIC6X_ELF_DATA
 #define ELF_MACHINE_CODE	EM_TI_C6000
 #define ELF_MAXPAGESIZE		1
 #define bfd_elf32_bfd_reloc_type_lookup elf32_tic6x_reloc_type_lookup
@@ -1765,7 +2012,9 @@ elf32_tic6x_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
 #define elf_backend_may_use_rel_p	1
 #define elf_backend_may_use_rela_p	1
 #define elf_backend_obj_attrs_arg_type	elf32_tic6x_obj_attrs_arg_type
-#define elf_backend_obj_attrs_section	"__TI_build_attributes"
+#define elf_backend_obj_attrs_handle_unknown	elf32_tic6x_obj_attrs_handle_unknown
+#define elf_backend_obj_attrs_order	elf32_tic6x_obj_attrs_order
+#define elf_backend_obj_attrs_section	".c6xabi.attributes"
 #define elf_backend_obj_attrs_section_type	SHT_C6000_ATTRIBUTES
 #define elf_backend_obj_attrs_vendor	"c6xabi"
 #define elf_backend_rela_normal		1

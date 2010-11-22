@@ -1,3 +1,1191 @@
+2010-11-18  Doug Kwan  <dougkwan@google.com>
+
+	* expression.cc (BINARY_EXPRESSION): Initialize left_alignment
+	and right_alignment to be zero.  Store result alignment only if it is
+	greater than existing alignment.
+
+2010-11-16  Cary Coutant  <ccoutant@google.com>
+
+	PR gold/12220
+	* dwarf_reader.cc (Sized_dwarf_line_info::Sized_dwarf_line_info):
+	Check for ".zdebug_line".
+
+2010-11-16  Doug Kwan  <dougkwan@google.com>
+	    Cary Coutant  <ccoutant@google.com>
+
+	* output.h (Output_segment::set_section_addresses): Pass increase_relro
+	by reference; adjust all callers.
+	* output.cc (Output_segment::set_section_addresses): Adjust references
+	to increase_relro. Add padding to *increase_relro when ORDER_RELRO_LAST
+	list is empty.
+	(Output_segment::set_offset): Assert if PT_GNU_RELRO segment does not
+	end at page boundary.
+
+2010-11-16  Cary Coutant  <ccoutant@google.com>
+
+	PR gold/12220
+	* layout.cc (Layout::choose_output_section): Transform names of
+	compressed sections even when using a script with a SECTIONS clause.
+	(Layout::output_section_name): Remove code to transform
+	compressed debug section names.
+	* output.cc (Output_section::add_input_section): Use uncompressed
+	section size when tracking input sections.
+
+2010-11-11  Richard Sandiford  <richard.sandiford@linaro.org>
+
+	* symtab.h (Symbol::NON_PIC_REF): Remove.
+	(Symbol::RELATIVE_REF, Symbol::TLS_REF): New Reference_flags.
+	(Symbol::FUNCTION_CALL): Renumber.  Reword comment.
+	(Symbol::needs_dynamic_reloc): Don't check NON_PIC_REF.
+	(Symbol::use_plt_offset): Take a flags argument and pass it
+	directly to needs_dynamic_reloc.  Restrict check for undefined
+	weak symbols to function calls.
+	* arm.cc (Target_arm::Scan::get_reference_flags): New function.
+	(Target_arm::Scan::global): Use it.
+	(Target_arm::Scan::scan_reloc_for_stub): Likewise.
+	(Target_arm::Relocate::relocate): Likewise.
+	(Target_arm::Relocate::should_apply_static_reloc): Replace flags
+	parameter with an r_type parameter.  Use get_reference_flags
+	to get the flags.
+	(Target_arm::Relocate::relocate): Update accordingly.
+	* i386.cc (Target_i386::Scan::get_reference_flags): New function.
+	(Target_i386::Scan::reloc_needs_plt_for_ifunc): Use it.
+	(Target_i386::Scan::global): Likewise.
+	(Target_i386::Relocate::relocate): Likewise.
+	(Target_i386::Relocate::should_apply_static_reloc): Replace flags
+	parameter with an r_type parameter.  Use get_reference_flags
+	to get the flags.
+	(Target_i386::Relocate::relocate): Update accordingly.
+	* powerpc.cc (Target_powerpc::Scan::get_reference_flags): New function.
+	(Target_powerpc::Scan::global): Use it.
+	(Target_powerpc::Scan::scan_reloc_for_stub): Likewise.
+	(Target_powerpc::Relocate::relocate): Likewise.
+	* sparc.cc (Target_sparc::Scan::get_reference_flags): New function.
+	(Target_sparc::Scan::global): Use it.
+	(Target_sparc::Scan::scan_reloc_for_stub): Likewise.
+	(Target_sparc::Relocate::relocate): Likewise.
+	* x86_64.cc (Target_x86_64::Scan::get_reference_flags): New function.
+	(Target_x86_64::Scan::reloc_needs_plt_for_ifunc): Use it.
+	(Target_x86_64::Scan::global): Likewise.
+	(Target_x86_64::Relocate::relocate): Likewise.
+
+2010-11-08  Doug Kwan  <dougkwan@google.com>
+	    Cary Coutant  <ccoutant@google.com>
+
+	* arm.cc (Arm_exidx_merge_section::build_contents): New method.
+	(Arm_exidx_merge_section::section_contents_): New data member.
+	(Arm_input_section::Arm_input_section): Initialize original_contents_.
+	(Arm_input_section::~Arm_input_section): De-allocate memory.
+	(Arm_input_section::original_contents_): New data member.	
+	(Arm_exidx_fixup::process_exidx_section): Pass EXIDX section contents
+	in parameters instead of calling Object::section_contents without
+	locking.
+	(Arm_output_section::group_section): New parameter TASK.  Pass it
+	to callees that need locking objects.
+	(Arm_output_section::fix_exidx_coverage): New parameter TASK.  Use it
+	to lock EXIDX input sections.  Fix a formatting issue.  Call
+	Arm_exidx_merged_section::build_contents to create merged section
+	contents.
+	(Arm_output_section::create_stub_group): New parameter TASK.  Use it
+	to lock object of stub table owner.
+	(Arm_exidx_input_section::Arm_exidx_input_section): Add new parameter
+	TEXT_SIZE to initialize data member TEXT_SIZE_.
+	(Arm_exidx_input_section::addralign): Fix typo in comment.
+	(Arm_exidx_input_section::text_size): New method.
+	(Target_arm::do_relax): New parameter TASK.  Pass it to callees
+	that require locking objects.  Lock objects before scanning for stubs
+	and updating local symbols.
+	(Arm_input_section<big_endian>::init): Copy contents of original
+	input section.
+ 	(Arm_input_section<big_endian>::do_write): Use saved contents of
+	original input section instead of calling Object::section_contents
+	without locking.
+	(Arm_exidx_cantunwind::do_fixed_endian_write): Find out text section
+	size without calling Object::section_size().
+	(Arm_exidx_merged_section::Arm_exidx_merged_section): Add sanity check
+	for size.  Allocate a buffer for merged EXIDX entries.
+	(Arm_exidx_merged_section::build_contents): New method.
+ 	(Arm_exidx_merged_section::do_write): Move merge section contents
+	building code to Arm_exidx_merged_section::build_contetns.  Write
+	out contetns in buffer instead of building it on the fly.
+	(Arm_relobj::make_exidx_input_section): Also pass text section size
+	to Arm_exidx_input_section constructor.
+	(Arm_relobj::do_read_symbols): Fix memory leak.  Fix a formatting issue.
+	(Arm_dynobj::do_read_symbols): Fix memory leak.
+	* layout.cc (Layout::finalize): Pass TASK to Target::relax().
+	* target.h: (class Task): Add forward declaration.
+	(Target::relax): Add new parameter TASK and pass it to
+	Target::do_relax().
+	(Target::do_relax):: New parameter TASK.  Fix a formatting issue.
+
+2010-11-05  Cary Coutant  <ccoutant@google.com>
+
+	PR gold/10708
+	* copy-relocs.cc (Copy_relocs::emit_copy_reloc): Hold a lock on the
+	object when reading from the file.
+	* gold.cc (queue_middle_tasks): Hold a lock on the object when doing
+	second layout pass.
+	* icf.cc (preprocess_for_unique_sections): Hold a lock on the object
+	when reading section contents.
+	(get_section_contents): Likewise.
+	(icf::find_identical_sections): Likewise.
+	* mapfile.cc (Mapfile::print_discarded_sections): Hold a lock on the
+	object when reading from the file.
+	* plugin.cc (Plugin_manager::layout_deferred_objects): Hold a lock on
+	the object when doing deferred section layout.
+
+2010-11-03  Nick Clifton  <nickc@redhat.com>
+
+	PR gold/12001
+	* script.h (class Symbol_assignment: name): New member.  Returns
+	the name of the symbol.
+	* scrfipt.cc (Script_options::is_pending_assignment): New member.
+	Returns true if the given symbol name is on the list of
+	assignments wating to be processed.
+	* archive.cc (should_incldue_member): If the symbol is undefined,
+	check to see if it is on the list of symbols pending assignment.
+
+2010-11-03  Ryan Mansfield  <rmansfield@qnx.com>
+
+	* script-sections.cc (Script_sections::find_memory_region): Check
+	for a NULL output section pointer.
+
+2010-10-29  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_outout_section::fix_exidx_coverage): Adjust call to
+	Output_section::add_relaxed_input_section.
+	* output.cc (Output_section::add_relaxed_input_section): Add new
+	arguments LAYOUT and NAME.  Set section order index.
+	(Output_section::convert_input_sections_in_list_to_relaxed_sections):
+	Copy section order index.
+	* output.h (Output_section::add_relaxed_input_section): Add new
+	arguments LAYOUT and NAME.
+
+2010-10-29  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* testsuite/Makefile.am: Move gcctestdir/ld rule to
+        NATIVE_OR_CROSS_LINKER.
+	* testsuite/Makefile.in: Regenerate.
+
+2010-10-20  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relobj::do_read_symbols): Warn about ARM EXIDX sections
+	without SHF_LINK_ORDER flags.
+	* layout.cc (Layout::choose_output_section): Do not filter
+	SHF_LINK_ORDER flag in a relocatable link.
+
+2010-10-17  Cary Coutant  <ccoutant@google.com>
+
+	* output.h (Output_segment::set_section_addresses): Change function
+	signature.  Update all callers.
+	* output.cc (Output_segment::is_first_section_relro): Ignore TLS
+	sections.
+	(Output_segment::set_section_addresses): Align after last TLS
+	section.  Add padding before last relro section instead of after.
+
+2010-10-17  Doug Kwan  <dougkwan@google.com>
+
+	* gold/arm.cc (Target_arm::got_section): Use correct order and set
+	GOT output section to be writable.
+
+2010-10-14  Cary Coutant  <ccoutant@google.com>
+
+	* debug.h (DEBUG_INCREMENTAL): New flag.
+ 	(debug_string_to_enum): Add DEBUG_INCREMENTAL).
+ 	* gold.cc (queue_initial_tasks): Check parameters for incremental link
+ 	mode.
+ 	* incremental.cc (report_command_line): Ignore all forms of
+ 	--incremental.
+ 	* layout.cc (Layout::Layout): Check parameters for incremental link
+ 	mode.
+ 	* options.cc (General_options::parse_incremental): New function.
+ 	(General_options::parse_no_incremental): New function.
+ 	(General_options::parse_incremental_full): New function.
+ 	(General_options::parse_incremental_update): New function.
+ 	(General_options::incremental_mode_): New data member.
+ 	(General_options::finalize): Check incremental_mode_.
+ 	* options.h (General_options): Update help text for --incremental.
+ 	Add --no-incremental, --incremental-full, --incremental-update.
+ 	(General_options::Incremental_mode): New enum type.
+ 	(General_options::incremental_mode): New function.
+ 	(General_options::incremental_mode_): New data member.
+ 	* parameters.cc (Parameters::incremental_mode_): New data member.
+ 	(Parameters::set_options): Set incremental_mode_.
+ 	(Parameters::set_incremental_full): New function.
+ 	(Parameters::incremental): New function.
+ 	(Parameters::incremental_update): New function.
+ 	(set_parameters_incremental_full): New function.
+ 	* parameters.h (Parameters::set_incremental_full): New function.
+ 	(Parameters::incremental): New function.
+ 	(Parameters::incremental_update): New function.
+ 	(Parameters::incremental_mode_): New data member.
+ 	(set_parameters_incremental_full): New function.
+ 	* plugin.cc (Plugin_manager::add_input_file): Check parameters for
+ 	incremental link mode.
+ 	* reloc.cc (Sized_relobj::do_read_relocs): Likewise.
+ 	(Sized_relobj::do_relocate_sections): Likewise.
+ 	* testsuite/Makefile.am (incremental_test): Use --incremental-full
+ 	option.
+ 	* testsuite/Makefile.in: Regenerate.
+ 	* testsuite/incremental_test.sh: Filter all forms of --incremental.
+
+2010-10-12  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* script-sections.h (class Script_sections): Make
+	Sections_elements typedef public.
+	* script-sections.cc (class Sort_output_sections): Add elements_
+	field.  Add constructor which sets it; change all callers.
+	(Sort_output_sections::is_before): New function.
+	(Sort_output_sections::operator()): Call is_before.
+	* configure.ac (NATIVE_OR_CROSS_LINKER): New automake
+	conditional.
+	* testsuite/script_test_10.sh: New test. Test script section
+	order.
+	* testsuite/script_test_10.t: Likewise.
+	* testsuite/script_test_10.s: Likewise.
+	* testsuite/Makefile.am: Wrap the cross linker tests and the
+	common tests into NATIVE_OR_CROSS_LINKER.
+	(check_SCRIPTS): Add script_test_10.sh.
+	(check_DATA): Add script_test_10.stdout.
+	(script_test_10.o, script_test_10): New targets.
+	(script_test_10.stdout): New target.
+	* configure, testsuite/Makefile.in: Regenerate.
+
+2010-10-12  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* arm.cc (Target_arm::Scan::local): Report the unsupported reloc
+	error for the deprecated relocations.
+	(Target_arm::Scan::global): Likewise.
+	(Target_arm::Relocate::relocate): Likewise.
+
+2010-10-12  Richard Sandiford  <richard.sandiford@linaro.org>
+
+	* fileread.cc (Input_file::find_file): Initialize *found_name
+	and *namep when using the fallback search for case 4.
+
+2010-10-11  Cary Coutant  <ccoutant@google.com>
+
+	* options.h (class General_options): Redefine -z lazy as an alias for
+	the negation of -z now.
+
+2010-10-11  Ian Lance Taylor  <iant@google.com>
+
+	* resolve.cc (symbol_to_bits): Report the value of the unsupported
+	binding.
+
+2010-10-06  Nick Clifton  <nickc@redhat.com>
+
+	* script-sections.cc(class Memory_region): Remove
+	current_lma_offset_ field.  Rename current_vma_offset_ to
+	current_offset_.  Add last_section_ field.
+	(Memory_region::get_current_vma_address): Rename to
+	get_current_address.
+	(Memory_region::get_current_lma_address): Delete.
+	(Memory_region::increment_vma_offset): Rename to
+	increment_offset.
+	(Memory_region::increment_lma_offset): Delete.
+	(Memory_region::attributes_compatible): New method.  Returns
+	true if the provided section is compatible with the region.
+	(Memory_region::get_last_section): New method.  Returns the last
+	section to use the region.
+	(Memory_region::set_last_section): New method.  Stores the last
+	section to use the region.
+	(Script_sections::block_in_region): New method.  Returns true if
+	a block of memory is contained within a region.
+	(Script_sections::find_memory_region): New method.  Locates a
+	memory region to be used to set a VMA or LMA address.
+	(Output_section_definition::set_section_addresses): Add code to
+	check for addresses set by memory regions.
+	(Output_segment::set_section_addresses): Remove memory region
+	walking code.
+	(Script_sections::create_segment): Add a warning if a header
+	segment is created outside of any region.
+	* script-sections.h (class Script_sections): Add prototypes for
+	find_memory_region and block_in_region methods.
+	* testsuite/memory_test.s: Use .long instead of .word.
+	* testsuite/memory_test.t: Add some more output sections.
+	* testsuite/memory_test.sh: Update expected output.
+
+2010-10-02  Doug Kwan  <dougkwan@google.com>
+
+	* symtab.cc (Symbol_table::Symbol_table_hash::operator()): Move
+	defintion to symtab.h
+	* symtab.h (Symbol_table::Symbol_table_hash::operator()): Change
+	declaration to defintion.
+
+2010-10-01  Nick Clifton  <nickc@redhat.com>
+
+	* expression.cc (eval): Replace dummy argument with NULL.
+	(eval_maybe_dot): Check for a NULL result section pointer.
+	(Symbol_expression::value): Likewise.
+	(Dot_expression::value): Likewise.
+	(BINARY_EXPRESSION): Likewise.
+	(Max_expression::value): Likewise.
+	(Min_expression::value): Likewise.
+	(Absolute_expression::value): Likewise.
+	(Addr_expression::value_from_output_section): Likewise.
+	(Loaddddr_expression::value_from_output_section): Likewise.
+	(Segment_start_expression::value): Likewise.
+	* script-sections.cc
+	(Sections_elememt_dot_assignment::finalize_symbols): Replace dummy
+	argument with NULL.
+	(Sections_elememt_dot_assignment::set_section_addresses):
+	Likewise.
+	(Output_data_expression::do_write_to_buffer): Likewise.
+	(Output_section_definition::finalize_symbols): Likewise.
+	(Output_section_definition::set_section_addresses): Likewise.
+
+2010-09-30  Doug Kwan  <dougkwan@google.com>
+
+	* gold/testsuite/arm_branch_out_of_range.sh: Fix broken tests.
+
+2010-09-28  Sriraman Tallam  <tmsriram@google.com>
+
+	* target.h (Target::can_icf_inline_merge_sections): New virtual
+	function.
+	* x86_64.cc (Target__x86_64::can_icf_inline_merge_sections): New
+	virtual function.
+	* i386.cc (Target_i386::can_icf_inline_merge_sections): New
+	virtual function.
+	* icf.cc (get_section_contents): Inline merge sections only when
+	target allows it.
+
+2010-09-27  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure: Regenerate.
+
+2010-09-17  Ian Lance Taylor  <iant@google.com>
+
+	* testsuite/memory_test.sh: Adjust for change of 2010-09-10.
+	* testsuite/Makefile.am (memory_test.o): New target.
+	(memory_test): Depend on memory_test.o, gcctestdir/ld, and
+	memory_test.t.
+	* testsuite/Makefile.in: Rebuild.
+
+2010-09-17  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::Relocate::relocate): Ignore symbol type and
+	defintion if relocation uses GOT entries of the symbol.
+	* testsuite/icf_safe_test.sh: Fix test.
+	* testsuite/icf_safe_so_test.sh: Fix test.
+
+2010-09-16  Cary Coutant  <ccoutant@google.com>
+
+	* script_sections.cc (class Memory_region): Remove "NULL" from
+	vector initializations.
+
+2010-09-15  Cary Coutant  <ccoutant@google.com>
+
+	* incremental.cc (Output_section_incremental_inputs::write_info_blocks):
+	Resolve forwarding symbols.
+
+2010-09-15  Doug Kwan  <dougkwan@google.com>
+
+	* gold/testsuite/script_test_3.t: Add ARM special sections.
+	* gold/testsuite/script_test_4.t: Same.
+	* gold/testsuite/script_test_5.t: Same.
+	* gold/testsuite/script_test_6.t: Same.
+	* gold/testsuite/script_test_7.t: Same.
+	* gold/testsuite/script_test_7.t: Same.
+	* gold/testsuite/thumb_blx_out_of_range.s: Fix instruction alignment.
+
+2010-09-14  Cary Coutant  <ccoutant@google.com>
+
+	* x86_64.cc (Target_x86_64::saw_tls_block_reloc_): Remove member.
+	(Target_x86_64::Relocate::relocate_tls): Replace check for
+	saw_tls_block_reloc_ with test for executable section.
+
+2010-09-12  Cary Coutant  <ccoutant@google.com>
+
+	* symtab.h (Symbol::needs_dynamic_reloc): Non-PIC calls from
+	position-independent executables to shared libraries need dynamic
+	relocations.
+	(Symbol::may_need_copy_reloc): Do not generate COPY relocs in
+	position-independent executables.
+	* testsuite/Makefile.am (two_file_mixed_pie_test): New test.
+	* testsuite/Makefile.in: Regenerate.
+
+2010-09-10  Nick Clifton  <nickc@redhat.com>
+
+	PR gold/11997
+	* testsuite/memory_test.t: Discard any sections that are not
+	needed.
+
+2010-09-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gold/11996
+	* object.cc (Sized_relobj::do_finalize_local_symbols): Remove
+	"This::" to work around a bug in gcc 4.2.
+
+	* testsuite/ifuncmain7.c (foo_ifunc): Add __attribute__ ((used)).
+
+2010-09-09  Rafael Espindola  <espindola@google.com>
+
+	* layout.cc (Layout::attach_allocated_section_to_segment): Don't put
+	sections with different PF_X flags in the same segment.
+	(Layout::find_first_load_seg): Search all segments to find the first
+	one.
+	* options.h (rosegment): New.
+
+2010-09-08  Rafael Espindola  <espindola@google.com>
+
+	* layout.cc (Layout::set_segment_offsets): Always advance to a new page.
+
+2010-09-08  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_exidx_cantunwind::do_print_to_mapfile): New method.
+	(Arm_relobj::do_relocate_sections): Add new parameter for output
+	file to match the parent.
+	(Target_arm::scan_reloc_section_for_stubs): Use would-be final values
+	of local symbols instead of input values.  Update code to track
+	changes in gold::relocate_section.
+	* object.cc (Sized_relobj::compute_final_local_value): New methods.
+	(Sized_relobj::compute_final_local_value_internal): New methods.
+	(Sized_relobj::do_finalize_local_symbols): Move code from loop
+	body into private version of Sized_relobj::compute_final_local_value.
+	Call the inline method.
+	* object.h (Symbol_value::Symbol_value): Define destructor.  Free
+	merged symbol value if there is one.
+	(Symbol_value::has_output_value): New method defintiion.
+	(Sized_relobj::Compute_final_local_value_status): New enum type.
+	(Sized_relobj::compute_final_local_value): New methods.
+	(Sized_relobj::compute_final_local_value_internal): New methods.
+	* Makefile.am (check_SCRIPTS): Add arm_branch_out_of_range.sh
+	and arm_cortex_a8.sh.
+	(thumb_bl_out_of_range_local, arm_cortex_a8_b_cond, arm_cortex_a8_bl,
+	arm_cortex_a8_blx, arm_cortex_a8_local, arm_corte_a8_local_reloc):
+	New tests.
+	* Makefile.in: Regenerate.
+	* testsuite/arm_bl_out_of_range.s: Update test.
+	* testsuite/thumb_bl_out_of_range.s: Ditto.
+	* testsuite/thumb_blx_out_of_range.s: Ditto.
+	* testsuite/arm_branch_out_of_range.sh: New file.
+	* testsuite/arm_cortex_a8.sh: Ditto.
+	* testsuite/arm_cortex_a8_b.s: Ditto.
+	* testsuite/arm_cortex_a8_b_cond.s: Ditto.
+	* testsuite/arm_cortex_a8_b_local.s: Ditto.
+	* testsuite/arm_cortex_a8_bl.s: Ditto.
+	* testsuite/arm_cortex_a8_blx.s: Ditto.
+	* testsuite/arm_cortex_a8_local.s: Ditto.
+	* testsuite/arm_cortex_a8_local_reloc.s: Ditto.
+	* testsuite/thumb_bl_out_of_range_local.s: Ditto.
+
+2010-09-08  Rafael Espindola  <espindola@google.com>
+
+	* Makefile.am (memory_test.stdout): Run readelf with -W.
+	* Makefile.in: Regenerate.
+	* testsuite/memory_test.sh: Make the regexps accept both 32 and
+	64 bit output.
+
+2010-09-08  Rafael Espindola  <espindola@google.com>
+
+	* script-sections.cc (Script_sections::add_memory_region): Convert
+	field precision to int.
+	* script.cc (script_set_section_region, script_set_section_region):
+	Convert field precision to int.
+
+2010-09-08  Rafael Espindola  <espindola@google.com>
+
+	* arm.cc (do_finalize_sections): Create the __exidx_start and
+	__exdix_end symbols even when the section is missing.
+
+2010-09-08  Nick Clifton  <nickc@redhat.com>
+
+	* README: Remove claim that MEMORY is not supported.
+	* expression.cc (script_exp_function_origin)
+	(script_exp_function_length): Move from here to ...
+	* script.cc: ... here.
+	(script_set_section_region, script_add_memory)
+	(script_parse_memory_attr, script_include_directive): New
+	functions.
+	* script-sections.cc
+	(class Memory_region): New class.
+	(class Output_section_definition): Add set_memory_region,
+	set_section_vma, set_section_lma and get_section_name methods.
+	(class Script_Sections): Add add_memory_region,
+	find_memory_region, find_memory_region_origin,
+	find_memory_region_length and set_memory_region methods.
+	Have set_section_addresses method walk the list of set memory
+	regions.
+	Extend the print methos to display memory regions.
+	* script-sections.h: Add prototypes for new methods.
+	Add enum for MEMORY region attributes.
+	* yyscript.y: Add support for parsing MEMORY regions.
+	* script-c.h: Add prototypes for new functions.
+	* testsuite/Makefile.am: Add test of MEMORY region functionality.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/memory_test.sh: New script.
+	* testsuite/memory_test.s: New assembler source file.
+	* testsuite/memory_test.t: New linker script.
+
+2010-08-27  Doug Kwan  <dougkwan@google.com>
+
+	* gold/resolve.cc (Symbol_table::should_override): Let a weak
+	reference override an existing dynamic weak reference.
+	* testsuite/Makefile.am: Add new test dyn_weak_ref.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/dyn_weak_ref.sh: New file.
+	* testsuite/dyn_weak_ref_1.c: Ditto.
+	* testsuite/dyn_weak_ref_2.c: Ditto.
+
+2010-08-27  Ian Lance Taylor  <iant@google.com>
+
+	* incremental.h (class Incremental_input_entry): Add virtual
+	destructor.
+
+2010-08-27  Ian Lance Taylor  <iant@google.com>
+
+	* testsuite/start_lib_test_3.c: Mark t3 as used.
+
+2010-08-27  Nick Clifton  <nickc@redhat.com>
+
+	* options.cc (version_script): Fix small typo in previous
+	whitespace tidyup.
+
+2010-08-25  Nick Clifton  <nickc@redhat.com>
+
+	* archive.cc: Formatting fixes: Remove whitespace between
+	typename and following asterisk.  Remove whitespace between
+	function name and opening parenthesis.
+	* archive.h: Likewise.
+	* arm.cc: Likewise.
+	* attributes.cc: Likewise.
+	* attributes.h: Likewise.
+	* common.cc: Likewise.
+	* copy-relocs.cc: Likewise.
+	* dirsearch.h: Likewise.
+	* dynobj.cc: Likewise.
+	* ehframe.cc: Likewise.
+	* ehframe.h: Likewise.
+	* expression.cc: Likewise.
+	* fileread.cc: Likewise.
+	* fileread.h: Likewise.
+	* gc.h: Likewise.
+	* gold-threads.cc: Likewise.
+	* gold.cc: Likewise.
+	* i386.cc: Likewise.
+	* icf.h: Likewise.
+	* incremental-dump.cc: Likewise.
+	* incremental.cc: Likewise.
+	* layout.cc: Likewise.
+	* layout.h: Likewise.
+	* main.cc: Likewise.
+	* merge.cc: Likewise.
+	* merge.h: Likewise.
+	* object.cc: Likewise.
+	* object.h: Likewise.
+	* options.cc: Likewise.
+	* options.h: Likewise.
+	* output.cc: Likewise.
+	* output.h: Likewise.
+	* plugin.cc: Likewise.
+	* plugin.h: Likewise.
+	* powerpc.cc: Likewise.
+	* reloc.cc: Likewise.
+	* script-c.h: Likewise.
+	* script-sections.cc: Likewise.
+	* script.cc: Likewise.
+	* stringpool.cc: Likewise.
+	* symtab.cc: Likewise.
+	* symtab.h: Likewise.
+	* target.cc: Likewise.
+	* timer.cc: Likewise.
+	* timer.h: Likewise.
+	* version.cc: Likewise.
+	* x86_64.cc: Likewise.
+
+2010-08-24  Nick Clifton  <nickc@redhat.com>
+
+	PR 11899
+	* layout.cc (segment_precedes): Sort segments by their physical
+	addresses, if they have been set.
+
+2010-08-23  Cary Coutant  <ccoutant@google.com>
+
+	* archive.cc (Lib_group::add_symbols): Lock object before deleting its
+	symbols data.
+	(Lib_group::include_member): Unlock object after deleting its
+	symbols data.
+	* testsuite/start_lib_test_3.c: Remove all global symbols to trigger
+	the bug fixed here.
+
+2010-08-19  Neil Vachharajani  <nvachhar@google.com>
+	    Cary Coutant  <ccoutant@google.com>
+
+	* gold/archive.h (Add_lib_group_symbols): Add readsyms_blocker_, adjust
+	constructor, and set_blocker.
+	* gold/archive.cc (Add_lib_group_symbols::is_runnable): Also check
+	readsyms_blocker_.
+	* gold/readsyms.cc (Read_symbols::do_lib_group): Also pass
+	this->this_blocker_ to Add_lib_group_symbols::set_blocker.
+	* testsuite/Makefile.am (start_lib_test): New test case.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/start_lib_test_main.c: New file.
+	* testsuite/start_lib_test_1.c: New file.
+	* testsuite/start_lib_test_2.c: New file.
+	* testsuite/start_lib_test_3.c: New file.
+
+2010-08-19  Ian Lance Taylor  <iant@google.com>
+
+	* Makefile.in: Rebuild with automake 1.11.1.
+	* aclocal.m4: Likewise.
+	* testsuite/Makefile.in: Likewise.
+
+2010-08-19  Ian Lance Taylor  <iant@google.com>
+
+	PR 10893
+	* i386.cc (class Output_data_plt_i386): Update declarations.
+	Define Global_ifunc and Local_ifunc types.  Add global_ifuncs_ and
+	local_ifuncs_ fields.
+	(Target_i386::do_plt_section_for_global): New function.
+	(Target_i386::do_plt_section_for_local): New function.
+	(Output_data_plt_i386::Output_data_plt_i386): Add symtab
+	parameter; change all callers.  Initialize global_ifuncs_ and
+	local_ifuncs_.  If doing a static link define __rel_iplt_start and
+	__rel_iplt_end.
+	(Output_data_plt_i386::add_entry): Handle IFUNC symbols.
+	(Output_data_plt_i386::add_local_ifunc_entry): New function.
+	(Output_data_plt_i386::do_write): Fix GOT entries for IFUNC
+	symbols.
+	(Target_i386::make_plt_section): New function, broken out of
+	make_plt_entry.  Set sh_info field of .rel.plt to point to .plt.
+	(Target_i386::make_plt_entry): Call make_plt_section.
+	(Target_i386::make_local_ifunc_plt_entry): New function.
+	(Target_i386::Scan::reloc_needs_iplt_for_ifunc): New function.
+	(Target_i386::Scan::local): Handle IFUNC symbols.  Add
+	R_386_IRELATIVE to switch.
+	(Target_i386::Scan::global): Likewise.
+	(Target_i386::Relocate::relocate): Likewise.
+	(Target_i386::Relocatable_size_for_reloc): Add R_386_IRELATIVE to
+	switch.
+	* x86_64.cc (class Output_data_plt_x86_64): Update declarations.
+	(Target_x86_64::do_plt_section_for_global): New function.
+	(Target_x86_64::do_plt_section_for_local): New function.
+	(Output_data_plt_x86_64::Output_data_plt_x86_64): Add symtab
+	parameter; change all callers.  If doing a static link define
+	__rela_iplt_start and __rela_iplt_end.
+	(Output_data_plt_x86_64::add_entry): Handle IFUNC symbols.
+	(Output_data_plt_x86_64::add_local_ifunc_entry): New function.
+	(Target_x86_64::make_plt_section): Set sh_info field of .rel.plt
+	to point to .plt.
+	(Target_x86_64::make_local_ifunc_plt_entry): New function.
+	(Target_x86_64::Scan::check_non_pic): Add R_X86_64_IRELATIVE to
+	switch.
+	(Target_x86_64::Scan::reloc_needs_iplt_for_ifunc): New function.
+	(Target_x86_64::Scan::local): Handle IFUNC symbols.  Add
+	R_X86_64_IRELATIVE to switch.
+	(Target_x86_64::Scan::global): Likewise.
+	(Target_x86_64::Relocate::relocate): Likewise.
+	(Target_x86_64::Relocatable_size_for_reloc): Add R_X86_64_IRELATIVE to
+	switch.
+	* target.h (class Target): Add plt_section_for_global and
+	plt_section_for_local functions.  Add do_plt_section_for_global
+	and do_plt_section_for_local virtual functions.
+	* symtab.h (Symbol::needs_plt_entry): Handle IFUNC symbol.  Add
+	clarifying comments.
+	(Symbol::use_plt_offset): Handle IFUNC symbol.
+	* object.cc (Sized_relobj::Sized_relobj): Initialize
+	local_plt_offsets_.
+	(Sized_relobj::local_has_plt_offset): New function.
+	(Sized_relobj::local_plt_offset): New function.
+	(Sized_relobj::set_local_plt_offset): New function.
+	(Sized_relobj::do_count): Handle IFUNC symbol.
+	* object.h (class Symbol_value): Add is_ifunc_symbol_ field.  Take
+	a bit away from input_shndx_ field.  Add set_is_func_symbol and
+	is_ifunc_symbol functions.
+	(class Sized_relobj): Update declarations.  Remove Tls_got_entry
+	and Local_tls_got_offsets.  Define Local_plt_offsets.  Add
+	local_plt_offsets_ field.
+	(Sized_relobj::clear_local_symbols): Clear local_plt_offsets_.
+	* output.h (class Output_section_data): Add non-const
+	output_section function.
+	(class Output_data_got): Update declarations.
+	(class Output_data_got::Got_entry): Add use_plt_offset_ field.
+	Add use_plt_offset parameter to global and local constructors.
+	Change all callers.  Change local_sym_index_ field to 31 bits.
+	Change GSYM_CODE and CONSTANT_CODE accordingly.
+	* output.cc (Output_data_reloc_base::do_adjust_output_section): If
+	doing a static link don't set sh_link field.
+	(Output_data_got::Got_entry::write): Use PLT offset if
+	appropriate.
+	(Output_data_got::add_global_plt): New function.
+	(Output_data_got::add_local_plt): New function.
+	* target-reloc.h (relocate_section): Handle IFUNC symbol.
+	* defstd.cc (in_section): Remove entries for __rel_iplt_start,
+	__rel_iplt_end, __rela_iplt_start, and __rela_iplt_end.
+	* configure.ac: Set IFUNC automake conditional for glibc >= 2.11.
+	* testsuite/Makefile.am: Add a bunch of IFUNC tests, all within
+	IFUNC conditional.
+	* testsuite/ifunc-sel.h: New file.
+	* testsuite/ifuncmain1.c: New file.
+	* testsuite/ifuncmain1vis.c: New file.
+	* testsuite/ifuncmod1.c: New file.
+	* testsuite/ifuncdep2.c: New file.
+	* testsuite/ifuncmain2.c: New file.
+	* testsuite/ifuncmain3.c: New file.
+	* testsuite/ifuncmod3.c: New file.
+	* testsuite/ifuncmain4.c: New file.
+	* testsuite/ifuncmain5.c: New file.
+	* testsuite/ifuncmod5.c: New file.
+	* testsuite/ifuncmain6pie.c: New file.
+	* testsuite/ifuncmod6.c: New file.
+	* testsuite/ifuncmain7.c: New file.
+	* configure, testsuite/Makefile.in: Rebuild.
+
+2010-08-18  Ian Lance Taylor  <iant@google.com>
+
+	* incremental.cc
+	(Output_section_incremental_inputs::write_input_files): Add cast
+	to avoid signed/unsigned comparison warning.
+	(Output_section_incremental_inputs::write_info_blocks): Likewise.
+
+2010-08-12  Cary Coutant  <ccoutant@google.com>
+
+	* common.cc (Sort_commons::operator()): Remove unnecessary code.
+
+2010-08-13  Ian Lance Taylor  <iant@google.com>
+
+	* testsuite/incremental_test_1.c: Add prototype to avoid warning.
+
+2010-08-12  Cary Coutant  <ccoutant@google.com>
+	    Doug Kwan  <dougkwan@google.com>
+
+	* resolve.cc (Symbol_table::should_override): When a weak dynamic
+	defintion overrides non-weak undef, remember that the original undef
+	is not weak.
+	* symtab.cc (Symbol_table::sized_write_global): For undef without
+	an original weak binding, set binding to global in output.
+	* testsuite/Makefile.am: Add new test strong_ref_weak_def.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/strong_ref_weak_def.sh: New file.
+	* testsuite/strong_ref_weak_def_1.c: Ditto.
+	* testsuite/strong_ref_weak_def_2.c: Ditto.
+
+2010-08-12  Cary Coutant  <ccoutant@google.com>
+
+	* testsuite/incremental_test.sh: Rewrite.
+	* testsuite/incremental_test_1.c: Rewrite.
+	* testsuite/incremental_test_2.c: Rewrite.
+
+2010-08-12  Cary Coutant  <ccoutant@google.com>
+
+	* arm.cc (Target_arm::got_size): Add const.
+	(Target_arm::got_entry_count): New function.
+	(Target_arm::plt_entry_count): New function.
+	(Target_arm::first_plt_entry_offset): New function.
+	(Target_arm::plt_entry_size): New function.
+	(Output_data_plt_arm::entry_count): New function.
+	(Output_data_plt_arm::first_plt_entry_offset): New function.
+	(Output_data_plt_arm::get_plt_entry_size): New function.
+	* i386.cc (Target_i386::got_size): Add const.
+	(Target_i386::got_entry_count): New function.
+	(Target_i386::plt_entry_count): New function.
+	(Target_i386::first_plt_entry_offset): New function.
+	(Target_i386::plt_entry_size): New function.
+	(Output_data_plt_i386::entry_count): New function.
+	(Output_data_plt_i386::first_plt_entry_offset): New function.
+	(Output_data_plt_i386::get_plt_entry_size): New function.
+	* incremental-dump.cc (dump_incremental_inputs): Adjust call to
+	find_incremental_inputs_sections.  Dump incremental_got_plt section.
+	* incremental.cc: Include target.h.
+	(Sized_incremental_binary::do_find_incremental_inputs_sections): Add
+	parameter.  Adjust all callers.  Find incremental_got_plt section.
+	(Incremental_inputs::create_data_sections): Create incremental_got_plt
+	section.
+	(Output_section_incremental_inputs::set_final_data_size): Calculate
+	size of incremental_got_plt section.
+	(Output_section_incremental_inputs::do_write): Write the
+	incremental_got_plt section.
+	(Got_plt_view_info): New struct.
+	(Local_got_offset_visitor): New class.
+	(Global_got_offset_visitor): New class.
+	(Global_symbol_visitor_got_plt): New class.
+	(Output_section_incremental_inputs::write_got_plt): New function.
+	* incremental.h (Incremental_binary::find_incremental_inputs_sections):
+	Add parameter.  Adjust all callers.
+	(Incremental_binary::do_find_incremental_inputs_sections): Likewise.
+	(Incremental_inputs::got_plt_section): New function.
+	(Incremental_inputs::got_plt_section_): New data member.
+	(Incremental_got_plt_reader): New class.
+	* layout.cc (Layout::create_incremental_info_sections): Add the
+	incremental_got_plt section.
+	* object.h (Got_offset_list::get_list): New function.
+	(Got offset_list::for_all_got_offsets): New function.
+	(Sized_relobj::local_got_offset_list): New function.
+	* powerpc.cc (Target_powerpc::got_size): Add const.
+	(Target_powerpc::got_entry_count): New function.
+	(Target_powerpc::plt_entry_count): New function.
+	(Target_powerpc::first_plt_entry_offset): New function.
+	(Target_powerpc::plt_entry_size): New function.
+	(Output_data_plt_powerpc::entry_count): New function.
+	(Output_data_plt_powerpc::first_plt_entry_offset): New function.
+	(Output_data_plt_powerpc::get_plt_entry_size): New function.
+	* sparc.cc (Target_sparc::got_size): Add const.
+	(Target_sparc::got_entry_count): New function.
+	(Target_sparc::plt_entry_count): New function.
+	(Target_sparc::first_plt_entry_offset): New function.
+	(Target_sparc::plt_entry_size): New function.
+	(Output_data_plt_sparc::entry_count): New function.
+	(Output_data_plt_sparc::first_plt_entry_offset): New function.
+	(Output_data_plt_sparc::get_plt_entry_size): New function.
+	* symtab.h (Symbol::got_offset_list): New function.
+	(Symbol_table::for_all_symbols): New function.
+	* target.h (Sized_target::got_entry_count): New function.
+	(Sized_target::plt_entry_count): New function.
+	(Sized_target::plt_entry_size): New function.
+	* x86_64.cc (Target_x86_64::got_size): Add const.
+	(Target_x86_64::got_entry_count): New function.
+	(Target_x86_64::plt_entry_count): New function.
+	(Target_x86_64::first_plt_entry_offset): New function.
+	(Target_x86_64::plt_entry_size): New function.
+	(Output_data_plt_x86_64::entry_count): New function.
+	(Output_data_plt_x86_64::first_plt_entry_offset): New function.
+	(Output_data_plt_x86_64::get_plt_entry_size): New function.
+
+2010-08-12  Cary Coutant  <ccoutant@google.com>
+
+	* archive.cc: Include incremental.h.
+	(Archive::Archive): Initialize incremental_info_.
+	(Archive::include_member): Record archive members in incremental info.
+	(Add_archive_symbols::run): Record begin and end of an archive in
+	incremental info.
+	(Lib_group::include_member): Record objects in incremental info.
+	* archive.h (Incremental_archive_entry): Forward declaration.
+	(Archive::set_incremental_info): New member function.
+	(Archive::incremental_info): New member function.
+	(Archive::Unused_symbol_iterator): New class.
+	(Archive::unused_symbols_begin): New member function.
+	(Archive::unused_symbols_end): New member function.
+	(Archive::incremental_info_): New data member.
+	* incremental-dump.cc (find_input_containing_global): New function.
+	(dump_incremental_inputs): Dump new incremental info sections.
+	* incremental.cc: Include symtab.h.
+	(Output_section_incremental_inputs): New class.
+	(Sized_incremental_binary::do_find_incremental_inputs_sections): Support
+	new incremental info sections.
+	(Sized_incremental_binary::do_check_inputs): Likewise.
+	(Incremental_inputs::report_archive): Remove.
+	(Incremental_inputs::report_archive_begin): New function.
+	(Incremental_inputs::report_archive_end): New function.
+	(Incremental_inputs::report_object): New function.
+	(Incremental_inputs::finalize_inputs): Remove.
+	(Incremental_inputs::report_input_section): New function.
+	(Incremental_inputs::report_script): Rewrite.
+	(Incremental_inputs::finalize): Do nothing but finalize string table.
+	(Incremental_inputs::create_incremental_inputs_section_data): Remove.
+	(Incremental_inputs::sized_create_inputs_section_data): Remove.
+	(Incremental_inputs::create_data_sections): New function.
+	(Incremental_inputs::relocs_entsize): New function.
+	(Output_section_incremental_inputs::set_final_data_size): New function.
+	(Output_section_incremental_inputs::do_write): New function.
+	(Output_section_incremental_inputs::write_header): New function.
+	(Output_section_incremental_inputs::write_input_files): New function.
+	(Output_section_incremental_inputs::write_info_blocks): New function.
+	(Output_section_incremental_inputs::write_symtab): New function.
+	* incremental.h (Incremental_script_entry): Forward declaration.
+	(Incremental_object_entry): Forward declaration.
+	(Incremental_archive_entry): Forward declaration.
+	(Incremental_inputs): Forward declaration.
+	(Incremental_inputs_header_data): Remove.
+	(Incremental_inputs_header): Remove.
+	(Incremental_inputs_header_write): Remove.
+	(Incremental_inputs_entry_data): Remove.
+	(Incremental_inputs_entry): Remove.
+	(Incremental_inputs_entry_write): Remove.
+	(enum Incremental_input_type): Add INCREMENTAL_INPUT_ARCHIVE_MEMBER.
+	(Incremental_binary::find_incremental_inputs_sections): Add parameters.
+	(Incremental_binary::do_find_incremental_inputs_sections): Likewise.
+	(Sized_ncremental_binary::do_find_incremental_inputs_sections):
+	Likewise.
+	(Incremental_input_entry): New class.
+	(Incremental_script_entry): New class.
+	(Incremental_object_entry): New class.
+	(Incremental_archive_entry): New class.
+	(Incremental_inputs::Incremental_inputs): Initialize new data members.
+	(Incremental_inputs::report_inputs): Remove.
+	(Incremental_inputs::report_archive): Remove.
+	(Incremental_inputs::report_archive_begin): New function.
+	(Incremental_inputs::report_archive_end): New function.
+	(Incremental_inputs::report_object): Change prototype.
+	(Incremental_inputs::report_input_section): New function.
+	(Incremental_inputs::report_script): Change prototype.
+	(Incremental_inputs::get_reloc_count): New function.
+	(Incremental_inputs::set_reloc_count): New function.
+	(Incremental_inputs::create_data_sections): New function.
+	(Incremental_inputs::create_incremental_inputs_section_data): Remove.
+	(Incremental_inputs::inputs_section): New function.
+	(Incremental_inputs::symtab_section): New function.
+	(Incremental_inputs::relocs_section): New function.
+	(Incremental_inputs::get_stringpool): Add const.
+	(Incremental_inputs::command_line): Add const.
+	(Incremental_inputs::inputs): Remove.
+	(Incremental_inputs::command_line_key): New function.
+	(Incremental_inputs::input_file_count): New function.
+	(Incremental_inputs::input_files): New function.
+	(Incremental_inputs::relocs_entsize): New function.
+	(Incremental_inputs::sized_create_inputs_section_data): Remove.
+	(Incremental_inputs::finalize_inputs): Remove.
+	(Incremental_inputs::Input_info): Remove.
+	(Incremental_inputs::lock_): Remove.
+	(Incremental_inputs::inputs_): Change type.
+	(Incremental_inputs::inputs_map_): Remove.
+	(Incremental_inputs::current_object_entry_): New data member.
+	(Incremental_inputs::inputs_section_): New data member.
+	(Incremental_inputs::symtab_section_): New data member.
+	(Incremental_inputs::relocs_section_): New data member.
+	(Incremental_inputs::reloc_count_): New data member.
+	(Incremental_inputs_reader): New class.
+	(Incremental_symtab_reader): New class.
+	(Incremental_relocs_reader): New class.
+	* layout.cc (Layout::finalize): Move finalization of incremental info
+	and creation of incremental info sections to follow finalization of
+	symbol table.  Set offsets for postprocessing sections.
+	(Layout::create_incremental_info_sections): Call
+	Incremental_inputs::create_data_sections.  Add incremental symtab
+	and relocs sections.  Set sh_entsize and sh_link fields.  Arrange for
+	sections to layout after input sections.
+	* layout.h (struct Timespec): Forward declaration.
+	(Layout::incremental_inputs): Add const.
+	(Layout::create_incremental_info_sections): Add parameter.
+	* main.cc (main): Remove call to Incremental_inputs::report_inputs.
+	* object.cc: Include incremental.h.
+	(Relobj::finalize_incremental_relocs): New function.
+	(Sized_relobj::do_layout): Record input sections in incremental info.
+	* object.h (Object::output_section): New function.
+	(Object::output_section_offset): Moved from Relobj.
+	(Object::get_incremental_reloc_base): New function.
+	(Object::get_incremental_reloc_count): New function.
+	(Object::do_output_section): New function.
+	(Object::do_output_section_offset): Moved from Relobj.
+	(Object::do_get_incremental_reloc_base): New function.
+	(Object::do_get_incremental_reloc_count): New function.
+	(Object::Object): Initialize new data members.
+	(Relobj::output_section): Renamed do_output_section and moved to
+	protected.
+	(Relobj::output_section_offset): Moved to Object.
+	(Relobj::do_get_incremental_reloc_base): New function.
+	(Relobj::do_get_incremental_reloc_count): New function.
+	(Relobj::allocate_incremental_reloc_counts): New function.
+	(Relobj::count_incremental_reloc): New function.
+	(Relobj::finalize_incremental_relocs): New function.
+	(Relobj::next_incremental_reloc_index): New function.
+	(Relobj::reloc_counts_): New data member.
+	(Relobj::reloc_bases_): New data member.
+	(Sized_relobj::do_relocate_sections): Add parameter.  Change caller.
+	(Sized_relobj::relocate_sections): Add parameter.  Change all callers.
+	(Sized_relobj::incremental_relocs_scan): New function.
+	(Sized_relobj::incremental_relocs_scan_reltype): New function.
+	(Sized_relobj::incremental_relocs_write): New function.
+	(Sized_relobj::incremental_relocs_write_reltype): New function.
+	* plugin.cc (Plugin_manager::add_input_file): Rewrite test for
+	incremental link.
+	* readsyms.cc (Read_symbols::do_read_symbols): Move reporting of
+	archives and object files elsewhere.
+	(Add_symbols::run): Report object files here.
+	(Finish_group::run): Report end of archive at end of group.
+	* reloc.cc: Include layout.h, incremental.h.
+	(Sized_relobj::do_read_relocs): Need relocations for incremental link.
+	(Sized_relobj::do_scan_relocs): Record relocations for incremental link.
+	(Sized_relobj::incremental_relocs_scan): New function.
+	(Sized_relobj::incremental_relocs_scan_reltype): New function.
+	(Sized_relobj::do_relocate_sections): Write incremental relocations.
+	(Sized_relobj::incremental_relocs_write): New function.
+	(Sized_relobj::incremental_relocs_write_reltype): New function.
+	* script.cc (read_input_script): Rewrite test for incremental link.
+	Change call to Incremental_inputs::report_script.
+	* symtab.h (Symbol_table::first_global_index): New function.
+	(Symbol_table::output_count): New function.
+
+2010-08-12  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::merge_object_attributes): Check command line
+	options --no-wchar-size-warning and --no-enum-size-warning.
+	* options.h (General_options): Add ld-compatible options
+	--no-enum-size-warning and --no-wchar-size-warning.
+
+2010-08-04  Ian Lance Taylor  <iant@google.com>
+
+	* x86_64.cc (Target_x86_64::Scan::local): Use
+	R_X86_64_GNU_VTINHERIT instead of R_386_GNU_VTINHERIT and
+	R_X86_64_GNU_VTENTRY instead of R_386_GNU_VTENTRY.
+	(Target_x86_64::Scan::global): Likewise.
+	(Target_x86_64::Relocate::relocate): Likewise.
+	(Target_x86_64::Relocatable_size_for_reloc::get_size_for_reloc):
+	Likewise.
+
+2010-08-03  Cary Coutant  <ccoutant@google.com>
+
+	* merge.cc (Output_merge_string::do_add_input_section): Count strings
+	to reserve space in merged_strings vector. Keep total input size
+	for stats.
+	(Output_merge_string::do_print_merge_stats): Print total input size.
+	* merge.h (Output_merge_string): Add input_size_ field.
+	* stringpool.cc (Stringpool_template::string_length): Move
+	implementations out of Stringpool_template class and place in
+	stringpool.h.
+	* stringpool.h (string_length): Move out of Stringpool_template.
+
+2010-08-03  Ian Lance Taylor  <iant@google.com>
+
+	PR 11712
+	* layout.cc (relaxation_loop_body): If address of load segment is
+	set, adjust address to include headers if possible.
+
+2010-08-03  Ian Lance Taylor  <iant@google.com>
+
+	* version.cc (version_string): Bump to 1.10.
+
+2010-08-03  Ian Lance Taylor  <iant@google.com>
+
+	PR 11805
+	* layout.h (enum Output_section_order): Define.
+	(class Layout): Update declarations.
+	* layout.cc (Layout::get_output_section): Add order parameter.
+	Remove is_interp, is_dynamic_linker_section, is_last_relro, and
+	is_first_non_relro parameters.  Change all callers.
+	(Layout::choose_output_section): Likewise.
+	(Layout::add_output_section_data): Likewise.
+	(Layout::make_output_section): Likewise.  Set order.
+	(Layout::default_section_order): New function.
+	(Layout::layout_eh_frame): Call add_output_section_to_nonload.
+	* output.cc (Output_section::Output_section): Initialize order_.
+	Don't initialize deleted fields.
+	(Output_segment::Output_segment): Don't initialize deleted
+	fields.
+	(Output_segment::add_output_section_to_load): New function
+	replacing add_output_section.  Change all callers to call this or
+	add_output_section_to_nonload.
+	(Output_segment::add_output_section_to_nonload): New function.
+	(Output_segment::remove_output_section): Rewrite.
+	(Output_segment::add_initial_output_data): Likewise.
+	(Output_segment::has_any_data_sections): Likewise.
+	(Output_segment::is_first_section_relro): Likewise.
+	(Output_segment::maximum_alignment): Likewise.
+	(Output_segment::has_dynamic_reloc): New function replacing
+	dynamic_reloc_count.  Change all callers.
+	(Output_segment::has_dynamic_reloc_list): New function replacing
+	dynamic_reloc_count_list.  Change all callers.
+	(Output_segment::set_section_addresses): Rewrite.
+	(Output_segment::set_offset): Rewrite.
+	(Output_segment::find_first_and_last_list): Remove.
+	(Output_segment::set_tls_offsets): Rewrite.
+	(Output_segment::first_section_load_address): Likewise.
+	(Output_segment::output_section_count): Likewise.
+	(Output_segment::section_with_lowest_load_address): Likewise.
+	(Output_segment::write_section_headers): Likewise.
+	(Output_segment::print_sections_to_map): Likewise.
+	* output.h (class Output_data): Remove dynamic_reloc_count_
+	field.  Add has_dynamic_reloc_ field.  Make bools into bitfields.
+	(Output_data::add_dynamic_reloc): Rewrite.
+	(Output_data::has_dynamic_reloc): New function.
+	(Output_data::dynamic_reloc_count): Remove.
+	(class Output_section): Add order_ field.  Remvoe is_relro_local_,
+	is_last_relro_, is_first_non_relro_, is_interp_,
+	is_dynamic_linker_section_ fields.  Add order and set_order
+	functions.  Remove is_relro_local, set_is_relro_local,
+	is_last_relro, set_is_last_relro, is_first_non_relro,
+	set_is_first_non_relro functions, is_interp, set_is_interp,
+	is_dynamic_linker_section, and set_is_dynamic_linker_section
+	functions.
+	(class Output_segment): Change Output_data_list from std::list to
+	std:;vector.  Add output_lists_ field.  Remove output_data_ and
+	output_bss_ fields.  Update declarations.
+
+2010-08-02  Ian Lance Taylor  <iant@google.com>
+
+	* arm.cc (Target_arm::gc_process_relocs): Use typename.
+	* powerpc.cc (Target_powerpc::gc_process_relocs): Likewise.
+	* sparc.cc (Target_sparc::gc_process_relocs): Likewise.
+
+2010-08-02  Ian Lance Taylor  <iant@google.com>
+
+	PR 11855
+	* script.cc (Script_options::Script_options): Initialize
+	symbol_definitions_ and symbol_references_.
+	(Script_options::add_symbol_assignment): Update
+	symbol_definitions_ and symbol_references_.
+	(Script_options::add_symbol_reference): New function.
+	(script_symbol): New function.
+	* script.h (class Script_options): Add symbol_definitions_ and
+	symbol_references_ fields.
+	(Script_options::referenced_const_iterator): New type.
+	(Script_options::referenced_begin): New function.
+	(Script_options::referenced_end): New function.
+	(Script_options::is_referenced): New function.
+	(Script_options::any_unreferenced): New function.
+	* script-c.h (script_symbol): Declare.
+	* yyscript.y (exp): Call script_symbol.
+	* symtab.cc: Include "script.h".
+	(Symbol_table::gc_mark_undef_symbols): Add layout parameter.
+	Change all callers.  Check symbols referenced by scripts.
+	(Symbol_table::add_undefined_symbols_from_command_line): Add
+	layout parameter.  Change all callers.
+	(Symbol_table::do_add_undefined_symbols_from_command_line):
+	Likewise.  Break out loop body.  Check symbols referenced by
+	scripts.
+	(Symbol_table::add_undefined_symbol_from_command_line): New
+	function broken out of
+	do_add_undefined_symbols_from_command_line.
+	* symtab.h (class Symbol_table): Update declarations.
+	* archive.cc: Include "layout.h".
+	(Archive::should_include_member): Add layout parameter.  Change
+	all callers.  Check for symbol mentioned in expression.
+	* archive.h (class Archive): Update declaration.
+	* object.cc (Sized_relobj::do_should_include_member): Add layout
+	parameter.
+	* object.h (Object::should_include_member): Add layout parameter.
+	Change all callers.
+	(Object::do_should_include_member): Add layout parameter.
+	(class Sized_relobj): Update declaration.
+	* dynobj.cc (Sized_dynobj::do_should_include_member): Add layout
+	parameter.
+	* dynobj.h (class Sized_dynobj): Update declaration.
+	* plugin.cc (Sized_pluginobj::do_should_include_member): Add
+	layout parameter.
+	* plugin.h (class Sized_pluginobj): Update declaration.
+
+2010-08-02  Ian Lance Taylor  <iant@google.com>
+
+	PR 11866
+	* output.cc (Output_segment::set_offset): Search for the first and
+	last sections rather than assuming that the list is in order.
+	(Output_segment::find_first_and_last_list): New function.
+	* output.h (class Output_segment): Update declarations.
+	* testsuite/Makefile.am (check_PROGRAMS): Add relro_strip_test.
+	(relro_strip_test_SOURCES): New variable.
+	(relro_strip_test_DEPENDENCIES): New variable.
+	(relro_strip_test_LDFLAGS): New variable.
+	(relro_strip_test_LDADD): New variable.
+	(relro_strip_test.so): New target.
+
+2010-08-02  Ian Lance Taylor  <iant@google.com>
+
+	* i386.cc (class Target_i386): Add got_tlsdesc_ field.
+	(Target_i386::Target_i386):: Initialize got_tlsdesc_.
+	(Target_i386::got_tlsdesc_section): New function.
+	(Target_i386::got_section): Create space for GOT entries for
+	TLSDESC relocations.
+	(Target_i386::Scan::local): Use TLSDESC GOT for unoptimized
+	R_386_TLS_GOTDESC.
+	(Target_i386::Scan::global): Likewise.
+	(Target_i386::Relocate::relocate_tls): Adjust GOT offset when
+	using TLSDESC GOT.
+	* x86_64.cc (class Target_x86_64): Add got_tlsdesc_ field.
+	(Target_x86_64::Target_x86_64):: Initialize got_tlsdesc_.
+	(Target_x86_64::got_tlsdesc_section): New function.
+	(Target_x86_64::got_section): Create space for GOT entries for
+	TLSDESC relocations.
+	(Target_x86_64::Scan::local): Use TLSDESC GOT for unoptimized
+	R_386_TLS_GOTDESC.
+	(Target_x86_64::Scan::global): Likewise.
+	(Target_x86_64::Relocate::relocate_tls): Adjust GOT offset when
+	using TLSDESC GOT.
+
+2010-08-02  Ian Lance Taylor  <iant@google.com>
+
+	* testsuite/final_layout.sh: Use dc to convert from hex to
+	decimal.
+
 2010-07-29  Sriraman Tallam  <tmsriram@google.com>
 
 	* arm.cc (Target_arm<big_endian>::gc_process_relocs): Add template

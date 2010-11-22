@@ -1,14 +1,14 @@
-/Makefile.am/1.4/Thu Jul  8 13:29:59 2010/-ko/
-/Makefile.in/1.16/Thu Jul  8 13:29:59 2010/-ko/
-/aclocal.m4/1.24/Thu Jul  8 13:29:59 2010/-ko/
-/cmpsi.c/1.1.1.1/Thu Jul  8 13:29:59 2010/-ko/
-/configure/1.29/Thu Jul  8 13:29:59 2010/-ko/
-/configure.in/1.2/Thu Jul  8 13:29:59 2010/-ko/
-/divsi3.c/1.1.1.1/Thu Jul  8 13:29:59 2010/-ko/
-/lshrhi.S/1.1/Thu Jul  8 13:29:59 2010//
-/mulsi3.c/1.1.1.1/Thu Jul  8 13:29:59 2010/-ko/
-/sdivhi3.S/1.1/Thu Jul  8 13:29:59 2010//
-/smulhi3.S/1.1/Thu Jul  8 13:29:59 2010//
-/udivhi3.S/1.1/Thu Jul  8 13:29:59 2010//
-/umodhi3.S/1.1/Thu Jul  8 13:29:59 2010//
+/Makefile.am/1.4/Sat Nov 13 14:05:51 2010/-ko/
+/Makefile.in/1.16/Sat Nov 13 14:05:51 2010/-ko/
+/aclocal.m4/1.24/Sat Nov 13 14:05:51 2010/-ko/
+/cmpsi.c/1.1.1.1/Sat Nov 13 14:05:51 2010/-ko/
+/configure/1.29/Sat Nov 13 14:05:51 2010/-ko/
+/configure.in/1.2/Sat Nov 13 14:05:51 2010/-ko/
+/divsi3.c/1.1.1.1/Sat Nov 13 14:05:51 2010/-ko/
+/lshrhi.S/1.1/Sat Nov 13 14:05:51 2010//
+/mulsi3.c/1.1.1.1/Sat Nov 13 14:05:51 2010/-ko/
+/sdivhi3.S/1.1/Sat Nov 13 14:05:51 2010//
+/smulhi3.S/1.1/Sat Nov 13 14:05:51 2010//
+/udivhi3.S/1.1/Sat Nov 13 14:05:51 2010//
+/umodhi3.S/1.1/Sat Nov 13 14:05:51 2010//
 D

@@ -31,16 +31,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 
 #include "libgfortran.h"
 
-#include <setjmp.h>
 #include <gthr.h>
-
-/* Basic types used in data transfers.  */
-
-typedef enum
-{ BT_NULL, BT_INTEGER, BT_LOGICAL, BT_CHARACTER, BT_REAL,
-  BT_COMPLEX
-}
-bt;
 
 /* Forward declarations.  */
 struct st_parameter_dt;
@@ -114,8 +105,8 @@ format_hash_entry;
 
 typedef struct namelist_type
 {
-  /* Object type, stored as GFC_DTYPE_xxxx.  */
-  dtype type;
+  /* Object type.  */
+  bt type;
 
   /* Object name.  */
   char * var_name;
@@ -435,7 +426,10 @@ typedef struct st_parameter_dt
 	  unsigned format_not_saved : 1;
 	  /* 14 unused bits.  */
 
-	  char last_char;
+	  /* Used for ungetc() style functionality. Possible values
+	     are an unsigned char, EOF, or EOF - 1 used to mark the
+	     field as not valid.  */
+	  int last_char;
 	  char nml_delim;
 
 	  int repeat_count;
@@ -446,7 +440,6 @@ typedef struct st_parameter_dt
 	  char *scratch;
 	  char *line_buffer;
 	  struct format_data *fmt;
-	  jmp_buf *eof_jump;
 	  namelist_info *ionml;
 	  /* A flag used to identify when a non-standard expanded namelist read
 	     has occurred.  */

@@ -70,8 +70,7 @@ find_location_expression (struct dwarf2_loclist_baton *baton,
   int signed_addr_p = bfd_get_sign_extend_vma (objfile->obfd);
   CORE_ADDR base_mask = ~(~(CORE_ADDR)1 << (addr_size * 8 - 1));
   /* Adjust base_address for relocatable objects.  */
-  CORE_ADDR base_offset = ANOFFSET (objfile->section_offsets,
-				    SECT_OFF_TEXT (objfile));
+  CORE_ADDR base_offset = dwarf2_per_cu_text_offset (baton->per_cu);
   CORE_ADDR base_address = baton->base_address + base_offset;
 
   loc_ptr = baton->data;
@@ -882,7 +881,7 @@ static struct lval_funcs pieced_value_funcs = {
    SIZE, to find the current location of variable of TYPE in the context
    of FRAME.  */
 
-static struct value *
+struct value *
 dwarf2_evaluate_loc_desc (struct type *type, struct frame_info *frame,
 			  const gdb_byte *data, unsigned short size,
 			  struct dwarf2_per_cu_data *per_cu)
@@ -909,7 +908,7 @@ dwarf2_evaluate_loc_desc (struct type *type, struct frame_info *frame,
 
   ctx->gdbarch = get_objfile_arch (objfile);
   ctx->addr_size = dwarf2_per_cu_addr_size (per_cu);
-  ctx->offset = ANOFFSET (objfile->section_offsets, SECT_OFF_TEXT (objfile));
+  ctx->offset = dwarf2_per_cu_text_offset (per_cu);
   ctx->baton = &baton;
   ctx->read_reg = dwarf_expr_read_reg;
   ctx->read_mem = dwarf_expr_read_mem;
@@ -1095,7 +1094,7 @@ dwarf2_loc_desc_needs_frame (const gdb_byte *data, unsigned short size,
 
   ctx->gdbarch = get_objfile_arch (objfile);
   ctx->addr_size = dwarf2_per_cu_addr_size (per_cu);
-  ctx->offset = ANOFFSET (objfile->section_offsets, SECT_OFF_TEXT (objfile));
+  ctx->offset = dwarf2_per_cu_text_offset (per_cu);
   ctx->baton = &baton;
   ctx->read_reg = needs_frame_read_reg;
   ctx->read_mem = needs_frame_read_mem;
@@ -1304,12 +1303,7 @@ compile_dwarf_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	     index, not an address.  We don't support things like
 	     branching between the address and the TLS op.  */
 	  if (op_ptr >= op_end || *op_ptr != DW_OP_GNU_push_tls_address)
-	    {
-	      struct objfile *objfile = dwarf2_per_cu_objfile (per_cu);
-
-	      uoffset += ANOFFSET (objfile->section_offsets,
-				   SECT_OFF_TEXT (objfile));
-	    }
+	    uoffset += dwarf2_per_cu_text_offset (per_cu);
 	  ax_const_l (expr, uoffset);
 	  break;
 
@@ -1946,7 +1940,7 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
       struct symbol *framefunc;
       int frame_reg = 0;
       LONGEST frame_offset;
-      const gdb_byte *base_data, *new_data;
+      const gdb_byte *base_data, *new_data, *save_data = data;
       size_t base_size;
       LONGEST base_offset = 0;
 
@@ -1990,10 +1984,7 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
 	{
 	  /* We don't know what to do with the frame base expression,
 	     so we can't trace this variable; give up.  */
-	  error (_("Cannot describe location of symbol \"%s\"; "
-		   "DWARF 2 encoding not handled, "
-		   "first opcode in base data is 0x%x."),
-		 SYMBOL_PRINT_NAME (symbol), base_data[0]);
+	  return save_data;
 	}
 
       regno = gdbarch_dwarf2_reg_to_regnum (gdbarch, frame_reg);
@@ -2022,15 +2013,19 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
 
      DW_AT_location    : 10 byte block: 3 4 0 0 0 0 0 0 0 e0
                         (DW_OP_addr: 4; DW_OP_GNU_push_tls_address)
-     
+
      0x3 is the encoding for DW_OP_addr, which has an operand as long
      as the size of an address on the target machine (here is 8
-     bytes).  0xe0 is the encoding for DW_OP_GNU_push_tls_address.
-     The operand represents the offset at which the variable is within
-     the thread local storage.  */
+     bytes).  Note that more recent version of GCC emit DW_OP_const4u
+     or DW_OP_const8u, depending on address size, rather than
+     DW_OP_addr.  0xe0 is the encoding for
+     DW_OP_GNU_push_tls_address. The operand represents the offset at
+     which the variable is within the thread local storage.  */
 
   else if (data + 1 + addr_size < end
-	   && data[0] == DW_OP_addr
+	   && (data[0] == DW_OP_addr
+	       || (addr_size == 4 && data[0] == DW_OP_const4u)
+	       || (addr_size == 8 && data[0] == DW_OP_const8u))
 	   && data[1 + addr_size] == DW_OP_GNU_push_tls_address
 	   && piece_end_p (data + 2 + addr_size, end))
     {
@@ -2511,8 +2506,7 @@ loclist_describe_location (struct symbol *symbol, CORE_ADDR addr,
   int signed_addr_p = bfd_get_sign_extend_vma (objfile->obfd);
   CORE_ADDR base_mask = ~(~(CORE_ADDR)1 << (addr_size * 8 - 1));
   /* Adjust base_address for relocatable objects.  */
-  CORE_ADDR base_offset = ANOFFSET (objfile->section_offsets,
-				    SECT_OFF_TEXT (objfile));
+  CORE_ADDR base_offset = dwarf2_per_cu_text_offset (dlbaton->per_cu);
   CORE_ADDR base_address = dlbaton->base_address + base_offset;
 
   loc_ptr = dlbaton->data;

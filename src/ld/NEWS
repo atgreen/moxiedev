@@ -1,5 +1,11 @@
 -*- text -*-
 
+Changes in 2.21:
+
+
+* Linker script expression evaluation is somewhat more sane.  This may
+  break scripts that depend on quirks of the old expression evaluation.
+
 * Turn off underscoring for x86_64 PE+-COFF targets.  For old behavior the
   option --enable-leading-mingw64-underscores can be used on configure of
   bfd.
@@ -16,6 +22,8 @@
   symbols from automatically being exported.
 
 * Add support for the Renesas RX processor.
+
+* Add support for alpha-vms target.
 
 Changes in 2.20:
 

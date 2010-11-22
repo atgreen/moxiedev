@@ -237,6 +237,7 @@ static bool
 mark_address (gimple stmt ATTRIBUTE_UNUSED, tree addr,
 	      void *data ATTRIBUTE_UNUSED)
 {
+  addr = get_base_address (addr);
   if (TREE_CODE (addr) == FUNCTION_DECL)
     {
       struct cgraph_node *node = cgraph_node (addr);
@@ -245,24 +246,20 @@ mark_address (gimple stmt ATTRIBUTE_UNUSED, tree addr,
 			    node, NULL,
 			    IPA_REF_ADDR, stmt);
     }
-  else
+  else if (addr && TREE_CODE (addr) == VAR_DECL
+	   && (TREE_STATIC (addr) || DECL_EXTERNAL (addr)))
     {
-      addr = get_base_address (addr);
-      if (addr && TREE_CODE (addr) == VAR_DECL
-	  && (TREE_STATIC (addr) || DECL_EXTERNAL (addr)))
-	{
-	  struct varpool_node *vnode = varpool_node (addr);
-	  int walk_subtrees;
+      struct varpool_node *vnode = varpool_node (addr);
+      int walk_subtrees;
 
-	  if (lang_hooks.callgraph.analyze_expr)
-	    lang_hooks.callgraph.analyze_expr (&addr, &walk_subtrees);
-	  varpool_mark_needed_node (vnode);
-	  if (vnode->alias && vnode->extra_name)
-	    vnode = vnode->extra_name;
-	  ipa_record_reference ((struct cgraph_node *)data, NULL,
-				NULL, vnode,
-				IPA_REF_ADDR, stmt);
-	}
+      if (lang_hooks.callgraph.analyze_expr)
+	lang_hooks.callgraph.analyze_expr (&addr, &walk_subtrees);
+      varpool_mark_needed_node (vnode);
+      if (vnode->alias && vnode->extra_name)
+	vnode = vnode->extra_name;
+      ipa_record_reference ((struct cgraph_node *)data, NULL,
+			    NULL, vnode,
+			    IPA_REF_ADDR, stmt);
     }
 
   return false;
@@ -361,16 +358,19 @@ build_cgraph_edges (void)
 	      && gimple_omp_parallel_child_fn (stmt))
 	    {
 	      tree fn = gimple_omp_parallel_child_fn (stmt);
-	      cgraph_mark_needed_node (cgraph_node (fn));
+	      ipa_record_reference (node, NULL, cgraph_node (fn),
+				    NULL, IPA_REF_ADDR, stmt);
 	    }
 	  if (gimple_code (stmt) == GIMPLE_OMP_TASK)
 	    {
 	      tree fn = gimple_omp_task_child_fn (stmt);
 	      if (fn)
-		cgraph_mark_needed_node (cgraph_node (fn));
+		ipa_record_reference (node, NULL, cgraph_node (fn),
+				      NULL, IPA_REF_ADDR, stmt);
 	      fn = gimple_omp_task_copy_fn (stmt);
 	      if (fn)
-		cgraph_mark_needed_node (cgraph_node (fn));
+		ipa_record_reference (node, NULL, cgraph_node (fn),
+				      NULL, IPA_REF_ADDR, stmt);
 	    }
 	}
       for (gsi = gsi_start (phi_nodes (bb)); !gsi_end_p (gsi); gsi_next (&gsi))
@@ -518,7 +518,7 @@ struct gimple_opt_pass pass_rebuild_cgraph_edges =
   NULL,					/* sub */
   NULL,					/* next */
   0,					/* static_pass_number */
-  TV_NONE,				/* tv_id */
+  TV_CGRAPH,				/* tv_id */
   PROP_cfg,				/* properties_required */
   0,					/* properties_provided */
   0,					/* properties_destroyed */

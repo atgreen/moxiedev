@@ -1,7 +1,7 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/sound/midi
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ mark
 
 2714
 
-InvalidMidiDataException.java
-file
-
-
-
-
-2009-04-24T17:47:20.000000Z
-d12958f0f2167b3e376726c0ac8b31ef
-2006-05-18T17:29:21.798468Z
-113887
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2362
-
 MidiDevice.java
 file
 
@@ -128,48 +94,14 @@ mark
 
 5997
 
-Track.java
+InvalidMidiDataException.java
 file
 
 
 
 
 2009-04-24T17:47:20.000000Z
-af5dea0193641b5dfcd411cbb1c5309f
-2006-08-14T23:12:35.345391Z
-116139
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4471
-
-ShortMessage.java
-file
-
-
-
-
-2009-04-24T17:47:20.000000Z
-e0eda453a64f297e315a0f5dc7ca625a
+d12958f0f2167b3e376726c0ac8b31ef
 2006-05-18T17:29:21.798468Z
 113887
 mark
@@ -194,7 +126,7 @@ mark
 
 
 
-9089
+2362
 
 Receiver.java
 file
@@ -230,6 +162,74 @@ mark
 
 2510
 
+ShortMessage.java
+file
+
+
+
+
+2009-04-24T17:47:20.000000Z
+e0eda453a64f297e315a0f5dc7ca625a
+2006-05-18T17:29:21.798468Z
+113887
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+9089
+
+Track.java
+file
+
+
+
+
+2009-04-24T17:47:20.000000Z
+af5dea0193641b5dfcd411cbb1c5309f
+2006-08-14T23:12:35.345391Z
+116139
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4471
+
 MidiUnavailableException.java
 file
 
@@ -263,40 +263,6 @@ mark
 
 
 2363
-
-Instrument.java
-file
-
-
-
-
-2009-04-24T17:47:20.000000Z
-b89f85deb8969812d1e0f50c75f58fe5
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2651
 
 Sequence.java
 file
@@ -332,6 +298,40 @@ tromey
 
 6997
 
+Instrument.java
+file
+
+
+
+
+2009-04-24T17:47:20.000000Z
+b89f85deb8969812d1e0f50c75f58fe5
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2651
+
 VoiceStatus.java
 file
 
@@ -366,6 +366,9 @@ mark
 
 2482
 
+spi
+dir
+
 MidiChannel.java
 file
 
@@ -399,9 +402,6 @@ mark
 
 
 6148
-
-spi
-dir
 
 Transmitter.java
 file

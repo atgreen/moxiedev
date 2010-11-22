@@ -53,6 +53,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "cfglayout.h"
 #include "basic-block.h"
 #include "tree-iterator.h"
+#include "pointer-set.h"
 
 #ifdef XCOFF_DEBUGGING_INFO
 #include "xcoffout.h"		/* Needed for external data
@@ -98,6 +99,10 @@ bool first_function_block_is_cold;
    MEM_READONLY_P, but pre-dates it.  */
 
 static alias_set_type const_alias_set;
+
+/* Whether we saw any functions with no_split_stack.  */
+
+static bool saw_no_split_stack;
 
 static const char *strip_reg_name (const char *);
 static int contains_pointers_p (tree);
@@ -469,7 +474,7 @@ resolve_unique_section (tree decl, int reloc ATTRIBUTE_UNUSED,
    ??? It is believed that this function will work in most cases so such
    support is localized here.  */
 
-static void
+static void ATTRIBUTE_UNUSED
 asm_output_bss (FILE *file, tree decl ATTRIBUTE_UNUSED,
 		const char *name,
 		unsigned HOST_WIDE_INT size ATTRIBUTE_UNUSED,
@@ -759,8 +764,11 @@ set_user_assembler_name (tree decl, const char *name)
    Prefixes such as % are optional.  */
 
 int
-decode_reg_name (const char *asmspec)
+decode_reg_name_and_count (const char *asmspec, int *pnregs)
 {
+  /* Presume just one register is clobbered.  */
+  *pnregs = 1;
+
   if (asmspec != 0)
     {
       int i;
@@ -786,6 +794,25 @@ decode_reg_name (const char *asmspec)
 	    && ! strcmp (asmspec, strip_reg_name (reg_names[i])))
 	  return i;
 
+#ifdef OVERLAPPING_REGISTER_NAMES
+      {
+	static const struct
+	{
+	  const char *const name;
+	  const int number;
+	  const int nregs;
+	} table[] = OVERLAPPING_REGISTER_NAMES;
+
+	for (i = 0; i < (int) ARRAY_SIZE (table); i++)
+	  if (table[i].name[0]
+	      && ! strcmp (asmspec, table[i].name))
+	    {
+	      *pnregs = table[i].nregs;
+	      return table[i].number;
+	    }
+      }
+#endif /* OVERLAPPING_REGISTER_NAMES */
+
 #ifdef ADDITIONAL_REGISTER_NAMES
       {
 	static const struct { const char *const name; const int number; } table[]
@@ -809,6 +836,14 @@ decode_reg_name (const char *asmspec)
 
   return -1;
 }
+
+int
+decode_reg_name (const char *name)
+{
+  int count;
+  return decode_reg_name_and_count (name, &count);
+}
+
 
 /* Return true if DECL's initializer is suitable for a BSS section.  */
 
@@ -993,7 +1028,8 @@ use_blocks_for_decl_p (tree decl)
   if (DECL_INITIAL (decl) == decl)
     return false;
 
-  /* If this decl is an alias, then we don't want to emit a definition.  */
+  /* If this decl is an alias, then we don't want to emit a
+     definition.  */
   if (lookup_attribute ("alias", DECL_ATTRIBUTES (decl)))
     return false;
 
@@ -1548,6 +1584,9 @@ assemble_start_function (tree decl, const char *fnname)
   /* Standard thing is just output label for the function.  */
   ASM_OUTPUT_FUNCTION_LABEL (asm_out_file, fnname, current_function_decl);
 #endif /* ASM_DECLARE_FUNCTION_NAME */
+
+  if (lookup_attribute ("no_split_stack", DECL_ATTRIBUTES (decl)))
+    saw_no_split_stack = true;
 }
 
 /* Output assembler code associated with defining the size of the
@@ -2045,7 +2084,7 @@ assemble_external (tree decl ATTRIBUTE_UNUSED)
   /* We want to output annotation for weak and external symbols at
      very last to check if they are references or not.  */
 
-  if (SUPPORTS_WEAK
+  if (TARGET_SUPPORTS_WEAK
       && DECL_WEAK (decl)
       /* TREE_STATIC is a weird and abused creature which is not
 	 generally the right test for whether an entity has been
@@ -3114,7 +3153,7 @@ output_constant_def_contents (rtx symbol)
   output_addressed_constants (exp);
 
   /* We are no longer deferring this constant.  */
-  TREE_ASM_WRITTEN (exp) = 1;
+  TREE_ASM_WRITTEN (decl) = TREE_ASM_WRITTEN (exp) = 1;
 
   /* If the constant is part of an object block, make sure that the
      decl has been positioned within its block, but do not write out
@@ -3893,8 +3932,8 @@ constructor_static_from_elts_p (const_tree ctor)
 {
   return (TREE_CONSTANT (ctor)
 	  && (TREE_CODE (TREE_TYPE (ctor)) == UNION_TYPE
-	      || TREE_CODE (TREE_TYPE (ctor)) == RECORD_TYPE)
-	  && !VEC_empty (constructor_elt, CONSTRUCTOR_ELTS (ctor)));
+	      || TREE_CODE (TREE_TYPE (ctor)) == RECORD_TYPE
+	      || TREE_CODE (TREE_TYPE (ctor)) == ARRAY_TYPE));
 }
 
 static tree initializer_constant_valid_p_1 (tree value, tree endtype,
@@ -5019,7 +5058,7 @@ merge_weak (tree newdecl, tree olddecl)
 {
   if (DECL_WEAK (newdecl) == DECL_WEAK (olddecl))
     {
-      if (DECL_WEAK (newdecl) && SUPPORTS_WEAK)
+      if (DECL_WEAK (newdecl) && TARGET_SUPPORTS_WEAK)
         {
           tree *pwd;
           /* We put the NEWDECL on the weak_decls list at some point
@@ -5056,7 +5095,7 @@ merge_weak (tree newdecl, tree olddecl)
 	warning (0, "weak declaration of %q+D after first use results "
                  "in unspecified behavior", newdecl);
 
-      if (SUPPORTS_WEAK)
+      if (TARGET_SUPPORTS_WEAK)
 	{
 	  /* We put the NEWDECL on the weak_decls list at some point.
 	     Replace it with the OLDDECL.  */
@@ -5090,7 +5129,7 @@ declare_weak (tree decl)
     error ("weak declaration of %q+D must be public", decl);
   else if (TREE_CODE (decl) == FUNCTION_DECL && TREE_ASM_WRITTEN (decl))
     error ("weak declaration of %q+D must precede definition", decl);
-  else if (!SUPPORTS_WEAK)
+  else if (!TARGET_SUPPORTS_WEAK)
     warning (0, "weak declaration of %q+D not supported", decl);
 
   mark_weak (decl);
@@ -5336,7 +5375,7 @@ do_assemble_alias (tree decl, tree target)
 			  IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (decl)),
 			  IDENTIFIER_POINTER (target));
 #else
-      if (!SUPPORTS_WEAK)
+      if (!TARGET_SUPPORTS_WEAK)
 	{
 	  error_at (DECL_SOURCE_LOCATION (decl),
 		    "weakref is not supported in this configuration");
@@ -5353,6 +5392,17 @@ do_assemble_alias (tree decl, tree target)
     {
       globalize_decl (decl);
       maybe_assemble_visibility (decl);
+    }
+  if (lookup_attribute ("ifunc", DECL_ATTRIBUTES (decl)))
+    {
+#if defined (ASM_OUTPUT_TYPE_DIRECTIVE) && HAVE_GNU_INDIRECT_FUNCTION
+      ASM_OUTPUT_TYPE_DIRECTIVE
+	(asm_out_file, IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (decl)),
+	 IFUNC_ASM_TYPE);
+#else
+      error_at (DECL_SOURCE_LOCATION (decl),
+		"ifunc is not supported in this configuration");
+#endif
     }
 
 # ifdef ASM_OUTPUT_DEF_FROM_DECLS
@@ -5396,17 +5446,57 @@ do_assemble_alias (tree decl, tree target)
 }
 
 
+/* Compute the set of indentifier nodes that is generated by aliases
+   whose targets are reachable.  */
+
+static struct pointer_set_t *
+compute_visible_aliases (void)
+{
+  struct pointer_set_t *visible;
+  unsigned i;
+  alias_pair *p;
+  bool changed;
+
+  /* We have to compute the set of visible nodes including aliases
+     themselves.  */
+  visible = pointer_set_create ();
+  do
+    {
+      changed = false;
+      for (i = 0; VEC_iterate (alias_pair, alias_pairs, i, p); ++i)
+	{
+	  struct cgraph_node *fnode = NULL;
+	  struct varpool_node *vnode = NULL;
+	  fnode = cgraph_node_for_asm (p->target);
+	  vnode = (fnode == NULL) ? varpool_node_for_asm (p->target) : NULL;
+	  if ((fnode
+	       || vnode
+	       || pointer_set_contains (visible, p->target))
+	      && !pointer_set_insert (visible, DECL_ASSEMBLER_NAME (p->decl)))
+	    changed = true;
+	}
+    }
+  while (changed);
+
+  return visible;
+}
+
 /* Remove the alias pairing for functions that are no longer in the call
    graph.  */
 
 void
 remove_unreachable_alias_pairs (void)
 {
+  struct pointer_set_t *visible;
   unsigned i;
   alias_pair *p;
 
   if (alias_pairs == NULL)
     return;
+
+  /* We have to compute the set of visible nodes including aliases
+     themselves.  */
+  visible = compute_visible_aliases ();
 
   for (i = 0; VEC_iterate (alias_pair, alias_pairs, i, p); )
     {
@@ -5416,7 +5506,9 @@ remove_unreachable_alias_pairs (void)
 	  struct varpool_node *vnode = NULL;
 	  fnode = cgraph_node_for_asm (p->target);
 	  vnode = (fnode == NULL) ? varpool_node_for_asm (p->target) : NULL;
-	  if (fnode == NULL && vnode == NULL)
+	  if (!fnode
+	      && !vnode
+	      && !pointer_set_contains (visible, p->target))
 	    {
 	      VEC_unordered_remove (alias_pair, alias_pairs, i);
 	      continue;
@@ -5425,6 +5517,8 @@ remove_unreachable_alias_pairs (void)
 
       i++;
     }
+
+  pointer_set_destroy (visible);
 }
 
 
@@ -5434,30 +5528,51 @@ remove_unreachable_alias_pairs (void)
 void
 finish_aliases_1 (void)
 {
+  struct pointer_set_t *visible;
   unsigned i;
   alias_pair *p;
 
-  for (i = 0; VEC_iterate (alias_pair, alias_pairs, i, p); i++)
+  if (alias_pairs == NULL)
+    return;
+
+  /* We have to compute the set of visible nodes including aliases
+     themselves.  */
+  visible = compute_visible_aliases ();
+
+  FOR_EACH_VEC_ELT (alias_pair, alias_pairs, i, p)
     {
       tree target_decl;
 
       target_decl = find_decl_and_mark_needed (p->decl, p->target);
       if (target_decl == NULL)
 	{
-	  if (! lookup_attribute ("weakref", DECL_ATTRIBUTES (p->decl)))
-	    error ("%q+D aliased to undefined symbol %qE",
-		   p->decl, p->target);
+	  if (pointer_set_contains (visible, p->target))
+	    continue;
+
+	  if (! (p->emitted_diags & ALIAS_DIAG_TO_UNDEF)
+	      && ! lookup_attribute ("weakref", DECL_ATTRIBUTES (p->decl)))
+	    {
+	      error ("%q+D aliased to undefined symbol %qE",
+		     p->decl, p->target);
+	      p->emitted_diags |= ALIAS_DIAG_TO_UNDEF;
+	    }
 	}
-      else if (DECL_EXTERNAL (target_decl)
- 	       /* We use local aliases for C++ thunks to force the tailcall
- 		  to bind locally.  Of course this is a hack - to keep it
- 		  working do the following (which is not strictly correct).  */
- 	       && (! TREE_CODE (target_decl) == FUNCTION_DECL
- 		   || ! DECL_VIRTUAL_P (target_decl))
+      else if (! (p->emitted_diags & ALIAS_DIAG_TO_EXTERN)
+	       && DECL_EXTERNAL (target_decl)
+	       /* We use local aliases for C++ thunks to force the tailcall
+		  to bind locally.  This is a hack - to keep it working do
+		  the following (which is not strictly correct).  */
+	       && (! TREE_CODE (target_decl) == FUNCTION_DECL
+		   || ! DECL_VIRTUAL_P (target_decl))
 	       && ! lookup_attribute ("weakref", DECL_ATTRIBUTES (p->decl)))
-	error ("%q+D aliased to external symbol %qE",
-	       p->decl, p->target);
+	{
+	  error ("%q+D aliased to external symbol %qE",
+		 p->decl, p->target);	  
+	  p->emitted_diags |= ALIAS_DIAG_TO_EXTERN;
+	}
     }
+
+  pointer_set_destroy (visible);
 }
 
 /* Second pass of completing pending aliases.  Emit the actual assembly.
@@ -5470,7 +5585,7 @@ finish_aliases_2 (void)
   unsigned i;
   alias_pair *p;
 
-  for (i = 0; VEC_iterate (alias_pair, alias_pairs, i, p); i++)
+  FOR_EACH_VEC_ELT (alias_pair, alias_pairs, i, p)
     do_assemble_alias (p->decl, p->target);
 
   VEC_truncate (alias_pair, alias_pairs, 0);
@@ -5515,8 +5630,12 @@ assemble_alias (tree decl, tree target)
 # else
       if (!DECL_WEAK (decl))
 	{
-	  error_at (DECL_SOURCE_LOCATION (decl),
-		    "only weak aliases are supported in this configuration");
+	  if (lookup_attribute ("ifunc", DECL_ATTRIBUTES (decl)))
+	    error_at (DECL_SOURCE_LOCATION (decl),
+		      "ifunc is not supported in this configuration");
+	  else	
+	    error_at (DECL_SOURCE_LOCATION (decl),
+		      "only weak aliases are supported in this configuration");
 	  return;
 	}
 # endif
@@ -5549,6 +5668,7 @@ assemble_alias (tree decl, tree target)
       alias_pair *p = VEC_safe_push (alias_pair, gc, alias_pairs, NULL);
       p->decl = decl;
       p->target = target;
+      p->emitted_diags = ALIAS_DIAG_NONE;
     }
 }
 
@@ -5604,7 +5724,7 @@ supports_one_only (void)
 {
   if (SUPPORTS_ONE_ONLY)
     return 1;
-  return SUPPORTS_WEAK;
+  return TARGET_SUPPORTS_WEAK;
 }
 
 /* Set up DECL as a public symbol that can be defined in multiple
@@ -5630,7 +5750,7 @@ make_decl_one_only (tree decl, tree comdat_group)
     DECL_COMMON (decl) = 1;
   else
     {
-      gcc_assert (SUPPORTS_WEAK);
+      gcc_assert (TARGET_SUPPORTS_WEAK);
       DECL_WEAK (decl) = 1;
     }
 }
@@ -5982,13 +6102,17 @@ categorize_decl_for_section (const_tree decl, int reloc)
 	  /* Here the reloc_rw_mask is not testing whether the section should
 	     be read-only or not, but whether the dynamic link will have to
 	     do something.  If so, we wish to segregate the data in order to
-	     minimize cache misses inside the dynamic linker.  */
-	  if (reloc & targetm.asm_out.reloc_rw_mask ())
+	     minimize cache misses inside the dynamic linker.  If the data
+	     has a section attribute, ignore reloc_rw_mask() so that all data
+             in a given named section is catagorized in the same way.  */
+	  if (reloc & targetm.asm_out.reloc_rw_mask ()
+	      && !lookup_attribute ("section", DECL_ATTRIBUTES (decl)))
 	    ret = reloc == 1 ? SECCAT_DATA_REL_LOCAL : SECCAT_DATA_REL;
 	  else
 	    ret = SECCAT_DATA;
 	}
-      else if (reloc & targetm.asm_out.reloc_rw_mask ())
+      else if (reloc & targetm.asm_out.reloc_rw_mask ()
+	       && !lookup_attribute ("section", DECL_ATTRIBUTES (decl)))
 	ret = reloc == 1 ? SECCAT_DATA_REL_RO_LOCAL : SECCAT_DATA_REL_RO;
       else if (reloc || flag_merge_constants < 2)
 	/* C and C++ don't allow different variables to share the same
@@ -6360,6 +6484,30 @@ default_use_anchors_for_symbol_p (const_rtx symbol)
   return true;
 }
 
+/* Return true when RESOLUTION indicate that symbol will be bound to the
+   definition provided by current .o file.  */
+
+static bool
+resolution_to_local_definition_p (enum ld_plugin_symbol_resolution resolution)
+{
+  return (resolution == LDPR_PREVAILING_DEF
+	  || resolution == LDPR_PREVAILING_DEF_IRONLY);
+}
+
+/* Return true when RESOLUTION indicate that symbol will be bound locally
+   within current executable or DSO.  */
+
+static bool
+resolution_local_p (enum ld_plugin_symbol_resolution resolution)
+{
+  return (resolution == LDPR_PREVAILING_DEF
+	  || resolution == LDPR_PREVAILING_DEF_IRONLY
+	  || resolution == LDPR_PREEMPTED_REG
+	  || resolution == LDPR_PREEMPTED_IR
+	  || resolution == LDPR_RESOLVED_IR
+	  || resolution == LDPR_RESOLVED_EXEC);
+}
+
 /* Assume ELF-ish defaults, since that's pretty much the most liberal
    wrt cross-module name binding.  */
 
@@ -6373,12 +6521,41 @@ bool
 default_binds_local_p_1 (const_tree exp, int shlib)
 {
   bool local_p;
+  bool resolved_locally = false;
+  bool resolved_to_local_def = false;
+
+  /* With resolution file in hands, take look into resolutions.
+     We can't just return true for resolved_localy symbols,
+     because dynamic linking might overwrite symbols
+     in shared libraries.  */
+  if (TREE_CODE (exp) == VAR_DECL && TREE_PUBLIC (exp)
+      && (TREE_STATIC (exp) || DECL_EXTERNAL (exp)))
+    {
+      struct varpool_node *vnode = varpool_get_node (exp);
+      if (vnode && resolution_local_p (vnode->resolution))
+	resolved_locally = true;
+      if (vnode
+	  && resolution_to_local_definition_p (vnode->resolution))
+	resolved_to_local_def = true;
+    }
+  else if (TREE_CODE (exp) == FUNCTION_DECL && TREE_PUBLIC (exp))
+    {
+      struct cgraph_node *node = cgraph_get_node_or_alias (exp);
+      if (node
+	  && resolution_local_p (node->resolution))
+	resolved_locally = true;
+      if (node
+	  && resolution_to_local_definition_p (node->resolution))
+	resolved_to_local_def = true;
+    }
 
   /* A non-decl is an entry in the constant pool.  */
   if (!DECL_P (exp))
     local_p = true;
   /* Weakrefs may not bind locally, even though the weakref itself is
-     always static and therefore local.  */
+     always static and therefore local.
+     FIXME: We can resolve this more curefuly by looking at the weakref
+     alias.  */
   else if (lookup_attribute ("weakref", DECL_ATTRIBUTES (exp)))
     local_p = false;
   /* Static variables are always local.  */
@@ -6386,11 +6563,12 @@ default_binds_local_p_1 (const_tree exp, int shlib)
     local_p = true;
   /* A variable is local if the user has said explicitly that it will
      be.  */
-  else if (DECL_VISIBILITY_SPECIFIED (exp)
+  else if ((DECL_VISIBILITY_SPECIFIED (exp)
+	    || resolved_to_local_def)
 	   && DECL_VISIBILITY (exp) != VISIBILITY_DEFAULT)
     local_p = true;
   /* Variables defined outside this object might not be local.  */
-  else if (DECL_EXTERNAL (exp))
+  else if (DECL_EXTERNAL (exp) && !resolved_locally)
     local_p = false;
   /* If defined in this object and visibility is not default, must be
      local.  */
@@ -6398,16 +6576,17 @@ default_binds_local_p_1 (const_tree exp, int shlib)
     local_p = true;
   /* Default visibility weak data can be overridden by a strong symbol
      in another module and so are not local.  */
-  else if (DECL_WEAK (exp))
+  else if (DECL_WEAK (exp)
+	   && !resolved_locally)
     local_p = false;
   /* If PIC, then assume that any global name can be overridden by
-     symbols resolved from other modules, unless we are compiling with
-     -fwhole-program, which assumes that names are local.  */
+     symbols resolved from other modules.  */
   else if (shlib)
-    local_p = flag_whole_program;
+    local_p = false;
   /* Uninitialized COMMON variable may be unified with symbols
      resolved from other modules.  */
   else if (DECL_COMMON (exp)
+	   && !resolved_locally
 	   && (DECL_INITIAL (exp) == NULL
 	       || DECL_INITIAL (exp) == error_mark_node))
     local_p = false;
@@ -6417,6 +6596,67 @@ default_binds_local_p_1 (const_tree exp, int shlib)
     local_p = true;
 
   return local_p;
+}
+
+/* Return true when references to DECL must bind to current definition in
+   final executable.
+
+   The condition is usually equivalent to whether the function binds to the
+   current module (shared library or executable), that is to binds_local_p.
+   We use this fact to avoid need for another target hook and implement
+   the logic using binds_local_p and just special cases where
+   decl_binds_to_current_def_p is stronger than binds local_p.  In particular
+   the weak definitions (that can be overwritten at linktime by other
+   definition from different object file) and when resolution info is available
+   we simply use the knowledge passed to us by linker plugin.  */
+bool
+decl_binds_to_current_def_p (tree decl)
+{
+  gcc_assert (DECL_P (decl));
+  if (!TREE_PUBLIC (decl))
+    return true;
+  if (!targetm.binds_local_p (decl))
+    return false;
+  /* When resolution is available, just use it.  */
+  if (TREE_CODE (decl) == VAR_DECL && TREE_PUBLIC (decl)
+      && (TREE_STATIC (decl) || DECL_EXTERNAL (decl)))
+    {
+      struct varpool_node *vnode = varpool_get_node (decl);
+      if (vnode
+	  && vnode->resolution != LDPR_UNKNOWN)
+	return resolution_to_local_definition_p (vnode->resolution);
+    }
+  else if (TREE_CODE (decl) == FUNCTION_DECL && TREE_PUBLIC (decl))
+    {
+      struct cgraph_node *node = cgraph_get_node_or_alias (decl);
+      if (node
+	  && node->resolution != LDPR_UNKNOWN)
+	return resolution_to_local_definition_p (node->resolution);
+    }
+  /* Otherwise we have to assume the worst for DECL_WEAK (hidden weaks
+     binds localy but still can be overwritten).
+     This rely on fact that binds_local_p behave as decl_replaceable_p
+     for all other declaration types.  */
+  return !DECL_WEAK (decl);
+}
+
+/* A replaceable function or variable is one which may be replaced
+   at link-time with an entirely different definition, provided that the
+   replacement has the same type.  For example, functions declared
+   with __attribute__((weak)) on most systems are replaceable.
+
+   COMDAT functions are not replaceable, since all definitions of the
+   function must be equivalent.  It is important that COMDAT functions
+   not be treated as replaceable so that use of C++ template
+   instantiations is not penalized.  */
+
+bool
+decl_replaceable_p (tree decl)
+{
+  gcc_assert (DECL_P (decl));
+  if (!TREE_PUBLIC (decl) || DECL_COMDAT (decl))
+    return false;
+  return !decl_binds_to_current_def_p (decl);
 }
 
 /* Default function to output code that will globalize a label.  A
@@ -6457,6 +6697,16 @@ default_emit_unwind_label (FILE * stream ATTRIBUTE_UNUSED,
 void
 default_emit_except_table_label (FILE * stream ATTRIBUTE_UNUSED)
 {
+}
+
+/* This is how to output an internal numbered label where PREFIX is
+   the class of label and LABELNO is the number within the class.  */
+
+void
+default_generate_internal_label (char *buf, const char *prefix,
+				 unsigned long labelno)
+{
+  ASM_GENERATE_INTERNAL_LABEL (buf, prefix, labelno);
 }
 
 /* This is how to output an internal numbered label where PREFIX is
@@ -6510,6 +6760,28 @@ file_end_indicate_exec_stack (void)
     flags |= SECTION_CODE;
 
   switch_to_section (get_section (".note.GNU-stack", flags, NULL));
+}
+
+/* Emit a special section directive to indicate that this object file
+   was compiled with -fsplit-stack.  This is used to let the linker
+   detect calls between split-stack code and non-split-stack code, so
+   that it can modify the split-stack code to allocate a sufficiently
+   large stack.  We emit another special section if there are any
+   functions in this file which have the no_split_stack attribute, to
+   prevent the linker from warning about being unable to convert the
+   functions if they call non-split-stack code.  */
+
+void
+file_end_indicate_split_stack (void)
+{
+  if (flag_split_stack)
+    {
+      switch_to_section (get_section (".note.GNU-split-stack", SECTION_DEBUG,
+				      NULL));
+      if (saw_no_split_stack)
+	switch_to_section (get_section (".note.GNU-no-split-stack",
+					SECTION_DEBUG, NULL));
+    }
 }
 
 /* Output DIRECTIVE (a C string) followed by a newline.  This is used as
@@ -6715,12 +6987,12 @@ output_object_block (struct object_block *block)
 
   /* Define the values of all anchors relative to the current section
      position.  */
-  for (i = 0; VEC_iterate (rtx, block->anchors, i, symbol); i++)
+  FOR_EACH_VEC_ELT (rtx, block->anchors, i, symbol)
     targetm.asm_out.output_anchor (symbol);
 
   /* Output the objects themselves.  */
   offset = 0;
-  for (i = 0; VEC_iterate (rtx, block->objects, i, symbol); i++)
+  FOR_EACH_VEC_ELT (rtx, block->objects, i, symbol)
     {
       /* Move to the object's offset, padding with zeros if necessary.  */
       assemble_zeros (SYMBOL_REF_BLOCK_OFFSET (symbol) - offset);

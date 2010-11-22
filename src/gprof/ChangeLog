@@ -1,3 +1,23 @@
+2010-11-10  Nick Clifton  <nickc@redhat.com>
+
+	* po/ru.po: New Russian translation.
+
+2010-11-05  Tristan Gingold  <gingold@adacore.com>
+
+	* po/gprof.pot: Regenerate
+
+2010-10-29  Matthias Klose  <doko@ubuntu.com>
+
+	* gprof.texi (Deprecated Options): Move introduction out of the table.
+
+2010-10-28  Matthias Klose  <doko@ubuntu.com>
+
+	* gprof.texi: Add directory section for info document.
+
+2010-09-27  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure: Regenerate.
+
 2010-07-16  James Blackburn  <james.blackburn@broadcom.com>
 
 	* corefile.c (core_sym_class): Fix handling of subprogram names

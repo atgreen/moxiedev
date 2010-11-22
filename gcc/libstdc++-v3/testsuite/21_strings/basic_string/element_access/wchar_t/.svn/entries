@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string/element_access/wchar_t
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-05-31T14:14:42.219552Z
-160071
+2010-09-03T18:10:46.246406Z
+163837
 paolo
 
 
@@ -168,10 +168,10 @@ file
 
 
 
-2010-02-03T11:41:57.587468Z
-45f3f8c856f4658f379be0a9ec0d458f
-2010-01-28T17:01:53.900823Z
-156326
+2010-11-22T19:18:18.113046Z
+1802df4b5a166ea7e06bdf4ab6916084
+2010-09-03T18:10:46.246406Z
+163837
 paolo
 
 
@@ -194,7 +194,7 @@ paolo
 
 
 
-1070
+1052
 
 4.cc
 file

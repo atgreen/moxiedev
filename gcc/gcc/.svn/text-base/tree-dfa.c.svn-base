@@ -878,6 +878,38 @@ get_ref_base_and_extent (tree exp, HOST_WIDE_INT *poffset,
 	    }
 	  goto done;
 
+	case TARGET_MEM_REF:
+	  /* Hand back the decl for MEM[&decl, off].  */
+	  if (TREE_CODE (TMR_BASE (exp)) == ADDR_EXPR)
+	    {
+	      /* Via the variable index or index2 we can reach the
+		 whole object.  */
+	      if (TMR_INDEX (exp) || TMR_INDEX2 (exp))
+		{
+		  exp = TREE_OPERAND (TMR_BASE (exp), 0);
+		  bit_offset = 0;
+		  maxsize = -1;
+		  goto done;
+		}
+	      if (integer_zerop (TMR_OFFSET (exp)))
+		exp = TREE_OPERAND (TMR_BASE (exp), 0);
+	      else
+		{
+		  double_int off = mem_ref_offset (exp);
+		  off = double_int_lshift (off,
+					   BITS_PER_UNIT == 8
+					   ? 3 : exact_log2 (BITS_PER_UNIT),
+					   HOST_BITS_PER_DOUBLE_INT, true);
+		  off = double_int_add (off, shwi_to_double_int (bit_offset));
+		  if (double_int_fits_in_shwi_p (off))
+		    {
+		      bit_offset = double_int_to_shwi (off);
+		      exp = TREE_OPERAND (TMR_BASE (exp), 0);
+		    }
+		}
+	    }
+	  goto done;
+
 	default:
 	  goto done;
 	}
@@ -1007,6 +1039,22 @@ get_addr_base_and_unit_offset (tree exp, HOST_WIDE_INT *poffset)
 		  byte_offset += double_int_to_shwi (off);
 		}
 	      exp = TREE_OPERAND (TREE_OPERAND (exp, 0), 0);
+	    }
+	  goto done;
+
+	case TARGET_MEM_REF:
+	  /* Hand back the decl for MEM[&decl, off].  */
+	  if (TREE_CODE (TMR_BASE (exp)) == ADDR_EXPR)
+	    {
+	      if (TMR_INDEX (exp) || TMR_INDEX2 (exp))
+		return NULL_TREE;
+	      if (!integer_zerop (TMR_OFFSET (exp)))
+		{
+		  double_int off = mem_ref_offset (exp);
+		  gcc_assert (off.high == -1 || off.high == 0);
+		  byte_offset += double_int_to_shwi (off);
+		}
+	      exp = TREE_OPERAND (TMR_BASE (exp), 0);
 	    }
 	  goto done;
 

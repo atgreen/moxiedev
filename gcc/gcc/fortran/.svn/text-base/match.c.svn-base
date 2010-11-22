@@ -27,6 +27,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "match.h"
 #include "parse.h"
 
+int gfc_matching_ptr_assignment = 0;
 int gfc_matching_procptr_assignment = 0;
 bool gfc_matching_prefix = false;
 
@@ -978,13 +979,6 @@ gfc_match_iterator (gfc_iterator *iter, int init_flag)
       goto cleanup;
     }
 
-  if (var->symtree->n.sym->attr.intent == INTENT_IN)
-    {
-      gfc_error ("Loop variable '%s' at %C cannot be INTENT(IN)",
-		 var->symtree->n.sym->name);
-      goto cleanup;
-    }
-
   gfc_match_char ('=');
 
   var->symtree->n.sym->attr.implied_index = 1;
@@ -1338,6 +1332,7 @@ gfc_match_pointer_assignment (void)
   old_loc = gfc_current_locus;
 
   lvalue = rvalue = NULL;
+  gfc_matching_ptr_assignment = 0;
   gfc_matching_procptr_assignment = 0;
 
   m = gfc_match (" %v =>", &lvalue);
@@ -1350,8 +1345,11 @@ gfc_match_pointer_assignment (void)
   if (lvalue->symtree->n.sym->attr.proc_pointer
       || gfc_is_proc_ptr_comp (lvalue, NULL))
     gfc_matching_procptr_assignment = 1;
+  else
+    gfc_matching_ptr_assignment = 1;
 
   m = gfc_match (" %e%t", &rvalue);
+  gfc_matching_ptr_assignment = 0;
   gfc_matching_procptr_assignment = 0;
   if (m != MATCH_YES)
     goto cleanup;
@@ -1827,6 +1825,7 @@ gfc_match_associate (void)
 	  gfc_error ("Expected association at %C");
 	  goto assocListError;
 	}
+      newAssoc->where = gfc_current_locus;
 
       /* Check that the current name is not yet in the list.  */
       for (a = new_st.ext.block.assoc; a; a = a->next)
@@ -1844,10 +1843,9 @@ gfc_match_associate (void)
 	  goto assocListError;
 	}
 
-      /* The target is a variable (and may be used as lvalue) if it's an
-	 EXPR_VARIABLE and does not have vector-subscripts.  */
-      newAssoc->variable = (newAssoc->target->expr_type == EXPR_VARIABLE
-			    && !gfc_has_vector_subscript (newAssoc->target));
+      /* The `variable' field is left blank for now; because the target is not
+	 yet resolved, we can't use gfc_has_vector_subscript to determine it
+	 for now.  This is set during resolution.  */
 
       /* Put it into the list.  */
       newAssoc->next = new_st.ext.block.assoc;
@@ -2032,7 +2030,7 @@ match_exit_cycle (gfc_statement st, gfc_exec_op op)
       sym = stree->n.sym;
       if (sym->attr.flavor != FL_LABEL)
 	{
-	  gfc_error ("Name '%s' in %s statement at %C is not a loop name",
+	  gfc_error ("Name '%s' in %s statement at %C is not a construct name",
 		     name, gfc_ascii_statement (st));
 	  return MATCH_ERROR;
 	}
@@ -2040,9 +2038,7 @@ match_exit_cycle (gfc_statement st, gfc_exec_op op)
 
   /* Find the loop specified by the label (or lack of a label).  */
   for (o = NULL, p = gfc_state_stack; p; p = p->previous)
-    if (p->state == COMP_DO && (sym == NULL || sym == p->sym))
-      break;
-    else if (o == NULL && p->state == COMP_OMP_STRUCTURED_BLOCK)
+    if (o == NULL && p->state == COMP_OMP_STRUCTURED_BLOCK)
       o = p;
     else if (p->state == COMP_CRITICAL)
       {
@@ -2050,16 +2046,52 @@ match_exit_cycle (gfc_statement st, gfc_exec_op op)
 		  gfc_ascii_statement (st));
 	return MATCH_ERROR;
       }
+    else if ((sym && sym == p->sym) || (!sym && p->state == COMP_DO))
+      break;
 
   if (p == NULL)
     {
       if (sym == NULL)
-	gfc_error ("%s statement at %C is not within a loop",
+	gfc_error ("%s statement at %C is not within a construct",
 		   gfc_ascii_statement (st));
       else
-	gfc_error ("%s statement at %C is not within loop '%s'",
+	gfc_error ("%s statement at %C is not within construct '%s'",
 		   gfc_ascii_statement (st), sym->name);
 
+      return MATCH_ERROR;
+    }
+
+  /* Special checks for EXIT from non-loop constructs.  */
+  switch (p->state)
+    {
+    case COMP_DO:
+      break;
+
+    case COMP_CRITICAL:
+      /* This is already handled above.  */
+      gcc_unreachable ();
+
+    case COMP_ASSOCIATE:
+    case COMP_BLOCK:
+    case COMP_IF:
+    case COMP_SELECT:
+    case COMP_SELECT_TYPE:
+      gcc_assert (sym);
+      if (op == EXEC_CYCLE)
+	{
+	  gfc_error ("CYCLE statement at %C is not applicable to non-loop"
+		     " construct '%s'", sym->name);
+	  return MATCH_ERROR;
+	}
+      gcc_assert (op == EXEC_EXIT);
+      if (gfc_notify_std (GFC_STD_F2008, "Fortran 2008: EXIT statement with no"
+			  " do-construct-name at %C") == FAILURE)
+	return MATCH_ERROR;
+      break;
+      
+    default:
+      gfc_error ("%s statement at %C is not applicable to construct '%s'",
+		 gfc_ascii_statement (st), sym->name);
       return MATCH_ERROR;
     }
 
@@ -2094,13 +2126,14 @@ match_exit_cycle (gfc_statement st, gfc_exec_op op)
 	}
       if (st == ST_CYCLE && cnt < collapse)
 	{
-	  gfc_error ("CYCLE statement at %C to non-innermost collapsed !$OMP DO loop");
+	  gfc_error ("CYCLE statement at %C to non-innermost collapsed"
+		     " !$OMP DO loop");
 	  return MATCH_ERROR;
 	}
     }
 
-  /* Save the first statement in the loop - needed by the backend.  */
-  new_st.ext.whichloop = p->head;
+  /* Save the first statement in the construct - needed by the backend.  */
+  new_st.ext.which_construct = p->construct;
 
   new_st.op = op;
 
@@ -2678,26 +2711,25 @@ gfc_free_alloc_list (gfc_alloc *p)
 static match
 match_derived_type_spec (gfc_typespec *ts)
 {
+  char name[GFC_MAX_SYMBOL_LEN + 1];
   locus old_locus; 
   gfc_symbol *derived;
 
-  old_locus = gfc_current_locus; 
+  old_locus = gfc_current_locus;
 
-  if (gfc_match_symbol (&derived, 1) == MATCH_YES)
+  if (gfc_match ("%n", name) != MATCH_YES)
     {
-      if (derived->attr.flavor == FL_DERIVED)
-	{
-	  ts->type = BT_DERIVED;
-	  ts->u.derived = derived;
-	  return MATCH_YES;
-	}
-      else
-	{
-	  /* Enforce F03:C476.  */
-	  gfc_error ("'%s' at %L is not an accessible derived type",
-		     derived->name, &gfc_current_locus);
-	  return MATCH_ERROR;
-	}
+       gfc_current_locus = old_locus;
+       return MATCH_NO;
+    }
+
+  gfc_find_symbol (name, NULL, 1, &derived);
+
+  if (derived && derived->attr.flavor == FL_DERIVED)
+    {
+      ts->type = BT_DERIVED;
+      ts->u.derived = derived;
+      return MATCH_YES;
     }
 
   gfc_current_locus = old_locus; 
@@ -2709,7 +2741,7 @@ match_derived_type_spec (gfc_typespec *ts)
    gfc_match_decl_type_spec() from decl.c, with the following exceptions:
    It only includes the intrinsic types from the Fortran 2003 standard
    (thus, neither BYTE nor forms like REAL*4 are allowed). Additionally,
-   the implicit_flag is not needed, so it was removed.  Derived types are
+   the implicit_flag is not needed, so it was removed. Derived types are
    identified by their name alone.  */
 
 static match
@@ -2719,7 +2751,20 @@ match_type_spec (gfc_typespec *ts)
   locus old_locus;
 
   gfc_clear_ts (ts);
+  gfc_gobble_whitespace ();
   old_locus = gfc_current_locus;
+
+  if (match_derived_type_spec (ts) == MATCH_YES)
+    {
+      /* Enforce F03:C401.  */
+      if (ts->u.derived->attr.abstract)
+	{
+	  gfc_error ("Derived type '%s' at %L may not be ABSTRACT",
+		     ts->u.derived->name, &old_locus);
+	  return MATCH_ERROR;
+	}
+      return MATCH_YES;
+    }
 
   if (gfc_match ("integer") == MATCH_YES)
     {
@@ -2752,7 +2797,13 @@ match_type_spec (gfc_typespec *ts)
   if (gfc_match ("character") == MATCH_YES)
     {
       ts->type = BT_CHARACTER;
-      goto char_selector;
+
+      m = gfc_match_char_spec (ts);
+
+      if (m == MATCH_NO)
+	m = MATCH_YES;
+
+      return m;
     }
 
   if (gfc_match ("logical") == MATCH_YES)
@@ -2761,25 +2812,6 @@ match_type_spec (gfc_typespec *ts)
       ts->kind = gfc_default_logical_kind;
       goto kind_selector;
     }
-
-  m = match_derived_type_spec (ts);
-  if (m == MATCH_YES)
-    {
-      old_locus = gfc_current_locus;
-      if (gfc_match (" :: ") != MATCH_YES)
-	return MATCH_ERROR;
-      gfc_current_locus = old_locus;
-      /* Enfore F03:C401.  */
-      if (ts->u.derived->attr.abstract)
-	{
-	  gfc_error ("Derived type '%s' at %L may not be ABSTRACT",
-		     ts->u.derived->name, &old_locus);
-	  return MATCH_ERROR;
-	}
-      return MATCH_YES;
-    }
-  else if (m == MATCH_ERROR && gfc_match (" :: ") == MATCH_YES)
-    return MATCH_ERROR;
 
   /* If a type is not matched, simply return MATCH_NO.  */
   gfc_current_locus = old_locus;
@@ -2800,15 +2832,6 @@ kind_selector:
     m = MATCH_YES;		/* No kind specifier found.  */
 
   return m;
-
-char_selector:
-
-  m = gfc_match_char_spec (ts);
-
-  if (m == MATCH_NO)
-    m = MATCH_YES;		/* No kind specifier found.  */
-
-  return m;
 }
 
 
@@ -2822,12 +2845,12 @@ gfc_match_allocate (void)
   gfc_typespec ts;
   gfc_symbol *sym;
   match m;
-  locus old_locus;
-  bool saw_stat, saw_errmsg, saw_source, saw_mold, b1, b2, b3;
+  locus old_locus, deferred_locus;
+  bool saw_stat, saw_errmsg, saw_source, saw_mold, saw_deferred, b1, b2, b3;
 
   head = tail = NULL;
   stat = errmsg = source = mold = tmp = NULL;
-  saw_stat = saw_errmsg = saw_source = saw_mold = false;
+  saw_stat = saw_errmsg = saw_source = saw_mold = saw_deferred = false;
 
   if (gfc_match_char ('(') != MATCH_YES)
     goto syntax;
@@ -2838,7 +2861,17 @@ gfc_match_allocate (void)
   if (m == MATCH_ERROR)
     goto cleanup;
   else if (m == MATCH_NO)
-    ts.type = BT_UNKNOWN;
+    {
+      char name[GFC_MAX_SYMBOL_LEN + 3];
+
+      if (gfc_match ("%n :: ", name) == MATCH_YES)
+	{
+	  gfc_error ("Error in type-spec at %L", &old_locus);
+	  goto cleanup;
+	}
+
+      ts.type = BT_UNKNOWN;
+    }
   else
     {
       if (gfc_match (" :: ") == MATCH_YES)
@@ -2846,6 +2879,13 @@ gfc_match_allocate (void)
 	  if (gfc_notify_std (GFC_STD_F2003, "Fortran 2003: typespec in "
 			      "ALLOCATE at %L", &old_locus) == FAILURE)
 	    goto cleanup;
+
+	  if (ts.deferred)
+	    {
+	      gfc_error ("Type-spec at %L cannot contain a deferred "
+			 "type parameter", &old_locus);
+	      goto cleanup;
+	    }
 	}
       else
 	{
@@ -2877,6 +2917,12 @@ gfc_match_allocate (void)
 	{
 	  gfc_error ("Bad allocate-object at %C for a PURE procedure");
 	  goto cleanup;
+	}
+
+      if (tail->expr->ts.deferred)
+	{
+	  saw_deferred = true;
+	  deferred_locus = tail->expr->where;
 	}
 
       /* The ALLOCATE statement had an optional typespec.  Check the
@@ -2921,8 +2967,8 @@ gfc_match_allocate (void)
 		|| sym->ns->proc_name->attr.proc_pointer);
       if (b1 && b2 && !b3)
 	{
-	  gfc_error ("Allocate-object at %C is not a nonprocedure pointer "
-		     "or an allocatable variable");
+	  gfc_error ("Allocate-object at %L is not a nonprocedure pointer "
+		     "or an allocatable variable", &tail->expr->where);
 	  goto cleanup;
 	}
 
@@ -2950,6 +2996,7 @@ alloc_opt_list:
 	    }
 
 	  stat = tmp;
+	  tmp = NULL;
 	  saw_stat = true;
 
 	  if (gfc_check_do_variable (stat->symtree))
@@ -2976,6 +3023,7 @@ alloc_opt_list:
 	    }
 
 	  errmsg = tmp;
+	  tmp = NULL;
 	  saw_errmsg = true;
 
 	  if (gfc_match_char (',') == MATCH_YES)
@@ -3014,6 +3062,7 @@ alloc_opt_list:
             }
 
 	  source = tmp;
+	  tmp = NULL;
 	  saw_source = true;
 
 	  if (gfc_match_char (',') == MATCH_YES)
@@ -3045,6 +3094,7 @@ alloc_opt_list:
 	    }
 
 	  mold = tmp;
+	  tmp = NULL;
 	  saw_mold = true;
 	  mold->mold = 1;
 
@@ -3058,7 +3108,6 @@ alloc_opt_list:
 	  break;
     }
 
-
   if (gfc_match (" )%t") != MATCH_YES)
     goto syntax;
 
@@ -3067,6 +3116,14 @@ alloc_opt_list:
     {
       gfc_error ("MOLD tag at %L conflicts with SOURCE tag at %L",
 		  &mold->where, &source->where);
+      goto cleanup;
+    }
+
+  /* Check F03:C623,  */
+  if (saw_deferred && ts.type == BT_UNKNOWN && !source)
+    {
+      gfc_error ("Allocate-object at %L with a deferred type parameter "
+		 "requires either a type-spec or SOURCE tag", &deferred_locus);
       goto cleanup;
     }
   
@@ -3121,12 +3178,6 @@ gfc_match_nullify (void)
 
       if (gfc_check_do_variable (p->symtree))
 	goto cleanup;
-
-      if (gfc_pure (NULL) && gfc_impure_variable (p->symtree->n.sym))
-	{
-	  gfc_error ("Illegal variable in NULLIFY at %C for a PURE procedure");
-	  goto cleanup;
-	}
 
       /* build ' => NULL() '.  */
       e = gfc_get_null_expr (&gfc_current_locus);
@@ -4455,13 +4506,19 @@ select_type_set_tmp (gfc_typespec *ts)
   char name[GFC_MAX_SYMBOL_LEN];
   gfc_symtree *tmp;
   
+  if (!ts)
+    {
+      select_type_stack->tmp = NULL;
+      return;
+    }
+  
   if (!gfc_type_is_extensible (ts->u.derived))
     return;
 
   if (ts->type == BT_CLASS)
-    sprintf (name, "tmp$class$%s", ts->u.derived->name);
+    sprintf (name, "__tmp_class_%s", ts->u.derived->name);
   else
-    sprintf (name, "tmp$type$%s", ts->u.derived->name);
+    sprintf (name, "__tmp_type_%s", ts->u.derived->name);
   gfc_get_sym_tree (name, gfc_current_ns, &tmp, false);
   gfc_add_type (tmp->n.sym, ts, NULL);
   gfc_set_sym_referenced (tmp->n.sym);
@@ -4473,6 +4530,13 @@ select_type_set_tmp (gfc_typespec *ts)
 			      &tmp->n.sym->as, false);
       tmp->n.sym->attr.class_ok = 1;
     }
+  tmp->n.sym->attr.select_type_temporary = 1;
+
+  /* Add an association for it, so the rest of the parser knows it is
+     an associate-name.  The target will be set during resolution.  */
+  tmp->n.sym->assoc = gfc_get_association_list ();
+  tmp->n.sym->assoc->dangling = 1;
+  tmp->n.sym->assoc->st = tmp;
 
   select_type_stack->tmp = tmp;
 }
@@ -4511,6 +4575,7 @@ gfc_match_select_type (void)
 	expr1->symtree->n.sym->attr.untyped = 1;
       else
 	expr1->symtree->n.sym->ts = expr2->ts;
+      expr1->symtree->n.sym->attr.flavor = FL_VARIABLE;
       expr1->symtree->n.sym->attr.referenced = 1;
       expr1->symtree->n.sym->attr.class_ok = 1;
     }
@@ -4697,6 +4762,7 @@ gfc_match_class_is (void)
       c->where = gfc_current_locus;
       c->ts.type = BT_UNKNOWN;
       new_st.ext.case_list = c;
+      select_type_set_tmp (NULL);
       return MATCH_YES;
     }
 

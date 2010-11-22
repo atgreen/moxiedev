@@ -166,6 +166,7 @@ Andrew Cagney			cagney@gnu.org
 Doug Evans			dje@google.com
 Daniel Jacobowitz		dan@codesourcery.com
 Mark Kettenis           	kettenis@gnu.org
+Jan Kratochvil			jan.kratochvil@redhat.com
 Stan Shebs			stan@codesourcery.com
 Michael Snyder			msnyder@vmware.com
 Tom Tromey			tromey@redhat.com
@@ -482,6 +483,7 @@ Andrew Cagney					cagney@gnu.org
 David Carlton					carlton@bactrian.org
 Stephane Carrez					stcarrez@nerim.fr
 Michael Chastain				mec.gnu@mindspring.com
+Renquan Cheng					crq@gcc.gnu.org
 Eric Christopher				echristo@apple.com
 Randolph Chung					tausq@debian.org
 Nick Clifton					nickc@redhat.com
@@ -495,6 +497,7 @@ Dhananjay Deshpande				dhananjayd@kpitcummins.com
 Markus Deuling					deuling@de.ibm.com
 Klee Dienes					kdienes@apple.com
 Gabriel Dos Reis                                gdr@integrable-solutions.net
+Sergio Durigan Junior				sergiodj@linux.vnet.ibm.com
 Michael Eager					eager@eagercon.com
 Richard Earnshaw				rearnsha@arm.com
 Steve Ellcey					sje@cup.hp.com
@@ -558,6 +561,7 @@ Chris Moller					cmoller@redhat.com
 Phil Muldoon					pmuldoon@redhat.com
 Pierre Muller					muller@sourceware.org
 Gaius Mulley                                    gaius@glam.ac.uk
+Masaki Muranaka					monaka@monami-software.com
 Joseph Myers					joseph@codesourcery.com
 Fernando Nasser					fnasser@redhat.com
 Adam Nemet					anemet@caviumnetworks.com
@@ -569,6 +573,7 @@ Karen Osmond					karen.osmond@gmail.com
 Denis Pilat					denis.pilat@st.com
 Paul Pluzhnikov					ppluzhnikov@google.com
 Vladimir Prus                                   vladimir@codesourcery.com
+Yao Qi						yao@codesourcery.com
 Qinwei						qinwei@sunnorth.com.cn
 Frederic Riss					frederic.riss@st.com
 Aleksandar Ristovski				aristovski@qnx.com
@@ -614,6 +619,7 @@ Sami Wagiaalla					swagiaal@redhat.com
 Keith Walker					keith.walker@arm.com
 Kris Warkentin					kewarken@qnx.com
 Ulrich Weigand					uweigand@de.ibm.com
+Ken Werner					ken.werner@de.ibm.com
 Nathan Williams					nathanw@wasabisystems.com
 Bob Wilson					bob.wilson@acm.org
 Jim Wilson					wilson@tuliptree.org
@@ -623,8 +629,6 @@ Jie Zhang					jie@codesourcery.com
 Wu Zhou						woodzltc@cn.ibm.com
 Yoshinori Sato					ysato@users.sourceforge.jp
 Hui Zhu						teawater@gmail.com
-Sergio Durigan Junior				sergiodj@linux.vnet.ibm.com
-Masaki Muranaka					monaka@monami-software.com
 
 
 			Past Maintainers

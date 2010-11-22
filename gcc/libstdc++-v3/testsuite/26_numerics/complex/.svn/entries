@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/26_numerics/complex
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-06-08T00:45:02.718875Z
-160416
-paolo
+2010-11-08T16:18:10.125604Z
+166439
+bkoz
 
 
 
@@ -59,6 +59,12 @@ jakub
 
 
 2050
+
+cons
+dir
+
+requirements
+dir
 
 complex_value.cc
 file
@@ -127,6 +133,9 @@ jakub
 
 
 1077
+
+comparison_operators
+dir
 
 dr844.cc
 file

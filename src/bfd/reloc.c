@@ -1544,14 +1544,15 @@ _bfd_relocate_contents (reloc_howto_type *howto,
   return flag;
 }
 
-/* Clear a given location using a given howto, by applying a relocation value
-   of zero and discarding any in-place addend.  This is used for fixed-up
+/* Clear a given location using a given howto, by applying a fixed relocation
+   value and discarding any in-place addend.  This is used for fixed-up
    relocations against discarded symbols, to make ignorable debug or unwind
    information more obvious.  */
 
 void
 _bfd_clear_contents (reloc_howto_type *howto,
 		     bfd *input_bfd,
+		     asection *input_section,
 		     bfd_byte *location)
 {
   int size;
@@ -1584,6 +1585,13 @@ _bfd_clear_contents (reloc_howto_type *howto,
 
   /* Zero out the unwanted bits of X.  */
   x &= ~howto->dst_mask;
+
+  /* For a range list, use 1 instead of 0 as placeholder.  0
+     would terminate the list, hiding any later entries.  */
+  if (strcmp (bfd_get_section_name (input_bfd, input_section),
+	      ".debug_ranges") == 0
+      && (howto->dst_mask & 1) != 0)
+    x |= 1;
 
   /* Put the relocated value back in the object file.  */
   switch (size)
@@ -3037,6 +3045,8 @@ ENUMX
   BFD_RELOC_ARM_SHIFT_IMM
 ENUMX
   BFD_RELOC_ARM_SMC
+ENUMX
+  BFD_RELOC_ARM_HVC
 ENUMX
   BFD_RELOC_ARM_SWI
 ENUMX
@@ -5572,7 +5582,7 @@ bfd_default_reloc_type_lookup (bfd *abfd, bfd_reloc_code_real_type code)
     case BFD_RELOC_CTOR:
       /* The type of reloc used in a ctor, which will be as wide as the
 	 address - so either a 64, 32, or 16 bitter.  */
-      switch (bfd_get_arch_info (abfd)->bits_per_address)
+      switch (bfd_arch_bits_per_address (abfd))
 	{
 	case 64:
 	  BFD_FAIL ();
@@ -5711,15 +5721,13 @@ bfd_generic_get_relocated_section_contents (bfd *abfd,
   long reloc_size;
   arelent **reloc_vector;
   long reloc_count;
-  bfd_size_type sz;
 
   reloc_size = bfd_get_reloc_upper_bound (input_bfd, input_section);
   if (reloc_size < 0)
     return NULL;
 
   /* Read in the section.  */
-  sz = input_section->rawsize ? input_section->rawsize : input_section->size;
-  if (!bfd_get_section_contents (input_bfd, input_section, data, 0, sz))
+  if (!bfd_get_full_section_contents (input_bfd, input_section, &data))
     return NULL;
 
   if (reloc_size == 0)
@@ -5754,7 +5762,8 @@ bfd_generic_get_relocated_section_contents (bfd *abfd,
 			 "unused", FALSE, 0, 0, FALSE);
 
 	      p = data + (*parent)->address * bfd_octets_per_byte (input_bfd);
-	      _bfd_clear_contents ((*parent)->howto, input_bfd, p);
+	      _bfd_clear_contents ((*parent)->howto, input_bfd, input_section,
+				   p);
 	      (*parent)->sym_ptr_ptr = bfd_abs_section.symbol_ptr_ptr;
 	      (*parent)->addend = 0;
 	      (*parent)->howto = &none_howto;

@@ -704,7 +704,7 @@ define_symbol (CORE_ADDR valu, char *string, int desc, int type,
   else
     {
     normal:
-      SYMBOL_LANGUAGE (sym) = current_subfile->language;
+      SYMBOL_SET_LANGUAGE (sym, current_subfile->language);
       if (SYMBOL_LANGUAGE (sym) == language_cplus)
 	{
 	  char *name = alloca (p - string + 1);
@@ -712,7 +712,6 @@ define_symbol (CORE_ADDR valu, char *string, int desc, int type,
 	  memcpy (name, string, p - string);
 	  name[p - string] = '\0';
 	  new_name = cp_canonicalize_string (name);
-	  cp_scan_for_anonymous_namespaces (sym);
 	}
       if (new_name != NULL)
 	{
@@ -721,6 +720,10 @@ define_symbol (CORE_ADDR valu, char *string, int desc, int type,
 	}
       else
 	SYMBOL_SET_NAMES (sym, string, p - string, 1, objfile);
+
+      if (SYMBOL_LANGUAGE (sym) == language_cplus)
+	cp_scan_for_anonymous_namespaces (sym);
+
     }
   p++;
 
@@ -3656,7 +3659,7 @@ read_enum_type (char **pp, struct type *type,
 	obstack_alloc (&objfile->objfile_obstack, sizeof (struct symbol));
       memset (sym, 0, sizeof (struct symbol));
       SYMBOL_SET_LINKAGE_NAME (sym, name);
-      SYMBOL_LANGUAGE (sym) = current_subfile->language;
+      SYMBOL_SET_LANGUAGE (sym, current_subfile->language);
       SYMBOL_CLASS (sym) = LOC_CONST;
       SYMBOL_DOMAIN (sym) = VAR_DOMAIN;
       SYMBOL_VALUE (sym) = n;

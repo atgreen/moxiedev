@@ -159,18 +159,17 @@ enum type_code
 
 enum type_flag_value
 {
-  TYPE_FLAG_UNSIGNED = (1 << 6),
-  TYPE_FLAG_NOSIGN = (1 << 7),
-  TYPE_FLAG_STUB = (1 << 8),
-  TYPE_FLAG_TARGET_STUB = (1 << 9),
-  TYPE_FLAG_STATIC = (1 << 10),
-  TYPE_FLAG_PROTOTYPED = (1 << 11),
-  TYPE_FLAG_INCOMPLETE = (1 << 12),
-  TYPE_FLAG_VARARGS = (1 << 13),
-  TYPE_FLAG_VECTOR = (1 << 14),
-  TYPE_FLAG_FIXED_INSTANCE = (1 << 15),
-  TYPE_FLAG_STUB_SUPPORTED = (1 << 16),
-  TYPE_FLAG_NOTTEXT = (1 << 17),
+  TYPE_FLAG_UNSIGNED = (1 << 7),
+  TYPE_FLAG_NOSIGN = (1 << 8),
+  TYPE_FLAG_STUB = (1 << 9),
+  TYPE_FLAG_TARGET_STUB = (1 << 10),
+  TYPE_FLAG_STATIC = (1 << 11),
+  TYPE_FLAG_PROTOTYPED = (1 << 12),
+  TYPE_FLAG_INCOMPLETE = (1 << 13),
+  TYPE_FLAG_VARARGS = (1 << 14),
+  TYPE_FLAG_VECTOR = (1 << 15),
+  TYPE_FLAG_FIXED_INSTANCE = (1 << 16),
+  TYPE_FLAG_STUB_SUPPORTED = (1 << 17),
 
   /* Used for error-checking.  */
   TYPE_FLAG_MIN = TYPE_FLAG_UNSIGNED
@@ -186,7 +185,8 @@ enum type_instance_flag_value
   TYPE_INSTANCE_FLAG_CODE_SPACE = (1 << 2),
   TYPE_INSTANCE_FLAG_DATA_SPACE = (1 << 3),
   TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1 = (1 << 4),
-  TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2 = (1 << 5)
+  TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2 = (1 << 5),
+  TYPE_INSTANCE_FLAG_NOTTEXT = (1 << 6),
 };
 
 /* Unsigned integer type.  If this is not set for a TYPE_CODE_INT, the
@@ -269,7 +269,7 @@ enum type_instance_flag_value
 /* Not textual.  By default, GDB treats all single byte integers as
    characters (or elements of strings) unless this flag is set.  */
 
-#define TYPE_NOTTEXT(t)		(TYPE_MAIN_TYPE (t)->flag_nottext)
+#define TYPE_NOTTEXT(t)	(TYPE_INSTANCE_FLAGS (t) & TYPE_INSTANCE_FLAG_NOTTEXT)
 
 /* Type owner.  If TYPE_OBJFILE_OWNED is true, the type is owned by
    the objfile retrieved as TYPE_OBJFILE.  Otherweise, the type is
@@ -388,7 +388,6 @@ struct main_type
   unsigned int flag_varargs : 1;
   unsigned int flag_vector : 1;
   unsigned int flag_stub_supported : 1;
-  unsigned int flag_nottext : 1;
   unsigned int flag_fixed_instance : 1;
   unsigned int flag_objfile_owned : 1;
   /* True if this type was declared with "class" rather than
@@ -624,7 +623,14 @@ struct type
   struct type *chain;
 
   /* Flags specific to this instance of the type, indicating where
-     on the ring we are.  */
+     on the ring we are.
+
+     For TYPE_CODE_TYPEDEF the flags of the typedef type should be binary
+     or-ed with the target type, with a special case for address class and
+     space class.  For example if this typedef does not specify any new
+     qualifiers, TYPE_INSTANCE_FLAGS is 0 and the instance flags are
+     completely inherited from the target type.  No qualifiers can be cleared
+     by the typedef.  See also check_typedef.  */
   int instance_flags;
 
   /* Length of storage for a value of this type.  This is what
@@ -680,6 +686,9 @@ struct cplus_struct_type
        methods that it derives from.  */
 
     short nfn_fields_total;
+
+    /* Number of template arguments.  */
+    unsigned short n_template_arguments;
 
     /* One if this struct is a dynamic class, as defined by the
        Itanium C++ ABI: if it requires a virtual table pointer,
@@ -826,6 +835,11 @@ struct cplus_struct_type
       }
     *typedef_field;
     unsigned typedef_field_count;
+
+    /* The template arguments.  This is an array with
+       N_TEMPLATE_ARGUMENTS elements.  This is NULL for non-template
+       classes.  */
+    struct symbol **template_arguments;
   };
 
 /* Struct used in computing virtual base list */
@@ -835,11 +849,25 @@ struct vbase
     struct vbase *next;		/* next in chain */
   };
 
+/* Struct used to store conversion rankings.  */
+struct rank
+  {
+    short rank;
+
+    /* When two conversions are of the same type and therefore have the same
+       rank, subrank is used to differentiate the two.
+       Eg: Two derived-class-pointer to base-class-pointer conversions would
+       both have base pointer conversion rank, but the conversion with the
+       shorter distance to the ancestor is preferable. 'subrank' would be used
+       to reflect that.  */
+    short subrank;
+  };
+
 /* Struct used for ranking a function for overload resolution */
 struct badness_vector
   {
     int length;
-    int *rank;
+    struct rank *rank;
   };
 
 /* GNAT Ada-specific information for various Ada types.  */
@@ -1022,6 +1050,13 @@ extern void allocate_gnat_aux_type (struct type *);
 #define TYPE_FN_FIELDLIST1(thistype, n) TYPE_CPLUS_SPECIFIC(thistype)->fn_fieldlists[n].fn_fields
 #define TYPE_FN_FIELDLIST_NAME(thistype, n) TYPE_CPLUS_SPECIFIC(thistype)->fn_fieldlists[n].name
 #define TYPE_FN_FIELDLIST_LENGTH(thistype, n) TYPE_CPLUS_SPECIFIC(thistype)->fn_fieldlists[n].length
+
+#define TYPE_N_TEMPLATE_ARGUMENTS(thistype) \
+  TYPE_CPLUS_SPECIFIC (thistype)->n_template_arguments
+#define TYPE_TEMPLATE_ARGUMENTS(thistype) \
+  TYPE_CPLUS_SPECIFIC (thistype)->template_arguments
+#define TYPE_TEMPLATE_ARGUMENT(thistype, n) \
+  TYPE_CPLUS_SPECIFIC (thistype)->template_arguments[n]
 
 #define TYPE_FN_FIELD(thisfn, n) (thisfn)[n]
 #define TYPE_FN_FIELD_PHYSNAME(thisfn, n) (thisfn)[n].physname
@@ -1353,7 +1388,7 @@ extern char *gdb_mangle_name (struct type *, int, int);
 
 extern struct type *lookup_typename (const struct language_defn *,
 				     struct gdbarch *, char *,
-				     struct block *, int);
+				     const struct block *, int);
 
 extern struct type *lookup_template_type (char *, struct type *,
 					  struct block *);
@@ -1361,6 +1396,9 @@ extern struct type *lookup_template_type (char *, struct type *,
 extern int get_vptr_fieldno (struct type *, struct type **);
 
 extern int get_discrete_bounds (struct type *, LONGEST *, LONGEST *);
+
+extern int get_array_bounds (struct type *type, LONGEST *low_bound,
+			     LONGEST *high_bound);
 
 extern int class_types_same_p (const struct type *, const struct type *);
 
@@ -1375,44 +1413,52 @@ extern int is_unique_ancestor (struct type *, struct value *);
 #define LENGTH_MATCH(bv) ((bv)->rank[0])
 
 /* Badness if parameter list length doesn't match arg list length */
-#define LENGTH_MISMATCH_BADNESS      100
+extern const struct rank LENGTH_MISMATCH_BADNESS;
+
 /* Dummy badness value for nonexistent parameter positions */
-#define TOO_FEW_PARAMS_BADNESS       100
+extern const struct rank TOO_FEW_PARAMS_BADNESS;
 /* Badness if no conversion among types */
-#define INCOMPATIBLE_TYPE_BADNESS    100
+extern const struct rank INCOMPATIBLE_TYPE_BADNESS;
+
+/* Badness of an exact match.  */
+extern const struct rank EXACT_MATCH_BADNESS;
 
 /* Badness of integral promotion */
-#define INTEGER_PROMOTION_BADNESS      1
+extern const struct rank INTEGER_PROMOTION_BADNESS;
 /* Badness of floating promotion */
-#define FLOAT_PROMOTION_BADNESS        1
+extern const struct rank FLOAT_PROMOTION_BADNESS;
+/* Badness of converting a derived class pointer
+   to a base class pointer.  */
+extern const struct rank BASE_PTR_CONVERSION_BADNESS;
 /* Badness of integral conversion */
-#define INTEGER_CONVERSION_BADNESS     2
+extern const struct rank INTEGER_CONVERSION_BADNESS;
 /* Badness of floating conversion */
-#define FLOAT_CONVERSION_BADNESS       2
+extern const struct rank FLOAT_CONVERSION_BADNESS;
 /* Badness of integer<->floating conversions */
-#define INT_FLOAT_CONVERSION_BADNESS   2
-/* Badness of converting to a boolean */
-#define BOOLEAN_CONVERSION_BADNESS     2
-/* Badness of pointer conversion */
-#define POINTER_CONVERSION_BADNESS     2
+extern const struct rank INT_FLOAT_CONVERSION_BADNESS;
 /* Badness of conversion of pointer to void pointer */
-#define VOID_PTR_CONVERSION_BADNESS    2
+extern const struct rank VOID_PTR_CONVERSION_BADNESS;
+/* Badness of conversion of pointer to boolean.  */
+extern const struct rank BOOL_PTR_CONVERSION_BADNESS;
 /* Badness of converting derived to base class */
-#define BASE_CONVERSION_BADNESS        2
+extern const struct rank BASE_CONVERSION_BADNESS;
 /* Badness of converting from non-reference to reference */
-#define REFERENCE_CONVERSION_BADNESS   2
+extern const struct rank REFERENCE_CONVERSION_BADNESS;
 
 /* Non-standard conversions allowed by the debugger */
 /* Converting a pointer to an int is usually OK */
-#define NS_POINTER_CONVERSION_BADNESS 10
+extern const struct rank NS_POINTER_CONVERSION_BADNESS;
 
+
+extern struct rank sum_ranks (struct rank a, struct rank b);
+extern int compare_ranks (struct rank a, struct rank b);
 
 extern int compare_badness (struct badness_vector *, struct badness_vector *);
 
 extern struct badness_vector *rank_function (struct type **, int,
 					     struct type **, int);
 
-extern int rank_one_type (struct type *, struct type *);
+extern struct rank rank_one_type (struct type *, struct type *);
 
 extern void recursive_dump_type (struct type *, int);
 

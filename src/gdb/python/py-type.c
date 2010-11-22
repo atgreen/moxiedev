@@ -27,6 +27,8 @@
 #include "demangle.h"
 #include "objfiles.h"
 #include "language.h"
+#include "vec.h"
+#include "bcache.h"
 
 typedef struct pyty_type_object
 {
@@ -216,6 +218,13 @@ typy_fields (PyObject *self, PyObject *args)
   PyObject *result;
   int i;
   struct type *type = ((type_object *) self)->type;
+  volatile struct gdb_exception except;
+
+  TRY_CATCH (except, RETURN_MASK_ALL)
+    {
+      CHECK_TYPEDEF (type);
+    }
+  GDB_PY_HANDLE_EXCEPTION (except);
 
   /* We would like to make a tuple here, make fields immutable, and
      then memoize the result (and perhaps make Field.type() lazy).
@@ -260,6 +269,54 @@ typy_strip_typedefs (PyObject *self, PyObject *args)
   struct type *type = ((type_object *) self)->type;
 
   return type_to_type_object (check_typedef (type));
+}
+
+/* Return an array type.  */
+
+static PyObject *
+typy_array (PyObject *self, PyObject *args)
+{
+  int n1, n2;
+  PyObject *n2_obj = NULL;
+  struct type *array = NULL;
+  struct type *type = ((type_object *) self)->type;
+  volatile struct gdb_exception except;
+
+  if (! PyArg_ParseTuple (args, "i|O", &n1, &n2_obj))
+    return NULL;
+
+  if (n2_obj)
+    {
+      if (!PyInt_Check (n2_obj))
+	{
+	  PyErr_SetString (PyExc_RuntimeError,
+			   _("Array bound must be an integer"));
+	  return NULL;
+	}
+      n2 = (int) PyInt_AsLong (n2_obj);
+      if (PyErr_Occurred ())
+	return NULL;
+    }
+  else
+    {
+      n2 = n1;
+      n1 = 0;
+    }
+
+  if (n2 < n1)
+    {
+      PyErr_SetString (PyExc_ValueError,
+		       _("Array length must not be negative"));
+      return NULL;
+    }
+
+  TRY_CATCH (except, RETURN_MASK_ALL)
+    {
+      array = lookup_array_range_type (type, n1, n2);
+    }
+  GDB_PY_HANDLE_EXCEPTION (except);
+
+  return type_to_type_object (array);
 }
 
 /* Return a Type object which represents a pointer to SELF.  */
@@ -509,34 +566,19 @@ typy_lookup_type (struct demangle_component *demangled,
   return type;
 }
 
+/* This is a helper function for typy_template_argument that is used
+   when the type does not have template symbols attached.  It works by
+   parsing the type name.  This happens with compilers, like older
+   versions of GCC, that do not emit DW_TAG_template_*.  */
+
 static PyObject *
-typy_template_argument (PyObject *self, PyObject *args)
+typy_legacy_template_argument (struct type *type, struct block *block,
+			       int argno)
 {
-  int i, argno;
-  struct type *type = ((type_object *) self)->type;
+  int i;
   struct demangle_component *demangled;
   const char *err;
   struct type *argtype;
-  struct block *block = NULL;
-  PyObject *block_obj = NULL;
-
-  if (! PyArg_ParseTuple (args, "i|O", &argno, &block_obj))
-    return NULL;
-
-  if (block_obj)
-    {
-      block = block_object_to_block (block_obj);
-      if (! block)
-	{
-	  PyErr_SetString (PyExc_RuntimeError,
-			   _("Second argument must be block."));
-	  return NULL;
-	}
-    }
-
-  type = check_typedef (type);
-  if (TYPE_CODE (type) == TYPE_CODE_REF)
-    type = check_typedef (TYPE_TARGET_TYPE (type));
 
   if (TYPE_NAME (type) == NULL)
     {
@@ -584,6 +626,71 @@ typy_template_argument (PyObject *self, PyObject *args)
 }
 
 static PyObject *
+typy_template_argument (PyObject *self, PyObject *args)
+{
+  int argno;
+  struct type *type = ((type_object *) self)->type;
+  struct block *block = NULL;
+  PyObject *block_obj = NULL;
+  struct symbol *sym;
+  struct value *val = NULL;
+  volatile struct gdb_exception except;
+
+  if (! PyArg_ParseTuple (args, "i|O", &argno, &block_obj))
+    return NULL;
+
+  if (block_obj)
+    {
+      block = block_object_to_block (block_obj);
+      if (! block)
+	{
+	  PyErr_SetString (PyExc_RuntimeError,
+			   _("Second argument must be block."));
+	  return NULL;
+	}
+    }
+
+  TRY_CATCH (except, RETURN_MASK_ALL)
+    {
+      type = check_typedef (type);
+      if (TYPE_CODE (type) == TYPE_CODE_REF)
+	type = check_typedef (TYPE_TARGET_TYPE (type));
+    }
+  GDB_PY_HANDLE_EXCEPTION (except);
+
+  /* We might not have DW_TAG_template_*, so try to parse the type's
+     name.  This is inefficient if we do not have a template type --
+     but that is going to wind up as an error anyhow.  */
+  if (! TYPE_N_TEMPLATE_ARGUMENTS (type))
+    return typy_legacy_template_argument (type, block, argno);
+
+  if (argno >= TYPE_N_TEMPLATE_ARGUMENTS (type))
+    {
+      PyErr_Format (PyExc_RuntimeError, _("No argument %d in template."),
+		    argno);
+      return NULL;
+    }
+
+  sym = TYPE_TEMPLATE_ARGUMENT (type, argno);
+  if (SYMBOL_CLASS (sym) == LOC_TYPEDEF)
+    return type_to_type_object (SYMBOL_TYPE (sym));
+  else if (SYMBOL_CLASS (sym) == LOC_OPTIMIZED_OUT)
+    {
+      PyErr_Format (PyExc_RuntimeError,
+		    _("Template argument is optimized out"));
+      return NULL;
+    }
+
+  TRY_CATCH (except, RETURN_MASK_ALL)
+    {
+      val = value_of_variable (sym, block);
+    }
+  GDB_PY_HANDLE_EXCEPTION (except);
+
+  return value_to_value_object (val);
+}
+
+static PyObject *
 typy_str (PyObject *self)
 {
   volatile struct gdb_exception except;
@@ -614,6 +721,200 @@ typy_str (PyObject *self)
   xfree (thetype);
 
   return result;
+}
+
+/* An entry in the type-equality bcache.  */
+
+typedef struct type_equality_entry
+{
+  struct type *type1, *type2;
+} type_equality_entry_d;
+
+DEF_VEC_O (type_equality_entry_d);
+
+/* A helper function to compare two strings.  Returns 1 if they are
+   the same, 0 otherwise.  Handles NULLs properly.  */
+
+static int
+compare_strings (const char *s, const char *t)
+{
+  if (s == NULL && t != NULL)
+    return 0;
+  else if (s != NULL && t == NULL)
+    return 0;
+  else if (s == NULL && t== NULL)
+    return 1;
+  return strcmp (s, t) == 0;
+}
+
+/* A helper function for typy_richcompare that checks two types for
+   "deep" equality.  Returns Py_EQ if the types are considered the
+   same, Py_NE otherwise.  */
+
+static int
+check_types_equal (struct type *type1, struct type *type2,
+		   VEC (type_equality_entry_d) **worklist)
+{
+  CHECK_TYPEDEF (type1);
+  CHECK_TYPEDEF (type2);
+
+  if (type1 == type2)
+    return Py_EQ;
+
+  if (TYPE_CODE (type1) != TYPE_CODE (type2)
+      || TYPE_LENGTH (type1) != TYPE_LENGTH (type2)
+      || TYPE_UNSIGNED (type1) != TYPE_UNSIGNED (type2)
+      || TYPE_NOSIGN (type1) != TYPE_NOSIGN (type2)
+      || TYPE_VARARGS (type1) != TYPE_VARARGS (type2)
+      || TYPE_VECTOR (type1) != TYPE_VECTOR (type2)
+      || TYPE_NOTTEXT (type1) != TYPE_NOTTEXT (type2)
+      || TYPE_INSTANCE_FLAGS (type1) != TYPE_INSTANCE_FLAGS (type2)
+      || TYPE_NFIELDS (type1) != TYPE_NFIELDS (type2))
+    return Py_NE;
+
+  if (!compare_strings (TYPE_TAG_NAME (type1), TYPE_TAG_NAME (type2)))
+    return Py_NE;
+  if (!compare_strings (TYPE_NAME (type1), TYPE_NAME (type2)))
+    return Py_NE;
+
+  if (TYPE_CODE (type1) == TYPE_CODE_RANGE)
+    {
+      if (memcmp (TYPE_RANGE_DATA (type1), TYPE_RANGE_DATA (type2),
+		  sizeof (*TYPE_RANGE_DATA (type1))) != 0)
+	return Py_NE;
+    }
+  else
+    {
+      int i;
+
+      for (i = 0; i < TYPE_NFIELDS (type1); ++i)
+	{
+	  const struct field *field1 = &TYPE_FIELD (type1, i);
+	  const struct field *field2 = &TYPE_FIELD (type2, i);
+	  struct type_equality_entry entry;
+
+	  if (FIELD_ARTIFICIAL (*field1) != FIELD_ARTIFICIAL (*field2)
+	      || FIELD_BITSIZE (*field1) != FIELD_BITSIZE (*field2)
+	      || FIELD_LOC_KIND (*field1) != FIELD_LOC_KIND (*field2))
+	    return Py_NE;
+	  if (!compare_strings (FIELD_NAME (*field1), FIELD_NAME (*field2)))
+	    return Py_NE;
+	  switch (FIELD_LOC_KIND (*field1))
+	    {
+	    case FIELD_LOC_KIND_BITPOS:
+	      if (FIELD_BITPOS (*field1) != FIELD_BITPOS (*field2))
+		return Py_NE;
+	      break;
+	    case FIELD_LOC_KIND_PHYSADDR:
+	      if (FIELD_STATIC_PHYSADDR (*field1)
+		  != FIELD_STATIC_PHYSADDR (*field2))
+		return Py_NE;
+	      break;
+	    case FIELD_LOC_KIND_PHYSNAME:
+	      if (!compare_strings (FIELD_STATIC_PHYSNAME (*field1),
+				    FIELD_STATIC_PHYSNAME (*field2)))
+		return Py_NE;
+	      break;
+	    }
+
+	  entry.type1 = FIELD_TYPE (*field1);
+	  entry.type2 = FIELD_TYPE (*field2);
+	  VEC_safe_push (type_equality_entry_d, *worklist, &entry);
+	}
+    }
+
+  if (TYPE_TARGET_TYPE (type1) != NULL)
+    {
+      struct type_equality_entry entry;
+      int added;
+
+      if (TYPE_TARGET_TYPE (type2) == NULL)
+	return Py_NE;
+
+      entry.type1 = TYPE_TARGET_TYPE (type1);
+      entry.type2 = TYPE_TARGET_TYPE (type2);
+      VEC_safe_push (type_equality_entry_d, *worklist, &entry);
+    }
+  else if (TYPE_TARGET_TYPE (type2) != NULL)
+    return Py_NE;
+
+  return Py_EQ;
+}
+
+/* Check types on a worklist for equality.  Returns Py_NE if any pair
+   is not equal, Py_EQ if they are all considered equal.  */
+
+static int
+check_types_worklist (VEC (type_equality_entry_d) **worklist,
+		      struct bcache *cache)
+{
+  while (!VEC_empty (type_equality_entry_d, *worklist))
+    {
+      struct type_equality_entry entry;
+      int added;
+
+      entry = *VEC_last (type_equality_entry_d, *worklist);
+      VEC_pop (type_equality_entry_d, *worklist);
+
+      /* If the type pair has already been visited, we know it is
+	 ok.  */
+      bcache_full (&entry, sizeof (entry), cache, &added);
+      if (!added)
+	continue;
+
+      if (check_types_equal (entry.type1, entry.type2, worklist) == Py_NE)
+	return Py_NE;
+    }
+
+  return Py_EQ;
+}
+
+/* Implement the richcompare method.  */
+
+static PyObject *
+typy_richcompare (PyObject *self, PyObject *other, int op)
+{
+  int result = Py_NE;
+  struct type *type1 = type_object_to_type (self);
+  struct type *type2 = type_object_to_type (other);
+  volatile struct gdb_exception except;
+
+  /* We can only compare ourselves to another Type object, and only
+     for equality or inequality.  */
+  if (type2 == NULL || (op != Py_EQ && op != Py_NE))
+    {
+      Py_INCREF (Py_NotImplemented);
+      return Py_NotImplemented;
+    }
+
+  if (type1 == type2)
+    result = Py_EQ;
+  else
+    {
+      struct bcache *cache;
+      VEC (type_equality_entry_d) *worklist = NULL;
+      struct type_equality_entry entry;
+
+      cache = bcache_xmalloc (NULL, NULL);
+
+      entry.type1 = type1;
+      entry.type2 = type2;
+      VEC_safe_push (type_equality_entry_d, worklist, &entry);
+
+      TRY_CATCH (except, RETURN_MASK_ALL)
+	{
+	  result = check_types_worklist (&worklist, cache);
+	}
+      if (except.reason < 0)
+	result = Py_NE;
+
+      bcache_xfree (cache);
+      VEC_free (type_equality_entry_d, worklist);
+    }
+
+  if (op == result)
+    Py_RETURN_TRUE;
+  Py_RETURN_FALSE;
 }
 
 
@@ -790,6 +1091,9 @@ static PyGetSetDef type_object_getset[] =
 
 static PyMethodDef type_object_methods[] =
 {
+  { "array", typy_array, METH_VARARGS,
+    "array (N) -> Type\n\
+Return a type which represents an array of N objects of this type." },
   { "const", typy_const, METH_NOARGS,
     "const () -> Type\n\
 Return a const variant of this type." },
@@ -850,7 +1154,7 @@ static PyTypeObject type_object_type =
   "GDB type object",		  /* tp_doc */
   0,				  /* tp_traverse */
   0,				  /* tp_clear */
-  0,				  /* tp_richcompare */
+  typy_richcompare,		  /* tp_richcompare */
   0,				  /* tp_weaklistoffset */
   0,				  /* tp_iter */
   0,				  /* tp_iternext */

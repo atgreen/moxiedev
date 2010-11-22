@@ -314,12 +314,42 @@ gfc_match_end_interface (void)
 	{
 
 	  if (current_interface.op == INTRINSIC_ASSIGN)
-	    gfc_error ("Expected 'END INTERFACE ASSIGNMENT (=)' at %C");
+	    {
+	      m = MATCH_ERROR;
+	      gfc_error ("Expected 'END INTERFACE ASSIGNMENT (=)' at %C");
+	    }
 	  else
-	    gfc_error ("Expecting 'END INTERFACE OPERATOR (%s)' at %C",
-		       gfc_op2string (current_interface.op));
+	    {
+	      const char *s1, *s2;
+	      s1 = gfc_op2string (current_interface.op);
+	      s2 = gfc_op2string (op);
 
-	  m = MATCH_ERROR;
+	      /* The following if-statements are used to enforce C1202
+		 from F2003.  */
+	      if ((strcmp(s1, "==") == 0 && strcmp(s2, ".eq.") == 0)
+		  || (strcmp(s1, ".eq.") == 0 && strcmp(s2, "==") == 0))
+		break;
+	      if ((strcmp(s1, "/=") == 0 && strcmp(s2, ".ne.") == 0)
+		  || (strcmp(s1, ".ne.") == 0 && strcmp(s2, "/=") == 0))
+		break;
+	      if ((strcmp(s1, "<=") == 0 && strcmp(s2, ".le.") == 0)
+		  || (strcmp(s1, ".le.") == 0 && strcmp(s2, "<=") == 0))
+		break;
+	      if ((strcmp(s1, "<") == 0 && strcmp(s2, ".lt.") == 0)
+		  || (strcmp(s1, ".lt.") == 0 && strcmp(s2, "<") == 0))
+		break;
+	      if ((strcmp(s1, ">=") == 0 && strcmp(s2, ".ge.") == 0)
+		  || (strcmp(s1, ".ge.") == 0 && strcmp(s2, ">=") == 0))
+		break;
+	      if ((strcmp(s1, ">") == 0 && strcmp(s2, ".gt.") == 0)
+		  || (strcmp(s1, ".gt.") == 0 && strcmp(s2, ">") == 0))
+		break;
+
+	      m = MATCH_ERROR;
+	      gfc_error ("Expecting 'END INTERFACE OPERATOR (%s)' at %C, "
+			 "but got %s", s1, s2);
+	    }
+		
 	}
 
       break;
@@ -842,7 +872,8 @@ count_types_test (gfc_formal_arglist *f1, gfc_formal_arglist *f2)
       /* Find other nonoptional arguments of the same type/rank.  */
       for (j = i + 1; j < n1; j++)
 	if ((arg[j].sym == NULL || !arg[j].sym->attr.optional)
-	    && compare_type_rank_if (arg[i].sym, arg[j].sym))
+	    && (compare_type_rank_if (arg[i].sym, arg[j].sym)
+	        || compare_type_rank_if (arg[j].sym, arg[i].sym)))
 	  arg[j].flag = k;
 
       k++;
@@ -867,7 +898,8 @@ count_types_test (gfc_formal_arglist *f1, gfc_formal_arglist *f2)
       ac2 = 0;
 
       for (f = f2; f; f = f->next)
-	if (compare_type_rank_if (arg[i].sym, f->sym))
+	if (compare_type_rank_if (arg[i].sym, f->sym)
+	    || compare_type_rank_if (f->sym, arg[i].sym))
 	  ac2++;
 
       if (ac1 > ac2)
@@ -918,7 +950,8 @@ generic_correspondence (gfc_formal_arglist *f1, gfc_formal_arglist *f2)
       if (f1->sym->attr.optional)
 	goto next;
 
-      if (f2 != NULL && compare_type_rank (f1->sym, f2->sym))
+      if (f2 != NULL && (compare_type_rank (f1->sym, f2->sym)
+			 || compare_type_rank (f2->sym, f1->sym)))
 	goto next;
 
       /* Now search for a disambiguating keyword argument starting at
@@ -1026,7 +1059,7 @@ gfc_compare_interfaces (gfc_symbol *s1, gfc_symbol *s2, const char *name2,
 	  }
 
 	/* Check type and rank.  */
-	if (!compare_type_rank (f1->sym, f2->sym))
+	if (!compare_type_rank (f2->sym, f1->sym))
 	  {
 	    if (errmsg != NULL)
 	      snprintf (errmsg, err_len, "Type/rank mismatch in argument '%s'",
@@ -1345,7 +1378,8 @@ compare_allocatable (gfc_symbol *formal, gfc_expr *actual)
 {
   symbol_attribute attr;
 
-  if (formal->attr.allocatable)
+  if (formal->attr.allocatable
+      || (formal->ts.type == BT_CLASS && CLASS_DATA (formal)->attr.allocatable))
     {
       attr = gfc_expr_attr (actual);
       if (!attr.allocatable)
@@ -1368,6 +1402,11 @@ compare_pointer (gfc_symbol *formal, gfc_expr *actual)
   if (formal->attr.pointer)
     {
       attr = gfc_expr_attr (actual);
+
+      /* Fortran 2008 allows non-pointer actual arguments.  */
+      if (!attr.pointer && attr.target && formal->attr.intent == INTENT_IN)
+	return 2;
+
       if (!attr.pointer)
 	return 0;
     }
@@ -1422,6 +1461,11 @@ compare_parameter (gfc_symbol *formal, gfc_expr *actual,
       && actual->ts.type == BT_DERIVED
       && actual->ts.u.derived && actual->ts.u.derived->ts.is_iso_c)
     return 1;
+
+  if (formal->ts.type == BT_CLASS && actual->ts.type == BT_DERIVED)
+    /* Make sure the vtab symbol is present when
+       the module variables are generated.  */
+    gfc_find_derived_vtab (actual->ts.u.derived);
 
   if (actual->ts.type == BT_PROCEDURE)
     {
@@ -1478,6 +1522,28 @@ compare_parameter (gfc_symbol *formal, gfc_expr *actual,
 		   formal->name, &actual->where, gfc_typename (&actual->ts),
 		   gfc_typename (&formal->ts));
       return 0;
+    }
+    
+  /* F2003, 12.5.2.5.  */
+  if (formal->ts.type == BT_CLASS
+      && (CLASS_DATA (formal)->attr.class_pointer
+          || CLASS_DATA (formal)->attr.allocatable))
+    {
+      if (actual->ts.type != BT_CLASS)
+	{
+	  if (where)
+	    gfc_error ("Actual argument to '%s' at %L must be polymorphic",
+			formal->name, &actual->where);
+	  return 0;
+	}
+      if (CLASS_DATA (actual)->ts.u.derived
+	  != CLASS_DATA (formal)->ts.u.derived)
+	{
+	  if (where)
+	    gfc_error ("Actual argument to '%s' at %L must have the same "
+		       "declared type", formal->name, &actual->where);
+	  return 0;
+	}
     }
 
   if (formal->attr.codimension)
@@ -1579,7 +1645,8 @@ compare_parameter (gfc_symbol *formal, gfc_expr *actual,
   if (rank_check || ranks_must_agree
       || (formal->attr.pointer && actual->expr_type != EXPR_NULL)
       || (actual->rank != 0 && !(is_elemental || formal->attr.dimension))
-      || (actual->rank == 0 && formal->as->type == AS_ASSUMED_SHAPE)
+      || (actual->rank == 0 && formal->as->type == AS_ASSUMED_SHAPE
+	  && actual->expr_type != EXPR_NULL)
       || (actual->rank == 0 && formal->attr.dimension
 	  && gfc_is_coindexed (actual)))
     {
@@ -1639,36 +1706,6 @@ compare_parameter (gfc_symbol *formal, gfc_expr *actual,
 		   "argument '%s' at %L", formal->name, &actual->where);
       return 0;
     }
-
-  return 1;
-}
-
-
-/* Given a symbol of a formal argument list and an expression, see if
-   the two are compatible as arguments.  Returns nonzero if
-   compatible, zero if not compatible.  */
-
-static int
-compare_parameter_protected (gfc_symbol *formal, gfc_expr *actual)
-{
-  if (actual->expr_type != EXPR_VARIABLE)
-    return 1;
-
-  if (!actual->symtree->n.sym->attr.is_protected)
-    return 1;
-
-  if (!actual->symtree->n.sym->attr.use_assoc)
-    return 1;
-
-  if (formal->attr.intent == INTENT_IN
-      || formal->attr.intent == INTENT_UNKNOWN)
-    return 1;
-
-  if (!actual->symtree->n.sym->attr.pointer)
-    return 0;
-
-  if (actual->symtree->n.sym->attr.pointer && formal->attr.pointer)
-    return 0;
 
   return 1;
 }
@@ -1926,7 +1963,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
   for (f = formal; f; f = f->next)
     n++;
 
-  new_arg = (gfc_actual_arglist **) alloca (n * sizeof (gfc_actual_arglist *));
+  new_arg = XALLOCAVEC (gfc_actual_arglist *, n);
 
   for (i = 0; i < n; i++)
     new_arg[i] = NULL;
@@ -1992,6 +2029,20 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
 	  if (where)
 	    gfc_error ("Unexpected alternate return spec in subroutine "
 		       "call at %L", where);
+	  return 0;
+	}
+
+      if (a->expr->expr_type == EXPR_NULL && !f->sym->attr.pointer
+	  && (f->sym->attr.allocatable || !f->sym->attr.optional
+	      || (gfc_option.allow_std & GFC_STD_F2008) == 0))
+	{
+	  if (where && (f->sym->attr.allocatable || !f->sym->attr.optional))
+	    gfc_error ("Unexpected NULL() intrinsic at %L to dummy '%s'",
+		       where, f->sym->name);
+	  else if (where)
+	    gfc_error ("Fortran 2008: Null pointer at %L to non-pointer "
+		       "dummy '%s'", where, f->sym->name);
+
 	  return 0;
 	}
       
@@ -2108,6 +2159,17 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
 	  return 0;
 	}
 
+      if (a->expr->expr_type != EXPR_NULL
+	  && (gfc_option.allow_std & GFC_STD_F2008) == 0
+	  && compare_pointer (f->sym, a->expr) == 2)
+	{
+	  if (where)
+	    gfc_error ("Fortran 2008: Non-pointer actual argument at %L to "
+		       "pointer dummy '%s'", &a->expr->where,f->sym->name);
+	  return 0;
+	}
+	
+
       /* Fortran 2008, C1242.  */
       if (f->sym->attr.pointer && gfc_is_coindexed (a->expr))
 	{
@@ -2169,27 +2231,20 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
 	}
 
       /* Check intent = OUT/INOUT for definable actual argument.  */
-      if ((a->expr->expr_type != EXPR_VARIABLE
-	   || (a->expr->symtree->n.sym->attr.flavor != FL_VARIABLE
-	       && a->expr->symtree->n.sym->attr.flavor != FL_PROCEDURE))
-	  && (f->sym->attr.intent == INTENT_OUT
-	      || f->sym->attr.intent == INTENT_INOUT))
+      if ((f->sym->attr.intent == INTENT_OUT
+	  || f->sym->attr.intent == INTENT_INOUT))
 	{
-	  if (where)
-	    gfc_error ("Actual argument at %L must be definable as "
-		       "the dummy argument '%s' is INTENT = OUT/INOUT",
-		       &a->expr->where, f->sym->name);
-	  return 0;
-	}
+	  const char* context = (where
+				 ? _("actual argument to INTENT = OUT/INOUT")
+				 : NULL);
 
-      if (!compare_parameter_protected(f->sym, a->expr))
-	{
-	  if (where)
-	    gfc_error ("Actual argument at %L is use-associated with "
-		       "PROTECTED attribute and dummy argument '%s' is "
-		       "INTENT = OUT/INOUT",
-		       &a->expr->where,f->sym->name);
-	  return 0;
+	  if (f->sym->attr.pointer
+	      && gfc_check_vardef_context (a->expr, true, context)
+		   == FAILURE)
+	    return 0;
+	  if (gfc_check_vardef_context (a->expr, false, context)
+		== FAILURE)
+	    return 0;
 	}
 
       if ((f->sym->attr.intent == INTENT_OUT
@@ -2434,7 +2489,7 @@ check_some_aliasing (gfc_formal_arglist *f, gfc_actual_arglist *a)
     }
   if (n == 0)
     return t;
-  p = (argpair *) alloca (n * sizeof (argpair));
+  p = XALLOCAVEC (argpair, n);
 
   for (i = 0, f1 = f, a1 = a; i < n; i++, f1 = f1->next, a1 = a1->next)
     {

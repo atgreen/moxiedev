@@ -29,6 +29,12 @@ struct ss
   struct s b;
 };
 
+struct arraystruct
+{
+  int y;
+  struct s x[2];
+};
+
 struct ns {
   const char *null_str;
   int length;
@@ -199,6 +205,7 @@ main ()
 {
   struct ss  ss;
   struct ss  ssa[2];
+  struct arraystruct arraystruct;
   string x = make_string ("this is x");
   zzz_type c = make_container ("container");
   zzz_type c2 = make_container ("container2");
@@ -206,6 +213,9 @@ main ()
   /* Clearing by being `static' could invoke an other GDB C++ bug.  */
   struct nullstr nullstr;
   nostring_type nstype;
+  struct ns ns, ns2;
+  struct lazystring estring, estring2;
+
   nstype.elements = narray;
   nstype.len = 0;
 
@@ -214,12 +224,21 @@ main ()
   init_ss(ssa+1, 5, 6);
   memset (&nullstr, 0, sizeof nullstr);
 
-  struct ns  ns;
+  arraystruct.y = 7;
+  init_s (&arraystruct.x[0], 23);
+  init_s (&arraystruct.x[1], 24);
+
   ns.null_str = "embedded\0null\0string";
   ns.length = 20;
 
-  struct lazystring estring;
+  /* Make a "corrupted" string.  */
+  ns2.null_str = NULL;
+  ns2.length = 20;
+
   estring.lazy_str = "embedded x\201\202\203\204" ;
+
+  /* Incomplete UTF-8, but ok Latin-1.  */
+  estring2.lazy_str = "embedded x\302";
 
 #ifdef __cplusplus
   S cps;

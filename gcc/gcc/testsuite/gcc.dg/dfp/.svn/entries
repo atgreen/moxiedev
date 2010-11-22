@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/dfp
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-04-07T20:27:37.009686Z
-158084
-jakub
+2010-11-13T16:19:33.333671Z
+166711
+bonzini
 
 
 
@@ -502,6 +502,40 @@ bje
 
 1713
 
+convert-dfp-round.c
+file
+
+
+
+
+2009-09-27T03:30:01.000000Z
+21f8e4694b43159e67ea5b564ee2a89b
+2009-09-16T16:38:49.712589Z
+151764
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5223
+
 constants.c
 file
 
@@ -536,17 +570,17 @@ janis
 
 243
 
-convert-dfp-round.c
+constants-c99.c
 file
 
 
 
 
-2009-09-27T03:30:01.000000Z
-21f8e4694b43159e67ea5b564ee2a89b
-2009-09-16T16:38:49.712589Z
-151764
-janis
+2010-11-22T19:14:31.955928Z
+f033f97e544d92f5e13f8a9eb2a587d8
+2010-11-13T16:19:33.333671Z
+166711
+bonzini
 
 
 
@@ -568,7 +602,7 @@ janis
 
 
 
-5223
+430
 
 cast-bad.c
 file
@@ -604,40 +638,6 @@ janis
 
 1705
 
-constants-c99.c
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-7571ea737918fdb01e2b4b4b1ad93460
-2007-07-12T22:57:32.434972Z
-126606
-manu
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-416
-
 pr31344.c
 file
 
@@ -672,40 +672,6 @@ janis
 
 508
 
-Wtraditional-conversion-2.c
-file
-
-
-
-
-2009-09-27T03:30:01.000000Z
-d898987e43ad43f22c65725bb92ec24f
-2009-09-16T16:38:49.712589Z
-151764
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2616
-
 pr41049.c
 file
 
@@ -739,6 +705,40 @@ janis
 
 
 25943
+
+Wtraditional-conversion-2.c
+file
+
+
+
+
+2009-09-27T03:30:01.000000Z
+d898987e43ad43f22c65725bb92ec24f
+2009-09-16T16:38:49.712589Z
+151764
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2616
 
 usual-arith-conv-bad-2.c
 file
@@ -944,40 +944,6 @@ janis
 
 1491
 
-pragma-float-const-decimal64-2.c
-file
-
-
-
-
-2009-09-27T03:30:01.000000Z
-3882046526a916dcd4cb2db9cfaad397
-2009-09-16T16:38:49.712589Z
-151764
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1563
-
 dfp-round.h
 file
 
@@ -1012,14 +978,14 @@ hjl
 
 647
 
-float-constant-double.c
+pragma-float-const-decimal64-2.c
 file
 
 
 
 
 2009-09-27T03:30:01.000000Z
-8c93ba27dd3f1398726001c48e3c892d
+3882046526a916dcd4cb2db9cfaad397
 2009-09-16T16:38:49.712589Z
 151764
 janis
@@ -1044,7 +1010,7 @@ janis
 
 
 
-557
+1563
 
 pragma-float-const-decimal64-3.c
 file
@@ -1079,6 +1045,40 @@ janis
 
 
 1390
+
+float-constant-double.c
+file
+
+
+
+
+2009-09-27T03:30:01.000000Z
+8c93ba27dd3f1398726001c48e3c892d
+2009-09-16T16:38:49.712589Z
+151764
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+557
 
 pragma-float-const-decimal64-4.c
 file

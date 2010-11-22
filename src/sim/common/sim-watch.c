@@ -109,7 +109,7 @@ do_watchpoint_delete (SIM_DESC sd,
   return status;
 }
 
-static char *
+static const char *
 watchpoint_type_to_str (SIM_DESC sd,
 			watchpoint_type type)
 {
@@ -128,7 +128,7 @@ watchpoint_type_to_str (SIM_DESC sd,
   return NULL;
 }
 
-static char *
+static const char *
 interrupt_nr_to_str (SIM_DESC sd,
 		     int interrupt_nr)
 {
@@ -372,16 +372,16 @@ static const OPTION watchpoint_options[] =
 {
   { {"watch-delete", required_argument, NULL, OPTION_WATCH_DELETE },
       '\0', "IDENT|all|pc|cycles|clock", "Delete a watchpoint",
-      watchpoint_option_handler },
+      watchpoint_option_handler, NULL },
 
   { {"watch-info", no_argument, NULL, OPTION_WATCH_INFO },
       '\0', NULL, "List scheduled watchpoints",
-      watchpoint_option_handler },
+      watchpoint_option_handler, NULL },
 
-  { {NULL, no_argument, NULL, 0}, '\0', NULL, NULL, NULL }
+  { {NULL, no_argument, NULL, 0}, '\0', NULL, NULL, NULL, NULL }
 };
 
-static char *default_interrupt_names[] = { "int", 0, };
+static const char *default_interrupt_names[] = { "int", 0, };
 
 
 
@@ -425,7 +425,7 @@ sim_watchpoint_install (SIM_DESC sd)
     /* adjust first few entries so that they contain real
        documentation, the first entry includes a list of actions. */
     {
-      char *prefix = 
+      const char *prefix =
 	"Watch the simulator, take ACTION in COUNT cycles (`+' for every COUNT cycles), ACTION is";
       char *doc;
       int len = strlen (prefix) + 1;

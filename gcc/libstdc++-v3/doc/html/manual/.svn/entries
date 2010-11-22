@@ -1,7 +1,7 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/doc/html/manual
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ redi
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-dynamic_memory.html
-file
-
-
-
-
-2010-07-08T15:19:22.427092Z
-6406c4e09d372ca4d429b2361c364fd9
-2010-04-21T23:33:44.896386Z
-158624
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4810
 
 iterators.html
 file
@@ -94,14 +60,14 @@ redi
 
 10022
 
-generalized_numeric_operations.html
+dynamic_memory.html
 file
 
 
 
 
-2010-07-08T15:19:22.431093Z
-0a346a7f1c8b6af01c797e994b36eb99
+2010-07-08T15:19:22.427092Z
+6406c4e09d372ca4d429b2361c364fd9
 2010-04-21T23:33:44.896386Z
 158624
 redi
@@ -126,7 +92,7 @@ redi
 
 
 
-3727
+4810
 
 spine.html
 file
@@ -162,6 +128,40 @@ redi
 
 34893
 
+generalized_numeric_operations.html
+file
+
+
+
+
+2010-07-08T15:19:22.431093Z
+0a346a7f1c8b6af01c797e994b36eb99
+2010-04-21T23:33:44.896386Z
+158624
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3727
+
 bk01pt03ch18s05.html
 file
 
@@ -195,40 +195,6 @@ redi
 
 
 3183
-
-bk01pt03ch19s05.html
-file
-
-
-
-
-2010-07-08T15:19:22.434092Z
-5f21d87855f078299db7c71c15484a26
-2010-04-21T23:33:44.896386Z
-158624
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6213
 
 configure.html
 file
@@ -264,14 +230,14 @@ redi
 
 16413
 
-ext_allocators.html
+bk01pt03ch19s05.html
 file
 
 
 
 
-2010-07-08T15:19:22.438092Z
-32c51f6741e191306c54b2fdcc9cbab4
+2010-07-08T15:19:22.434092Z
+5f21d87855f078299db7c71c15484a26
 2010-04-21T23:33:44.896386Z
 158624
 redi
@@ -296,7 +262,7 @@ redi
 
 
 
-25172
+6213
 
 status.html
 file
@@ -332,14 +298,14 @@ redi
 
 142349
 
-ext_containers.html
+ext_allocators.html
 file
 
 
 
 
-2010-07-08T15:19:22.439092Z
-2e1e31812d4f11e607886d85dab274de
+2010-07-08T15:19:22.438092Z
+32c51f6741e191306c54b2fdcc9cbab4
 2010-04-21T23:33:44.896386Z
 158624
 redi
@@ -364,7 +330,7 @@ redi
 
 
 
-2715
+25172
 
 using.html
 file
@@ -400,6 +366,40 @@ redi
 
 8269
 
+ext_containers.html
+file
+
+
+
+
+2010-07-08T15:19:22.439092Z
+2e1e31812d4f11e607886d85dab274de
+2010-04-21T23:33:44.896386Z
+158624
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2715
+
 ext_io.html
 file
 
@@ -434,40 +434,6 @@ redi
 
 5537
 
-termination.html
-file
-
-
-
-
-2010-07-08T15:19:22.440107Z
-caa8d03cd7cb2c51772856471fd55457
-2010-04-21T23:33:44.896386Z
-158624
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7269
-
 using_macros.html
 file
 
@@ -501,6 +467,40 @@ redi
 
 
 7267
+
+termination.html
+file
+
+
+
+
+2010-07-08T15:19:22.440107Z
+caa8d03cd7cb2c51772856471fd55457
+2010-04-21T23:33:44.896386Z
+158624
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7269
 
 concurrency.html
 file
@@ -1114,40 +1114,6 @@ redi
 
 20234
 
-intro.html
-file
-
-
-
-
-2010-07-30T08:37:52.081835Z
-24404814f4cd1e8dc514f2dd1e61faa9
-2010-07-14T20:11:09.473864Z
-162193
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7524
-
 abi.html
 file
 
@@ -1182,14 +1148,14 @@ redi
 
 48284
 
-atomics.html
+intro.html
 file
 
 
 
 
 2010-07-30T08:37:52.081835Z
-389f120397d82256211d60620e1e0408
+24404814f4cd1e8dc514f2dd1e61faa9
 2010-07-14T20:11:09.473864Z
 162193
 redi
@@ -1214,7 +1180,7 @@ redi
 
 
 
-3183
+7524
 
 internals.html
 file
@@ -1250,6 +1216,40 @@ redi
 
 24213
 
+atomics.html
+file
+
+
+
+
+2010-07-30T08:37:52.081835Z
+389f120397d82256211d60620e1e0408
+2010-07-14T20:11:09.473864Z
+162193
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3183
+
 bugs.html
 file
 
@@ -1283,40 +1283,6 @@ redi
 
 
 31022
-
-bk01pt04.html
-file
-
-
-
-
-2010-07-08T15:19:22.449096Z
-59d32b5f6b54c545d2c8f85fe1f312f1
-2010-04-21T23:33:44.896386Z
-158624
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8606
 
 ext_numerics.html
 file
@@ -1352,14 +1318,14 @@ redi
 
 2903
 
-bk01pt03ch21s02.html
+bk01pt04.html
 file
 
 
 
 
-2010-07-08T15:19:22.450096Z
-0a997df72e4e6eef867818687b8847b4
+2010-07-08T15:19:22.449096Z
+59d32b5f6b54c545d2c8f85fe1f312f1
 2010-04-21T23:33:44.896386Z
 158624
 redi
@@ -1384,7 +1350,7 @@ redi
 
 
 
-4639
+8606
 
 bk01pt03pr01.html
 file
@@ -1419,6 +1385,40 @@ redi
 
 
 2878
+
+bk01pt03ch21s02.html
+file
+
+
+
+
+2010-07-08T15:19:22.450096Z
+0a997df72e4e6eef867818687b8847b4
+2010-04-21T23:33:44.896386Z
+158624
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4639
 
 memory.html
 file
@@ -1522,40 +1522,6 @@ redi
 
 8961
 
-bk01pt03ch18s03.html
-file
-
-
-
-
-2010-07-30T08:37:52.084835Z
-d56d91d4e3e2b359e1ee7110a2c7e303
-2010-07-14T20:11:09.473864Z
-162193
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-16371
-
 bk01pt03ch28s02.html
 file
 
@@ -1589,6 +1555,40 @@ redi
 
 
 5954
+
+bk01pt03ch18s03.html
+file
+
+
+
+
+2010-07-30T08:37:52.084835Z
+d56d91d4e3e2b359e1ee7110a2c7e303
+2010-07-14T20:11:09.473864Z
+162193
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+16371
 
 bk01pt03ch19s03.html
 file
@@ -1658,40 +1658,6 @@ redi
 
 46862
 
-fstreams.html
-file
-
-
-
-
-2010-07-08T15:19:22.453112Z
-1e9ca7027e28abbf3b0445ed897e71ee
-2010-04-21T23:33:44.896386Z
-158624
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-12042
-
 source_organization.html
 file
 
@@ -1725,6 +1691,40 @@ redi
 
 
 6401
+
+fstreams.html
+file
+
+
+
+
+2010-07-08T15:19:22.453112Z
+1e9ca7027e28abbf3b0445ed897e71ee
+2010-04-21T23:33:44.896386Z
+158624
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12042
 
 ext_demangling.html
 file
@@ -1794,40 +1794,6 @@ redi
 
 4261
 
-containers_and_c.html
-file
-
-
-
-
-2010-07-08T15:19:22.454101Z
-c18c01d70fd0e47d0aee23913bcb9f40
-2010-04-21T23:33:44.896386Z
-158624
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5868
-
 strings.html
 file
 
@@ -1861,6 +1827,40 @@ redi
 
 
 23033
+
+containers_and_c.html
+file
+
+
+
+
+2010-07-08T15:19:22.454101Z
+c18c01d70fd0e47d0aee23913bcb9f40
+2010-04-21T23:33:44.896386Z
+158624
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5868
 
 io_and_c.html
 file
@@ -1930,40 +1930,6 @@ redi
 
 11682
 
-setup.html
-file
-
-
-
-
-2010-07-08T15:19:22.456097Z
-9b9f9a50ef7bdca6ba5dd88335d05a75
-2010-06-06T23:13:32.044117Z
-160352
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7790
-
 parallel_mode.html
 file
 
@@ -1998,17 +1964,17 @@ redi
 
 8703
 
-source_design_notes.html
+setup.html
 file
 
 
 
 
-2010-01-06T00:59:44.083655Z
-3d30516ab223e2c1f02f12aee6f24e32
-2010-01-05T20:51:05.649611Z
-155661
-bkoz
+2010-07-08T15:19:22.456097Z
+9b9f9a50ef7bdca6ba5dd88335d05a75
+2010-06-06T23:13:32.044117Z
+160352
+redi
 
 
 
@@ -2030,7 +1996,7 @@ bkoz
 
 
 
-58922
+7790
 
 backwards.html
 file
@@ -2065,6 +2031,40 @@ redi
 
 
 43399
+
+source_design_notes.html
+file
+
+
+
+
+2010-01-06T00:59:44.083655Z
+3d30516ab223e2c1f02f12aee6f24e32
+2010-01-05T20:51:05.649611Z
+155661
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+58922
 
 facets.html
 file

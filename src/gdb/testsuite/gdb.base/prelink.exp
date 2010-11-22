@@ -44,7 +44,7 @@ set libfile ${objdir}/${subdir}/${testfile}.so
 
 # Use -soname so that the new library gets copied by build_executable_own_libs.
 
-if { [gdb_compile_shlib "${srcdir}/${subdir}/${libsrcfile}" "${libfile}" [list debug "additional_flags=-Wl,-soname,[file tail ${libfile}]"]] != ""} {
+if { [gdb_compile_shlib "${srcdir}/${subdir}/${libsrcfile}" "${libfile}" [list debug "ldflags=-Wl,-soname,[file tail ${libfile}]"]] != ""} {
     # If creating the shared library fails, maybe we don't have the right tools
     return -1
 }
@@ -52,9 +52,16 @@ if { [gdb_compile_shlib "${srcdir}/${subdir}/${libsrcfile}" "${libfile}" [list d
 set srcfile ${testfile}.c
 set executable ${testfile}t
 set binfile ${objdir}/${subdir}/${executable}
-set prelink_args [build_executable_own_libs ${testfile}.exp $executable $srcfile [list debug "additional_flags=-Wl,${libfile},-rpath,[file dirname ${libfile}]"]]
+set prelink_args [build_executable_own_libs ${testfile}.exp $executable $srcfile [list debug "ldflags=-Wl,${libfile},-rpath,[file dirname ${libfile}]"]]
 if {$prelink_args == ""} {
     return -1
+}
+
+set test "split debug of executable"
+if [gdb_gnu_strip_debug $binfile] {
+    fail $test
+} else {
+    pass $test
 }
 
 if ![prelink_yes $prelink_args] {
@@ -105,3 +112,5 @@ clean_restart $executable
 gdb_test_no_output "set verbose on"
 
 gdb_test "core-file $objdir/$subdir/prelink.core" "Using PIC \\(Position Independent Code\\) prelink displacement 0x\[^0\]\[0-9a-f\]* for \[^\r\n\]*[file tail ${libfile}].*" "seen displacement message"
+
+gdb_test "p &bssvar == bssvarp" " = 1" ".dynbss vs. .bss address shift"

@@ -1,6 +1,6 @@
 /* Search an insn for pseudo regs that must be in hard regs and are not.
    Copyright (C) 1987, 1988, 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -121,9 +121,14 @@ a register with any other reload.  */
 
 /* True if C is a non-empty register class that has too few registers
    to be safely used as a reload target class.  */
-#define SMALL_REGISTER_CLASS_P(C) \
-  (reg_class_size [(C)] == 1 \
-   || (reg_class_size [(C)] >= 1 && CLASS_LIKELY_SPILLED_P (C)))
+
+static inline bool
+small_register_class_p (reg_class_t rclass)
+{
+  return (reg_class_size [(int) rclass] == 1
+	  || (reg_class_size [(int) rclass] >= 1 
+	      && targetm.class_likely_spilled_p (rclass)));
+}
 
 
 /* All reloads of the current insn are recorded here.  See reload.h for
@@ -259,7 +264,7 @@ static void combine_reloads (void);
 static int find_reusable_reload (rtx *, rtx, enum reg_class,
 				 enum reload_type, int, int);
 static rtx find_dummy_reload (rtx, rtx, rtx *, rtx *, enum machine_mode,
-			      enum machine_mode, enum reg_class, int, int);
+			      enum machine_mode, reg_class_t, int, int);
 static int hard_reg_set_here_p (unsigned int, unsigned int, rtx);
 static struct decomposition decompose (rtx);
 static int immune_p (rtx, rtx, struct decomposition);
@@ -438,7 +443,7 @@ push_secondary_reload (int in_p, rtx x, int opnum, int optional,
 	    || (! in_p && rld[s_reload].secondary_out_reload == t_reload))
 	&& ((in_p && rld[s_reload].secondary_in_icode == t_icode)
 	    || (! in_p && rld[s_reload].secondary_out_icode == t_icode))
-	&& (SMALL_REGISTER_CLASS_P (rclass)
+	&& (small_register_class_p (rclass)
 	    || targetm.small_register_classes_for_mode_p (VOIDmode))
 	&& MERGABLE_RELOADS (secondary_type, rld[s_reload].when_needed,
 			     opnum, rld[s_reload].opnum))
@@ -518,9 +523,9 @@ push_secondary_reload (int in_p, rtx x, int opnum, int optional,
 /* If a secondary reload is needed, return its class.  If both an intermediate
    register and a scratch register is needed, we return the class of the
    intermediate register.  */
-enum reg_class
-secondary_reload_class (bool in_p, enum reg_class rclass,
-			enum machine_mode mode, rtx x)
+reg_class_t
+secondary_reload_class (bool in_p, reg_class_t rclass, enum machine_mode mode,
+			rtx x)
 {
   enum insn_code icode;
   secondary_reload_info sri;
@@ -749,7 +754,7 @@ find_reusable_reload (rtx *p_in, rtx out, enum reg_class rclass,
 	    || (out != 0 && MATCHES (rld[i].out, out)
 		&& (in == 0 || rld[i].in == 0 || MATCHES (rld[i].in, in))))
 	&& (rld[i].out == 0 || ! earlyclobber_operand_p (rld[i].out))
-	&& (SMALL_REGISTER_CLASS_P (rclass)
+	&& (small_register_class_p (rclass)
 	    || targetm.small_register_classes_for_mode_p (VOIDmode))
 	&& MERGABLE_RELOADS (type, rld[i].when_needed, opnum, rld[i].opnum))
       return i;
@@ -775,7 +780,7 @@ find_reusable_reload (rtx *p_in, rtx out, enum reg_class rclass,
 		&& GET_RTX_CLASS (GET_CODE (in)) == RTX_AUTOINC
 		&& MATCHES (XEXP (in, 0), rld[i].in)))
 	&& (rld[i].out == 0 || ! earlyclobber_operand_p (rld[i].out))
-	&& (SMALL_REGISTER_CLASS_P (rclass)
+	&& (small_register_class_p (rclass)
 	    || targetm.small_register_classes_for_mode_p (VOIDmode))
 	&& MERGABLE_RELOADS (type, rld[i].when_needed,
 			     opnum, rld[i].opnum))
@@ -1219,21 +1224,20 @@ push_reload (rtx in, rtx out, rtx *inloc, rtx *outloc,
   /* Narrow down the class of register wanted if that is
      desirable on this machine for efficiency.  */
   {
-    enum reg_class preferred_class = rclass;
+    reg_class_t preferred_class = rclass;
 
     if (in != 0)
-      preferred_class = PREFERRED_RELOAD_CLASS (in, rclass);
+      preferred_class = targetm.preferred_reload_class (in, rclass);
 
-  /* Output reloads may need analogous treatment, different in detail.  */
-#ifdef PREFERRED_OUTPUT_RELOAD_CLASS
+    /* Output reloads may need analogous treatment, different in detail.  */
     if (out != 0)
-      preferred_class = PREFERRED_OUTPUT_RELOAD_CLASS (out, preferred_class);
-#endif
+      preferred_class
+	= targetm.preferred_output_reload_class (out, preferred_class);
 
     /* Discard what the target said if we cannot do it.  */
     if (preferred_class != NO_REGS
 	|| (optional && type == RELOAD_FOR_OUTPUT))
-      rclass = preferred_class;
+      rclass = (enum reg_class) preferred_class;
   }
 
   /* Make sure we use a class that can handle the actual pseudo
@@ -1915,7 +1919,7 @@ combine_reloads (void)
 static rtx
 find_dummy_reload (rtx real_in, rtx real_out, rtx *inloc, rtx *outloc,
 		   enum machine_mode inmode, enum machine_mode outmode,
-		   enum reg_class rclass, int for_real, int earlyclobber)
+		   reg_class_t rclass, int for_real, int earlyclobber)
 {
   rtx in = real_in;
   rtx out = real_out;
@@ -1958,9 +1962,9 @@ find_dummy_reload (rtx real_in, rtx real_out, rtx *inloc, rtx *outloc,
   /* Narrow down the reg class, the same way push_reload will;
      otherwise we might find a dummy now, but push_reload won't.  */
   {
-    enum reg_class preferred_class = PREFERRED_RELOAD_CLASS (in, rclass);
+    reg_class_t preferred_class = targetm.preferred_reload_class (in, rclass);
     if (preferred_class != NO_REGS)
-      rclass = preferred_class;
+      rclass = (enum reg_class) preferred_class;
   }
 
   /* See if OUT will do.  */
@@ -2583,14 +2587,14 @@ find_reloads (rtx insn, int replace, int ind_levels, int live_known,
   enum reload_usage { RELOAD_READ, RELOAD_READ_WRITE, RELOAD_WRITE } modified[MAX_RECOG_OPERANDS];
   int no_input_reloads = 0, no_output_reloads = 0;
   int n_alternatives;
-  enum reg_class this_alternative[MAX_RECOG_OPERANDS];
+  reg_class_t this_alternative[MAX_RECOG_OPERANDS];
   char this_alternative_match_win[MAX_RECOG_OPERANDS];
   char this_alternative_win[MAX_RECOG_OPERANDS];
   char this_alternative_offmemok[MAX_RECOG_OPERANDS];
   char this_alternative_earlyclobber[MAX_RECOG_OPERANDS];
   int this_alternative_matches[MAX_RECOG_OPERANDS];
   int swapped;
-  int goal_alternative[MAX_RECOG_OPERANDS];
+  reg_class_t goal_alternative[MAX_RECOG_OPERANDS];
   int this_alternative_number;
   int goal_alternative_number = 0;
   int operand_reloadnum[MAX_RECOG_OPERANDS];
@@ -3501,7 +3505,8 @@ find_reloads (rtx insn, int replace, int ind_levels, int live_known,
 		 precisely the same as in the code below that calls
 		 force_const_mem.  */
 	      if (CONST_POOL_OK_P (operand)
-		  && ((PREFERRED_RELOAD_CLASS (operand, this_alternative[i])
+		  && ((targetm.preferred_reload_class (operand,
+						       this_alternative[i])
 		       == NO_REGS)
 		      || no_input_reloads)
 		  && operand_mode[i] != VOIDmode)
@@ -3529,17 +3534,15 @@ find_reloads (rtx insn, int replace, int ind_levels, int live_known,
 
 	      if (! CONSTANT_P (operand) && this_alternative[i] != NO_REGS)
 		{
-		  if (PREFERRED_RELOAD_CLASS (operand, this_alternative[i])
+		  if (targetm.preferred_reload_class (operand, this_alternative[i])
 		      == NO_REGS)
 		    reject = 600;
 
-#ifdef PREFERRED_OUTPUT_RELOAD_CLASS
 		  if (operand_type[i] == RELOAD_FOR_OUTPUT
-		      && (PREFERRED_OUTPUT_RELOAD_CLASS (operand,
-							this_alternative[i])
+		      && (targetm.preferred_output_reload_class (operand,
+								 this_alternative[i])
 			  == NO_REGS))
 		    reject = 600;
-#endif
 		}
 
 	      /* We prefer to reload pseudos over reloading other things,
@@ -3588,7 +3591,7 @@ find_reloads (rtx insn, int replace, int ind_levels, int live_known,
 	      && this_alternative[i] != NO_REGS
 	      && GET_MODE_SIZE (operand_mode[i]) <= UNITS_PER_WORD
 	      && reg_class_size [(int) preferred_class[i]] > 0
-	      && ! SMALL_REGISTER_CLASS_P (preferred_class[i]))
+	      && ! small_register_class_p (preferred_class[i]))
 	    {
 	      if (! reg_class_subset_p (this_alternative[i],
 					preferred_class[i]))
@@ -3646,7 +3649,7 @@ find_reloads (rtx insn, int replace, int ind_levels, int live_known,
 		{
 		  /* If the output is in a non-empty few-regs class,
 		     it's costly to reload it, so reload the input instead.  */
-		  if (SMALL_REGISTER_CLASS_P (this_alternative[i])
+		  if (small_register_class_p (this_alternative[i])
 		      && (REG_P (recog_data.operand[j])
 			  || GET_CODE (recog_data.operand[j]) == SUBREG))
 		    {
@@ -3910,8 +3913,7 @@ find_reloads (rtx insn, int replace, int ind_levels, int live_known,
 	  }
 
 	if (CONST_POOL_OK_P (op)
-	    && ((PREFERRED_RELOAD_CLASS (op,
-					 (enum reg_class) goal_alternative[i])
+	    && ((targetm.preferred_reload_class (op, goal_alternative[i])
 		 == NO_REGS)
 		|| no_input_reloads)
 	    && mode != VOIDmode)
@@ -4089,7 +4091,7 @@ find_reloads (rtx insn, int replace, int ind_levels, int live_known,
 	    /* If this is only for an output, the optional reload would not
 	       actually cause us to use a register now, just note that
 	       something is stored here.  */
-	    && ((enum reg_class) goal_alternative[i] != NO_REGS
+	    && (goal_alternative[i] != NO_REGS
 		|| modified[i] == RELOAD_WRITE)
 	    && ! no_input_reloads
 	    /* An optional output reload might allow to delete INSN later.
@@ -4163,8 +4165,7 @@ find_reloads (rtx insn, int replace, int ind_levels, int live_known,
 	if ((MEM_P (operand)
 	     || (REG_P (operand)
 		 && REGNO (operand) >= FIRST_PSEUDO_REGISTER))
-	    && ((enum reg_class) goal_alternative[goal_alternative_matches[i]]
-		!= NO_REGS))
+	    && (goal_alternative[goal_alternative_matches[i]] != NO_REGS))
 	  operand_reloadnum[i] = operand_reloadnum[goal_alternative_matches[i]]
 	    = push_reload (recog_data.operand[goal_alternative_matches[i]],
 			   recog_data.operand[i],
@@ -5152,7 +5153,7 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
       if ((regno_ok_for_base_p (REGNO (operand), mode, inner_code,
 				GET_CODE (addend))
 	   || operand == frame_pointer_rtx
-#if FRAME_POINTER_REGNUM != HARD_FRAME_POINTER_REGNUM
+#if !HARD_FRAME_POINTER_IS_FRAME_POINTER
 	   || operand == hard_frame_pointer_rtx
 #endif
 #if FRAME_POINTER_REGNUM != ARG_POINTER_REGNUM
@@ -6043,7 +6044,7 @@ find_reloads_address_part (rtx x, rtx *loc, enum reg_class rclass,
 {
   if (CONSTANT_P (x)
       && (! LEGITIMATE_CONSTANT_P (x)
-	  || PREFERRED_RELOAD_CLASS (x, rclass) == NO_REGS))
+	  || targetm.preferred_reload_class (x, rclass) == NO_REGS))
     {
       x = force_const_mem (mode, x);
       find_reloads_address (mode, &x, XEXP (x, 0), &XEXP (x, 0),
@@ -6053,7 +6054,8 @@ find_reloads_address_part (rtx x, rtx *loc, enum reg_class rclass,
   else if (GET_CODE (x) == PLUS
 	   && CONSTANT_P (XEXP (x, 1))
 	   && (! LEGITIMATE_CONSTANT_P (XEXP (x, 1))
-	       || PREFERRED_RELOAD_CLASS (XEXP (x, 1), rclass) == NO_REGS))
+	       || targetm.preferred_reload_class (XEXP (x, 1), rclass)
+		   == NO_REGS))
     {
       rtx tem;
 

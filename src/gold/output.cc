@@ -1,6 +1,6 @@
 // output.cc -- manage the output file for gold
 
-// Copyright 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -1133,10 +1133,17 @@ Output_data_reloc_base<sh_type, dynamic, size, big_endian>
     os->set_entsize(elfcpp::Elf_sizes<size>::rela_size);
   else
     gold_unreachable();
-  if (dynamic)
-    os->set_should_link_to_dynsym();
-  else
+
+  // A STT_GNU_IFUNC symbol may require a IRELATIVE reloc when doing a
+  // static link.  The backends will generate a dynamic reloc section
+  // to hold this.  In that case we don't want to link to the dynsym
+  // section, because there isn't one.
+  if (!dynamic)
     os->set_should_link_to_symtab();
+  else if (parameters->doing_static_link())
+    ;
+  else
+    os->set_should_link_to_dynsym();
 }
 
 // Write out relocation data.
@@ -1262,12 +1269,18 @@ Output_data_got<size, big_endian>::Got_entry::write(unsigned char* pov) const
 	// link-time value, which will be relocated dynamically by a
 	// RELATIVE relocation.
 	Symbol* gsym = this->u_.gsym;
-	Sized_symbol<size>* sgsym;
-	// This cast is a bit ugly.  We don't want to put a
-	// virtual method in Symbol, because we want Symbol to be
-	// as small as possible.
-	sgsym = static_cast<Sized_symbol<size>*>(gsym);
-	val = sgsym->value();
+	if (this->use_plt_offset_ && gsym->has_plt_offset())
+	  val = (parameters->target().plt_section_for_global(gsym)->address()
+		 + gsym->plt_offset());
+	else
+	  {
+	    Sized_symbol<size>* sgsym;
+	    // This cast is a bit ugly.  We don't want to put a
+	    // virtual method in Symbol, because we want Symbol to be
+	    // as small as possible.
+	    sgsym = static_cast<Sized_symbol<size>*>(gsym);
+	    val = sgsym->value();
+	  }
       }
       break;
 
@@ -1277,9 +1290,17 @@ Output_data_got<size, big_endian>::Got_entry::write(unsigned char* pov) const
 
     default:
       {
+	const Sized_relobj<size, big_endian>* object = this->u_.object;
         const unsigned int lsi = this->local_sym_index_;
-        const Symbol_value<size>* symval = this->u_.object->local_symbol(lsi);
-        val = symval->value(this->u_.object, 0);
+        const Symbol_value<size>* symval = object->local_symbol(lsi);
+	if (!this->use_plt_offset_)
+	  val = symval->value(this->u_.object, 0);
+	else
+	  {
+	    const Output_data* plt =
+	      parameters->target().plt_section_for_local(object, lsi);
+	    val = plt->address() + object->local_plt_offset(lsi);
+	  }
       }
       break;
     }
@@ -1302,7 +1323,23 @@ Output_data_got<size, big_endian>::add_global(
   if (gsym->has_got_offset(got_type))
     return false;
 
-  this->entries_.push_back(Got_entry(gsym));
+  this->entries_.push_back(Got_entry(gsym, false));
+  this->set_got_size();
+  gsym->set_got_offset(got_type, this->last_got_offset());
+  return true;
+}
+
+// Like add_global, but use the PLT offset.
+
+template<int size, bool big_endian>
+bool
+Output_data_got<size, big_endian>::add_global_plt(Symbol* gsym,
+						  unsigned int got_type)
+{
+  if (gsym->has_got_offset(got_type))
+    return false;
+
+  this->entries_.push_back(Got_entry(gsym, true));
   this->set_got_size();
   gsym->set_got_offset(got_type, this->last_got_offset());
   return true;
@@ -1310,6 +1347,7 @@ Output_data_got<size, big_endian>::add_global(
 
 // Add an entry for a global symbol to the GOT, and add a dynamic
 // relocation of type R_TYPE for the GOT entry.
+
 template<int size, bool big_endian>
 void
 Output_data_got<size, big_endian>::add_global_with_rel(
@@ -1417,7 +1455,25 @@ Output_data_got<size, big_endian>::add_local(
   if (object->local_has_got_offset(symndx, got_type))
     return false;
 
-  this->entries_.push_back(Got_entry(object, symndx));
+  this->entries_.push_back(Got_entry(object, symndx, false));
+  this->set_got_size();
+  object->set_local_got_offset(symndx, got_type, this->last_got_offset());
+  return true;
+}
+
+// Like add_local, but use the PLT offset.
+
+template<int size, bool big_endian>
+bool
+Output_data_got<size, big_endian>::add_local_plt(
+    Sized_relobj<size, big_endian>* object,
+    unsigned int symndx,
+    unsigned int got_type)
+{
+  if (object->local_has_got_offset(symndx, got_type))
+    return false;
+
+  this->entries_.push_back(Got_entry(object, symndx, true));
   this->set_got_size();
   object->set_local_got_offset(symndx, got_type, this->last_got_offset());
   return true;
@@ -1425,6 +1481,7 @@ Output_data_got<size, big_endian>::add_local(
 
 // Add an entry for a local symbol to the GOT, and add a dynamic
 // relocation of type R_TYPE for the GOT entry.
+
 template<int size, bool big_endian>
 void
 Output_data_got<size, big_endian>::add_local_with_rel(
@@ -1486,7 +1543,7 @@ Output_data_got<size, big_endian>::add_local_pair_with_rel(
   Output_section* os = object->output_section(shndx);
   rel_dyn->add_output_section(os, r_type_1, this, got_offset);
 
-  this->entries_.push_back(Got_entry(object, symndx));
+  this->entries_.push_back(Got_entry(object, symndx, false));
   if (r_type_2 != 0)
     {
       got_offset = this->last_got_offset();
@@ -1516,7 +1573,7 @@ Output_data_got<size, big_endian>::add_local_pair_with_rela(
   Output_section* os = object->output_section(shndx);
   rela_dyn->add_output_section(os, r_type_1, this, got_offset, 0);
 
-  this->entries_.push_back(Got_entry(object, symndx));
+  this->entries_.push_back(Got_entry(object, symndx, false));
   if (r_type_2 != 0)
     {
       got_offset = this->last_got_offset();
@@ -1827,7 +1884,7 @@ Output_section::Input_section::output_offset(
     const Relobj* object,
     unsigned int shndx,
     section_offset_type offset,
-    section_offset_type *poutput) const
+    section_offset_type* poutput) const
 {
   if (!this->is_input_section())
     return this->u2_.posd->output_offset(object, shndx, offset, poutput);
@@ -1917,6 +1974,7 @@ Output_section::Output_section(const char* name, elfcpp::Elf_Word type,
     info_(0),
     type_(type),
     flags_(flags),
+    order_(ORDER_INVALID),
     out_shndx_(-1U),
     symtab_index_(0),
     dynsym_index_(0),
@@ -1938,13 +1996,8 @@ Output_section::Output_section(const char* name, elfcpp::Elf_Word type,
     must_sort_attached_input_sections_(false),
     attached_input_sections_are_sorted_(false),
     is_relro_(false),
-    is_relro_local_(false),
-    is_last_relro_(false),
-    is_first_non_relro_(false),
     is_small_section_(false),
     is_large_section_(false),
-    is_interp_(false),
-    is_dynamic_linker_section_(false),
     generate_code_fills_at_write_(false),
     is_entsize_zero_(false),
     section_offsets_need_adjustment_(false),
@@ -2112,7 +2165,7 @@ Output_section::add_input_section(Layout* layout,
       || parameters->target().may_relax()
       || parameters->options().section_ordering_file())
     {
-      Input_section isecn(object, shndx, shdr.get_sh_size(), addralign);
+      Input_section isecn(object, shndx, input_section_size, addralign);
       if (parameters->options().section_ordering_file())
         {
           unsigned int section_order_index =
@@ -2150,9 +2203,25 @@ Output_section::add_output_section_data(Output_section_data* posd)
 // Add a relaxed input section.
 
 void
-Output_section::add_relaxed_input_section(Output_relaxed_input_section* poris)
+Output_section::add_relaxed_input_section(Layout* layout,
+					  Output_relaxed_input_section* poris,
+					  const std::string& name)
 {
   Input_section inp(poris);
+
+  // If the --section-ordering-file option is used to specify the order of
+  // sections, we need to keep track of sections.
+  if (parameters->options().section_ordering_file())
+    {
+      unsigned int section_order_index =
+        layout->find_section_order_index(name);
+      if (section_order_index != 0)
+        {
+          inp.set_section_order_index(section_order_index);
+          this->set_input_section_order_specified();
+        }
+    }
+
   this->add_output_section_data(&inp);
   if (this->lookup_maps_->is_valid())
     this->lookup_maps_->add_relaxed_input_section(poris->relobj(),
@@ -2320,7 +2389,13 @@ Output_section::convert_input_sections_in_list_to_relaxed_sections(
       Relaxation_map::const_iterator p = map.find(sid);
       gold_assert(p != map.end());
       gold_assert((*input_sections)[p->second].is_input_section());
+
+      // Remember section order index of original input section
+      // if it is set.  Copy it to the relaxed input section.
+      unsigned int soi =
+	(*input_sections)[p->second].section_order_index();
       (*input_sections)[p->second] = Input_section(poris);
+      (*input_sections)[p->second].set_section_order_index(soi);
     }
 }
   
@@ -3409,9 +3484,7 @@ Output_section::print_merge_stats()
 // Output segment methods.
 
 Output_segment::Output_segment(elfcpp::Elf_Word type, elfcpp::Elf_Word flags)
-  : output_data_(),
-    output_bss_(),
-    vaddr_(0),
+  : vaddr_(0),
     paddr_(0),
     memsz_(0),
     max_align_(0),
@@ -3430,273 +3503,44 @@ Output_segment::Output_segment(elfcpp::Elf_Word type, elfcpp::Elf_Word flags)
     this->flags_ = elfcpp::PF_R;
 }
 
-// Add an Output_section to an Output_segment.
+// Add an Output_section to a PT_LOAD Output_segment.
 
 void
-Output_segment::add_output_section(Output_section* os,
-				   elfcpp::Elf_Word seg_flags,
-				   bool do_sort)
+Output_segment::add_output_section_to_load(Layout* layout,
+					   Output_section* os,
+					   elfcpp::Elf_Word seg_flags)
 {
+  gold_assert(this->type() == elfcpp::PT_LOAD);
   gold_assert((os->flags() & elfcpp::SHF_ALLOC) != 0);
   gold_assert(!this->is_max_align_known_);
   gold_assert(os->is_large_data_section() == this->is_large_data_segment());
-  gold_assert(this->type() == elfcpp::PT_LOAD || !do_sort);
 
   this->update_flags_for_output_section(seg_flags);
 
-  Output_segment::Output_data_list* pdl;
-  if (os->type() == elfcpp::SHT_NOBITS)
-    pdl = &this->output_bss_;
+  // We don't want to change the ordering if we have a linker script
+  // with a SECTIONS clause.
+  Output_section_order order = os->order();
+  if (layout->script_options()->saw_sections_clause())
+    order = static_cast<Output_section_order>(0);
   else
-    pdl = &this->output_data_;
+    gold_assert(order != ORDER_INVALID);
 
-  // Note that while there may be many input sections in an output
-  // section, there are normally only a few output sections in an
-  // output segment.  The loops below are expected to be fast.
+  this->output_lists_[order].push_back(os);
+}
 
-  // So that PT_NOTE segments will work correctly, we need to ensure
-  // that all SHT_NOTE sections are adjacent.
-  if (os->type() == elfcpp::SHT_NOTE && !pdl->empty())
-    {
-      Output_segment::Output_data_list::iterator p = pdl->end();
-      do
-	{
-	  --p;
-	  if ((*p)->is_section_type(elfcpp::SHT_NOTE))
-	    {
-	      ++p;
-	      pdl->insert(p, os);
-	      return;
-	    }
-	}
-      while (p != pdl->begin());
-    }
+// Add an Output_section to a non-PT_LOAD Output_segment.
 
-  // Similarly, so that PT_TLS segments will work, we need to group
-  // SHF_TLS sections.  An SHF_TLS/SHT_NOBITS section is a special
-  // case: we group the SHF_TLS/SHT_NOBITS sections right after the
-  // SHF_TLS/SHT_PROGBITS sections.  This lets us set up PT_TLS
-  // correctly.  SHF_TLS sections get added to both a PT_LOAD segment
-  // and the PT_TLS segment; we do this grouping only for the PT_LOAD
-  // segment.
-  if (this->type_ != elfcpp::PT_TLS
-      && (os->flags() & elfcpp::SHF_TLS) != 0)
-    {
-      pdl = &this->output_data_;
-      if (!pdl->empty())
-	{
-	  bool nobits = os->type() == elfcpp::SHT_NOBITS;
-	  bool sawtls = false;
-	  Output_segment::Output_data_list::iterator p = pdl->end();
-	  gold_assert(p != pdl->begin());
-	  do
-	    {
-	      --p;
-	      bool insert;
-	      if ((*p)->is_section_flag_set(elfcpp::SHF_TLS))
-		{
-		  sawtls = true;
-		  // Put a NOBITS section after the first TLS section.
-		  // Put a PROGBITS section after the first
-		  // TLS/PROGBITS section.
-		  insert = nobits || !(*p)->is_section_type(elfcpp::SHT_NOBITS);
-		}
-	      else
-		{
-		  // If we've gone past the TLS sections, but we've
-		  // seen a TLS section, then we need to insert this
-		  // section now.
-		  insert = sawtls;
-		}
+void
+Output_segment::add_output_section_to_nonload(Output_section* os,
+					      elfcpp::Elf_Word seg_flags)
+{
+  gold_assert(this->type() != elfcpp::PT_LOAD);
+  gold_assert((os->flags() & elfcpp::SHF_ALLOC) != 0);
+  gold_assert(!this->is_max_align_known_);
 
-	      if (insert)
-		{
-		  ++p;
-		  pdl->insert(p, os);
-		  return;
-		}
-	    }
-	  while (p != pdl->begin());
-	}
+  this->update_flags_for_output_section(seg_flags);
 
-      // There are no TLS sections yet; put this one at the requested
-      // location in the section list.
-    }
-
-  if (do_sort)
-    {
-      // For the PT_GNU_RELRO segment, we need to group relro
-      // sections, and we need to put them before any non-relro
-      // sections.  Any relro local sections go before relro non-local
-      // sections.  One section may be marked as the last relro
-      // section.
-      if (os->is_relro())
-	{
-	  gold_assert(pdl == &this->output_data_);
-	  Output_segment::Output_data_list::iterator p;
-	  for (p = pdl->begin(); p != pdl->end(); ++p)
-	    {
-	      if (!(*p)->is_section())
-		break;
-
-	      Output_section* pos = (*p)->output_section();
-	      if (!pos->is_relro()
-		  || (os->is_relro_local() && !pos->is_relro_local())
-		  || (!os->is_last_relro() && pos->is_last_relro()))
-		break;
-	    }
-
-	  pdl->insert(p, os);
-	  return;
-	}
-
-      // One section may be marked as the first section which follows
-      // the relro sections.
-      if (os->is_first_non_relro())
-	{
-	  gold_assert(pdl == &this->output_data_);
-	  Output_segment::Output_data_list::iterator p;
-	  for (p = pdl->begin(); p != pdl->end(); ++p)
-	    {
-	      if (!(*p)->is_section())
-		break;
-
-	      Output_section* pos = (*p)->output_section();
-	      if (!pos->is_relro())
-		break;
-	    }
-
-	  pdl->insert(p, os);
-	  return;
-	}
-    }
-
-  // Small data sections go at the end of the list of data sections.
-  // If OS is not small, and there are small sections, we have to
-  // insert it before the first small section.
-  if (os->type() != elfcpp::SHT_NOBITS
-      && !os->is_small_section()
-      && !pdl->empty()
-      && pdl->back()->is_section()
-      && pdl->back()->output_section()->is_small_section())
-    {
-      for (Output_segment::Output_data_list::iterator p = pdl->begin();
-	   p != pdl->end();
-	   ++p)
-	{
-	  if ((*p)->is_section()
-	      && (*p)->output_section()->is_small_section())
-	    {
-	      pdl->insert(p, os);
-	      return;
-	    }
-	}
-      gold_unreachable();
-    }
-
-  // A small BSS section goes at the start of the BSS sections, after
-  // other small BSS sections.
-  if (os->type() == elfcpp::SHT_NOBITS && os->is_small_section())
-    {
-      for (Output_segment::Output_data_list::iterator p = pdl->begin();
-	   p != pdl->end();
-	   ++p)
-	{
-	  if (!(*p)->is_section()
-	      || !(*p)->output_section()->is_small_section())
-	    {
-	      pdl->insert(p, os);
-	      return;
-	    }
-	}
-    }
-
-  // A large BSS section goes at the end of the BSS sections, which
-  // means that one that is not large must come before the first large
-  // one.
-  if (os->type() == elfcpp::SHT_NOBITS
-      && !os->is_large_section()
-      && !pdl->empty()
-      && pdl->back()->is_section()
-      && pdl->back()->output_section()->is_large_section())
-    {
-      for (Output_segment::Output_data_list::iterator p = pdl->begin();
-	   p != pdl->end();
-	   ++p)
-	{
-	  if ((*p)->is_section()
-	      && (*p)->output_section()->is_large_section())
-	    {
-	      pdl->insert(p, os);
-	      return;
-	    }
-	}
-      gold_unreachable();
-    }
-
-  // We do some further output section sorting in order to make the
-  // generated program run more efficiently.  We should only do this
-  // when not using a linker script, so it is controled by the DO_SORT
-  // parameter.
-  if (do_sort)
-    {
-      // FreeBSD requires the .interp section to be in the first page
-      // of the executable.  That is a more efficient location anyhow
-      // for any OS, since it means that the kernel will have the data
-      // handy after it reads the program headers.
-      if (os->is_interp() && !pdl->empty())
-	{
-	  pdl->insert(pdl->begin(), os);
-	  return;
-	}
-
-      // Put loadable non-writable notes immediately after the .interp
-      // sections, so that the PT_NOTE segment is on the first page of
-      // the executable.
-      if (os->type() == elfcpp::SHT_NOTE
-	  && (os->flags() & elfcpp::SHF_WRITE) == 0
-	  && !pdl->empty())
-	{
-	  Output_segment::Output_data_list::iterator p = pdl->begin();
-	  if ((*p)->is_section() && (*p)->output_section()->is_interp())
-	    ++p;
-	  pdl->insert(p, os);
-	  return;
-	}
-
-      // If this section is used by the dynamic linker, and it is not
-      // writable, then put it first, after the .interp section and
-      // any loadable notes.  This makes it more likely that the
-      // dynamic linker will have to read less data from the disk.
-      if (os->is_dynamic_linker_section()
-	  && !pdl->empty()
-	  && (os->flags() & elfcpp::SHF_WRITE) == 0)
-	{
-	  bool is_reloc = (os->type() == elfcpp::SHT_REL
-			   || os->type() == elfcpp::SHT_RELA);
-	  Output_segment::Output_data_list::iterator p = pdl->begin();
-	  while (p != pdl->end()
-		 && (*p)->is_section()
-		 && ((*p)->output_section()->is_dynamic_linker_section()
-		     || (*p)->output_section()->type() == elfcpp::SHT_NOTE))
-	    {
-	      // Put reloc sections after the other ones.  Putting the
-	      // dynamic reloc sections first confuses BFD, notably
-	      // objcopy and strip.
-	      if (!is_reloc
-		  && ((*p)->output_section()->type() == elfcpp::SHT_REL
-		      || (*p)->output_section()->type() == elfcpp::SHT_RELA))
-		break;
-	      ++p;
-	    }
-	  pdl->insert(p, os);
-	  return;
-	}
-    }
-
-  // If there were no constraints on the output section, just add it
-  // to the end of the list.
-  pdl->push_back(os);
+  this->output_lists_[0].push_back(os);
 }
 
 // Remove an Output_section from this segment.  It is an error if it
@@ -3705,18 +3549,18 @@ Output_segment::add_output_section(Output_section* os,
 void
 Output_segment::remove_output_section(Output_section* os)
 {
-  // We only need this for SHT_PROGBITS.
-  gold_assert(os->type() == elfcpp::SHT_PROGBITS);
-  for (Output_data_list::iterator p = this->output_data_.begin();
-       p != this->output_data_.end();
-       ++p)
-   {
-     if (*p == os)
-       {
-         this->output_data_.erase(p);
-         return;
-       }
-   }
+  for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+    {
+      Output_data_list* pdl = &this->output_lists_[i];
+      for (Output_data_list::iterator p = pdl->begin(); p != pdl->end(); ++p)
+	{
+	  if (*p == os)
+	    {
+	      pdl->erase(p);
+	      return;
+	    }
+	}
+    }
   gold_unreachable();
 }
 
@@ -3727,17 +3571,51 @@ void
 Output_segment::add_initial_output_data(Output_data* od)
 {
   gold_assert(!this->is_max_align_known_);
-  this->output_data_.push_front(od);
+  Output_data_list::iterator p = this->output_lists_[0].begin();
+  this->output_lists_[0].insert(p, od);
 }
 
-// Return whether the first data section is a relro section.
+// Return true if this segment has any sections which hold actual
+// data, rather than being a BSS section.
+
+bool
+Output_segment::has_any_data_sections() const
+{
+  for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+    {
+      const Output_data_list* pdl = &this->output_lists_[i];
+      for (Output_data_list::const_iterator p = pdl->begin();
+	   p != pdl->end();
+	   ++p)
+	{
+	  if (!(*p)->is_section())
+	    return true;
+	  if ((*p)->output_section()->type() != elfcpp::SHT_NOBITS)
+	    return true;
+	}
+    }
+  return false;
+}
+
+// Return whether the first data section (not counting TLS sections)
+// is a relro section.
 
 bool
 Output_segment::is_first_section_relro() const
 {
-  return (!this->output_data_.empty()
-	  && this->output_data_.front()->is_section()
-	  && this->output_data_.front()->output_section()->is_relro());
+  for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+    {
+      if (i == static_cast<int>(ORDER_TLS_DATA)
+	  || i == static_cast<int>(ORDER_TLS_BSS))
+	continue;
+      const Output_data_list* pdl = &this->output_lists_[i];
+      if (!pdl->empty())
+	{
+	  Output_data* p = pdl->front();
+	  return p->is_section() && p->output_section()->is_relro();
+	}
+    }
+  return false;
 }
 
 // Return the maximum alignment of the Output_data in Output_segment.
@@ -3747,16 +3625,13 @@ Output_segment::maximum_alignment()
 {
   if (!this->is_max_align_known_)
     {
-      uint64_t addralign;
-
-      addralign = Output_segment::maximum_alignment_list(&this->output_data_);
-      if (addralign > this->max_align_)
-	this->max_align_ = addralign;
-
-      addralign = Output_segment::maximum_alignment_list(&this->output_bss_);
-      if (addralign > this->max_align_)
-	this->max_align_ = addralign;
-
+      for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+	{	
+	  const Output_data_list* pdl = &this->output_lists_[i];
+	  uint64_t addralign = Output_segment::maximum_alignment_list(pdl);
+	  if (addralign > this->max_align_)
+	    this->max_align_ = addralign;
+	}
       this->is_max_align_known_ = true;
     }
 
@@ -3780,44 +3655,54 @@ Output_segment::maximum_alignment_list(const Output_data_list* pdl)
   return ret;
 }
 
-// Return the number of dynamic relocs applied to this segment.
+// Return whether this segment has any dynamic relocs.
 
-unsigned int
-Output_segment::dynamic_reloc_count() const
+bool
+Output_segment::has_dynamic_reloc() const
 {
-  return (this->dynamic_reloc_count_list(&this->output_data_)
-	  + this->dynamic_reloc_count_list(&this->output_bss_));
+  for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+    if (this->has_dynamic_reloc_list(&this->output_lists_[i]))
+      return true;
+  return false;
 }
 
-// Return the number of dynamic relocs applied to an Output_data_list.
+// Return whether this Output_data_list has any dynamic relocs.
 
-unsigned int
-Output_segment::dynamic_reloc_count_list(const Output_data_list* pdl) const
+bool
+Output_segment::has_dynamic_reloc_list(const Output_data_list* pdl) const
 {
-  unsigned int count = 0;
   for (Output_data_list::const_iterator p = pdl->begin();
        p != pdl->end();
        ++p)
-    count += (*p)->dynamic_reloc_count();
-  return count;
+    if ((*p)->has_dynamic_reloc())
+      return true;
+  return false;
 }
 
 // Set the section addresses for an Output_segment.  If RESET is true,
 // reset the addresses first.  ADDR is the address and *POFF is the
 // file offset.  Set the section indexes starting with *PSHNDX.
-// Return the address of the immediately following segment.  Update
-// *POFF and *PSHNDX.
+// INCREASE_RELRO is the size of the portion of the first non-relro
+// section that should be included in the PT_GNU_RELRO segment.
+// If this segment has relro sections, and has been aligned for
+// that purpose, set *HAS_RELRO to TRUE.  Return the address of
+// the immediately following segment.  Update *HAS_RELRO, *POFF,
+// and *PSHNDX.
 
 uint64_t
 Output_segment::set_section_addresses(const Layout* layout, bool reset,
                                       uint64_t addr,
-				      unsigned int increase_relro,
+				      unsigned int* increase_relro,
+				      bool* has_relro,
 				      off_t* poff,
 				      unsigned int* pshndx)
 {
   gold_assert(this->type_ == elfcpp::PT_LOAD);
 
+  uint64_t last_relro_pad = 0;
   off_t orig_off = *poff;
+
+  bool in_tls = false;
 
   // If we have relro sections, we need to pad forward now so that the
   // relro sections plus INCREASE_RELRO end on a common page boundary.
@@ -3827,33 +3712,58 @@ Output_segment::set_section_addresses(const Layout* layout, bool reset,
     {
       uint64_t relro_size = 0;
       off_t off = *poff;
-      for (Output_data_list::iterator p = this->output_data_.begin();
-	   p != this->output_data_.end();
-	   ++p)
+      uint64_t max_align = 0;
+      for (int i = 0; i <= static_cast<int>(ORDER_RELRO_LAST); ++i)
 	{
-	  if (!(*p)->is_section())
-	    break;
-	  Output_section* pos = (*p)->output_section();
-	  if (!pos->is_relro())
-	    break;
-	  gold_assert(!(*p)->is_section_flag_set(elfcpp::SHF_TLS));
-	  if ((*p)->is_address_valid())
-	    relro_size += (*p)->data_size();
-	  else
+	  Output_data_list* pdl = &this->output_lists_[i];
+	  Output_data_list::iterator p;
+	  for (p = pdl->begin(); p != pdl->end(); ++p)
 	    {
-	      // FIXME: This could be faster.
-	      (*p)->set_address_and_file_offset(addr + relro_size,
-						off + relro_size);
-	      relro_size += (*p)->data_size();
-	      (*p)->reset_address_and_file_offset();
+	      if (!(*p)->is_section())
+		break;
+	      uint64_t align = (*p)->addralign();
+	      if (align > max_align)
+		max_align = align;
+	      if ((*p)->is_section_flag_set(elfcpp::SHF_TLS))
+		in_tls = true;
+	      else if (in_tls)
+		{
+		  // Align the first non-TLS section to the alignment
+		  // of the TLS segment.
+		  align = max_align;
+		  in_tls = false;
+		}
+	      relro_size = align_address(relro_size, align);
+	      // Ignore the size of the .tbss section.
+	      if ((*p)->is_section_flag_set(elfcpp::SHF_TLS)
+		  && (*p)->is_section_type(elfcpp::SHT_NOBITS))
+		continue;
+	      if ((*p)->is_address_valid())
+		relro_size += (*p)->data_size();
+	      else
+		{
+		  // FIXME: This could be faster.
+		  (*p)->set_address_and_file_offset(addr + relro_size,
+						    off + relro_size);
+		  relro_size += (*p)->data_size();
+		  (*p)->reset_address_and_file_offset();
+		}
 	    }
+	  if (p != pdl->end())
+	    break;
 	}
-      relro_size += increase_relro;
+      relro_size += *increase_relro;
+      // Pad the total relro size to a multiple of the maximum
+      // section alignment seen.
+      uint64_t aligned_size = align_address(relro_size, max_align);
+      // Note the amount of padding added after the last relro section.
+      last_relro_pad = aligned_size - relro_size;
+      *has_relro = true;
 
       uint64_t page_align = parameters->target().common_pagesize();
 
       // Align to offset N such that (N + RELRO_SIZE) % PAGE_ALIGN == 0.
-      uint64_t desired_align = page_align - (relro_size % page_align);
+      uint64_t desired_align = page_align - (aligned_size % page_align);
       if (desired_align < *poff % page_align)
 	*poff += page_align - *poff % page_align;
       *poff += desired_align - *poff % page_align;
@@ -3873,20 +3783,37 @@ Output_segment::set_section_addresses(const Layout* layout, bool reset,
       this->are_addresses_set_ = true;
     }
 
-  bool in_tls = false;
+  in_tls = false;
 
   this->offset_ = orig_off;
 
-  addr = this->set_section_list_addresses(layout, reset, &this->output_data_,
-					  addr, poff, pshndx, &in_tls);
-  this->filesz_ = *poff - orig_off;
+  off_t off = 0;
+  uint64_t ret;
+  for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+    {
+      if (i == static_cast<int>(ORDER_RELRO_LAST))
+	{
+	  *poff += last_relro_pad;
+	  addr += last_relro_pad;
+	  if (this->output_lists_[i].empty())
+	    {
+	      // If there is nothing in the ORDER_RELRO_LAST list,
+	      // the padding will occur at the end of the relro
+	      // segment, and we need to add it to *INCREASE_RELRO.
+	      *increase_relro += last_relro_pad;
+	    }
+	}
+      addr = this->set_section_list_addresses(layout, reset,
+					      &this->output_lists_[i],
+					      addr, poff, pshndx, &in_tls);
+      if (i < static_cast<int>(ORDER_SMALL_BSS))
+	{
+	  this->filesz_ = *poff - orig_off;
+	  off = *poff;
+	}
 
-  off_t off = *poff;
-
-  uint64_t ret = this->set_section_list_addresses(layout, reset,
-                                                  &this->output_bss_,
-						  addr, poff, pshndx,
-                                                  &in_tls);
+      ret = addr;
+    }
 
   // If the last section was a TLS section, align upward to the
   // alignment of the TLS segment, so that the overall size of the TLS
@@ -4029,7 +3956,11 @@ Output_segment::set_offset(unsigned int increase)
 
   gold_assert(!this->are_addresses_set_);
 
-  if (this->output_data_.empty() && this->output_bss_.empty())
+  // A non-load section only uses output_lists_[0].
+
+  Output_data_list* pdl = &this->output_lists_[0];
+
+  if (pdl->empty())
     {
       gold_assert(increase == 0);
       this->vaddr_ = 0;
@@ -4042,11 +3973,32 @@ Output_segment::set_offset(unsigned int increase)
       return;
     }
 
-  const Output_data* first;
-  if (this->output_data_.empty())
-    first = this->output_bss_.front();
-  else
-    first = this->output_data_.front();
+  // Find the first and last section by address.
+  const Output_data* first = NULL;
+  const Output_data* last_data = NULL;
+  const Output_data* last_bss = NULL;
+  for (Output_data_list::const_iterator p = pdl->begin();
+       p != pdl->end();
+       ++p)
+    {
+      if (first == NULL
+	  || (*p)->address() < first->address()
+	  || ((*p)->address() == first->address()
+	      && (*p)->data_size() < first->data_size()))
+	first = *p;
+      const Output_data** plast;
+      if ((*p)->is_section()
+	  && (*p)->output_section()->type() == elfcpp::SHT_NOBITS)
+	plast = &last_bss;
+      else
+	plast = &last_data;
+      if (*plast == NULL
+	  || (*p)->address() > (*plast)->address()
+	  || ((*p)->address() == (*plast)->address()
+	      && (*p)->data_size() > (*plast)->data_size()))
+	*plast = *p;
+    }
+
   this->vaddr_ = first->address();
   this->paddr_ = (first->has_load_address()
 		  ? first->load_address()
@@ -4054,27 +4006,29 @@ Output_segment::set_offset(unsigned int increase)
   this->are_addresses_set_ = true;
   this->offset_ = first->offset();
 
-  if (this->output_data_.empty())
+  if (last_data == NULL)
     this->filesz_ = 0;
   else
-    {
-      const Output_data* last_data = this->output_data_.back();
-      this->filesz_ = (last_data->address()
-		       + last_data->data_size()
-		       - this->vaddr_);
-    }
+    this->filesz_ = (last_data->address()
+		     + last_data->data_size()
+		     - this->vaddr_);
 
-  const Output_data* last;
-  if (this->output_bss_.empty())
-    last = this->output_data_.back();
-  else
-    last = this->output_bss_.back();
+  const Output_data* last = last_bss != NULL ? last_bss : last_data;
   this->memsz_ = (last->address()
 		  + last->data_size()
 		  - this->vaddr_);
 
   this->filesz_ += increase;
   this->memsz_ += increase;
+
+  // If this is a RELRO segment, verify that the segment ends at a
+  // page boundary.
+  if (this->type_ == elfcpp::PT_GNU_RELRO)
+    {
+      uint64_t page_align = parameters->target().common_pagesize();
+      uint64_t segment_end = this->vaddr_ + this->memsz_;
+      gold_assert(segment_end == align_address(segment_end, page_align));
+    }
 
   // If this is a TLS segment, align the memory size.  The code in
   // set_section_list ensures that the section after the TLS segment
@@ -4094,34 +4048,30 @@ Output_segment::set_tls_offsets()
 {
   gold_assert(this->type_ == elfcpp::PT_TLS);
 
-  for (Output_data_list::iterator p = this->output_data_.begin();
-       p != this->output_data_.end();
-       ++p)
-    (*p)->set_tls_offset(this->vaddr_);
-
-  for (Output_data_list::iterator p = this->output_bss_.begin();
-       p != this->output_bss_.end();
+  for (Output_data_list::iterator p = this->output_lists_[0].begin();
+       p != this->output_lists_[0].end();
        ++p)
     (*p)->set_tls_offset(this->vaddr_);
 }
 
-// Return the address of the first section.
+// Return the load address of the first section.
 
 uint64_t
 Output_segment::first_section_load_address() const
 {
-  for (Output_data_list::const_iterator p = this->output_data_.begin();
-       p != this->output_data_.end();
-       ++p)
-    if ((*p)->is_section())
-      return (*p)->has_load_address() ? (*p)->load_address() : (*p)->address();
-
-  for (Output_data_list::const_iterator p = this->output_bss_.begin();
-       p != this->output_bss_.end();
-       ++p)
-    if ((*p)->is_section())
-      return (*p)->has_load_address() ? (*p)->load_address() : (*p)->address();
-
+  for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+    {
+      const Output_data_list* pdl = &this->output_lists_[i];
+      for (Output_data_list::const_iterator p = pdl->begin();
+	   p != pdl->end();
+	   ++p)
+	{
+	  if ((*p)->is_section())
+	    return ((*p)->has_load_address()
+		    ? (*p)->load_address()
+		    : (*p)->address());
+	}
+    }
   gold_unreachable();
 }
 
@@ -4130,8 +4080,10 @@ Output_segment::first_section_load_address() const
 unsigned int
 Output_segment::output_section_count() const
 {
-  return (this->output_section_count_list(&this->output_data_)
-	  + this->output_section_count_list(&this->output_bss_));
+  unsigned int ret = 0;
+  for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+    ret += this->output_section_count_list(&this->output_lists_[i]);
+  return ret;
 }
 
 // Return the number of Output_sections in an Output_data_list.
@@ -4159,18 +4111,9 @@ Output_segment::section_with_lowest_load_address() const
 {
   Output_section* found = NULL;
   uint64_t found_lma = 0;
-  this->lowest_load_address_in_list(&this->output_data_, &found, &found_lma);
-
-  Output_section* found_data = found;
-  this->lowest_load_address_in_list(&this->output_bss_, &found, &found_lma);
-  if (found != found_data && found_data != NULL)
-    {
-      gold_error(_("nobits section %s may not precede progbits section %s "
-		   "in same segment"),
-		 found->name(), found_data->name());
-      return NULL;
-    }
-
+  for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+    this->lowest_load_address_in_list(&this->output_lists_[i], &found,
+				      &found_lma);
   return found;
 }
 
@@ -4222,7 +4165,7 @@ unsigned char*
 Output_segment::write_section_headers(const Layout* layout,
 				      const Stringpool* secnamepool,
 				      unsigned char* v,
-				      unsigned int *pshndx) const
+				      unsigned int* pshndx) const
 {
   // Every section that is attached to a segment must be attached to a
   // PT_LOAD segment, so we only write out section headers for PT_LOAD
@@ -4230,12 +4173,15 @@ Output_segment::write_section_headers(const Layout* layout,
   if (this->type_ != elfcpp::PT_LOAD)
     return v;
 
-  v = this->write_section_headers_list<size, big_endian>(layout, secnamepool,
-							 &this->output_data_,
-							 v, pshndx);
-  v = this->write_section_headers_list<size, big_endian>(layout, secnamepool,
-							 &this->output_bss_,
-							 v, pshndx);
+  for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+    {
+      const Output_data_list* pdl = &this->output_lists_[i];
+      v = this->write_section_headers_list<size, big_endian>(layout,
+							     secnamepool,
+							     pdl,
+							     v, pshndx);
+    }
+
   return v;
 }
 
@@ -4272,8 +4218,8 @@ Output_segment::print_sections_to_mapfile(Mapfile* mapfile) const
 {
   if (this->type() != elfcpp::PT_LOAD)
     return;
-  this->print_section_list_to_mapfile(mapfile, &this->output_data_);
-  this->print_section_list_to_mapfile(mapfile, &this->output_bss_);
+  for (int i = 0; i < static_cast<int>(ORDER_MAX); ++i)
+    this->print_section_list_to_mapfile(mapfile, &this->output_lists_[i]);
 }
 
 // Print an output section list to the map file.

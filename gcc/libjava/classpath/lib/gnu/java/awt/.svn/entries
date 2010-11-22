@@ -1,7 +1,7 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/awt
 svn://gcc.gnu.org/svn/gcc
 
@@ -97,40 +97,6 @@ has-props
 
 2023
 
-BitwiseXORComposite.class
-file
-
-
-
-
-2009-04-24T17:47:30.000000Z
-b8e5561e1b4b13b09d1de56d156e8300
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1207
-
 BitMaskExtent.class
 file
 
@@ -165,8 +131,39 @@ has-props
 
 788
 
-peer
-dir
+BitwiseXORComposite.class
+file
+
+
+
+
+2009-04-24T17:47:30.000000Z
+b8e5561e1b4b13b09d1de56d156e8300
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1207
 
 AWTUtilities.class
 file
@@ -202,19 +199,19 @@ has-props
 
 7547
 
-print
+peer
 dir
 
-ClasspathToolkit.class
+AWTUtilities$VisibleComponentList.class
 file
 
 
 
 
 2009-04-24T17:47:30.000000Z
-4284bd952f79f23c8ab1167ae2b1aeca
-2008-06-28T13:29:13.958049Z
-137223
+4f6f6c697c9db54afc56ebbc2840a3ed
+2007-06-03T23:18:43.019099Z
+125302
 doko
 has-props
 
@@ -237,7 +234,7 @@ has-props
 
 
 
-2951
+1070
 
 ClasspathGraphicsEnvironment.class
 file
@@ -273,16 +270,16 @@ has-props
 
 602
 
-AWTUtilities$VisibleComponentList.class
+ClasspathToolkit.class
 file
 
 
 
 
 2009-04-24T17:47:30.000000Z
-4f6f6c697c9db54afc56ebbc2840a3ed
-2007-06-03T23:18:43.019099Z
-125302
+4284bd952f79f23c8ab1167ae2b1aeca
+2008-06-28T13:29:13.958049Z
+137223
 doko
 has-props
 
@@ -305,7 +302,10 @@ has-props
 
 
 
-1070
+2951
+
+print
+dir
 
 BitwiseXORComposite$GeneralContext.class
 file

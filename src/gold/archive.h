@@ -1,6 +1,6 @@
 // archive.h -- archive support for gold      -*- C++ -*-
 
-// Copyright 2006, 2007, 2008 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2010 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -42,6 +42,7 @@ class Symbol_table;
 class Object;
 class Read_symbols_data;
 class Input_file_lib;
+class Incremental_archive_entry;
 
 // An entry in the archive map of offsets to members.
 struct Archive_member
@@ -164,6 +165,16 @@ class Archive
   no_export()
   { return this->no_export_; }
 
+  // Store a pointer to the incremental link info for the archive.
+  void
+  set_incremental_info(Incremental_archive_entry* info)
+  { this->incremental_info_ = info; }
+
+  // Return the pointer to the incremental link info for the archive.
+  Incremental_archive_entry*
+  incremental_info() const
+  { return this->incremental_info_; }
+
   // When we see a symbol in an archive we might decide to include the member,
   // not include the member or be undecided. This enum represents these
   // possibilities.
@@ -176,9 +187,72 @@ class Archive
   };
 
   static Should_include
-  should_include_member(Symbol_table* symtab, const char* sym_name,
+  should_include_member(Symbol_table* symtab, Layout*, const char* sym_name,
                         Symbol** symp, std::string* why, char** tmpbufp,
                         size_t* tmpbuflen);
+
+ private:
+  struct Armap_entry;
+
+ public:
+  // Iterator class for unused global symbols.  This iterator is used
+  // for incremental links.
+
+  class Unused_symbol_iterator
+  {
+   public:
+    Unused_symbol_iterator(Archive* arch,
+                           std::vector<Armap_entry>::const_iterator it)
+      : arch_(arch), it_(it)
+    { this->skip_used_symbols(); }
+
+    const char*
+    operator*() const
+    { return this->arch_->armap_names_.data() + this->it_->name_offset; }
+
+    Unused_symbol_iterator&
+    operator++()
+    {
+      ++this->it_;
+      this->skip_used_symbols();
+      return *this;
+    }
+
+    bool
+    operator==(const Unused_symbol_iterator p) const
+    { return this->it_ == p.it_; }
+
+    bool
+    operator!=(const Unused_symbol_iterator p) const
+    { return this->it_ != p.it_; }
+
+   private:
+    // Skip over symbols defined by members that have been included.
+    void
+    skip_used_symbols()
+    {
+      while (this->it_ != this->arch_->armap_.end()
+	     && (this->arch_->seen_offsets_.find(this->it_->file_offset)
+		 != this->arch_->seen_offsets_.end()))
+	++it_;
+    }
+
+    // The underlying archive.
+    Archive* arch_;
+
+    // The underlying iterator over all entries in the archive map.
+    std::vector<Armap_entry>::const_iterator it_;
+  };
+
+  // Return an iterator referring to the first unused symbol.
+  Unused_symbol_iterator
+  unused_symbols_begin()
+  { return Unused_symbol_iterator(this, this->armap_.begin()); }
+
+  // Return an iterator referring to the end of the unused symbols.
+  Unused_symbol_iterator
+  unused_symbols_end()
+  { return Unused_symbol_iterator(this, this->armap_.end()); }
 
  private:
   Archive(const Archive&);
@@ -307,11 +381,13 @@ class Archive
   // The directory search path.
   Dirsearch* dirpath_;
   // The task reading this archive.
-  Task *task_;
+  Task* task_;
   // Number of members in this archive;
   unsigned int num_members_;
   // True if we exclude this library archive from automatic export.
   bool no_export_;
+  // The incremental link information for this archive.
+  Incremental_archive_entry* incremental_info_;
 };
 
 // This class is used to read an archive and pick out the desired
@@ -405,7 +481,7 @@ class Lib_group
   // For reading the files.
   const Input_file_lib* lib_;
   // The task reading this lib group.
-  Task *task_;
+  Task* task_;
   // Table of the objects in the group.
   std::vector<Archive_member> members_;
 };
@@ -419,7 +495,8 @@ class Add_lib_group_symbols : public Task
                         Input_objects* input_objects,
                         Lib_group* lib, Task_token* next_blocker)
       : symtab_(symtab), layout_(layout), input_objects_(input_objects),
-        lib_(lib), this_blocker_(NULL), next_blocker_(next_blocker)
+        lib_(lib), readsyms_blocker_(NULL), this_blocker_(NULL),
+        next_blocker_(next_blocker)
   { }
 
   ~Add_lib_group_symbols();
@@ -437,9 +514,10 @@ class Add_lib_group_symbols : public Task
 
   // Set the blocker to use for this task.
   void
-  set_blocker(Task_token* this_blocker)
+  set_blocker(Task_token* readsyms_blocker, Task_token* this_blocker)
   {
-    gold_assert(this->this_blocker_ == NULL);
+    gold_assert(this->readsyms_blocker_ == NULL && this->this_blocker_ == NULL);
+    this->readsyms_blocker_ = readsyms_blocker;
     this->this_blocker_ = this_blocker;
   }
 
@@ -453,7 +531,8 @@ class Add_lib_group_symbols : public Task
   Symbol_table* symtab_;
   Layout* layout_;
   Input_objects* input_objects_;
-  Lib_group * lib_;
+  Lib_group* lib_;
+  Task_token* readsyms_blocker_;
   Task_token* this_blocker_;
   Task_token* next_blocker_;
 };

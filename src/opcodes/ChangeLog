@@ -1,10 +1,336 @@
+2010-11-11  Mingming Sun  <mingm.sun@gmail.com>
+
+	* mips-dis.c (mips_arch_choices): Add loongson3a.
+	* mips-opc.c (IL3A): Defined as INSN_LOONGSON_3A.
+	(mips_builtin_opcodes): Modify some instructions' membership from
+	IL2F to IL2F|IL3A, since these instructions are supported by Loongson_3A.
+
+2010-11-10  Nick Clifton  <nickc@redhat.com>
+
+	* po/fi.po: Updated Finnish translation.
+
+2010-11-05  Tristan Gingold  <gingold@adacore.com>
+
+	* po/opcodes.pot: Regenerate
+
+2010-10-28  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Fix formatting of "ld".
+
+2010-10-28  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+
+	* s390-opc.txt: cfxr, cfdr and cfer z900 -> g5.
+
+2010-10-25  Chao-ying Fu  <fu@mips.com>
+
+	* mips-opc.c (madd, maddu, msub, msubu, mult, multu): Change D33 to D32.
+
+2010-10-25  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* tic6x-dis.c: Add attribution.
+
+2010-10-22  Alan Modra  <amodra@gmail.com>
+
+	* Makefile.am (CLEANFILES): Add stamp-lm32.  Sort.
+	* Makefile.in: Regenerate.
+
+2010-10-18  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* mips-opc.c (mips_builtin_opcodes): Move M_LD_OB and M_SD_OB
+	macros before their corresponding MIPS III hardware instructions.
+
+2010-10-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-gen.c (cpu_flag_init): Add CpuNop to CPU_GENERIC64_FLAGS.
+
+	* i386-init.h: Regenerated.
+
+2010-10-15  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-dis.c (decode_dsp32alu_0): Call imm5d() for BYTEOP2M.
+
+2010-10-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-opc.tbl: Remove CheckRegSize from movq.
+	* i386-tbl.h: Regenerated.
+
+2010-10-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-opc.tbl: Remove CheckRegSize from instructions with
+	0, 1 or fixed operands.
+	* i386-tbl.h: Regenerated.
+
+2010-10-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-gen.c (opcode_modifiers): Add CheckRegSize.
+
+	* i386-opc.h (CheckRegSize): New.
+	(i386_opcode_modifier): Add checkregsize.
+
+	* i386-opc.tbl: Add CheckRegSize to instructions which
+	require register size check.
+	* i386-tbl.h: Regenerated.
+
+2010-10-12  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* m68k-opc.c (m68k_opcodes): Move fnop before fbf.
+
+2010-10-11  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+
+	* s390-opc.c: Make the instruction masks for the load/store on
+	condition instructions to cover the condition code mask as well.
+	* s390-opc.txt: lgoc -> locg and stgoc -> stocg.
+
+2010-10-11  Jan Kratochvil  <jan.kratochvil@redhat.com>
+	    Jiang Jilin  <freephp@gmail.com>
+
+	* Makefile.am (libopcodes_a_SOURCES): New as empty.
+	* Makefile.in: Regenerate.
+
+2010-10-09  Matt Rice  <ratmice@gmail.com>
+
+	* fr30-desc.h: Regenerate.
+	* frv-desc.h: Regenerate.
+	* ip2k-desc.h: Regenerate.
+	* iq2000-desc.h: Regenerate.
+	* lm32-desc.h: Regenerate.
+	* m32c-desc.h: Regenerate.
+	* m32r-desc.h: Regenerate.
+	* mep-desc.h: Regenerate.
+	* mep-opc.c: Regenerate.
+	* mt-desc.h: Regenerate.
+	* openrisc-desc.h: Regenerate.
+	* xc16x-desc.h: Regenerate.
+	* xstormy16-desc.h: Regenerate.
+
+2010-10-08  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	Fix build with -DDEBUG=7
+	* frv-opc.c: Regenerate.
+	* or32-dis.c (DEBUG): Don't redefine.
+	(find_bytes_big, or32_extract, or32_opcode_match, or32_print_register):
+	Adapt DEBUG code to some type changes throughout.
+	* or32-opc.c (or32_extract): Likewise.
+
+2010-10-07  Bernd Schmidt  <bernds@codesourcery.com>
+
+	* tic6x-dis.c (print_insn_tic6x): Correct decoding of fstg field
+	in SPKERNEL instructions.
+
+2010-10-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/12076
+	* i386-dis.c (RMAL): Remove duplicate.
+
+2010-09-30  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* s390-mkopc.c (main): Exit with error 1 if sscanf fails
+	to parse all 6 parameters.
+
+2010-09-28  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* s390-mkopc.c (main): Change description array size to 80.
+	Add maximum length of 79 to description parsing.
+
+2010-09-27  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure: Regenerate.
+
+2010-09-27  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+
+	* s390-mkopc.c (enum s390_opcde_cpu_val): Add S390_OPCODE_Z196.
+	(main): Recognize the new CPU string.
+	* s390-opc.c: Add new instruction formats and masks.
+	* s390-opc.txt: Add new z196 instructions.
+
+2010-09-27  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+
+	* s390-dis.c (print_insn_s390): Pick instruction with most
+	specific mask.
+	* s390-opc.c: Add unused bits to the insn mask.
+	* s390-opc.txt: Reorder some instructions to prefer more recent
+	versions.
+
+2010-09-27  Tejas Belagod  <tejas.belagod@arm.com>
+
+	* arm_dis.c (print_insn_coprocessor): Apply off-by-alignment
+	correction to unaligned PCs while printing comment.
+
+2010-09-23  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* arm-dis.c (arm_opcodes): Add Virtualiztion Extensions support.
+	(thumb32_opcodes): Likewise.
+	(banked_regname): New function.
+	(print_insn_arm): Add Virtualization Extensions support.
+	(print_insn_thumb32): Likewise.
+
+2010-09-23  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* arm-dis.c (arm_opcodes): Support disassembly of UDIV and SDIV in
+	ARM state.
+
+2010-09-23  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* arm-dis.c (arm_opcodes): SMC implies Security Extensions.
+	(thumb32_opcodes): Likewise.
+
+2010-09-23  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* arm-dis.c (arm_opcodes): Add support for pldw.
+	(thumb32_opcodes): Likewise.
+
+2010-09-22  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-dis.c (fmtconst): Cast address to 32bits.
+
+2010-09-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-dis.c (decode_REGMV_0): Rewrite valid combo checks.
+
+2010-09-22  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-dis.c (decode_ProgCtrl_0): Check for parallel insns.
+	Reject P6/P7 to TESTSET.
+	(decode_PushPopReg_0): Check for parallel insns.  Reject pushing
+	SP onto the stack.
+	(decode_PushPopMultiple_0): Check for parallel insns.  Make sure
+	P/D fields match all the time.
+	(decode_CCflag_0): Check for parallel insns.  Verify x/y fields
+	are 0 for accumulator compares.
+	(decode_CC2stat_0): Check for parallel insns.  Reject CC<op>CC.
+	(decode_CaCTRL_0, decode_ccMV_0, decode_CC2dreg_0, decode_BRCC_0,
+	decode_UJUMP_0, decode_LOGI2op_0, decode_COMPI2opD_0,
+	decode_COMPI2opP_0, decode_LoopSetup_0, decode_LDIMMhalf_0,
+	decode_CALLa_0, decode_linkage_0, decode_pseudoDEBUG_0,
+	decode_pseudoOChar_0, decode_pseudodbg_assert_0): Check for parallel
+	insns.
+	(decode_dagMODim_0): Verify br field for IREG ops.
+	(decode_LDST_0): Reject preg load into same preg.
+	(_print_insn_bfin): Handle returns for ILLEGAL decodes.
+	(print_insn_bfin): Likewise.
+
+2010-09-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-dis.c (decode_PushPopMultiple_0): Return 0 when pr > 5.
+
+2010-09-22  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-dis.c (decode_dsp32shiftimm_0): Add missing "S" flag.
+
+2010-09-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-dis.c (decode_CC2stat_0): Decode all ASTAT bits.
+
+2010-09-22  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-dis.c (IS_DREG, IS_PREG, IS_GENREG, IS_DAGREG): Reject
+	register values greater than 8.
+	(IS_RESERVEDREG, allreg, mostreg): New helpers.
+	(decode_ProgCtrl_0): Call IS_DREG/IS_PREG as appropriate.
+	(decode_PushPopReg_0): Call mostreg/allreg as appropriate.
+	(decode_CC2dreg_0): Check valid CC register number.
+
+2010-09-22  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-dis.c (decode_pseudoDEBUG_0): Add space after DBG.
+
+2010-09-22  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-dis.c (machine_registers): Add AC0_COPY, V_COPY, and RND_MOD.
+	(reg_names): Likewise.
+	(decode_statbits): Likewise; while reformatting to make manageable.
+
+2010-09-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-dis.c (decode_pseudoDEBUG_0): Add space after OUTC.
+	(decode_pseudoOChar_0): New function.
+	(_print_insn_bfin): Remove #if 0 and call new decode_pseudoOChar_0.
+
+2010-09-22  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-dis.c (decode_dsp32shift_0): Decode sub opcodes 2/2 as
+	LSHIFT instead of SHIFT.
+
+2010-09-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-dis.c (constant_formats): Constify the whole structure.
+	(fmtconst): Add const to return value.
+	(reg_names): Mark const.
+	(decode_multfunc): Mark s0/s1 as const.
+	(decode_macfunc): Mark a/sop as const.
+
+2010-09-17  Tejas Belagod  <tejas.belagod@arm.com>
+
+	* arm_dis.c (coprocessor_opcodes): Add MRC entry for APSR_nzcv.
+
+2010-09-14  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* mips-opc.c (mips_builtin_opcodes): Add "sync_acquire",
+	"sync_mb", "sync_release", "sync_rmb" and "sync_wmb".
+
+2010-09-10  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* src/opcodes/dlx-dis.c (print_insn_dlx): Use dlx_insn type for
+	dlx_insn_type array.
+
+2010-08-31  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/11960
+	* i386-dis.c (sIv): New.
+	(dis386): Replace Iq with sIv on "pushT".
+	(reg_table): Replace T with {T|} on callT, JcallT, jmpT and JjmpT.
+	(x86_64_table): Replace {T|}/{P|} with P.
+	(putop): Add 'w' to 'T'/'P' if needed for Intel syntax.
+	(OP_sI): Update v_mode.  Remove w_mode.
+
+2010-08-27  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* ppc-opc.c (powerpc_opcodes) [lswx,lswi,stswx,stswi]: Deprecate
+	on E500 and E500MC.
+
+2010-08-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-dis.c (reg_table): Replace Eb with Mb on prefetch and
+	prefetchw.
+
+2010-08-06  Quentin Neill <quentin.neill@amd.com>
+
+	* i386-gen.c (cpu_flag_init): Define CpuNop extension flag, add
+	to processor flags for PENTIUMPRO processors and later.
+	* i386-opc.h (enum): Add CpuNop.
+	(i386_cpu_flags): Add cpunop bit.
+	* i386-opc.tbl: Change nop cpu_flags.
+	* i386-init.h: Regenerated.
+	* i386-tbl.h: Likewise.
+
+2010-08-06  Quentin Neill <quentin.neill@amd.com>
+
+	* i386-opc.h (enum): Fix typos in comments.
+
+2010-08-06  Alan Modra  <amodra@gmail.com>
+
+	* disassemble.c: Formatting.
+	(disassemble_init_for_target <ARCH_m32c>): Comment on endian.
+
+2010-08-05  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-opc.tbl: Add Cpu186 to ud1/ud2/ud2a/ud2b.
+	* i386-tbl.h: Regenerated.
+
+2010-08-05  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-dis.c (dis386_twobyte): Replace ud2a/ud2b with ud2/ud1.
+
+	* i386-opc.tbl: Add ud1.  Remove Cpu686 from ud2/ud2a/ud2b.
+	* i386-tbl.h: Regenerated.
+
 2010-07-29  DJ Delorie  <dj@redhat.com>
 
 	* rx-decode.opc (SRR): New.
 	(rx_decode_opcode): Use it for movbi and movbir.  Decode NOP2 (mov
 	r0,r0) and NOP3 (max r0,r0) special cases.
 	* rx-decode.c: Regenerate.
-	
+
 2010-07-28  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* i386-dis.c: Add 0F to VEX opcode enums.

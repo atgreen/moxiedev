@@ -19,6 +19,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +68,11 @@ init_regs (void)
 {
   memset (&regs, 0, sizeof (regs));
   memset (&oldregs, 0, sizeof (oldregs));
+
+#ifdef CYCLE_ACCURATE
+  regs.rt = -1;
+  oldregs.rt = -1;
+#endif
 }
 
 static unsigned int
@@ -377,7 +383,7 @@ set_flags (int mask, int newbits)
 void
 set_oszc (long long value, int b, int c)
 {
-  int mask = b2mask[b];
+  unsigned int mask = b2mask[b];
   int f = 0;
 
   if (c)
@@ -394,7 +400,7 @@ set_oszc (long long value, int b, int c)
 void
 set_szc (long long value, int b, int c)
 {
-  int mask = b2mask[b];
+  unsigned int mask = b2mask[b];
   int f = 0;
 
   if (c)
@@ -409,7 +415,7 @@ set_szc (long long value, int b, int c)
 void
 set_osz (long long value, int b)
 {
-  int mask = b2mask[b];
+  unsigned int mask = b2mask[b];
   int f = 0;
 
   if ((value & mask) == 0)
@@ -424,7 +430,7 @@ set_osz (long long value, int b)
 void
 set_sz (long long value, int b)
 {
-  int mask = b2mask[b];
+  unsigned int mask = b2mask[b];
   int f = 0;
 
   if ((value & mask) == 0)

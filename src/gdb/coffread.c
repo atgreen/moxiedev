@@ -131,7 +131,7 @@ struct coff_symbol
     char *c_name;
     int c_symnum;		/* symbol number of this entry */
     int c_naux;			/* 0 if syment only, 1 if syment + auxent, etc */
-    long c_value;
+    CORE_ADDR c_value;
     int c_sclass;
     int c_secnum;
     unsigned int c_type;
@@ -1512,7 +1512,7 @@ process_coff_symbol (struct coff_symbol *cs,
   memset (sym, 0, sizeof (struct symbol));
   name = cs->c_name;
   name = EXTERNAL_NAME (name, objfile->obfd);
-  SYMBOL_LANGUAGE (sym) = current_subfile->language;
+  SYMBOL_SET_LANGUAGE (sym, current_subfile->language);
   SYMBOL_SET_NAMES (sym, name, strlen (name), 1, objfile);
 
   /* default assumptions */
@@ -2126,7 +2126,7 @@ coff_read_enum_type (int index, int length, int lastsym,
 
 /* Register our ability to parse symbols for coff BFD files. */
 
-static struct sym_fns coff_sym_fns =
+static const struct sym_fns coff_sym_fns =
 {
   bfd_target_coff_flavour,
   coff_new_init,		/* sym_new_init: init anything gbl to entire symtab */
@@ -2138,8 +2138,7 @@ static struct sym_fns coff_sym_fns =
 				   a file.  */
   NULL,                         /* sym_read_linetable  */
   default_symfile_relocate,	/* sym_relocate: Relocate a debug section.  */
-  &psym_functions,
-  NULL				/* next: pointer to next struct sym_fns */
+  &psym_functions
 };
 
 void

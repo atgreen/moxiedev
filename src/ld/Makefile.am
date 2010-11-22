@@ -21,6 +21,19 @@ WARN_CFLAGS = @WARN_CFLAGS@
 NO_WERROR = @NO_WERROR@
 AM_CFLAGS = $(WARN_CFLAGS)
 
+# Conditionally enable the plugin interface.
+if ENABLE_PLUGINS
+PLUGIN_C = plugin.c
+PLUGIN_H = plugin.h
+PLUGIN_OBJECT = plugin.@OBJEXT@
+PLUGIN_CFLAGS = -DENABLE_PLUGINS
+else
+PLUGIN_C =
+PLUGIN_H =
+PLUGIN_OBJECT =
+PLUGIN_CFLAGS =
+endif
+
 # We put the scripts in the directory $(scriptdir)/ldscripts.
 # We can't put the scripts in $(datadir) because the SEARCH_DIR
 # directives need to be different for native and cross linkers.
@@ -108,345 +121,349 @@ TEXI2DVI = texi2dvi -I $(srcdir) -I $(BFDDIR)/doc -I ../bfd/doc \
 		    -I $(top_srcdir)/../libiberty
 
 AM_CPPFLAGS = -I. -I$(srcdir) -I../bfd -I$(BFDDIR) -I$(INCDIR) \
-	@INCINTL@ $(HDEFINES) $(CFLAGS) \
+	@INCINTL@ $(HDEFINES) $(CFLAGS) $(PLUGIN_CFLAGS) \
 	-DLOCALEDIR="\"$(datadir)/locale\""
 
 BFDLIB = ../bfd/libbfd.la
 LIBIBERTY = ../libiberty/libiberty.a
 
-ALL_EMULATIONS = \
-	eaixppc.@OBJEXT@ \
-	eaixrs6.@OBJEXT@ \
-	ealpha.@OBJEXT@ \
-	ealphavms.@OBJEXT@ \
-	earcelf.@OBJEXT@ \
-	earm_epoc_pe.@OBJEXT@ \
-	earm_wince_pe.@OBJEXT@ \
-	earmaoutb.@OBJEXT@ \
-	earmaoutl.@OBJEXT@ \
-	earmcoff.@OBJEXT@ \
-	earmelf.@OBJEXT@ \
-	earmelfb.@OBJEXT@ \
-	earmelf_fbsd.@OBJEXT@ \
-	earmelf_linux.@OBJEXT@ \
-	earmelf_linux_eabi.@OBJEXT@ \
-	earmelfb_linux.@OBJEXT@ \
-	earmelfb_linux_eabi.@OBJEXT@ \
-	earmelf_nbsd.@OBJEXT@ \
-	earmelfb_nbsd.@OBJEXT@ \
-	earmelf_vxworks.@OBJEXT@ \
-	earmnto.@OBJEXT@ \
-	earmnbsd.@OBJEXT@ \
-	earmpe.@OBJEXT@ \
-	earmsymbian.@OBJEXT@ \
-	eavr2.@OBJEXT@ \
-	eavr1.@OBJEXT@ \
-	eavr25.@OBJEXT@ \
-	eavr3.@OBJEXT@ \
-	eavr31.@OBJEXT@ \
-	eavr35.@OBJEXT@ \
-	eavr4.@OBJEXT@ \
-	eavr5.@OBJEXT@ \
-	eavr51.@OBJEXT@ \
-	eavr6.@OBJEXT@ \
-	ecoff_i860.@OBJEXT@ \
-	ecoff_sparc.@OBJEXT@ \
-	eelf32_spu.@OBJEXT@ \
-	ecrisaout.@OBJEXT@ \
-	ecriself.@OBJEXT@ \
-	ecrislinux.@OBJEXT@ \
-	ed10velf.@OBJEXT@ \
-	ed30v_e.@OBJEXT@ \
-	ed30v_o.@OBJEXT@ \
-	ed30velf.@OBJEXT@ \
-	edelta68.@OBJEXT@ \
-	eelf32_dlx.@OBJEXT@ \
-	eelf32_i960.@OBJEXT@ \
-	eelf32_i860.@OBJEXT@ \
-	eelf32_sparc.@OBJEXT@ \
-	eelf32_sparc_sol2.@OBJEXT@ \
-	eelf32_sparc_vxworks.@OBJEXT@ \
-	eelf32_tic6x_be.@OBJEXT@ \
-	eelf32_tic6x_le.@OBJEXT@ \
-	eelf32b4300.@OBJEXT@ \
-	eelf32bfin.@OBJEXT@ \
-	eelf32bfinfd.@OBJEXT@ \
-	eelf32cr16.@OBJEXT@ \
-	eelf32cr16c.@OBJEXT@ \
-	eelf32bmip.@OBJEXT@ \
-	eelf32bmipn32.@OBJEXT@ \
-	eelf32btsmip.@OBJEXT@ \
-	eelf32crx.@OBJEXT@ \
-	eelf32btsmipn32.@OBJEXT@ \
-	eelf32ltsmip.@OBJEXT@ \
-	eelf32ltsmipn32.@OBJEXT@ \
-	eelf32ebmip.@OBJEXT@ \
-	eelf32ebmipvxworks.@OBJEXT@ \
-	eelf32elmip.@OBJEXT@ \
-	eelf32elmipvxworks.@OBJEXT@ \
-	eelf32fr30.@OBJEXT@ \
-	eelf32frv.@OBJEXT@ \
-	eelf32moxie.@OBJEXT@ \
-	eelf32i370.@OBJEXT@ \
-	eelf32ip2k.@OBJEXT@ \
-	eelf32iq2000.@OBJEXT@ \
-	eelf32iq10.@OBJEXT@ \
-	eelf32lm32.@OBJEXT@ \
-	eelf32lm32fd.@OBJEXT@ \
-	eelf32l4300.@OBJEXT@ \
-	eelf32lmip.@OBJEXT@ \
-	eelf32lppc.@OBJEXT@ \
-	eelf32lppcnto.@OBJEXT@ \
-	eelf32lppcsim.@OBJEXT@ \
-	eelf32m32c.@OBJEXT@ \
-	eelf32mcore.@OBJEXT@ \
-	eelf32mep.@OBJEXT@ \
-	eelf32mb_linux.@OBJEXT@ \
-	eelf32microblaze.@OBJEXT@ \
-	eelf32mipswindiss.@OBJEXT@ \
-	eelf32mt.@OBJEXT@ \
-	eelf32openrisc.@OBJEXT@ \
-	eelf32ppc.@OBJEXT@ \
-	eelf32ppc_fbsd.@OBJEXT@ \
-	eelf32ppclinux.@OBJEXT@ \
-	eelf32ppcnto.@OBJEXT@ \
-	eelf32ppcsim.@OBJEXT@ \
-	eelf32ppcwindiss.@OBJEXT@ \
-	eelf32ppcvxworks.@OBJEXT@ \
-	eelf32rx.@OBJEXT@ \
-	eelf32vax.@OBJEXT@ \
-        eelf32xc16x.@OBJEXT@ \
-        eelf32xc16xl.@OBJEXT@ \
-        eelf32xc16xs.@OBJEXT@ \
-	eelf32xstormy16.@OBJEXT@ \
-	eelf32xtensa.@OBJEXT@ \
-	eelf_i386.@OBJEXT@ \
-	eelf_i386_be.@OBJEXT@ \
-	eelf_i386_chaos.@OBJEXT@ \
-	eelf_i386_fbsd.@OBJEXT@ \
-	eelf_i386_ldso.@OBJEXT@ \
-	eelf_i386_sol2.@OBJEXT@ \
-	eelf_i386_vxworks.@OBJEXT@ \
-	eelf_s390.@OBJEXT@ \
-	egld960.@OBJEXT@ \
-	egld960coff.@OBJEXT@ \
-	eh8300.@OBJEXT@ \
-	eh8300h.@OBJEXT@ \
-	eh8300s.@OBJEXT@ \
-	eh8300elf.@OBJEXT@ \
-	eh8300hn.@OBJEXT@ \
-	eh8300sn.@OBJEXT@ \
-	eh8300sx.@OBJEXT@ \
-	eh8300helf.@OBJEXT@ \
-	eh8300self.@OBJEXT@ \
-	eh8300hnelf.@OBJEXT@ \
-	eh8300snelf.@OBJEXT@ \
-	eh8300sxelf.@OBJEXT@ \
-	eh8300sxn.@OBJEXT@ \
-	eh8300sxnelf.@OBJEXT@ \
-	eh8500.@OBJEXT@ \
-	eh8500b.@OBJEXT@ \
-	eh8500c.@OBJEXT@ \
-	eh8500m.@OBJEXT@ \
-	eh8500s.@OBJEXT@ \
-	ehp300bsd.@OBJEXT@ \
-	ehp3hpux.@OBJEXT@ \
-	ehppaelf.@OBJEXT@ \
-	ehppalinux.@OBJEXT@ \
-	ehppanbsd.@OBJEXT@ \
-	ehppaobsd.@OBJEXT@ \
-	ei386aout.@OBJEXT@ \
-	ei386beos.@OBJEXT@ \
-	ei386bsd.@OBJEXT@ \
-	ei386coff.@OBJEXT@ \
-	ei386go32.@OBJEXT@ \
-	ei386linux.@OBJEXT@ \
-	ei386lynx.@OBJEXT@ \
-	ei386mach.@OBJEXT@ \
-	ei386moss.@OBJEXT@ \
-	ei386msdos.@OBJEXT@ \
-	ei386nbsd.@OBJEXT@ \
-	ei386nto.@OBJEXT@ \
-	ei386nw.@OBJEXT@ \
-	ei386pe.@OBJEXT@ \
-	ei386pe_posix.@OBJEXT@ \
-	ei386pep.@OBJEXT@ \
-	elnk960.@OBJEXT@ \
-	em32relf.@OBJEXT@ \
-	em32rlelf.@OBJEXT@ \
-	em32relf_linux.@OBJEXT@ \
-	em32rlelf_linux.@OBJEXT@ \
-	em68hc11elf.@OBJEXT@ \
-	em68hc11elfb.@OBJEXT@ \
-	em68hc12elf.@OBJEXT@ \
-	em68hc12elfb.@OBJEXT@ \
-	em68k4knbsd.@OBJEXT@ \
-	em68kaout.@OBJEXT@ \
-	em68kaux.@OBJEXT@ \
-	em68kcoff.@OBJEXT@ \
-	em68kelf.@OBJEXT@ \
-	em68kelfnbsd.@OBJEXT@ \
-	em68klinux.@OBJEXT@ \
-	em68knbsd.@OBJEXT@ \
-	em68kpsos.@OBJEXT@ \
-	em88kbcs.@OBJEXT@ \
-	emcorepe.@OBJEXT@ \
-	emipsbig.@OBJEXT@ \
-	emipsbsd.@OBJEXT@ \
-	emipsidt.@OBJEXT@ \
-	emipsidtl.@OBJEXT@ \
-	emipslit.@OBJEXT@ \
-	emipslnews.@OBJEXT@ \
-	emipspe.@OBJEXT@ \
-	emsp430x110.@OBJEXT@ \
-	emsp430x112.@OBJEXT@ \
-	emsp430x1101.@OBJEXT@ \
-	emsp430x1111.@OBJEXT@ \
-	emsp430x1121.@OBJEXT@ \
-	emsp430x1122.@OBJEXT@ \
-	emsp430x1132.@OBJEXT@ \
-	emsp430x122.@OBJEXT@ \
-	emsp430x123.@OBJEXT@ \
-	emsp430x1222.@OBJEXT@ \
-	emsp430x1232.@OBJEXT@ \
-	emsp430x133.@OBJEXT@ \
-	emsp430x135.@OBJEXT@ \
-	emsp430x1331.@OBJEXT@ \
-	emsp430x1351.@OBJEXT@ \
-	emsp430x147.@OBJEXT@ \
-	emsp430x148.@OBJEXT@ \
-	emsp430x149.@OBJEXT@ \
-	emsp430x155.@OBJEXT@ \
-	emsp430x156.@OBJEXT@ \
-	emsp430x157.@OBJEXT@ \
-	emsp430x167.@OBJEXT@ \
-	emsp430x168.@OBJEXT@ \
-	emsp430x169.@OBJEXT@ \
-	emsp430x1610.@OBJEXT@ \
-	emsp430x1611.@OBJEXT@ \
-	emsp430x1612.@OBJEXT@ \
-	emsp430x2101.@OBJEXT@ \
-	emsp430x2111.@OBJEXT@ \
-	emsp430x2121.@OBJEXT@ \
-	emsp430x2131.@OBJEXT@ \
-	emsp430x311.@OBJEXT@ \
-	emsp430x312.@OBJEXT@ \
-	emsp430x313.@OBJEXT@ \
-	emsp430x314.@OBJEXT@ \
-	emsp430x315.@OBJEXT@ \
-	emsp430x323.@OBJEXT@ \
-	emsp430x325.@OBJEXT@ \
-	emsp430x336.@OBJEXT@ \
-	emsp430x337.@OBJEXT@ \
-	emsp430x412.@OBJEXT@ \
-	emsp430x413.@OBJEXT@ \
-	emsp430x415.@OBJEXT@ \
-	emsp430x417.@OBJEXT@ \
-	emsp430xE423.@OBJEXT@ \
-	emsp430xE425.@OBJEXT@ \
-	emsp430xE427.@OBJEXT@ \
-	emsp430xW423.@OBJEXT@ \
-	emsp430xW425.@OBJEXT@ \
-	emsp430xW427.@OBJEXT@ \
-	emsp430xG437.@OBJEXT@ \
-	emsp430xG438.@OBJEXT@ \
-	emsp430xG439.@OBJEXT@ \
-	emsp430x435.@OBJEXT@ \
-	emsp430x436.@OBJEXT@ \
-	emsp430x437.@OBJEXT@ \
-	emsp430x447.@OBJEXT@ \
-	emsp430x448.@OBJEXT@ \
-	emsp430x449.@OBJEXT@ \
-	enews.@OBJEXT@ \
-	ens32knbsd.@OBJEXT@ \
-	eor32.@OBJEXT@ \
-	eor32elf.@OBJEXT@ \
-	epc532macha.@OBJEXT@ \
-	epdp11.@OBJEXT@ \
-	epjelf.@OBJEXT@ \
-	epjlelf.@OBJEXT@ \
-	eppcmacos.@OBJEXT@ \
-	eppcnw.@OBJEXT@ \
-	eppcpe.@OBJEXT@ \
-	eppclynx.@OBJEXT@ \
-	eriscix.@OBJEXT@ \
-	escore3_elf.@OBJEXT@ \
-	escore7_elf.@OBJEXT@ \
-	esh.@OBJEXT@ \
-	eshelf32.@OBJEXT@ \
-	eshlelf32.@OBJEXT@ \
-	eshelf32_linux.@OBJEXT@ \
-	eshlelf32_linux.@OBJEXT@ \
-	eshelf32_nbsd.@OBJEXT@ \
-	eshlelf32_nbsd.@OBJEXT@ \
-	eshelf.@OBJEXT@ \
-	eshelf_fd.@OBJEXT@ \
-	eshlelf_fd.@OBJEXT@ \
-	eshelf_linux.@OBJEXT@ \
-	eshlelf_linux.@OBJEXT@ \
-	eshelf_nbsd.@OBJEXT@ \
-	eshlelf_nbsd.@OBJEXT@ \
-	eshelf_nto.@OBJEXT@ \
-	eshlelf_nto.@OBJEXT@ \
-	eshelf_uclinux.@OBJEXT@ \
-	eshelf_vxworks.@OBJEXT@ \
-	eshlelf_vxworks.@OBJEXT@ \
-	eshl.@OBJEXT@ \
-	eshlelf.@OBJEXT@ \
-	eshlsymbian.@OBJEXT@ \
-	eshpe.@OBJEXT@ \
-	esparcaout.@OBJEXT@ \
-	esparclinux.@OBJEXT@ \
-	esparcnbsd.@OBJEXT@ \
-	est2000.@OBJEXT@ \
-	esun3.@OBJEXT@ \
-	esun4.@OBJEXT@ \
-	etic30aout.@OBJEXT@ \
-	etic30coff.@OBJEXT@ \
-	etic3xcoff.@OBJEXT@ \
-	etic3xcoff_onchip.@OBJEXT@ \
-	etic4xcoff.@OBJEXT@ \
-	etic54xcoff.@OBJEXT@ \
-	etic80coff.@OBJEXT@ \
-	evanilla.@OBJEXT@ \
-	evax.@OBJEXT@ \
-	evaxnbsd.@OBJEXT@ \
-	evsta.@OBJEXT@ \
-	ew65.@OBJEXT@ \
-	ez8001.@OBJEXT@ \
-	eelf32frvfd.@OBJEXT@ \
-	ez80.@OBJEXT@ \
-	ez8002.@OBJEXT@
+ALL_EMULATION_SOURCES = \
+	eaixppc.c \
+	eaixrs6.c \
+	ealpha.c \
+	ealphavms.c \
+	earcelf.c \
+	earm_epoc_pe.c \
+	earm_wince_pe.c \
+	earmaoutb.c \
+	earmaoutl.c \
+	earmcoff.c \
+	earmelf.c \
+	earmelfb.c \
+	earmelf_fbsd.c \
+	earmelf_linux.c \
+	earmelf_linux_eabi.c \
+	earmelfb_linux.c \
+	earmelfb_linux_eabi.c \
+	earmelf_nbsd.c \
+	earmelfb_nbsd.c \
+	earmelf_vxworks.c \
+	earmnto.c \
+	earmnbsd.c \
+	earmpe.c \
+	earmsymbian.c \
+	eavr2.c \
+	eavr1.c \
+	eavr25.c \
+	eavr3.c \
+	eavr31.c \
+	eavr35.c \
+	eavr4.c \
+	eavr5.c \
+	eavr51.c \
+	eavr6.c \
+	ecoff_i860.c \
+	ecoff_sparc.c \
+	eelf32_spu.c \
+	ecrisaout.c \
+	ecriself.c \
+	ecrislinux.c \
+	ed10velf.c \
+	ed30v_e.c \
+	ed30v_o.c \
+	ed30velf.c \
+	edelta68.c \
+	eelf32_dlx.c \
+	eelf32_i960.c \
+	eelf32_i860.c \
+	eelf32_sparc.c \
+	eelf32_sparc_sol2.c \
+	eelf32_sparc_vxworks.c \
+	eelf32_tic6x_be.c \
+	eelf32_tic6x_le.c \
+	eelf32b4300.c \
+	eelf32bfin.c \
+	eelf32bfinfd.c \
+	eelf32cr16.c \
+	eelf32cr16c.c \
+	eelf32bmip.c \
+	eelf32bmipn32.c \
+	eelf32btsmip.c \
+	eelf32crx.c \
+	eelf32btsmipn32.c \
+	eelf32ltsmip.c \
+	eelf32ltsmipn32.c \
+	eelf32ebmip.c \
+	eelf32ebmipvxworks.c \
+	eelf32elmip.c \
+	eelf32elmipvxworks.c \
+	eelf32fr30.c \
+	eelf32frv.c \
+	eelf32moxie.c \
+	eelf32i370.c \
+	eelf32ip2k.c \
+	eelf32iq2000.c \
+	eelf32iq10.c \
+	eelf32lm32.c \
+	eelf32lm32fd.c \
+	eelf32l4300.c \
+	eelf32lmip.c \
+	eelf32lppc.c \
+	eelf32lppcnto.c \
+	eelf32lppcsim.c \
+	eelf32m32c.c \
+	eelf32mcore.c \
+	eelf32mep.c \
+	eelf32mb_linux.c \
+	eelf32microblaze.c \
+	eelf32mipswindiss.c \
+	eelf32mt.c \
+	eelf32openrisc.c \
+	eelf32ppc.c \
+	eelf32ppc_fbsd.c \
+	eelf32ppclinux.c \
+	eelf32ppcnto.c \
+	eelf32ppcsim.c \
+	eelf32ppcwindiss.c \
+	eelf32ppcvxworks.c \
+	eelf32rx.c \
+	eelf32vax.c \
+        eelf32xc16x.c \
+        eelf32xc16xl.c \
+        eelf32xc16xs.c \
+	eelf32xstormy16.c \
+	eelf32xtensa.c \
+	eelf_i386.c \
+	eelf_i386_be.c \
+	eelf_i386_chaos.c \
+	eelf_i386_fbsd.c \
+	eelf_i386_ldso.c \
+	eelf_i386_sol2.c \
+	eelf_i386_vxworks.c \
+	eelf_s390.c \
+	egld960.c \
+	egld960coff.c \
+	eh8300.c \
+	eh8300h.c \
+	eh8300s.c \
+	eh8300elf.c \
+	eh8300hn.c \
+	eh8300sn.c \
+	eh8300sx.c \
+	eh8300helf.c \
+	eh8300self.c \
+	eh8300hnelf.c \
+	eh8300snelf.c \
+	eh8300sxelf.c \
+	eh8300sxn.c \
+	eh8300sxnelf.c \
+	eh8500.c \
+	eh8500b.c \
+	eh8500c.c \
+	eh8500m.c \
+	eh8500s.c \
+	ehp300bsd.c \
+	ehp3hpux.c \
+	ehppaelf.c \
+	ehppalinux.c \
+	ehppanbsd.c \
+	ehppaobsd.c \
+	ei386aout.c \
+	ei386beos.c \
+	ei386bsd.c \
+	ei386coff.c \
+	ei386go32.c \
+	ei386linux.c \
+	ei386lynx.c \
+	ei386mach.c \
+	ei386moss.c \
+	ei386msdos.c \
+	ei386nbsd.c \
+	ei386nto.c \
+	ei386nw.c \
+	ei386pe.c \
+	ei386pe_posix.c \
+	ei386pep.c \
+	elnk960.c \
+	em32relf.c \
+	em32rlelf.c \
+	em32relf_linux.c \
+	em32rlelf_linux.c \
+	em68hc11elf.c \
+	em68hc11elfb.c \
+	em68hc12elf.c \
+	em68hc12elfb.c \
+	em68k4knbsd.c \
+	em68kaout.c \
+	em68kaux.c \
+	em68kcoff.c \
+	em68kelf.c \
+	em68kelfnbsd.c \
+	em68klinux.c \
+	em68knbsd.c \
+	em68kpsos.c \
+	em88kbcs.c \
+	emcorepe.c \
+	emipsbig.c \
+	emipsbsd.c \
+	emipsidt.c \
+	emipsidtl.c \
+	emipslit.c \
+	emipslnews.c \
+	emipspe.c \
+	emsp430x110.c \
+	emsp430x112.c \
+	emsp430x1101.c \
+	emsp430x1111.c \
+	emsp430x1121.c \
+	emsp430x1122.c \
+	emsp430x1132.c \
+	emsp430x122.c \
+	emsp430x123.c \
+	emsp430x1222.c \
+	emsp430x1232.c \
+	emsp430x133.c \
+	emsp430x135.c \
+	emsp430x1331.c \
+	emsp430x1351.c \
+	emsp430x147.c \
+	emsp430x148.c \
+	emsp430x149.c \
+	emsp430x155.c \
+	emsp430x156.c \
+	emsp430x157.c \
+	emsp430x167.c \
+	emsp430x168.c \
+	emsp430x169.c \
+	emsp430x1610.c \
+	emsp430x1611.c \
+	emsp430x1612.c \
+	emsp430x2101.c \
+	emsp430x2111.c \
+	emsp430x2121.c \
+	emsp430x2131.c \
+	emsp430x311.c \
+	emsp430x312.c \
+	emsp430x313.c \
+	emsp430x314.c \
+	emsp430x315.c \
+	emsp430x323.c \
+	emsp430x325.c \
+	emsp430x336.c \
+	emsp430x337.c \
+	emsp430x412.c \
+	emsp430x413.c \
+	emsp430x415.c \
+	emsp430x417.c \
+	emsp430xE423.c \
+	emsp430xE425.c \
+	emsp430xE427.c \
+	emsp430xW423.c \
+	emsp430xW425.c \
+	emsp430xW427.c \
+	emsp430xG437.c \
+	emsp430xG438.c \
+	emsp430xG439.c \
+	emsp430x435.c \
+	emsp430x436.c \
+	emsp430x437.c \
+	emsp430x447.c \
+	emsp430x448.c \
+	emsp430x449.c \
+	enews.c \
+	ens32knbsd.c \
+	eor32.c \
+	eor32elf.c \
+	epc532macha.c \
+	epdp11.c \
+	epjelf.c \
+	epjlelf.c \
+	eppcmacos.c \
+	eppcnw.c \
+	eppcpe.c \
+	eppclynx.c \
+	eriscix.c \
+	escore3_elf.c \
+	escore7_elf.c \
+	esh.c \
+	eshelf32.c \
+	eshlelf32.c \
+	eshelf32_linux.c \
+	eshlelf32_linux.c \
+	eshelf32_nbsd.c \
+	eshlelf32_nbsd.c \
+	eshelf.c \
+	eshelf_fd.c \
+	eshlelf_fd.c \
+	eshelf_linux.c \
+	eshlelf_linux.c \
+	eshelf_nbsd.c \
+	eshlelf_nbsd.c \
+	eshelf_nto.c \
+	eshlelf_nto.c \
+	eshelf_uclinux.c \
+	eshelf_vxworks.c \
+	eshlelf_vxworks.c \
+	eshl.c \
+	eshlelf.c \
+	eshlsymbian.c \
+	eshpe.c \
+	esparcaout.c \
+	esparclinux.c \
+	esparcnbsd.c \
+	est2000.c \
+	esun3.c \
+	esun4.c \
+	etic30aout.c \
+	etic30coff.c \
+	etic3xcoff.c \
+	etic3xcoff_onchip.c \
+	etic4xcoff.c \
+	etic54xcoff.c \
+	etic80coff.c \
+	evanilla.c \
+	evax.c \
+	evaxnbsd.c \
+	evsta.c \
+	ew65.c \
+	ez8001.c \
+	eelf32frvfd.c \
+	ez80.c \
+	ez8002.c
 
-ALL_64_EMULATIONS = \
-	eelf64_aix.@OBJEXT@ \
-	eelf64_ia64.@OBJEXT@ \
-	eelf64_ia64_fbsd.@OBJEXT@ \
-	eshelf64.@OBJEXT@ \
-	eshlelf64.@OBJEXT@ \
-	eshelf64_nbsd.@OBJEXT@ \
-	eshlelf64_nbsd.@OBJEXT@ \
-	eelf_x86_64.@OBJEXT@ \
-	eelf_x86_64_fbsd.@OBJEXT@ \
-	eelf_x86_64_sol2.@OBJEXT@ \
-	eelf_l1om.@OBJEXT@ \
-	eelf_l1om_fbsd.@OBJEXT@ \
-	eelf64_s390.@OBJEXT@ \
-	eelf64_sparc.@OBJEXT@ \
-	eelf64_sparc_fbsd.@OBJEXT@ \
-	eelf64_sparc_sol2.@OBJEXT@ \
-	eelf64alpha.@OBJEXT@ \
-	eelf64alpha_fbsd.@OBJEXT@ \
-	eelf64alpha_nbsd.@OBJEXT@ \
-	eelf64bmip.@OBJEXT@ \
-	eelf64btsmip.@OBJEXT@ \
-	eelf64ltsmip.@OBJEXT@ \
-	eelf64hppa.@OBJEXT@ \
-	eelf64mmix.@OBJEXT@ \
-	emmo.@OBJEXT@ \
-	eelf64ppc.@OBJEXT@ \
-	eelf64lppc.@OBJEXT@ \
-	ehppa64linux.@OBJEXT@
+ALL_EMULATIONS = $(ALL_EMULATION_SOURCES:.c=.@OBJEXT@)
+
+ALL_64_EMULATION_SOURCES = \
+	eelf64_aix.c \
+	eelf64_ia64.c \
+	eelf64_ia64_fbsd.c \
+	eshelf64.c \
+	eshlelf64.c \
+	eshelf64_nbsd.c \
+	eshlelf64_nbsd.c \
+	eelf_x86_64.c \
+	eelf_x86_64_fbsd.c \
+	eelf_x86_64_sol2.c \
+	eelf_l1om.c \
+	eelf_l1om_fbsd.c \
+	eelf64_s390.c \
+	eelf64_sparc.c \
+	eelf64_sparc_fbsd.c \
+	eelf64_sparc_sol2.c \
+	eelf64alpha.c \
+	eelf64alpha_fbsd.c \
+	eelf64alpha_nbsd.c \
+	eelf64bmip.c \
+	eelf64btsmip.c \
+	eelf64ltsmip.c \
+	eelf64hppa.c \
+	eelf64mmix.c \
+	emmo.c \
+	eelf64ppc.c \
+	eelf64lppc.c \
+	ehppa64linux.c
+
+ALL_64_EMULATIONS = $(ALL_64_EMULATION_SOURCES:.c=.@OBJEXT@)
 
 ALL_EMUL_EXTRA_OFILES = \
 	deffilep.@OBJEXT@ \
@@ -455,11 +472,13 @@ ALL_EMUL_EXTRA_OFILES = \
 
 CFILES = ldctor.c ldemul.c ldexp.c ldfile.c ldlang.c \
 	ldmain.c ldmisc.c ldver.c ldwrite.c lexsup.c \
-	mri.c ldcref.c pe-dll.c pep-dll.c ldlex-wrapper.c
+	mri.c ldcref.c pe-dll.c pep-dll.c ldlex-wrapper.c \
+	$(PLUGIN_C)
 
 HFILES = ld.h ldctor.h ldemul.h ldexp.h ldfile.h \
 	ldlang.h ldlex.h ldmain.h ldmisc.h ldver.h \
-	ldwrite.h mri.h deffile.h pe-dll.h pep-dll.h elf-hints-local.h
+	ldwrite.h mri.h deffile.h pe-dll.h pep-dll.h \
+	elf-hints-local.h $(PLUGIN_H)
 
 GENERATED_CFILES = ldgram.c ldlex.c deffilep.c
 GENERATED_HFILES = ldgram.h ldemul-list.h deffilep.h
@@ -468,7 +487,8 @@ GENERATED_HFILES = ldgram.h ldemul-list.h deffilep.h
 # tracking will not cause them to be built beforehand.
 BUILT_SOURCES = $(GENERATED_HFILES)
 
-OFILES = ldgram.@OBJEXT@ ldlex-wrapper.@OBJEXT@ lexsup.@OBJEXT@ ldlang.@OBJEXT@ mri.@OBJEXT@ ldctor.@OBJEXT@ ldmain.@OBJEXT@ \
+OFILES = ldgram.@OBJEXT@ ldlex-wrapper.@OBJEXT@ lexsup.@OBJEXT@ ldlang.@OBJEXT@ \
+	mri.@OBJEXT@ ldctor.@OBJEXT@ ldmain.@OBJEXT@ $(PLUGIN_OBJECT) \
 	ldwrite.@OBJEXT@ ldexp.@OBJEXT@  ldemul.@OBJEXT@ ldver.@OBJEXT@ ldmisc.@OBJEXT@ \
 	ldfile.@OBJEXT@ ldcref.@OBJEXT@ ${EMULATION_OFILES} ${EMUL_EXTRA_OFILES}
 
@@ -771,11 +791,12 @@ edelta68.c: $(srcdir)/emulparams/delta68.sh \
   $(srcdir)/emultempl/generic.em $(srcdir)/scripttempl/delta68.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} delta68 "$(tdir_delta68)"
 eelf32bfin.c: $(srcdir)/emulparams/bfin.sh \
-  $(ELF_DEPS) \
+  $(ELF_DEPS) $(srcdir)/emultempl/bfin.em \
   $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32bfin "$(tdir_elf32bfin)" bfin
-eelf32bfinfd.c: $(srcdir)/emulparams/elf32bfinfd.sh $(srcdir)/emulparams/bfin.sh \
-  $(ELF_DEPS) \
+eelf32bfinfd.c: $(srcdir)/emulparams/elf32bfinfd.sh \
+  $(srcdir)/emulparams/bfin.sh \
+  $(ELF_DEPS) $(srcdir)/emultempl/bfin.em \
   $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32bfinfd "$(tdir_elf32bfinfd)" elf32bfinfd
 eelf32_dlx.c: $(srcdir)/emulparams/elf32_dlx.sh \
@@ -853,6 +874,7 @@ eelf32_sparc.c: $(srcdir)/emulparams/elf32_sparc.sh \
 	${GENSCRIPTS} elf32_sparc "$(tdir_elf32_sparc)"
 eelf32_sparc_sol2.c: $(srcdir)/emulparams/elf32_sparc_sol2.sh \
   $(srcdir)/emulparams/elf32_sparc.sh \
+  $(srcdir)/emulparams/solaris2.sh \
   $(srcdir)/emultempl/solaris2.em $(ELF_DEPS) \
   $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32_sparc_sol2 "$(tdir_elf32_sparc_sol2)"
@@ -963,7 +985,7 @@ eelf32lmip.c: $(srcdir)/emulparams/elf32lmip.sh \
 eelf32mb_linux.c: $(srcdir)/emulparams/elf32mb_linux.sh \
   $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32mb_linux "$(tdir_microblaze)"
- eelf32microblaze.c: $(srcdir)/emulparams/elf32microblaze.sh \
+eelf32microblaze.c: $(srcdir)/emulparams/elf32microblaze.sh \
   $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elfmicroblaze.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32microblaze "$(tdir_microblaze)"
 eelf32mipswindiss.c: $(srcdir)/emulparams/elf32mipswindiss.sh $(ELF_DEPS) \
@@ -1082,8 +1104,7 @@ eelf64alpha_nbsd.c: $(srcdir)/emulparams/elf64alpha_nbsd.sh \
   $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf64alpha_nbsd "$(tdir_elf64alpha_nbsd)"
 eelf64hppa.c: $(srcdir)/emulparams/elf64hppa.sh \
-  $(srcdir)/emulparams/hppa64linux.sh \
-  $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+  $(ELF_DEPS) $(srcdir)/scripttempl/elf64hppa.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf64hppa "$(tdir_elf64hppa)"
 eelf64_aix.c: $(srcdir)/emulparams/elf64_aix.sh \
   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
@@ -1111,6 +1132,7 @@ eelf64_sparc_fbsd.c: $(srcdir)/emulparams/elf64_sparc_fbsd.sh \
 	${GENSCRIPTS} elf64_sparc_fbsd "$(tdir_elf64_sparc_fbsd)"
 eelf64_sparc_sol2.c: $(srcdir)/emulparams/elf64_sparc_sol2.sh \
   $(srcdir)/emulparams/elf64_sparc.sh \
+  $(srcdir)/emulparams/solaris2.sh \
   $(srcdir)/emultempl/solaris2.em \
   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf64_sparc_sol2 "$(tdir_elf64_sparc_sol2)"
@@ -1151,6 +1173,7 @@ eelf_x86_64_fbsd.c: $(srcdir)/emulparams/elf_x86_64_fbsd.sh \
 	${GENSCRIPTS} elf_x86_64_fbsd "$(tdir_elf_x86_64_fbsd)"
 eelf_x86_64_sol2.c: $(srcdir)/emulparams/elf_x86_64_sol2.sh \
   $(srcdir)/emulparams/elf_x86_64.sh \
+  $(srcdir)/emulparams/solaris2.sh \
   $(srcdir)/emultempl/solaris2.em \
   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf_x86_64_sol2 "$(tdir_elf_x86_64_sol2)"
@@ -1175,6 +1198,7 @@ eelf_i386_ldso.c: $(srcdir)/emulparams/elf_i386_ldso.sh \
   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf_i386_ldso "$(tdir_elf_i386_ldso)"
 eelf_i386_sol2.c: $(srcdir)/emulparams/elf_i386_sol2.sh \
+  $(srcdir)/emulparams/solaris2.sh \
   $(srcdir)/emultempl/solaris2.em \
   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf_i386_sol2 "$(tdir_elf_i386_sol2)"
@@ -1732,7 +1756,7 @@ eshelf_fd.c: $(srcdir)/emulparams/shelf_fd.sh \
 	${GENSCRIPTS} shelf_fd "$(tdir_shelf_fd)"
 eshlelf_fd.c: $(srcdir)/emulparams/shlelf_fd.sh \
   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
-	${GENSCRIPTS} shlelf_fd "$(tdir_shelf_fd)"
+	${GENSCRIPTS} shlelf_fd "$(tdir_shlelf_fd)"
 eshelf_linux.c: $(srcdir)/emulparams/shelf_linux.sh \
   $(srcdir)/emulparams/shlelf_linux.sh \
   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
@@ -1882,12 +1906,12 @@ EXTRA_ld_new_SOURCES = deffilep.y ldlex.l
 EXTRA_ld_new_SOURCES += pep-dll.c pe-dll.c
 
 ld_new_SOURCES = ldgram.y ldlex-wrapper.c lexsup.c ldlang.c mri.c ldctor.c ldmain.c \
-	ldwrite.c ldexp.c ldemul.c ldver.c ldmisc.c ldfile.c ldcref.c
+	ldwrite.c ldexp.c ldemul.c ldver.c ldmisc.c ldfile.c ldcref.c $(PLUGIN_C)
 ld_new_DEPENDENCIES = $(EMULATION_OFILES) $(EMUL_EXTRA_OFILES) $(BFDLIB) $(LIBIBERTY) $(LIBINTL_DEP)
 ld_new_LDADD = $(EMULATION_OFILES) $(EMUL_EXTRA_OFILES) $(BFDLIB) $(LIBIBERTY) $(LIBINTL)
 
 # Dependency tracking for the generated emulation files.
-EXTRA_ld_new_SOURCES += $(ALL_EMULATIONS:.@OBJEXT@=.c) $(ALL_64_EMULATIONS:.@OBJEXT@=.c)
+EXTRA_ld_new_SOURCES += $(ALL_EMULATION_SOURCES) $(ALL_64_EMULATION_SOURCES)
 
 # This is the real libbfd.a created by libtool.
 TESTBFDLIB = @TESTBFDLIB@
@@ -1963,6 +1987,16 @@ bootstrap: ld3$(EXEEXT)
 #.PHONY: check-cdtest
 
 # END OF CHECK TARGETS
+
+# 
+# Build a dummy plugin using libtool.
+#
+if ENABLE_PLUGINS
+noinst_LTLIBRARIES = libldtestplug.la
+libldtestplug_la_SOURCES = testplug.c
+libldtestplug_la_CFLAGS= -g -O2
+libldtestplug_la_LDFLAGS = -no-undefined -rpath /nowhere
+endif
 
 # DOCUMENTATION TARGETS
 # Manual configuration file; not usually attached to normal configuration,

@@ -339,6 +339,14 @@ namespace __gnu_test
   typedef transform<integral_types::type, atomics>::type atomics_tl;
 #endif
 
+  template<typename Tp>
+    struct numeric_limits
+    {
+      typedef Tp			value_type;
+      typedef std::numeric_limits<value_type>	type;
+    };
+
+  typedef transform<integral_types::type, numeric_limits>::type limits_tl;
 
   struct has_increment_operators
   {
@@ -383,6 +391,20 @@ namespace __gnu_test
 	  = &_Concept::__constraint;
       }
   };
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  template<typename _Tp>
+    void
+    constexpr_bitwise_operators()
+    {
+      constexpr _Tp a = _Tp();
+      constexpr _Tp b = _Tp();
+      constexpr _Tp c1 __attribute__((unused)) = a | b;
+      constexpr _Tp c2 __attribute__((unused)) = a & b;
+      constexpr _Tp c3 __attribute__((unused)) = a ^ b;
+      constexpr _Tp c4 __attribute__((unused)) = ~b;
+    }
+#endif
 
   template<typename _Tp>
     void
@@ -440,8 +462,35 @@ namespace __gnu_test
       }
   };
 
-  // Generator to test standard layout
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
+
+  struct constexpr_comparison_eq_ne
+  {
+    template<typename _Tp1, typename _Tp2 = _Tp1>
+      void 
+      operator()()
+      {
+	static_assert(_Tp1() == _Tp2(), "eq");
+	static_assert(!(_Tp1() != _Tp2()), "ne");
+      }
+  };
+
+  struct constexpr_comparison_operators
+  {
+    template<typename _Tp>
+      void 
+      operator()()
+      {
+	static_assert(!(_Tp() < _Tp()), "less");
+	static_assert(_Tp() <= _Tp(), "leq");
+	static_assert(!(_Tp() > _Tp()), "more");
+	static_assert(_Tp() >= _Tp(), "meq");
+	static_assert(_Tp() == _Tp(), "eq");
+	static_assert(!(_Tp() != _Tp()), "ne");
+      }
+  };
+
+  // Generator to test standard layout
   struct has_trivial_cons_dtor
   {
     template<typename _Tp>
@@ -540,7 +589,7 @@ namespace __gnu_test
 	struct _Concept
 	{
 	  void __constraint()
-	  { _Tp __v; }
+	  { _Tp __v __attribute__((unused)); }
 	};
 
 	void (_Concept::*__x)() __attribute__((unused))
@@ -587,6 +636,55 @@ namespace __gnu_test
 	  = &_Concept::__constraint;
       }
   };
+
+  // Generator to test constexpr constructor
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  // Generator to test default constructor.
+  struct constexpr_default_constructible
+  {
+    // NB: _Tp must be a literal type. 
+    template<typename _Tp>
+      void 
+      operator()()
+      {
+	struct _Concept
+	{
+	  // Have to have user-defined default ctor for this to work.
+	  void __constraint()
+	  { constexpr _Tp __v; }
+	};
+
+	void (_Concept::*__x)() __attribute__((unused))
+	  = &_Concept::__constraint;
+      }
+  };
+
+  struct constexpr_single_value_constructible
+  {
+    // NB: _Tbasetype and _Ttesttype must be literal types. 
+    template<typename _Ttesttype, typename _Tbasetype>
+      void
+      operator()()
+      {
+	struct _Concept
+	{
+	  // Additional constraint on _Tbasetype needed.
+	  // Either assume user-defined default ctor as per
+	  // constexpr_default_constructible and provide no
+	  // initializer, provide an initializer, or assume empty-list
+	  // init-able. Choose the latter.
+	  void __constraint()
+	  {
+	    constexpr _Tbasetype __v { };
+	    constexpr _Ttesttype __t(__v);
+	  }
+	};
+
+	_Concept c;
+	c.__constraint();
+      }
+  };
+#endif
 
   // Generator to test direct list initialization
 #ifdef __GXX_EXPERIMENTAL_CXX0X__

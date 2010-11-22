@@ -1,5 +1,5 @@
 /* dwarf.h - DWARF support header file
-   Copyright 2005, 2007, 2008, 2009
+   Copyright 2005, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
@@ -19,15 +19,8 @@
    Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
    MA 02110-1301, USA.  */
 
-#if __STDC_VERSION__ >= 199901L || (defined(__GNUC__) && __GNUC__ >= 2)
-/* We can't use any bfd types here since readelf may define BFD64 and
-   objdump may not.  */
-typedef unsigned long long dwarf_vma;
-typedef unsigned long long dwarf_size_type;
-#else
-typedef unsigned long dwarf_vma;
-typedef unsigned long dwarf_size_type;
-#endif
+typedef unsigned HOST_WIDEST_INT dwarf_vma;
+typedef unsigned HOST_WIDEST_INT dwarf_size_type;
 
 struct dwarf_section
 {
@@ -84,6 +77,8 @@ extern struct dwarf_section_display debug_displays [];
 typedef struct
 {
   unsigned int   pointer_size;
+  unsigned int   offset_size;
+  int            dwarf_version;
   unsigned long  cu_offset;
   unsigned long	 base_address;
   /* This is an array of offsets to the location list table.  */
@@ -97,10 +92,6 @@ typedef struct
   unsigned int   max_range_lists;
 }
 debug_info;
-
-extern dwarf_vma (*byte_get) (unsigned char *, int);
-extern dwarf_vma byte_get_little_endian (unsigned char *, int);
-extern dwarf_vma byte_get_big_endian (unsigned char *, int);
 
 extern int eh_addr_size;
 
@@ -122,6 +113,8 @@ extern int do_trace_aranges;
 extern int do_wide;
 
 extern void init_dwarf_regnames (unsigned int);
+extern void init_dwarf_regnames_i386 (void);
+extern void init_dwarf_regnames_x86_64 (void);
 
 extern int load_debug_section (enum dwarf_section_display_enum,
 			       void *);
@@ -136,9 +129,6 @@ extern void dwarf_select_sections_all (void);
 void *cmalloc (size_t, size_t);
 void *xcmalloc (size_t, size_t);
 void *xcrealloc (void *, size_t, size_t);
-
-void error (const char *, ...) ATTRIBUTE_PRINTF_1;
-void warn (const char *, ...) ATTRIBUTE_PRINTF_1;
 
 unsigned long int read_leb128 (unsigned char *data,
 			       unsigned int *length_return, int sign);

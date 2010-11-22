@@ -127,7 +127,7 @@ create_loop_tree_nodes (bool loops_p)
 		    ira_allocate (sizeof (struct ira_loop_tree_node)
 				  * VEC_length (loop_p, ira_loops.larray)));
   max_regno = max_reg_num ();
-  for (i = 0; VEC_iterate (loop_p, ira_loops.larray, i, loop); i++)
+  FOR_EACH_VEC_ELT (loop_p, ira_loops.larray, i, loop)
     {
       if (loop != ira_loops.tree_root)
 	{
@@ -145,7 +145,7 @@ create_loop_tree_nodes (bool loops_p)
 	  if (skip_p)
 	    continue;
 	  edges = get_loop_exit_edges (loop);
-	  for (j = 0; VEC_iterate (edge, edges, j, e); j++)
+	  FOR_EACH_VEC_ELT (edge, edges, j, e)
 	    if ((e->flags & EDGE_ABNORMAL) && EDGE_CRITICAL_P (e))
 	      {
 		skip_p = true;
@@ -176,7 +176,7 @@ more_one_region_p (void)
   unsigned int i;
   loop_p loop;
 
-  for (i = 0; VEC_iterate (loop_p, ira_loops.larray, i, loop); i++)
+  FOR_EACH_VEC_ELT (loop_p, ira_loops.larray, i, loop)
     if (ira_loop_nodes[i].regno_allocno_map != NULL
 	&& ira_loop_tree_root != &ira_loop_nodes[i])
       return true;
@@ -206,7 +206,7 @@ finish_loop_tree_nodes (void)
   unsigned int i;
   loop_p loop;
 
-  for (i = 0; VEC_iterate (loop_p, ira_loops.larray, i, loop); i++)
+  FOR_EACH_VEC_ELT (loop_p, ira_loops.larray, i, loop)
     finish_loop_tree_node (&ira_loop_nodes[i]);
   ira_free (ira_loop_nodes);
   for (i = 0; i < (unsigned int) last_basic_block_before_change; i++)
@@ -309,7 +309,7 @@ form_loop_tree (void)
   /* We can not use loop/bb node access macros because of potential
      checking and because the nodes are not initialized enough
      yet.  */
-  for (i = 0; VEC_iterate (loop_p, ira_loops.larray, i, loop); i++)
+  FOR_EACH_VEC_ELT (loop_p, ira_loops.larray, i, loop)
      if (ira_loop_nodes[i].regno_allocno_map != NULL)
        {
 	 ira_loop_nodes[i].children = NULL;
@@ -355,7 +355,7 @@ rebuild_regno_allocno_maps (void)
   ira_allocno_iterator ai;
 
   max_regno = max_reg_num ();
-  for (l = 0; VEC_iterate (loop_p, ira_loops.larray, l, loop); l++)
+  FOR_EACH_VEC_ELT (loop_p, ira_loops.larray, l, loop)
     if (ira_loop_nodes[l].regno_allocno_map != NULL)
       {
 	ira_free (ira_loop_nodes[l].regno_allocno_map);
@@ -1224,48 +1224,6 @@ ira_add_allocno_copy_to_list (ira_copy_t cp)
   ALLOCNO_COPIES (second) = cp;
 }
 
-/* Detach a copy CP from allocnos involved into the copy.  */
-void
-ira_remove_allocno_copy_from_list (ira_copy_t cp)
-{
-  ira_allocno_t first = cp->first, second = cp->second;
-  ira_copy_t prev, next;
-
-  next = cp->next_first_allocno_copy;
-  prev = cp->prev_first_allocno_copy;
-  if (prev == NULL)
-    ALLOCNO_COPIES (first) = next;
-  else if (prev->first == first)
-    prev->next_first_allocno_copy = next;
-  else
-    prev->next_second_allocno_copy = next;
-  if (next != NULL)
-    {
-      if (next->first == first)
-	next->prev_first_allocno_copy = prev;
-      else
-	next->prev_second_allocno_copy = prev;
-    }
-  cp->prev_first_allocno_copy = cp->next_first_allocno_copy = NULL;
-
-  next = cp->next_second_allocno_copy;
-  prev = cp->prev_second_allocno_copy;
-  if (prev == NULL)
-    ALLOCNO_COPIES (second) = next;
-  else if (prev->second == second)
-    prev->next_second_allocno_copy = next;
-  else
-    prev->next_first_allocno_copy = next;
-  if (next != NULL)
-    {
-      if (next->second == second)
-	next->prev_second_allocno_copy = prev;
-      else
-	next->prev_first_allocno_copy = prev;
-    }
-  cp->prev_second_allocno_copy = cp->next_second_allocno_copy = NULL;
-}
-
 /* Make a copy CP a canonical copy where number of the
    first allocno is less than the second one.  */
 void
@@ -1657,7 +1615,7 @@ create_loop_tree_node_allocnos (ira_loop_tree_node_t loop_node)
 	  create_loop_allocnos (e);
 
       edges = get_loop_exit_edges (loop_node->loop);
-      for (i = 0; VEC_iterate (edge, edges, i, e); i++)
+      FOR_EACH_VEC_ELT (edge, edges, i, e)
 	create_loop_allocnos (e);
       VEC_free (edge, heap, edges);
     }
@@ -1917,7 +1875,7 @@ mark_all_loops_for_removal (void)
   int i;
   loop_p loop;
 
-  for (i = 0; VEC_iterate (loop_p, ira_loops.larray, i, loop); i++)
+  FOR_EACH_VEC_ELT (loop_p, ira_loops.larray, i, loop)
     if (ira_loop_nodes[i].regno_allocno_map != NULL)
       {
 	if (ira_loop_nodes[i].parent == NULL)

@@ -1,6 +1,6 @@
 // sparc.cc -- sparc target support for gold.
 
-// Copyright 2008, 2009 Free Software Foundation, Inc.
+// Copyright 2008, 2009, 2010 Free Software Foundation, Inc.
 // Written by David S. Miller <davem@davemloft.net>.
 
 // This file is part of gold.
@@ -161,11 +161,32 @@ class Target_sparc : public Sized_target<size, big_endian>
 
   // Return the size of the GOT section.
   section_size_type
-  got_size()
+  got_size() const
   {
     gold_assert(this->got_ != NULL);
     return this->got_->data_size();
   }
+
+  // Return the number of entries in the GOT.
+  unsigned int
+  got_entry_count() const
+  {
+    if (this->got_ == NULL)
+      return 0;
+    return this->got_size() / (size / 8);
+  }
+
+  // Return the number of entries in the PLT.
+  unsigned int
+  plt_entry_count() const;
+
+  // Return the offset of the first non-reserved PLT entry.
+  unsigned int
+  first_plt_entry_offset() const;
+
+  // Return the size of each PLT entry.
+  unsigned int
+  plt_entry_size() const;
 
  private:
 
@@ -176,6 +197,9 @@ class Target_sparc : public Sized_target<size, big_endian>
     Scan()
       : issued_non_pic_error_(false)
     { }
+
+    static inline int
+    get_reference_flags(unsigned int r_type);
 
     inline void
     local(Symbol_table* symtab, Layout* layout, Target_sparc* target,
@@ -343,6 +367,9 @@ class Target_sparc : public Sized_target<size, big_endian>
   static Target::Target_info sparc_info;
 
   // The types of GOT entries needed for this platform.
+  // These values are exposed to the ABI in an incremental link.
+  // Do not renumber existing values without changing the version
+  // number of the .gnu_incremental_inputs section.
   enum Got_type
   {
     GOT_TYPE_STANDARD = 0,      // GOT entry for a regular symbol
@@ -1048,7 +1075,7 @@ Target_sparc<size, big_endian>::got_section(Symbol_table* symtab,
       layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
 				      (elfcpp::SHF_ALLOC
 				       | elfcpp::SHF_WRITE),
-				      this->got_, false, true, false, false);
+				      this->got_, ORDER_RELRO, true);
 
       // Define _GLOBAL_OFFSET_TABLE_ at the start of the .got section.
       symtab->define_in_output_data("_GLOBAL_OFFSET_TABLE_", NULL,
@@ -1074,8 +1101,8 @@ Target_sparc<size, big_endian>::rela_dyn_section(Layout* layout)
       gold_assert(layout != NULL);
       this->rela_dyn_ = new Reloc_section(parameters->options().combreloc());
       layout->add_output_section_data(".rela.dyn", elfcpp::SHT_RELA,
-				      elfcpp::SHF_ALLOC, this->rela_dyn_, true,
-				      false, false, false);
+				      elfcpp::SHF_ALLOC, this->rela_dyn_,
+				      ORDER_DYNAMIC_RELOCS, false);
     }
   return this->rela_dyn_;
 }
@@ -1099,6 +1126,21 @@ class Output_data_plt_sparc : public Output_section_data
   {
     return this->rel_;
   }
+
+  // Return the number of PLT entries.
+  unsigned int
+  entry_count() const
+  { return this->count_; }
+
+  // Return the offset of the first non-reserved PLT entry.
+  static unsigned int
+  first_plt_entry_offset()
+  { return 4 * base_plt_entry_size; }
+
+  // Return the size of a PLT entry.
+  static unsigned int
+  get_plt_entry_size()
+  { return base_plt_entry_size; }
 
  protected:
   void do_adjust_output_section(Output_section* os);
@@ -1177,8 +1219,8 @@ Output_data_plt_sparc<size, big_endian>::Output_data_plt_sparc(Layout* layout)
 {
   this->rel_ = new Reloc_section(false);
   layout->add_output_section_data(".rela.plt", elfcpp::SHT_RELA,
-				  elfcpp::SHF_ALLOC, this->rel_, true,
-				  false, false, false);
+				  elfcpp::SHF_ALLOC, this->rel_,
+				  ORDER_DYNAMIC_PLT_RELOCS, false);
 }
 
 template<int size, bool big_endian>
@@ -1400,7 +1442,7 @@ Target_sparc<size, big_endian>::make_plt_entry(Symbol_table* symtab,
 				      (elfcpp::SHF_ALLOC
 				       | elfcpp::SHF_EXECINSTR
 				       | elfcpp::SHF_WRITE),
-				      this->plt_, false, false, false, false);
+				      this->plt_, ORDER_PLT, false);
 
       // Define _PROCEDURE_LINKAGE_TABLE_ at the start of the .plt section.
       symtab->define_in_output_data("_PROCEDURE_LINKAGE_TABLE_", NULL,
@@ -1413,6 +1455,35 @@ Target_sparc<size, big_endian>::make_plt_entry(Symbol_table* symtab,
     }
 
   this->plt_->add_entry(gsym);
+}
+
+// Return the number of entries in the PLT.
+
+template<int size, bool big_endian>
+unsigned int
+Target_sparc<size, big_endian>::plt_entry_count() const
+{
+  if (this->plt_ == NULL)
+    return 0;
+  return this->plt_->entry_count();
+}
+
+// Return the offset of the first non-reserved PLT entry.
+
+template<int size, bool big_endian>
+unsigned int
+Target_sparc<size, big_endian>::first_plt_entry_offset() const
+{
+  return Output_data_plt_sparc<size, big_endian>::first_plt_entry_offset();
+}
+
+// Return the size of each PLT entry.
+
+template<int size, bool big_endian>
+unsigned int
+Target_sparc<size, big_endian>::plt_entry_size() const
+{
+  return Output_data_plt_sparc<size, big_endian>::get_plt_entry_size();
 }
 
 // Create a GOT entry for the TLS module index.
@@ -1505,6 +1576,119 @@ optimize_tls_reloc(bool is_final, int r_type)
 
     default:
       gold_unreachable();
+    }
+}
+
+// Get the Reference_flags for a particular relocation.
+
+template<int size, bool big_endian>
+int
+Target_sparc<size, big_endian>::Scan::get_reference_flags(unsigned int r_type)
+{
+  r_type &= 0xff;
+  switch (r_type)
+    {
+    case elfcpp::R_SPARC_NONE:
+    case elfcpp::R_SPARC_REGISTER:
+    case elfcpp::R_SPARC_GNU_VTINHERIT:
+    case elfcpp::R_SPARC_GNU_VTENTRY:
+      // No symbol reference.
+      return 0;
+
+    case elfcpp::R_SPARC_UA64:
+    case elfcpp::R_SPARC_64:
+    case elfcpp::R_SPARC_HIX22:
+    case elfcpp::R_SPARC_LOX10:
+    case elfcpp::R_SPARC_H44:
+    case elfcpp::R_SPARC_M44:
+    case elfcpp::R_SPARC_L44:
+    case elfcpp::R_SPARC_HH22:
+    case elfcpp::R_SPARC_HM10:
+    case elfcpp::R_SPARC_LM22:
+    case elfcpp::R_SPARC_HI22:
+    case elfcpp::R_SPARC_LO10:
+    case elfcpp::R_SPARC_OLO10:
+    case elfcpp::R_SPARC_UA32:
+    case elfcpp::R_SPARC_32:
+    case elfcpp::R_SPARC_UA16:
+    case elfcpp::R_SPARC_16:
+    case elfcpp::R_SPARC_11:
+    case elfcpp::R_SPARC_10:
+    case elfcpp::R_SPARC_8:
+    case elfcpp::R_SPARC_7:
+    case elfcpp::R_SPARC_6:
+    case elfcpp::R_SPARC_5:
+      return Symbol::ABSOLUTE_REF;
+
+    case elfcpp::R_SPARC_DISP8:
+    case elfcpp::R_SPARC_DISP16:
+    case elfcpp::R_SPARC_DISP32:
+    case elfcpp::R_SPARC_DISP64:
+    case elfcpp::R_SPARC_PC_HH22:
+    case elfcpp::R_SPARC_PC_HM10:
+    case elfcpp::R_SPARC_PC_LM22:
+    case elfcpp::R_SPARC_PC10:
+    case elfcpp::R_SPARC_PC22:
+    case elfcpp::R_SPARC_WDISP30:
+    case elfcpp::R_SPARC_WDISP22:
+    case elfcpp::R_SPARC_WDISP19:
+    case elfcpp::R_SPARC_WDISP16:
+      return Symbol::RELATIVE_REF;
+
+    case elfcpp::R_SPARC_PLT64:
+    case elfcpp::R_SPARC_PLT32:
+    case elfcpp::R_SPARC_HIPLT22:
+    case elfcpp::R_SPARC_LOPLT10:
+    case elfcpp::R_SPARC_PCPLT10:
+      return Symbol::FUNCTION_CALL | Symbol::ABSOLUTE_REF;
+
+    case elfcpp::R_SPARC_PCPLT32:
+    case elfcpp::R_SPARC_PCPLT22:
+    case elfcpp::R_SPARC_WPLT30:
+      return Symbol::FUNCTION_CALL | Symbol::RELATIVE_REF;
+
+    case elfcpp::R_SPARC_GOTDATA_OP:
+    case elfcpp::R_SPARC_GOTDATA_OP_HIX22:
+    case elfcpp::R_SPARC_GOTDATA_OP_LOX10:
+    case elfcpp::R_SPARC_GOT10:
+    case elfcpp::R_SPARC_GOT13:
+    case elfcpp::R_SPARC_GOT22:
+      // Absolute in GOT.
+      return Symbol::ABSOLUTE_REF;
+
+    case elfcpp::R_SPARC_TLS_GD_HI22: // Global-dynamic
+    case elfcpp::R_SPARC_TLS_GD_LO10:
+    case elfcpp::R_SPARC_TLS_GD_ADD:
+    case elfcpp::R_SPARC_TLS_GD_CALL:
+    case elfcpp::R_SPARC_TLS_LDM_HI22:	// Local-dynamic
+    case elfcpp::R_SPARC_TLS_LDM_LO10:
+    case elfcpp::R_SPARC_TLS_LDM_ADD:
+    case elfcpp::R_SPARC_TLS_LDM_CALL:
+    case elfcpp::R_SPARC_TLS_LDO_HIX22:	// Alternate local-dynamic
+    case elfcpp::R_SPARC_TLS_LDO_LOX10:
+    case elfcpp::R_SPARC_TLS_LDO_ADD:
+    case elfcpp::R_SPARC_TLS_LE_HIX22:
+    case elfcpp::R_SPARC_TLS_LE_LOX10:
+    case elfcpp::R_SPARC_TLS_IE_HI22:	// Initial-exec
+    case elfcpp::R_SPARC_TLS_IE_LO10:
+    case elfcpp::R_SPARC_TLS_IE_LD:
+    case elfcpp::R_SPARC_TLS_IE_LDX:
+    case elfcpp::R_SPARC_TLS_IE_ADD:
+      return Symbol::TLS_REF;
+
+    case elfcpp::R_SPARC_COPY:
+    case elfcpp::R_SPARC_GLOB_DAT:
+    case elfcpp::R_SPARC_JMP_SLOT:
+    case elfcpp::R_SPARC_RELATIVE:
+    case elfcpp::R_SPARC_TLS_DTPMOD64:
+    case elfcpp::R_SPARC_TLS_DTPMOD32:
+    case elfcpp::R_SPARC_TLS_DTPOFF64:
+    case elfcpp::R_SPARC_TLS_DTPOFF32:
+    case elfcpp::R_SPARC_TLS_TPOFF64:
+    case elfcpp::R_SPARC_TLS_TPOFF32:
+    default:
+      // Not expected.  We will give an error later.
+      return 0;
     }
 }
 
@@ -2000,10 +2184,7 @@ Target_sparc<size, big_endian>::Scan::global(
 	if (gsym->needs_plt_entry())
 	  target->make_plt_entry(symtab, layout, gsym);
 	// Make a dynamic relocation if necessary.
-	int flags = Symbol::NON_PIC_REF;
-	if (gsym->type() == elfcpp::STT_FUNC)
-	  flags |= Symbol::FUNCTION_CALL;
-	if (gsym->needs_dynamic_reloc(flags))
+	if (gsym->needs_dynamic_reloc(Scan::get_reference_flags(r_type)))
 	  {
 	    if (gsym->may_need_copy_reloc())
 	      {
@@ -2059,7 +2240,7 @@ Target_sparc<size, big_endian>::Scan::global(
               gsym->set_needs_dynsym_value();
           }
         // Make a dynamic relocation if necessary.
-        if (gsym->needs_dynamic_reloc(Symbol::ABSOLUTE_REF))
+        if (gsym->needs_dynamic_reloc(Scan::get_reference_flags(r_type)))
           {
 	    unsigned int r_off = reloc.get_r_offset();
 
@@ -2331,7 +2512,7 @@ Target_sparc<size, big_endian>::gc_process_relocs(
   typedef typename Target_sparc<size, big_endian>::Scan Scan;
 
   gold::gc_process_relocs<size, big_endian, Sparc, elfcpp::SHT_RELA, Scan,
-			  Target_sparc::Relocatable_size_for_reloc>(
+			  typename Target_sparc::Relocatable_size_for_reloc>(
     symtab,
     layout,
     this,
@@ -2444,19 +2625,7 @@ Target_sparc<size, big_endian>::Relocate::relocate(
   // Pick the value to use for symbols defined in shared objects.
   Symbol_value<size> symval;
   if (gsym != NULL
-      && gsym->use_plt_offset(r_type == elfcpp::R_SPARC_DISP8
-			      || r_type == elfcpp::R_SPARC_DISP16
-			      || r_type == elfcpp::R_SPARC_DISP32
-			      || r_type == elfcpp::R_SPARC_DISP64
-			      || r_type == elfcpp::R_SPARC_PC_HH22
-			      || r_type == elfcpp::R_SPARC_PC_HM10
-			      || r_type == elfcpp::R_SPARC_PC_LM22
-			      || r_type == elfcpp::R_SPARC_PC10
-			      || r_type == elfcpp::R_SPARC_PC22
-			      || r_type == elfcpp::R_SPARC_WDISP30
-			      || r_type == elfcpp::R_SPARC_WDISP22
-			      || r_type == elfcpp::R_SPARC_WDISP19
-			      || r_type == elfcpp::R_SPARC_WDISP16))
+      && gsym->use_plt_offset(Scan::get_reference_flags(r_type)))
     {
       elfcpp::Elf_Xword value;
 

@@ -27,7 +27,7 @@ if [istarget "*-*-linux"] then {
     set target_cflags ""
 }
 
-if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile} ${srcdir}/${subdir}/${srcfile2}" "${binfile}" executable [list debug "incdir=${objdir}"]] != "" } {
+if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile} ${srcdir}/${subdir}/${srcfile2}" "${binfile}" executable [list c++ debug "incdir=${objdir}"]] != "" } {
     return -1
 }
 
@@ -75,7 +75,7 @@ proc check_thread_local {number} {
 	    "= $expected_value" \
 	    "${number} thread local storage"
 
-    gdb_test "p another_thread_local" \
+    gdb_test "p K::another_thread_local" \
 	    "= $me_variable" \
 	    "${number} another thread local storage"
 
@@ -83,7 +83,7 @@ proc check_thread_local {number} {
 	    ".*a_thread_local.*a thread-local variable at offset.*" \
 	    "${number} info address a_thread_local"
 
-    gdb_test "info address another_thread_local" \
+    gdb_test "info address K::another_thread_local" \
     	    ".*another_thread_local.*a thread-local variable at offset.*" \
 	    "${number} info address another_thread_local"
 }
@@ -284,8 +284,8 @@ runto spin
 gdb_test "info address a_global" \
 	".*a_global.*static storage at address.*" "info address a_global"
 
-setup_kfail "gdb/1294" "*-*-*"
-gdb_test "info address me" ".*me.*is a variable at offset.*" "info address me"
+gdb_test "info address me" ".*me.*is a complex DWARF expression:.*" \
+    "info address me"
 
 
 # Test LOC_UNRESOLVED references resolving for `extern' TLS variables.

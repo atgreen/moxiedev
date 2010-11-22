@@ -2770,7 +2770,7 @@ elf32_frv_relocate_section (output_bfd, info, input_bfd, input_section,
       struct elf_link_hash_entry *h;
       bfd_vma relocation;
       bfd_reloc_status_type r;
-      const char * name = NULL;
+      const char *name;
       int r_type;
       asection *osec;
       struct frvfdpic_relocs_info *picrel;
@@ -2796,7 +2796,8 @@ elf32_frv_relocate_section (output_bfd, info, input_bfd, input_section,
 
 	  name = bfd_elf_string_from_elf_section
 	    (input_bfd, symtab_hdr->sh_link, sym->st_name);
-	  name = (name == NULL) ? bfd_section_name (input_bfd, sec) : name;
+	  if (name == NULL || name[0] == 0)
+	    name = bfd_section_name (input_bfd, sec);
 	}
       else
 	{
@@ -2808,18 +2809,12 @@ elf32_frv_relocate_section (output_bfd, info, input_bfd, input_section,
 				   h, sec, relocation,
 				   unresolved_reloc, warned);
 	  osec = sec;
+	  name = h->root.root.string;
 	}
 
       if (sec != NULL && elf_discarded_section (sec))
-	{
-	  /* For relocs against symbols from removed linkonce sections,
-	     or sections discarded by a linker script, we just want the
-	     section contents zeroed.  Avoid any special processing.  */
-	  _bfd_clear_contents (howto, input_bfd, contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend, howto, contents);
 
       if (info->relocatable)
 	continue;
@@ -5896,7 +5891,8 @@ elf32_frvfdpic_finish_dynamic_sections (bfd *output_bfd,
 				       FALSE, FALSE, TRUE);
 	  if (hend
 	      && (hend->type == bfd_link_hash_defined
-		  || hend->type == bfd_link_hash_defweak))
+		  || hend->type == bfd_link_hash_defweak)
+	      && hend->u.def.section->output_section != NULL)
 	    {
 	      bfd_vma value =
 		frvfdpic_gotfixup_section (info)->output_section->vma
@@ -6935,7 +6931,7 @@ elf32_frv_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
 	elf_tdata (abfd)->core_signal = bfd_get_16 (abfd, note->descdata + 12);
 
 	/* `pr_pid' is at offset 24.  */
-	elf_tdata (abfd)->core_pid = bfd_get_32 (abfd, note->descdata + 24);
+	elf_tdata (abfd)->core_lwpid = bfd_get_32 (abfd, note->descdata + 24);
 
 	/* `pr_reg' is at offset 72.  */
 	offset = 72;
@@ -6994,6 +6990,7 @@ elf32_frv_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
   return TRUE;
 }
 #define ELF_ARCH		bfd_arch_frv
+#define ELF_TARGET_ID		FRV_ELF_DATA
 #define ELF_MACHINE_CODE	EM_CYGNUS_FRV
 #define ELF_MAXPAGESIZE		0x1000
 

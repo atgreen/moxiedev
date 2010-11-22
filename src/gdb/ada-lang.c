@@ -59,6 +59,7 @@
 #include "stack.h"
 
 #include "psymtab.h"
+#include "value.h"
 
 /* Define whether or not the C operator '/' truncates towards zero for
    differently signed operands (truncation direction is undefined in C). 
@@ -67,8 +68,6 @@
 #ifndef TRUNCATION_TOWARDS_ZERO
 #define TRUNCATION_TOWARDS_ZERO ((-5 / 2) == -2)
 #endif
-
-static void modify_general_field (struct type *, char *, LONGEST, int, int);
 
 static struct type *desc_base_type (struct type *);
 
@@ -102,11 +101,9 @@ static int ada_type_match (struct type *, struct type *, int);
 
 static int ada_args_match (struct symbol *, struct value **, int);
 
-static struct value *ensure_lval (struct value *,
-				  struct gdbarch *, CORE_ADDR *);
+static int full_match (const char *, const char *);
 
-static struct value *make_array_descriptor (struct type *, struct value *,
-                                            struct gdbarch *, CORE_ADDR *);
+static struct value *make_array_descriptor (struct type *, struct value *);
 
 static void ada_add_block_symbols (struct obstack *,
                                    struct block *, const char *,
@@ -200,7 +197,9 @@ static int equiv_types (struct type *, struct type *);
 
 static int is_name_suffix (const char *);
 
-static int wild_match (const char *, int, const char *);
+static int advance_wild_match (const char **, const char *, int);
+
+static int wild_match (const char *, const char *);
 
 static struct value *ada_coerce_ref (struct value *);
 
@@ -1210,7 +1209,7 @@ char *
 ada_decode_symbol (const struct general_symbol_info *gsymbol)
 {
   char **resultp =
-    (char **) &gsymbol->language_specific.cplus_specific.demangled_name;
+    (char **) &gsymbol->language_specific.mangled_lang.demangled_name;
 
   if (*resultp == NULL)
     {
@@ -1255,12 +1254,12 @@ ada_la_decode (const char *encoded, int options)
    either argument is NULL.  */
 
 static int
-ada_match_name (const char *sym_name, const char *name, int wild)
+match_name (const char *sym_name, const char *name, int wild)
 {
   if (sym_name == NULL || name == NULL)
     return 0;
   else if (wild)
-    return wild_match (name, strlen (name), sym_name);
+    return wild_match (sym_name, name) == 0;
   else
     {
       int len_name = strlen (name);
@@ -1341,15 +1340,6 @@ static char *bound_name[] = {
 /* Maximum number of array dimensions we are prepared to handle.  */
 
 #define MAX_ADA_DIMENS (sizeof(bound_name) / (2*sizeof(char *)))
-
-/* Like modify_field, but allows bitpos > wordlength.  */
-
-static void
-modify_general_field (struct type *type, char *addr,
-		      LONGEST fieldval, int bitpos, int bitsize)
-{
-  modify_field (type, addr + bitpos / 8, fieldval, bitpos % 8, bitsize);
-}
 
 
 /* The desc_* routines return primitive portions of array descriptors
@@ -1491,8 +1481,26 @@ desc_bounds (struct value *arr)
     }
 
   else if (is_thick_pntr (type))
-    return value_struct_elt (&arr, NULL, "P_BOUNDS", NULL,
-                             _("Bad GNAT array descriptor"));
+    {
+      struct value *p_bounds = value_struct_elt (&arr, NULL, "P_BOUNDS", NULL,
+					       _("Bad GNAT array descriptor"));
+      struct type *p_bounds_type = value_type (p_bounds);
+
+      if (p_bounds_type
+	  && TYPE_CODE (p_bounds_type) == TYPE_CODE_PTR)
+	{
+	  struct type *target_type = TYPE_TARGET_TYPE (p_bounds_type);
+
+	  if (TYPE_STUB (target_type))
+	    p_bounds = value_cast (lookup_pointer_type
+				   (ada_check_typedef (target_type)),
+				   p_bounds);
+	}
+      else
+	error (_("Bad GNAT array descriptor"));
+
+      return p_bounds;
+    }
   else
     return NULL;
 }
@@ -1539,7 +1547,7 @@ desc_data_target_type (struct type *type)
 
       if (data_type
 	  && TYPE_CODE (ada_check_typedef (data_type)) == TYPE_CODE_PTR)
-	return TYPE_TARGET_TYPE (data_type);
+	return ada_check_typedef (TYPE_TARGET_TYPE (data_type));
     }
 
   return NULL;
@@ -3908,43 +3916,22 @@ parse_old_style_renaming (struct type *type,
                                 /* Evaluation: Function Calls */
 
 /* Return an lvalue containing the value VAL.  This is the identity on
-   lvalues, and otherwise has the side-effect of pushing a copy of VAL 
-   on the stack, using and updating *SP as the stack pointer, and 
-   returning an lvalue whose value_address points to the copy.  */
+   lvalues, and otherwise has the side-effect of allocating memory
+   in the inferior where a copy of the value contents is copied.  */
 
 static struct value *
-ensure_lval (struct value *val, struct gdbarch *gdbarch, CORE_ADDR *sp)
+ensure_lval (struct value *val)
 {
-  if (! VALUE_LVAL (val))
+  if (VALUE_LVAL (val) == not_lval
+      || VALUE_LVAL (val) == lval_internalvar)
     {
       int len = TYPE_LENGTH (ada_check_typedef (value_type (val)));
+      const CORE_ADDR addr =
+        value_as_long (value_allocate_space_in_inferior (len));
 
-      /* The following is taken from the structure-return code in
-	 call_function_by_hand. FIXME: Therefore, some refactoring seems 
-	 indicated. */
-      if (gdbarch_inner_than (gdbarch, 1, 2))
-	{
-	  /* Stack grows downward.  Align SP and value_address (val) after
-	     reserving sufficient space. */
-	  *sp -= len;
-	  if (gdbarch_frame_align_p (gdbarch))
-	    *sp = gdbarch_frame_align (gdbarch, *sp);
-	  set_value_address (val, *sp);
-	}
-      else
-	{
-	  /* Stack grows upward.  Align the frame, allocate space, and
-	     then again, re-align the frame. */
-	  if (gdbarch_frame_align_p (gdbarch))
-	    *sp = gdbarch_frame_align (gdbarch, *sp);
-	  set_value_address (val, *sp);
-	  *sp += len;
-	  if (gdbarch_frame_align_p (gdbarch))
-	    *sp = gdbarch_frame_align (gdbarch, *sp);
-	}
+      set_value_address (val, addr);
       VALUE_LVAL (val) = lval_memory;
-
-      write_memory (value_address (val), value_contents (val), len);
+      write_memory (addr, value_contents (val), len);
     }
 
   return val;
@@ -3956,8 +3943,7 @@ ensure_lval (struct value *val, struct gdbarch *gdbarch, CORE_ADDR *sp)
    values not residing in memory, updating it as needed.  */
 
 struct value *
-ada_convert_actual (struct value *actual, struct type *formal_type0,
-                    struct gdbarch *gdbarch, CORE_ADDR *sp)
+ada_convert_actual (struct value *actual, struct type *formal_type0)
 {
   struct type *actual_type = ada_check_typedef (value_type (actual));
   struct type *formal_type = ada_check_typedef (formal_type0);
@@ -3970,7 +3956,7 @@ ada_convert_actual (struct value *actual, struct type *formal_type0,
 
   if (ada_is_array_descriptor_type (formal_target)
       && TYPE_CODE (actual_target) == TYPE_CODE_ARRAY)
-    return make_array_descriptor (formal_type, actual, gdbarch, sp);
+    return make_array_descriptor (formal_type, actual);
   else if (TYPE_CODE (formal_type) == TYPE_CODE_PTR
 	   || TYPE_CODE (formal_type) == TYPE_CODE_REF)
     {
@@ -3990,7 +3976,7 @@ ada_convert_actual (struct value *actual, struct type *formal_type0,
               memcpy ((char *) value_contents_raw (val),
                       (char *) value_contents (actual),
                       TYPE_LENGTH (actual_type));
-              actual = ensure_lval (val, gdbarch, sp);
+              actual = ensure_lval (val);
             }
           result = value_addr (actual);
         }
@@ -4031,8 +4017,7 @@ value_pointer (struct value *value, struct type *type)
    representing a pointer to this descriptor.  */
 
 static struct value *
-make_array_descriptor (struct type *type, struct value *arr,
-		       struct gdbarch *gdbarch, CORE_ADDR *sp)
+make_array_descriptor (struct type *type, struct value *arr)
 {
   struct type *bounds_type = desc_bounds_type (type);
   struct type *desc_type = desc_base_type (type);
@@ -4042,35 +4027,33 @@ make_array_descriptor (struct type *type, struct value *arr,
 
   for (i = ada_array_arity (ada_check_typedef (value_type (arr))); i > 0; i -= 1)
     {
-      modify_general_field (value_type (bounds),
-			    value_contents_writeable (bounds),
-                            ada_array_bound (arr, i, 0),
-                            desc_bound_bitpos (bounds_type, i, 0),
-                            desc_bound_bitsize (bounds_type, i, 0));
-      modify_general_field (value_type (bounds),
-			    value_contents_writeable (bounds),
-                            ada_array_bound (arr, i, 1),
-                            desc_bound_bitpos (bounds_type, i, 1),
-                            desc_bound_bitsize (bounds_type, i, 1));
+      modify_field (value_type (bounds), value_contents_writeable (bounds),
+		    ada_array_bound (arr, i, 0),
+		    desc_bound_bitpos (bounds_type, i, 0),
+		    desc_bound_bitsize (bounds_type, i, 0));
+      modify_field (value_type (bounds), value_contents_writeable (bounds),
+		    ada_array_bound (arr, i, 1),
+		    desc_bound_bitpos (bounds_type, i, 1),
+		    desc_bound_bitsize (bounds_type, i, 1));
     }
 
-  bounds = ensure_lval (bounds, gdbarch, sp);
+  bounds = ensure_lval (bounds);
 
-  modify_general_field (value_type (descriptor),
-			value_contents_writeable (descriptor),
-                        value_pointer (ensure_lval (arr, gdbarch, sp),
-                                       TYPE_FIELD_TYPE (desc_type, 0)),
-                        fat_pntr_data_bitpos (desc_type),
-                        fat_pntr_data_bitsize (desc_type));
+  modify_field (value_type (descriptor),
+		value_contents_writeable (descriptor),
+		value_pointer (ensure_lval (arr),
+			       TYPE_FIELD_TYPE (desc_type, 0)),
+		fat_pntr_data_bitpos (desc_type),
+		fat_pntr_data_bitsize (desc_type));
 
-  modify_general_field (value_type (descriptor),
-			value_contents_writeable (descriptor),
-                        value_pointer (bounds,
-                                       TYPE_FIELD_TYPE (desc_type, 1)),
-                        fat_pntr_bounds_bitpos (desc_type),
-                        fat_pntr_bounds_bitsize (desc_type));
+  modify_field (value_type (descriptor),
+		value_contents_writeable (descriptor),
+		value_pointer (bounds,
+			       TYPE_FIELD_TYPE (desc_type, 1)),
+		fat_pntr_bounds_bitpos (desc_type),
+		fat_pntr_bounds_bitsize (desc_type));
 
-  descriptor = ensure_lval (descriptor, gdbarch, sp);
+  descriptor = ensure_lval (descriptor);
 
   if (TYPE_CODE (type) == TYPE_CODE_PTR)
     return value_addr (descriptor);
@@ -4273,7 +4256,7 @@ ada_lookup_simple_minsym (const char *name)
 
   ALL_MSYMBOLS (objfile, msymbol)
   {
-    if (ada_match_name (SYMBOL_LINKAGE_NAME (msymbol), name, wild_match)
+    if (match_name (SYMBOL_LINKAGE_NAME (msymbol), name, wild_match)
         && MSYMBOL_TYPE (msymbol) != mst_solib_trampoline)
       return msymbol;
   }
@@ -4633,28 +4616,91 @@ ada_add_local_symbols (struct obstack *obstackp, const char *name,
 }
 
 /* An object of this type is used as the user_data argument when
-   calling the map_ada_symtabs method.  */
+   calling the map_matching_symbols method.  */
 
-struct ada_psym_data
+struct match_data
 {
+  struct objfile *objfile;
   struct obstack *obstackp;
-  const char *name;
-  domain_enum domain;
-  int global;
-  int wild_match;
+  struct symbol *arg_sym;
+  int found_sym;
 };
 
-/* Callback function for map_ada_symtabs.  */
+/* A callback for add_matching_symbols that adds SYM, found in BLOCK,
+   to a list of symbols.  DATA0 is a pointer to a struct match_data *
+   containing the obstack that collects the symbol list, the file that SYM
+   must come from, a flag indicating whether a non-argument symbol has
+   been found in the current block, and the last argument symbol
+   passed in SYM within the current block (if any).  When SYM is null,
+   marking the end of a block, the argument symbol is added if no
+   other has been found.  */
 
-static void
-ada_add_psyms (struct objfile *objfile, struct symtab *s, void *user_data)
+static int
+aux_add_nonlocal_symbols (struct block *block, struct symbol *sym, void *data0)
 {
-  struct ada_psym_data *data = user_data;
-  const int block_kind = data->global ? GLOBAL_BLOCK : STATIC_BLOCK;
+  struct match_data *data = (struct match_data *) data0;
+  
+  if (sym == NULL)
+    {
+      if (!data->found_sym && data->arg_sym != NULL) 
+	add_defn_to_vec (data->obstackp,
+			 fixup_symbol_section (data->arg_sym, data->objfile),
+			 block);
+      data->found_sym = 0;
+      data->arg_sym = NULL;
+    }
+  else 
+    {
+      if (SYMBOL_CLASS (sym) == LOC_UNRESOLVED)
+	return 0;
+      else if (SYMBOL_IS_ARGUMENT (sym))
+	data->arg_sym = sym;
+      else
+	{
+	  data->found_sym = 1;
+	  add_defn_to_vec (data->obstackp,
+			   fixup_symbol_section (sym, data->objfile),
+			   block);
+	}
+    }
+  return 0;
+}
 
-  ada_add_block_symbols (data->obstackp,
-			 BLOCKVECTOR_BLOCK (BLOCKVECTOR (s), block_kind),
-			 data->name, data->domain, objfile, data->wild_match);
+/* Compare STRING1 to STRING2, with results as for strcmp.
+   Compatible with strcmp_iw in that strcmp_iw (STRING1, STRING2) <= 0
+   implies compare_names (STRING1, STRING2) (they may differ as to
+   what symbols compare equal).  */
+
+static int
+compare_names (const char *string1, const char *string2)
+{
+  while (*string1 != '\0' && *string2 != '\0')
+    {
+      if (isspace (*string1) || isspace (*string2))
+	return strcmp_iw_ordered (string1, string2);
+      if (*string1 != *string2)
+	break;
+      string1 += 1;
+      string2 += 1;
+    }
+  switch (*string1)
+    {
+    case '(':
+      return strcmp_iw_ordered (string1, string2);
+    case '_':
+      if (*string2 == '\0')
+	{
+	  if (is_name_suffix (string2))
+	    return 0;
+	  else
+	    return -1;
+	}
+    default:
+      if (*string2 == '(')
+	return strcmp_iw_ordered (string1, string2);
+      else
+	return *string1 - *string2;
+    }
 }
 
 /* Add to OBSTACKP all non-local symbols whose name and domain match
@@ -4662,27 +4708,43 @@ ada_add_psyms (struct objfile *objfile, struct symtab *s, void *user_data)
    symbols if GLOBAL is non-zero, or on STATIC_BLOCK symbols otherwise.  */
 
 static void
-ada_add_non_local_symbols (struct obstack *obstackp, const char *name,
-                           domain_enum domain, int global,
-                           int is_wild_match)
+add_nonlocal_symbols (struct obstack *obstackp, const char *name,
+		      domain_enum domain, int global,
+		      int is_wild_match)
 {
   struct objfile *objfile;
-  struct ada_psym_data data;
+  struct match_data data;
 
   data.obstackp = obstackp;
-  data.name = name;
-  data.domain = domain;
-  data.global = global;
-  data.wild_match = is_wild_match;
+  data.arg_sym = NULL;
 
   ALL_OBJFILES (objfile)
-  {
-    if (objfile->sf)
-      objfile->sf->qf->map_ada_symtabs (objfile, wild_match, is_name_suffix,
-					ada_add_psyms, name,
-					global, domain,
-					is_wild_match, &data);
-  }
+    {
+      data.objfile = objfile;
+
+      if (is_wild_match)
+	objfile->sf->qf->map_matching_symbols (name, domain, objfile, global,
+					       aux_add_nonlocal_symbols, &data,
+					       wild_match, NULL);
+      else
+	objfile->sf->qf->map_matching_symbols (name, domain, objfile, global,
+					       aux_add_nonlocal_symbols, &data,
+					       full_match, compare_names);
+    }
+
+  if (num_defns_collected (obstackp) == 0 && global && !is_wild_match)
+    {
+      ALL_OBJFILES (objfile)
+        {
+	  char *name1 = alloca (strlen (name) + sizeof ("_ada_"));
+	  strcpy (name1, "_ada_");
+	  strcpy (name1 + sizeof ("_ada_") - 1, name);
+	  data.objfile = objfile;
+	  objfile->sf->qf->map_matching_symbols (name1, domain, objfile, global,
+						 aux_add_nonlocal_symbols, &data,
+						 full_match, compare_names);
+	}
+    }      	
 }
 
 /* Find symbols in DOMAIN matching NAME0, in BLOCK0 and enclosing
@@ -4759,15 +4821,15 @@ ada_lookup_symbol_list (const char *name0, const struct block *block0,
 
   /* Search symbols from all global blocks.  */
  
-  ada_add_non_local_symbols (&symbol_list_obstack, name, namespace, 1,
-                             wild_match);
+  add_nonlocal_symbols (&symbol_list_obstack, name, namespace, 1,
+			wild_match);
 
   /* Now add symbols from all per-file blocks if we've gotten no hits
      (not strictly correct, but perhaps better than an error).  */
 
   if (num_defns_collected (&symbol_list_obstack) == 0)
-    ada_add_non_local_symbols (&symbol_list_obstack, name, namespace, 0,
-                               wild_match);
+    add_nonlocal_symbols (&symbol_list_obstack, name, namespace, 0,
+			  wild_match);
 
 done:
   ndefns = num_defns_collected (&symbol_list_obstack);
@@ -4994,32 +5056,89 @@ is_valid_name_for_wild_match (const char *name0)
   return 1;
 }
 
-/* True if NAME represents a name of the form A1.A2....An, n>=1 and
-   PATN[0..PATN_LEN-1] = Ak.Ak+1.....An for some k >= 1.  Ignores
-   informational suffixes of NAME (i.e., for which is_name_suffix is
-   true).  */
+/* Advance *NAMEP to next occurrence of TARGET0 in the string NAME0
+   that could start a simple name.  Assumes that *NAMEP points into
+   the string beginning at NAME0.  */
 
 static int
-wild_match (const char *patn0, int patn_len, const char *name0)
+advance_wild_match (const char **namep, const char *name0, int target0)
 {
-  char* match;
-  const char* start;
+  const char *name = *namep;
 
-  start = name0;
   while (1)
     {
-      match = strstr (start, patn0);
-      if (match == NULL)
+      int t0, t1;
+
+      t0 = *name;
+      if (t0 == '_')
+	{
+	  t1 = name[1];
+	  if ((t1 >= 'a' && t1 <= 'z') || (t1 >= '0' && t1 <= '9'))
+	    {
+	      name += 1;
+	      if (name == name0 + 5 && strncmp (name0, "_ada", 4) == 0)
+		break;
+	      else
+		name += 1;
+	    }
+	  else if (t1 == '_' && ((name[2] >= 'a' && name[2] <= 'z')
+				 || name[2] == target0))
+	    {
+	      name += 2;
+	      break;
+	    }
+	  else
+	    return 0;
+	}
+      else if ((t0 >= 'a' && t0 <= 'z') || (t0 >= '0' && t0 <= '9'))
+	name += 1;
+      else
 	return 0;
-      if ((match == name0 
-	   || match[-1] == '.' 
-	   || (match > name0 + 1 && match[-1] == '_' && match[-2] == '_')
-	   || (match == name0 + 5 && strncmp ("_ada_", name0, 5) == 0))
-          && is_name_suffix (match + patn_len))
-        return (match == name0 || is_valid_name_for_wild_match (name0));
-      start = match + 1;
+    }
+
+  *namep = name;
+  return 1;
+}
+
+/* Return 0 iff NAME encodes a name of the form prefix.PATN.  Ignores any
+   informational suffixes of NAME (i.e., for which is_name_suffix is
+   true).  Assumes that PATN is a lower-cased Ada simple name.  */
+
+static int
+wild_match (const char *name, const char *patn)
+{
+  const char *p, *n;
+  const char *name0 = name;
+
+  while (1)
+    {
+      const char *match = name;
+
+      if (*name == *patn)
+	{
+	  for (name += 1, p = patn + 1; *p != '\0'; name += 1, p += 1)
+	    if (*p != *name)
+	      break;
+	  if (*p == '\0' && is_name_suffix (name))
+	    return match != name0 && !is_valid_name_for_wild_match (name0);
+
+	  if (name[-1] == '_')
+	    name -= 1;
+	}
+      if (!advance_wild_match (&name, name0, *patn))
+	return 1;
     }
 }
+
+/* Returns 0 iff symbol name SYM_NAME matches SEARCH_NAME, apart from
+   informational suffix.  */
+
+static int
+full_match (const char *sym_name, const char *search_name)
+{
+  return !match_name (sym_name, search_name, 0);
+}
+
 
 /* Add symbols from BLOCK matching identifier NAME in DOMAIN to
    vector *defn_symbols, updating the list of symbols in OBSTACKP 
@@ -5045,13 +5164,13 @@ ada_add_block_symbols (struct obstack *obstackp,
   found_sym = 0;
   if (wild)
     {
-      struct symbol *sym;
-
-      ALL_BLOCK_SYMBOLS (block, iter, sym)
+      for (sym = dict_iter_match_first (BLOCK_DICT (block), name,
+					wild_match, &iter);
+	   sym != NULL; sym = dict_iter_match_next (name, wild_match, &iter))
       {
         if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
                                    SYMBOL_DOMAIN (sym), domain)
-            && wild_match (name, name_len, SYMBOL_LINKAGE_NAME (sym)))
+            && wild_match (SYMBOL_LINKAGE_NAME (sym), name) == 0)
           {
 	    if (SYMBOL_CLASS (sym) == LOC_UNRESOLVED)
 	      continue;
@@ -5069,29 +5188,25 @@ ada_add_block_symbols (struct obstack *obstackp,
     }
   else
     {
-      ALL_BLOCK_SYMBOLS (block, iter, sym)
+     for (sym = dict_iter_match_first (BLOCK_DICT (block), name,
+				       full_match, &iter);
+	   sym != NULL; sym = dict_iter_match_next (name, full_match, &iter))
       {
         if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
                                    SYMBOL_DOMAIN (sym), domain))
           {
-            int cmp = strncmp (name, SYMBOL_LINKAGE_NAME (sym), name_len);
-
-            if (cmp == 0
-                && is_name_suffix (SYMBOL_LINKAGE_NAME (sym) + name_len))
-              {
-		if (SYMBOL_CLASS (sym) != LOC_UNRESOLVED)
+	    if (SYMBOL_CLASS (sym) != LOC_UNRESOLVED)
+	      {
+		if (SYMBOL_IS_ARGUMENT (sym))
+		  arg_sym = sym;
+		else
 		  {
-		    if (SYMBOL_IS_ARGUMENT (sym))
-		      arg_sym = sym;
-		    else
-		      {
-			found_sym = 1;
-			add_defn_to_vec (obstackp,
-					 fixup_symbol_section (sym, objfile),
-					 block);
-		      }
+		    found_sym = 1;
+		    add_defn_to_vec (obstackp,
+				     fixup_symbol_section (sym, objfile),
+				     block);
 		  }
-              }
+	      }
           }
       }
     }
@@ -7636,7 +7751,15 @@ ada_check_typedef (struct type *type)
       char *name = TYPE_TAG_NAME (type);
       struct type *type1 = ada_find_any_type (name);
 
-      return (type1 == NULL) ? type : type1;
+      if (type1 == NULL)
+        return type;
+
+      /* TYPE1 might itself be a TYPE_CODE_TYPEDEF (this can happen with
+	 stubs pointing to arrays, as we don't create symbols for array
+	 types, only for the typedef-to-array types).  This is why
+	 we process TYPE1 with ada_check_typedef before returning
+	 the result.  */
+      return ada_check_typedef (type1);
     }
 }
 
@@ -10325,7 +10448,7 @@ is_known_support_routine (struct frame_info *frame)
 
   /* Check whether the function is a GNAT-generated entity.  */
 
-  find_frame_funname (frame, &func_name, &func_lang);
+  find_frame_funname (frame, &func_name, &func_lang, NULL);
   if (func_name == NULL)
     return 1;
 
@@ -10393,7 +10516,7 @@ ada_unhandled_exception_name_addr_from_raise (void)
       char *func_name;
       enum language func_lang;
 
-      find_frame_funname (fi, &func_name, &func_lang);
+      find_frame_funname (fi, &func_name, &func_lang, NULL);
       if (func_name != NULL
           && strcmp (func_name, exception_info->catch_exception_sym) == 0)
         break; /* We found the frame we were looking for...  */

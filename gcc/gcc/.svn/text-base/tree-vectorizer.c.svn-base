@@ -208,7 +208,7 @@ vectorize_loops (void)
   /*  ----------- Analyze loops. -----------  */
 
   /* If some loop was duplicated, it gets bigger number
-     than all previously defined loops. This fact allows us to run
+     than all previously defined loops.  This fact allows us to run
      only over initial loops skipping newly generated ones.  */
   FOR_EACH_LOOP (li, loop, 0)
     if (optimize_loop_nest_for_speed_p (loop))
@@ -383,7 +383,7 @@ struct simple_ipa_opt_pass pass_ipa_increase_alignment =
   NULL,                                 /* sub */
   NULL,                                 /* next */
   0,                                    /* static_pass_number */
-  TV_NONE,                              /* tv_id */
+  TV_IPA_OPT,                           /* tv_id */
   0,                                    /* properties_required */
   0,                                    /* properties_provided */
   0,                                    /* properties_destroyed */

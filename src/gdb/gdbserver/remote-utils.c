@@ -107,8 +107,8 @@ struct sym_cache
 int remote_debug = 0;
 struct ui_file *gdb_stdlog;
 
-static int remote_desc = INVALID_DESCRIPTOR;
-static int listen_desc = INVALID_DESCRIPTOR;
+static gdb_fildes_t remote_desc = INVALID_DESCRIPTOR;
+static gdb_fildes_t listen_desc = INVALID_DESCRIPTOR;
 
 /* FIXME headerize? */
 extern int using_threads;
@@ -1091,7 +1091,8 @@ getpkt (char *buf)
 
       fprintf (stderr, "Bad checksum, sentsum=0x%x, csum=0x%x, buf=%s\n",
 	       (c1 << 4) + c2, csum, buf);
-      write (remote_desc, "-", 1);
+      if (write (remote_desc, "-", 1) != 1)
+	return -1;
     }
 
   if (!noack_mode)
@@ -1102,7 +1103,8 @@ getpkt (char *buf)
 	  fflush (stderr);
 	}
 
-      write (remote_desc, "+", 1);
+      if (write (remote_desc, "+", 1) != 1)
+	return -1;
 
       if (remote_debug)
 	{

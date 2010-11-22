@@ -1,15 +1,15 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/char_traits/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-15T07:14:45.850392Z
-147561
-bonzini
+2010-11-02T18:25:55.189481Z
+166210
+paolo
 
 
 
@@ -28,6 +28,40 @@ bonzini
 
 short
 dir
+
+constexpr_functions.cc
+file
+
+
+
+
+2010-11-22T19:18:18.041042Z
+1c34e6eca796091f96d3319c81634c73
+2010-11-02T18:25:55.189481Z
+166210
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2175
 
 char32_t
 dir

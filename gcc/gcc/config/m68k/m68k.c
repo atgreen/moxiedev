@@ -133,8 +133,10 @@ static void m68k_sched_dfa_post_advance_cycle (void);
 static int m68k_sched_first_cycle_multipass_dfa_lookahead (void);
 
 static bool m68k_can_eliminate (const int, const int);
+static void m68k_conditional_register_usage (void);
 static bool m68k_legitimate_address_p (enum machine_mode, rtx, bool);
 static bool m68k_handle_option (size_t, const char *, int);
+static void m68k_option_override (void);
 static rtx find_addr_reg (rtx);
 static const char *singlemove_string (rtx *);
 static void m68k_output_mi_thunk (FILE *, tree, HOST_WIDE_INT,
@@ -156,6 +158,10 @@ static void m68k_output_dwarf_dtprel (FILE *, int, rtx) ATTRIBUTE_UNUSED;
 static void m68k_trampoline_init (rtx, tree, rtx);
 static int m68k_return_pops_args (tree, tree, int);
 static rtx m68k_delegitimize_address (rtx);
+static void m68k_function_arg_advance (CUMULATIVE_ARGS *, enum machine_mode,
+				       const_tree, bool);
+static rtx m68k_function_arg (CUMULATIVE_ARGS *, enum machine_mode,
+			      const_tree, bool);
 
 
 /* Specify the identification number of the library being built */
@@ -233,6 +239,9 @@ const char *m68k_library_id_string = "_current_shared_library_a5_offset_";
 #undef TARGET_HANDLE_OPTION
 #define TARGET_HANDLE_OPTION m68k_handle_option
 
+#undef TARGET_OPTION_OVERRIDE
+#define TARGET_OPTION_OVERRIDE m68k_option_override
+
 #undef TARGET_RTX_COSTS
 #define TARGET_RTX_COSTS m68k_rtx_costs
 
@@ -270,6 +279,9 @@ const char *m68k_library_id_string = "_current_shared_library_a5_offset_";
 #undef TARGET_CAN_ELIMINATE
 #define TARGET_CAN_ELIMINATE m68k_can_eliminate
 
+#undef TARGET_CONDITIONAL_REGISTER_USAGE
+#define TARGET_CONDITIONAL_REGISTER_USAGE m68k_conditional_register_usage
+
 #undef TARGET_TRAMPOLINE_INIT
 #define TARGET_TRAMPOLINE_INIT m68k_trampoline_init
 
@@ -278,6 +290,12 @@ const char *m68k_library_id_string = "_current_shared_library_a5_offset_";
 
 #undef TARGET_DELEGITIMIZE_ADDRESS
 #define TARGET_DELEGITIMIZE_ADDRESS m68k_delegitimize_address
+
+#undef TARGET_FUNCTION_ARG
+#define TARGET_FUNCTION_ARG m68k_function_arg
+
+#undef TARGET_FUNCTION_ARG_ADVANCE
+#define TARGET_FUNCTION_ARG_ADVANCE m68k_function_arg_advance
 
 static const struct attribute_spec m68k_attribute_table[] =
 {
@@ -539,17 +557,10 @@ m68k_handle_option (size_t code, const char *arg, int value)
     }
 }
 
-/* Sometimes certain combinations of command options do not make
-   sense on a particular target machine.  You can define a macro
-   `OVERRIDE_OPTIONS' to take account of this.  This macro, if
-   defined, is executed once just after all the command options have
-   been parsed.
+/* Implement TARGET_OPTION_OVERRIDE.  */
 
-   Don't use this macro to turn on various extra optimizations for
-   `-O'.  That is what `OPTIMIZATION_OPTIONS' is for.  */
-
-void
-override_options (void)
+static void
+m68k_option_override (void)
 {
   const struct m68k_target_selection *entry;
   unsigned long target_mask;
@@ -1475,6 +1486,26 @@ m68k_ok_for_sibcall_p (tree decl, tree exp)
     return true;
   
   return false;
+}
+
+/* On the m68k all args are always pushed.  */
+
+static rtx
+m68k_function_arg (CUMULATIVE_ARGS *cum ATTRIBUTE_UNUSED,
+		   enum machine_mode mode ATTRIBUTE_UNUSED,
+		   const_tree type ATTRIBUTE_UNUSED,
+		   bool named ATTRIBUTE_UNUSED)
+{
+  return NULL_RTX;
+}
+
+static void
+m68k_function_arg_advance (CUMULATIVE_ARGS *cum, enum machine_mode mode,
+			   const_tree type, bool named ATTRIBUTE_UNUSED)
+{
+  *cum += (mode != BLKmode
+	   ? (GET_MODE_SIZE (mode) + 3) & ~3
+	   : (int_size_in_bytes (type) + 3) & ~3);
 }
 
 /* Convert X to a legitimate function call memory reference and return the
@@ -4632,49 +4663,46 @@ m68k_output_dwarf_dtprel (FILE *file, int size, rtx x)
 static rtx
 m68k_delegitimize_address (rtx orig_x)
 {
-  rtx x, y;
-  rtx addend = NULL_RTX;
-  rtx result;
+  rtx x;
+  struct m68k_address addr;
+  rtx unspec;
 
   orig_x = delegitimize_mem_from_attrs (orig_x);
-  if (! MEM_P (orig_x))
+  x = orig_x;
+  if (MEM_P (x))
+    x = XEXP (x, 0);
+
+  if (GET_CODE (x) != PLUS || GET_MODE (x) != Pmode)
     return orig_x;
 
-  x = XEXP (orig_x, 0);
+  if (!m68k_decompose_address (GET_MODE (x), x, false, &addr)
+      || addr.offset == NULL_RTX
+      || GET_CODE (addr.offset) != CONST)
+    return orig_x;
 
-  if (GET_CODE (x) == PLUS
-      && GET_CODE (XEXP (x, 1)) == CONST
-      && REG_P (XEXP (x, 0))
-      && REGNO (XEXP (x, 0)) == PIC_REG)
+  unspec = XEXP (addr.offset, 0);
+  if (GET_CODE (unspec) == PLUS && CONST_INT_P (XEXP (unspec, 1)))
+    unspec = XEXP (unspec, 0);
+  if (GET_CODE (unspec) != UNSPEC 
+      || (XINT (unspec, 1) != UNSPEC_RELOC16
+	  && XINT (unspec, 1) != UNSPEC_RELOC32))
+    return orig_x;
+  x = XVECEXP (unspec, 0, 0);
+  gcc_assert (GET_CODE (x) == SYMBOL_REF || GET_CODE (x) == LABEL_REF);
+  if (unspec != XEXP (addr.offset, 0))
+    x = gen_rtx_PLUS (Pmode, x, XEXP (XEXP (addr.offset, 0), 1));
+  if (addr.index)
     {
-      y = x = XEXP (XEXP (x, 1), 0);
-
-      /* Handle an addend.  */
-      if ((GET_CODE (x) == PLUS || GET_CODE (x) == MINUS)
-	  && CONST_INT_P (XEXP (x, 1)))
-	{
-	  addend = XEXP (x, 1);
-	  x = XEXP (x, 0);
-	}
-
-      if (GET_CODE (x) == UNSPEC
-	  && (XINT (x, 1) == UNSPEC_RELOC16
-	      || XINT (x, 1) == UNSPEC_RELOC32))
-	{
-	  result = XVECEXP (x, 0, 0);
-	  if (addend)
-	    {
-	      if (GET_CODE (y) == PLUS)
-		result = gen_rtx_PLUS (Pmode, result, addend);
-	      else
-		result = gen_rtx_MINUS (Pmode, result, addend);
-	      result = gen_rtx_CONST (Pmode, result);
-	    }
-	  return result;
-	}
+      rtx idx = addr.index;
+      if (addr.scale != 1)
+	idx = gen_rtx_MULT (Pmode, idx, GEN_INT (addr.scale));
+      x = gen_rtx_PLUS (Pmode, idx, x);
     }
-
-  return orig_x;
+  if (addr.base)
+    x = gen_rtx_PLUS (Pmode, addr.base, x);
+  if (MEM_P (orig_x))
+    x = replace_equiv_address_nv (orig_x, x);
+  return x;
 }
   
 
@@ -6540,10 +6568,29 @@ m68k_return_pops_args (tree fundecl, tree funtype, int size)
   return ((TARGET_RTD
 	   && (!fundecl
 	       || TREE_CODE (fundecl) != IDENTIFIER_NODE)
-	   && (TYPE_ARG_TYPES (funtype) == 0
-	       || (TREE_VALUE (tree_last (TYPE_ARG_TYPES (funtype)))
-		   == void_type_node)))
+	   && (!stdarg_p (funtype)))
 	  ? size : 0);
+}
+
+/* Make sure everything's fine if we *don't* have a given processor.
+   This assumes that putting a register in fixed_regs will keep the
+   compiler's mitts completely off it.  We don't bother to zero it out
+   of register classes.  */
+
+static void
+m68k_conditional_register_usage (void)
+{
+  int i;
+  HARD_REG_SET x;
+  if (!TARGET_HARD_FLOAT)
+    {
+      COPY_HARD_REG_SET (x, reg_class_contents[(int)FP_REGS]);
+      for (i = 0; i < FIRST_PSEUDO_REGISTER; i++)
+        if (TEST_HARD_REG_BIT (x, i))
+	  fixed_regs[i] = call_used_regs[i] = 1;
+    }
+  if (flag_pic)
+    fixed_regs[PIC_REG] = call_used_regs[PIC_REG] = 1;
 }
 
 #include "gt-m68k.h"

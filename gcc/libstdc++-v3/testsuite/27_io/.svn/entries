@@ -1,14 +1,14 @@
 10
 
 dir
-162706
+167046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-07-27T10:36:50.719609Z
-162562
+2010-11-18T17:21:35.193806Z
+166911
 paolo
 
 
@@ -66,16 +66,16 @@ dir
 basic_stringstream
 dir
 
-ios_base
-dir
-
 basic_iostream
 dir
 
-basic_streambuf
+ios_base
 dir
 
 objects
+dir
+
+basic_streambuf
 dir
 
 basic_ios
@@ -84,16 +84,16 @@ dir
 basic_istringstream
 dir
 
-basic_ostringstream
-dir
-
 basic_fstream
 dir
 
-basic_stringbuf
+basic_ostringstream
 dir
 
 types
+dir
+
+basic_stringbuf
 dir
 
 basic_istream

@@ -257,7 +257,12 @@ get_emutls_init_templ_addr (tree decl)
 			targetm.emutls.tmpl_section);
     }
 
-  varpool_finalize_decl (to);
+  /* Create varpool node for the new variable and finalize it if it is
+     not external one.  */
+  if (DECL_EXTERNAL (to))
+    varpool_node (to);
+  else
+    varpool_finalize_decl (to);
   return build_fold_addr_expr (to);
 }
 
@@ -324,7 +329,12 @@ new_emutls_decl (tree decl)
       record_references_in_initializer (to, false);
     }
 
-  varpool_finalize_decl (to);
+  /* Create varpool node for the new variable and finalize it if it is
+     not external one.  */
+  if (DECL_EXTERNAL (to))
+    varpool_node (to);
+  else
+    varpool_finalize_decl (to);
   return to;
 }
 
@@ -714,7 +724,7 @@ ipa_lower_emutls (void)
   VEC_safe_grow (tree, heap, access_vars, n_tls);
 
   /* Create the control variables for each TLS variable.  */
-  for (i = 0; VEC_iterate (varpool_node_ptr, tls_vars->nodes, i, var); ++i)
+  FOR_EACH_VEC_ELT (varpool_node_ptr, tls_vars->nodes, i, var)
     {
       tree cdecl;
       struct varpool_node *cvar;
@@ -750,7 +760,7 @@ ipa_lower_emutls (void)
   if (any_aliases)
     {
       alias_pair *p;
-      for (i = 0; VEC_iterate (alias_pair, alias_pairs, i, p); ++i)
+      FOR_EACH_VEC_ELT (alias_pair, alias_pairs, i, p)
 	if (DECL_THREAD_LOCAL_P (p->decl))
 	  {
 	    p->decl = emutls_decl (p->decl);
@@ -792,7 +802,7 @@ struct simple_ipa_opt_pass pass_ipa_lower_emutls =
   NULL,                                 /* sub */
   NULL,                                 /* next */
   0,                                    /* static_pass_number */
-  TV_NONE,				/* tv_id */
+  TV_IPA_OPT,				/* tv_id */
   PROP_cfg | PROP_ssa,			/* properties_required */
   0,                                    /* properties_provided */
   0,                                    /* properties_destroyed */

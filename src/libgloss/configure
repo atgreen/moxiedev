@@ -732,6 +732,7 @@ m32c
 rx
 arm
 spu
+tic6x
 iq2000
 libnosys'
 
@@ -2560,6 +2561,11 @@ case "${target}" in
 
 	config_testsuite=false
 	config_libnosys=false
+	;;
+  tic6x-*-*)
+	subdirs="$subdirs tic6x"
+
+	config_testsuite=false
 	;;
   iq2000-*-*)
 	subdirs="$subdirs iq2000"

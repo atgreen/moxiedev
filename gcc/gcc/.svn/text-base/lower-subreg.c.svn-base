@@ -396,7 +396,7 @@ simplify_subreg_concatn (enum machine_mode outermode, rtx op,
 			 unsigned int byte)
 {
   unsigned int inner_size;
-  enum machine_mode innermode;
+  enum machine_mode innermode, partmode;
   rtx part;
   unsigned int final_offset;
 
@@ -409,11 +409,24 @@ simplify_subreg_concatn (enum machine_mode outermode, rtx op,
 
   inner_size = GET_MODE_SIZE (innermode) / XVECLEN (op, 0);
   part = XVECEXP (op, 0, byte / inner_size);
+  partmode = GET_MODE (part);
+
+  /* VECTOR_CSTs in debug expressions are expanded into CONCATN instead of
+     regular CONST_VECTORs.  They have vector or integer modes, depending
+     on the capabilities of the target.  Cope with them.  */
+  if (partmode == VOIDmode && VECTOR_MODE_P (innermode))
+    partmode = GET_MODE_INNER (innermode);
+  else if (partmode == VOIDmode)
+    {
+      enum mode_class mclass = GET_MODE_CLASS (innermode);
+      partmode = mode_for_size (inner_size * BITS_PER_UNIT, mclass, 0);
+    }
+
   final_offset = byte % inner_size;
   if (final_offset + GET_MODE_SIZE (outermode) > inner_size)
     return NULL_RTX;
 
-  return simplify_gen_subreg (outermode, part, GET_MODE (part), final_offset);
+  return simplify_gen_subreg (outermode, part, partmode, final_offset);
 }
 
 /* Wrapper around simplify_gen_subreg which handles CONCATN.  */
@@ -1008,13 +1021,6 @@ resolve_shift_zext (rtx insn)
   offset2 = UNITS_PER_WORD * (1 - dest_reg_num);
   src_offset = UNITS_PER_WORD * src_reg_num;
 
-  if (WORDS_BIG_ENDIAN != BYTES_BIG_ENDIAN)
-    {
-      offset1 += UNITS_PER_WORD - 1;
-      offset2 += UNITS_PER_WORD - 1;
-      src_offset += UNITS_PER_WORD - 1;
-    }
-
   start_sequence ();
 
   dest_reg = simplify_gen_subreg_concatn (word_mode, SET_DEST (set),
@@ -1312,7 +1318,7 @@ decompose_multiword_subregs (void)
     unsigned int i;
     bitmap b;
 
-    for (i = 0; VEC_iterate (bitmap, reg_copy_graph, i, b); ++i)
+    FOR_EACH_VEC_ELT (bitmap, reg_copy_graph, i, b)
       if (b)
 	BITMAP_FREE (b);
   }

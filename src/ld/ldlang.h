@@ -286,6 +286,10 @@ typedef struct lang_input_statement_struct
 
   /* Set if the file does not exist.  */
   unsigned int missing_file : 1;
+
+  /* Set if the file was claimed by a plugin.  */
+  unsigned int claimed : 1;
+
 } lang_input_statement_type;
 
 typedef struct
@@ -564,7 +568,7 @@ extern lang_output_section_statement_type *lang_output_section_statement_lookup
 extern lang_output_section_statement_type *next_matching_output_section_statement
   (lang_output_section_statement_type *, int);
 extern void ldlang_add_undef
-  (const char *const);
+  (const char *const, bfd_boolean);
 extern void lang_add_output_format
   (const char *, const char *, const char *, int);
 extern void lang_list_init
@@ -580,6 +584,8 @@ extern void lang_add_reloc
    union etree_union *);
 extern void lang_for_each_statement
   (void (*) (lang_statement_union_type *));
+extern void lang_for_each_statement_worker
+  (void (*) (lang_statement_union_type *), lang_statement_union_type *);
 extern void *stat_alloc
   (size_t);
 extern void strip_excluded_output_sections

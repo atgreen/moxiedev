@@ -1,4 +1,5 @@
 /* { dg-require-effective-target vect_int } */
+/* { dg-add-options quad_vectors } */
 
 #include <stdarg.h>
 #include "tree-vect.h"
@@ -7,7 +8,7 @@
 
 /* unaligned store.  */
 
-int ib[N+5];
+int ib[N+7];
 
 __attribute__ ((noinline))
 int main1 ()
@@ -39,14 +40,14 @@ int main (void)
 
   check_vect ();
 
-  for (i = 0; i < N+5; i++)
+  for (i = 0; i <= N+6; i++)
     ib[i] = i;
 
   return main1 ();
 }
 
 /* { dg-final { scan-tree-dump-times "vectorized 1 loops" 2 "vect" { xfail  vect_no_align } } } */
-/* { dg-final { scan-tree-dump-times "Vectorizing an unaligned access" 1 "vect" { target vect_hw_misalign  } } } */
-/* { dg-final { scan-tree-dump-times "Vectorizing an unaligned access" 2 "vect" { xfail { vect_no_align || vect_hw_misalign } } } } */
-/* { dg-final { scan-tree-dump-times "Alignment of access forced using peeling" 1 "vect" { target vect_hw_misalign } } } */
+/* { dg-final { scan-tree-dump-times "Vectorizing an unaligned access" 1 "vect" { target vect_element_align  } } } */
+/* { dg-final { scan-tree-dump-times "Vectorizing an unaligned access" 2 "vect" { xfail { vect_no_align || vect_element_align } } } } */
+/* { dg-final { scan-tree-dump-times "Alignment of access forced using peeling" 1 "vect" { target vect_element_align } } } */
 /* { dg-final { cleanup-tree-dump "vect" } } */

@@ -1067,10 +1067,10 @@ microblaze_elf_relocate_section (bfd *output_bfd,
 	    case (int) R_MICROBLAZE_64:
 	    case (int) R_MICROBLAZE_32:
 	      {
-		/* r_symndx will be zero only for relocs against symbols
+		/* r_symndx will be STN_UNDEF (zero) only for relocs against symbols
 		   from removed linkonce sections, or sections discarded by
 		   a linker script.  */
-		if (r_symndx == 0 || (input_section->flags & SEC_ALLOC) == 0)
+		if (r_symndx == STN_UNDEF || (input_section->flags & SEC_ALLOC) == 0)
 		  {
 		    relocation += addend;
 		    if (r_type == R_MICROBLAZE_32)
@@ -2060,7 +2060,7 @@ microblaze_elf_check_relocs (bfd * abfd,
 		    const char *name;
 		    bfd *dynobj;
 		    unsigned int strndx = elf_elfheader (abfd)->e_shstrndx;
-		    unsigned int shnam = elf_section_data (sec)->rel_hdr.sh_name;
+		    unsigned int shnam = _bfd_elf_single_rel_hdr (sec)->sh_name;
 
 		    name = bfd_elf_string_from_elf_section (abfd, strndx, shnam);
 		    if (name == NULL)
@@ -3026,6 +3026,7 @@ microblaze_elf_add_symbol_hook (bfd *abfd,
 #define TARGET_BIG_NAME		"elf32-microblaze"
 
 #define ELF_ARCH		bfd_arch_microblaze
+#define ELF_TARGET_ID		MICROBLAZE_ELF_DATA
 #define ELF_MACHINE_CODE	EM_MICROBLAZE
 #define ELF_MACHINE_ALT1	EM_MICROBLAZE_OLD
 #define ELF_MAXPAGESIZE		0x4   		/* 4k, if we ever have 'em.  */

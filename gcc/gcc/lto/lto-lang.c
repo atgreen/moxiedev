@@ -36,6 +36,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "toplev.h"
 
 static tree handle_noreturn_attribute (tree *, tree, tree, int, bool *);
+static tree handle_leaf_attribute (tree *, tree, tree, int, bool *);
 static tree handle_const_attribute (tree *, tree, tree, int, bool *);
 static tree handle_malloc_attribute (tree *, tree, tree, int, bool *);
 static tree handle_pure_attribute (tree *, tree, tree, int, bool *);
@@ -53,6 +54,8 @@ const struct attribute_spec lto_attribute_table[] =
   /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
   { "noreturn",               0, 0, true,  false, false,
 			      handle_noreturn_attribute },
+  { "leaf",		      0, 0, true,  false, false,
+			      handle_leaf_attribute },
   /* The same comments as for noreturn attributes apply to const ones.  */
   { "const",                  0, 0, true,  false, false,
 			      handle_const_attribute },
@@ -184,6 +187,27 @@ handle_noreturn_attribute (tree *node, tree ARG_UNUSED (name),
   return NULL_TREE;
 }
 
+/* Handle a "leaf" attribute; arguments as in
+   struct attribute_spec.handler.  */
+
+static tree
+handle_leaf_attribute (tree *node, tree name,
+		       tree ARG_UNUSED (args),
+		       int ARG_UNUSED (flags), bool *no_add_attrs)
+{
+  if (TREE_CODE (*node) != FUNCTION_DECL)
+    {
+      warning (OPT_Wattributes, "%qE attribute ignored", name);
+      *no_add_attrs = true;
+    }
+  if (!TREE_PUBLIC (*node))
+    {
+      warning (OPT_Wattributes, "%qE attribute has no effect on unit local functions", name);
+      *no_add_attrs = true;
+    }
+
+  return NULL_TREE;
+}
 
 /* Handle a "const" attribute; arguments as in
    struct attribute_spec.handler.  */
@@ -615,14 +639,13 @@ lto_complain_wrong_lang_p (const struct cl_option *option ATTRIBUTE_UNUSED)
 }
 
 static void
-lto_init_options (unsigned int decoded_options_count ATTRIBUTE_UNUSED,
-		  struct cl_decoded_option *decoded_options ATTRIBUTE_UNUSED)
+lto_init_options_struct (struct gcc_options *opts)
 {
   /* By default, C99-like requirements for complex multiply and divide.
      ???  Until the complex method is encoded in the IL this is the only
      safe choice.  This will pessimize Fortran code with LTO unless
      people specify a complex method manually or use -ffast-math.  */
-  flag_complex_method = 2;
+  opts->x_flag_complex_method = 2;
 }
 
 /* Handle command-line option SCODE.  If the option takes an argument, it is
@@ -634,6 +657,7 @@ const char *resolution_file_name;
 static bool
 lto_handle_option (size_t scode, const char *arg,
 		   int value ATTRIBUTE_UNUSED, int kind ATTRIBUTE_UNUSED,
+		   location_t loc ATTRIBUTE_UNUSED,
 		   const struct cl_option_handlers *handlers ATTRIBUTE_UNUSED)
 {
   enum opt_code code = (enum opt_code) scode;
@@ -1138,8 +1162,8 @@ static void lto_init_ts (void)
 #define LANG_HOOKS_OPTION_LANG_MASK lto_option_lang_mask
 #undef LANG_HOOKS_COMPLAIN_WRONG_LANG_P
 #define LANG_HOOKS_COMPLAIN_WRONG_LANG_P lto_complain_wrong_lang_p
-#undef LANG_HOOKS_INIT_OPTIONS
-#define LANG_HOOKS_INIT_OPTIONS lto_init_options
+#undef LANG_HOOKS_INIT_OPTIONS_STRUCT
+#define LANG_HOOKS_INIT_OPTIONS_STRUCT lto_init_options_struct
 #undef LANG_HOOKS_HANDLE_OPTION
 #define LANG_HOOKS_HANDLE_OPTION lto_handle_option
 #undef LANG_HOOKS_POST_OPTIONS

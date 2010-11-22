@@ -35,8 +35,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <ctype.h>
 
-#define TRACE(x,y)
-
 
 struct hw_port_edge {
   int my_port;
@@ -53,7 +51,7 @@ struct hw_port_data {
 };
 
 const struct hw_port_descriptor empty_hw_ports[] = {
-  { NULL, },
+  { NULL, 0, 0, 0 },
 };
 
 static void

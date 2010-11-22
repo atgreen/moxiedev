@@ -54,10 +54,12 @@
 #if HAVE_NETINET_TCP_H
 #include <netinet/tcp.h>
 #endif
+#if HAVE_ALLOCA_H
+#include <alloca.h>
+#endif
 #if HAVE_MALLOC_H
 #include <malloc.h>
 #endif
-
 #if USE_WIN32API
 #include <winsock2.h>
 #endif
@@ -158,6 +160,14 @@ sync_error (FILE *fp, char *desc, int expect, int got)
   fprintf (stderr, "\n%s\n", desc);
   fprintf (stderr, "At logfile offset %ld, expected '0x%x' got '0x%x'\n",
 	   ftell (fp), expect, got);
+  fflush (stderr);
+  exit (1);
+}
+
+static void
+remote_error (const char *desc)
+{
+  fprintf (stderr, "\n%s\n", desc);
   fflush (stderr);
   exit (1);
 }
@@ -339,6 +349,17 @@ logchar (FILE *fp)
   return (ch);
 }
 
+static int
+gdbchar (int desc)
+{
+  unsigned char fromgdb;
+
+  if (read (desc, &fromgdb, 1) != 1)
+    return -1;
+  else
+    return fromgdb;
+}
+
 /* Accept input from gdb and match with chars from fp (after skipping one
    blank) up until a \n is read from fp (which is not matched) */
 
@@ -346,7 +367,7 @@ static void
 expect (FILE *fp)
 {
   int fromlog;
-  unsigned char fromgdb;
+  int fromgdb;
 
   if ((fromlog = logchar (fp)) != ' ')
     {
@@ -357,15 +378,16 @@ expect (FILE *fp)
     {
       fromlog = logchar (fp);
       if (fromlog == EOL)
-	{
-	  break;
-	}
-      read (remote_desc, &fromgdb, 1);
+	break;
+      fromgdb = gdbchar (remote_desc);
+      if (fromgdb < 0)
+	remote_error ("Error during read from gdb");
     }
   while (fromlog == fromgdb);
+
   if (fromlog != EOL)
     {
-      sync_error (fp, "Sync error during read of gdb packet", fromlog,
+      sync_error (fp, "Sync error during read of gdb packet from log", fromlog,
 		  fromgdb);
     }
 }
@@ -387,7 +409,8 @@ play (FILE *fp)
   while ((fromlog = logchar (fp)) != EOL)
     {
       ch = fromlog;
-      write (remote_desc, &ch, 1);
+      if (write (remote_desc, &ch, 1) != 1)
+	remote_error ("Error during write to gdb");
     }
 }
 

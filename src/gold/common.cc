@@ -88,16 +88,7 @@ bool
 Sort_commons<size>::operator()(const Symbol* pa, const Symbol* pb) const
 {
   if (pa == NULL)
-    {
-      if (pb == NULL)
-	{
-	  // Stabilize sort.  The order really doesn't matter, because
-	  // these entries will be discarded, but we want to return
-	  // the same result every time we compare pa and pb.
-	  return pa < pb;
-	}
-      return false;
-    }
+    return false;
   if (pb == NULL)
     return true;
 
@@ -295,11 +286,12 @@ Symbol_table::do_allocate_commons_list(
       gold_unreachable();
     }
 
-  Output_data_space *poc = new Output_data_space(addralign, ds_name);
-  Output_section *os = layout->add_output_section_data(name,
+  Output_data_space* poc = new Output_data_space(addralign, ds_name);
+  Output_section* os = layout->add_output_section_data(name,
 						       elfcpp::SHT_NOBITS,
-						       flags, poc, false,
-						       false, false, false);
+						       flags, poc,
+						       ORDER_INVALID,
+						       false);
   if (os != NULL)
     {
       if (commons_section_type == COMMONS_SMALL)

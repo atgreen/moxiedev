@@ -711,8 +711,7 @@ mark_address_taken (tree ref)
 }
 
 
-/* A subroutine of get_expr_operands to handle MEM_REF,
-   MISALIGNED_INDIRECT_REF.
+/* A subroutine of get_expr_operands to handle MEM_REF.
 
    STMT is the statement being processed, EXPR is the MEM_REF
       that got us here.
@@ -754,9 +753,7 @@ get_tmr_operands (gimple stmt, tree expr, int flags)
   /* First record the real operands.  */
   get_expr_operands (stmt, &TMR_BASE (expr), opf_use | (flags & opf_no_vops));
   get_expr_operands (stmt, &TMR_INDEX (expr), opf_use | (flags & opf_no_vops));
-
-  if (TMR_SYMBOL (expr))
-    mark_address_taken (TMR_SYMBOL (expr));
+  get_expr_operands (stmt, &TMR_INDEX2 (expr), opf_use | (flags & opf_no_vops));
 
   add_virtual_operand (stmt, flags);
 }
@@ -910,10 +907,6 @@ get_expr_operands (gimple stmt, tree *expr_p, int flags)
       gcc_assert (gimple_debug_bind_p (stmt));
       return;
 
-    case MISALIGNED_INDIRECT_REF:
-      get_expr_operands (stmt, &TREE_OPERAND (expr, 1), flags);
-      /* fall through */
-
     case MEM_REF:
       get_indirect_ref_operands (stmt, expr, flags, true);
       return;
@@ -1006,6 +999,7 @@ get_expr_operands (gimple stmt, tree *expr_p, int flags)
     case REALIGN_LOAD_EXPR:
     case WIDEN_MULT_PLUS_EXPR:
     case WIDEN_MULT_MINUS_EXPR:
+    case FMA_EXPR:
       {
 	get_expr_operands (stmt, &TREE_OPERAND (expr, 0), flags);
 	get_expr_operands (stmt, &TREE_OPERAND (expr, 1), flags);

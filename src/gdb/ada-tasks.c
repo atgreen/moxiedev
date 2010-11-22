@@ -212,6 +212,27 @@ ada_task_is_alive (struct ada_task_info *task_info)
   return (task_info->state != Terminated);
 }
 
+/* Call the ITERATOR function once for each Ada task that hasn't been
+   terminated yet.  */
+
+void
+iterate_over_live_ada_tasks (ada_task_list_iterator_ftype *iterator)
+{
+  int i, nb_tasks;
+  struct ada_task_info *task;
+
+  ada_build_task_list (0);
+  nb_tasks = VEC_length (ada_task_info_s, task_list);
+
+  for (i = 0; i < nb_tasks; i++)
+    {
+      task = VEC_index (ada_task_info_s, task_list, i);
+      if (!ada_task_is_alive (task))
+        continue;
+      iterator (task);
+    }
+}
+
 /* Extract the contents of the value as a string whose length is LENGTH,
    and store the result in DEST.  */
 
@@ -583,9 +604,18 @@ read_atcb (CORE_ADDR task_id, struct ada_task_info *task_info)
         }
     }
 
-  /* And finally, compute the task ptid.  */
+  /* And finally, compute the task ptid.  Note that there are situations
+     where this cannot be determined:
+       - The task is no longer alive - the ptid is irrelevant;
+       - We are debugging a core file - the thread is not always
+         completely preserved for us to link back a task to its
+         underlying thread.  Since we do not support task switching
+         when debugging core files anyway, we don't need to compute
+         that task ptid.
+     In either case, we don't need that ptid, and it is just good enough
+     to set it to null_ptid.  */
 
-  if (ada_task_is_alive (task_info))
+  if (target_has_execution && ada_task_is_alive (task_info))
     task_info->ptid = ptid_from_atcb_common (common_value);
   else
     task_info->ptid = null_ptid;

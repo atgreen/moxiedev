@@ -418,19 +418,40 @@ void
 mi_cmd_target_detach (char *command, char **argv, int argc)
 {
   if (argc != 0 && argc != 1)
-    error ("Usage: -target-detach [thread-group]");
+    error ("Usage: -target-detach [pid | thread-group]");
 
   if (argc == 1)
     {
       struct thread_info *tp;
       char *end = argv[0];
-      int pid = strtol (argv[0], &end, 10);
+      int pid;
 
-      if (*end != '\0')
-	error (_("Cannot parse thread group id '%s'"), argv[0]);
+      /* First see if we are dealing with a thread-group id.  */
+      if (*argv[0] == 'i')
+	{
+	  struct inferior *inf;
+	  int id = strtoul (argv[0] + 1, &end, 0);
+
+	  if (*end != '\0')
+	    error (_("Invalid syntax of thread-group id '%s'"), argv[0]);
+
+	  inf = find_inferior_id (id);
+	  if (!inf)
+	    error (_("Non-existent thread-group id '%d'"), id);
+
+	  pid = inf->pid;
+	}
+      else
+	{
+	  /* We must be dealing with a pid.  */
+	  pid = strtol (argv[0], &end, 10);
+
+	  if (*end != '\0')
+	    error (_("Invalid identifier '%s'"), argv[0]);
+	}
 
       /* Pick any thread in the desired process.  Current
-	 target_detach deteches from the parent of inferior_ptid.  */
+	 target_detach detaches from the parent of inferior_ptid.  */
       tp = iterate_over_threads (find_thread_of_process, &pid);
       if (!tp)
 	error (_("Thread group is empty"));
@@ -1352,9 +1373,9 @@ mi_cmd_data_read_memory (char *command, char **argv, int argc)
 
   /* Dispatch memory reads to the topmost target, not the flattened
      current_target.  */
-  nr_bytes = target_read_until_error (current_target.beneath,
-				      TARGET_OBJECT_MEMORY, NULL, mbuf,
-				      addr, total_bytes);
+  nr_bytes = target_read (current_target.beneath,
+			  TARGET_OBJECT_MEMORY, NULL, mbuf,
+			  addr, total_bytes);
   if (nr_bytes <= 0)
     error ("Unable to read memory.");
 
@@ -1436,6 +1457,88 @@ mi_cmd_data_read_memory (char *command, char **argv, int argc)
   }
   do_cleanups (cleanups);
 }
+
+void
+mi_cmd_data_read_memory_bytes (char *command, char **argv, int argc)
+{
+  struct gdbarch *gdbarch = get_current_arch ();
+  struct cleanup *cleanups;
+  CORE_ADDR addr;
+  LONGEST length;
+  memory_read_result_s *read_result;
+  int ix;
+  VEC(memory_read_result_s) *result;
+  long offset = 0;
+  int optind = 0;
+  char *optarg;
+  enum opt
+    {
+      OFFSET_OPT
+    };
+  static struct mi_opt opts[] =
+  {
+    {"o", OFFSET_OPT, 1},
+    { 0, 0, 0 }
+  };
+
+  while (1)
+    {
+      int opt = mi_getopt ("mi_cmd_data_read_memory_bytes", argc, argv, opts,
+			   &optind, &optarg);
+      if (opt < 0)
+	break;
+      switch ((enum opt) opt)
+	{
+	case OFFSET_OPT:
+	  offset = atol (optarg);
+	  break;
+	}
+    }
+  argv += optind;
+  argc -= optind;
+
+  if (argc != 2)
+    error ("Usage: [ -o OFFSET ] ADDR LENGTH.");
+
+  addr = parse_and_eval_address (argv[0]) + offset;
+  length = atol (argv[1]);
+
+  result = read_memory_robust (current_target.beneath, addr, length);
+
+  cleanups = make_cleanup (free_memory_read_result_vector, result);
+
+  if (VEC_length (memory_read_result_s, result) == 0)
+    error ("Unable to read memory.");
+
+  make_cleanup_ui_out_list_begin_end (uiout, "memory");
+  for (ix = 0;
+       VEC_iterate (memory_read_result_s, result, ix, read_result);
+       ++ix)
+    {
+      struct cleanup *t = make_cleanup_ui_out_tuple_begin_end (uiout, NULL);
+      char *data, *p;
+      int i;
+
+      ui_out_field_core_addr (uiout, "begin", gdbarch, read_result->begin);
+      ui_out_field_core_addr (uiout, "offset", gdbarch, read_result->begin
+			      - addr);
+      ui_out_field_core_addr (uiout, "end", gdbarch, read_result->end);
+
+      data = xmalloc ((read_result->end - read_result->begin) * 2 + 1);
+
+      for (i = 0, p = data;
+	   i < (read_result->end - read_result->begin);
+	   ++i, p += 2)
+	{
+	  sprintf (p, "%02x", read_result->data[i]);
+	}
+      ui_out_field_string (uiout, "contents", data);
+      xfree (data);
+      do_cleanups (t);
+    }
+  do_cleanups (cleanups);
+}
+
 
 /* DATA-MEMORY-WRITE:
 
@@ -1523,6 +1626,44 @@ mi_cmd_data_write_memory (char *command, char **argv, int argc)
   do_cleanups (old_chain);
 }
 
+/* DATA-MEMORY-WRITE-RAW:
+
+   ADDR: start address
+   DATA: string of bytes to write at that address. */
+void
+mi_cmd_data_write_memory_bytes (char *command, char **argv, int argc)
+{
+  CORE_ADDR addr;
+  char *cdata;
+  gdb_byte *data;
+  int len, r, i;
+  struct cleanup *back_to;
+
+  if (argc != 2)
+    error ("Usage: ADDR DATA.");
+
+  addr = parse_and_eval_address (argv[0]);
+  cdata = argv[1];
+  len = strlen (cdata)/2;
+
+  data = xmalloc (len);
+  back_to = make_cleanup (xfree, data);
+
+  for (i = 0; i < len; ++i)
+    {
+      int x;
+      sscanf (cdata + i * 2, "%02x", &x);
+      data[i] = (gdb_byte)x;
+    }
+
+  r = target_write_memory (addr, data, len);
+  if (r != 0)
+    error (_("Could not write memory"));
+
+  do_cleanups (back_to);
+}
+
+
 void
 mi_cmd_enable_timings (char *command, char **argv, int argc)
 {
@@ -1557,6 +1698,7 @@ mi_cmd_list_features (char *command, char **argv, int argc)
       ui_out_field_string (uiout, NULL, "frozen-varobjs");
       ui_out_field_string (uiout, NULL, "pending-breakpoints");
       ui_out_field_string (uiout, NULL, "thread-info");
+      ui_out_field_string (uiout, NULL, "data-read-memory-bytes");
       
 #if HAVE_PYTHON
       ui_out_field_string (uiout, NULL, "python");
@@ -1579,6 +1721,8 @@ mi_cmd_list_target_features (char *command, char **argv, int argc)
       cleanup = make_cleanup_ui_out_list_begin_end (uiout, "features");      
       if (target_can_async_p ())
 	ui_out_field_string (uiout, NULL, "async");
+      if (target_can_execute_reverse)
+	ui_out_field_string (uiout, NULL, "reverse");
       
       do_cleanups (cleanup);
       return;
@@ -1609,7 +1753,7 @@ mi_cmd_remove_inferior (char *command, char **argv, int argc)
   if (argc != 1)
     error ("-remove-inferior should be passed a single argument");
 
-  if (sscanf (argv[1], "i%d", &id) != 1)
+  if (sscanf (argv[0], "i%d", &id) != 1)
     error ("the thread group id is syntactically invalid");
 
   inf = find_inferior_id (id);

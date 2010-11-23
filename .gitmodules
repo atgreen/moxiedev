@@ -10,3 +10,6 @@
 [submodule "rtems"]
 	path = rtems
 	url = git://github.com/atgreen/rtems-moxie
+[submodule "uClibc"]
+	path = uClibc
+	url = git://github.com/atgreen/uClibc-moxie

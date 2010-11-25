@@ -1,4 +1,4 @@
-This is the public release of libelf-0.8.12, a free ELF object
+This is the public release of libelf-0.8.13, a free ELF object
 file access library. If you have problems with applications
 that use libelf and work with the commercial (SVR4, Solaris)
 version but not with this one, please contact me.
@@ -9,7 +9,7 @@ have a file .../include/elf.h that contains the single line
 configure.
 
 Installation is straightforward - the package is autoconf'ed.  Just do
-``cd libelf-0.8.12; ./configure; make; make install''.  Header files
+``cd libelf-0.8.13; ./configure; make; make install''.  Header files
 will be installed in .../include/libelf/.  If your system does not
 provide its own versions of libelf.h, nlist.h or gelf.h, ``make
 install'' will add the missing headers.  If you prefer not to have
@@ -35,7 +35,7 @@ On some systems (in particular, Solaris and all variants of Linux),
 ``make'' will try to build a shared library. If you run into problems
 on your system, please pass ``--disable-shared'' to configure.
 If you build a shared library and want it to be installed as
-``libelf-0.8.12.so'' rather than ``libelf.so.0.8.12'', please use
+``libelf-0.8.13.so'' rather than ``libelf.so.0.8.13'', please use
 ``./configure --enable-gnu-names''. Other files, e.g. ``libelf.so'' and
 ``libelf.so.0'' are NOT affected.
 
@@ -180,6 +180,12 @@ Various notes regarding the W32 port:
 	* Libelf does not translate Solaris' `Move' and `Syminfo'
 	  sections. You can read them using elf_getdata(), but you'll
 	  only get raw (untranslated) bytes.
+
+Changes since 0.8.12:
+
+	* New function elf_getaroff().
+
+	* Build fixes.
 
 Changes since 0.8.11:
 

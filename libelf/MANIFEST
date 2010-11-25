@@ -1,8 +1,8 @@
 25275 COPYING.LIB
-35032 ChangeLog
+35406 ChangeLog
 7462 INSTALL
 5908 Makefile.in
-13159 README
+13232 README
 7 VERSION
 2955 acconfig.h
 9381 aclocal.m4
@@ -20,10 +20,10 @@
 3055 lib/32.newphdr.c
 12322 lib/32.xlatetof.c
 14221 lib/64.xlatetof.c
-7990 lib/Makefile.in
-3999 lib/Makefile.w32
+8012 lib/Makefile.in
+4010 lib/Makefile.w32
 1119 lib/assert.c
-10795 lib/begin.c
+10463 lib/begin.c
 1685 lib/build.bat
 3566 lib/byteswap.h
 3937 lib/checksum.c
@@ -31,7 +31,7 @@
 4851 lib/config.h.w32
 12554 lib/cook.c
 1183 lib/data.c
-24544 lib/elf_repl.h
+24585 lib/elf_repl.h
 2899 lib/end.c
 2137 lib/errmsg.c
 1037 lib/errno.c
@@ -45,6 +45,7 @@
 3758 lib/gelfshdr.c
 9456 lib/gelftrans.c
 1175 lib/getarhdr.c
+1380 lib/getaroff.c
 2421 lib/getarsym.c
 1096 lib/getbase.c
 3841 lib/getdata.c
@@ -64,7 +65,7 @@
 5898 lib/nlist.c
 1452 lib/nlist.h
 5071 lib/opt.delscn.c
-12801 lib/private.h
+13133 lib/private.h
 1286 lib/rand.c
 2543 lib/rawdata.c
 1541 lib/rawfile.c
@@ -83,7 +84,7 @@
 4425 lib/x.elfext.c
 2721 lib/x.movscn.c
 2870 lib/x.remscn.c
-238 libelf.pc.in
+254 libelf.pc.in
 619 mkinstalldirs
 4593 po/Makefile.in
 8748 po/de.gmo

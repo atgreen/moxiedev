@@ -9,4 +9,4 @@ Version: @VERSION@
 Requires:
 Conflicts:
 Libs: -L${libdir} -lelf
-Cflags: -I${includedir}/libelf
+Cflags: -I${includedir}/libelf -I${includedir}

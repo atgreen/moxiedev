@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
  */
 
-/* @(#) $Id: private.h,v 1.39 2008/05/23 08:15:35 michael Exp $ */
+/* @(#) $Id: private.h,v 1.40 2009/11/01 13:04:19 michael Exp $ */
 
 #ifndef _PRIVATE_H
 #define _PRIVATE_H
@@ -95,6 +95,27 @@ extern void *_elf_memset();
 #elif __LIBELF_NEED_SYS_LINK_H
 # include <sys/link.h>
 #endif /* __LIBELF_NEED_LINK_H */
+
+#if HAVE_AR_H
+#include <ar.h>
+#else /* HAVE_AR_H */
+
+#define ARMAG	"!<arch>\n"
+#define SARMAG	8
+
+struct ar_hdr {
+    char    ar_name[16];
+    char    ar_date[12];
+    char    ar_uid[6];
+    char    ar_gid[6];
+    char    ar_mode[8];
+    char    ar_size[10];
+    char    ar_fmag[2];
+};
+
+#define ARFMAG	"`\n"
+
+#endif /* HAVE_AR_H */
 
 #include <libelf.h>
 

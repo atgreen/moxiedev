@@ -1,3 +1,21 @@
+Sun Nov  1 14:08:47 CET 2009, Michael Riepe <libelf@mr511.de>
+
+	* README:
+	* VERSION:
+		update for 0.8.13 release.
+	* libelf.pc.in:
+		add -I${includedir}.
+	* lib/begin.c:
+	* lib/private.h:
+		move archive related declarations.
+	* lib/elf_repl.h:
+		disable Elf64_Cap for 32-bit build.
+	* lib/getaroff.c:
+		new file.
+	* lib/Makefile.in:
+	* lib/Makefile.w32:
+		add getaroff.c.
+
 Tue Jul  7 19:45:12 CEST 2009, Michael Riepe <libelf@mr511.de>
 
 	* README:

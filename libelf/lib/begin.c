@@ -20,29 +20,8 @@
 #include <private.h>
 
 #ifndef lint
-static const char rcsid[] = "@(#) $Id: begin.c,v 1.21 2008/05/23 08:15:34 michael Exp $";
+static const char rcsid[] = "@(#) $Id: begin.c,v 1.22 2009/11/01 13:04:19 michael Exp $";
 #endif /* lint */
-
-#if HAVE_AR_H
-#include <ar.h>
-#else /* HAVE_AR_H */
-
-#define ARMAG	"!<arch>\n"
-#define SARMAG	8
-
-struct ar_hdr {
-    char    ar_name[16];
-    char    ar_date[12];
-    char    ar_uid[6];
-    char    ar_gid[6];
-    char    ar_mode[8];
-    char    ar_size[10];
-    char    ar_fmag[2];
-};
-
-#define ARFMAG	"`\n"
-
-#endif /* HAVE_AR_H */
 
 static const Elf _elf_init = INIT_ELF;
 static const char fmag[] = ARFMAG;

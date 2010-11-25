@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
  */
 
-/* @(#) $Id: elf_repl.h,v 1.21 2008/05/23 08:15:34 michael Exp $ */
+/* @(#) $Id: elf_repl.h,v 1.22 2009/11/01 13:04:19 michael Exp $ */
 
 /*
  * NEVER INCLUDE THIS FILE DIRECTLY - USE <libelf.h> INSTEAD!
@@ -973,6 +973,8 @@ typedef struct {
     } c_un;
 } Elf32_Cap;
 
+#if __LIBELF64
+
 typedef struct {
     Elf64_Xword     	c_tag;
     union {
@@ -980,6 +982,8 @@ typedef struct {
 	Elf64_Addr      c_ptr;
     } c_un;
 } Elf64_Cap;
+
+#endif /* __LIBELF64 */
 
 #define CA_SUNW_NULL	0	/* c_un ignored */
 #define CA_SUNW_HW_1	1	/* c_un.c_val */

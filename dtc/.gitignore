@@ -1,9 +1,0 @@
-*.o
-*.d
-*.a
-*.so
-*~
-*.tab.[ch]
-lex.yy.c
-dtc
-ftdump

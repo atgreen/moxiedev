@@ -13,3 +13,6 @@
 [submodule "uClibc"]
 	path = uClibc
 	url = git://github.com/atgreen/uClibc-moxie
+[submodule "dtc"]
+	path = dtc
+	url = http://jdl.com/software/dtc.git

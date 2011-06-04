@@ -1,7 +1,7 @@
 /* Target-dependent code for the Matsushita MN10300 for GDB, the GNU debugger.
 
    Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,7 +25,7 @@
 #include "regcache.h"
 #include "gdb_string.h"
 #include "gdb_assert.h"
-#include "gdbcore.h"	/* for write_memory_unsigned_integer */
+#include "gdbcore.h"	/* For write_memory_unsigned_integer.  */
 #include "value.h"
 #include "gdbtypes.h"
 #include "frame.h"
@@ -1142,7 +1142,8 @@ mn10300_frame_this_id (struct frame_info *this_frame,
 		       void **this_prologue_cache,
 		       struct frame_id *this_id)
 {
-  *this_id = frame_id_build (mn10300_frame_base (this_frame, this_prologue_cache),
+  *this_id = frame_id_build (mn10300_frame_base (this_frame,
+						 this_prologue_cache),
 			     get_frame_func (this_frame));
 
 }
@@ -1173,6 +1174,7 @@ mn10300_frame_prev_register (struct frame_info *this_frame,
 
 static const struct frame_unwind mn10300_frame_unwind = {
   NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
   mn10300_frame_this_id, 
   mn10300_frame_prev_register,
   NULL,
@@ -1263,7 +1265,7 @@ mn10300_push_dummy_call (struct gdbarch *gdbarch,
   else
     regs_used = 0;
 
-  /* Push all arguments onto the stack. */
+  /* Push all arguments onto the stack.  */
   for (argnum = 0; argnum < nargs; argnum++)
     {
       /* FIXME what about structs?  Unions?  */
@@ -1332,7 +1334,7 @@ mn10300_push_dummy_call (struct gdbarch *gdbarch,
      Note that we don't update the return value though because that's
      the value of the stack just after pushing the arguments, but prior
      to performing the call.  This value is needed in order to
-     construct the frame ID of the dummy call.   */
+     construct the frame ID of the dummy call.  */
   {
     CORE_ADDR func_addr = find_function_addr (target_func, NULL);
     CORE_ADDR unwound_sp 
@@ -1436,7 +1438,7 @@ mn10300_gdbarch_init (struct gdbarch_info info,
   set_gdbarch_inner_than (gdbarch, core_addr_lessthan);
   /* Breakpoints.  */
   set_gdbarch_breakpoint_from_pc (gdbarch, mn10300_breakpoint_from_pc);
-  /* decr_pc_after_break? */
+  /* decr_pc_after_break?  */
   /* Disassembly.  */
   set_gdbarch_print_insn (gdbarch, print_insn_mn10300);
 
@@ -1456,7 +1458,7 @@ mn10300_gdbarch_init (struct gdbarch_info info,
   return gdbarch;
 }
  
-/* Dump out the mn10300 specific architecture information. */
+/* Dump out the mn10300 specific architecture information.  */
 
 static void
 mn10300_dump_tdep (struct gdbarch *gdbarch, struct ui_file *file)

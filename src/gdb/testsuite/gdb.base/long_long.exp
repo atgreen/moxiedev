@@ -1,7 +1,7 @@
 # This testcase is part of GDB, the GNU debugger.
 
 # Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009,
-# 2010 Free Software Foundation, Inc.
+# 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -165,9 +165,7 @@ if { $sizeof_double == 8 || $sizeof_long_double == 8 } {
     # words swapped in big endian format.
     # EABI targets default to natural-endian VFP format.
 
-    if { ([istarget "arm*-*-*"] || \
-	  [istarget "xscale*-*-*"] || \
-	  [istarget "strongarm*-*-*"]) \
+    if { ([istarget "arm*-*-*"]) \
 	 && !([istarget "*-*-*eabi"] || \
 	      [istarget "*-*-mingw32ce*"] || \
 	      [istarget "*-*-openbsd*"] || \

@@ -1,6 +1,6 @@
 /* CLI Definitions for GDB, the GNU debugger.
 
-   Copyright (c) 2002, 2003, 2007, 2008, 2009, 2010
+   Copyright (c) 2002, 2003, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -30,17 +30,13 @@
 
 struct ui_out *cli_uiout;
 
-/* These are the ui_out and the interpreter for the console interpreter.  */
+/* These are the ui_out and the interpreter for the console
+   interpreter.  */
 
 /* Longjmp-safe wrapper for "execute_command".  */
 static struct gdb_exception safe_execute_command (struct ui_out *uiout,
-						  char *command, int from_tty);
-struct captured_execute_command_args
-{
-  char *command;
-  int from_tty;
-};
-
+						  char *command, 
+						  int from_tty);
 /* These implement the cli out interpreter: */
 
 static void *
@@ -56,8 +52,9 @@ cli_interpreter_resume (void *data)
 
   /*sync_execution = 1; */
 
-  /* gdb_setup_readline will change gdb_stdout.  If the CLI was previously
-     writing to gdb_stdout, then set it to the new gdb_stdout afterwards.  */
+  /* gdb_setup_readline will change gdb_stdout.  If the CLI was
+     previously writing to gdb_stdout, then set it to the new
+     gdb_stdout afterwards.  */
 
   stream = cli_out_set_stream (cli_uiout, gdb_stdout);
   if (stream != gdb_stdout)
@@ -101,37 +98,28 @@ cli_interpreter_exec (void *data, const char *command_str)
      safe_execute_command.  */
   char *str = strcpy (alloca (strlen (command_str) + 1), command_str);
 
-  /* gdb_stdout could change between the time cli_uiout was initialized
-     and now. Since we're probably using a different interpreter which has
-     a new ui_file for gdb_stdout, use that one instead of the default.
+  /* gdb_stdout could change between the time cli_uiout was
+     initialized and now.  Since we're probably using a different
+     interpreter which has a new ui_file for gdb_stdout, use that one
+     instead of the default.
 
-     It is important that it gets reset everytime, since the user could
-     set gdb to use a different interpreter.  */
+     It is important that it gets reset everytime, since the user
+     could set gdb to use a different interpreter.  */
   old_stream = cli_out_set_stream (cli_uiout, gdb_stdout);
   result = safe_execute_command (cli_uiout, str, 1);
   cli_out_set_stream (cli_uiout, old_stream);
   return result;
 }
 
-static void
-do_captured_execute_command (struct ui_out *uiout, void *data)
-{
-  struct captured_execute_command_args *args =
-    (struct captured_execute_command_args *) data;
-
-  execute_command (args->command, args->from_tty);
-}
-
 static struct gdb_exception
 safe_execute_command (struct ui_out *uiout, char *command, int from_tty)
 {
-  struct gdb_exception e;
-  struct captured_execute_command_args args;
+  volatile struct gdb_exception e;
 
-  args.command = command;
-  args.from_tty = from_tty;
-  e = catch_exception (uiout, do_captured_execute_command, &args,
-		       RETURN_MASK_ALL);
+  TRY_CATCH (e, RETURN_MASK_ALL)
+    {
+      execute_command (command, from_tty);
+    }
   /* FIXME: cagney/2005-01-13: This shouldn't be needed.  Instead the
      caller should print the exception.  */
   exception_print (gdb_stderr, e);

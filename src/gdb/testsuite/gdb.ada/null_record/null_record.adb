@@ -1,4 +1,5 @@
---  Copyright 2004, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+--  Copyright 2004, 2007, 2008, 2009, 2010, 2011
+--  Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -18,6 +19,6 @@ with Bar; use Bar;
 procedure Null_Record is
    E : Void_Star := new Empty;
 begin
-   Do_Nothing (E);
+   Do_Nothing (E);  -- START
 end Null_Record;
 

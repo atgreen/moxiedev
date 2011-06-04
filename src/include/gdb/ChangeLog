@@ -1,3 +1,16 @@
+2011-04-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* remote-sim.h (sim_complete_command): New prototype.
+
+2011-03-05  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-bfin.h: New file.
+
+2011-01-11  Andrew Burgess  <aburgess@broadcom.com>
+
+	* remote-sim.h (sim_store_register): Update the API
+	documentation for this function.
+
 2010-09-06  Pedro Alves  <pedro@codesourcery.com>
 
 	* signals.def: Replace all ANY uses by SET with specific numbers.

@@ -1,5 +1,6 @@
 /* Tcl/Tk command definitions for Insight - Stack.
-   Copyright (C) 2001, 2002, 2003, 2008 Free Software Foundation, Inc.
+   Copyright (C) 2001, 2002, 2003, 2008, 2011
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -277,7 +278,7 @@ gdb_get_vars_command (ClientData clientData, Tcl_Interp *interp,
   struct symtabs_and_lines sals;
   struct symbol *sym;
   struct block *block;
-  char **canonical, *args;
+  char *args;
   struct dict_iterator iter;
   int i, arguments;
 
@@ -297,7 +298,7 @@ gdb_get_vars_command (ClientData clientData, Tcl_Interp *interp,
   if (objc == 2)
     {
       args = Tcl_GetStringFromObj (objv[1], NULL);
-      sals = decode_line_1 (&args, 1, NULL, 0, &canonical, NULL);
+      sals = decode_line_1 (&args, 1, NULL, 0, NULL);
       if (sals.nelts == 0)
 	{
 	  gdbtk_set_result (interp, "error decoding line");

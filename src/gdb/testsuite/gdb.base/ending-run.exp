@@ -1,7 +1,7 @@
 # This testcase is part of GDB, the GNU debugger.
 
 # Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009,
-# 2010 Free Software Foundation, Inc.
+# 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -146,7 +146,7 @@ gdb_test_multiple "next" "step out of main" {
 	# This is what happens on mingw32ce.
 	pass "step out of main"
     }
-    -re ".*Program exited normally.*$gdb_prompt $" {
+    -re ".*$inferior_exited_re normally.*$gdb_prompt $" {
 	# This is what happens on Linux i86 (and I would expect others)
 	set program_exited 1
 	pass "step out of main"
@@ -195,6 +195,10 @@ gdb_test_multiple "next" "step out of main" {
     -re ".*Program received signal SIGTRAP.*$gdb_prompt $" {
         pass "step out of main"
     }
+    -re ".*in.*__uClibc_main.*$gdb_prompt $" {
+	# This is what happens on system using uClibc.
+	pass "step out of main"
+    }
 }
 
 # When we're talking to a program running on a real stand-alone board,
@@ -209,21 +213,21 @@ if {! [target_info exists use_gdb_stub]
     global program_exited;
     if {[eval expr $program_exited == 0]} {
 	gdb_test_multiple "n" "step to end of run" {
-	    -re "Program exited normally.*$gdb_prompt $" {
+	    -re "$inferior_exited_re normally.*$gdb_prompt $" {
 		# If we actually have debug info for the start function,
 		# then we won't get the "Single-stepping until function
 		# exit" message.
 		pass "step to end of run"
 		set program_exited_normally 1
 	    }
-	    -re "Single.*EXIT code 0\r\n.*Program exited normally.*$gdb_prompt $" {
+	    -re "Single.*EXIT code 0\r\n.*$inferior_exited_re normally.*$gdb_prompt $" {
 		pass "step to end of run (status wrapper)"
 		set program_exited_normally 1
 	    }
 	    -re "Single.*EXIT code 0\r\n.*$gdb_prompt $" {
 		pass "step to end of run (status wrapper)"
 	    }
-	    -re ".*Single.*Program exited.*$gdb_prompt $" {
+	    -re ".*Single.*$inferior_exited_re.*$gdb_prompt $" {
 		pass "step to end of run"
 		set program_exited_normally 1
 	    }

@@ -1,5 +1,5 @@
 /* Darwin support for GDB, the GNU debugger.
-   Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2008, 2009, 2010
+   Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Contributed by Apple Computer, Inc.
@@ -51,7 +51,7 @@
 
 #define CHECK_ARGS(what, args) do { \
   if ((NULL == args) || ((args[0] != '0') && (args[1] != 'x'))) \
-    error("%s must be specified with 0x...", what);		\
+    error(_("%s must be specified with 0x..."), what);		\
 } while (0)
 
 #define PRINT_FIELD(structure, field) \
@@ -544,7 +544,7 @@ darwin_debug_regions (task_t task, mach_vm_address_t address, int max)
 
       address = prev_address + prev_size;
 
-      /* Check to see if address space has wrapped around. */
+      /* Check to see if address space has wrapped around.  */
       if (address == 0)
         print = done = 1;
 
@@ -817,7 +817,7 @@ info_mach_exceptions_command (char *args, int from_tty)
 	}
       else if (strcmp (args, "host") == 0)
 	{
-	  /* FIXME: This need a the privilegied host port!  */
+	  /* FIXME: This need a privilegied host port!  */
 	  kret = host_get_exception_ports
 	    (darwin_host_self, EXC_MASK_ALL, info.masks,
 	     &info.count, info.ports, info.behaviors, info.flavors);

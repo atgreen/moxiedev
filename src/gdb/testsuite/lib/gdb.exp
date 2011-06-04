@@ -1,5 +1,6 @@
 # Copyright 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-# 2003, 2004, 2005, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+# 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
+# Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -56,7 +57,7 @@ verbose "using GDBFLAGS = $GDBFLAGS" 2
 # INTERNAL_GDBFLAGS contains flags that the testsuite requires.
 global INTERNAL_GDBFLAGS
 if ![info exists INTERNAL_GDBFLAGS] {
-    set INTERNAL_GDBFLAGS "-nw -nx"
+    set INTERNAL_GDBFLAGS "-nw -nx -data-directory [pwd]/../data-directory"
 }
 
 # The variable gdb_prompt is a regexp which matches the gdb prompt.
@@ -98,6 +99,8 @@ if ![info exists env(EXEEXT)] {
 
 set octal "\[0-7\]+"
 
+set inferior_exited_re "(\\\[Inferior \[0-9\]+ \\(.*\\) exited)"
+
 ### Only procedures should come after this point.
 
 #
@@ -134,9 +137,8 @@ proc gdb_unload {} {
     gdb_expect 60 {
 	-re "No executable file now\[^\r\n\]*\[\r\n\]" { exp_continue }
 	-re "No symbol file now\[^\r\n\]*\[\r\n\]" { exp_continue }
-	-re "A program is being debugged already..*Kill it.*y or n. $"\
-	    { send_gdb "y\n"
-		verbose "\t\tKilling previous program being debugged"
+	-re "A program is being debugged already.*Are you sure you want to change the file.*y or n. $" {
+	    send_gdb "y\n"
 	    exp_continue
 	}
 	-re "Discard symbol table from .*y or n.*$" {
@@ -375,6 +377,11 @@ proc gdb_breakpoint { function args } {
 		send_gdb "$pending_response\n"
 		exp_continue
 	}
+	-re "A problem internal to GDB has been detected" {
+		fail "setting breakpoint at $function in runto (GDB internal error)"
+		gdb_internal_error_resync
+		return 0
+	}
 	-re "$gdb_prompt $" {
 		if { $no_message == 0 } {
 			fail "setting breakpoint at $function"
@@ -571,13 +578,14 @@ proc gdb_internal_error_resync {} {
 #    }
 # }
 #
-# The standard patterns, such as "Program exited..." and "A problem
+# The standard patterns, such as "Inferior exited..." and "A problem
 # ...", all being implicitly appended to that list.
 #
 proc gdb_test_multiple { command message user_code } {
     global verbose
     global gdb_prompt
     global GDB
+    global inferior_exited_re
     upvar timeout timeout
     upvar expect_out expect_out
 
@@ -587,6 +595,10 @@ proc gdb_test_multiple { command message user_code } {
 
     if [string match "*\[\r\n\]" $command] {
 	error "Invalid trailing newline in \"$message\" test"
+    }
+
+    if [string match "*\[\r\n\]*" $message] {
+	error "Invalid newline in \"$message\" test"
     }
 
     # TCL/EXPECT WART ALERT
@@ -754,7 +766,7 @@ proc gdb_test_multiple { command message user_code } {
             fail "$message"
 	    set result 1
 	}
-	 -re "Program exited with code \[0-9\]+.*$gdb_prompt $" {
+	 -re "$inferior_exited_re with code \[0-9\]+.*$gdb_prompt $" {
 	    if ![string match "" $message] then {
 		set errmsg "$message (the program exited)"
 	    } else {
@@ -763,7 +775,7 @@ proc gdb_test_multiple { command message user_code } {
 	    fail "$errmsg"
 	    set result -1
 	}
-	 -re "Program exited normally.*$gdb_prompt $" {
+	 -re "$inferior_exited_re normally.*$gdb_prompt $" {
 	    if ![string match "" $message] then {
 		set errmsg "$message (the program exited)"
 	    } else {
@@ -921,6 +933,37 @@ proc gdb_test_no_output { args } {
     }
 }
 
+# Send a command and then wait for a sequence of outputs.
+# This is useful when the sequence is long and contains ".*", a single
+# regexp to match the entire output can get a timeout much easier.
+#
+# COMMAND is the command to send.
+# TEST_NAME is passed to pass/fail.  COMMAND is used if TEST_NAME is "".
+# EXPECTED_OUTPUT_LIST is a list of regexps of expected output, which are
+# processed in order, and all must be present in the output.
+#
+# It is unnecessary to specify ".*" at the beginning or end of any regexp,
+# there is an implicit ".*" between each element of EXPECTED_OUTPUT_LIST.
+# There is also an implicit ".*" between the last regexp and the gdb prompt.
+#
+# Like gdb_test and gdb_test_multiple, the output is expected to end with the
+# gdb prompt, which must not be specified in EXPECTED_OUTPUT_LIST.
+#
+# Returns:
+#    1 if the test failed,
+#    0 if the test passes,
+#   -1 if there was an internal error.
+
+proc gdb_test_sequence { command test_name expected_output_list } {
+    global gdb_prompt
+    if { $test_name == "" } {
+	set test_name $command
+    }
+    lappend expected_output_list ""; # implicit ".*" before gdb prompt
+    send_gdb "$command\n"
+    return [gdb_expect_list $test_name "$gdb_prompt $" $expected_output_list]
+}
+
 
 # Test that a command gives an error.  For pass or fail, return
 # a 1 to indicate that more tests can proceed.  However a timeout
@@ -1056,8 +1099,8 @@ proc gdb_test_exact { args } {
 # of text per element and then strip trailing \r\n's.
 # Example:
 # gdb_test_list_exact "foo" "bar" \
-#     {[^\r\n]+[\r\n]+} \
-#     {[^\r\n]+} \
+#    "\[^\r\n\]+\[\r\n\]+" \
+#    "\[^\r\n\]+" \
 #     { \
 #	{expected result 1} \
 #	{expected result 2} \
@@ -1277,24 +1320,8 @@ proc default_gdb_start { } {
     global gdb_prompt
     global timeout
     global gdb_spawn_id;
-    global env
 
     gdb_stop_suppressing_tests;
-
-    set env(LC_CTYPE) C
-
-    # Don't let a .inputrc file or an existing setting of INPUTRC mess up
-    # the test results.  Even if /dev/null doesn't exist on the particular
-    # platform, the readline library will use the default setting just by
-    # failing to open the file.  OTOH, opening /dev/null successfully will
-    # also result in the default settings being used since nothing will be
-    # read from this file.
-    set env(INPUTRC) "/dev/null"
-
-    # The gdb.base/readline.exp arrow key test relies on the standard VT100
-    # bindings, so make sure that an appropriate terminal is selected.
-    # The same bug doesn't show up if we use ^P / ^N instead.
-    set env(TERM) "vt100"
 
     verbose "Spawning $GDB $INTERNAL_GDBFLAGS $GDBFLAGS"
 
@@ -1459,6 +1486,47 @@ proc skip_shlib_tests {} {
     return 1
 }
 
+# Return 1 if _Complex types are supported, otherwise, return 0.
+
+proc support_complex_tests {} {
+    global support_complex_tests_saved
+
+    # Use the cached value, if it exists.
+    if [info exists support_complex_tests_saved] {
+        verbose "returning saved $support_complex_tests_saved" 2
+        return $support_complex_tests_saved
+    }
+
+    # Set up, compile, and execute a test program containing _Complex types.
+    # Include the current process ID in the file names to prevent conflicts
+    # with invocations for multiple testsuites.
+    set src complex[pid].c
+    set exe complex[pid].x
+
+    set f [open $src "w"]
+    puts $f "int main() {"
+    puts $f "_Complex float cf;"
+    puts $f "_Complex double cd;"
+    puts $f "_Complex long double cld;"
+    puts $f "  return 0; }"
+    close $f
+
+    verbose "compiling testfile $src" 2
+    set compile_flags {debug nowarnings quiet}
+    set lines [gdb_compile $src $exe executable $compile_flags]
+    file delete $src
+    file delete $exe
+
+    if ![string match "" $lines] then {
+        verbose "testfile compilation failed, returning 0" 2
+        set support_complex_tests_saved 0
+    } else {
+	set support_complex_tests_saved 1
+    }
+
+    return $support_complex_tests_saved
+}
+
 # Return 1 if target is ILP32.
 # This cannot be decided simply from looking at the target string,
 # as it might depend on externally passed compiler options like -m64.
@@ -1536,12 +1604,23 @@ proc is_lp64_target {} {
     return [set is_lp64_target_saved($board) 1]
 }
 
+# Return 1 if this target is an x86 or x86-64 with -m32.
+proc is_x86_like_target {} {
+    if {[istarget i?86-*]} {
+	return 1
+    }
+    if {![istarget "x86_64-*-*"]} {
+	return 0
+    }
+    return [is_ilp32_target]
+}
+
 # Run a test on the target to see if it supports vmx hardware.  Return 0 if so, 
 # 1 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
 proc skip_altivec_tests {} {
     global skip_vmx_tests_saved
-    global srcdir subdir gdb_prompt
+    global srcdir subdir gdb_prompt inferior_exited_re
 
     # Use the cached value, if it exists.
     set me "skip_altivec_tests"
@@ -1608,7 +1687,7 @@ proc skip_altivec_tests {} {
             verbose -log "\n$me altivec hardware not detected" 
             set skip_vmx_tests_saved 1
         }
-        -re ".*Program exited normally.*${gdb_prompt} $" {
+        -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
             verbose -log "\n$me: altivec hardware detected" 
             set skip_vmx_tests_saved 0
         }
@@ -1629,7 +1708,7 @@ proc skip_altivec_tests {} {
 
 proc skip_vsx_tests {} {
     global skip_vsx_tests_saved
-    global srcdir subdir gdb_prompt
+    global srcdir subdir gdb_prompt inferior_exited_re
 
     # Use the cached value, if it exists.
     set me "skip_vsx_tests"
@@ -1654,7 +1733,7 @@ proc skip_vsx_tests {} {
     if [test_compiler_info gcc*] {
         set compile_flags "$compile_flags additional_flags=-mvsx"
     } elseif [test_compiler_info xlc*] {
-        set compile_flags "$compile_flags additional_flags=-qvsx"
+        set compile_flags "$compile_flags additional_flags=-qasm=gcc"
     } else {
         verbose "Could not compile with vsx support, returning 1" 2
         return 1
@@ -1665,10 +1744,11 @@ proc skip_vsx_tests {} {
 
     set f [open $src "w"]
     puts $f "int main() {"
+    puts $f "  double a\[2\] = { 1.0, 2.0 };"
     puts $f "#ifdef __MACH__"
-    puts $f "  asm volatile (\"lxvd2x v0,v0,v0\");"
+    puts $f "  asm volatile (\"lxvd2x v0,v0,%\[addr\]\" : : \[addr\] \"r\" (a));"
     puts $f "#else"
-    puts $f "  asm volatile (\"lxvd2x 0,0,0\");"
+    puts $f "  asm volatile (\"lxvd2x 0,0,%\[addr\]\" : : \[addr\] \"r\" (a));"
     puts $f "#endif"
     puts $f "  return 0; }"
     close $f
@@ -1694,7 +1774,7 @@ proc skip_vsx_tests {} {
             verbose -log "\n$me VSX hardware not detected"
             set skip_vsx_tests_saved 1
         }
-        -re ".*Program exited normally.*${gdb_prompt} $" {
+        -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
             verbose -log "\n$me: VSX hardware detected"
             set skip_vsx_tests_saved 0
         }
@@ -1744,6 +1824,79 @@ proc skip_inline_frame_tests {} {
 proc skip_inline_var_tests {} {
     # GDB only recognizes inlining information in DWARF 2 (DWARF 3).
     if { ! [test_debug_format "DWARF 2"] } {
+	return 1
+    }
+
+    return 0
+}
+
+# Return a 1 if we should skip tests that require hardware breakpoints
+
+proc skip_hw_breakpoint_tests {} {
+    # Skip tests if requested by the board (note that no_hardware_watchpoints
+    # disables both watchpoints and breakpoints)
+    if { [target_info exists gdb,no_hardware_watchpoints]} {
+	return 1
+    }
+
+    # These targets support hardware breakpoints natively
+    if { [istarget "i?86-*-*"] 
+	 || [istarget "x86_64-*-*"]
+	 || [istarget "ia64-*-*"] 
+	 || [istarget "arm*-*-*"]} {
+	return 0
+    }
+
+    return 1
+}
+
+# Return a 1 if we should skip tests that require hardware watchpoints
+
+proc skip_hw_watchpoint_tests {} {
+    # Skip tests if requested by the board
+    if { [target_info exists gdb,no_hardware_watchpoints]} {
+	return 1
+    }
+
+    # These targets support hardware watchpoints natively
+    if { [istarget "i?86-*-*"] 
+	 || [istarget "x86_64-*-*"]
+	 || [istarget "ia64-*-*"] 
+	 || [istarget "arm*-*-*"]
+	 || [istarget "powerpc*-*-linux*"]
+	 || [istarget "s390*-*-*"] } {
+	return 0
+    }
+
+    return 1
+}
+
+# Return a 1 if we should skip tests that require *multiple* hardware
+# watchpoints to be active at the same time
+
+proc skip_hw_watchpoint_multi_tests {} {
+    if { [skip_hw_watchpoint_tests] } {
+	return 1
+    }
+
+    # These targets support just a single hardware watchpoint
+    if { [istarget "arm*-*-*"]
+	 || [istarget "powerpc*-*-linux*"] } {
+	return 1
+    }
+
+    return 0
+}
+
+# Return a 1 if we should skip tests that require read/access watchpoints
+
+proc skip_hw_watchpoint_access_tests {} {
+    if { [skip_hw_watchpoint_tests] } {
+	return 1
+    }
+
+    # These targets support just write watchpoints
+    if { [istarget "s390*-*-*"] } {
 	return 1
     }
 
@@ -2350,10 +2503,10 @@ proc gdb_expect { args } {
     }
 }
 
-# gdb_expect_list MESSAGE SENTINEL LIST -- expect a sequence of outputs
+# gdb_expect_list TEST SENTINEL LIST -- expect a sequence of outputs
 #
 # Check for long sequence of output by parts.
-# MESSAGE: is the test message to be printed with the test success/fail.
+# TEST: is the test message to be printed with the test success/fail.
 # SENTINEL: Is the terminal pattern indicating that output has finished.
 # LIST: is the sequence of outputs to match.
 # If the sentinel is recognized early, it is considered an error.
@@ -2362,7 +2515,7 @@ proc gdb_expect { args } {
 #    1 if the test failed,
 #    0 if the test passes,
 #   -1 if there was an internal error.
-#
+
 proc gdb_expect_list {test sentinel list} {
     global gdb_prompt
     global suppress_flag
@@ -2375,6 +2528,7 @@ proc gdb_expect_list {test sentinel list} {
     while { ${index} < [llength ${list}] } {
 	set pattern [lindex ${list} ${index}]
         set index [expr ${index} + 1]
+	verbose -log "gdb_expect_list pattern: /$pattern/" 2
 	if { ${index} == [llength ${list}] } {
 	    if { ${ok} } {
 		gdb_expect {
@@ -2551,6 +2705,43 @@ proc shlib_symbol_file { libname } {
     return $libname
 }
 
+# Return the filename to download to the target and load for this
+# executable.  Normally just BINFILE unless it is renamed to something
+# else for this target.
+
+proc exec_target_file { binfile } {
+    return $binfile
+}
+
+# Return the filename GDB will load symbols from when debugging this
+# executable.  Normally just BINFILE unless executables for this target
+# have separate files for symbols.
+
+proc exec_symbol_file { binfile } {
+    return $binfile
+}
+
+# Rename the executable file.  Normally this is just BINFILE1 being renamed
+# to BINFILE2, but some targets require multiple binary files.
+proc gdb_rename_execfile { binfile1 binfile2 } {
+    file rename -force [exec_target_file ${binfile1}] \
+		       [exec_target_file ${binfile2}]
+    if { [exec_target_file ${binfile1}] != [exec_symbol_file ${binfile1}] } {
+	file rename -force [exec_symbol_file ${binfile1}] \
+			   [exec_symbol_file ${binfile2}]
+    }
+}
+
+# "Touch" the executable file to update the date.  Normally this is just
+# BINFILE, but some targets require multiple files.
+proc gdb_touch_execfile { binfile } {
+    set time [clock seconds]
+    file mtime [exec_target_file ${binfile}] $time
+    if { [exec_target_file ${binfile}] != [exec_symbol_file ${binfile}] } {
+	file mtime [exec_symbol_file ${binfile}] $time
+    }
+}
+
 # gdb_download
 #
 # Copy a file to the remote target and return its target filename.
@@ -2687,10 +2878,34 @@ proc gdb_init { args } {
 	set banned_variables_traced 1
     }
 
-    # We set LC_ALL and LANG to C so that we get the same messages as
-    # expected.
+    # We set LC_ALL, LC_CTYPE, and LANG to C so that we get the same
+    # messages as expected.
     setenv LC_ALL C
+    setenv LC_CTYPE C
     setenv LANG C
+
+    # Don't let a .inputrc file or an existing setting of INPUTRC mess up
+    # the test results.  Even if /dev/null doesn't exist on the particular
+    # platform, the readline library will use the default setting just by
+    # failing to open the file.  OTOH, opening /dev/null successfully will
+    # also result in the default settings being used since nothing will be
+    # read from this file.
+    setenv INPUTRC "/dev/null"
+
+    # The gdb.base/readline.exp arrow key test relies on the standard VT100
+    # bindings, so make sure that an appropriate terminal is selected.
+    # The same bug doesn't show up if we use ^P / ^N instead.
+    setenv TERM "vt100"
+
+    # Some tests (for example gdb.base/maint.exp) shell out from gdb to use
+    # grep.  Clear GREP_OPTIONS to make the behavoiur predictable, 
+    # especially having color output turned on can cause tests to fail.
+    setenv GREP_OPTIONS ""
+
+    # Clear $gdbserver_reconnect_p.
+    global gdbserver_reconnect_p
+    set gdbserver_reconnect_p 1
+    unset gdbserver_reconnect_p
 
     return [eval default_gdb_init $args];
 }
@@ -2779,6 +2994,14 @@ proc setup_xfail_format { format } {
 	setup_xfail "*-*-*"
     }
     return $ret;
+}
+
+# Like setup_kfail, but only call setup_kfail conditionally if
+# istarget[TARGET] returns true.
+proc setup_kfail_for_target { PR target } {
+    if { [istarget $target] } {
+	setup_kfail $PR $target
+    }
 }
 
 proc gdb_step_for_stub { } {
@@ -2948,22 +3171,41 @@ proc gdb_get_line_number { text { file "" } } {
 #       stub is used, we set a breakpoint at exit because we cannot rely on
 #       exit() behavior of a remote target.
 # 
-# mssg is the error message that gets printed.
+# MSSG is the error message that gets printed.  If not given, a
+#	default is used.
+# COMMAND is the command to invoke.  If not given, "continue" is
+#	used.
+# ALLOW_EXTRA is a flag indicating whether the test should expect
+#	extra output between the "Continuing." line and the program
+#	exiting.  By default it is zero; if nonzero, any extra output
+#	is accepted.
 
-proc gdb_continue_to_end {mssg} {
+proc gdb_continue_to_end {{mssg ""} {command continue} {allow_extra 0}} {
+  global inferior_exited_re
+
+  if {$mssg == ""} {
+      set text "continue until exit"
+  } else {
+      set text "continue until exit at $mssg"
+  }
+  if {$allow_extra} {
+      set extra ".*"
+  } else {
+      set extra ""
+  }
   if [target_info exists use_gdb_stub] {
     if {![gdb_breakpoint "exit"]} {
       return 0
     }
-    gdb_test "continue" "Continuing..*Breakpoint .*exit.*" \
-      "continue until exit at $mssg"
+    gdb_test $command "Continuing..*Breakpoint .*exit.*" \
+	$text
   } else {
     # Continue until we exit.  Should not stop again.
     # Don't bother to check the output of the program, that may be
     # extremely tough for some remote systems.
-    gdb_test "continue"\
-      "Continuing.\[\r\n0-9\]+(... EXIT code 0\[\r\n\]+|Program exited normally\\.).*"\
-      "continue until exit at $mssg"
+    gdb_test $command \
+      "Continuing.\[\r\n0-9\]+${extra}(... EXIT code 0\[\r\n\]+|$inferior_exited_re normally).*"\
+	$text
   }
 }
 
@@ -3465,3 +3707,19 @@ proc core_find {binfile {deletefiles {}} {arg ""}} {
     }
     return $destcore
 }
+
+# gdb_target_symbol_prefix_flags returns a string that can be added
+# to gdb_compile options to define SYMBOL_PREFIX macro value
+# symbol_prefix_flags returns a string that can be added
+# for targets that use underscore as symbol prefix.
+# TODO: find out automatically if the target needs this.
+
+proc gdb_target_symbol_prefix_flags {} {
+    if { [istarget "*-*-cygwin*"] || [istarget "i?86-*-mingw*"]
+	 || [istarget "*-*-msdosdjgpp*"] || [istarget "*-*-go32*"] } {
+	return "additional_flags=-DSYMBOL_PREFIX=\"_\""
+    } else {
+	return ""
+    }
+}
+

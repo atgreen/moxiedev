@@ -1,7 +1,7 @@
 /* Generate a core file for the inferior process.
 
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-   Free Software Foundation, Inc.
+   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+   2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -427,7 +427,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size,
 	      && !(bfd_get_file_flags (abfd) & BFD_IN_MEMORY))
 	    {
 	      flags &= ~(SEC_LOAD | SEC_HAS_CONTENTS);
-	      goto keep;	/* break out of two nested for loops */
+	      goto keep;	/* Break out of two nested for loops.  */
 	    }
 	}
 
@@ -498,7 +498,7 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 	     0, /* Stack section will not be executable.  */
 	     obfd);
 
-  /* Make a heap segment. */
+  /* Make a heap segment.  */
   if (derive_heap_segment (exec_bfd, &temp_bottom, &temp_top))
     (*func) (temp_bottom, temp_top - temp_bottom,
 	     1, /* Heap section will be readable.  */
@@ -537,7 +537,8 @@ gcore_copy_callback (bfd *obfd, asection *osec, void *ignored)
       if (target_read_memory (bfd_section_vma (obfd, osec) + offset,
 			      memhunk, size) != 0)
 	{
-	  warning (_("Memory read failed for corefile section, %s bytes at %s."),
+	  warning (_("Memory read failed for corefile "
+		     "section, %s bytes at %s."),
 		   plongest (size),
 		   paddress (target_gdbarch, bfd_section_vma (obfd, osec)));
 	  break;

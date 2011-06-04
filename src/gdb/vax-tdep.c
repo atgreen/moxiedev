@@ -1,7 +1,8 @@
 /* Target-dependent code for the VAX.
 
    Copyright (C) 1986, 1989, 1991, 1992, 1995, 1996, 1998, 1999, 2000, 2002,
-   2003, 2004, 2005, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -56,7 +57,7 @@ vax_register_name (struct gdbarch *gdbarch, int regnum)
 }
 
 /* Return the GDB type object for the "standard" data type of data in
-   register REGNUM. */
+   register REGNUM.  */
 
 static struct type *
 vax_register_type (struct gdbarch *gdbarch, int regnum)
@@ -401,6 +402,7 @@ vax_frame_prev_register (struct frame_info *this_frame,
 static const struct frame_unwind vax_frame_unwind =
 {
   NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
   vax_frame_this_id,
   vax_frame_prev_register,
   NULL,

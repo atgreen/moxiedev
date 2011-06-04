@@ -1,6 +1,6 @@
 /* Command-line output logging for GDB, the GNU debugger.
 
-   Copyright (c) 2003, 2004, 2007, 2008, 2009, 2010
+   Copyright (c) 2003, 2004, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -61,18 +61,19 @@ static void
 show_logging_overwrite (struct ui_file *file, int from_tty,
 			struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("\
-Whether logging overwrites or appends to the log file is %s.\n"),
+  fprintf_filtered (file,
+		    _("Whether logging overwrites or "
+		      "appends to the log file is %s.\n"),
 		    value);
 }
 
 /* Value as configured by the user.  */
 static int logging_redirect;
 
-/* The on-disk file in use if logging is currently active together with
-   redirection turned off (and therefore using tee_file_new).  For active
-   logging with redirection the on-disk file is directly in GDB_STDOUT and
-   this variable is NULL.  */
+/* The on-disk file in use if logging is currently active together
+   with redirection turned off (and therefore using tee_file_new).
+   For active logging with redirection the on-disk file is directly in
+   GDB_STDOUT and this variable is NULL.  */
 static struct ui_file *logging_no_redirect_file;
 
 static void
@@ -90,7 +91,8 @@ set_logging_redirect (char *args, int from_tty, struct cmd_list_element *c)
     {
       gdb_assert (logging_no_redirect_file != NULL);
 
-      /* ui_out_redirect still has not been called for next gdb_stdout.  */
+      /* ui_out_redirect still has not been called for next
+	 gdb_stdout.  */
       cleanups = make_cleanup_ui_file_delete (gdb_stdout);
 
       output = logging_no_redirect_file;
@@ -120,10 +122,11 @@ set_logging_redirect (char *args, int from_tty, struct cmd_list_element *c)
   gdb_stdtargerr = output;
   logging_no_redirect_file = new_logging_no_redirect_file;
 
-  /* There is a former output pushed on the ui_out_redirect stack.  We want to
-     replace it by OUTPUT so we must pop the former value first.  We should
-     either do both the pop and push or to do neither of it.  At least do not
-     try to push OUTPUT if the pop already failed.  */
+  /* There is a former output pushed on the ui_out_redirect stack.  We
+     want to replace it by OUTPUT so we must pop the former value
+     first.  We should either do both the pop and push or to do
+     neither of it.  At least do not try to push OUTPUT if the pop
+     already failed.  */
 
   if (ui_out_redirect (uiout, NULL) < 0
       || ui_out_redirect (uiout, output) < 0)
@@ -256,13 +259,12 @@ set_logging_off (char *args, int from_tty)
 static void
 set_logging_command (char *args, int from_tty)
 {
-  printf_unfiltered (_("\
-\"set logging\" lets you log output to a file.\n\
-Usage: set logging on [FILENAME]\n\
-       set logging off\n\
-       set logging file FILENAME\n\
-       set logging overwrite [on|off]\n\
-       set logging redirect [on|off]\n"));
+  printf_unfiltered (_("\"set logging\" lets you log output to a file.\n"
+		       "Usage: set logging on [FILENAME]\n"
+		       "       set logging off\n"
+		       "       set logging file FILENAME\n"
+		       "       set logging overwrite [on|off]\n"
+		       "       set logging redirect [on|off]\n"));
 }
 
 static void

@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux x86-64.
 
-   Copyright (C) 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Jiri Smid, SuSE Labs.
 
@@ -72,7 +72,7 @@ int amd64_linux_gregset_reg_offset[] =
   14 * 8,			/* %rdi */
   4 * 8,			/* %rbp */
   19 * 8,			/* %rsp */
-  9 * 8,			/* %r8 ... */
+  9 * 8,			/* %r8 ...  */
   8 * 8,
   7 * 8,
   6 * 8,
@@ -1174,25 +1174,24 @@ amd64_linux_syscall_record (struct regcache *regcache)
       break;
 
     case amd64_sys_arch_prctl:
-      if (syscall_native == amd64_sys_arch_prctl)
-        {
-          ULONGEST arg3;
+      {
+	ULONGEST arg3;
 
-          regcache_raw_read_unsigned (regcache, amd64_linux_record_tdep.arg3,
-                                      &arg3);
-          if (arg3 == RECORD_ARCH_GET_FS || arg3 == RECORD_ARCH_GET_GS)
-            {
-	      CORE_ADDR addr;
+	regcache_raw_read_unsigned (regcache, amd64_linux_record_tdep.arg3,
+				    &arg3);
+	if (arg3 == RECORD_ARCH_GET_FS || arg3 == RECORD_ARCH_GET_GS)
+	  {
+	    CORE_ADDR addr;
 
-	      regcache_raw_read_unsigned (regcache,
-                                          amd64_linux_record_tdep.arg2,
-                                          &addr);
-	      if (record_arch_list_add_mem (addr,
-                                            amd64_linux_record_tdep.size_ulong))
-                return -1;
-            }
-          goto record_regs;
-        }
+	    regcache_raw_read_unsigned (regcache,
+					amd64_linux_record_tdep.arg2,
+					&addr);
+	    if (record_arch_list_add_mem (addr,
+					  amd64_linux_record_tdep.size_ulong))
+	      return -1;
+	  }
+	goto record_regs;
+      }
       break;
     }
 
@@ -1544,7 +1543,7 @@ _initialize_amd64_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64,
 			  GDB_OSABI_LINUX, amd64_linux_init_abi);
 
-  /* Initialize the Linux target description  */
+  /* Initialize the Linux target description.  */
   initialize_tdesc_amd64_linux ();
   initialize_tdesc_amd64_avx_linux ();
 }

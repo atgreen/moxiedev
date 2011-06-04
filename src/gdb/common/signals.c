@@ -1,6 +1,6 @@
 /* Target signal translation functions for GDB.
    Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2006, 2007, 2008, 2009, 2010
+   2000, 2001, 2002, 2003, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Cygnus Support.
 
@@ -48,7 +48,8 @@ struct gdbarch;
 # endif
 #endif
 
-/* This table must match in order and size the signals in enum target_signal.  */
+/* This table must match in order and size the signals in enum
+   target_signal.  */
 
 static const struct {
   const char *name;
@@ -348,7 +349,8 @@ target_signal_from_host (int hostsig)
 	return (enum target_signal)
 	  (hostsig - 64 + (int) TARGET_SIGNAL_REALTIME_64);
       else
-	error ("GDB bug: target.c (target_signal_from_host): unrecognized real-time signal");
+	error (_("GDB bug: target.c (target_signal_from_host): "
+	       "unrecognized real-time signal"));
     }
 #endif
 
@@ -642,7 +644,7 @@ target_signal_to_host (enum target_signal oursig)
     {
       /* The user might be trying to do "signal SIGSAK" where this system
          doesn't have SIGSAK.  */
-      warning ("Signal %s does not exist on this system.\n",
+      warning (_("Signal %s does not exist on this system."),
 	       target_signal_to_name (oursig));
       return 0;
     }
@@ -665,8 +667,8 @@ target_signal_from_command (int num)
 {
   if (num >= 1 && num <= 15)
     return (enum target_signal) num;
-  error ("Only signals 1-15 are valid as numeric signals.\n\
-Use \"info signals\" for a list of symbolic signals.");
+  error (_("Only signals 1-15 are valid as numeric signals.\n\
+Use \"info signals\" for a list of symbolic signals."));
 }
 
 extern initialize_file_ftype _initialize_signals; /* -Wmissing-prototype */

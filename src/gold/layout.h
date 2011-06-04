@@ -41,6 +41,7 @@ namespace gold
 
 class General_options;
 class Incremental_inputs;
+class Incremental_binary;
 class Input_objects;
 class Mapfile;
 class Symbol_table;
@@ -63,6 +64,69 @@ struct Timespec;
 // Return TRUE if SECNAME is the name of a compressed debug section.
 extern bool
 is_compressed_debug_section(const char* secname);
+
+// Maintain a list of free space within a section, segment, or file.
+// Used for incremental update links.
+
+class Free_list
+{
+ public:
+  Free_list()
+    : list_(), last_remove_(list_.begin()), extend_(false), length_(0)
+  { }
+
+  void
+  init(off_t len, bool extend);
+
+  void
+  remove(off_t start, off_t end);
+
+  off_t
+  allocate(off_t len, uint64_t align, off_t minoff);
+
+  void
+  dump();
+
+  static void
+  print_stats();
+
+ private:
+  struct Free_list_node
+  {
+    Free_list_node(off_t start, off_t end)
+      : start_(start), end_(end)
+    { }
+    off_t start_;
+    off_t end_;
+  };
+  typedef std::list<Free_list_node>::iterator Iterator;
+
+  // The free list.
+  std::list<Free_list_node> list_;
+
+  // The last node visited during a remove operation.
+  Iterator last_remove_;
+
+  // Whether we can extend past the original length.
+  bool extend_;
+
+  // The total length of the section, segment, or file.
+  off_t length_;
+
+  // Statistics:
+  // The total number of free lists used.
+  static unsigned int num_lists;
+  // The total number of free list nodes used.
+  static unsigned int num_nodes;
+  // The total number of calls to Free_list::remove.
+  static unsigned int num_removes;
+  // The total number of nodes visited during calls to Free_list::remove.
+  static unsigned int num_remove_visits;
+  // The total number of calls to Free_list::allocate.
+  static unsigned int num_allocates;
+  // The total number of nodes visited during calls to Free_list::allocate.
+  static unsigned int num_allocate_visits;
+};
 
 // This task function handles mapping the input sections to output
 // sections and laying them out in memory.
@@ -401,6 +465,20 @@ class Layout
     delete this->segment_states_;
   }
 
+  // For incremental links, record the base file to be modified.
+  void
+  set_incremental_base(Incremental_binary* base);
+
+  Incremental_binary*
+  incremental_base()
+  { return this->incremental_base_; }
+
+  // For incremental links, record the initial fixed layout of a section
+  // from the base file, and return a pointer to the Output_section.
+  template<int size, bool big_endian>
+  Output_section*
+  init_fixed_output_section(const char*, elfcpp::Shdr<size, big_endian>&);
+
   // Given an input section SHNDX, named NAME, with data in SHDR, from
   // the object file OBJECT, return the output section where this
   // input section should go.  RELOC_SHNDX is the index of a
@@ -410,9 +488,15 @@ class Layout
   // within the output section.
   template<int size, bool big_endian>
   Output_section*
-  layout(Sized_relobj<size, big_endian> *object, unsigned int shndx,
+  layout(Sized_relobj_file<size, big_endian> *object, unsigned int shndx,
 	 const char* name, const elfcpp::Shdr<size, big_endian>& shdr,
 	 unsigned int reloc_shndx, unsigned int reloc_type, off_t* offset);
+
+  // For incremental updates, allocate a block of memory from the
+  // free list.  Find a block starting at or after MINOFF.
+  off_t
+  allocate(off_t len, uint64_t align, off_t minoff)
+  { return this->free_list_.allocate(len, align, minoff); }
 
   unsigned int
   find_section_order_index(const std::string&);
@@ -426,7 +510,7 @@ class Layout
   // relocatable information.
   template<int size, bool big_endian>
   Output_section*
-  layout_reloc(Sized_relobj<size, big_endian>* object,
+  layout_reloc(Sized_relobj_file<size, big_endian>* object,
 	       unsigned int reloc_shndx,
 	       const elfcpp::Shdr<size, big_endian>& shdr,
 	       Output_section* data_section,
@@ -436,7 +520,7 @@ class Layout
   template<int size, bool big_endian>
   void
   layout_group(Symbol_table* symtab,
-	       Sized_relobj<size, big_endian>* object,
+	       Sized_relobj_file<size, big_endian>* object,
 	       unsigned int group_shndx,
 	       const char* group_section_name,
 	       const char* signature,
@@ -455,7 +539,7 @@ class Layout
   // returns the output section, and sets *OFFSET to the offset.
   template<int size, bool big_endian>
   Output_section*
-  layout_eh_frame(Sized_relobj<size, big_endian>* object,
+  layout_eh_frame(Sized_relobj_file<size, big_endian>* object,
 		  const unsigned char* symbols,
 		  off_t symbols_size,
 		  const unsigned char* symbol_names,
@@ -470,7 +554,8 @@ class Layout
   // .note.GNU-stack section.  GNU_STACK_FLAGS is the section flags
   // from that section if there was one.
   void
-  layout_gnu_stack(bool seen_gnu_stack, uint64_t gnu_stack_flags);
+  layout_gnu_stack(bool seen_gnu_stack, uint64_t gnu_stack_flags,
+		   const Object*);
 
   // Add an Output_section_data to the layout.  This is used for
   // special sections like the GOT section.  ORDER is where the
@@ -599,6 +684,10 @@ class Layout
     gold_assert(this->symtab_section_ != NULL);
     return this->symtab_section_;
   }
+
+  // Return the file offset of the normal symbol table.
+  off_t
+  symtab_section_offset() const;
 
   // Return the dynamic symbol table.
   Output_section*
@@ -869,7 +958,7 @@ class Layout
   // Return whether to include this section in the link.
   template<int size, bool big_endian>
   bool
-  include_section(Sized_relobj<size, big_endian>* object, const char* name,
+  include_section(Sized_relobj_file<size, big_endian>* object, const char* name,
 		  const elfcpp::Shdr<size, big_endian>&);
 
   // Return the output section name to use given an input section
@@ -1140,7 +1229,7 @@ class Layout
   Incremental_inputs* incremental_inputs_;
   // Whether we record output section data created in script
   bool record_output_section_data_from_script_;
-  // List of output data that needs to be removed at relexation clean up.
+  // List of output data that needs to be removed at relaxation clean up.
   Output_section_data_list script_output_section_data_list_;
   // Structure to save segment states before entering the relaxation loop.
   Segment_states* segment_states_;
@@ -1150,6 +1239,10 @@ class Layout
   Unordered_map<std::string, unsigned int> input_section_position_;
   // Vector of glob only patterns in the section_ordering file.
   std::vector<std::string> input_section_glob_;
+  // For incremental links, the base file to be modified.
+  Incremental_binary* incremental_base_;
+  // For incremental links, a list of free space within the file.
+  Free_list free_list_;
 };
 
 // This task handles writing out data in output sections which is not

@@ -1,5 +1,6 @@
 /* Handling of inferior events for the event loop for GDB, the GNU debugger.
-   Copyright (C) 1999, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 1999, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
    Written by Elena Zannoni <ezannoni@cygnus.com> of Cygnus Solutions.
 
    This file is part of GDB.
@@ -15,11 +16,11 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>. */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
-#include "inferior.h"		/* For fetch_inferior_event. */
-#include "target.h"             /* For enum inferior_event_type. */
+#include "inferior.h"		/* For fetch_inferior_event.  */
+#include "target.h"             /* For enum inferior_event_type.  */
 #include "event-loop.h"
 #include "event-top.h"
 #include "inf-loop.h"
@@ -27,19 +28,14 @@
 #include "exceptions.h"
 #include "language.h"
 #include "gdbthread.h"
+#include "continuations.h"
 
 static int fetch_inferior_event_wrapper (gdb_client_data client_data);
 
-void
-inferior_event_handler_wrapper (gdb_client_data client_data)
-{
-  inferior_event_handler (INF_QUIT_REQ, client_data);
-}
-
-/* General function to handle events in the inferior. So far it just
+/* General function to handle events in the inferior.  So far it just
    takes care of detecting errors reported by select() or poll(),
    otherwise it assumes that all is OK, and goes on reading data from
-   the fd. This however may not always be what we want to do. */
+   the fd.  This however may not always be what we want to do.  */
 void
 inferior_event_handler (enum inferior_event_type event_type, 
 			gdb_client_data client_data)
@@ -49,25 +45,16 @@ inferior_event_handler (enum inferior_event_type event_type,
 
   switch (event_type)
     {
-    case INF_ERROR:
-      printf_unfiltered (_("error detected from target.\n"));
-      pop_all_targets_above (file_stratum, 0);
-      discard_all_intermediate_continuations ();
-      discard_all_continuations ();
-      async_enable_stdin ();
-      break;
-
     case INF_REG_EVENT:
       /* Use catch errors for now, until the inner layers of
 	 fetch_inferior_event (i.e. readchar) can return meaningful
 	 error status.  If an error occurs while getting an event from
-	 the target, just get rid of the target. */
+	 the target, just cancel the current command.  */
       if (!catch_errors (fetch_inferior_event_wrapper, 
 			 client_data, "", RETURN_MASK_ALL))
 	{
-	  pop_all_targets_above (file_stratum, 0);
-	  discard_all_intermediate_continuations ();
-	  discard_all_continuations ();
+	  do_all_intermediate_continuations (1);
+	  do_all_continuations (1);
 	  async_enable_stdin ();
 	  display_gdb_prompt (0);
 	}
@@ -77,7 +64,7 @@ inferior_event_handler (enum inferior_event_type event_type,
 
       if (!non_stop)
 	{
-	  /* Unregister the inferior from the event loop. This is done
+	  /* Unregister the inferior from the event loop.  This is done
 	     so that when the inferior is not running we don't get
 	     distracted by spurious inferior output.  */
 	  if (target_has_execution)
@@ -93,7 +80,7 @@ inferior_event_handler (enum inferior_event_type event_type,
       /* Do all continuations associated with the whole inferior (not
 	 a particular thread).  */
       if (!ptid_equal (inferior_ptid, null_ptid))
-	do_all_inferior_continuations ();
+	do_all_inferior_continuations (0);
 
       /* If we were doing a multi-step (eg: step n, next n), but it
 	 got interrupted by a breakpoint, still do the pending
@@ -105,9 +92,9 @@ inferior_event_handler (enum inferior_event_type event_type,
       if (non_stop
 	  && target_has_execution
 	  && !ptid_equal (inferior_ptid, null_ptid))
-	do_all_intermediate_continuations_thread (inferior_thread ());
+	do_all_intermediate_continuations_thread (inferior_thread (), 0);
       else
-	do_all_intermediate_continuations ();
+	do_all_intermediate_continuations (0);
 
       /* Always finish the previous command before running any
 	 breakpoint commands.  Any stop cancels the previous command.
@@ -116,11 +103,12 @@ inferior_event_handler (enum inferior_event_type event_type,
       if (non_stop
 	  && target_has_execution
 	  && !ptid_equal (inferior_ptid, null_ptid))
-	do_all_continuations_thread (inferior_thread ());
+	do_all_continuations_thread (inferior_thread (), 0);
       else
-	do_all_continuations ();
+	do_all_continuations (0);
 
-      if (current_language != expected_language
+      if (info_verbose
+	  && current_language != expected_language
 	  && language_mode == language_mode_auto)
 	language_info (1);	/* Print what changed.  */
 
@@ -141,19 +129,12 @@ inferior_event_handler (enum inferior_event_type event_type,
 
     case INF_EXEC_CONTINUE:
       /* Is there anything left to do for the command issued to
-         complete? */
+         complete?  */
 
       if (non_stop)
-	do_all_intermediate_continuations_thread (inferior_thread ());
+	do_all_intermediate_continuations_thread (inferior_thread (), 0);
       else
-	do_all_intermediate_continuations ();
-      break;
-
-    case INF_QUIT_REQ: 
-      /* FIXME: ezannoni 1999-10-04. This call should really be a
-	 target vector entry, so that it can be used for any kind of
-	 targets. */
-      async_remote_interrupt_twice (NULL);
+	do_all_intermediate_continuations (0);
       break;
 
     case INF_TIMER:

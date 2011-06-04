@@ -1,6 +1,6 @@
 /* readelf.c -- display contents of an ELF format file
    Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009, 2010
+   2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Originally developed by Eric Youngdale <eric@andante.jic.com>
@@ -278,10 +278,13 @@ print_mode;
    already been called and verified that the string exists.  */
 #define GET_DYNAMIC_NAME(offset)	(dynamic_strings + offset)
 
-#define REMOVE_ARCH_BITS(ADDR) do {		\
-    if (elf_header.e_machine == EM_ARM)		\
-      (ADDR) &= ~1;				\
-  } while (0)
+#define REMOVE_ARCH_BITS(ADDR)			\
+  do						\
+    {						\
+      if (elf_header.e_machine == EM_ARM)	\
+	(ADDR) &= ~1;				\
+    }						\
+  while (0)
 
 static void *
 get_data (void * var, FILE * file, long offset, size_t size, size_t nmemb,
@@ -380,15 +383,16 @@ print_vma (bfd_vma vma, print_mode mode)
    Returns the number of emitted characters.  */
 
 static unsigned int
-print_symbol (int width, const char * symbol)
+print_symbol (int width, const char *symbol)
 {
-  const char * c;
+  const char *c;
   bfd_boolean extra_padding = FALSE;
   unsigned int num_printed = 0;
 
   if (do_wide)
     {
-      /* Set the width to a very large value.  This simplifies the code below.  */
+      /* Set the width to a very large value.  This simplifies the
+	 code below.  */
       width = INT_MAX;
     }
   else if (width < 0)
@@ -407,7 +411,7 @@ print_symbol (int width, const char * symbol)
       /* Look for non-printing symbols inside the symbol's name.
 	 This test is triggered in particular by the names generated
 	 by the assembler for local labels.  */
-      while (ISPRINT (* c))
+      while (ISPRINT (*c))
 	c++;
 
       len = c - symbol;
@@ -423,12 +427,12 @@ print_symbol (int width, const char * symbol)
 	  num_printed += len;
 	}
 
-      if (* c == 0 || width == 0)
+      if (*c == 0 || width == 0)
 	break;
 
       /* Now display the non-printing character, if
 	 there is room left in which to dipslay it.  */
-      if (*c < 32)
+      if ((unsigned char) *c < 32)
 	{
 	  if (width < 2)
 	    break;
@@ -443,7 +447,7 @@ print_symbol (int width, const char * symbol)
 	  if (width < 6)
 	    break;
 
-	  printf ("<0x%.2x>", *c);
+	  printf ("<0x%.2x>", (unsigned char) *c);
 
 	  width -= 6;
 	  num_printed += 6;
@@ -1300,8 +1304,10 @@ dump_relocations (FILE * file,
 			sec_name = "ABS";
 		      else if (psym->st_shndx == SHN_COMMON)
 			sec_name = "COMMON";
-		      else if (elf_header.e_machine == EM_MIPS
-			       && psym->st_shndx == SHN_MIPS_SCOMMON)
+		      else if ((elf_header.e_machine == EM_MIPS
+				&& psym->st_shndx == SHN_MIPS_SCOMMON)
+			       || (elf_header.e_machine == EM_TI_C6000
+				   && psym->st_shndx == SHN_TIC6X_SCOMMON))
 			sec_name = "SCOMMON";
 		      else if (elf_header.e_machine == EM_MIPS
 			       && psym->st_shndx == SHN_MIPS_SUNDEFINED)
@@ -1832,7 +1838,7 @@ get_machine_name (unsigned e_machine)
     case EM_CYGNUS_M32R:
     case EM_M32R:		return "Renesas M32R (formerly Mitsubishi M32r)";
     case EM_CYGNUS_V850:
-    case EM_V850:		return "NEC v850";
+    case EM_V850:		return "Renesas v850";
     case EM_CYGNUS_MN10300:
     case EM_MN10300:		return "mn10300";
     case EM_CYGNUS_MN10200:
@@ -1878,7 +1884,7 @@ get_machine_name (unsigned e_machine)
     case EM_S390_OLD:
     case EM_S390:		return "IBM S/390";
     case EM_SCORE:		return "SUNPLUS S+Core";
-    case EM_XSTORMY16:		return "Sanyo Xstormy16 CPU core";
+    case EM_XSTORMY16:		return "Sanyo XStormy16 CPU core";
     case EM_OPENRISC:
     case EM_OR32:		return "OpenRISC";
     case EM_ARC_A5:		return "ARC International ARCompact processor";
@@ -3067,6 +3073,8 @@ get_section_type_name (unsigned int sh_type)
 
 #define OPTION_DEBUG_DUMP	512
 #define OPTION_DYN_SYMS		513
+#define OPTION_DWARF_DEPTH	514
+#define OPTION_DWARF_START	515
 
 static struct option options[] =
 {
@@ -3099,6 +3107,9 @@ static struct option options[] =
   {"instruction-dump", required_argument, 0, 'i'},
 #endif
   {"debug-dump",       optional_argument, 0, OPTION_DEBUG_DUMP},
+
+  {"dwarf-depth",      required_argument, 0, OPTION_DWARF_DEPTH},
+  {"dwarf-start",      required_argument, 0, OPTION_DWARF_START},
 
   {"version",	       no_argument, 0, 'v'},
   {"wide",	       no_argument, 0, 'W'},
@@ -3141,8 +3152,12 @@ usage (FILE * stream)
   -w[lLiaprmfFsoRt] or\n\
   --debug-dump[=rawline,=decodedline,=info,=abbrev,=pubnames,=aranges,=macro,=frames,\n\
                =frames-interp,=str,=loc,=Ranges,=pubtypes,\n\
-               =trace_info,=trace_abbrev,=trace_aranges]\n\
+               =gdb_index,=trace_info,=trace_abbrev,=trace_aranges]\n\
                          Display the contents of DWARF2 debug sections\n"));
+  fprintf (stream, _("\
+  --dwarf-depth=N        Do not display DIEs at depth N or greater\n\
+  --dwarf-start=N        Display DIEs starting with N, at the same depth\n\
+                         or deeper\n"));
 #ifdef SUPPORT_DISASSEMBLY
   fprintf (stream, _("\
   -i --instruction-dump=<number|name>\n\
@@ -3348,6 +3363,20 @@ parse_args (int argc, char ** argv)
 	      do_debugging = 0;
 	      dwarf_select_sections_by_names (optarg);
 	    }
+	  break;
+	case OPTION_DWARF_DEPTH:
+	  {
+	    char *cp;
+
+	    dwarf_cutoff_level = strtoul (optarg, & cp, 0);
+	  }
+	  break;
+	case OPTION_DWARF_START:
+	  {
+	    char *cp;
+
+	    dwarf_start_die = strtoul (optarg, & cp, 0);
+	  }
 	  break;
 	case OPTION_DYN_SYMS:
 	  do_dyn_syms++;
@@ -3637,7 +3666,11 @@ process_program_headers (FILE * file)
 
   if (elf_header.e_phnum == 0)
     {
-      if (do_segments)
+      /* PR binutils/12467.  */
+      if (elf_header.e_phoff != 0)
+	warn (_("possibly corrupt ELF header - it has a non-zero program"
+		" header offset, but no program headers"));
+      else if (do_segments)
 	printf (_("\nThere are no program headers in this file.\n"));
       return 0;
     }
@@ -4376,7 +4409,11 @@ process_section_headers (FILE * file)
 
   if (elf_header.e_shnum == 0)
     {
-      if (do_sections)
+      /* PR binutils/12467.  */
+      if (elf_header.e_shoff != 0)
+	warn (_("possibly corrupt ELF file header - it has a non-zero"
+		" section header offset, but no section headers\n"));
+      else if (do_sections)
 	printf (_("\nThere are no sections in this file.\n"));
 
       return 1;
@@ -4563,6 +4600,8 @@ process_section_headers (FILE * file)
 	       && const_strneq (name, ".gnu.linkonce.wi."))
 	request_dump_bynumber (i, DEBUG_DUMP);
       else if (do_debug_frames && streq (name, ".eh_frame"))
+	request_dump_bynumber (i, DEBUG_DUMP);
+      else if (do_gdb_index && streq (name, ".gdb_index"))
 	request_dump_bynumber (i, DEBUG_DUMP);
       /* Trace sections for Itanium VMS.  */
       else if ((do_debugging || do_trace_info || do_trace_abbrevs
@@ -4857,7 +4896,7 @@ process_section_groups (FILE * file)
   if (elf_header.e_shnum == 0)
     {
       if (do_section_groups)
-	printf (_("\nThere are no sections in this file.\n"));
+	printf (_("\nThere are no sections to group in this file.\n"));
 
       return 1;
     }
@@ -6295,12 +6334,26 @@ arm_section_get_word (struct arm_unw_aux_info *aux,
       if (rp->r_offset < word_offset)
 	continue;
 
-      relname = elf_arm_reloc_type (ELF32_R_TYPE (rp->r_info));
+      switch (elf_header.e_machine)
+	{
+	case EM_ARM:
+	  relname = elf_arm_reloc_type (ELF32_R_TYPE (rp->r_info));
+	  break;
 
-      if (streq (relname, "R_ARM_NONE"))
+	case EM_TI_C6000:
+	  relname = elf_tic6x_reloc_type (ELF32_R_TYPE (rp->r_info));
+	  break;
+
+	default:
+	    abort();
+	}
+
+      if (streq (relname, "R_ARM_NONE")
+	  || streq (relname, "R_C6000_NONE"))
 	continue;
 
-      if (! streq (relname, "R_ARM_PREL31"))
+      if (!(streq (relname, "R_ARM_PREL31")
+	    || streq (relname, "R_C6000_PREL31")))
 	{
 	  warn (_("Skipping unexpected relocation type %s\n"), relname);
 	  continue;
@@ -6320,6 +6373,9 @@ arm_section_get_word (struct arm_unw_aux_info *aux,
       offset += sym->st_value;
       prelval = offset - (arm_sec->sec->sh_addr + rp->r_offset);
 
+      if (streq (relname, "R_C6000_PREL31"))
+	prelval >>= 1;
+
       word = (word & ~ (bfd_vma) 0x7fffffff) | (prelval & 0x7fffffff);
       addr->section = sym->st_shndx;
       addr->offset = offset;
@@ -6332,15 +6388,26 @@ arm_section_get_word (struct arm_unw_aux_info *aux,
   return 1;
 }
 
+static const char *tic6x_unwind_regnames[16] = {
+    "A15", "B15", "B14", "B13", "B12", "B11", "B10", "B3", 
+    "A14", "A13", "A12", "A11", "A10", 
+    "[invalid reg 13]", "[invalid reg 14]", "[invalid reg 15]"};
+
 static void
-decode_arm_unwind (struct arm_unw_aux_info *aux,
-		   unsigned int word, unsigned int remaining,
-		   bfd_vma data_offset, Elf_Internal_Shdr *data_sec,
-		   struct arm_section *data_arm_sec)
+decode_tic6x_unwind_regmask (unsigned int mask)
 {
-  int per_index;
-  unsigned int more_words;
-  struct absaddr addr;
+  int i;
+
+  for (i = 12; mask; mask >>= 1, i--)
+    {
+      if (mask & 1)
+	{
+	  fputs (tic6x_unwind_regnames[i], stdout);
+	  if (mask > 1)
+	    fputs (", ", stdout);
+	}
+    }
+}
 
 #define ADVANCE							\
   if (remaining == 0 && more_words)				\
@@ -6368,77 +6435,14 @@ decode_arm_unwind (struct arm_unw_aux_info *aux,
     }					\
   printf ("0x%02x ", OP)
 
-  if (remaining == 0)
-    {
-      /* Fetch the first word.  */
-      if (!arm_section_get_word (aux, data_arm_sec, data_sec, data_offset,
-				 &word, &addr))
-	return;
-      remaining = 4;
-    }
-
-  if ((word & 0x80000000) == 0)
-    {
-      /* Expand prel31 for personality routine.  */
-      bfd_vma fn;
-      const char *procname;
-
-      fn = word;
-      if (fn & 0x40000000)
-	fn |= ~ (bfd_vma) 0x7fffffff;
-      fn = fn + data_sec->sh_addr + data_offset;
-
-      printf (_("  Personality routine: "));
-      procname = arm_print_vma_and_name (aux, fn, addr);
-      fputc ('\n', stdout);
-
-      /* The GCC personality routines use the standard compact
-	 encoding, starting with one byte giving the number of
-	 words.  */
-      if (procname != NULL
-	  && (const_strneq (procname, "__gcc_personality_v0")
-	      || const_strneq (procname, "__gxx_personality_v0")
-	      || const_strneq (procname, "__gcj_personality_v0")
-	      || const_strneq (procname, "__gnu_objc_personality_v0")))
-	{
-	  remaining = 0;
-	  more_words = 1;
-	  ADVANCE;
-	  if (!remaining)
-	    {
-	      printf (_("  [Truncated data]\n"));
-	      return;
-	    }
-	  more_words = word >> 24;
-	  word <<= 8;
-	  remaining--;
-	}
-      else
-	return;
-    }
-  else
-    {
-      per_index = (word >> 24) & 0x7f;
-      if (per_index != 0 && per_index != 1 && per_index != 2)
-	{
-	  printf (_("  [reserved compact index %d]\n"), per_index);
-	  return;
-	}
-
-      printf (_("  Compact model %d\n"), per_index);
-      if (per_index == 0)
-	{
-	  more_words = 0;
-	  word <<= 8;
-	  remaining--;
-	}
-      else
-	{
-	  more_words = (word >> 16) & 0xff;
-	  word <<= 16;
-	  remaining -= 2;
-	}
-    }
+static void
+decode_arm_unwind_bytecode (struct arm_unw_aux_info *aux,
+			    unsigned int word, unsigned int remaining,
+			    unsigned int more_words,
+			    bfd_vma data_offset, Elf_Internal_Shdr *data_sec,
+			    struct arm_section *data_arm_sec)
+{
+  struct absaddr addr;
 
   /* Decode the unwinding instructions.  */
   while (1)
@@ -6457,11 +6461,13 @@ decode_arm_unwind (struct arm_unw_aux_info *aux,
       if ((op & 0xc0) == 0x00)
 	{
 	  int offset = ((op & 0x3f) << 2) + 4;
+
 	  printf ("     vsp = vsp + %d", offset);
 	}
       else if ((op & 0xc0) == 0x40)
 	{
 	  int offset = ((op & 0x3f) << 2) + 4;
+
 	  printf ("     vsp = vsp - %d", offset);
 	}
       else if ((op & 0xf0) == 0x80)
@@ -6500,6 +6506,7 @@ decode_arm_unwind (struct arm_unw_aux_info *aux,
 	  int end = 4 + (op & 0x07);
 	  int first = 1;
 	  int i;
+
 	  printf ("     pop {");
 	  for (i = 4; i <= end; i++)
 	    {
@@ -6529,6 +6536,7 @@ decode_arm_unwind (struct arm_unw_aux_info *aux,
 	      unsigned int mask = op2 & 0x0f;
 	      int first = 1;
 	      int i;
+
 	      printf ("pop {");
 	      for (i = 0; i < 12; i++)
 		if (mask & (1 << i))
@@ -6547,6 +6555,7 @@ decode_arm_unwind (struct arm_unw_aux_info *aux,
 	  unsigned char buf[9];
 	  unsigned int i, len;
 	  unsigned long offset;
+
 	  for (i = 0; i < sizeof (buf); i++)
 	    {
 	      GET_OP (buf[i]);
@@ -6559,19 +6568,342 @@ decode_arm_unwind (struct arm_unw_aux_info *aux,
 	  offset = offset * 4 + 0x204;
 	  printf ("vsp = vsp + %ld", offset);
 	}
-      else
+      else if (op == 0xb3 || op == 0xc8 || op == 0xc9)
 	{
-	  if (op == 0xb3 || op == 0xc6 || op == 0xc7 || op == 0xc8 || op == 0xc9)
-	    {
-	      GET_OP (op2);
-	      printf (_("[unsupported two-byte opcode]"));
-	    }
+	  unsigned int first, last;
+
+	  GET_OP (op2);
+	  first = op2 >> 4;
+	  last = op2 & 0x0f;
+	  if (op == 0xc8)
+	    first = first + 16;
+	  printf ("pop {D%d", first);
+	  if (last)
+	    printf ("-D%d", first + last);
+	  printf ("}");
+	}
+      else if ((op & 0xf8) == 0xb8 || (op & 0xf8) == 0xd0)
+	{
+	  unsigned int count = op & 0x07;
+
+	  printf ("pop {D8");
+	  if (count)
+	    printf ("-D%d", 8 + count);
+	  printf ("}");
+	}
+      else if (op >= 0xc0 && op <= 0xc5)
+	{
+	  unsigned int count = op & 0x07;
+
+	  printf ("     pop {wR10");
+	  if (count)
+	    printf ("-wR%d", 10 + count);
+	  printf ("}");
+	}
+      else if (op == 0xc6)
+	{
+	  unsigned int first, last;
+
+	  GET_OP (op2);
+	  first = op2 >> 4;
+	  last = op2 & 0x0f;
+	  printf ("pop {wR%d", first);
+	  if (last)
+	    printf ("-wR%d", first + last);
+	  printf ("}");
+	}
+      else if (op == 0xc7)
+	{
+	  GET_OP (op2);
+	  if (op2 == 0 || (op2 & 0xf0) != 0)
+	    printf (_("[Spare]"));
 	  else
 	    {
-	      printf (_("     [unsupported opcode]"));
+	      unsigned int mask = op2 & 0x0f;
+	      int first = 1;
+	      int i;
+
+	      printf ("pop {");
+	      for (i = 0; i < 4; i++)
+		if (mask & (1 << i))
+		  {
+		    if (first)
+		      first = 0;
+		    else
+		      printf (", ");
+		    printf ("wCGR%d", i);
+		  }
+	      printf ("}");
 	    }
 	}
+      else
+	printf (_("     [unsupported opcode]"));
       printf ("\n");
+    }
+}
+
+static void
+decode_tic6x_unwind_bytecode (struct arm_unw_aux_info *aux,
+			    unsigned int word, unsigned int remaining,
+			    unsigned int more_words,
+			    bfd_vma data_offset, Elf_Internal_Shdr *data_sec,
+			    struct arm_section *data_arm_sec)
+{
+  struct absaddr addr;
+
+  /* Decode the unwinding instructions.  */
+  while (1)
+    {
+      unsigned int op, op2;
+
+      ADVANCE;
+      if (remaining == 0)
+	break;
+      remaining--;
+      op = word >> 24;
+      word <<= 8;
+
+      printf (_("  0x%02x "), op);
+
+      if ((op & 0xc0) == 0x00)
+	{
+	  int offset = ((op & 0x3f) << 3) + 8;
+	  printf (_("     sp = sp + %d"), offset);
+	}
+      else if ((op & 0xc0) == 0x80)
+	{
+	  GET_OP (op2);
+	  if (op == 0x80 && op2 == 0)
+	    printf (_("Refuse to unwind"));
+	  else
+	    {
+	      unsigned int mask = ((op & 0x1f) << 8) | op2;
+	      if (op & 0x20)
+		printf ("pop compact {");
+	      else
+		printf ("pop {");
+
+	      decode_tic6x_unwind_regmask (mask);
+	      printf("}");
+	    }
+	}
+      else if ((op & 0xf0) == 0xc0)
+	{
+	  unsigned int reg;
+	  unsigned int nregs;
+	  unsigned int i;
+	  const char *name;
+	  struct {
+	      unsigned int offset;
+	      unsigned int reg;
+	  } regpos[16];
+
+	  /* Scan entire instruction first so that GET_OP output is not
+	     interleaved with disassembly.  */
+	  nregs = 0;
+	  for (i = 0; nregs < (op & 0xf); i++)
+	    {
+	      GET_OP (op2);
+	      reg = op2 >> 4;
+	      if (reg != 0xf)
+		{
+		  regpos[nregs].offset = i * 2;
+		  regpos[nregs].reg = reg;
+		  nregs++;
+		}
+
+	      reg = op2 & 0xf;
+	      if (reg != 0xf)
+		{
+		  regpos[nregs].offset = i * 2 + 1;
+		  regpos[nregs].reg = reg;
+		  nregs++;
+		}
+	    }
+
+	  printf (_("pop frame {"));
+	  reg = nregs - 1;
+	  for (i = i * 2; i > 0; i--)
+	    {
+	      if (regpos[reg].offset == i - 1)
+		{
+		  name = tic6x_unwind_regnames[regpos[reg].reg];
+		  if (reg > 0)
+		    reg--;
+		}
+	      else
+		name = _("[pad]");
+
+	      fputs (name, stdout);
+	      if (i > 1)
+		printf (", ");
+	    }
+
+	  printf ("}");
+	}
+      else if (op == 0xd0)
+	printf ("     MOV FP, SP");
+      else if (op == 0xd1)
+	printf ("     __c6xabi_pop_rts");
+      else if (op == 0xd2)
+	{
+	  unsigned char buf[9];
+	  unsigned int i, len;
+	  unsigned long offset;
+	  for (i = 0; i < sizeof (buf); i++)
+	    {
+	      GET_OP (buf[i]);
+	      if ((buf[i] & 0x80) == 0)
+		break;
+	    }
+	  assert (i < sizeof (buf));
+	  offset = read_uleb128 (buf, &len);
+	  assert (len == i + 1);
+	  offset = offset * 8 + 0x408;
+	  printf (_("sp = sp + %ld"), offset);
+	}
+      else if ((op & 0xf0) == 0xe0)
+	{
+	  if ((op & 0x0f) == 7)
+	    printf ("     RETURN");
+	  else
+	    printf ("     MV %s, B3", tic6x_unwind_regnames[op & 0x0f]);
+	}
+      else
+	{
+	  printf (_("     [unsupported opcode]"));
+	}
+      putchar ('\n');
+    }
+}
+
+static bfd_vma
+expand_prel31 (bfd_vma word, bfd_vma where)
+{
+  bfd_vma offset;
+
+  offset = word & 0x7fffffff;
+  if (offset & 0x40000000)
+    offset |= ~ (bfd_vma) 0x7fffffff;
+
+  if (elf_header.e_machine == EM_TI_C6000)
+    offset <<= 1;
+
+  return offset + where;
+}
+
+static void
+decode_arm_unwind (struct arm_unw_aux_info *aux,
+		   unsigned int word, unsigned int remaining,
+		   bfd_vma data_offset, Elf_Internal_Shdr *data_sec,
+		   struct arm_section *data_arm_sec)
+{
+  int per_index;
+  unsigned int more_words = 0;
+  struct absaddr addr;
+
+  if (remaining == 0)
+    {
+      /* Fetch the first word.  */
+      if (!arm_section_get_word (aux, data_arm_sec, data_sec, data_offset,
+				 &word, &addr))
+	return;
+      remaining = 4;
+    }
+
+  if ((word & 0x80000000) == 0)
+    {
+      /* Expand prel31 for personality routine.  */
+      bfd_vma fn;
+      const char *procname;
+
+      fn = expand_prel31 (word, data_sec->sh_addr + data_offset);
+      printf (_("  Personality routine: "));
+      procname = arm_print_vma_and_name (aux, fn, addr);
+      fputc ('\n', stdout);
+
+      /* The GCC personality routines use the standard compact
+	 encoding, starting with one byte giving the number of
+	 words.  */
+      if (procname != NULL
+	  && (const_strneq (procname, "__gcc_personality_v0")
+	      || const_strneq (procname, "__gxx_personality_v0")
+	      || const_strneq (procname, "__gcj_personality_v0")
+	      || const_strneq (procname, "__gnu_objc_personality_v0")))
+	{
+	  remaining = 0;
+	  more_words = 1;
+	  ADVANCE;
+	  if (!remaining)
+	    {
+	      printf (_("  [Truncated data]\n"));
+	      return;
+	    }
+	  more_words = word >> 24;
+	  word <<= 8;
+	  remaining--;
+	  per_index = -1;
+	}
+      else
+	return;
+    }
+  else
+    {
+      
+      per_index = (word >> 24) & 0x7f;
+      printf (_("  Compact model %d\n"), per_index);
+      if (per_index == 0)
+	{
+	  more_words = 0;
+	  word <<= 8;
+	  remaining--;
+	}
+      else if (per_index < 3)
+	{
+	  more_words = (word >> 16) & 0xff;
+	  word <<= 16;
+	  remaining -= 2;
+	}
+    }
+
+  switch (elf_header.e_machine)
+    {
+    case EM_ARM:
+      if (per_index < 3)
+	{
+	  decode_arm_unwind_bytecode (aux, word, remaining, more_words,
+				      data_offset, data_sec, data_arm_sec);
+	}
+      else
+	printf ("  [reserved]\n");
+      break;
+
+    case EM_TI_C6000:
+      if (per_index < 3)
+	{
+	  decode_tic6x_unwind_bytecode (aux, word, remaining, more_words,
+				      data_offset, data_sec, data_arm_sec);
+	}
+      else if (per_index < 5)
+	{
+	  if (((word >> 17) & 0x7f) == 0x7f)
+	    printf (_("  Restore stack from frame pointer\n"));
+	  else
+	    printf (_("  Stack increment %d\n"), (word >> 14) & 0x1fc);
+	  printf (_("  Registers restored: "));
+	  if (per_index == 4)
+	    printf (" (compact) ");
+	  decode_tic6x_unwind_regmask ((word >> 4) & 0x1fff);
+	  putchar ('\n');
+	  printf (_("  Return register: %s\n"),
+		  tic6x_unwind_regnames[word & 0xf]);
+	}
+      else
+	printf ("  [reserved]\n");
+      break;
+
+    default:
+      abort ();
     }
 
   /* Decode the descriptors.  Not implemented.  */
@@ -6605,10 +6937,7 @@ dump_arm_unwind (struct arm_unw_aux_info *aux, Elf_Internal_Shdr *exidx_sec)
 	  return;
 	}
 
-      fn = exidx_fn & 0x7fffffff;
-      if (fn & 0x40000000)
-	fn |= ~ (bfd_vma) 0x7fffffff;
-      fn = fn + exidx_sec->sh_addr + 8 * i;
+      fn = expand_prel31 (exidx_fn, exidx_sec->sh_addr + 8 * i);
 
       arm_print_vma_and_name (aux, fn, entry_addr);
       fputs (": ", stdout);
@@ -6630,10 +6959,7 @@ dump_arm_unwind (struct arm_unw_aux_info *aux, Elf_Internal_Shdr *exidx_sec)
 	  Elf_Internal_Shdr *table_sec;
 
 	  fputs ("@", stdout);
-	  table = exidx_entry;
-	  if (table & 0x40000000)
-	    table |= ~ (bfd_vma) 0x7fffffff;
-	  table = table + exidx_sec->sh_addr + 8 * i + 4;
+	  table = expand_prel31 (exidx_entry, exidx_sec->sh_addr + 8 * i + 4);
 	  print_vma (table, PREFIX_HEX);
 	  printf ("\n");
 
@@ -6667,6 +6993,7 @@ dump_arm_unwind (struct arm_unw_aux_info *aux, Elf_Internal_Shdr *exidx_sec)
   arm_free_section (&extab_arm_sec);
 }
 
+/* Used for both ARM and C6X unwinding tables.  */
 static int
 arm_process_unwind (FILE *file)
 {
@@ -6675,9 +7002,24 @@ arm_process_unwind (FILE *file)
   Elf_Internal_Shdr *strsec;
   Elf_Internal_Shdr *sec;
   unsigned long i;
+  unsigned int sec_type;
 
   memset (& aux, 0, sizeof (aux));
   aux.file = file;
+
+  switch (elf_header.e_machine)
+    {
+    case EM_ARM:
+      sec_type = SHT_ARM_EXIDX;
+      break;
+
+    case EM_TI_C6000:
+      sec_type = SHT_C6000_UNWIND;
+      break;
+
+    default:
+	abort();
+    }
 
   if (string_table == NULL)
     return 1;
@@ -6694,7 +7036,7 @@ arm_process_unwind (FILE *file)
 				 1, strsec->sh_size, _("string table"));
 	  aux.strtab_size = aux.strtab != NULL ? strsec->sh_size : 0;
 	}
-      else if (sec->sh_type == SHT_ARM_EXIDX)
+      else if (sec->sh_type == sec_type)
 	unwsec = sec;
     }
 
@@ -6703,7 +7045,7 @@ arm_process_unwind (FILE *file)
 
   for (i = 0, sec = section_headers; i < elf_header.e_shnum; ++i, ++sec)
     {
-      if (sec->sh_type == SHT_ARM_EXIDX)
+      if (sec->sh_type == sec_type)
 	{
 	  printf (_("\nUnwind table index '%s' at offset 0x%lx contains %lu entries:\n"),
 		  SECTION_NAME (sec),
@@ -6734,6 +7076,7 @@ process_unwind (FILE * file)
     { EM_ARM, arm_process_unwind },
     { EM_IA_64, ia64_process_unwind },
     { EM_PARISC, hppa_process_unwind },
+    { EM_TI_C6000, arm_process_unwind },
     { 0, 0 }
   };
   int i;
@@ -7976,7 +8319,10 @@ process_version_sections (FILE * file)
                                         string_sec->sh_size,
                                         _("version string table"));
 	    if (!strtab)
-	      break;
+	      {
+		free (symbols);
+		break;
+	      }
 
 	    printf (_("\nVersion symbols section '%s' contains %d entries:\n"),
 		    SECTION_NAME (section), total);
@@ -7996,6 +8342,7 @@ process_version_sections (FILE * file)
 	    if (!edata)
 	      {
 		free (strtab);
+		free (symbols);
 		break;
 	      }
 
@@ -8401,8 +8748,10 @@ get_symbol_index_type (unsigned int type)
 		|| elf_header.e_machine == EM_L1OM)
 	       && type == SHN_X86_64_LCOMMON)
 	return "LARGE_COM";
-      else if (type == SHN_MIPS_SCOMMON
-	       && elf_header.e_machine == EM_MIPS)
+      else if ((type == SHN_MIPS_SCOMMON
+		&& elf_header.e_machine == EM_MIPS)
+	       || (type == SHN_TIC6X_SCOMMON
+		   && elf_header.e_machine == EM_TI_C6000))
 	return "SCOM";
       else if (type == SHN_MIPS_SUNDEFINED
 	       && elf_header.e_machine == EM_MIPS)
@@ -11765,6 +12114,7 @@ process_gnu_liblist (FILE * file)
 	      || section->sh_entsize != sizeof (Elf32_External_Lib))
 	    {
 	      free (elib);
+	      free (strtab);
 	      break;
 	    }
 
@@ -11806,6 +12156,7 @@ process_gnu_liblist (FILE * file)
 	    }
 
 	  free (elib);
+	  free (strtab);
 	}
     }
 
@@ -11903,6 +12254,63 @@ get_gnu_elf_note_type (unsigned e_type)
   return buff;
 }
 
+static int
+print_gnu_note (Elf_Internal_Note *pnote)
+{
+  switch (pnote->type)
+    {
+    case NT_GNU_BUILD_ID:
+      {
+	unsigned long i;
+
+	printf (_("    Build ID: "));
+	for (i = 0; i < pnote->descsz; ++i)
+	  printf ("%02x", pnote->descdata[i] & 0xff);
+	printf (_("\n"));
+      }
+      break;
+
+    case NT_GNU_ABI_TAG:
+      {
+	unsigned long os, major, minor, subminor;
+	const char *osname;
+
+	os = byte_get ((unsigned char *) pnote->descdata, 4);
+	major = byte_get ((unsigned char *) pnote->descdata + 4, 4);
+	minor = byte_get ((unsigned char *) pnote->descdata + 8, 4);
+	subminor = byte_get ((unsigned char *) pnote->descdata + 12, 4);
+
+	switch (os)
+	  {
+	  case GNU_ABI_TAG_LINUX:
+	    osname = "Linux";
+	    break;
+	  case GNU_ABI_TAG_HURD:
+	    osname = "Hurd";
+	    break;
+	  case GNU_ABI_TAG_SOLARIS:
+	    osname = "Solaris";
+	    break;
+	  case GNU_ABI_TAG_FREEBSD:
+	    osname = "FreeBSD";
+	    break;
+	  case GNU_ABI_TAG_NETBSD:
+	    osname = "NetBSD";
+	    break;
+	  default:
+	    osname = "Unknown";
+	    break;
+	  }
+
+	printf (_("    OS: %s, ABI: %ld.%ld.%ld\n"), osname,
+		major, minor, subminor);
+      }
+      break;
+    }
+
+  return 1;
+}
+
 static const char *
 get_netbsd_elfcore_note_type (unsigned e_type)
 {
@@ -11965,6 +12373,172 @@ get_netbsd_elfcore_note_type (unsigned e_type)
   return buff;
 }
 
+static const char *
+get_stapsdt_note_type (unsigned e_type)
+{
+  static char buff[64];
+
+  switch (e_type)
+    {
+    case NT_STAPSDT:
+      return _("NT_STAPSDT (SystemTap probe descriptors)");
+
+    default:
+      break;
+    }
+
+  snprintf (buff, sizeof (buff), _("Unknown note type: (0x%08x)"), e_type);
+  return buff;
+}
+
+static int
+print_stapsdt_note (Elf_Internal_Note *pnote)
+{
+  int addr_size = is_32bit_elf ? 4 : 8;
+  char *data = pnote->descdata;
+  char *data_end = pnote->descdata + pnote->descsz;
+  bfd_vma pc, base_addr, semaphore;
+  char *provider, *probe, *arg_fmt;
+
+  pc = byte_get ((unsigned char *) data, addr_size);
+  data += addr_size;
+  base_addr = byte_get ((unsigned char *) data, addr_size);
+  data += addr_size;
+  semaphore = byte_get ((unsigned char *) data, addr_size);
+  data += addr_size;
+
+  provider = data;
+  data += strlen (data) + 1;
+  probe = data;
+  data += strlen (data) + 1;
+  arg_fmt = data;
+  data += strlen (data) + 1;
+
+  printf (_("    Provider: %s\n"), provider);
+  printf (_("    Name: %s\n"), probe);
+  printf (_("    Location: "));
+  print_vma (pc, FULL_HEX);
+  printf (_(", Base: "));
+  print_vma (base_addr, FULL_HEX);
+  printf (_(", Semaphore: "));
+  print_vma (semaphore, FULL_HEX);
+  printf (_("\n"));
+  printf (_("    Arguments: %s\n"), arg_fmt);
+
+  return data == data_end;
+}
+
+static const char *
+get_ia64_vms_note_type (unsigned e_type)
+{
+  static char buff[64];
+
+  switch (e_type)
+    {
+    case NT_VMS_MHD:
+      return _("NT_VMS_MHD (module header)");
+    case NT_VMS_LNM:
+      return _("NT_VMS_LNM (language name)");
+    case NT_VMS_SRC:
+      return _("NT_VMS_SRC (source files)");
+    case NT_VMS_TITLE:
+      return _("NT_VMS_TITLE");
+    case NT_VMS_EIDC:
+      return _("NT_VMS_EIDC (consistency check)");
+    case NT_VMS_FPMODE:
+      return _("NT_VMS_FPMODE (FP mode)");
+    case NT_VMS_LINKTIME:
+      return _("NT_VMS_LINKTIME");
+    case NT_VMS_IMGNAM:
+      return _("NT_VMS_IMGNAM (image name)");
+    case NT_VMS_IMGID:
+      return _("NT_VMS_IMGID (image id)");
+    case NT_VMS_LINKID:
+      return _("NT_VMS_LINKID (link id)");
+    case NT_VMS_IMGBID:
+      return _("NT_VMS_IMGBID (build id)");
+    case NT_VMS_GSTNAM:
+      return _("NT_VMS_GSTNAM (sym table name)");
+    case NT_VMS_ORIG_DYN:
+      return _("NT_VMS_ORIG_DYN");
+    case NT_VMS_PATCHTIME:
+      return _("NT_VMS_PATCHTIME");
+    default:
+      snprintf (buff, sizeof (buff), _("Unknown note type: (0x%08x)"), e_type);
+      return buff;
+    }
+}
+
+static int
+print_ia64_vms_note (Elf_Internal_Note * pnote)
+{
+  switch (pnote->type)
+    {
+    case NT_VMS_MHD:
+      if (pnote->descsz > 36)
+        {
+          size_t l = strlen (pnote->descdata + 34);
+          printf (_("    Creation date  : %.17s\n"), pnote->descdata);
+          printf (_("    Last patch date: %.17s\n"), pnote->descdata + 17);
+          printf (_("    Module name    : %s\n"), pnote->descdata + 34);
+          printf (_("    Module version : %s\n"), pnote->descdata + 34 + l + 1);
+        }
+      else
+        printf (_("    Invalid size\n"));
+      break;
+    case NT_VMS_LNM:
+      printf (_("   Language: %s\n"), pnote->descdata);
+      break;
+#ifdef BFD64
+    case NT_VMS_FPMODE:
+      printf (_("   FP mode: 0x%016" BFD_VMA_FMT "x\n"),
+              (bfd_vma)byte_get ((unsigned char *)pnote->descdata, 8));
+      break;
+    case NT_VMS_LINKTIME:
+      printf (_("   Link time: "));
+      print_vms_time
+        ((bfd_int64_t) byte_get ((unsigned char *)pnote->descdata, 8));
+      printf ("\n");
+      break;
+    case NT_VMS_PATCHTIME:
+      printf (_("   Patch time: "));
+      print_vms_time
+        ((bfd_int64_t) byte_get ((unsigned char *)pnote->descdata, 8));
+      printf ("\n");
+      break;
+    case NT_VMS_ORIG_DYN:
+      printf (_("   Major id: %u,  minor id: %u\n"),
+              (unsigned) byte_get ((unsigned char *)pnote->descdata, 4),
+              (unsigned) byte_get ((unsigned char *)pnote->descdata + 4, 4));
+      printf (_("   Manip date  : "));
+      print_vms_time
+        ((bfd_int64_t) byte_get ((unsigned char *)pnote->descdata + 8, 8));
+      printf (_("\n"
+                "   Link flags  : 0x%016" BFD_VMA_FMT "x\n"),
+              (bfd_vma)byte_get ((unsigned char *)pnote->descdata + 16, 8));
+      printf (_("   Header flags: 0x%08x\n"),
+              (unsigned)byte_get ((unsigned char *)pnote->descdata + 24, 4));
+      printf (_("   Image id    : %s\n"), pnote->descdata + 32);
+      break;
+#endif
+    case NT_VMS_IMGNAM:
+      printf (_("    Image name: %s\n"), pnote->descdata);
+      break;
+    case NT_VMS_GSTNAM:
+      printf (_("    Global symbol table name: %s\n"), pnote->descdata);
+      break;
+    case NT_VMS_IMGID:
+      printf (_("    Image id: %s\n"), pnote->descdata);
+      break;
+    case NT_VMS_LINKID:
+      printf (_("    Linker id: %s\n"), pnote->descdata);
+      break;
+    default:
+      break;
+    }
+  return 1;
+}
+
 /* Note that by the ELF standard, the name field is already null byte
    terminated, and namesz includes the terminating null byte.
    I.E. the value of namesz for the name "FSF" is 4.
@@ -11996,13 +12570,28 @@ process_note (Elf_Internal_Note * pnote)
       name = "SPU";
     }
 
+  else if (const_strneq (pnote->namedata, "IPF/VMS"))
+    /* VMS/ia64-specific file notes.  */
+    nt = get_ia64_vms_note_type (pnote->type);
+
+  else if (const_strneq (pnote->namedata, "stapsdt"))
+    nt = get_stapsdt_note_type (pnote->type);
+
   else
     /* Don't recognize this note name; just use the default set of
        note type strings.  */
-      nt = get_note_type (pnote->type);
+    nt = get_note_type (pnote->type);
 
-  printf ("  %s\t\t0x%08lx\t%s\n", name, pnote->descsz, nt);
-  return 1;
+  printf ("  %-20s 0x%08lx\t%s\n", name, pnote->descsz, nt);
+
+  if (const_strneq (pnote->namedata, "IPF/VMS"))
+    return print_ia64_vms_note (pnote);
+  else if (const_strneq (pnote->namedata, "GNU"))
+    return print_gnu_note (pnote);
+  else if (const_strneq (pnote->namedata, "stapsdt"))
+    return print_stapsdt_note (pnote);
+  else
+    return 1;
 }
 
 
@@ -12025,7 +12614,7 @@ process_corefile_note_segment (FILE * file, bfd_vma offset, bfd_vma length)
 
   printf (_("\nNotes at offset 0x%08lx with length 0x%08lx:\n"),
 	  (unsigned long) offset, (unsigned long) length);
-  printf (_("  Owner\t\tData size\tDescription\n"));
+  printf (_("  %-20s %10s\tDescription\n"), _("Owner"), _("Data size"));
 
   while (external < (Elf_External_Note *) ((char *) pnotes + length))
     {
@@ -12033,14 +12622,32 @@ process_corefile_note_segment (FILE * file, bfd_vma offset, bfd_vma length)
       Elf_Internal_Note inote;
       char * temp = NULL;
 
-      inote.type     = BYTE_GET (external->type);
-      inote.namesz   = BYTE_GET (external->namesz);
-      inote.namedata = external->name;
-      inote.descsz   = BYTE_GET (external->descsz);
-      inote.descdata = inote.namedata + align_power (inote.namesz, 2);
-      inote.descpos  = offset + (inote.descdata - (char *) pnotes);
+      if (!is_ia64_vms ())
+        {
+          inote.type     = BYTE_GET (external->type);
+          inote.namesz   = BYTE_GET (external->namesz);
+          inote.namedata = external->name;
+          inote.descsz   = BYTE_GET (external->descsz);
+          inote.descdata = inote.namedata + align_power (inote.namesz, 2);
+          inote.descpos  = offset + (inote.descdata - (char *) pnotes);
 
-      next = (Elf_External_Note *) (inote.descdata + align_power (inote.descsz, 2));
+          next = (Elf_External_Note *) (inote.descdata + align_power (inote.descsz, 2));
+        }
+      else
+        {
+          Elf64_External_VMS_Note *vms_external;
+
+          vms_external = (Elf64_External_VMS_Note *)external;
+          inote.type     = BYTE_GET (vms_external->type);
+          inote.namesz   = BYTE_GET (vms_external->namesz);
+          inote.namedata = vms_external->name;
+          inote.descsz   = BYTE_GET (vms_external->descsz);
+          inote.descdata = inote.namedata + align_power (inote.namesz, 3);
+          inote.descpos  = offset + (inote.descdata - (char *) pnotes);
+
+          next = (Elf_External_Note *)
+            (inote.descdata + align_power (inote.descsz, 3));
+        }
 
       if (   ((char *) next > ((char *) pnotes) + length)
 	  || ((char *) next <  (char *) pnotes))
@@ -12300,6 +12907,7 @@ process_object (char * file_name, FILE * file)
 
   for (i = ARRAY_SIZE (dynamic_info); i--;)
     dynamic_info[i] = 0;
+  dynamic_info_DT_GNU_HASH = 0;
 
   /* Process the file.  */
   if (show_name)
@@ -12400,6 +13008,12 @@ process_object (char * file_name, FILE * file)
     {
       free (dynamic_syminfo);
       dynamic_syminfo = NULL;
+    }
+
+  if (dynamic_section)
+    {
+      free (dynamic_section);
+      dynamic_section = NULL;
     }
 
   if (section_headers_groups)
@@ -12636,6 +13250,13 @@ process_archive (char * file_name, FILE * file, bfd_boolean is_thin_archive)
 
           ret |= process_object (qualified_name, file);
         }
+
+      if (dump_sects != NULL)
+	{
+	  free (dump_sects);
+	  dump_sects = NULL;
+	  num_dump_sects = 0;
+	}
 
       free (qualified_name);
     }

@@ -20,8 +20,6 @@ if {[gdbtk_initialize_display]} {
   #
   # Basic window tests (basic as in, "do they open")
   #
-  set prms_id 0
-  set bug_id 0
 
   set srcfile [file join $srcdir $subdir c_variable.c]
   set binfile [file join $objdir $subdir c_variable]

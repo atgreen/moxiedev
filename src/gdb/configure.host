@@ -51,7 +51,6 @@ sparcv9 | sparc64)	gdb_host_cpu=sparc ;;
 s390*)			gdb_host_cpu=s390 ;;
 sh*)			gdb_host_cpu=sh ;;
 x86_64*)		gdb_host_cpu=i386 ;;
-xscale*)		gdb_host_cpu=arm ;;
 m32r*)			gdb_host_cpu=m32r ;;
 xtensa*)		gdb_host_cpu=xtensa ;;
 *)			gdb_host_cpu=$host_cpu ;;
@@ -105,6 +104,7 @@ i[34567]86-*-solaris2.1[0-9]* | x86_64-*-solaris2.1[0-9]*)
 i[34567]86-*-solaris*)	gdb_host=i386sol2 ;;
 i[34567]86-*-cygwin*)	gdb_host=cygwin ;;
 
+ia64-*-hpux*)		gdb_host=hpux ;;
 ia64-*-linux*)		gdb_host=linux ;;
 
 m68*-*-linux*)		gdb_host=linux ;;
@@ -201,6 +201,11 @@ m68*-*-*)
 	gdb_host_float_format="&floatformat_ieee_single_big"
 	gdb_host_double_format="&floatformat_ieee_double_big"
 	gdb_host_long_double_format="&floatformat_m68881_ext"
+	;;
+ia64-*-hpux*)
+	gdb_host_float_format="&floatformat_ieee_single_big"
+	gdb_host_double_format="&floatformat_ieee_double_big"
+	gdb_host_long_double_format="&floatformat_ia64_quad_big"
 	;;
 *)
 	gdb_host_float_format=0

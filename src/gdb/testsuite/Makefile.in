@@ -1,6 +1,6 @@
 # Makefile for regression testing the GNU debugger.
 # Copyright 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2002, 2003, 2004,
-# 2005, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+# 2005, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
 # This file is part of GDB.
 
@@ -33,11 +33,11 @@ SHELL = @SHELL@
 EXEEXT = @EXEEXT@
 SUBDIRS = @subdirs@
 RPATH_ENVVAR = @RPATH_ENVVAR@
-ALL_SUBDIRS = gdb.ada gdb.arch gdb.asm gdb.base gdb.cp gdb.disasm \
-	gdb.dwarf2 \
-	gdb.fortran gdb.server gdb.java gdb.mi gdb.multi \
-	gdb.objc gdb.opencl gdb.opt gdb.pascal gdb.python gdb.threads \
-	gdb.trace gdb.xml \
+ALL_SUBDIRS = gdb.ada gdb.arch gdb.asm gdb.base gdb.cell gdb.cp gdb.disasm \
+	gdb.dwarf2 gdb.fortran gdb.gdb gdb.hp \
+	gdb.java gdb.mi gdb.modula2 gdb.multi \
+	gdb.objc gdb.opencl gdb.opt gdb.pascal gdb.python gdb.server \
+	gdb.stabs gdb.reverse gdb.threads gdb.trace gdb.xml \
 	$(SUBDIRS)
 
 EXPECT = `if [ -f $${rootme}/../../expect/expect ] ; then \
@@ -212,7 +212,8 @@ subdirs:
 	done
 
 clean mostlyclean:
-	-rm -f *~ core *.o a.out xgdb *.x *.grt
+	-rm -f *~ core *.o a.out xgdb *.x *.grt bigcore.corefile .gdb_history
+	-rm -f core.* *.tf *.cl *.py tracecommandsscript copy1.txt zzz-gdbscript
 	if [ x"${ALL_SUBDIRS}" != x ] ; then \
 	    for dir in ${ALL_SUBDIRS}; \
 	    do \
@@ -242,3 +243,7 @@ Makefile : Makefile.in config.status $(host_makefile_frag)
 
 config.status: configure
 	$(SHELL) config.status --recheck
+
+TAGS: force
+	find $(srcdir) -name '*.exp' -print | \
+	    etags --regex='/proc[ \t]+\([^ \t]+\)/\1/' -

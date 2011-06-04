@@ -1,6 +1,6 @@
 /* Debug register code for the i386.
 
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -243,6 +243,7 @@ Invalid hardware breakpoint type %d in i386_length_and_rw_bits.\n",
 	return (DR_LEN_2 | rw);
       case 4:
 	return (DR_LEN_4 | rw);
+	/* ELSE FALL THROUGH */
       case 8:
         if (TARGET_HAS_DR_LEN_8)
  	  return (DR_LEN_8 | rw);

@@ -1,6 +1,6 @@
 /* Routines to help build PEI-format DLLs (Win32 etc)
    Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009, 2010 Free Software Foundation, Inc.
+   2008, 2009, 2010, 2011 Free Software Foundation, Inc.
    Written by DJ Delorie <dj@cygnus.com>
 
    This file is part of the GNU Binutils.
@@ -24,6 +24,7 @@
 #include "bfd.h"
 #include "bfdlink.h"
 #include "libiberty.h"
+#include "filenames.h"
 #include "safe-ctype.h"
 
 #include <time.h>
@@ -343,7 +344,7 @@ static const autofilter_entry_type autofilter_liblist[] =
   returning zero if so or -1 if not.  */
 static int libnamencmp (const char *libname, const autofilter_entry_type *afptr)
 {
-  if (strncmp (libname, afptr->name, afptr->len))
+  if (filename_ncmp (libname, afptr->name, afptr->len))
     return -1;
 
   libname += afptr->len;
@@ -619,13 +620,13 @@ auto_export (bfd *abfd, def_file *d, const char *n)
       if (ex->type == EXCLUDELIBS)
 	{
 	  if (libname
-	      && ((strcmp (libname, ex->string) == 0)
+	      && ((filename_cmp (libname, ex->string) == 0)
 		   || (strcasecmp ("ALL", ex->string) == 0)))
 	    return 0;
 	}
       else if (ex->type == EXCLUDEFORIMPLIB)
 	{
-	  if (strcmp (abfd->filename, ex->string) == 0)
+	  if (filename_cmp (abfd->filename, ex->string) == 0)
 	    return 0;
 	}
       else if (strcmp (n, ex->string) == 0)
@@ -720,9 +721,8 @@ process_def_file_and_drectve (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *
 	      if (lang_elf_version_info && would_export)
 		{
 		  bfd_boolean hide = 0;
-		  char ofs = pe_details->underscored && symbols[j]->name[0] == '_';
 		  (void) bfd_find_version_for_sym (lang_elf_version_info,
-				symbols[j]->name + ofs, &hide);
+				symbols[j]->name, &hide);
 		  would_export = !hide;
 		}
 	      if (would_export)
@@ -751,10 +751,13 @@ process_def_file_and_drectve (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *
 
 		  if (auto_export (b, pe_def_file, sn))
 		    {
+		      int is_dup = 0;
 		      def_file_export *p;
-		      p=def_file_add_export (pe_def_file, sn, 0, -1, NULL);
+		      p = def_file_add_export (pe_def_file, sn, 0, -1,
+					       NULL, &is_dup);
 		      /* Fill data flag properly, from dlltool.c.  */
-		      p->flag_data = !(symbols[j]->flags & BSF_FUNCTION);
+		      if (!is_dup)
+		        p->flag_data = !(symbols[j]->flags & BSF_FUNCTION);
 		    }
 		}
 	    }
@@ -801,6 +804,7 @@ process_def_file_and_drectve (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *
 
 	  if (strchr (pe_def_file->exports[i].name, '@'))
 	    {
+	      int is_dup = 1;
 	      int lead_at = (*pe_def_file->exports[i].name == '@');
 	      char *tmp = xstrdup (pe_def_file->exports[i].name + lead_at);
 
@@ -808,9 +812,9 @@ process_def_file_and_drectve (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *
 	      if (auto_export (NULL, pe_def_file, tmp))
 		def_file_add_export (pe_def_file, tmp,
 				     pe_def_file->exports[i].internal_name,
-				     -1, NULL);
-	      else
-		free (tmp);
+				     -1, NULL, &is_dup);
+	      if (is_dup)
+	        free (tmp);
 	    }
 	}
     }
@@ -2702,7 +2706,7 @@ pe_dll_generate_implib (def_file *def, const char *impfilename, struct bfd_link_
 	{
 	  if (ex->type != EXCLUDEFORIMPLIB)
 	    continue;
-	  found = (strcmp (ex->string, ibfd->filename) == 0);
+	  found = (filename_cmp (ex->string, ibfd->filename) == 0);
 	}
       /* If it matched, we must open a fresh BFD for it (the original
         input BFD is still needed for the DLL's final link) and add
@@ -2732,7 +2736,7 @@ pe_dll_generate_implib (def_file *def, const char *impfilename, struct bfd_link_
 	      newbfd = NULL;
 	      while ((newbfd = bfd_openr_next_archived_file (arbfd, newbfd)) != 0)
 		{
-		  if (strcmp (newbfd->filename, ibfd->filename) == 0)
+		  if (filename_cmp (newbfd->filename, ibfd->filename) == 0)
 		    break;
 		}
 	      if (!newbfd)
@@ -3146,6 +3150,7 @@ pe_implied_import_dll (const char *filename)
 	 exported in buggy auto-import releases.  */
       if (! CONST_STRNEQ (erva + name_rva, "__nm_"))
  	{
+	  int is_dup = 0;
  	  /* is_data is true if the address is in the data, rdata or bss
 	     segment.  */
  	  is_data =
@@ -3154,9 +3159,10 @@ pe_implied_import_dll (const char *filename)
 	    || (func_rva >= bss_start && func_rva < bss_end);
 
 	  imp = def_file_add_import (pe_def_file, erva + name_rva,
-				     dllname, i, 0, NULL);
+				     dllname, i, 0, NULL, &is_dup);
  	  /* Mark symbol type.  */
- 	  imp->data = is_data;
+ 	  if (!is_dup)
+ 	    imp->data = is_data;
 
  	  if (pe_dll_extra_pe_debug)
 	    printf ("%s dll-name: %s sym: %s addr: 0x%lx %s\n",
@@ -3226,7 +3232,7 @@ pe_dll_fill_sections (bfd *abfd, struct bfd_link_info *info)
       ldemul_after_allocation ();
 
       /* Do the assignments again.  */
-      lang_do_assignments ();
+      lang_do_assignments (lang_final_phase_enum);
     }
 
   fill_edata (abfd, info);
@@ -3258,7 +3264,7 @@ pe_exe_fill_sections (bfd *abfd, struct bfd_link_info *info)
       ldemul_after_allocation ();
 
       /* Do the assignments again.  */
-      lang_do_assignments ();
+      lang_do_assignments (lang_final_phase_enum);
     }
   reloc_s->contents = reloc_d;
 }

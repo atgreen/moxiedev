@@ -1,6 +1,6 @@
 /* The common simulator framework for GDB, the GNU Debugger.
 
-   Copyright 2002, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2002, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney and Red Hat.
 
@@ -55,7 +55,7 @@
 	   if (events-were-next)
 	     next-cpu-nr = 0;
 
-           .... // prime main loop 
+           .... // prime main loop
 
            while (1)
              {
@@ -93,7 +93,7 @@ struct _sim_events {
   unsigned long elapsed_wallclock;
   SIM_ELAPSED_TIME resume_wallclock;
   signed64 time_of_event;
-  int time_from_event;
+  signed64 time_from_event;
   int trace;
 };
 

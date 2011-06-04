@@ -1,6 +1,6 @@
 /* Common target dependent code Alpha BSD's.
 
-   Copyright (C) 2000, 2001, 2002, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2000, 2001, 2002, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -42,7 +42,8 @@ alphabsd_fill_reg (const struct regcache *regcache, char *regs, int regno)
 }
 
 void
-alphabsd_supply_fpreg (struct regcache *regcache, const char *fpregs, int regno)
+alphabsd_supply_fpreg (struct regcache *regcache,
+		       const char *fpregs, int regno)
 {
   /* FPCR is at slot 33; slot 32 unused.  */
   alpha_supply_fp_regs (regcache, regno, fpregs, fpregs + 32 * 8);

@@ -1,6 +1,6 @@
 \input texinfo @c                               -*-Texinfo-*-
 @c  Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-@c  2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+@c  2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 @c  Free Software Foundation, Inc.
 @c UPDATE!!  On future updates--
 @c   (1)   check for new machine-dep cmdline options in
@@ -103,7 +103,8 @@ This file documents the GNU Assembler "@value{AS}".
 
 @c man begin COPYRIGHT
 Copyright @copyright{} 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-2000, 2001, 2002, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+2000, 2001, 2002, 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation,
+Inc.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3
@@ -153,7 +154,8 @@ done.
 
 @vskip 0pt plus 1filll
 Copyright @copyright{} 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-2000, 2001, 2002, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+2000, 2001, 2002, 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation,
+Inc.
 
       Permission is granted to copy, distribute and/or modify this document
       under the terms of the GNU Free Documentation License, Version 1.3
@@ -241,6 +243,7 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
  @var{objfile}] [@b{-R}] [@b{--reduce-memory-overheads}] [@b{--statistics}]
  [@b{-v}] [@b{-version}] [@b{--version}] [@b{-W}] [@b{--warn}]
  [@b{--fatal-warnings}] [@b{-w}] [@b{-x}] [@b{-Z}] [@b{@@@var{FILE}}]
+ [@b{--size-check=[error|warning]}]
  [@b{--target-help}] [@var{target-options}]
  [@b{--}|@var{files} @dots{}]
 @c
@@ -315,7 +318,7 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
 @ifset I80386
 
 @emph{Target i386 options:}
-   [@b{--32}|@b{--64}] [@b{-n}]
+   [@b{--32}|@b{--n32}|@b{--64}] [@b{-n}]
    [@b{-march}=@var{CPU}[+@var{EXTENSION}@dots{}]] [@b{-mtune}=@var{CPU}]
 @end ifset
 @ifset I960
@@ -426,13 +429,18 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
 @ifset PPC
 
 @emph{Target PowerPC options:}
-   [@b{-mpwrx}|@b{-mpwr2}|@b{-mpwr}|@b{-m601}|@b{-mppc}|@b{-mppc32}|@b{-m603}|@b{-m604}|
-    @b{-m403}|@b{-m405}|@b{-mppc64}|@b{-m620}|@b{-mppc64bridge}|@b{-mbooke}]
-   [@b{-mcom}|@b{-many}|@b{-maltivec}|@b{-mvsx}] [@b{-memb}]
+   [@b{-a32}|@b{-a64}]
+   [@b{-mpwrx}|@b{-mpwr2}|@b{-mpwr}|@b{-m601}|@b{-mppc}|@b{-mppc32}|@b{-m603}|@b{-m604}|@b{-m403}|@b{-m405}|
+    @b{-m440}|@b{-m464}|@b{-m476}|@b{-m7400}|@b{-m7410}|@b{-m7450}|@b{-m7455}|@b{-m750cl}|@b{-mppc64}|
+    @b{-m620}|@b{-me500}|@b{-e500x2}|@b{-me500mc}|@b{-me500mc64}|@b{-mppc64bridge}|@b{-mbooke}|
+    @b{-mpower4}|@b{-mpr4}|@b{-mpower5}|@b{-mpwr5}|@b{-mpwr5x}|@b{-mpower6}|@b{-mpwr6}|
+    @b{-mpower7}|@b{-mpw7}|@b{-ma2}|@b{-mcell}|@b{-mspe}|@b{-mtitan}|@b{-me300}|@b{-mcom}]
+   [@b{-many}] [@b{-maltivec}|@b{-mvsx}]
    [@b{-mregnames}|@b{-mno-regnames}]
-   [@b{-mrelocatable}|@b{-mrelocatable-lib}]
-   [@b{-mlittle}|@b{-mlittle-endian}|@b{-mbig}|@b{-mbig-endian}]
+   [@b{-mrelocatable}|@b{-mrelocatable-lib}|@b{-K PIC}] [@b{-memb}]
+   [@b{-mlittle}|@b{-mlittle-endian}|@b{-le}|@b{-mbig}|@b{-mbig-endian}|@b{-be}]
    [@b{-msolaris}|@b{-mno-solaris}]
+   [@b{-nops=@var{count}}]
 @end ifset
 @ifset RX
 
@@ -475,9 +483,18 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
 @ifset TIC6X
 
 @emph{Target TIC6X options:}
-   [@b{-march=@var{arch}}] [@b{-matomic}|@b{-mno-atomic}]
-   [@b{-mbig-endian}|@b{-mlittle-endian}] [@b{-mdsbt}|@b{-mno-dsbt}]
-   [@b{-mpid=no}|@b{-mpid=near}|@b{-mpid=far}] [@b{-mpic}|@b{-mno-pic}]
+   [@b{-march=@var{arch}}] [@b{-mbig-endian}|@b{-mlittle-endian}]
+   [@b{-mdsbt}|@b{-mno-dsbt}] [@b{-mpid=no}|@b{-mpid=near}|@b{-mpid=far}]
+   [@b{-mpic}|@b{-mno-pic}]
+@end ifset
+
+@ifset XTENSA
+
+@emph{Target Xtensa options:}
+ [@b{--[no-]text-section-literals}] [@b{--[no-]absolute-literals}]
+ [@b{--[no-]target-align}] [@b{--[no-]longcalls}]
+ [@b{--[no-]transform}]
+ [@b{--rename-section} @var{oldname}=@var{newname}]
 @end ifset
 
 @ifset Z80
@@ -495,14 +512,7 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
 @ifset Z8000
 @c Z8000 has no machine-dependent assembler options
 @end ifset
-@ifset XTENSA
 
-@emph{Target Xtensa options:}
- [@b{--[no-]text-section-literals}] [@b{--[no-]absolute-literals}]
- [@b{--[no-]target-align}] [@b{--[no-]longcalls}]
- [@b{--[no-]transform}]
- [@b{--rename-section} @var{oldname}=@var{newname}]
-@end ifset
 @c man end
 @end smallexample
 
@@ -601,6 +611,10 @@ the location of the current working directory at assembling time.
 Generate DWARF2 debugging information for each assembler line.  This
 may help debugging assembler code, if the debugger can handle it.  Note---this
 option is only supported by some targets, not all of them.
+
+@item --size-check=error
+@itemx --size-check=warning
+Issue an error or warning for invalid ELF .size directive.
 
 @item --help
 Print a summary of the command line options and exit.
@@ -702,7 +716,28 @@ Generate an object file even after errors.
 Standard input, or source files to assemble.
 
 @end table
+@c man end
 
+@ifset ALPHA
+
+@ifclear man
+@xref{Alpha Options}, for the options available when @value{AS} is configured
+for an Alpha processor.
+@end ifclear
+
+@ifset man
+@c man begin OPTIONS
+The following options are available when @value{AS} is configured for an Alpha
+processor.
+@c man end
+@c man begin INCLUDE
+@include c-alpha.texi
+@c ended inside the included file
+@end ifset
+
+@end ifset
+
+@c man begin OPTIONS
 @ifset ARC
 The following options are available when @value{AS} is configured for
 an ARC processor.
@@ -741,23 +776,28 @@ ARM code in mind.
 Specify that PIC code has been generated.
 @end table
 @end ifset
+@c man end
 
 @ifset Blackfin
+
+@ifclear man
+@xref{Blackfin Options}, for the options available when @value{AS} is
+configured for the Blackfin processor family.
+@end ifclear
+
+@ifset man
+@c man begin OPTIONS
 The following options are available when @value{AS} is configured for
 the Blackfin processor family.
-
-@table @gcctabopt
-@item -mcpu=@var{processor}@r{[}-@var{sirevision}@r{]}
-This option specifies the target processor.  The optional @var{sirevision}
-is not used in assembler.
-@item -mfdpic
-Assemble for the FDPIC ABI.
-@item -mno-fdpic
-@itemx -mnopic
-Disable -mfdpic.
-@end table
+@c man end
+@c man begin INCLUDE
+@include c-bfin.texi
+@c ended inside the included file
 @end ifset
 
+@end ifset
+
+@c man begin OPTIONS
 @ifset CRIS
 See the info pages for documentation of the CRIS-specific options.
 @end ifset
@@ -791,7 +831,28 @@ Warn when nops are generated.
 Warn when a nop after a 32-bit multiply instruction is generated.
 @end table
 @end ifset
+@c man end
 
+@ifset I80386
+
+@ifclear man
+@xref{i386-Options}, for the options available when @value{AS} is
+configured for an i386 processor.
+@end ifclear
+
+@ifset man
+@c man begin OPTIONS
+The following options are available when @value{AS} is configured for
+an i386 processor.
+@c man end
+@c man begin INCLUDE
+@include c-i386.texi
+@c ended inside the included file
+@end ifset
+
+@end ifset
+
+@c man begin OPTIONS
 @ifset I960
 The following options are available when @value{AS} is configured for the
 Intel 80960 processor.
@@ -1234,6 +1295,27 @@ Assemble for a little endian target.
 See the info pages for documentation of the MMIX-specific options.
 @end ifset
 
+@c man end
+@ifset PPC
+
+@ifclear man
+@xref{PowerPC-Opts}, for the options available when @value{AS} is configured
+for a PowerPC processor.
+@end ifclear
+
+@ifset man
+@c man begin OPTIONS
+The following options are available when @value{AS} is configured for a
+PowerPC processor.
+@c man end
+@c man begin INCLUDE
+@include c-ppc.texi
+@c ended inside the included file
+@end ifset
+
+@end ifset
+
+@c man begin OPTIONS
 @ifset RX
 See the info pages for documentation of the RX-specific options.
 @end ifset
@@ -1261,110 +1343,47 @@ Warn whenever the operand for a base or index register has been specified
 but evaluates to zero.
 @end table
 @end ifset
+@c man end
 
 @ifset TIC6X
+
+@ifclear man
+@xref{TIC6X Options}, for the options available when @value{AS} is configured
+for a TMS320C6000 processor.
+@end ifclear
+
+@ifset man
+@c man begin OPTIONS
 The following options are available when @value{AS} is configured for a
 TMS320C6000 processor.
-
-@table @gcctabopt
-@item -march=@var{arch}
-Enable (only) instructions from architecture @var{arch}.  By default,
-all instructions are permitted.
-
-The following values of @var{arch} are accepted: @code{c62x},
-@code{c64x}, @code{c64x+}, @code{c67x}, @code{c67x+}, @code{c674x}.
-
-@item -matomic
-@itemx -mno-atomic
-Enable or disable the optional C64x+ atomic operation instructions.
-By default, they are enabled if no @option{-march} option is given, or
-if an architecture is specified with @option{-march} that implies
-these instructions are present (currently, there are no such
-architectures); they are disabled if an architecture is specified with
-@option{-march} on which the instructions are optional or not
-present.  This option overrides such a default from the architecture,
-independent of the order in which the @option{-march} or
-@option{-matomic} or @option{-mno-atomic} options are passed.
-
-@item -mdsbt
-@itemx -mno-dsbt
-The @option{-mdsbt} option causes the assembler to generate the
-@code{Tag_ABI_DSBT} attribute with a value of 1, indicating that the
-code is using DSBT addressing.  The @option{-mno-dsbt} option, the
-default, causes the tag to have a value of 0, indicating that the code
-does not use DSBT addressing.  The linker will emit a warning if
-objects of different type (DSBT and non-DSBT) are linked together.
-
-@item -mpid=no
-@itemx -mpid=near
-@itemx -mpid=far
-The @option{-mpid=} option causes the assembler to generate the
-@code{Tag_ABI_PID} attribute with a value indicating the form of data
-addressing used by the code.  @option{-mpid=no}, the default,
-indicates position-dependent data addressing, @option{-mpid=near}
-indicates position-independent addressing with GOT accesses using near
-DP addressing, and @option{-mpid=far} indicates position-independent
-addressing with GOT accesses using far DP addressing.  The linker will
-emit a warning if objects built with different settings of this option
-are linked together.
-
-@item -mpic
-@itemx -mno-pic
-The @option{-mpic} option causes the assembler to generate the
-@code{Tag_ABI_PIC} attribute with a value of 1, indicating that the
-code is using position-independent code addressing,  The
-@code{-mno-pic} option, the default, causes the tag to have a value of
-0, indicating position-dependent code addressing.  The linker will
-emit a warning if objects of different type (position-dependent and
-position-independent) are linked together.
-
-@item -mbig-endian
-@itemx -mlittle-endian
-Generate code for the specified endianness.  The default is
-little-endian.
-@end table
+@c man end
+@c man begin INCLUDE
+@include c-tic6x.texi
+@c ended inside the included file
+@end ifset
 
 @end ifset
 
 @ifset XTENSA
-The following options are available when @value{AS} is configured for
-an Xtensa processor.
 
-@table @gcctabopt
-@item --text-section-literals | --no-text-section-literals
-With @option{--text-@-section-@-literals}, literal pools are interspersed
-in the text section.  The default is
-@option{--no-@-text-@-section-@-literals}, which places literals in a
-separate section in the output file.  These options only affect literals
-referenced via PC-relative @code{L32R} instructions; literals for
-absolute mode @code{L32R} instructions are handled separately.
+@ifclear man
+@xref{Xtensa Options}, for the options available when @value{AS} is configured
+for an Xtensa processor.
+@end ifclear
 
-@item --absolute-literals | --no-absolute-literals
-Indicate to the assembler whether @code{L32R} instructions use absolute
-or PC-relative addressing.  The default is to assume absolute addressing
-if the Xtensa processor includes the absolute @code{L32R} addressing
-option.  Otherwise, only the PC-relative @code{L32R} mode can be used.
-
-@item --target-align | --no-target-align
-Enable or disable automatic alignment to reduce branch penalties at the
-expense of some code density.  The default is @option{--target-@-align}.
-
-@item --longcalls | --no-longcalls
-Enable or disable transformation of call instructions to allow calls
-across a greater range of addresses.  The default is
-@option{--no-@-longcalls}.
-
-@item --transform | --no-transform
-Enable or disable all assembler transformations of Xtensa instructions.
-The default is @option{--transform};
-@option{--no-transform} should be used only in the rare cases when the
-instructions must be exactly as specified in the assembly source.
-
-@item --rename-section @var{oldname}=@var{newname}
-When generating output sections, rename the @var{oldname} section to
-@var{newname}.
-@end table
+@ifset man
+@c man begin OPTIONS
+The following options are available when @value{AS} is configured for an
+Xtensa processor.
+@c man end
+@c man begin INCLUDE
+@include c-xtensa.texi
+@c ended inside the included file
 @end ifset
+
+@end ifset
+
+@c man begin OPTIONS
 
 @ifset Z80
 The following options are available when @value{AS} is configured for
@@ -2252,7 +2271,7 @@ assembler, except that @command{@value{AS}} does not assemble Vax bit-fields.
 @end ifset
 
 @menu
-* Preprocessing::              Preprocessing
+* Preprocessing::               Preprocessing
 * Whitespace::                  Whitespace
 * Comments::                    Comments
 * Symbol Intro::                Symbols
@@ -2337,98 +2356,18 @@ This means you may not nest these comments.
 @end smallexample
 
 @cindex line comment character
-Anything from the @dfn{line comment} character to the next newline
-is considered a comment and is ignored.  The line comment character is
-@ifset ARC
-@samp{;} on the ARC;
-@end ifset
-@ifset ARM
-@samp{@@} on the ARM;
-@end ifset
-@ifset H8/300
-@samp{;} for the H8/300 family;
-@end ifset
-@ifset HPPA
-@samp{;} for the HPPA;
-@end ifset
-@ifset I80386
-@samp{#} on the i386 and x86-64;
-@end ifset
-@ifset I960
-@samp{#} on the i960;
-@end ifset
-@ifset PDP11
-@samp{;} for the PDP-11;
-@end ifset
-@ifset PJ
-@samp{;} for picoJava;
-@end ifset
-@ifset PPC
-@samp{#} for Motorola PowerPC;
-@end ifset
-@ifset S390
-@samp{#} for IBM S/390;
-@end ifset
-@ifset SCORE
-@samp{#} for the Sunplus SCORE;
-@end ifset
-@ifset SH
-@samp{!} for the Renesas / SuperH SH;
-@end ifset
-@ifset SPARC
-@samp{!} on the SPARC;
-@end ifset
-@ifset IP2K
-@samp{#} on the ip2k;
-@end ifset
-@ifset M32C
-@samp{#} on the m32c;
-@end ifset
-@ifset M32R
-@samp{#} on the m32r;
-@end ifset
-@ifset M680X0
-@samp{|} on the 680x0;
-@end ifset
-@ifset M68HC11
-@samp{#} on the 68HC11 and 68HC12;
-@end ifset
-@ifset RX
-@samp{#} on the RX;
-@end ifset
-@ifset TIC6X
-@samp{;} on the TMS320C6X;
-@end ifset
-@ifset VAX
-@samp{#} on the Vax;
-@end ifset
-@ifset Z80
-@samp{;} for the Z80;
-@end ifset
-@ifset Z8000
-@samp{!} for the Z8000;
-@end ifset
-@ifset V850
-@samp{#} on the V850;
-@end ifset
-@ifset XTENSA
-@samp{#} for Xtensa systems;
-@end ifset
-see @ref{Machine Dependencies}.  @refill
-@c FIXME What about i860?
+Anything from a @dfn{line comment} character up to the next newline is
+considered a comment and is ignored.  The line comment character is target
+specific, and some targets multiple comment characters.  Some targets also have
+line comment characters that only work if they are the first character on a
+line.  Some targets use a sequence of two characters to introduce a line
+comment.  Some targets can also change their line comment characters depending
+upon command line options that have been used.  For more details see the
+@emph{Syntax} section in the documentation for individual targets.
 
-@ifset GENERIC
-On some machines there are two different line comment characters.  One
-character only begins a comment if it is the first non-whitespace character on
-a line, while the other always begins a comment.
-@end ifset
-
-@ifset V850
-The V850 assembler also supports a double dash as starting a comment that
-extends to the end of the line.
-
-@samp{--};
-@end ifset
+If the line comment character is the hash sign (@samp{#}) then it still has the
+special ability to enable and disable preprocessing (@pxref{Preprocessing}) and
+to specify logical line numbers:
 
 @kindex #
 @cindex lines starting with @code{#}
@@ -2486,37 +2425,14 @@ not a possible symbol delimiter).  @xref{Symbols}.
 @cindex statements, structure of
 @cindex line separator character
 @cindex statement separator character
-@ifclear GENERIC
-@ifclear abnormal-separator
-A @dfn{statement} ends at a newline character (@samp{\n}) or at a
-semicolon (@samp{;}).  The newline or semicolon is considered part of
-the preceding statement.  Newlines and semicolons within character
-constants are an exception: they do not end statements.
-@end ifclear
-@ifset abnormal-separator
-@ifset HPPA
-A @dfn{statement} ends at a newline character (@samp{\n}) or an exclamation
-point (@samp{!}).  The newline or exclamation point is considered part of the
-preceding statement.  Newlines and exclamation points within character
-constants are an exception: they do not end statements.
-@end ifset
-@ifset H8
-A @dfn{statement} ends at a newline character (@samp{\n}); or (for the
-H8/300) a dollar sign (@samp{$}); or (for the Renesas-SH) a semicolon
-(@samp{;}).  The newline or separator character is considered part of
-the preceding statement.  Newlines and separators within character
-constants are an exception: they do not end statements.
-@end ifset
-@end ifset
-@end ifclear
-@ifset GENERIC
-A @dfn{statement} ends at a newline character (@samp{\n}) or line
-separator character.  (The line separator is usually @samp{;}, unless this
-conflicts with the comment character; see @ref{Machine Dependencies}.)  The
-newline or separator character is considered part of the preceding
-statement.  Newlines and separators within character constants are an
+
+A @dfn{statement} ends at a newline character (@samp{\n}) or a
+@dfn{line separator character}.  The line separator character is target
+specific and described in the @emph{Syntax} section of each
+target's documentation.  Not all targets support a line separator character.
+The newline or line separator character is considered to be part of the
+preceding statement.  Newlines and separators within character constants are an
 exception: they do not end statements.
-@end ifset
 
 @cindex newline, required at file end
 @cindex EOF, newline must precede
@@ -6930,6 +6846,9 @@ subject, see the hardware manufacturer's manual.
 @end ifset
 @ifset MSP430
 * MSP430-Dependent::		MSP430 Dependent Features
+@end ifset
+@ifset NS32K
+* NS32K-Dependent::		NS32K Dependent Features
 @end ifset
 @ifset SH
 * SH-Dependent::                Renesas / SuperH SH Dependent Features

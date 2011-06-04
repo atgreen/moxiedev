@@ -1,5 +1,5 @@
 /* Remote debugging interface to dBUG ROM monitor for GDB, the GNU debugger.
-   Copyright (C) 1996, 1998, 1999, 2000, 2001, 2007, 2008, 2009, 2010
+   Copyright (C) 1996, 1998, 1999, 2000, 2001, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Written by Stan Shebs of Cygnus Support.
@@ -74,10 +74,10 @@ dbug_supply_register (struct regcache *regcache, char *regname,
   monitor_supply_register (regcache, regno, val);
 }
 
-/* This array of registers needs to match the indexes used by GDB. The
-   whole reason this exists is because the various ROM monitors use
-   different names than GDB does, and don't support all the registers
-   either. So, typing "info reg sp" becomes an "A7". */
+/* This array of registers needs to match the indexes used by GDB.
+   The whole reason this exists is because the various ROM monitors
+   use different names than GDB does, and don't support all the
+   registers either.  So, typing "info reg sp" becomes an "A7".  */
 
 static const char *
 dbug_regname (int index)
@@ -107,7 +107,8 @@ static char *dbug_inits[] =
 static void
 init_dbug_cmds (void)
 {
-  dbug_cmds.flags = MO_CLR_BREAK_USES_ADDR | MO_GETMEM_NEEDS_RANGE | MO_FILL_USES_ADDR;
+  dbug_cmds.flags = MO_CLR_BREAK_USES_ADDR
+    | MO_GETMEM_NEEDS_RANGE | MO_FILL_USES_ADDR;
   dbug_cmds.init = dbug_inits;	/* Init strings */
   dbug_cmds.cont = "go\r";	/* continue command */
   dbug_cmds.step = "trace\r";	/* single step */
@@ -139,7 +140,8 @@ init_dbug_cmds (void)
   dbug_cmds.getreg.term = NULL;	/* getreg.term */
   dbug_cmds.getreg.term_cmd = NULL;	/* getreg.term_cmd */
   dbug_cmds.dump_registers = "rd\r";	/* dump_registers */
-  dbug_cmds.register_pattern = "\\(\\w+\\) +:\\([0-9a-fA-F]+\\b\\)";	/* register_pattern */
+					/* register_pattern */
+  dbug_cmds.register_pattern = "\\(\\w+\\) +:\\([0-9a-fA-F]+\\b\\)";
   dbug_cmds.supply_register = dbug_supply_register;
   dbug_cmds.load_routine = NULL;	/* load_routine (defaults to SRECs) */
   dbug_cmds.load = "dl\r";	/* download command */

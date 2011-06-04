@@ -1,6 +1,6 @@
 /* The IGEN simulator generator for GDB, the GNU Debugger.
 
-   Copyright 2002, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2002, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney.
 
@@ -131,7 +131,7 @@ table_push (table *root,
       ff = fopen (dup_name, "rb");
       if (ff)
 	break;
-      /* zfree (dup_name); */
+      /* free (dup_name); */
       if (include->next == NULL)
 	{
 	  if (line != NULL)

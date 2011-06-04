@@ -1,6 +1,6 @@
 /* Native-dependent code for NetBSD/sh.
 
-   Copyright (C) 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Contributed by Wasabi Systems, Inc.
@@ -32,7 +32,7 @@
 #include "regcache.h"
 
 
-/* Determine if PT_GETREGS fetches this register. */
+/* Determine if PT_GETREGS fetches this register.  */
 #define GETREGS_SUPPLIES(gdbarch, regno) \
   (((regno) >= R0_REGNUM && (regno) <= (R0_REGNUM + 15)) \
 || (regno) == gdbarch_pc_regnum (gdbarch) || (regno) == PR_REGNUM \

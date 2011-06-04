@@ -1,6 +1,6 @@
 /* Target-dependent code for NetBSD/amd64.
 
-   Copyright (C) 2003, 2004, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -78,7 +78,7 @@ int amd64nbsd_r_reg_offset[] =
   0 * 8,			/* %rdi */
   12 * 8,			/* %rbp */
   24 * 8,			/* %rsp */
-  4 * 8,			/* %r8 .. */
+  4 * 8,			/* %r8 ..  */
   5 * 8,
   6 * 8,
   7 * 8,

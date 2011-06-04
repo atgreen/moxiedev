@@ -1,6 +1,7 @@
 /* run front end support for all the simulators.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2002, 2003, 2004, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -351,7 +352,7 @@ usage (int help)
   exit (help ? 0 : 1);
 }
 
-static void 
+static void
 print_version ()
 {
   printf ("GNU simulator %s%s\n", PKGVERSION, version);

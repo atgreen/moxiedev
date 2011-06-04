@@ -1,3 +1,8 @@
+2010-08-10  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	Remove the use of prms_id and bug_id throughout the testsuite,
+	as they are now on the banned variable list in lib/gdb.exp.
+
 2009-11-09  Keith Seitz  <keiths@redhat.com>
 
 	* configure: Regenerate with autcoconf 2.64.

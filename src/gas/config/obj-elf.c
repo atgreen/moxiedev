@@ -1,6 +1,6 @@
 /* ELF object file format
    Copyright 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -984,6 +984,7 @@ obj_elf_section (int push)
 	  if (beg == NULL)
 	    {
 	      ignore_rest_of_line ();
+	      xfree (name);
 	      return;
 	    }
 	  attr |= obj_elf_parse_section_letters (beg, strlen (beg), &clone);
@@ -1003,6 +1004,7 @@ obj_elf_section (int push)
 		  if (beg == NULL)
 		    {
 		      ignore_rest_of_line ();
+		      xfree (name);
 		      return;
 		    }
 		  type = obj_elf_section_type (beg, strlen (beg), TRUE);
@@ -1084,6 +1086,7 @@ obj_elf_section (int push)
 		{
 		  as_bad (_("character following name is not '#'"));
 		  ignore_rest_of_line ();
+		  xfree (name);
 		  return;
 		}
 	      beg = ++input_line_pointer;
@@ -1879,6 +1882,7 @@ void
 elf_frob_symbol (symbolS *symp, int *puntp)
 {
   struct elf_obj_sy *sy_obj;
+  expressionS *size;
 
 #ifdef NEED_ECOFF_DEBUG
   if (ECOFF_DEBUGGING)
@@ -1887,24 +1891,20 @@ elf_frob_symbol (symbolS *symp, int *puntp)
 
   sy_obj = symbol_get_obj (symp);
 
-  if (sy_obj->size != NULL)
+  size = sy_obj->size;
+  if (size != NULL)
     {
-      switch (sy_obj->size->X_op)
+      if (resolve_expression (size)
+	  && size->X_op == O_constant)
+	S_SET_SIZE (symp, size->X_add_number);
+      else
 	{
-	case O_subtract:
-	  S_SET_SIZE (symp,
-		      (S_GET_VALUE (sy_obj->size->X_add_symbol)
-		       + sy_obj->size->X_add_number
-		       - S_GET_VALUE (sy_obj->size->X_op_symbol)));
-	  break;
-	case O_constant:
-	  S_SET_SIZE (symp,
-		      (S_GET_VALUE (sy_obj->size->X_add_symbol)
-		       + sy_obj->size->X_add_number));
-	  break;
-	default:
-	  as_bad (_(".size expression too complicated to fix up"));
-	  break;
+	  if (flag_size_check == size_check_error)
+	    as_bad (_(".size expression for %s "
+		      "does not evaluate to a constant"), S_GET_NAME (symp));
+	  else
+	    as_warn (_(".size expression for %s "
+		       "does not evaluate to a constant"), S_GET_NAME (symp));
 	}
       free (sy_obj->size);
       sy_obj->size = NULL;

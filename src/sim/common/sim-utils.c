@@ -1,5 +1,5 @@
 /* Miscellaneous simulator utilities.
-   Copyright (C) 1997, 1998, 2007, 2008, 2009, 2010
+   Copyright (C) 1997, 1998, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Cygnus Support.
 
@@ -62,12 +62,6 @@ zalloc (unsigned long size)
   return xcalloc (1, size);
 }
 
-void
-zfree (void *data)
-{
-  free (data);
-}
-
 /* Allocate a sim_state struct.  */
 
 SIM_DESC
@@ -118,7 +112,7 @@ sim_state_free (SIM_DESC sd)
   SIM_STATE_FREE (sd);
 #endif
 
-  zfree (sd);
+  free (sd);
 }
 
 /* Return a pointer to the cpu data for CPU_NAME, or NULL if not found.  */
@@ -241,13 +235,13 @@ sim_analyze_program (SIM_DESC sd, char *prog_name, bfd *prog_bfd)
   prog_bfd = bfd_openr (prog_name, STATE_TARGET (sd));
   if (prog_bfd == NULL)
     {
-      sim_io_eprintf (sd, "%s: can't open \"%s\": %s\n", 
+      sim_io_eprintf (sd, "%s: can't open \"%s\": %s\n",
 		      STATE_MY_NAME (sd),
 		      prog_name,
 		      bfd_errmsg (bfd_get_error ()));
       return SIM_RC_FAIL;
     }
-  if (!bfd_check_format (prog_bfd, bfd_object)) 
+  if (!bfd_check_format (prog_bfd, bfd_object))
     {
       sim_io_eprintf (sd, "%s: \"%s\" is not an object file: %s\n",
 		      STATE_MY_NAME (sd),
@@ -336,7 +330,12 @@ sim_do_commandf (SIM_DESC sd,
   va_list ap;
   char *buf;
   va_start (ap, fmt);
-  vasprintf (&buf, fmt, ap);
+  if (vasprintf (&buf, fmt, ap) < 0)
+    {
+      sim_io_eprintf (sd, "%s: asprintf failed for `%s'\n",
+		      STATE_MY_NAME (sd), fmt);
+      return;
+    }
   sim_do_command (sd, buf);
   va_end (ap);
   free (buf);
@@ -403,5 +402,3 @@ transfer_to_str (unsigned transfer)
     default: return "(error)";
     }
 }
-
-

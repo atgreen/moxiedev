@@ -1,6 +1,6 @@
 /* Native-dependent code for PA-RISC HP-UX.
 
-   Copyright (C) 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -25,6 +25,7 @@
 
 #include "gdb_assert.h"
 #include <sys/ptrace.h>
+#include <sys/utsname.h>
 #include <machine/save_state.h>
 
 #ifdef HAVE_TTRACE
@@ -32,11 +33,9 @@
 #endif
 
 #include "hppa-tdep.h"
+#include "solib-som.h"
 #include "inf-ptrace.h"
 #include "inf-ttrace.h"
-
-/* Non-zero if we should pretend not to be a runnable target.  */
-int child_suppress_run = 0;
 
 /* Return the offset of register REGNUM within `struct save_state'.
    The offset returns depends on the flags in the "flags" register and
@@ -236,15 +235,21 @@ hppa_hpux_store_inferior_registers (struct target_ops *ops,
     hppa_hpux_store_register (regcache, regnum);
 }
 
-static int
-hppa_hpux_child_can_run (void)
+/* Set hpux_major_release variable to the value retrieved from a call to
+   uname function.  */
+
+static void
+set_hpux_major_release (void)
 {
-  /* This variable is controlled by modules that layer their own
-     process structure atop that provided here.  The code in
-     hpux-thread.c does this to support the HP-UX user-mode DCE
-     threads.  */
-  return !child_suppress_run;
+  struct utsname x;
+  char *p;
+
+  uname (&x);
+  p = strchr (x.release, '.');
+  if (p)
+    hpux_major_release = atoi (p + 1);
 }
+
 
 
 /* Prevent warning from -Wmissing-prototypes.  */
@@ -255,6 +260,8 @@ _initialize_hppa_hpux_nat (void)
 {
   struct target_ops *t;
 
+  set_hpux_major_release ();
+
 #ifdef HAVE_TTRACE
   t = inf_ttrace_target ();
 #else
@@ -263,7 +270,6 @@ _initialize_hppa_hpux_nat (void)
 
   t->to_fetch_registers = hppa_hpux_fetch_inferior_registers;
   t->to_store_registers = hppa_hpux_store_inferior_registers;
-  t->to_can_run = hppa_hpux_child_can_run;
 
   add_target (t);
 }

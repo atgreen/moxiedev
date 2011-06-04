@@ -1,6 +1,6 @@
 /* Target-dependent code for FreeBSD/sparc64.
 
-   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -202,6 +202,7 @@ sparc64fbsd_sigtramp_frame_sniffer (const struct frame_unwind *self,
 static const struct frame_unwind sparc64fbsd_sigtramp_frame_unwind =
 {
   SIGTRAMP_FRAME,
+  default_frame_unwind_stop_reason,
   sparc64fbsd_sigtramp_frame_this_id,
   sparc64fbsd_sigtramp_frame_prev_register,
   NULL,

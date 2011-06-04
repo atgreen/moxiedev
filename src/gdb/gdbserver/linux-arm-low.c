@@ -1,6 +1,6 @@
 /* GNU/Linux/ARM specific low level interface, for the remote server for GDB.
    Copyright (C) 1995, 1996, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -336,7 +336,7 @@ arm_arch_setup (void)
 	 registers.  Support was added in 2.6.30.  */
       pid = lwpid_of (get_thread_lwp (current_inferior));
       errno = 0;
-      buf = malloc (32 * 8 + 4);
+      buf = xmalloc (32 * 8 + 4);
       if (ptrace (PTRACE_GETVFPREGS, pid, 0, buf) < 0
 	  && errno == EIO)
 	{

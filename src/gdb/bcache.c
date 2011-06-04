@@ -2,7 +2,7 @@
    Written by Fred Fish <fnf@cygnus.com>
    Rewritten by Jim Blandy <jimb@cygnus.com>
 
-   Copyright (C) 1999, 2000, 2002, 2003, 2007, 2008, 2009, 2010
+   Copyright (C) 1999, 2000, 2002, 2003, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -97,9 +97,8 @@ struct bcache
   int (*compare_function)(const void *, const void *, int length);
 };
 
-/* The old hash function was stolen from SDBM. This is what DB 3.0 uses now,
- * and is better than the old one. 
- */
+/* The old hash function was stolen from SDBM. This is what DB 3.0
+   uses now, and is better than the old one.  */
 
 unsigned long
 hash(const void *addr, int length)
@@ -305,12 +304,14 @@ bcache_compare (const void *addr1, const void *addr2, int length)
 
 /* Allocated a bcache.  HASH_FUNCTION and COMPARE_FUNCTION can be used
    to pass in custom hash, and compare functions to be used by this
-   bcache. If HASH_FUNCTION is NULL hash() is used and if COMPARE_FUNCTION
-   is NULL memcmp() is used.  */
+   bcache.  If HASH_FUNCTION is NULL hash() is used and if
+   COMPARE_FUNCTION is NULL memcmp() is used.  */
 
 struct bcache *
 bcache_xmalloc (unsigned long (*hash_function)(const void *, int length),
-                int (*compare_function)(const void *, const void *, int length))
+                int (*compare_function)(const void *, 
+					const void *, 
+					int length))
 {
   /* Allocate the bcache pre-zeroed.  */
   struct bcache *b = XCALLOC (1, struct bcache);
@@ -348,7 +349,7 @@ static void
 print_percentage (int portion, int total)
 {
   if (total == 0)
-    /* i18n: Like "Percentage of duplicates, by count: (not applicable)" */
+    /* i18n: Like "Percentage of duplicates, by count: (not applicable)".  */
     printf_filtered (_("(not applicable)\n"));
   else
     printf_filtered ("%3d%%\n", (int) (portion * 100.0 / total));
@@ -399,7 +400,8 @@ print_bcache_statistics (struct bcache *c, char *type)
 	  }
       }
 
-    /* To compute the median, we need the set of chain lengths sorted.  */
+    /* To compute the median, we need the set of chain lengths
+       sorted.  */
     qsort (chain_length, c->num_buckets, sizeof (chain_length[0]),
 	   compare_positive_ints);
     qsort (entry_size, c->unique_count, sizeof (entry_size[0]),
@@ -448,12 +450,13 @@ print_bcache_statistics (struct bcache *c, char *type)
   if (c->unique_count > 0)
     printf_filtered ("%ld\n", c->unique_size / c->unique_count);
   else
-    /* i18n: "Average entry size: (not applicable)" */
+    /* i18n: "Average entry size: (not applicable)".  */
     printf_filtered (_("(not applicable)\n"));    
   printf_filtered (_("    Median entry size:  %d\n"), median_entry_size);
   printf_filtered ("\n");
 
-  printf_filtered (_("    Total memory used by bcache, including overhead: %ld\n"),
+  printf_filtered (_("    \
+Total memory used by bcache, including overhead: %ld\n"),
 		   c->structure_size);
   printf_filtered (_("    Percentage memory overhead: "));
   print_percentage (c->structure_size - c->unique_size, c->unique_size);
@@ -461,7 +464,8 @@ print_bcache_statistics (struct bcache *c, char *type)
   print_percentage (c->total_size - c->structure_size, c->total_size);
   printf_filtered ("\n");
 
-  printf_filtered (_("    Hash table size:           %3d\n"), c->num_buckets);
+  printf_filtered (_("    Hash table size:           %3d\n"), 
+		   c->num_buckets);
   printf_filtered (_("    Hash table expands:        %lu\n"),
 		   c->expand_count);
   printf_filtered (_("    Hash table hashes:         %lu\n"),
@@ -476,9 +480,10 @@ print_bcache_statistics (struct bcache *c, char *type)
   if (c->num_buckets > 0)
     printf_filtered ("%3lu\n", c->unique_count / c->num_buckets);
   else
-    /* i18n: "Average hash chain length: (not applicable)" */
+    /* i18n: "Average hash chain length: (not applicable)".  */
     printf_filtered (_("(not applicable)\n"));
-  printf_filtered (_("    Maximum hash chain length: %3d\n"), max_chain_length);
+  printf_filtered (_("    Maximum hash chain length: %3d\n"), 
+		   max_chain_length);
   printf_filtered ("\n");
 }
 

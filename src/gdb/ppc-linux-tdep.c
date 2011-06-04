@@ -1,7 +1,7 @@
 /* Target-dependent code for GDB, the GNU debugger.
 
    Copyright (C) 1986, 1987, 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -147,7 +147,7 @@
 	Now we've hit the breakpoint at shr1.  (The breakpoint was
 	reset from the PLT entry to the actual shr1 function after the
 	shared library was loaded.) Note that the PLT entry has been
-	resolved to contain a branch that takes us directly to shr1. 
+	resolved to contain a branch that takes us directly to shr1.
 	(The real one, not the PLT entry.)
 
 	    (gdb) x/2i 0x100409d4
@@ -158,7 +158,7 @@
    changed twice.
 
    Now the problem should be obvious.  GDB places a breakpoint (a
-   trap instruction) on the zero value of the PLT entry for shr1. 
+   trap instruction) on the zero value of the PLT entry for shr1.
    Later on, after the shared library had been loaded and the PLT
    initialized, GDB gets a signal indicating this fact and attempts
    (as it always does when it stops) to remove all the breakpoints.
@@ -167,7 +167,7 @@
    word) to be written back to the now initialized PLT entry thus
    destroying a portion of the initialization that had occurred only a
    short time ago.  When execution continued, the zero word would be
-   executed as an instruction an an illegal instruction trap was
+   executed as an instruction an illegal instruction trap was
    generated instead.  (0 is not a legal instruction.)
 
    The fix for this problem was fairly straightforward.  The function
@@ -181,7 +181,7 @@
    that the latter does not is check to make sure that the breakpoint
    location actually contains a breakpoint (trap instruction) prior
    to attempting to write back the old contents.  If it does contain
-   a trap instruction, we allow the old contents to be written back. 
+   a trap instruction, we allow the old contents to be written back.
    Otherwise, we silently do nothing.
 
    The big question is whether memory_remove_breakpoint () should be
@@ -216,7 +216,7 @@ ppc_linux_memory_remove_breakpoint (struct gdbarch *gdbarch,
 
   /* If our breakpoint is no longer at the address, this means that the
      program modified the code on us, so it is wrong to put back the
-     old value */
+     old value.  */
   if (val == 0 && memcmp (bp, old_contents, bplen) == 0)
     val = target_write_memory (addr, bp_tgt->shadow_contents, bplen);
 
@@ -284,8 +284,8 @@ read_insn (CORE_ADDR pc)
 /* An instruction to match.  */
 struct insn_pattern
 {
-  unsigned int mask;            /* mask the insn with this... */
-  unsigned int data;            /* ...and see if it matches this. */
+  unsigned int mask;            /* mask the insn with this...  */
+  unsigned int data;            /* ...and see if it matches this.  */
   int optional;                 /* If non-zero, this insn may be absent.  */
 };
 
@@ -912,7 +912,8 @@ ppc_linux_sigtramp_cache (struct frame_info *this_frame,
   for (i = 0; i < 32; i++)
     {
       int regnum = i + tdep->ppc_gp0_regnum;
-      trad_frame_set_reg_addr (this_cache, regnum, gpregs + i * tdep->wordsize);
+      trad_frame_set_reg_addr (this_cache,
+			       regnum, gpregs + i * tdep->wordsize);
     }
   trad_frame_set_reg_addr (this_cache,
 			   gdbarch_pc_regnum (gdbarch),
@@ -1366,7 +1367,12 @@ ppu2spu_prev_register (struct frame_info *this_frame,
   gdb_byte *buf;
 
   buf = alloca (register_size (gdbarch, regnum));
-  regcache_cooked_read (cache->regcache, regnum, buf);
+
+  if (regnum < gdbarch_num_regs (gdbarch))
+    regcache_raw_read (cache->regcache, regnum, buf);
+  else
+    gdbarch_pseudo_register_read (gdbarch, cache->regcache, regnum, buf);
+
   return frame_unwind_got_bytes (this_frame, regnum, buf);
 }
 
@@ -1391,9 +1397,9 @@ ppu2spu_unwind_register (void *src, int regnum, gdb_byte *buf)
   else if (regnum == SPU_PC_REGNUM)
     store_unsigned_integer (buf, 4, byte_order, data->npc);
   else
-    return 0;
+    return REG_UNAVAILABLE;
 
-  return 1;
+  return REG_VALID;
 }
 
 static int
@@ -1471,6 +1477,7 @@ ppu2spu_dealloc_cache (struct frame_info *self, void *this_cache)
 
 static const struct frame_unwind ppu2spu_unwind = {
   ARCH_FRAME,
+  default_frame_unwind_stop_reason,
   ppu2spu_this_id,
   ppu2spu_prev_register,
   NULL,
@@ -1508,7 +1515,7 @@ ppc_linux_init_abi (struct gdbarch_info info,
       /* Until November 2001, gcc did not comply with the 32 bit SysV
 	 R4 ABI requirement that structures less than or equal to 8
 	 bytes should be returned in registers.  Instead GCC was using
-	 the the AIX/PowerOpen ABI - everything returned in memory
+	 the AIX/PowerOpen ABI - everything returned in memory
 	 (well ignoring vectors that is).  When this was corrected, it
 	 wasn't fixed for GNU/Linux native platform.  Use the
 	 PowerOpen struct convention.  */
@@ -1526,8 +1533,10 @@ ppc_linux_init_abi (struct gdbarch_info info,
       set_xml_syscall_file_name (XML_SYSCALL_FILENAME_PPC);
 
       /* Trampolines.  */
-      tramp_frame_prepend_unwinder (gdbarch, &ppc32_linux_sigaction_tramp_frame);
-      tramp_frame_prepend_unwinder (gdbarch, &ppc32_linux_sighandler_tramp_frame);
+      tramp_frame_prepend_unwinder (gdbarch,
+				    &ppc32_linux_sigaction_tramp_frame);
+      tramp_frame_prepend_unwinder (gdbarch,
+				    &ppc32_linux_sighandler_tramp_frame);
 
       /* BFD target for core files.  */
       if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_LITTLE)
@@ -1565,8 +1574,10 @@ ppc_linux_init_abi (struct gdbarch_info info,
       set_xml_syscall_file_name (XML_SYSCALL_FILENAME_PPC64);
 
       /* Trampolines.  */
-      tramp_frame_prepend_unwinder (gdbarch, &ppc64_linux_sigaction_tramp_frame);
-      tramp_frame_prepend_unwinder (gdbarch, &ppc64_linux_sighandler_tramp_frame);
+      tramp_frame_prepend_unwinder (gdbarch,
+				    &ppc64_linux_sigaction_tramp_frame);
+      tramp_frame_prepend_unwinder (gdbarch,
+				    &ppc64_linux_sighandler_tramp_frame);
 
       /* BFD target for core files.  */
       if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_LITTLE)
@@ -1587,7 +1598,8 @@ ppc_linux_init_abi (struct gdbarch_info info,
 	set_gdbarch_core_regset_sections (gdbarch,
 					  ppc64_linux_fp_regset_sections);
     }
-  set_gdbarch_regset_from_core_section (gdbarch, ppc_linux_regset_from_core_section);
+  set_gdbarch_regset_from_core_section (gdbarch,
+					ppc_linux_regset_from_core_section);
   set_gdbarch_core_read_description (gdbarch, ppc_linux_core_read_description);
 
   /* Enable TLS support.  */

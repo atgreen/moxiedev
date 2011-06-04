@@ -30,7 +30,7 @@
    If editing this file, please also run gdbarch.sh and merge any
    changes into that script. Conversely, when making sweeping changes
    to this file, modifying gdbarch.sh and using its output may prove
-   easier. */
+   easier.  */
 
 #ifndef GDBARCH_H
 #define GDBARCH_H
@@ -53,6 +53,7 @@ struct target_desc;
 struct displaced_step_closure;
 struct core_regset_section;
 struct syscall;
+struct agent_expr;
 
 /* The architecture associated with the connection to the target.
  
@@ -67,25 +68,25 @@ struct syscall;
 extern struct gdbarch *target_gdbarch;
 
 
-/* The following are pre-initialized by GDBARCH. */
+/* The following are pre-initialized by GDBARCH.  */
 
 extern const struct bfd_arch_info * gdbarch_bfd_arch_info (struct gdbarch *gdbarch);
-/* set_gdbarch_bfd_arch_info() - not applicable - pre-initialized. */
+/* set_gdbarch_bfd_arch_info() - not applicable - pre-initialized.  */
 
 extern int gdbarch_byte_order (struct gdbarch *gdbarch);
-/* set_gdbarch_byte_order() - not applicable - pre-initialized. */
+/* set_gdbarch_byte_order() - not applicable - pre-initialized.  */
 
 extern int gdbarch_byte_order_for_code (struct gdbarch *gdbarch);
-/* set_gdbarch_byte_order_for_code() - not applicable - pre-initialized. */
+/* set_gdbarch_byte_order_for_code() - not applicable - pre-initialized.  */
 
 extern enum gdb_osabi gdbarch_osabi (struct gdbarch *gdbarch);
-/* set_gdbarch_osabi() - not applicable - pre-initialized. */
+/* set_gdbarch_osabi() - not applicable - pre-initialized.  */
 
 extern const struct target_desc * gdbarch_target_desc (struct gdbarch *gdbarch);
-/* set_gdbarch_target_desc() - not applicable - pre-initialized. */
+/* set_gdbarch_target_desc() - not applicable - pre-initialized.  */
 
 
-/* The following are initialized by the target dependent code. */
+/* The following are initialized by the target dependent code.  */
 
 /* The bit byte-order has to do just with numbering of bits in debugging symbols
    and such.  Conceptually, it's quite separate from byte/word byte order. */
@@ -211,8 +212,8 @@ extern void set_gdbarch_virtual_frame_pointer (struct gdbarch *gdbarch, gdbarch_
 
 extern int gdbarch_pseudo_register_read_p (struct gdbarch *gdbarch);
 
-typedef void (gdbarch_pseudo_register_read_ftype) (struct gdbarch *gdbarch, struct regcache *regcache, int cookednum, gdb_byte *buf);
-extern void gdbarch_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache, int cookednum, gdb_byte *buf);
+typedef enum register_status (gdbarch_pseudo_register_read_ftype) (struct gdbarch *gdbarch, struct regcache *regcache, int cookednum, gdb_byte *buf);
+extern enum register_status gdbarch_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache, int cookednum, gdb_byte *buf);
 extern void set_gdbarch_pseudo_register_read (struct gdbarch *gdbarch, gdbarch_pseudo_register_read_ftype *pseudo_register_read);
 
 extern int gdbarch_pseudo_register_write_p (struct gdbarch *gdbarch);
@@ -231,6 +232,25 @@ extern void set_gdbarch_num_regs (struct gdbarch *gdbarch, int num_regs);
 
 extern int gdbarch_num_pseudo_regs (struct gdbarch *gdbarch);
 extern void set_gdbarch_num_pseudo_regs (struct gdbarch *gdbarch, int num_pseudo_regs);
+
+/* Assemble agent expression bytecode to collect pseudo-register REG.
+   Return -1 if something goes wrong, 0 otherwise. */
+
+extern int gdbarch_ax_pseudo_register_collect_p (struct gdbarch *gdbarch);
+
+typedef int (gdbarch_ax_pseudo_register_collect_ftype) (struct gdbarch *gdbarch, struct agent_expr *ax, int reg);
+extern int gdbarch_ax_pseudo_register_collect (struct gdbarch *gdbarch, struct agent_expr *ax, int reg);
+extern void set_gdbarch_ax_pseudo_register_collect (struct gdbarch *gdbarch, gdbarch_ax_pseudo_register_collect_ftype *ax_pseudo_register_collect);
+
+/* Assemble agent expression bytecode to push the value of pseudo-register
+   REG on the interpreter stack.
+   Return -1 if something goes wrong, 0 otherwise. */
+
+extern int gdbarch_ax_pseudo_register_push_stack_p (struct gdbarch *gdbarch);
+
+typedef int (gdbarch_ax_pseudo_register_push_stack_ftype) (struct gdbarch *gdbarch, struct agent_expr *ax, int reg);
+extern int gdbarch_ax_pseudo_register_push_stack (struct gdbarch *gdbarch, struct agent_expr *ax, int reg);
+extern void set_gdbarch_ax_pseudo_register_push_stack (struct gdbarch *gdbarch, gdbarch_ax_pseudo_register_push_stack_ftype *ax_pseudo_register_push_stack);
 
 /* GDB's standard (or well known) register numbers.  These can map onto
    a real register or a pseudo (computed) register or not be defined at
@@ -364,8 +384,8 @@ typedef int (gdbarch_convert_register_p_ftype) (struct gdbarch *gdbarch, int reg
 extern int gdbarch_convert_register_p (struct gdbarch *gdbarch, int regnum, struct type *type);
 extern void set_gdbarch_convert_register_p (struct gdbarch *gdbarch, gdbarch_convert_register_p_ftype *convert_register_p);
 
-typedef void (gdbarch_register_to_value_ftype) (struct frame_info *frame, int regnum, struct type *type, gdb_byte *buf);
-extern void gdbarch_register_to_value (struct gdbarch *gdbarch, struct frame_info *frame, int regnum, struct type *type, gdb_byte *buf);
+typedef int (gdbarch_register_to_value_ftype) (struct frame_info *frame, int regnum, struct type *type, gdb_byte *buf, int *optimizedp, int *unavailablep);
+extern int gdbarch_register_to_value (struct gdbarch *gdbarch, struct frame_info *frame, int regnum, struct type *type, gdb_byte *buf, int *optimizedp, int *unavailablep);
 extern void set_gdbarch_register_to_value (struct gdbarch *gdbarch, gdbarch_register_to_value_ftype *register_to_value);
 
 typedef void (gdbarch_value_to_register_ftype) (struct frame_info *frame, int regnum, struct type *type, const gdb_byte *buf);
@@ -1010,7 +1030,7 @@ extern struct gdbarch_tdep *gdbarch_tdep (struct gdbarch *gdbarch);
    data for all the various GDB components was also considered.  Since
    GDB is built from a variable number of (fairly independent)
    components it was determined that the global aproach was not
-   applicable. */
+   applicable.  */
 
 
 /* Register a new architectural family with GDB.
@@ -1044,7 +1064,7 @@ extern struct gdbarch_tdep *gdbarch_tdep (struct gdbarch *gdbarch);
 
    The DUMP_TDEP function shall print out all target specific values.
    Care should be taken to ensure that the function works in both the
-   multi-arch and non- multi-arch cases. */
+   multi-arch and non- multi-arch cases.  */
 
 struct gdbarch_list
 {
@@ -1054,7 +1074,7 @@ struct gdbarch_list
 
 struct gdbarch_info
 {
-  /* Use default: NULL (ZERO). */
+  /* Use default: NULL (ZERO).  */
   const struct bfd_arch_info *bfd_arch_info;
 
   /* Use default: BFD_ENDIAN_UNKNOWN (NB: is not ZERO).  */
@@ -1062,10 +1082,10 @@ struct gdbarch_info
 
   int byte_order_for_code;
 
-  /* Use default: NULL (ZERO). */
+  /* Use default: NULL (ZERO).  */
   bfd *abfd;
 
-  /* Use default: NULL (ZERO). */
+  /* Use default: NULL (ZERO).  */
   struct gdbarch_tdep_info *tdep_info;
 
   /* Use default: GDB_OSABI_UNINITIALIZED (-1).  */
@@ -1089,13 +1109,13 @@ extern void gdbarch_register (enum bfd_architecture architecture,
 /* Return a freshly allocated, NULL terminated, array of the valid
    architecture names.  Since architectures are registered during the
    _initialize phase this function only returns useful information
-   once initialization has been completed. */
+   once initialization has been completed.  */
 
 extern const char **gdbarch_printable_names (void);
 
 
 /* Helper function.  Search the list of ARCHES for a GDBARCH that
-   matches the information provided by INFO. */
+   matches the information provided by INFO.  */
 
 extern struct gdbarch_list *gdbarch_list_lookup_by_info (struct gdbarch_list *arches, const struct gdbarch_info *info);
 
@@ -1103,14 +1123,14 @@ extern struct gdbarch_list *gdbarch_list_lookup_by_info (struct gdbarch_list *ar
 /* Helper function.  Create a preliminary ``struct gdbarch''.  Perform
    basic initialization using values obtained from the INFO and TDEP
    parameters.  set_gdbarch_*() functions are called to complete the
-   initialization of the object. */
+   initialization of the object.  */
 
 extern struct gdbarch *gdbarch_alloc (const struct gdbarch_info *info, struct gdbarch_tdep *tdep);
 
 
 /* Helper function.  Free a partially-constructed ``struct gdbarch''.
    It is assumed that the caller freeds the ``struct
-   gdbarch_tdep''. */
+   gdbarch_tdep''.  */
 
 extern void gdbarch_free (struct gdbarch *);
 
@@ -1124,14 +1144,14 @@ extern void *gdbarch_obstack_zalloc (struct gdbarch *gdbarch, long size);
 #define GDBARCH_OBSTACK_ZALLOC(GDBARCH, TYPE) ((TYPE *) gdbarch_obstack_zalloc ((GDBARCH), sizeof (TYPE)))
 
 
-/* Helper function. Force an update of the current architecture.
+/* Helper function.  Force an update of the current architecture.
 
    The actual architecture selected is determined by INFO, ``(gdb) set
    architecture'' et.al., the existing architecture and BFD's default
    architecture.  INFO should be initialized to zero and then selected
    fields should be updated.
 
-   Returns non-zero if the update succeeds */
+   Returns non-zero if the update succeeds.  */
 
 extern int gdbarch_update_p (struct gdbarch_info info);
 
@@ -1189,7 +1209,7 @@ extern void *gdbarch_data (struct gdbarch *gdbarch, struct gdbarch_data *);
 
 
 /* Set the dynamic target-system-dependent parameters (architecture,
-   byte-order, ...) using information found in the BFD */
+   byte-order, ...) using information found in the BFD.  */
 
 extern void set_gdbarch_from_file (bfd *);
 

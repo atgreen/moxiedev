@@ -1,6 +1,6 @@
 /* Python interface to blocks.
 
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -109,7 +109,7 @@ blpy_get_start (PyObject *self, void *closure)
 
   BLPY_REQUIRE_VALID (self, block);
 
-  return PyLong_FromUnsignedLongLong (BLOCK_START (block));
+  return gdb_py_object_from_ulongest (BLOCK_START (block));
 }
 
 static PyObject *
@@ -119,7 +119,7 @@ blpy_get_end (PyObject *self, void *closure)
 
   BLPY_REQUIRE_VALID (self, block);
 
-  return PyLong_FromUnsignedLongLong (BLOCK_END (block));
+  return gdb_py_object_from_ulongest (BLOCK_END (block));
 }
 
 static PyObject *
@@ -173,7 +173,7 @@ blpy_dealloc (PyObject *obj)
 /* Given a block, and a block_object that has previously been
    allocated and initialized, populate the block_object with the
    struct block data.  Also, register the block_object life-cycle
-   with the life-cycle of the the object file associated with this
+   with the life-cycle of the object file associated with this
    block, if needed.  */
 static void
 set_block (block_object *obj, struct block *block,
@@ -263,17 +263,47 @@ blpy_block_syms_dealloc (PyObject *obj)
   Py_XDECREF (iter_obj->source);
 }
 
+/* Implementation of gdb.Block.is_valid (self) -> Boolean.
+   Returns True if this block object still exists in GDB.  */
+
+static PyObject *
+blpy_is_valid (PyObject *self, PyObject *args)
+{
+  struct block *block;
+
+  block = block_object_to_block (self);
+  if (block == NULL)
+    Py_RETURN_FALSE;
+
+  Py_RETURN_TRUE;
+}
+
+/* Implementation of gdb.BlockIterator.is_valid (self) -> Boolean.
+   Returns True if this block iterator object still exists in GDB  */
+
+static PyObject *
+blpy_iter_is_valid (PyObject *self, PyObject *args)
+{
+  block_syms_iterator_object *iter_obj =
+    (block_syms_iterator_object *) self;
+
+  if (iter_obj->source->block == NULL)
+    Py_RETURN_FALSE;
+
+  Py_RETURN_TRUE;
+}
+
 /* Return the innermost lexical block containing the specified pc value,
    or 0 if there is none.  */
 PyObject *
 gdbpy_block_for_pc (PyObject *self, PyObject *args)
 {
-  unsigned PY_LONG_LONG pc;
+  gdb_py_ulongest pc;
   struct block *block;
   struct obj_section *section;
   struct symtab *symtab;
 
-  if (!PyArg_ParseTuple (args, "K", &pc))
+  if (!PyArg_ParseTuple (args, GDB_PY_LLU_ARG, &pc))
     return NULL;
 
   section = find_pc_mapped_section (pc);
@@ -342,6 +372,13 @@ gdbpy_initialize_blocks (void)
 
 
 
+static PyMethodDef block_object_methods[] = {
+  { "is_valid", blpy_is_valid, METH_NOARGS,
+    "is_valid () -> Boolean.\n\
+Return true if this block is valid, false if not." },
+  {NULL}  /* Sentinel */
+};
+
 static PyGetSetDef block_object_getset[] = {
   { "start", blpy_get_start, NULL, "Start address of the block.", NULL },
   { "end", blpy_get_end, NULL, "End address of the block.", NULL },
@@ -381,9 +418,16 @@ PyTypeObject block_object_type = {
   0,				  /* tp_weaklistoffset */
   blpy_iter,			  /* tp_iter */
   0,				  /* tp_iternext */
-  0,				  /* tp_methods */
+  block_object_methods,		  /* tp_methods */
   0,				  /* tp_members */
   block_object_getset		  /* tp_getset */
+};
+
+static PyMethodDef block_iterator_object_methods[] = {
+  { "is_valid", blpy_iter_is_valid, METH_NOARGS,
+    "is_valid () -> Boolean.\n\
+Return true if this block iterator is valid, false if not." },
+  {NULL}  /* Sentinel */
 };
 
 static PyTypeObject block_syms_iterator_object_type = {
@@ -415,5 +459,5 @@ static PyTypeObject block_syms_iterator_object_type = {
   0,				  /*tp_weaklistoffset */
   blpy_block_syms_iter,           /*tp_iter */
   blpy_block_syms_iternext,	  /*tp_iternext */
-  0				  /*tp_methods */
+  block_iterator_object_methods   /*tp_methods */
 };

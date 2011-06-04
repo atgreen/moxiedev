@@ -76,6 +76,10 @@ extern unsigned long i386_mach (void);
 #define ELF_TARGET_FORMAT64	"elf64-x86-64"
 #endif
 
+#ifndef ELF_TARGET_FORMAT32
+#define ELF_TARGET_FORMAT32	"elf32-x86-64"
+#endif
+
 #ifndef ELF_TARGET_L1OM_FORMAT
 #define ELF_TARGET_L1OM_FORMAT	"elf64-l1om"
 #endif
@@ -121,8 +125,8 @@ extern const char *i386_comment_chars;
 
 #if (defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)) && !defined (LEX_AT)
 #define TC_PARSE_CONS_EXPRESSION(EXP, NBYTES) x86_cons (EXP, NBYTES)
-extern void x86_cons (expressionS *, int);
 #endif
+extern void x86_cons (expressionS *, int);
 
 #define TC_CONS_FIX_NEW(FRAG,OFF,LEN,EXP) x86_cons_fix_new(FRAG, OFF, LEN, EXP)
 extern void x86_cons_fix_new
@@ -226,7 +230,7 @@ enum processor_type
   PROCESSOR_GENERIC32,
   PROCESSOR_GENERIC64,
   PROCESSOR_AMDFAM10,
-  PROCESSOR_BDVER1
+  PROCESSOR_BD
 };
 
 extern enum processor_type cpu_arch_tune;

@@ -1,4 +1,4 @@
-# Copyright 1999, 2000, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+# Copyright 1999, 2000, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
 # Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
@@ -32,6 +32,7 @@ set MIFLAGS "-i=mi"
 
 set thread_selected_re "=thread-selected,id=\"\[0-9\]+\"\r\n"
 set library_loaded_re "=library-loaded\[^\n\]+\"\r\n"
+set breakpoint_re "=(breakpoint-created|breakpoint-deleted)\[^\n\]+\"\r\n"
 
 #
 # mi_gdb_exit -- exit the GDB, killing the target program if necessary
@@ -575,6 +576,7 @@ proc mi_gdb_test { args } {
     global verbose
     global mi_gdb_prompt
     global GDB expect_out
+    global inferior_exited_re
     upvar timeout timeout
 
     set command [lindex $args 0]
@@ -698,7 +700,7 @@ proc mi_gdb_test { args } {
             fail "$message"
 	    set result 1
 	}
-	 -re "Program exited with code \[0-9\]+.*$mi_gdb_prompt\[ \]*$" {
+	 -re "$inferior_exited_re with code \[0-9\]+.*$mi_gdb_prompt\[ \]*$" {
 	    if ![string match "" $message] then {
 		set errmsg "$message (the program exited)"
 	    } else {
@@ -977,6 +979,7 @@ proc mi_expect_stop { reason func args file line extra test } {
     global fullname_syntax
     global async
     global thread_selected_re
+    global breakpoint_re
 
     set after_stopped ""
     set after_reason ""
@@ -1037,13 +1040,13 @@ proc mi_expect_stop { reason func args file line extra test } {
 
     set any "\[^\n\]*"
 
-    verbose -log "mi_expect_stop: expecting: \\*stopped,${r}${a}${bn}frame=\{addr=\"$hex\",func=\"$func\",args=$args,file=\"$any$file\",fullname=\"${fullname_syntax}$file\",line=\"$line\"\}$after_stopped,thread-id=\"$decimal\",stopped-threads=$any\r\n($thread_selected_re)?$prompt_re"
+    verbose -log "mi_expect_stop: expecting: \\*stopped,${r}${a}${bn}frame=\{addr=\"$hex\",func=\"$func\",args=$args,file=\"$any$file\",fullname=\"${fullname_syntax}$file\",line=\"$line\"\}$after_stopped,thread-id=\"$decimal\",stopped-threads=$any\r\n($thread_selected_re|$breakpoint_re)*$prompt_re"
     gdb_expect {
-	-re "\\*stopped,${r}${a}${bn}frame=\{addr=\"$hex\",func=\"$func\",args=$args,file=\"$any$file\",fullname=\"${fullname_syntax}$file\",line=\"($line)\"\}$after_stopped,thread-id=\"$decimal\",stopped-threads=$any\r\n($thread_selected_re)?$prompt_re" {
+	-re "\\*stopped,${r}${a}${bn}frame=\{addr=\"$hex\",func=\"$func\",args=$args,file=\"$any$file\",fullname=\"${fullname_syntax}$file\",line=\"($line)\"\}$after_stopped,thread-id=\"$decimal\",stopped-threads=$any\r\n($thread_selected_re|$breakpoint_re)*$prompt_re" {
 	    pass "$test"
             return $expect_out(2,string)
 	}
-	-re "\\*stopped,${r}${a}${bn}frame=\{addr=\"$hex\",func=\"$any\",args=\[\\\[\{\]$any\[\\\]\}\],file=\"$any\",fullname=\"${fullname_syntax}$any\",line=\"\[0-9\]*\"\}$after_stopped,thread-id=\"$decimal\",stopped-threads=$any\r\n$prompt_re" {
+	-re "\\*stopped,${r}${a}${bn}frame=\{addr=\"$hex\",func=\"$any\",args=\[\\\[\{\]$any\[\\\]\}\],file=\"$any\",fullname=\"${fullname_syntax}$any\",line=\"\[0-9\]*\"\}$after_stopped,thread-id=\"$decimal\",stopped-threads=$any\r\n($thread_selected_re|$breakpoint_re)*$prompt_re" {
             verbose -log "got $expect_out(buffer)"
 	    fail "$test (stopped at wrong place)"
 	    return -1

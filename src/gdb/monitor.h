@@ -1,6 +1,6 @@
 /* Definitions for remote debugging interface for ROM monitors.
    Copyright (C) 1990, 1991, 1992, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Cygnus Support. Written by Rob Savoye for Cygnus.
 
    This file is part of GDB.
@@ -16,8 +16,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #ifndef MONITOR_H
 #define MONITOR_H
@@ -63,7 +62,8 @@ struct memrw_cmd
     char *cmdll;		/* Command for long long (64 bit) read/write */
     char *resp_delim;		/* String just prior to the desired value */
     char *term;			/* Terminating string to search for */
-    char *term_cmd;		/* String to get out of sub-mode (if necessary) */
+    char *term_cmd;		/* String to get out of sub-mode (if
+				   necessary) */
   };
 
 struct regrw_cmd
@@ -72,18 +72,20 @@ struct regrw_cmd
     char *resp_delim;		/* String (actually a regexp if getmem) just
 				   prior to the desired value */
     char *term;			/* Terminating string to search for */
-    char *term_cmd;		/* String to get out of sub-mode (if necessary) */
+    char *term_cmd;		/* String to get out of sub-mode (if
+				   necessary) */
   };
 
 struct monitor_ops
   {
     int flags;			/* See below */
-    char **init;		/* List of init commands.  NULL terminated. */
+    char **init;		/* List of init commands.  NULL terminated.  */
     char *cont;			/* continue command */
     char *step;			/* single step */
     char *stop;			/* Interrupt program string */
-    char *set_break;		/* set a breakpoint. If NULL, monitor implementation
-				   sets its own to_insert_breakpoint method. */
+    char *set_break;		/* set a breakpoint.  If NULL, monitor
+				   implementation sets its own
+				   to_insert_breakpoint method.  */
     char *clr_break;		/* clear a breakpoint */
     char *clr_all_break;	/* Clear all breakpoints */
     char *fill;			/* Memory fill cmd (addr len val) */
@@ -97,7 +99,8 @@ struct monitor_ops
        of registers that we can parse to supply
        GDB with the value of a register.  */
     char *dump_registers;	/* Command to dump all regs at once */
-    char *register_pattern;	/* Pattern that picks out register from reg dump */
+    char *register_pattern;	/* Pattern that picks out register
+				   from reg dump */
     void (*supply_register) (struct regcache *regcache, char *name,
 			     int namelen, char *val, int vallen);
     void (*load_routine) (struct serial *desc, char *file,
@@ -125,11 +128,11 @@ struct monitor_ops
   };
 
 /* The monitor ops magic number, used to detect if an ops structure doesn't
-   have the right number of entries filled in. */
+   have the right number of entries filled in.  */
 
 #define MONITOR_OPS_MAGIC 600925
 
-/* Flag definitions. */
+/* Flag definitions.  */
 
 /* If set, then clear breakpoint command uses address, otherwise it
    uses an index returned by the monitor.  */
@@ -137,7 +140,7 @@ struct monitor_ops
 #define MO_CLR_BREAK_USES_ADDR 0x1
 
 /* If set, then memory fill command uses STARTADDR, ENDADDR+1, VALUE
-   as args, else it uses STARTADDR, LENGTH, VALUE as args. */
+   as args, else it uses STARTADDR, LENGTH, VALUE as args.  */
 
 #define MO_FILL_USES_ADDR 0x2
 
@@ -146,35 +149,35 @@ struct monitor_ops
 
 #define MO_NEED_REGDUMP_AFTER_CONT 0x4
 
-/* getmem needs start addr and end addr */
+/* getmem needs start addr and end addr.  */
 
 #define MO_GETMEM_NEEDS_RANGE 0x8
 
-/* getmem can only read one loc at a time */
+/* getmem can only read one loc at a time.  */
 
 #define MO_GETMEM_READ_SINGLE 0x10
 
-/* handle \r\n combinations */
+/* handle \r\n combinations.  */
 
 #define MO_HANDLE_NL 0x20
 
-/* don't expect echos in monitor_open */
+/* don't expect echos in monitor_open.  */
 
 #define MO_NO_ECHO_ON_OPEN 0x40
 
-/* If set, send break to stop monitor */
+/* If set, send break to stop monitor.  */
 
 #define MO_SEND_BREAK_ON_STOP 0x80
 
-/* If set, target sends an ACK after each S-record */
+/* If set, target sends an ACK after each S-record.  */
 
 #define MO_SREC_ACK 0x100
 
-/* Allow 0x prefix on addresses retured from monitor */
+/* Allow 0x prefix on addresses retured from monitor.  */
 
 #define MO_HEX_PREFIX 0x200
 
-/* Some monitors require a different command when starting a program */
+/* Some monitors require a different command when starting a program.  */
 
 #define MO_RUN_FIRST_TIME 0x400
 
@@ -182,7 +185,7 @@ struct monitor_ops
 
 #define MO_NO_ECHO_ON_SETMEM 0x800
 
-/* If set, then register store command expects value BEFORE regname */
+/* If set, then register store command expects value BEFORE regname.  */
 
 #define MO_REGISTER_VALUE_FIRST 0x1000
 
@@ -224,17 +227,17 @@ struct monitor_ops
 #define MO_PRINT_PROGRAM_OUTPUT 0x200000
 
 /* Some dump bytes commands align the first data with the preceeding
-   16 byte boundary. Some print blanks and start at the exactly the
-   requested boundary. */
+   16 byte boundary.  Some print blanks and start at the exactly the
+   requested boundary.  */
 
 #define MO_EXACT_DUMPADDR 0x400000
 
 /* Rather entering and exiting the write memory dialog for each word byte,
    we can save time by transferring the whole block without exiting
-   the memory editing mode. You only need to worry about this
+   the memory editing mode.  You only need to worry about this
    if you are doing memory downloading.
-   This engages a new write function registered with dcache.
- */
+   This engages a new write function registered with dcache.  */
+
 #define MO_HAS_BLOCKWRITES 0x800000
 
 #define SREC_SIZE 160

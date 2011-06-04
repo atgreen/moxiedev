@@ -7,8 +7,8 @@
 
 /* Main header file for the bfd library -- portable access to object files.
 
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Contributed by Cygnus Support.
@@ -298,8 +298,8 @@ typedef struct bfd_section *sec_ptr;
 #define bfd_set_section_userdata(bfd, ptr, val) (((ptr)->userdata = (val)),TRUE)
 /* Find the address one past the end of SEC.  */
 #define bfd_get_section_limit(bfd, sec) \
-  (((sec)->rawsize ? (sec)->rawsize : (sec)->size) \
-   / bfd_octets_per_byte (bfd))
+  (((bfd)->direction != write_direction && (sec)->rawsize != 0	\
+    ? (sec)->rawsize : (sec)->size) / bfd_octets_per_byte (bfd))
 
 /* Return TRUE if input section SEC has been discarded.  */
 #define elf_discarded_section(sec)				\
@@ -439,7 +439,7 @@ extern void bfd_hash_traverse
 /* Allows the default size of a hash table to be configured. New hash
    tables allocated using bfd_hash_table_init will be created with
    this size.  */
-extern void bfd_hash_set_default_size (bfd_size_type);
+extern unsigned long bfd_hash_set_default_size (unsigned long);
 
 /* This structure is used to keep track of stabs in sections
    information while linking.  */
@@ -919,6 +919,10 @@ extern bfd_boolean elf32_arm_build_stubs
 extern bfd_boolean elf32_arm_fix_exidx_coverage
 (struct bfd_section **, unsigned int, struct bfd_link_info *, bfd_boolean);
 
+/* C6x unwind section editing support.  */
+extern bfd_boolean elf32_tic6x_fix_exidx_coverage
+(struct bfd_section **, unsigned int, struct bfd_link_info *, bfd_boolean);
+
 /* PowerPC @tls opcode transform/validate.  */
 extern unsigned int _bfd_elf_ppc_at_tls_transform
   (unsigned int, unsigned int);
@@ -1029,9 +1033,9 @@ bfd_boolean bfd_fill_in_gnu_debuglink_section
 #define bfd_put_signed_8 \
   bfd_put_8
 #define bfd_get_8(abfd, ptr) \
-  (*(unsigned char *) (ptr) & 0xff)
+  (*(const unsigned char *) (ptr) & 0xff)
 #define bfd_get_signed_8(abfd, ptr) \
-  (((*(unsigned char *) (ptr) & 0xff) ^ 0x80) - 0x80)
+  (((*(const unsigned char *) (ptr) & 0xff) ^ 0x80) - 0x80)
 
 #define bfd_put_16(abfd, val, ptr) \
   BFD_SEND (abfd, bfd_putx16, ((val),(ptr)))
@@ -1319,6 +1323,11 @@ typedef struct bfd_section
      allow the back end to control what the linker does with
      sections.  */
 #define SEC_COFF_SHARED_LIBRARY 0x4000000
+
+  /* This input section should be copied to output in reverse order
+     as an array of pointers.  This is for ELF linker internal use
+     only.  */
+#define SEC_ELF_REVERSE_COPY 0x4000000
 
   /* This section contains data which may be shared with other
      executables or shared objects. This is for COFF only.  */
@@ -1872,6 +1881,8 @@ enum bfd_architecture
 #define bfd_mach_i386_i386 1
 #define bfd_mach_i386_i8086 2
 #define bfd_mach_i386_i386_intel_syntax 3
+#define bfd_mach_x64_32 32
+#define bfd_mach_x64_32_intel_syntax 33
 #define bfd_mach_x86_64 64
 #define bfd_mach_x86_64_intel_syntax 65
   bfd_arch_l1om,   /* Intel L1OM */
@@ -2061,6 +2072,13 @@ enum bfd_architecture
 #define bfd_mach_avr5          5
 #define bfd_mach_avr51         51
 #define bfd_mach_avr6          6
+#define bfd_mach_avrxmega1 101
+#define bfd_mach_avrxmega2 102
+#define bfd_mach_avrxmega3 103
+#define bfd_mach_avrxmega4 104
+#define bfd_mach_avrxmega5 105
+#define bfd_mach_avrxmega6 106
+#define bfd_mach_avrxmega7 107
   bfd_arch_bfin,        /* ADI Blackfin */
 #define bfd_mach_bfin          1
   bfd_arch_cr16,       /* National Semiconductor CompactRISC (ie CR16). */
@@ -3144,6 +3162,12 @@ pc-relative or some form of GOT-indirect relocation.  */
   BFD_RELOC_ARM_TLS_TPOFF32,
   BFD_RELOC_ARM_TLS_IE32,
   BFD_RELOC_ARM_TLS_LE32,
+  BFD_RELOC_ARM_TLS_GOTDESC,
+  BFD_RELOC_ARM_TLS_CALL,
+  BFD_RELOC_ARM_THM_TLS_CALL,
+  BFD_RELOC_ARM_TLS_DESCSEQ,
+  BFD_RELOC_ARM_THM_TLS_DESCSEQ,
+  BFD_RELOC_ARM_TLS_DESC,
 
 /* ARM group relocations.  */
   BFD_RELOC_ARM_ALU_PC_G0_NC,
@@ -3177,6 +3201,9 @@ pc-relative or some form of GOT-indirect relocation.  */
 
 /* Annotation of BX instructions.  */
   BFD_RELOC_ARM_V4BX,
+
+/* ARM support for STT_GNU_IFUNC.  */
+  BFD_RELOC_ARM_IRELATIVE,
 
 /* These relocs are only used within the ARM assembler.  They are not
 (at present) written to any object files.  */
@@ -3756,6 +3783,10 @@ the opcode.  */
   BFD_RELOC_C6000_DSBT_INDEX,
   BFD_RELOC_C6000_PREL31,
   BFD_RELOC_C6000_COPY,
+  BFD_RELOC_C6000_JUMP_SLOT,
+  BFD_RELOC_C6000_EHTYPE,
+  BFD_RELOC_C6000_PCR_H16,
+  BFD_RELOC_C6000_PCR_L16,
   BFD_RELOC_C6000_ALIGN,
   BFD_RELOC_C6000_FPHEAD,
   BFD_RELOC_C6000_NOCMP,
@@ -3989,9 +4020,12 @@ instructions  */
   BFD_RELOC_RX_GPRELL,
   BFD_RELOC_RX_SYM,
   BFD_RELOC_RX_OP_SUBTRACT,
+  BFD_RELOC_RX_OP_NEG,
   BFD_RELOC_RX_ABS8,
   BFD_RELOC_RX_ABS16,
+  BFD_RELOC_RX_ABS16_REV,
   BFD_RELOC_RX_ABS32,
+  BFD_RELOC_RX_ABS32_REV,
   BFD_RELOC_RX_ABS16U,
   BFD_RELOC_RX_ABS16UW,
   BFD_RELOC_RX_ABS16UL,
@@ -5085,14 +5119,17 @@ struct bfd
   /* Decompress sections in this BFD.  */
 #define BFD_DECOMPRESS 0x10000
 
+  /* BFD is a dummy, for plugins.  */
+#define BFD_PLUGIN 0x20000
+
   /* Flags bits to be saved in bfd_preserve_save.  */
 #define BFD_FLAGS_SAVED \
-  (BFD_IN_MEMORY | BFD_COMPRESS | BFD_DECOMPRESS)
+  (BFD_IN_MEMORY | BFD_COMPRESS | BFD_DECOMPRESS | BFD_PLUGIN)
 
   /* Flags bits which are for BFD use only.  */
 #define BFD_FLAGS_FOR_BFD_USE_MASK \
   (BFD_IN_MEMORY | BFD_COMPRESS | BFD_DECOMPRESS | BFD_LINKER_CREATED \
-   | BFD_TRADITIONAL_FORMAT | BFD_DETERMINISTIC_OUTPUT)
+   | BFD_PLUGIN | BFD_TRADITIONAL_FORMAT | BFD_DETERMINISTIC_OUTPUT)
 
   /* Currently my_archive is tested before adding origin to
      anything. I believe that this can become always an add of

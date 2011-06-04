@@ -1,5 +1,5 @@
 #   Copyright 1988, 1990, 1991, 1992, 1994, 1995, 1996, 1997, 1999, 2007,
-#   2008, 2009, 2010 Free Software Foundation, Inc.
+#   2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ gdb_test_no_output "set width 0"
 gdb_test "info terminal" "No saved terminal information.*" "test info terminal"
 gdb_run_cmd 5
 gdb_expect {
-    -re ".*120.*Program exited normally.*$gdb_prompt $" {
+    -re ".*120.*$inferior_exited_re normally.*$gdb_prompt $" {
 	gdb_test "info terminal" "No saved terminal information.*" "test info terminal #2"
     }
     default {

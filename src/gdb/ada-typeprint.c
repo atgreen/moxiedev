@@ -1,6 +1,6 @@
 /* Support for printing Ada types for GDB, the GNU debugger.
    Copyright (C) 1986, 1988, 1989, 1991, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2003, 2004, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -402,11 +402,10 @@ print_array_type (struct type *type, struct ui_file *stream, int show,
 
 /* Print the choices encoded by field FIELD_NUM of variant-part TYPE on
    STREAM, assuming that VAL_TYPE (if non-NULL) is the type of the
-   values. Returns non-zero if the field is an encoding of
+   values.  Return non-zero if the field is an encoding of
    discriminant values, as in a standard variant record, and 0 if the
    field is not so encoded (as happens with single-component variants
-   in types annotated with pragma Unchecked_Variant.)
- */
+   in types annotated with pragma Unchecked_Variant).  */
 
 static int
 print_choices (struct type *type, int field_num, struct ui_file *stream,
@@ -553,7 +552,7 @@ print_variant_part (struct type *type, int field_num, struct type *outer_type,
    LEVEL is the recursion (indentation) level, in case any of the
    fields themselves have nested structure, and SHOW is the number of
    levels of internal structure to show (see ada_print_type).  Does
-   not print parent type information of TYPE. Returns 0 if no fields
+   not print parent type information of TYPE.  Returns 0 if no fields
    printed, -1 for an incomplete type, else > 0.  Prints each field
    beginning on a new line, but does not put a new line at end.  */
 
@@ -797,6 +796,7 @@ ada_print_type (struct type *type0, const char *varstring,
 	fprintf_filtered (stream, ">");
 	break;
       case TYPE_CODE_PTR:
+      case TYPE_CODE_TYPEDEF:
 	fprintf_filtered (stream, "access ");
 	ada_print_type (TYPE_TARGET_TYPE (type), "", stream, show, level);
 	break;

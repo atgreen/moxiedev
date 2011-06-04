@@ -1,6 +1,6 @@
 /* bucomm.c -- Bin Utils COMmon code.
    Copyright 1991, 1992, 1993, 1994, 1995, 1997, 1998, 2000, 2001, 2002,
-   2003, 2005, 2006, 2007, 2008, 2009, 2010
+   2003, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
@@ -511,7 +511,10 @@ make_tempname (char *filename)
   fd = open (tmpname, O_RDWR | O_CREAT | O_EXCL, 0600);
 #endif
   if (fd == -1)
-    return NULL;
+    {
+      free (tmpname);
+      return NULL;
+    }
   close (fd);
   return tmpname;
 }
@@ -577,6 +580,9 @@ get_file_size (const char * file_name)
     }  
   else if (! S_ISREG (statbuf.st_mode))
     non_fatal (_("Warning: '%s' is not an ordinary file"), file_name);
+  else if (statbuf.st_size < 0)
+    non_fatal (_("Warning: '%s' has negative size, probably it is too large"),
+               file_name);
   else
     return statbuf.st_size;
 

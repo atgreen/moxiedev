@@ -1,6 +1,6 @@
 /* AVR-specific support for 32-bit ELF
    Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010  Free Software Foundation, Inc.
+   2010, 2011  Free Software Foundation, Inc.
    Contributed by Denis Chertykov <denisc@overta.ru>
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -1298,6 +1298,34 @@ bfd_elf_avr_final_write_processing (bfd *abfd,
     case bfd_mach_avr6:
       val = E_AVR_MACH_AVR6;
       break;
+
+    case bfd_mach_avrxmega1:
+      val = E_AVR_MACH_XMEGA1;
+      break;
+
+    case bfd_mach_avrxmega2:
+      val = E_AVR_MACH_XMEGA2;
+      break;
+
+    case bfd_mach_avrxmega3:
+      val = E_AVR_MACH_XMEGA3;
+      break;
+
+    case bfd_mach_avrxmega4:
+      val = E_AVR_MACH_XMEGA4;
+      break;
+
+    case bfd_mach_avrxmega5:
+      val = E_AVR_MACH_XMEGA5;
+      break;
+
+    case bfd_mach_avrxmega6:
+      val = E_AVR_MACH_XMEGA6;
+      break;
+
+    case bfd_mach_avrxmega7:
+      val = E_AVR_MACH_XMEGA7;
+      break;
     }
 
   elf_elfheader (abfd)->e_machine = EM_AVR;
@@ -1359,6 +1387,34 @@ elf32_avr_object_p (bfd *abfd)
 
 	case E_AVR_MACH_AVR6:
 	  e_set = bfd_mach_avr6;
+	  break;
+
+	case E_AVR_MACH_XMEGA1:
+	  e_set = bfd_mach_avrxmega1;
+	  break;
+
+	case E_AVR_MACH_XMEGA2:
+	  e_set = bfd_mach_avrxmega2;
+	  break;
+
+	case E_AVR_MACH_XMEGA3:
+	  e_set = bfd_mach_avrxmega3;
+	  break;
+
+	case E_AVR_MACH_XMEGA4:
+	  e_set = bfd_mach_avrxmega4;
+	  break;
+
+	case E_AVR_MACH_XMEGA5:
+	  e_set = bfd_mach_avrxmega5;
+	  break;
+
+	case E_AVR_MACH_XMEGA6:
+	  e_set = bfd_mach_avrxmega6;
+	  break;
+
+	case E_AVR_MACH_XMEGA7:
+	  e_set = bfd_mach_avrxmega7;
 	  break;
 	}
     }
@@ -1952,10 +2008,10 @@ elf32_avr_relax_section (bfd *abfd,
                 if ((0x95 == next_insn_msb) && (0x08 == next_insn_lsb))
                   {
                     /* The next insn is a ret. We possibly could delete
-                       this ret. First we need to check for preceeding
+                       this ret. First we need to check for preceding
                        sbis/sbic/sbrs or cpse "skip" instructions.  */
 
-                    int there_is_preceeding_non_skip_insn = 1;
+                    int there_is_preceding_non_skip_insn = 1;
                     bfd_vma address_of_ret;
 
                     address_of_ret = dot + insn_size;
@@ -1967,51 +2023,52 @@ elf32_avr_relax_section (bfd *abfd,
                       printf ("found jmp / ret sequence at address 0x%x\n",
                               (int) dot);
 
-                    /* We have to make sure that there is a preceeding insn.  */
+                    /* We have to make sure that there is a preceding insn.  */
                     if (irel->r_offset >= 2)
                       {
-                        unsigned char preceeding_msb;
-                        unsigned char preceeding_lsb;
-                        preceeding_msb =
+                        unsigned char preceding_msb;
+                        unsigned char preceding_lsb;
+
+                        preceding_msb =
 			  bfd_get_8 (abfd, contents + irel->r_offset - 1);
-                        preceeding_lsb =
+                        preceding_lsb =
 			  bfd_get_8 (abfd, contents + irel->r_offset - 2);
 
                         /* sbic.  */
-                        if (0x99 == preceeding_msb)
-                          there_is_preceeding_non_skip_insn = 0;
+                        if (0x99 == preceding_msb)
+                          there_is_preceding_non_skip_insn = 0;
 
                         /* sbis.  */
-                        if (0x9b == preceeding_msb)
-                          there_is_preceeding_non_skip_insn = 0;
+                        if (0x9b == preceding_msb)
+                          there_is_preceding_non_skip_insn = 0;
 
                         /* sbrc */
-                        if ((0xfc == (preceeding_msb & 0xfe)
-			     && (0x00 == (preceeding_lsb & 0x08))))
-                          there_is_preceeding_non_skip_insn = 0;
+                        if ((0xfc == (preceding_msb & 0xfe)
+			     && (0x00 == (preceding_lsb & 0x08))))
+                          there_is_preceding_non_skip_insn = 0;
 
                         /* sbrs */
-                        if ((0xfe == (preceeding_msb & 0xfe)
-			     && (0x00 == (preceeding_lsb & 0x08))))
-                          there_is_preceeding_non_skip_insn = 0;
+                        if ((0xfe == (preceding_msb & 0xfe)
+			     && (0x00 == (preceding_lsb & 0x08))))
+                          there_is_preceding_non_skip_insn = 0;
 
                         /* cpse */
-                        if (0x10 == (preceeding_msb & 0xfc))
-                          there_is_preceeding_non_skip_insn = 0;
+                        if (0x10 == (preceding_msb & 0xfc))
+                          there_is_preceding_non_skip_insn = 0;
 
-                        if (there_is_preceeding_non_skip_insn == 0)
+                        if (there_is_preceding_non_skip_insn == 0)
                           if (debug_relax)
-                            printf ("preceeding skip insn prevents deletion of"
-                                    " ret insn at addr 0x%x in section %s\n",
+                            printf ("preceding skip insn prevents deletion of"
+                                    " ret insn at Addy 0x%x in section %s\n",
                                     (int) dot + 2, sec->name);
                       }
                     else
                       {
                         /* There is no previous instruction.  */
-                        there_is_preceeding_non_skip_insn = 0;
+                        there_is_preceding_non_skip_insn = 0;
                       }
 
-                    if (there_is_preceeding_non_skip_insn)
+                    if (there_is_preceding_non_skip_insn)
                       {
                         /* We now only have to make sure that there is no
                            local label defined at the address of the ret

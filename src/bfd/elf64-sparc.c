@@ -426,8 +426,9 @@ elf64_sparc_add_symbol_hook (bfd *abfd, struct bfd_link_info *info,
   static const char *const stt_types[] = { "NOTYPE", "OBJECT", "FUNCTION" };
 
   if ((abfd->flags & DYNAMIC) == 0
-      && ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC)
-    elf_tdata (info->output_bfd)->has_ifunc_symbols = TRUE;
+      && (ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
+	  || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE))
+    elf_tdata (info->output_bfd)->has_gnu_symbols = TRUE;
 
   if (ELF_ST_TYPE (sym->st_info) == STT_REGISTER)
     {
@@ -591,6 +592,7 @@ elf64_sparc_output_arch_syms (bfd *output_bfd ATTRIBUTE_UNUSED,
 	sym.st_other = 0;
 	sym.st_info = ELF_ST_INFO (app_regs [reg].bind, STT_REGISTER);
 	sym.st_shndx = app_regs [reg].shndx;
+	sym.st_target_internal = 0;
 	if ((*func) (finfo, app_regs [reg].name, &sym,
 		     sym.st_shndx == SHN_ABS
 		     ? bfd_abs_section_ptr : bfd_und_section_ptr,

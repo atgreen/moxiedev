@@ -94,7 +94,7 @@ arm*-*-symbianelf*)
 	# Target: SymbianOS/arm
 	gdb_target_obs="arm-tdep.o solib-target.o arm-symbian-tdep.o"
 	;;
-arm*-*-* | thumb*-*-* | strongarm*-*-* | xscale-*-*)
+arm*-*-*)
 	# Target: ARM embedded system
 	gdb_target_obs="arm-tdep.o"
 	gdb_sim=../sim/arm/libsim.a
@@ -104,6 +104,18 @@ avr-*-*)
 	# Target: AVR
 	gdb_target_obs="avr-tdep.o"
 	gdb_sim=../sim/avr/libsim.a
+	;;
+
+bfin-*-*linux*)
+	# Target: Blackfin Linux
+	gdb_target_obs="bfin-tdep.o bfin-linux-tdep.o linux-tdep.o"
+	gdb_sim=../sim/bfin/libsim.a
+	build_gdbserver=yes
+	;;
+bfin-*-*)
+	# Target: Blackfin processor
+	gdb_target_obs="bfin-tdep.o"
+	gdb_sim=../sim/bfin/libsim.a
 	;;
 
 cris*)
@@ -234,6 +246,10 @@ i[34567]86-*-*)
 	gdb_target_obs="i386-tdep.o i387-tdep.o"
 	;;
 
+ia64-*-hpux*)
+	# Target: Intel IA-64 running HP-UX
+	gdb_target_obs="ia64-tdep.o ia64-hpux-tdep.o"
+	;;
 ia64-*-linux*)
 	# Target: Intel IA-64 running GNU/Linux
 	gdb_target_obs="ia64-tdep.o ia64-linux-tdep.o linux-tdep.o \
@@ -317,14 +333,14 @@ mep-*-*)
 	# No sim needed. Target uses SID.
 	;;
 
-microblaze*-linux-*)
+microblaze*-linux-*|microblaze*-*-linux*)
 	# Target: Xilinx MicroBlaze running Linux
 	gdb_target_obs="microblaze-tdep.o microblaze-linux-tdep.o microblaze-rom.o \
 			monitor.o dsrec.o solib.o solib-svr4.o corelow.o \
 			symfile-mem.o linux-tdep.o"
 	gdb_sim=../sim/microblaze/libsim.a
 	;;
-microblaze*-xilinx-*)
+microblaze*-*-*)
 	# Target: Xilinx MicroBlaze running standalone
 	gdb_target_obs="microblaze-tdep.o microblaze-rom.o monitor.o dsrec.o"
 	gdb_sim=../sim/microblaze/libsim.a
@@ -356,6 +372,11 @@ mips64*-*-openbsd*)
 	# Target: OpenBSD/mips64
 	gdb_target_obs="mips-tdep.o mips64obsd-tdep.o \
 			corelow.o solib.o solib-svr4.o"
+	;;
+mips*-*-elf)
+	# Target: MIPS ELF
+	gdb_target_obs="mips-tdep.o remote-mips.o"
+	gdb_sim=../sim/mips/libsim.a
 	;;
 mips*-*-*)
 	# Target: MIPS
@@ -619,8 +640,10 @@ esac
 # map target onto default OS ABI
 
 case "${targ}" in
-*-*-freebsd*)	gdb_osabi=GDB_OSABI_FREEBSD_ELF ;;
-*-*-linux*)	gdb_osabi=GDB_OSABI_LINUX ;;
+*-*-freebsd* | *-*-kfreebsd*-gnu)
+		gdb_osabi=GDB_OSABI_FREEBSD_ELF ;;
+*-*-linux* | *-*-uclinux*)
+		gdb_osabi=GDB_OSABI_LINUX ;;
 *-*-nto*)	gdb_osabi=GDB_OSABI_QNXNTO ;;
 m68*-*-openbsd* | m88*-*-openbsd* | vax-*-openbsd*) ;;
 *-*-openbsd*)	gdb_osabi=GDB_OSABI_OPENBSD_ELF ;;

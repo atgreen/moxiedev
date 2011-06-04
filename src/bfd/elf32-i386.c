@@ -1,6 +1,7 @@
 /* Intel 80386/80486-specific support for 32-bit ELF
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -323,7 +324,7 @@ elf_i386_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
 
     case BFD_RELOC_386_IRELATIVE:
       TRACE ("BFD_RELOC_386_IRELATIVE");
-      return &elf_howto_table[R_386_IRELATIVE];
+      return &elf_howto_table[R_386_IRELATIVE - R_386_tls_offset];
 
     case BFD_RELOC_VTABLE_INHERIT:
       TRACE ("BFD_RELOC_VTABLE_INHERIT");
@@ -1375,7 +1376,9 @@ elf_i386_check_relocs (bfd *abfd,
 	    case R_386_PLT32:
 	    case R_386_GOT32:
 	    case R_386_GOTOFF:
-	      if (!_bfd_elf_create_ifunc_sections (abfd, info))
+	      if (htab->elf.dynobj == NULL)
+		htab->elf.dynobj = abfd;
+	      if (!_bfd_elf_create_ifunc_sections (htab->elf.dynobj, info))
 		return FALSE;
 	      break;
 	    }
@@ -1807,23 +1810,10 @@ elf_i386_gc_sweep_hook (bfd *abfd,
       r_symndx = ELF32_R_SYM (rel->r_info);
       if (r_symndx >= symtab_hdr->sh_info)
 	{
-	  struct elf_i386_link_hash_entry *eh;
-	  struct elf_dyn_relocs **pp;
-	  struct elf_dyn_relocs *p;
-
 	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
-	  eh = (struct elf_i386_link_hash_entry *) h;
-
-	  for (pp = &eh->dyn_relocs; (p = *pp) != NULL; pp = &p->next)
-	    if (p->sec == sec)
-	      {
-		/* Everything must go for SEC.  */
-		*pp = p->next;
-		break;
-	      }
 	}
       else
 	{
@@ -1841,6 +1831,22 @@ elf_i386_gc_sweep_hook (bfd *abfd,
 	      if (h == NULL)
 		abort ();
 	    }
+	}
+
+      if (h)
+	{
+	  struct elf_i386_link_hash_entry *eh;
+	  struct elf_dyn_relocs **pp;
+	  struct elf_dyn_relocs *p;
+
+	  eh = (struct elf_i386_link_hash_entry *) h;
+	  for (pp = &eh->dyn_relocs; (p = *pp) != NULL; pp = &p->next)
+	    if (p->sec == sec)
+	      {
+		/* Everything must go for SEC.  */
+		*pp = p->next;
+		break;
+	      }
 	}
 
       r_type = ELF32_R_TYPE (rel->r_info);
@@ -1883,7 +1889,8 @@ elf_i386_gc_sweep_hook (bfd *abfd,
 
 	case R_386_32:
 	case R_386_PC32:
-	  if (info->shared)
+	  if (info->shared
+	      && (h == NULL || h->type != STT_GNU_IFUNC))
 	    break;
 	  /* Fall through */
 
@@ -2379,6 +2386,10 @@ elf_i386_readonly_dynrelocs (struct elf_link_hash_entry *h, void *inf)
   if (h->root.type == bfd_link_hash_warning)
     h = (struct elf_link_hash_entry *) h->root.u.i.link;
 
+  /* Skip local IFUNC symbols. */
+  if (h->forced_local && h->type == STT_GNU_IFUNC)
+    return TRUE;
+
   eh = (struct elf_i386_link_hash_entry *) h;
   for (p = eh->dyn_relocs; p != NULL; p = p->next)
     {
@@ -2389,6 +2400,11 @@ elf_i386_readonly_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 	  struct bfd_link_info *info = (struct bfd_link_info *) inf;
 
 	  info->flags |= DF_TEXTREL;
+
+	  if (info->warn_shared_textrel && info->shared)
+	    info->callbacks->einfo (_("%P: %B: warning: relocation against `%s' in readonly section `%A'.\n"),
+				    p->sec->owner, h->root.root.string,
+				    p->sec);
 
 	  /* Not an error, just cut short the traversal.  */
 	  return FALSE;
@@ -2472,8 +2488,14 @@ elf_i386_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 		{
 		  srel = elf_section_data (p->sec)->sreloc;
 		  srel->size += p->count * sizeof (Elf32_External_Rel);
-		  if ((p->sec->output_section->flags & SEC_READONLY) != 0)
-		    info->flags |= DF_TEXTREL;
+		  if ((p->sec->output_section->flags & SEC_READONLY) != 0
+		      && (info->flags & DF_TEXTREL) == 0)
+		    {
+		      info->flags |= DF_TEXTREL;
+		      if (info->warn_shared_textrel && info->shared)
+			info->callbacks->einfo (_("%P: %B: warning: relocation in readonly section `%A'.\n"),
+						p->sec->owner, p->sec);
+		    }
 		}
 	    }
 	}
@@ -3124,7 +3146,7 @@ elf_i386_relocate_section (bfd *output_bfd,
 		     internal symbol, we have updated addend.  */
 		  continue;
 		}
-
+	      /* FALLTHROUGH */
 	    case R_386_PC32:
 	    case R_386_PLT32:
 	      goto do_relocation;
@@ -3447,7 +3469,11 @@ elf_i386_relocate_section (bfd *output_bfd,
 
 	      sreloc = elf_section_data (input_section)->sreloc;
 
-	      BFD_ASSERT (sreloc != NULL && sreloc->contents != NULL);
+	      if (sreloc == NULL || sreloc->contents == NULL)
+		{
+		  r = bfd_reloc_notsupported;
+		  goto check_relocation_error;
+		}
 
 	      loc = sreloc->contents;
 	      loc += sreloc->reloc_count++ * sizeof (Elf32_External_Rel);
@@ -4021,7 +4047,7 @@ elf_i386_relocate_section (bfd *output_bfd,
 	  break;
 
 	case R_386_TLS_LDO_32:
-	  if (info->shared || (input_section->flags & SEC_CODE) == 0)
+	  if (!info->executable || (input_section->flags & SEC_CODE) == 0)
 	    relocation -= elf_i386_dtpoff_base (info);
 	  else
 	    /* When converting LDO to LE, we must negate.  */
@@ -4092,6 +4118,7 @@ do_relocation:
 				    contents, rel->r_offset,
 				    relocation, 0);
 
+check_relocation_error:
       if (r != bfd_reloc_ok)
 	{
 	  const char *name;
@@ -4179,7 +4206,7 @@ elf_i386_finish_dynamic_symbol (bfd *output_bfd,
 	  || plt == NULL
 	  || gotplt == NULL
 	  || relplt == NULL)
-	abort ();
+	return FALSE;
 
       /* Get the index in the procedure linkage table which
 	 corresponds to this symbol.  This is the index of this symbol
@@ -4695,8 +4722,9 @@ elf_i386_add_symbol_hook (bfd * abfd,
 			  bfd_vma * valp ATTRIBUTE_UNUSED)
 {
   if ((abfd->flags & DYNAMIC) == 0
-      && ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC)
-    elf_tdata (info->output_bfd)->has_ifunc_symbols = TRUE;
+      && (ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
+	  || ELF_ST_BIND (sym->st_info) == STB_GNU_UNIQUE))
+    elf_tdata (info->output_bfd)->has_gnu_symbols = TRUE;
 
   return TRUE;
 }

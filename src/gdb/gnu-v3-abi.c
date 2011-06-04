@@ -1,7 +1,7 @@
 /* Abstraction of GNU v3 abi.
    Contributed by Jim Blandy <jimb@redhat.com>
 
-   Copyright (C) 2001, 2002, 2003, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2001, 2002, 2003, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -265,7 +265,8 @@ gnuv3_get_vtable (struct gdbarch *gdbarch,
   /* Correct it to point at the start of the virtual table, rather
      than the address point.  */
   return value_at_lazy (vtable_type,
-			vtable_address - vtable_address_point_offset (gdbarch));
+			vtable_address
+			- vtable_address_point_offset (gdbarch));
 }
 
 
@@ -322,7 +323,7 @@ gnuv3_rtti_type (struct value *value,
   class_name = vtable_symbol_name + 11;
 
   /* Try to look up the class name as a type name.  */
-  /* FIXME: chastain/2003-11-26: block=NULL is bogus.  See pr gdb/1465. */
+  /* FIXME: chastain/2003-11-26: block=NULL is bogus.  See pr gdb/1465.  */
   run_time_type = cp_lookup_rtti_type (class_name, NULL);
   if (run_time_type == NULL)
     return NULL;
@@ -407,10 +408,12 @@ gnuv3_virtual_fn_field (struct value **value_p,
    The result is the offset of the baseclass value relative
    to (the address of)(ARG) + OFFSET.
 
-   -1 is returned on error. */
+   -1 is returned on error.  */
+
 static int
-gnuv3_baseclass_offset (struct type *type, int index, const bfd_byte *valaddr,
-			CORE_ADDR address)
+gnuv3_baseclass_offset (struct type *type, int index,
+			const bfd_byte *valaddr, int embedded_offset,
+			CORE_ADDR address, const struct value *val)
 {
   struct gdbarch *gdbarch;
   struct type *ptr_type;
@@ -441,7 +444,7 @@ gnuv3_baseclass_offset (struct type *type, int index, const bfd_byte *valaddr,
     error (_("Misaligned vbase offset."));
   cur_base_offset = cur_base_offset / ((int) TYPE_LENGTH (ptr_type));
 
-  vtable = gnuv3_get_vtable (gdbarch, type, address);
+  vtable = gnuv3_get_vtable (gdbarch, type, address + embedded_offset);
   gdb_assert (vtable != NULL);
   vbase_array = value_field (vtable, vtable_field_vcall_and_vbase_offsets);
   base_offset = value_as_long (value_subscript (vbase_array, cur_base_offset));
@@ -825,7 +828,8 @@ gnuv3_pass_by_reference (struct type *type)
 	   a reference to this class, then it is a copy constructor.  */
 	if (TYPE_NFIELDS (fieldtype) == 2
 	    && TYPE_CODE (TYPE_FIELD_TYPE (fieldtype, 1)) == TYPE_CODE_REF
-	    && check_typedef (TYPE_TARGET_TYPE (TYPE_FIELD_TYPE (fieldtype, 1))) == type)
+	    && check_typedef (TYPE_TARGET_TYPE (TYPE_FIELD_TYPE (fieldtype,
+								 1))) == type)
 	  return 1;
       }
 
@@ -847,7 +851,8 @@ gnuv3_pass_by_reference (struct type *type)
 static void
 init_gnuv3_ops (void)
 {
-  vtable_type_gdbarch_data = gdbarch_data_register_post_init (build_gdb_vtable_type);
+  vtable_type_gdbarch_data
+    = gdbarch_data_register_post_init (build_gdb_vtable_type);
 
   gnu_v3_abi_ops.shortname = "gnu-v3";
   gnu_v3_abi_ops.longname = "GNU G++ Version 3 ABI";

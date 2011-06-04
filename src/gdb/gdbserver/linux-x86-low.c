@@ -1,6 +1,6 @@
 /* GNU/Linux/x86-64 specific low level interface, for the remote server
    for GDB.
-   Copyright (C) 2002, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -232,7 +232,8 @@ x86_get_thread_area (int lwpid, CORE_ADDR *addr)
     idx = gs >> reg_thread_area;
 
     if (ptrace (PTRACE_GET_THREAD_AREA,
-		lwpid_of (lwp), (void *) (long) idx, (unsigned long) &desc) < 0)
+		lwpid_of (lwp),
+		(void *) (long) idx, (unsigned long) &desc) < 0)
       return -1;
 
     *addr = desc[1];
@@ -507,7 +508,7 @@ i386_dr_low_get_addr (int regnum)
   ptid_t ptid = ptid_of (lwp);
 
   /* DR6 and DR7 are retrieved with some other way.  */
-  gdb_assert (DR_FIRSTADDR <= regnum && regnum < DR_LASTADDR);
+  gdb_assert (DR_FIRSTADDR <= regnum && regnum <= DR_LASTADDR);
 
   return x86_linux_dr_get (ptid, regnum);
 }
@@ -659,7 +660,8 @@ x86_linux_prepare_to_resume (struct lwp_info *lwp)
       int i;
       int pid = ptid_get_pid (ptid);
       struct process_info *proc = find_process_pid (pid);
-      struct i386_debug_reg_state *state = &proc->private->arch_private->debug_reg_state;
+      struct i386_debug_reg_state *state
+	= &proc->private->arch_private->debug_reg_state;
 
       for (i = DR_FIRSTADDR; i <= DR_LASTADDR; i++)
 	x86_linux_dr_set (ptid, i, state->dr_mirror[i]);
@@ -1544,7 +1546,7 @@ add_insns (unsigned char *start, int len)
     {									\
       extern unsigned char start_ ## NAME, end_ ## NAME;		\
       add_insns (&start_ ## NAME, &end_ ## NAME - &start_ ## NAME);	\
-      __asm__ ("jmp end_" #NAME "\n"				\
+      __asm__ ("jmp end_" #NAME "\n"					\
 	       "\t" "start_" #NAME ":"					\
 	       "\t" INSNS "\n"						\
 	       "\t" "end_" #NAME ":");					\
@@ -1817,7 +1819,7 @@ amd64_emit_const (LONGEST num)
 
   i = 0;
   buf[i++] = 0x48;  buf[i++] = 0xb8; /* mov $<n>,%rax */
-  *((LONGEST *) (&buf[i])) = num;
+  memcpy (&buf[i], &num, sizeof (num));
   i += 8;
   append_insns (&buildaddr, i, buf);
   current_insn_ptr = buildaddr;
@@ -1874,7 +1876,7 @@ amd64_emit_reg (int reg)
   buildaddr = current_insn_ptr;
   i = 0;
   buf[i++] = 0xbe; /* mov $<n>,%esi */
-  *((int *) (&buf[i])) = reg;
+  memcpy (&buf[i], &reg, sizeof (reg));
   i += 4;
   append_insns (&buildaddr, i, buf);
   current_insn_ptr = buildaddr;
@@ -1957,7 +1959,7 @@ amd64_emit_int_call_1 (CORE_ADDR fn, int arg1)
   buildaddr = current_insn_ptr;
   i = 0;
   buf[i++] = 0xbf; /* movl $<n>,%edi */
-  *((int *) (&buf[i])) = arg1;
+  memcpy (&buf[i], &arg1, sizeof (arg1));
   i += 4;
   append_insns (&buildaddr, i, buf);
   current_insn_ptr = buildaddr;
@@ -1976,7 +1978,7 @@ amd64_emit_void_call_2 (CORE_ADDR fn, int arg1)
   buildaddr = current_insn_ptr;
   i = 0;
   buf[i++] = 0xbf; /* movl $<n>,%edi */
-  *((int *) (&buf[i])) = arg1;
+  memcpy (&buf[i], &arg1, sizeof (arg1));
   i += 4;
   append_insns (&buildaddr, i, buf);
   current_insn_ptr = buildaddr;
@@ -2299,18 +2301,19 @@ static void
 i386_emit_const (LONGEST num)
 {
   unsigned char buf[16];
-  int i, hi;
+  int i, hi, lo;
   CORE_ADDR buildaddr = current_insn_ptr;
 
   i = 0;
   buf[i++] = 0xb8; /* mov $<n>,%eax */
-  *((int *) (&buf[i])) = (num & 0xffffffff);
+  lo = num & 0xffffffff;
+  memcpy (&buf[i], &lo, sizeof (lo));
   i += 4;
   hi = ((num >> 32) & 0xffffffff);
   if (hi)
     {
       buf[i++] = 0xbb; /* mov $<n>,%ebx */
-      *((int *) (&buf[i])) = hi;
+      memcpy (&buf[i], &hi, sizeof (hi));
       i += 4;
     }
   else
@@ -2349,7 +2352,7 @@ i386_emit_reg (int reg)
   buildaddr = current_insn_ptr;
   i = 0;
   buf[i++] = 0xb8; /* mov $<n>,%eax */
-  *((int *) (&buf[i])) = reg;
+  memcpy (&buf[i], &reg, sizeof (reg));
   i += 4;
   append_insns (&buildaddr, i, buf);
   current_insn_ptr = buildaddr;
@@ -2449,7 +2452,7 @@ i386_emit_int_call_1 (CORE_ADDR fn, int arg1)
   buf[i++] = 0xc7;  /* movl $<arg1>,(%esp) */
   buf[i++] = 0x04;
   buf[i++] = 0x24;
-  *((int *) (&buf[i])) = arg1;
+  memcpy (&buf[i], &arg1, sizeof (arg1));
   i += 4;
   append_insns (&buildaddr, i, buf);
   current_insn_ptr = buildaddr;
@@ -2484,7 +2487,7 @@ i386_emit_void_call_2 (CORE_ADDR fn, int arg1)
   buf[i++] = 0xc7;  /* movl $<arg1>,(%esp) */
   buf[i++] = 0x04;
   buf[i++] = 0x24;
-  *((int *) (&buf[i])) = arg1;
+  memcpy (&buf[i], &arg1, sizeof (arg1));
   i += 4;
   append_insns (&buildaddr, i, buf);
   current_insn_ptr = buildaddr;

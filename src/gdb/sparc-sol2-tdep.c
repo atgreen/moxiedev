@@ -1,6 +1,6 @@
 /* Target-dependent code for Solaris SPARC.
 
-   Copyright (C) 2003, 2004, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -57,7 +57,7 @@ const struct sparc_gregset sparc32_sol2_gregset =
    `ucontext_t', which has a member `uc_mcontext' that contains the
    saved registers.  Incidentally, the kernel passes the `ucontext_t'
    pointer as the third argument of the signal trampoline too, and
-   `sigacthandler' simply passes it on. However, if you link your
+   `sigacthandler' simply passes it on.  However, if you link your
    program with "-L/usr/ucblib -R/usr/ucblib -lucb", the function
    `ucbsigvechandler' will be used, which invokes the using the BSD
    convention, where the third argument is a pointer to an instance of
@@ -164,6 +164,7 @@ sparc32_sol2_sigtramp_frame_sniffer (const struct frame_unwind *self,
 static const struct frame_unwind sparc32_sol2_sigtramp_frame_unwind =
 {
   SIGTRAMP_FRAME,
+  default_frame_unwind_stop_reason,
   sparc32_sol2_sigtramp_frame_this_id,
   sparc32_sol2_sigtramp_frame_prev_register,
   NULL,

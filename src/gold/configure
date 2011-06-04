@@ -765,6 +765,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 with_sysroot
+enable_ld
 enable_gold
 enable_threads
 enable_plugins
@@ -1410,7 +1411,8 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-gold[=ARG]     build gold [ARG={both}[/{gold,ld}]]
+  --enable-ld[=ARG]     build ld [ARG={default,yes,no}]
+  --enable-gold[=ARG]     build gold [ARG={default,yes,no}]
   --enable-threads        multi-threaded linking
   --enable-plugins        linker plugins
   --enable-targets        alternative target configurations
@@ -3247,28 +3249,36 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+
+default_ld=
+# Check whether --enable-ld was given.
+if test "${enable_ld+set}" = set; then :
+  enableval=$enable_ld; case "${enableval}" in
+  default)
+    default_ld=ld.bfd
+    ;;
+esac
+fi
+
+
 # Check whether --enable-gold was given.
 if test "${enable_gold+set}" = set; then :
   enableval=$enable_gold; case "${enableval}" in
- yes)
-   install_as_default=gold
-   installed_linker=ld
-   ;;
- both/gold)
-   install_as_default=yes
+ yes|default)
+   if test x${default_ld} = x; then
+     install_as_default=yes
+   fi
    installed_linker=ld.gold
    ;;
- both|both/ld)
-   install_as_default=no
-   installed_linker=ld.gold
+ no)
    ;;
  *)
    as_fn_error "invalid --enable-gold argument" "$LINENO" 5
    ;;
  esac
 else
-  install_as_default=gold
- installed_linker=ld
+  install_as_default=no
+ installed_linker=ld.gold
 fi
 
 
@@ -6374,6 +6384,7 @@ error
 #elif __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 11)
 error
 #endif
+__asm__(".type foo, %gnu_indirect_function");
 
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
@@ -6475,18 +6486,32 @@ WARN_CXXFLAGS=`echo ${WARN_CFLAGS} | sed -e 's/-Wstrict-prototypes//' -e 's/-Wmi
 LFS_CFLAGS="-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
 
 
-for ac_func in chsize
+for ac_header in sys/mman.h
 do :
-  ac_fn_c_check_func "$LINENO" "chsize" "ac_cv_func_chsize"
-if test "x$ac_cv_func_chsize" = x""yes; then :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/mman.h" "ac_cv_header_sys_mman_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_mman_h" = x""yes; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_CHSIZE 1
+#define HAVE_SYS_MMAN_H 1
+_ACEOF
+
+fi
+
+done
+
+for ac_func in chsize mmap
+do :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+eval as_val=\$$as_ac_var
+   if test "x$as_val" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
 _ACEOF
 
 fi
 done
 
-for ac_func in pread ftruncate mremap ffsll
+for ac_func in pread ftruncate ffsll
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -6507,6 +6532,49 @@ fi
 done
 
 
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking mremap with MREMAP_MAYMOVE" >&5
+$as_echo_n "checking mremap with MREMAP_MAYMOVE... " >&6; }
+if test "${gold_cv_lib_mremap_maymove+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#include <sys/mman.h>
+void f() { mremap (0, 0, 0, MREMAP_MAYMOVE); }
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  gold_cv_lib_mremap_maymove=yes
+else
+  gold_cv_lib_mremap_maymove=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gold_cv_lib_mremap_maymove" >&5
+$as_echo "$gold_cv_lib_mremap_maymove" >&6; }
+if test "$gold_cv_lib_mremap_maymove" = "yes"; then
+
+$as_echo "#define HAVE_MREMAP 1" >>confdefs.h
+
+else
+  case " $LIBOBJS " in
+  *" mremap.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS mremap.$ac_objext"
+ ;;
+esac
+
+fi
 
 # Link in zlib if we can.  This allows us to write compressed sections.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
@@ -8577,7 +8645,7 @@ $as_echo X"$file" |
       case "$ac_file" in */Makefile.in)
         # Adjust a relative srcdir.
         ac_dir=`echo "$ac_file"|sed 's%/[^/][^/]*$%%'`
-        ac_dir_suffix="/`echo "$ac_dir"|sed 's%^\./%%'`"
+        ac_dir_suffix=/`echo "$ac_dir"|sed 's%^\./%%'`
         ac_dots=`echo "$ac_dir_suffix"|sed 's%/[^/]*%../%g'`
         # In autoconf-2.13 it is called $ac_given_srcdir.
         # In autoconf-2.50 it is called $srcdir.

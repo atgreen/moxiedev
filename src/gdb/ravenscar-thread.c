@@ -1,6 +1,6 @@
 /* Ada Ravenscar thread support.
 
-   Copyright 2004, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2004, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -48,18 +48,17 @@ static ptid_t base_magic_null_ptid;
 /* Ptid of the inferior as seen by the process stratum.  */
 static ptid_t base_ptid;
 
-static const char running_thread_name[] = "running_thread";
+static const char running_thread_name[] = "__gnat_running_thread_table";
 
 static const char known_tasks_name[] = "system__tasking__debug__known_tasks";
 
-static const char ravenscar_runtime_initializer[] = "system__bb__threads__initialize";
+static const char ravenscar_runtime_initializer[] =
+  "system__bb__threads__initialize";
 
 static struct observer *update_target_observer = NULL;
 
 /* Architecture-specific hooks.  */
 static struct ravenscar_arch_ops* current_arch_ops;
-
-static CORE_ADDR read_thread_id (const char *symbol_name);
 
 static void ravenscar_find_new_threads (struct target_ops *ops);
 static ptid_t ravenscar_running_thread (void);
@@ -105,6 +104,27 @@ ravenscar_update_inferior_ptid (void)
     add_thread (inferior_ptid);
 }
 
+/* The Ravenscar Runtime exports a symbol which contains the ID of
+   the thread that is currently running.  Try to locate that symbol
+   and return its associated minimal symbol.
+   Return NULL if not found.  */
+
+static struct minimal_symbol *
+get_running_thread_msymbol (void)
+{
+  struct minimal_symbol *msym;
+
+  msym = lookup_minimal_symbol (running_thread_name, NULL, NULL);
+  if (!msym)
+    /* Older versions of the GNAT runtime were using a different
+       (less ideal) name for the symbol where the active thread ID
+       is stored.  If we couldn't find the symbol using the latest
+       name, then try the old one.  */
+    msym = lookup_minimal_symbol ("running_thread", NULL, NULL);
+
+  return msym;
+}
+
 /* Return True if the Ada Ravenscar run-time can be found in the
    application.  */
 
@@ -115,8 +135,7 @@ has_ravenscar_runtime (void)
     lookup_minimal_symbol (ravenscar_runtime_initializer, NULL, NULL);
   struct minimal_symbol *msym_known_tasks =
     lookup_minimal_symbol (known_tasks_name, NULL, NULL);
-  struct minimal_symbol *msym_running_thread =
-    lookup_minimal_symbol (running_thread_name, NULL, NULL);
+  struct minimal_symbol *msym_running_thread = get_running_thread_msymbol ();
 
   return (msym_ravenscar_runtime_initializer
 	  && msym_known_tasks
@@ -132,13 +151,13 @@ ravenscar_runtime_initialized (void)
   return (!(ptid_equal (ravenscar_running_thread (), null_ptid)));
 }
 
-/* Read the thread ID whose symbol name is SYMBOL_NAME.  */
+/* Return the ID of the thread that is currently running.
+   Return 0 if the ID could not be determined.  */
 
 static CORE_ADDR
-read_thread_id (const char *symbol_name)
+get_running_thread_id (void)
 {
-  const struct minimal_symbol *object_msym =
-    lookup_minimal_symbol (symbol_name, NULL, NULL);
+  const struct minimal_symbol *object_msym = get_running_thread_msymbol ();
   int object_size;
   int buf_size;
   char *buf;
@@ -213,7 +232,7 @@ ravenscar_find_new_threads (struct target_ops *ops)
 static ptid_t
 ravenscar_running_thread (void)
 {
-  CORE_ADDR tid = read_thread_id (running_thread_name);
+  CORE_ADDR tid = get_running_thread_id ();
 
   if (tid == 0)
     return null_ptid;
@@ -311,7 +330,7 @@ ravenscar_register_arch_ops (struct ravenscar_arch_ops *ops)
      architectures, just like in remote-wtx-hw.c.  However, for now the
      only Ravenscar run-time for bare board that is implemented in
      GNAT is for only one architecture: erc32-elf.  So no need to care about
-     that for now...*/
+     that for now...  */
   current_arch_ops = ops;
 }
 
@@ -393,10 +412,10 @@ show_ravenscar_task_switching_command (struct ui_file *file, int from_tty,
 {
   if (ravenscar_task_support)
     fprintf_filtered (file, _("\
-Support for Ravenscar task/thread switching is enabled"));
+Support for Ravenscar task/thread switching is enabled\n"));
   else
     fprintf_filtered (file, _("\
-Support for Ravenscar task/thread switching is disabled"));
+Support for Ravenscar task/thread switching is disabled\n"));
 }
 
 /* Module startup initialization function, automagically called by
@@ -420,7 +439,7 @@ _initialize_ravenscar (void)
 
   add_prefix_cmd ("ravenscar", no_class, show_ravenscar_command,
                   _("Prefix command for showing Ravenscar-specific settings"),
-                  &show_ravenscar_list, "set ravenscar ", 0, &showlist);
+                  &show_ravenscar_list, "show ravenscar ", 0, &showlist);
 
   add_setshow_boolean_cmd ("task-switching", class_obscure,
                            &ravenscar_task_support, _("\

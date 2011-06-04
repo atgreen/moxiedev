@@ -1,5 +1,5 @@
 # Pretty-printer utilities.
-# Copyright (C) 2010 Free Software Foundation, Inc.
+# Copyright (C) 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -85,7 +85,8 @@ def register_pretty_printer(obj, printer):
 
     Raises:
         TypeError: A problem with the type of the printer.
-        ValueError: The printer's name contains a colon ":".
+        ValueError: The printer's name contains a semicolon ";".
+        RuntimeError: A printer with the same name is already registered.
 
     If the caller wants the printer to be listable and disableable, it must
     follow the PrettyPrinter API.  This applies to the old way (functions) too.
@@ -116,11 +117,11 @@ def register_pretty_printer(obj, printer):
     if hasattr(printer, "name"):
         if not isinstance(printer.name, basestring):
             raise TypeError("printer name is not a string")
-        # If printer provides a name, make sure it doesn't contain ":".
-        # Colon is used by the info/enable/disable pretty-printer commands
+        # If printer provides a name, make sure it doesn't contain ";".
+        # Semicolon is used by the info/enable/disable pretty-printer commands
         # to delimit subprinters.
-        if printer.name.find(":") >= 0:
-            raise ValueError("colon ':' in printer name")
+        if printer.name.find(";") >= 0:
+            raise ValueError("semicolon ';' in printer name")
         # Also make sure the name is unique.
         # Alas, we can't do the same for functions and __name__, they could
         # all have a canonical name like "lookup_function".

@@ -1,4 +1,5 @@
-# Copyright 1998, 2005, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+# Copyright 1998, 2005, 2007, 2008, 2009, 2010, 2011
+# Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -456,13 +457,30 @@ proc gdb_collect_globals_test { } {
 	}
     }
 
+    # Use use this to test collecting overlapping memory ranges
+    # (making use of UNOP_MEMVAL, as objects don't usually overlap
+    # other objects).  Note that globalarr2 should not be collected in
+    # any other way so that a regression test below can be effective.
+
+    set globalarr2_addr ""
+    set test "get address of globalarr2"
+    gdb_test_multiple "p /x &globalarr2" $test {
+	-re " = (0x\[0-9a-f\]+)\r\n$gdb_prompt $" {
+	    set globalarr2_addr $expect_out(1,string)
+	    pass $test
+	}
+    }
+
     gdb_test "trace $testline" \
 	    "Tracepoint \[0-9\]+ at .*" \
 	    "collect globals: set tracepoint"
     gdb_trace_setactions "collect globals: define actions" \
 	    "" \
 	    "collect globalc, globali, globalf, globald" "^$" \
-	    "collect globalstruct, globalp, globalarr" "^$"
+	    "collect globalstruct, globalp, globalarr" "^$" \
+	    "collect \{int \[4\]\}$globalarr2_addr" "^$" \
+	    "collect \{int \[2\]\}$globalarr2_addr" "^$" \
+	    "collect \{int \[4\]\}globalarr3" "^$"
 
     # Begin the test.
     run_trace_experiment "globals" globals_test_func
@@ -507,9 +525,67 @@ proc gdb_collect_globals_test { } {
 	    "\\$\[0-9\]+ = 3$cr" \
 	    "collect globals: collected global array element #3"
 
+    # Check that we didn't mess up sort&merging memory ranges to
+    # collect.
+    gdb_test "print globalarr2" \
+	"\\$\[0-9\]+ = \\{0, 1, 2, 3\\}$cr" \
+	"collect globals: collected global array 2"
+
+    # GDB would internal error collecting UNOP_MEMVAL's whose address
+    # expression wasn't an rvalue (that's regtested in the
+    # corresponding 'collect' action above).  This just double checks
+    # we actually did collect what we wanted.
+    gdb_test "print globalarr3" \
+	"\\$\[0-9\]+ = \\{3, 2, 1, 0\\}$cr" \
+	"collect globals: collected global array 3"
+
     gdb_test "tfind none" \
 	    "#0  end .*" \
 	    "collect globals: cease trace debugging"
+}
+
+# Test that when we've collected all fields of a structure
+# individually, we can print the whole structure in one go.
+proc gdb_collect_global_in_pieces_test { } {
+    global gdb_prompt
+
+    prepare_for_trace_test
+
+    # Find the comment-identified line for setting this tracepoint.
+    set testline 0
+    set msg "collect global in pieces: find tracepoint line"
+    gdb_test_multiple "list globals_test_func, +30" "$msg" {
+	-re "\[\r\n\](\[0-9\]+)\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
+	    set testline $expect_out(1,string)
+	    pass "$msg"
+	}
+    }
+
+    if {$testline == 0} {
+	return
+    }
+
+    gdb_test "trace $testline" \
+	"Tracepoint \[0-9\]+ at .*" \
+	"collect global in pieces: set tracepoint"
+    gdb_trace_setactions "collect global in pieces: define actions" \
+	    "" \
+	    "collect global_pieces.a, global_pieces.b" \
+	    "^$"
+
+    # Begin the test.
+    run_trace_experiment "global in pieces" globals_test_func
+
+    gdb_test "print /x global_pieces.a" " = 0x12345678" \
+	"collect global in pieces: print piece a"
+    gdb_test "print /x global_pieces.b" " = 0x87654321" \
+	"collect global in pieces: print piece b"
+
+    gdb_test "print /x global_pieces" " = \{a = 0x12345678, b = 0x87654321\}" \
+	"collect global in pieces: print whole object"
+
+    gdb_test "tfind none" "#0  end .*" \
+	"collect global in pieces: cease trace debugging"
 }
 
 proc gdb_trace_collection_test {} {
@@ -547,6 +623,7 @@ proc gdb_trace_collection_test {} {
     gdb_collect_registers_test "\$regs"
     gdb_collect_registers_test "\$$fpreg, \$$spreg, \$$pcreg"
     gdb_collect_globals_test
+    gdb_collect_global_in_pieces_test
     
     #
     # Expression tests:

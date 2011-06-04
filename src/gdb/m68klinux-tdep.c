@@ -1,7 +1,7 @@
 /* Motorola m68k target-dependent support for GNU/Linux.
 
    Copyright (C) 1996, 1998, 2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009,
-   2010 Free Software Foundation, Inc.
+   2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -328,6 +328,7 @@ m68k_linux_sigtramp_frame_sniffer (const struct frame_unwind *self,
 static const struct frame_unwind m68k_linux_sigtramp_frame_unwind =
 {
   SIGTRAMP_FRAME,
+  default_frame_unwind_stop_reason,
   m68k_linux_sigtramp_frame_this_id,
   m68k_linux_sigtramp_frame_prev_register,
   NULL,

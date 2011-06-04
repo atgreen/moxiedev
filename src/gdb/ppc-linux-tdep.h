@@ -1,6 +1,6 @@
 /* Target-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,7 +22,7 @@
 
 struct regset;
 
-/* From ppc-linux-tdep.c ... */
+/* From ppc-linux-tdep.c ...  */
 const struct regset *ppc_linux_gregset (int);
 const struct regset *ppc_linux_fpregset (void);
 

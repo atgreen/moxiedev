@@ -1,5 +1,5 @@
 /* Machine independent support for SVR4 /proc (process file system) for GDB.
-   Copyright (C) 1999, 2000, 2007, 2008, 2009, 2010
+   Copyright (C) 1999, 2000, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Written by Michael Snyder at Cygnus Solutions.
    Based on work by Fred Fish, Stu Grossman, Geoff Noer, and others.
@@ -39,7 +39,7 @@
 /*  Much of the information used in the /proc interface, particularly for
     printing status information, is kept as tables of structures of the
     following form.  These tables can be used to map numeric values to
-    their symbolic names and to a string that describes their specific use. */
+    their symbolic names and to a string that describes their specific use.  */
 
 struct trans {
   int value;                    /* The numeric value */
@@ -48,7 +48,7 @@ struct trans {
 };
 
 /* Translate bits in the pr_flags member of the prstatus structure,
-   into the names and desc information. */
+   into the names and desc information.  */
 
 static struct trans pr_flag_table[] =
 {

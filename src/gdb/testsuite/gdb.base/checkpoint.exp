@@ -1,4 +1,5 @@
-#   Copyright 2005, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+#   Copyright 2005, 2007, 2008, 2009, 2010, 2011
+#   Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -276,23 +277,23 @@ gdb_test "print ftell (out) > 100000" " = 1.*" "outfile still open 10"
 
 delete_breakpoints
 gdb_test "continue" \
-    "Deleting copy.*Program exited normally.*Switching to.*" \
+    "Deleting copy.*$inferior_exited_re normally.*Switching to.*" \
     "Exit, dropped into next fork one"
 
 gdb_test "continue" \
-    "Deleting copy.*Program exited normally.*Switching to.*" \
+    "Deleting copy.*$inferior_exited_re normally.*Switching to.*" \
     "Exit, dropped into next fork two"
 
 gdb_test "continue" \
-    "Deleting copy.*Program exited normally.*Switching to.*" \
+    "Deleting copy.*$inferior_exited_re normally.*Switching to.*" \
     "Exit, dropped into next fork three"
 
 gdb_test "continue" \
-    "Deleting copy.*Program exited normally.*Switching to.*" \
+    "Deleting copy.*$inferior_exited_re normally.*Switching to.*" \
     "Exit, dropped into next fork four"
 
 gdb_test "continue" \
-    "Deleting copy.*Program exited normally.*Switching to.*" \
+    "Deleting copy.*$inferior_exited_re normally.*Switching to.*" \
     "Exit, dropped into next fork five"
 
 #

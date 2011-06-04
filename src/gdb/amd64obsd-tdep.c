@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/amd64.
 
-   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -167,7 +167,7 @@ int amd64obsd_r_reg_offset[] =
   0 * 8,			/* %rdi */
   12 * 8,			/* %rbp */
   15 * 8,			/* %rsp */
-  4 * 8,			/* %r8 .. */
+  4 * 8,			/* %r8 ..  */
   5 * 8,
   6 * 8,
   7 * 8,
@@ -196,7 +196,7 @@ static int amd64obsd_sc_reg_offset[] =
   0 * 8,			/* %rdi */
   12 * 8,			/* %rbp */
   24 * 8,			/* %rsp */
-  4 * 8,			/* %r8 ... */
+  4 * 8,			/* %r8 ...  */
   5 * 8,
   6 * 8,
   7 * 8,
@@ -225,7 +225,7 @@ static int amd64obsd_uthread_reg_offset[] =
   13 * 8,			/* %rdi */
   15 * 8,			/* %rbp */
   -1,				/* %rsp */
-  12 * 8,			/* %r8 ... */
+  12 * 8,			/* %r8 ...  */
   11 * 8,
   10 * 8,
   9 * 8,
@@ -437,6 +437,7 @@ static const struct frame_unwind amd64obsd_trapframe_unwind = {
      frame, but SIGTRAMP_FRAME would print <signal handler called>,
      which really is not what we want here.  */
   NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
   amd64obsd_trapframe_this_id,
   amd64obsd_trapframe_prev_register,
   NULL,

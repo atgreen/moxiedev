@@ -1,7 +1,7 @@
 /* corefile.c
 
    Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009,
-   2010  Free Software Foundation, Inc.
+   2010, 2011  Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
 
@@ -22,6 +22,7 @@
 
 #include "gprof.h"
 #include "libiberty.h"
+#include "filenames.h"
 #include "search_list.h"
 #include "source.h"
 #include "symtab.h"
@@ -157,7 +158,8 @@ read_function_mappings (const char *filename)
   symbol_map_count = count;
 
   for (i = 0; i < symbol_map_count; ++i)
-    if (i == 0 || strcmp (symbol_map[i].file_name, symbol_map[i - 1].file_name))
+    if (i == 0
+        || filename_cmp (symbol_map[i].file_name, symbol_map[i - 1].file_name))
       symbol_map[i].is_first = 1;
 
   qsort (symbol_map, symbol_map_count, sizeof (struct function_map), cmp_symbol_map);
@@ -573,6 +575,20 @@ core_create_function_syms (void)
   int cxxclass;
   long i;
   struct function_map * found;
+  int core_has_func_syms = 0;
+
+  switch (core_bfd->xvec->flavour)
+    {
+    default:
+      break;
+    case bfd_target_coff_flavour:
+    case bfd_target_ecoff_flavour:
+    case bfd_target_xcoff_flavour:
+    case bfd_target_elf_flavour:
+    case bfd_target_nlm_flavour:
+    case bfd_target_som_flavour:
+      core_has_func_syms = 1;
+    }
 
   /* Pass 1 - determine upper bound on number of function names.  */
   symtab.len = 0;
@@ -678,7 +694,8 @@ core_create_function_syms (void)
 	  }
       }
 
-      symtab.limit->is_func = (core_syms[i]->flags & BSF_FUNCTION) != 0; 
+      symtab.limit->is_func = (!core_has_func_syms
+			       || (core_syms[i]->flags & BSF_FUNCTION) != 0);
       symtab.limit->is_bb_head = TRUE;
 
       if (cxxclass == 't')
@@ -751,7 +768,7 @@ core_create_line_syms (void)
 	  || (prev_line_num == dummy.line_num
 	      && prev_name != NULL
 	      && strcmp (prev_name, dummy.name) == 0
-	      && strcmp (prev_filename, filename) == 0))
+	      && filename_cmp (prev_filename, filename) == 0))
 	continue;
 
       ++ltab.len;
@@ -816,7 +833,7 @@ core_create_line_syms (void)
       if (!get_src_info (vma, &filename, &ltab.limit->name, &ltab.limit->line_num)
 	  || (prev && prev->line_num == ltab.limit->line_num
 	      && strcmp (prev->name, ltab.limit->name) == 0
-	      && strcmp (prev->file->name, filename) == 0))
+	      && filename_cmp (prev->file->name, filename) == 0))
 	continue;
 
       /* Make name pointer a malloc'ed string.  */

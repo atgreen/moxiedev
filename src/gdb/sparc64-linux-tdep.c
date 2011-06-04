@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux UltraSPARC.
 
-   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -157,7 +157,8 @@ sparc64_linux_supply_core_gregset (const struct regset *regset,
 				   struct regcache *regcache,
 				   int regnum, const void *gregs, size_t len)
 {
-  sparc64_supply_gregset (&sparc64_linux_core_gregset, regcache, regnum, gregs);
+  sparc64_supply_gregset (&sparc64_linux_core_gregset,
+			  regcache, regnum, gregs);
 }
 
 static void
@@ -165,7 +166,8 @@ sparc64_linux_collect_core_gregset (const struct regset *regset,
 				    const struct regcache *regcache,
 				    int regnum, void *gregs, size_t len)
 {
-  sparc64_collect_gregset (&sparc64_linux_core_gregset, regcache, regnum, gregs);
+  sparc64_collect_gregset (&sparc64_linux_core_gregset,
+			   regcache, regnum, gregs);
 }
 
 static void

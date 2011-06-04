@@ -78,6 +78,7 @@ message (int level ATTRIBUTE_UNUSED,
   va_start (args, format);
   printf ("bfd plugin: ");
   vprintf (format, args);
+  putchar ('\n');
   va_end (args);
   return LDPS_OK;
 }
@@ -231,11 +232,17 @@ static const bfd_target *
 bfd_plugin_object_p (bfd *abfd)
 {
   int claimed = 0;
-  int t = load_plugin ();
   struct ld_plugin_input_file file;
   bfd *iobfd;
+  static int have_loaded = 0;
+  static int have_plugin = 0;
 
-  if (!t)
+  if (!have_loaded)
+    {
+      have_loaded = 1;
+      have_plugin = load_plugin ();
+    }
+  if (!have_plugin)
     return NULL;
 
   file.name = abfd->filename;
@@ -250,7 +257,7 @@ bfd_plugin_object_p (bfd *abfd)
     {
       iobfd = abfd;
       file.offset = 0;
-      file.filesize = 0; /*FIXME*/
+      file.filesize = 0;
     }
 
   if (!iobfd->iostream && !bfd_open_file (iobfd))
@@ -258,8 +265,18 @@ bfd_plugin_object_p (bfd *abfd)
 
   file.fd = fileno ((FILE *) iobfd->iostream);
 
+  if (!abfd->my_archive)
+    {
+      struct stat stat_buf;
+      if (fstat (file.fd, &stat_buf))
+        return NULL;
+      file.filesize = stat_buf.st_size;
+    }
+
   file.handle = abfd;
+  off_t cur_offset = lseek(file.fd, 0, SEEK_CUR);
   claim_file (&file, &claimed);
+  lseek(file.fd, cur_offset, SEEK_SET);
   if (!claimed)
     return NULL;
 
@@ -447,13 +464,6 @@ bfd_plugin_sizeof_headers (bfd *a ATTRIBUTE_UNUSED,
   return 0;
 }
 
-static bfd_boolean
-bfd_plugin_mkobject (bfd *abfd ATTRIBUTE_UNUSED)
-{
-  BFD_ASSERT (0);
-  return 0;
-}
-
 const bfd_target plugin_vec =
 {
   "plugin",			/* Name.  */
@@ -484,7 +494,7 @@ const bfd_target plugin_vec =
   },
   {				/* bfd_set_format.  */
     bfd_false,
-    bfd_plugin_mkobject,
+    bfd_false,
     _bfd_generic_mkarchive,
     bfd_false,
   },

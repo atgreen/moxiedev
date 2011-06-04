@@ -1,6 +1,6 @@
 /* gdb commands implemented in Python
 
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -170,7 +170,8 @@ cmdpy_function (struct cmd_list_element *command, char *args, int from_tty)
 	  /* An error occurred computing the string representation of the
 	     error message.  This is rare, but we should inform the user.  */
 	  printf_filtered (_("An error occurred in a Python command\n"
-			     "and then another occurred computing the error message.\n"));
+			     "and then another occurred computing the "
+			     "error message.\n"));
 	  gdbpy_print_stack ();
 	}
 
@@ -278,9 +279,14 @@ cmdpy_completer (struct cmd_list_element *command, char *text, char *word)
     {
       /* User code may also return one of the completion constants,
 	 thus requesting that sort of completion.  */
-      long value = PyInt_AsLong (resultobj);
+      long value;
 
-      if (value >= 0 && value < (long) N_COMPLETERS)
+      if (! gdb_py_int_as_long (resultobj, &value))
+	{
+	  /* Ignore.  */
+	  PyErr_Clear ();
+	}
+      else if (value >= 0 && value < (long) N_COMPLETERS)
 	result = completers[value].completer (command, text, word);
     }
 
@@ -420,7 +426,8 @@ cmdpy_init (PyObject *self, PyObject *args, PyObject *kw)
       return -1;
     }
 
-  if (! PyArg_ParseTupleAndKeywords (args, kw, "si|iO", keywords, &name, &cmdtype,
+  if (! PyArg_ParseTupleAndKeywords (args, kw, "si|iO",
+				     keywords, &name, &cmdtype,
 			  &completetype, &is_prefix))
     return -1;
 
@@ -437,7 +444,8 @@ cmdpy_init (PyObject *self, PyObject *args, PyObject *kw)
 
   if (completetype < -1 || completetype >= (int) N_COMPLETERS)
     {
-      PyErr_Format (PyExc_RuntimeError, _("Invalid completion type argument."));
+      PyErr_Format (PyExc_RuntimeError,
+		    _("Invalid completion type argument."));
       return -1;
     }
 
@@ -473,7 +481,10 @@ cmdpy_init (PyObject *self, PyObject *args, PyObject *kw)
 	  pfx_name[out] = '\0';
 	}
       else if (cmp < 0)
+	{
+	  xfree (cmd_name);
 	  return -1;
+	}
     }
   if (PyObject_HasAttr (self, gdbpy_doc_cst))
     {

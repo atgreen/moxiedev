@@ -1,3 +1,85 @@
+2011-05-18  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/12753
+	* lib/utils-lib.exp (run_dump_test): Allow nm as a program.
+	* binutils-all/nm.exp: Test running "nm -g" on an object file
+	containing a unique symbol.
+
+2011-05-13  Alan Modra  <amodra@gmail.com>
+
+	* binutils-all/objcopy.exp objcopy_text): Remove xfails for sh-rtems
+	and tic4x.
+
+2011-05-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/12720
+	* binutils-all/ar.exp (delete_an_element): New.
+	(move_an_element): Likewise.
+	Run delete_an_element and move_an_element.
+
+2011-04-30  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* binutils-all/x86-64/compressed-1a.d: Adjust for change in output
+	format.
+
+2011-04-29  Hans-Peter Nilsson  <hp@axis.com>
+
+	* binutils-all/i386/compressed-1a.d: Adjust for change in output
+	format.
+
+2011-04-28  Tom Tromey  <tromey@redhat.com>
+
+	* binutils-all/objdump.W: Correct output.
+
+011-04-11  Kai Tietz
+
+	* binutils-all/windres/windres.exp: Add '// cpparg <option>' command
+	to rc file interpretation to specify addition pre-processor commands
+	as script option.
+	* binutils-all/windres/strtab3.rc: New.
+	* binutils-all/windres/strtab3.rsd: New.
+	* binutils-all/windres/README: Add note about cpparg script option.
+	argument
+
+2011-04-11  Nick Clifton  <nickc@redhat.com>
+
+	* binutils-all/arm/simple.s: Fix assembly problems for COFF based
+	ARM toolchaisn by removing .type and .size directives.
+
+2011-04-07  Paul Carroll<pcarroll@codesourcery.com>
+
+	* binutils-all/arm/simple.s: Demo issue with objdump with
+	multiple input files
+	* binutils-all/arm/objdump.exp: added new ARM test case code
+
+2011-04-06  Joseph Myers  <joseph@codesourcery.com>
+
+	* binutils-all/objcopy.exp (*arm*-*-coff): Change to arm*-*-coff.
+	(xscale-*-coff, thumb*-*-coff, thumb*-*-pe): Don't handle.
+
+2011-03-31  Bernd Schmidt  <bernds@codesourcery.com>
+
+	* lib/binutils-common.exp (is_elf_format): Accept tic6x*-*-uclinux*.
+
+2011-01-03  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	* lib/binutils-common.exp (regexp_diff): Use "==" instead of "eq".
+
+2010-12-31  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	* binutils-all/copy-2.d: Change "hppa" to "hppa*" in not-target list.
+	* binutils-all/copy-3.d: Add hppa*-*-hpux* to not-target list.
+	* binutils-all/objcopy.exp (reverse-bytes): xfail on 32-bit hpux.
+
+2010-12-31  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* binutils-all/readelf.exp: Handle MIPS FreeBSD targets.
+
+2010-12-09  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* lib/binutils-common.exp (regexp_diff): Implement inverse
+	matching, requested by `!'.
+
 2010-11-20  Richard Sandiford  <rdsandiford@googlemail.com>
 
 	* lib/binutils-common.exp (regexp_diff): New procedure.

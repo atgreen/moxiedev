@@ -1,5 +1,5 @@
 /* Remote target system call support.
-   Copyright 1997, 1998, 2002, 2004, 2007, 2008, 2009, 2010
+   Copyright 1997, 1998, 2002, 2004, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Cygnus Solutions.
 
@@ -93,7 +93,7 @@ get_string (cb, sc, buf, buflen, addr)
 	 path name along with the syscall request, and cache the file
 	 name somewhere (or otherwise tweak this as desired).  */
       unsigned int count = (*sc->read_mem) (cb, sc, addr, p, 1);
-				    
+
       if (count != 1)
 	return EINVAL;
       if (*p == 0)
@@ -345,12 +345,12 @@ cb_syscall (cb, sc)
 		errcode = EINVAL;
 		goto FinishSyscall;
 	      }
-	    if (cb_is_stdout(cb, fd))
+	    if (cb_is_stdout (cb, fd))
 	      {
 		result = (int) (*cb->write_stdout) (cb, buf, bytes_read);
 		(*cb->flush_stdout) (cb);
 	      }
-	    else if (cb_is_stderr(cb, fd))
+	    else if (cb_is_stderr (cb, fd))
 	      {
 		result = (int) (*cb->write_stderr) (cb, buf, bytes_read);
 		(*cb->flush_stderr) (cb);

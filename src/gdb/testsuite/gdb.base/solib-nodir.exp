@@ -1,4 +1,4 @@
-# Copyright 2010 Free Software Foundation, Inc.
+# Copyright 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ clean_restart $executable
 gdb_load_shlibs ${binlibfile}
 
 gdb_test_no_output "set env LD_LIBRARY_PATH=:"
-gdb_test "cd ${binlibfiledir}" "Working directory [string_to_regexp ${binlibfiledir}]\\."
+gdb_test "cd ${binlibfiledir}" "Working directory [string_to_regexp ${binlibfiledir}]\\." "cd OBJDIR/${subdir}"
 
 set test "library loaded"
 if [runto_main] {

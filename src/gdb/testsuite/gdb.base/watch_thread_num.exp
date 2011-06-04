@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 
-# Copyright 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+# Copyright 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,8 +25,8 @@ if $tracelevel then {
 
 # This test verifies that a watchpoint is detected in the proper thread
 # so the test is only meaningful on a system with hardware watchpoints.
-if [target_info exists gdb,no_hardware_watchpoints] {
-    return 0;
+if {[skip_hw_watchpoint_tests]} {
+    return 0
 }
 
 set testfile watch_thread_num

@@ -1,7 +1,7 @@
 /* Native-dependent code for GNU/Linux x86-64.
 
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-   Free Software Foundation, Inc.
+   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+   2011 Free Software Foundation, Inc.
    Contributed by Jiri Smid, SuSE Labs.
 
    This file is part of GDB.
@@ -40,7 +40,7 @@
    <asm/ptrace.h> because the latter redefines FS and GS for no apparent
    reason, and those definitions don't match the ones that libpthread_db
    uses, which come from <sys/reg.h>.  */
-/* ezannoni-2003-07-09: I think this is fixed. The extraneous defs have
+/* ezannoni-2003-07-09: I think this is fixed.  The extraneous defs have
    been removed from ptrace.h in the kernel.  However, better safe than
    sorry.  */
 #include <asm/ptrace.h>

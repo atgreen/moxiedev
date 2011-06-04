@@ -1,6 +1,6 @@
 /* Python interface to inferiors.
 
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -26,6 +26,9 @@
 #include "python-internal.h"
 #include "arch-utils.h"
 #include "language.h"
+#include "gdb_signals.h"
+#include "py-event.h"
+#include "py-stopevent.h"
 
 struct threadlist_entry {
   thread_object *thread_obj;
@@ -73,6 +76,55 @@ static PyTypeObject membuf_object_type;
       }								\
   } while (0)
 
+static void
+python_on_normal_stop (struct bpstats *bs, int print_frame)
+{
+  struct cleanup *cleanup;
+  enum target_signal stop_signal;
+
+  if (!find_thread_ptid (inferior_ptid))
+      return;
+
+  stop_signal = inferior_thread ()->suspend.stop_signal;
+
+  cleanup = ensure_python_env (get_current_arch (), current_language);
+
+  if (emit_stop_event (bs, stop_signal) < 0)
+    gdbpy_print_stack ();
+
+  do_cleanups (cleanup);
+}
+
+static void
+python_on_resume (ptid_t ptid)
+{
+  struct cleanup *cleanup;
+
+  cleanup = ensure_python_env (target_gdbarch, current_language);
+
+  if (emit_continue_event (ptid) < 0)
+    gdbpy_print_stack ();
+
+  do_cleanups (cleanup);
+}
+
+static void
+python_inferior_exit (struct inferior *inf)
+{
+  struct cleanup *cleanup;
+  const LONGEST *exit_code = NULL;
+
+  cleanup = ensure_python_env (target_gdbarch, current_language);
+
+  if (inf->has_exit_code)
+    exit_code = &inf->exit_code;
+
+  if (emit_exited_event (exit_code) < 0)
+    gdbpy_print_stack ();
+
+  do_cleanups (cleanup);
+}
+
 /* Return a borrowed reference to the Python object of type Inferior
    representing INFERIOR.  If the object has already been created,
    return it,  otherwise, create it.  Return NULL on failure.  */
@@ -108,8 +160,8 @@ inferior_to_inferior_object (struct inferior *inferior)
 
 /* Finds the Python Inferior object for the given PID.  Returns a
    borrowed reference, or NULL if PID does not match any inferior
-   obect.
-  */
+   object.  */
+
 PyObject *
 find_inferior_object (int pid)
 {
@@ -130,6 +182,9 @@ find_thread_object (ptid_t ptid)
   PyObject *inf_obj;
 
   pid = PIDGET (ptid);
+  if (pid == 0)
+    return NULL;
+
   inf_obj = find_inferior_object (pid);
 
   if (inf_obj)
@@ -267,7 +322,9 @@ build_inferior_list (struct inferior *inf, void *arg)
   PyObject *list = arg;
   PyObject *inferior = inferior_to_inferior_object (inf);
 
-  PyList_Append (list, inferior);
+  if (PyList_Append (list, inferior))
+    return 1;
+
   return 0;
 }
 
@@ -284,7 +341,11 @@ gdbpy_inferiors (PyObject *unused, PyObject *unused2)
   if (!list)
     return NULL;
 
-  iterate_over_inferiors (build_inferior_list, list);
+  if (iterate_over_inferiors (build_inferior_list, list))
+    {
+      Py_DECREF (list);
+      return NULL;
+    }
 
   return PyList_AsTuple (list);
 }
@@ -541,6 +602,20 @@ infpy_search_memory (PyObject *self, PyObject *args, PyObject *kw)
     Py_RETURN_NONE;
 }
 
+/* Implementation of gdb.Inferior.is_valid (self) -> Boolean.
+   Returns True if this inferior object still exists in GDB.  */
+
+static PyObject *
+infpy_is_valid (PyObject *self, PyObject *args)
+{
+  inferior_object *inf = (inferior_object *) self;
+
+  if (! inf->inferior)
+    Py_RETURN_FALSE;
+
+  Py_RETURN_TRUE;
+}
+
 
 /* Clear the INFERIOR pointer in an Inferior object and clear the
    thread list.  */
@@ -587,6 +662,9 @@ gdbpy_initialize_inferior (void)
 
   observer_attach_new_thread (add_thread_object);
   observer_attach_thread_exit (delete_thread_object);
+  observer_attach_normal_stop (python_on_normal_stop);
+  observer_attach_target_resumed (python_on_resume);
+  observer_attach_inferior_exit (python_inferior_exit);
 
   if (PyType_Ready (&membuf_object_type) < 0)
     return;
@@ -608,6 +686,9 @@ static PyGetSetDef inferior_object_getset[] =
 
 static PyMethodDef inferior_object_methods[] =
 {
+  { "is_valid", infpy_is_valid, METH_NOARGS,
+    "is_valid () -> Boolean.\n\
+Return true if this inferior is valid, false if not." },
   { "threads", infpy_threads, METH_NOARGS,
     "Return all the threads of this inferior." },
   { "read_memory", (PyCFunction) infpy_read_memory,

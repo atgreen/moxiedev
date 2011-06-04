@@ -1,6 +1,6 @@
 /* Shared library support for IRIX.
    Copyright (C) 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2001, 2002, 2004,
-   2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file was created using portions of irix5-nat.c originally
    contributed to GDB by Ian Lance Taylor.
@@ -158,7 +158,7 @@ fetch_lm_info (CORE_ADDR addr)
   if (extract_unsigned_integer (buf.magic.b, sizeof (buf.magic), byte_order)
       != 0xffffffff)
     {
-      /* Use buf.ol32... */
+      /* Use buf.ol32...  */
       char obj_buf[432];
       CORE_ADDR obj_addr = extract_mips_address (&buf.ol32.data,
 						 sizeof (buf.ol32.data),
@@ -242,7 +242,7 @@ fetch_lm_info (CORE_ADDR addr)
 
 static void *base_breakpoint;
 
-static CORE_ADDR debug_base;	/* Base of dynamic linker structures */
+static CORE_ADDR debug_base;	/* Base of dynamic linker structures.  */
 
 /*
 
@@ -328,7 +328,7 @@ disable_break (void)
   int status = 1;
 
   /* Note that breakpoint address and original contents are in our address
-     space, so we just need to write the original contents back. */
+     space, so we just need to write the original contents back.  */
 
   if (deprecated_remove_raw_breakpoint (target_gdbarch, base_breakpoint) != 0)
     {
@@ -463,26 +463,26 @@ irix_solib_create_inferior_hook (int from_tty)
   /* Now run the target.  It will eventually hit the breakpoint, at
      which point all of the libraries will have been mapped in and we
      can go groveling around in the dynamic linker structures to find
-     out what we need to know about them. */
+     out what we need to know about them.  */
 
   tp = inferior_thread ();
 
   clear_proceed_status ();
 
-  inf->stop_soon = STOP_QUIETLY;
-  tp->stop_signal = TARGET_SIGNAL_0;
+  inf->control.stop_soon = STOP_QUIETLY;
+  tp->suspend.stop_signal = TARGET_SIGNAL_0;
 
   do
     {
-      target_resume (pid_to_ptid (-1), 0, tp->stop_signal);
-      wait_for_inferior (0);
+      target_resume (pid_to_ptid (-1), 0, tp->suspend.stop_signal);
+      wait_for_inferior ();
     }
-  while (tp->stop_signal != TARGET_SIGNAL_TRAP);
+  while (tp->suspend.stop_signal != TARGET_SIGNAL_TRAP);
 
   /* We are now either at the "mapping complete" breakpoint (or somewhere
      else, a condition we aren't prepared to deal with anyway), so adjust
      the PC as necessary after a breakpoint, disable the breakpoint, and
-     add any shared libraries that were mapped in. */
+     add any shared libraries that were mapped in.  */
 
   if (!disable_break ())
     {
@@ -496,7 +496,7 @@ irix_solib_create_inferior_hook (int from_tty)
      Delaying the resetting of stop_soon until after symbol loading
      suppresses the warning.  */
   solib_add ((char *) 0, 0, (struct target_ops *) 0, auto_solib_add);
-  inf->stop_soon = NO_STOP_QUIETLY;
+  inf->control.stop_soon = NO_STOP_QUIETLY;
 }
 
 /* LOCAL FUNCTION
@@ -572,9 +572,9 @@ irix_current_sos (void)
 	  if (name_size >= SO_NAME_MAX_PATH_SIZE)
 	    {
 	      name_size = SO_NAME_MAX_PATH_SIZE - 1;
-	      warning
-		("current_sos: truncating name of %d characters to only %d characters",
-		 lm.pathname_len, name_size);
+	      warning (_("current_sos: truncating name of "
+		         "%d characters to only %d characters"),
+		       lm.pathname_len, name_size);
 	    }
 
 	  target_read_string (lm.pathname_addr, &name_buf,
@@ -623,7 +623,7 @@ irix_current_sos (void)
   If FROM_TTYP dereferences to a non-zero integer, allow messages to
   be printed.  This parameter is a pointer rather than an int because
   open_symbol_file_object() is called via catch_errors() and
-  catch_errors() requires a pointer argument. */
+  catch_errors() requires a pointer argument.  */
 
 static int
 irix_open_symbol_file_object (void *from_ttyp)

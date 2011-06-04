@@ -1,6 +1,6 @@
 /* Private partial symbol table definitions.
 
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,12 +32,12 @@ struct psymbol_allocation_list;
    normal symtab once the partial_symtab has been referenced.  */
 
 /* This structure is space critical.  See space comments at the top of
-   symtab.h. */
+   symtab.h.  */
 
 struct partial_symbol
 {
 
-  /* The general symbol info required for all types of symbols. */
+  /* The general symbol info required for all types of symbols.  */
 
   struct general_symbol_info ginfo;
 
@@ -45,7 +45,7 @@ struct partial_symbol
 
   ENUM_BITFIELD(domain_enum_tag) domain : 6;
 
-  /* Address class (for info_symbols) */
+  /* Address class (for info_symbols).  */
 
   ENUM_BITFIELD(address_class) aclass : 6;
 
@@ -71,7 +71,7 @@ struct partial_symtab
 
   struct partial_symtab *next;
 
-  /* Name of the source file which this partial_symtab defines */
+  /* Name of the source file which this partial_symtab defines.  */
 
   const char *filename;
 
@@ -92,7 +92,7 @@ struct partial_symtab
   struct section_offsets *section_offsets;
 
   /* Range of text addresses covered by this file; texthigh is the
-     beginning of the next section. */
+     beginning of the next section.  */
 
   CORE_ADDR textlow;
   CORE_ADDR texthigh;
@@ -112,7 +112,7 @@ struct partial_symtab
 
   /* Global symbol list.  This list will be sorted after readin to
      improve access.  Binary search will be the usual method of
-     finding a symbol within it. globals_offset is an integer offset
+     finding a symbol within it.  globals_offset is an integer offset
      within global_psymbols[].  */
 
   int globals_offset;
@@ -128,6 +128,12 @@ struct partial_symtab
 
   int statics_offset;
   int n_static_syms;
+
+  /* Non-zero if the symtab corresponding to this psymtab has been
+     readin.  This is located here so that this structure packs better
+     on 64-bit systems.  */
+
+  unsigned char readin;
 
   /* Pointer to symtab eventually allocated for this source file, 0 if
      !readin or if we haven't looked for the symtab after it was readin.  */
@@ -145,10 +151,6 @@ struct partial_symtab
      the various symbol reading modules.  */
 
   void *read_symtab_private;
-
-  /* Non-zero if the symtab corresponding to this psymtab has been readin */
-
-  unsigned char readin;
 };
 
 extern void sort_pst_symbols (struct partial_symtab *);
@@ -156,7 +158,8 @@ extern void sort_pst_symbols (struct partial_symtab *);
 /* Add any kind of symbol to a psymbol_allocation_list.  */
 
 extern const
-struct partial_symbol *add_psymbol_to_list (const char *, int, int, domain_enum,
+struct partial_symbol *add_psymbol_to_list (const char *, int,
+					    int, domain_enum,
 					    enum address_class,
 					    struct psymbol_allocation_list *,
 					    long, CORE_ADDR,
@@ -179,11 +182,5 @@ extern void discard_psymtab (struct partial_symtab *);
 
 #define	ALL_OBJFILE_PSYMTABS(objfile, p) \
     for ((p) = (objfile) -> psymtabs; (p) != NULL; (p) = (p) -> next)
-
-/* Traverse all psymtabs in all objfiles.  */
-
-#define	ALL_PSYMTABS(objfile, p) \
-  ALL_OBJFILES (objfile)	 \
-    ALL_OBJFILE_PSYMTABS (objfile, p)
 
 #endif /* PSYMPRIV_H */

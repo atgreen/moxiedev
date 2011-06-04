@@ -1,4 +1,4 @@
-/* Copyright 1999, 2000, 2004, 2007, 2008, 2009, 2010
+/* Copyright 1999, 2000, 2004, 2007, 2008, 2009, 2010, 2011
 Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -20,9 +20,6 @@ Free Software Foundation, Inc.
  *	This simple program that passes different types of arguments
  *      on function calls.  Useful to test printing frames, stepping, etc.
  */
-
-#include <stdio.h>
-#include <unistd.h>
 
 int callee4 (void)
 {
@@ -50,7 +47,6 @@ callee1 (int intarg, char *strarg, double fltarg)
 
 void callme (int i)
 {
-  printf ("callme\n");
 }
 
 int return_1 ()

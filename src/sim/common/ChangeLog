@@ -1,3 +1,211 @@
+2011-05-27  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-options.c (standard_option_handler): Remove arg[0] check
+	when freeing simulator_sysroot.  Only strdup arg when arg[0] is
+	not an empty string, otherwise assign "" back to it.
+
+2011-05-26  Mike Frysinger  <vapier@gentoo.org>
+
+	* nltvals.def: Regenerate to include Blackfin syscalls again.
+
+2011-05-25  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-trace.c (OPTION_TRACE_SYSCALL): New enum.
+	(trace_options): Handle "trace-syscall" with OPTION_TRACE_SYSCALL.
+	(trace_option_handler): Handle OPTION_TRACE_SYSCALL.
+	(trace_idx_to_str): Likewise.
+	* sim-trace.h (TRACE_SYSCALL_IDX): New enum.
+	(TRACE_syscall): Define.
+	(WITH_TRACE_SYSCALL_P): Likewise.
+	(TRACE_SYSCALL_P): Likewise.
+
+2011-05-23  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-glue.c (hw_glue_finish): Move "name" to function scope and
+	remove now-unnecessary sub-scope for glue->type setting.
+	Check to see if the "reg" property exists before we use it, and
+	if it doesn't exist, error out for "glue" devices.
+
+2011-05-23  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-glue.c (hw_glue_finish): Set type to glue_or when name is
+	glue-or, and set type to glue_xor when name is glue-xor.
+	(hw_glue_port_event): Return immediately when type is glue_io
+	or unmatched.  Handle glue_or and glue_xor types.  Move HW_TRACE
+	and hw_port_event calls from glue_and to end of function.
+
+2011-05-11  Mike Frysinger  <vapier@gentoo.org>
+
+	* callback.c, dv-pal.c, dv-sockser.c, hw-base.c, hw-device.c,
+	hw-instances.c, hw-ports.c, hw-properties.c, hw-tree.c, sim-abort.c,
+	sim-arange.c, sim-config.c, sim-core.c, sim-engine.c, sim-events.c,
+	sim-hw.c, sim-io.c, sim-memopt.c, sim-options.c, sim-profile.c,
+	sim-resume.c, sim-stop.c, syscall.c: Add space before parenthesis
+	around function arguments.
+
+2011-04-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-options.c (complete_option_list, sim_complete_command):
+	New functions.
+
+2011-04-02  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-glue.c: Fix up style.
+
+2011-04-02  Mike Frysinger  <vapier@gentoo.org>
+
+	* hw-alloc.c (hw_alloc_data): Adjust brace.
+	* hw-base.c (hw_base_data): Likewise.
+	(generic_hw_unit_decode): Fix indentation.
+	* hw-device.h (_hw_unit, enum, hw): Adjust braces.
+	* hw-events.c (hw_event, hw_event_data): Likewise.
+	* hw-handles.c (hw_handle_mapping, hw_handle_data): Likewise.
+	* hw-instances.c (hw_instance_data): Likewise.
+	* hw-instances.h (hw_instance): Likewise.
+	* hw-main.h (hw_descriptor, enum): Likewise.
+	* hw-ports.c (hw_port_edge, hw_port_data, empty_hw_ports): Likewise.
+	* hw-ports.h (hw_port_descriptor): Likewise.
+	* hw-properties.c (hw_property_data): Likewise.
+	* hw-properties.h (enum, hw_property, _ihandle_runtime_property_spec,
+	_range_property_spec, _reg_property_spec): Likewise.
+	* hw-tree.c (_name_specifier, printer): Likewise.
+	(split_device_specifier, parse_string_property, hw_tree_traverse,
+	print_size, print_reg_property, print_string, print_properties):
+	Fix indentation.
+
+2011-03-29  Mike Frysinger  <vapier@gentoo.org>
+
+	* aclocal.m4 (SIM_AC_OPTION_HARDWARE): Add cfi to default list.
+	* Make-common.in (dv-cfi.o): New rule.
+	* dv-cfi.c, dv-cfi.h: New files.
+
+2011-03-21  Kevin Buettner  <kevinb@redhat.com>
+
+	* gennltvals.sh: Search sys/_default_fcntl.h, in addition to
+	fcntl.h and sys/fcntl.h, for constants.
+	* nltvals.def: Regenerate.
+	* sim-io.c (sim_io_stat, sim_io_fstat): New functions.
+	* sim-io.h (sys/types.h, sys/stat.h): Include.
+	(sim_io_stat, sim_io_fstat): Declare.
+
+2011-03-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* callback.c, cgen-engine.h, dv-core.c, dv-glue.c, dv-pal.c,
+	hw-base.c, hw-device.c, hw-device.h, hw-handles.c, hw-instances.c,
+	hw-ports.c, hw-ports.h, hw-properties.c, hw-tree.c, nrun.c,
+	run-sim.h, run.c, sim-alu.h, sim-assert.h, sim-base.h, sim-basics.h,
+	sim-config.c, sim-core.c, sim-core.h, sim-engine.h, sim-events.c,
+	sim-events.h, sim-fpu.c, sim-hw.c, sim-inline.h, sim-load.c,
+	sim-memopt.c, sim-n-core.h, sim-options.c, sim-profile.c,
+	sim-signal.c, sim-trace.c, sim-trace.h, sim-utils.c, sim-watch.c,
+	syscall.c: Trim trailing whitespace.
+
+2011-03-05  Mike Frysinger  <vapier@gentoo.org>
+
+	* gennltvals.sh: Handle bfin targets.
+	* nltvals.def: Regenerate.
+
+2011-02-25  Kevin Buettner  <kevinb@redhat.com>
+
+	* callback.c (fdbad): Return EBADF rather than EINVAL for bad
+	file descriptors.
+
+2011-02-14  Mike Frysinger  <vapier@gentoo.org>
+
+	* hw-alloc.c (hw_alloc_data): Delete zalloc_p.
+	(hw_zalloc, hw_malloc): Delete zalloc_p reference.
+	(hw_free): Drop zfree logic and always call free.
+	* hw-base.c (hw_delete): Change zfree to free.
+	* hw-handles.c (hw_handle_remove_ihandle): Likewise.
+	(hw_handle_remove_phandle): Likewise.
+	* hw-instances.c (hw_instance_delete): Likewise.
+	* hw-tree.c (parse_reg_property): Likewise.
+	(parse_ranges_property): Likewise.
+	(parse_string_property): Likewise.
+	* sim-core.c (sim_core_uninstall): Likewise.
+	* sim-cpu.c (sim_cpu_free_all): Likewise.
+	* sim-hw.c (sim_hw_uninstall): Likewise.
+	* sim-memopt.c (do_memopt_delete): Likewise.
+	(sim_memory_uninstall): Likewise.
+	* sim-module.c (sim_module_uninstall): Likewise.
+	* sim-options.c (sim_parse_args): Likewise.
+	* sim-profile.c (profile_pc_cleanup): Likewise.
+	(profile_uninstall): Likewise.
+	* sim-watch.c (do_watchpoint_delete): Likewise.
+	* sim-utils.c (zfree): Delete.
+	(sim_state_free): Change zfree to free.
+	* sim-utils.h (zfree): Delete.
+
+2011-02-13  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-events.h (_sim_events.time_from_event): Change type to signed64.
+
+2011-01-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-hw.c (sim_hw_uninstall): Uncomment hw_tree_delete.
+
+2011-01-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-module.c (sim_pre_argv_init): Return SIM_RC_FAIL when asprintf
+	fails.
+	* sim-options.c (sim_parse_args): Issue an error and return SIM_RC_FAIL
+	when asprintf fails.
+	* sim-utils.c (sim_do_commandf): Issue an error and return when
+	asprintf fails.
+	* sim-watch.c (sim_watchpoint_install): Return SIM_RC_FAIL when
+	asprintf fails.
+
+2011-01-11  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-memopt.c (do_memopt_add): Set nr_bytes to s.st_size before
+	bytes has been calculated and when mmap_next_fd is valid and
+	nr_bytes is 0.
+	(memory_option_handler): Allow missing size when mmap_next_fd is
+	valid.
+
+2011-01-10  Mike Frysinger  <vapier@gentoo.org>
+
+	* aclocal.m4 (SIM_AC_OPTION_HARDWARE): Set $hardware to $2 when $2 is
+	not empty, and always append $3 to $hardware.
+
+2011-01-10  Mike Frysinger  <vapier@gentoo.org>
+
+	* hw-device.h (hw_abort, hw_vabort, hw_halt): Add noreturn attribute.
+	* sim-hw.h (sim_hw_abort): Likewise.
+
+2011-01-05  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-load.c (sim_load_file): Change buffer type to unsigned char *.
+
+2011-01-05  Joel Brobecker  <brobecker@adacore.com>
+
+	* run.1: Copyright year update.
+
+2010-12-28  Mike Frysinger  <vapier@gentoo.org>
+
+	* hw-alloc.h (HW_NALLOC): Define.
+
+010-12-28  Mike Frysinger  <vapier@gentoo.org>
+
+	* hw-alloc.h (HW_NZALLOC): Change ME,TYPE,N to me,type,n.
+
+2010-12-15  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-memopt.c (OPTION_MAP_INFO): Define.
+	(memory_options): Handle --map-info.
+	(memory_option_handler): Handle OPTION_MAP_INFO.
+
+2010-11-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-profile.c (PROFILE_PC_FREQ, PROFILE_PC_NR_BUCKETS,
+	PROFILE_PC_SHIFT, PROFILE_PC_START, PROFILE_PC_END,
+	PROFILE_INSN_COUNT): Add stubs when profile is disabled.
+
+2010-11-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-core.c (WITH_HW): Add device casts to device_error,
+	device_io_read_buffer, and device_io_write_buffer.
+
 2010-11-16  Mike Frysinger  <vapier@gentoo.org>
 
 	* dv-sockser.c (dv_sockser_write_buffer): New function.

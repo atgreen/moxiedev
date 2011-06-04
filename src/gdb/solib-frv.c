@@ -1,5 +1,6 @@
 /* Handle FR-V (FDPIC) shared libraries for GDB, the GNU Debugger.
-   Copyright (C) 2004, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2004, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -201,7 +202,7 @@ struct ext_link_map
   ext_ptr l_next, l_prev;	/* struct link_map *l_next, *l_prev; */
 };
 
-/* Link map info to include in an allocated so_list entry */
+/* Link map info to include in an allocated so_list entry.  */
 
 struct lm_info
   {
@@ -224,7 +225,7 @@ struct lm_info
        caching of the dynamic relocations could be dispensed with.  */
     asymbol **dyn_syms;
     arelent **dyn_relocs;
-    int dyn_reloc_count;	/* number of dynamic relocs.  */
+    int dyn_reloc_count;	/* Number of dynamic relocs.  */
 
   };
 
@@ -283,7 +284,7 @@ bfd_lookup_symbol (bfd *abfd, char *symname)
 	  sym = *symbol_table++;
 	  if (strcmp (sym->name, symname) == 0)
 	    {
-	      /* Bfd symbols are section relative. */
+	      /* Bfd symbols are section relative.  */
 	      symaddr = sym->value + sym->section->vma;
 	      break;
 	    }
@@ -309,7 +310,7 @@ bfd_lookup_symbol (bfd *abfd, char *symname)
 	  sym = *symbol_table++;
 	  if (strcmp (sym->name, symname) == 0)
 	    {
-	      /* Bfd symbols are section relative. */
+	      /* Bfd symbols are section relative.  */
 	      symaddr = sym->value + sym->section->vma;
 	      break;
 	    }
@@ -339,7 +340,7 @@ bfd_lookup_symbol (bfd *abfd, char *symname)
   If FROM_TTYP dereferences to a non-zero integer, allow messages to
   be printed.  This parameter is a pointer rather than an int because
   open_symbol_file_object() is called via catch_errors() and
-  catch_errors() requires a pointer argument. */
+  catch_errors() requires a pointer argument.  */
 
 static int
 open_symbol_file_object (void *from_ttyp)
@@ -460,7 +461,7 @@ frv_current_sos (void)
   /* Locate the address of the first link map struct.  */
   lm_addr = lm_base ();
 
-  /* We have at least one link map entry.  Fetch the the lot of them,
+  /* We have at least one link map entry.  Fetch the lot of them,
      building the solist chain.  */
   while (lm_addr)
     {
@@ -472,9 +473,11 @@ frv_current_sos (void)
 			    "current_sos: reading link_map entry at %s\n",
 			    hex_string_custom (lm_addr, 8));
 
-      if (target_read_memory (lm_addr, (gdb_byte *) &lm_buf, sizeof (lm_buf)) != 0)
+      if (target_read_memory (lm_addr, (gdb_byte *) &lm_buf,
+			      sizeof (lm_buf)) != 0)
 	{
-	  warning (_("frv_current_sos: Unable to read link map entry.  Shared object chain may be incomplete."));
+	  warning (_("frv_current_sos: Unable to read link map entry.  "
+		     "Shared object chain may be incomplete."));
 	  break;
 	}
 
@@ -500,7 +503,8 @@ frv_current_sos (void)
 	  loadmap = fetch_loadmap (addr);
 	  if (loadmap == NULL)
 	    {
-	      warning (_("frv_current_sos: Unable to fetch load map.  Shared object chain may be incomplete."));
+	      warning (_("frv_current_sos: Unable to fetch load map.  "
+			 "Shared object chain may be incomplete."));
 	      break;
 	    }
 
@@ -738,7 +742,8 @@ enable_break2 (void)
       addr = bfd_lookup_symbol (tmp_bfd, "_dl_debug_addr");
       if (addr == 0)
 	{
-	  warning (_("Could not find symbol _dl_debug_addr in dynamic linker"));
+	  warning (_("Could not find symbol _dl_debug_addr "
+		     "in dynamic linker"));
 	  enable_break_failure_warning ();
 	  bfd_close (tmp_bfd);
 	  return 0;
@@ -746,20 +751,23 @@ enable_break2 (void)
 
       if (solib_frv_debug)
 	fprintf_unfiltered (gdb_stdlog,
-	                    "enable_break: _dl_debug_addr (prior to relocation) = %s\n",
+			    "enable_break: _dl_debug_addr "
+			    "(prior to relocation) = %s\n",
 			    hex_string_custom (addr, 8));
 
       addr += displacement_from_map (ldm, addr);
 
       if (solib_frv_debug)
 	fprintf_unfiltered (gdb_stdlog,
-	                    "enable_break: _dl_debug_addr (after relocation) = %s\n",
+			    "enable_break: _dl_debug_addr "
+			    "(after relocation) = %s\n",
 			    hex_string_custom (addr, 8));
 
       /* Fetch the address of the r_debug struct.  */
       if (target_read_memory (addr, addr_buf, sizeof addr_buf) != 0)
 	{
-	  warning (_("Unable to fetch contents of _dl_debug_addr (at address %s) from dynamic linker"),
+	  warning (_("Unable to fetch contents of _dl_debug_addr "
+		     "(at address %s) from dynamic linker"),
 	           hex_string_custom (addr, 8));
 	}
       addr = extract_unsigned_integer (addr_buf, sizeof addr_buf, byte_order);
@@ -784,7 +792,8 @@ enable_break2 (void)
          _dl_debug_addr.  */
       if (target_read_memory (addr + 8, addr_buf, sizeof addr_buf) != 0)
 	{
-	  warning (_("Unable to fetch _dl_debug_addr->r_brk (at address %s) from dynamic linker"),
+	  warning (_("Unable to fetch _dl_debug_addr->r_brk "
+		     "(at address %s) from dynamic linker"),
 	           hex_string_custom (addr + 8, 8));
 	  enable_break_failure_warning ();
 	  bfd_close (tmp_bfd);
@@ -795,7 +804,8 @@ enable_break2 (void)
       /* Now fetch the function entry point.  */
       if (target_read_memory (addr, addr_buf, sizeof addr_buf) != 0)
 	{
-	  warning (_("Unable to fetch _dl_debug_addr->.r_brk entry point (at address %s) from dynamic linker"),
+	  warning (_("Unable to fetch _dl_debug_addr->.r_brk entry point "
+		     "(at address %s) from dynamic linker"),
 	           hex_string_custom (addr, 8));
 	  enable_break_failure_warning ();
 	  bfd_close (tmp_bfd);
@@ -867,8 +877,10 @@ enable_break (void)
 
   if (solib_frv_debug)
     fprintf_unfiltered (gdb_stdlog,
-			"enable_break: solib event breakpoint placed at entry point: %s\n",
-			hex_string_custom (symfile_objfile->ei.entry_point, 8));
+			"enable_break: solib event breakpoint "
+			"placed at entry point: %s\n",
+			hex_string_custom (symfile_objfile->ei.entry_point,
+					   8));
   return 1;
 }
 
@@ -893,7 +905,7 @@ enable_break (void)
 static void
 frv_special_symbol_handling (void)
 {
-  /* Nothing needed (yet) for FRV. */
+  /* Nothing needed (yet) for FRV.  */
 }
 
 static void
@@ -1063,7 +1075,8 @@ main_got (void)
 {
   struct minimal_symbol *got_sym;
 
-  got_sym = lookup_minimal_symbol ("_GLOBAL_OFFSET_TABLE_", NULL, symfile_objfile);
+  got_sym = lookup_minimal_symbol ("_GLOBAL_OFFSET_TABLE_",
+				   NULL, symfile_objfile);
   if (got_sym == 0)
     return 0;
 
@@ -1095,7 +1108,7 @@ frv_fdpic_find_global_pointer (CORE_ADDR addr)
       so = so->next;
     }
 
-  /* Didn't find it it any of the shared objects.  So assume it's in the
+  /* Didn't find it in any of the shared objects.  So assume it's in the
      main executable.  */
   return main_got ();
 }

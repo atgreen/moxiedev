@@ -1,7 +1,7 @@
 \input texinfo
 @setfilename ld.info
 @c Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-@c 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+@c 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 @c Free Software Foundation, Inc.
 @syncodeindex ky cp
 @c man begin INCLUDE
@@ -22,6 +22,7 @@
 @set UsesEnvVars
 @set GENERIC
 @set ARM
+@set C6X
 @set H8300
 @set HPPA
 @set I960
@@ -1851,13 +1852,14 @@ Normally the linker will generate an error message for each reported
 unresolved symbol but the option @option{--warn-unresolved-symbols}
 can change this to a warning.
 
-@kindex --verbose
-@cindex verbose
+@kindex --verbose[=@var{NUMBER}]
+@cindex verbose[=@var{NUMBER}]
 @item --dll-verbose
-@itemx --verbose
+@itemx --verbose[=@var{NUMBER}]
 Display the version number for @command{ld} and list the linker emulations
 supported.  Display which input files can and cannot be opened.  Display
-the linker script being used by the linker.
+the linker script being used by the linker. If the optional @var{NUMBER}
+argument > 1, plugin symbol status will also be displayed.
 
 @kindex --version-script=@var{version-scriptfile}
 @cindex version script, symbol versions
@@ -2611,6 +2613,39 @@ The image is Terminal Server aware.
 
 @c man end
 
+@ifset C6X
+@subsection Options specific to C6X uClinux targets
+
+@c man begin OPTIONS
+
+The C6X uClinux target uses a binary format called DSBT to support shared
+libraries.  Each shared library in the system needs to have a unique index;
+all executables use an index of 0.
+
+@table @gcctabopt
+
+@kindex --dsbt-size
+@item --dsbt-size @var{size}
+This option sets the number of entires in the DSBT of the current executable
+or shared library to @var{size}.  The default is to create a table with 64
+entries.
+
+@kindex --dsbt-index
+@item --dsbt-index @var{index}
+This option sets the DSBT index of the current executable or shared library
+to @var{index}.  The default is 0, which is appropriate for generating
+executables.  If a shared library is generated with a DSBT index of 0, the
+@code{R_C6000_DSBT_INDEX} relocs are copied into the output file.
+
+@kindex --no-merge-exidx-entries
+The @samp{--no-merge-exidx-entries} switch disables the merging of adjacent
+exidx entries in frame unwind info.
+
+@end table
+
+@c man end
+@end ifset
+
 @ifset M68HC11
 @subsection Options specific to Motorola 68HC11 and 68HC12 targets
 
@@ -3344,6 +3379,13 @@ of the names used by the BFD library (@pxref{BFD}).  You can see the
 architecture of an object file by using the @code{objdump} program with
 the @samp{-f} option.
 @end ifclear
+
+@item LD_FEATURE(@var{string})
+@kindex LD_FEATURE(@var{string})
+This command may be used to modify @command{ld} behavior.  If
+@var{string} is @code{"SANE_EXPR"} then absolute symbols and numbers
+in a script are simply treated as numbers everywhere.
+@xref{Expression Section}.
 @end table
 
 @node Assignments
@@ -3910,6 +3952,12 @@ into ascending order by name before placing them in the output file.
 @code{SORT_BY_ALIGNMENT} is very similar to @code{SORT_BY_NAME}. The
 difference is @code{SORT_BY_ALIGNMENT} will sort sections into
 ascending order by alignment before placing them in the output file.
+
+@cindex SORT_BY_INIT_PRIORITY
+@code{SORT_BY_INIT_PRIORITY} is very similar to @code{SORT_BY_NAME}. The
+difference is @code{SORT_BY_INIT_PRIORITY} will sort sections into
+ascending order by numerical value of the GCC init_priority attribute
+encoded in the section name before placing them in the output file.
 
 @cindex SORT
 @code{SORT} is an alias for @code{SORT_BY_NAME}.
@@ -5497,17 +5545,17 @@ section relative symbols and for builtin functions that return an
 address, such as @code{ADDR}, @code{LOADADDR}, @code{ORIGIN} and
 @code{SEGMENT_START}.  Other terms are simply numbers, or are builtin
 functions that return a non-address value, such as @code{LENGTH}.
+One complication is that unless you set @code{LD_FEATURE ("SANE_EXPR")}
+(@pxref{Miscellaneous Commands}), numbers and absolute symbols are treated
+differently depending on their location, for compatibility with older
+versions of @code{ld}.  Expressions appearing outside an output
+section definition treat all numbers as absolute addresses.
+Expressions appearing inside an output section definition treat
+absolute symbols as numbers.  If @code{LD_FEATURE ("SANE_EXPR")} is
+given, then absolute symbols and numbers are simply treated as numbers
+everywhere.
 
-When the linker evaluates an expression, the result depends on where
-the expression is located in a linker script.  Expressions appearing
-outside an output section definitions are evaluated with all terms
-first being converted to absolute addresses before applying operators,
-and evaluate to an absolute address result.  Expressions appearing
-inside an output section definition are evaluated with more complex
-rules, but the aim is to treat terms as relative addresses and produce
-a relative address result.  In particular, an assignment of a number
-to a symbol results in a symbol relative to the output section with an
-offset given by the number.  So, in the following simple example,
+In the following simple example,
 
 @smallexample
 @group
@@ -5531,9 +5579,8 @@ address 0x100 in the first two assignments, then both @code{.} and
 @code{__data_start} are set to 0x10 relative to the @code{.data}
 section in the second two assignments.
 
-For expressions appearing inside an output section definition
-involving numbers, relative addresses and absolute addresses, ld
-follows these rules to evaluate terms:
+For expressions involving numbers, relative addresses and absolute
+addresses, ld follows these rules to evaluate terms:
 
 @itemize @bullet
 @item
@@ -5555,8 +5602,13 @@ An operation involving only numbers results in a number.
 @item
 The result of comparisons, @samp{&&} and @samp{||} is also a number.
 @item
-The result of other operations on relative addresses (after above
-conversions) is a relative address in the same section as the operand(s).
+The result of other binary arithmetic and logical operations on two
+relative addresses in the same section or two absolute addresess
+(after above conversions) is also a number.
+@item
+The result of other operations on relative addresses or one
+relative address and a number, is a relative address in the same
+section as the relative operand(s).
 @item
 The result of other operations on absolute addresses (after above
 conversions) is an absolute address.

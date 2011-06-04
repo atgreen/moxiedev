@@ -13,7 +13,7 @@ fragment <<EOF
 
 /* ${ELFSIZE} bit ELF emulation code for ${EMULATION_NAME}
    Copyright 1991, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Written by Steve Chamberlain <sac@cygnus.com>
    ELF support by Ian Lance Taylor <ian@cygnus.com>
@@ -40,6 +40,7 @@ fragment <<EOF
 #include "sysdep.h"
 #include "bfd.h"
 #include "libiberty.h"
+#include "filenames.h"
 #include "safe-ctype.h"
 #include "getopt.h"
 #include "md5.h"
@@ -200,7 +201,7 @@ gld${EMULATION_NAME}_vercheck (lang_input_statement_type *s)
     {
       const char *suffix;
 
-      if (strcmp (soname, l->name) == 0)
+      if (filename_cmp (soname, l->name) == 0)
 	{
 	  /* Probably can't happen, but it's an easy check.  */
 	  continue;
@@ -215,7 +216,7 @@ gld${EMULATION_NAME}_vercheck (lang_input_statement_type *s)
 
       suffix += sizeof ".so." - 1;
 
-      if (strncmp (soname, l->name, suffix - l->name) == 0)
+      if (filename_ncmp (soname, l->name, suffix - l->name) == 0)
 	{
 	  /* Here we know that S is a dynamic object FOO.SO.VER1, and
 	     the object we are considering needs a dynamic object
@@ -290,7 +291,7 @@ gld${EMULATION_NAME}_stat_needed (lang_input_statement_type *s)
   if (soname == NULL)
     soname = lbasename (s->filename);
 
-  if (strncmp (soname, global_needed->name, suffix - global_needed->name) == 0)
+  if (filename_ncmp (soname, global_needed->name, suffix - global_needed->name) == 0)
     einfo ("%P: warning: %s, needed by %B, may conflict with %s\n",
 	   global_needed->name, global_needed->by, soname);
 }
@@ -855,7 +856,7 @@ gld${EMULATION_NAME}_check_needed (lang_input_statement_type *s)
       && (bfd_elf_get_dyn_lib_class (s->the_bfd) & DYN_AS_NEEDED) != 0)
     return;
 
-  if (strcmp (s->filename, global_needed->name) == 0)
+  if (filename_cmp (s->filename, global_needed->name) == 0)
     {
       global_found = s;
       return;
@@ -865,7 +866,7 @@ gld${EMULATION_NAME}_check_needed (lang_input_statement_type *s)
     {
       const char *f = strrchr (s->filename, '/');
       if (f != NULL
-	  && strcmp (f + 1, global_needed->name) == 0)
+	  && filename_cmp (f + 1, global_needed->name) == 0)
 	{
 	  global_found = s;
 	  return;
@@ -874,7 +875,7 @@ gld${EMULATION_NAME}_check_needed (lang_input_statement_type *s)
 
   soname = bfd_elf_get_dt_soname (s->the_bfd);
   if (soname != NULL
-      && strcmp (soname, global_needed->name) == 0)
+      && filename_cmp (soname, global_needed->name) == 0)
     {
       global_found = s;
       return;
@@ -1058,6 +1059,8 @@ gld${EMULATION_NAME}_after_open (void)
 {
   struct bfd_link_needed_list *needed, *l;
   struct elf_link_hash_table *htab;
+
+  after_open_default ();
 
   htab = elf_hash_table (&link_info);
   if (!is_elf_hash_table (htab))
@@ -1618,7 +1621,7 @@ gld${EMULATION_NAME}_open_dynamic_archive
   const char *filename;
   char *string;
 
-  if (! entry->is_archive)
+  if (! entry->maybe_archive)
     return FALSE;
 
   filename = entry->filename;
@@ -1672,7 +1675,7 @@ gld${EMULATION_NAME}_open_dynamic_archive
   if (bfd_check_format (entry->the_bfd, bfd_object)
       && (entry->the_bfd->flags & DYNAMIC) != 0)
     {
-      ASSERT (entry->is_archive && entry->search_dirs_flag);
+      ASSERT (entry->maybe_archive && entry->search_dirs_flag);
 
       /* Rather than duplicating the logic above.  Just use the
 	 filename we recorded earlier.  */
@@ -1786,7 +1789,7 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
       { ".sdata",
 	SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_DATA | SEC_SMALL_DATA,
 	0, 0, 0, 0 },
-      { 0,
+      { ".comment",
 	SEC_HAS_CONTENTS,
 	0, 0, 0, 0 },
     };
@@ -1878,7 +1881,6 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
 
   if (!orphan_init_done)
     {
-      lang_output_section_statement_type *lookup;
       struct orphan_save *ho;
 
       for (ho = hold; ho < hold + sizeof (hold) / sizeof (hold[0]); ++ho)
@@ -1888,16 +1890,6 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
 	    if (ho->os != NULL && ho->os->flags == 0)
 	      ho->os->flags = ho->flags;
 	  }
-      lookup = hold[orphan_bss].os;
-      if (lookup == NULL)
-	lookup = &lang_output_section_statement.head->output_section_statement;
-      for (; lookup != NULL; lookup = lookup->next)
-	if ((lookup->bfd_section != NULL
-	     && (lookup->bfd_section->flags & SEC_DEBUGGING) != 0)
-	    || strcmp (lookup->name, ".comment") == 0)
-	  break;
-      hold[orphan_nonalloc].os = lookup ? lookup->prev : NULL;
-      hold[orphan_nonalloc].name = ".comment";
       orphan_init_done = 1;
     }
 
@@ -1928,7 +1920,7 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
 	   && ((iself && sh_type == SHT_NOTE)
 	       || (!iself && CONST_STRNEQ (secname, ".note"))))
     place = &hold[orphan_interp];
-  else if ((s->flags & (SEC_LOAD | SEC_HAS_CONTENTS)) == 0)
+  else if ((s->flags & (SEC_LOAD | SEC_HAS_CONTENTS | SEC_THREAD_LOCAL)) == 0)
     place = &hold[orphan_bss];
   else if ((s->flags & SEC_SMALL_DATA) != 0)
     place = &hold[orphan_sdata];

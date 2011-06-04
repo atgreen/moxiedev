@@ -1,6 +1,6 @@
 /* The common simulator framework for GDB, the GNU Debugger.
 
-   Copyright 2002, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2002, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney and Red Hat.
 
@@ -44,13 +44,13 @@
 
 /* DEVICE
 
-   
+
    pal - glue logic device containing assorted junk
 
-   
+
    DESCRIPTION
 
-   
+
    Typical hardware dependant hack.  This device allows the firmware
    to gain access to all the things the firmware needs (but the OS
    doesn't).
@@ -74,10 +74,10 @@
 
    RESET (write): halts the simulator.  The value written to the
    register is used as an exit status.
-   
+
    PROCESSOR ID (read): returns the processor identifier (0 .. N-1) of
    the processor performing the read.
-   
+
    INTERRUPT (write): This register must be written using a two byte
    store.  The low byte specifies a port and the upper byte specifies
    the a level.  LEVEL is driven on the specified port.  By
@@ -122,7 +122,7 @@
 
 
    PROPERTIES
-   
+
 
    reg = <address> <size> (required)
 
@@ -306,7 +306,7 @@ scan_hw_pal (struct hw *me)
   hw_pal_device *hw_pal = (hw_pal_device *)hw_data (me);
   char c;
   int count;
-  count = do_hw_poll_read (me, hw_pal->reader, 0/*STDIN*/, &c, sizeof(c));
+  count = do_hw_poll_read (me, hw_pal->reader, 0/*STDIN*/, &c, sizeof (c));
   switch (count)
     {
     case HW_IO_NOT_READY:
@@ -429,7 +429,7 @@ hw_pal_io_write_buffer (struct hw *me,
 {
   hw_pal_device *hw_pal = (hw_pal_device*) hw_data (me);
   unsigned_1 *byte = (unsigned_1 *) source;
-  
+
   switch (addr & hw_pal_address_mask)
     {
 
@@ -467,12 +467,12 @@ hw_pal_io_write_buffer (struct hw *me,
       do_counter_write (me, hw_pal, "countdown",
 			&hw_pal->countdown, source, nr_bytes);
       break;
-      
+
     case hw_pal_timer:
       do_counter_write (me, hw_pal, "timer",
 			&hw_pal->timer, source, nr_bytes);
       break;
-      
+
     }
   return nr_bytes;
 }
@@ -482,7 +482,7 @@ hw_pal_io_write_buffer (struct hw *me,
 
 #if NOT_YET
 static void
-hw_pal_instance_delete_callback(hw_instance *instance)
+hw_pal_instance_delete_callback (hw_instance *instance)
 {
   /* nothing to delete, the hw_pal is attached to the struct hw */
   return;

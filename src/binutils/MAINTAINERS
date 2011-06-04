@@ -40,7 +40,7 @@ repository without obtaining approval first:
   DJ Delorie <dj@redhat.com>
   Alan Modra <amodra@gmail.com>
   Michael Meissner <gnu@the-meissners.org>
-  Daniel Jacobowitz <dan@codesourcery.com>
+  Daniel Jacobowitz <drow@false.org>
   Richard Sandiford <rdsandiford@googlemail.com>
 
       --------- Maintainers ---------
@@ -63,15 +63,16 @@ responsibility among the other maintainers.
   ARM (Symbian)	   Mark Mitchell <mark@codesourcery.com>
   AVR		   Denis Chertykov <denisc@overta.ru>
   AVR		   Marek Michalkiewicz <marekm@amelek.gda.pl>
-  BFIN		   Jie Zhang <jie@codesourcery.com>
+  BFIN		   Jie Zhang <jzhang918@gmail.com>
   BFIN		   Bernd Schmidt <bernd.schmidt@analog.com>
   BFIN		   Mike Frysinger <michael.frysinger@analog.com>
-  BUILD SYSTEM	   Daniel Jacobowitz <dan@codesourcery.com>
+  BUILD SYSTEM	   Daniel Jacobowitz <drow@false.org>
   CR16		   M R Swami Reddy <MR.Swami.Reddy@nsc.com>
   CRIS		   Hans-Peter Nilsson <hp@axis.com>
   CRX		   M R Swami Reddy <MR.Swami.Reddy@nsc.com>
   DLX              Nikolaos Kavvadias <nkavv@physics.auth.gr>
   DWARF2	   Jason Merrill <jason@redhat.com>
+  DWARF2	   Jakub Jelinek <jakub@redhat.com>
   FR30		   Dave Brolley <brolley@redhat.com>
   FRV		   Dave Brolley <brolley@redhat.com>
   FRV		   Alexandre Oliva <aoliva@redhat.com>
@@ -123,7 +124,7 @@ responsibility among the other maintainers.
   x86_64	   Andreas Jaeger <aj@suse.de>
   x86_64	   H.J. Lu <hjl.tools@gmail.com>
   XCOFF 	   Richard Sandiford <r.sandiford@uk.ibm.com>
-  Xtensa	   Sterling Augustine <sterling@tensilica.com> 
+  Xtensa	   Sterling Augustine <augustine.sterling@gmail.com> 
   z80		   Arnold Metselaar <arnold.metselaar@planet.nl>
   z8k		   Christian Groessler <chris@groessler.org>
 

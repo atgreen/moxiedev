@@ -1,6 +1,6 @@
 /* Target-specific definition for a Renesas Super-H.
    Copyright (C) 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2003, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,9 +20,9 @@
 #ifndef SH_TDEP_H
 #define SH_TDEP_H
 
-/* Contributed by Steve Chamberlain sac@cygnus.com */
+/* Contributed by Steve Chamberlain sac@cygnus.com.  */
 
-/* Registers for all SH variants.  Used also by sh3-rom.c. */
+/* Registers for all SH variants.  Used also by sh3-rom.c.  */
 enum
   {
     R0_REGNUM = 0,

@@ -1,5 +1,5 @@
 /* MI Command Set - stack commands.
-   Copyright (C) 2000, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2000, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -53,7 +53,7 @@ mi_cmd_stack_list_frames (char *command, char **argv, int argc)
   struct frame_info *fi;
 
   if (argc > 2 || argc == 1)
-    error (_("mi_cmd_stack_list_frames: Usage: [FRAME_LOW FRAME_HIGH]"));
+    error (_("-stack-list-frames: Usage: [FRAME_LOW FRAME_HIGH]"));
 
   if (argc == 2)
     {
@@ -76,7 +76,7 @@ mi_cmd_stack_list_frames (char *command, char **argv, int argc)
        i++, fi = get_prev_frame (fi));
 
   if (fi == NULL)
-    error (_("mi_cmd_stack_list_frames: Not enough frames in stack."));
+    error (_("-stack-list-frames: Not enough frames in stack."));
 
   cleanup_stack = make_cleanup_ui_out_list_begin_end (uiout, "stack");
 
@@ -103,7 +103,7 @@ mi_cmd_stack_info_depth (char *command, char **argv, int argc)
   struct frame_info *fi;
 
   if (argc > 1)
-    error (_("mi_cmd_stack_info_depth: Usage: [MAX_DEPTH]"));
+    error (_("-stack-info-depth: Usage: [MAX_DEPTH]"));
 
   if (argc == 1)
     frame_high = atoi (argv[0]);
@@ -147,7 +147,7 @@ mi_cmd_stack_list_locals (char *command, char **argv, int argc)
   struct frame_info *frame;
 
   if (argc != 1)
-    error (_("mi_cmd_stack_list_locals: Usage: PRINT_VALUES"));
+    error (_("-stack-list-locals: Usage: PRINT_VALUES"));
 
    frame = get_selected_frame (NULL);
 
@@ -168,7 +168,8 @@ mi_cmd_stack_list_args (char *command, char **argv, int argc)
   enum print_values print_values;
 
   if (argc < 1 || argc > 3 || argc == 2)
-    error (_("mi_cmd_stack_list_args: Usage: PRINT_VALUES [FRAME_LOW FRAME_HIGH]"));
+    error (_("-stack-list-arguments: Usage: "
+	     "PRINT_VALUES [FRAME_LOW FRAME_HIGH]"));
 
   if (argc == 3)
     {
@@ -193,9 +194,10 @@ mi_cmd_stack_list_args (char *command, char **argv, int argc)
        i++, fi = get_prev_frame (fi));
 
   if (fi == NULL)
-    error (_("mi_cmd_stack_list_args: Not enough frames in stack."));
+    error (_("-stack-list-arguments: Not enough frames in stack."));
 
-  cleanup_stack_args = make_cleanup_ui_out_list_begin_end (uiout, "stack-args");
+  cleanup_stack_args
+    = make_cleanup_ui_out_list_begin_end (uiout, "stack-args");
 
   /* Now let's print the frames up to frame_high, or until there are
      frames in the stack. */
@@ -397,7 +399,7 @@ void
 mi_cmd_stack_select_frame (char *command, char **argv, int argc)
 {
   if (argc == 0 || argc > 1)
-    error (_("mi_cmd_stack_select_frame: Usage: FRAME_SPEC"));
+    error (_("-stack-select-frame: Usage: FRAME_SPEC"));
 
   select_frame_command (argv[0], 1 /* not used */ );
 }
@@ -406,7 +408,7 @@ void
 mi_cmd_stack_info_frame (char *command, char **argv, int argc)
 {
   if (argc > 0)
-    error (_("mi_cmd_stack_info_frame: No arguments required"));
+    error (_("-stack-info-frame: No arguments required"));
 
   print_frame_info (get_selected_frame (NULL), 1, LOC_AND_ADDRESS, 0);
 }

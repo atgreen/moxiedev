@@ -89,6 +89,10 @@
 #define DWARF2_FILE_SIZE_NAME(FILENAME,DIRNAME) 0
 #endif
 
+#ifndef DWARF2_VERSION
+#define DWARF2_VERSION 2
+#endif
+
 #include "subsegs.h"
 
 #include "dwarf2.h"
@@ -431,14 +435,14 @@ get_filenum (const char *filename, unsigned int num)
   if (num == 0 && last_used)
     {
       if (! files[last_used].dir
-	  && strcmp (filename, files[last_used].filename) == 0)
+	  && filename_cmp (filename, files[last_used].filename) == 0)
 	return last_used;
       if (files[last_used].dir
-	  && strncmp (filename, dirs[files[last_used].dir],
-		      last_used_dir_len) == 0
+	  && filename_ncmp (filename, dirs[files[last_used].dir],
+			    last_used_dir_len) == 0
 	  && IS_DIR_SEPARATOR (filename [last_used_dir_len])
-	  && strcmp (filename + last_used_dir_len + 1,
-		     files[last_used].filename) == 0)
+	  && filename_cmp (filename + last_used_dir_len + 1,
+			   files[last_used].filename) == 0)
 	return last_used;
     }
 
@@ -460,7 +464,7 @@ get_filenum (const char *filename, unsigned int num)
       --dir_len;
 #endif
       for (dir = 1; dir < dirs_in_use; ++dir)
-	if (strncmp (filename, dirs[dir], dir_len) == 0
+	if (filename_ncmp (filename, dirs[dir], dir_len) == 0
 	    && dirs[dir][dir_len] == '\0')
 	  break;
 
@@ -485,7 +489,7 @@ get_filenum (const char *filename, unsigned int num)
       for (i = 1; i < files_in_use; ++i)
 	if (files[i].dir == dir
 	    && files[i].filename
-	    && strcmp (file, files[i].filename) == 0)
+	    && filename_cmp (file, files[i].filename) == 0)
 	  {
 	    last_used = i;
 	    last_used_dir_len = dir_len;
@@ -1080,7 +1084,7 @@ emit_fixed_inc_line_addr (int line_delta, addressT addr_delta, fragS *frag,
       symbolS *to_sym;
       expressionS exp;
 
-      gas_assert (pexp->X_op = O_subtract);
+      gas_assert (pexp->X_op == O_subtract);
       to_sym = pexp->X_add_symbol;
 
       *p++ = DW_LNS_extended_op;
@@ -1420,7 +1424,7 @@ out_debug_line (segT line_seg)
   line_end = exp.X_add_symbol;
 
   /* Version.  */
-  out_two (2);
+  out_two (DWARF2_VERSION);
 
   /* Length of the prologue following this length.  */
   prologue_end = symbol_temp_make ();
@@ -1524,7 +1528,7 @@ out_debug_aranges (segT aranges_seg, segT info_seg)
   aranges_end = exp.X_add_symbol;
 
   /* Version.  */
-  out_two (2);
+  out_two (DWARF2_VERSION);
 
   /* Offset to .debug_info.  */
   TC_DWARF2_EMIT_OFFSET (section_symbol (info_seg), sizeof_offset);
@@ -1627,7 +1631,7 @@ out_debug_info (segT info_seg, segT abbrev_seg, segT line_seg, segT ranges_seg)
   info_end = exp.X_add_symbol;
 
   /* DWARF version.  */
-  out_two (2);
+  out_two (DWARF2_VERSION);
 
   /* .debug_abbrev offset */
   TC_DWARF2_EMIT_OFFSET (section_symbol (abbrev_seg), sizeof_offset);

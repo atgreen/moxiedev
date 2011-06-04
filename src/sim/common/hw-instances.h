@@ -1,6 +1,6 @@
 /* The common simulator framework for GDB, the GNU Debugger.
 
-   Copyright 2002, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2002, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney and Red Hat.
 
@@ -134,7 +134,8 @@ int hw_instance_call_method
 /* Finally an instance of a hardware device - keep your grubby little
    mits off of these internals! :-) */
 
-struct hw_instance {
+struct hw_instance
+{
 
   void *data_of_instance;
   char *args_of_instance;

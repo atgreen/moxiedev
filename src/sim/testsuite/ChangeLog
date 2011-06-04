@@ -1,3 +1,30 @@
+2011-05-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* lib/sim-defs.exp: Support cc tag in test files.
+	(run_sim_test): Support global_cc_options in boards files.  Convert
+	assembler options into compiler options (c_as_options) with -Wa.
+	Convert linker options into compiler options (c_ld_options) with -Wl.
+	Compile .c and .S files into .x programs.
+
+2011-05-11  Joseph Myers  <joseph@codesourcery.com>
+	    Hans-Peter Nilsson  <hp@axis.com>
+
+	PR sim/12737
+	* sim/arm/iwmmxt/wcmpgt.cgs, sim/arm/iwmmxt/wmac.cgs,
+	sim/arm/iwmmxt/wsra.cgs, sim/arm/xscale/blx.cgs: Kfail.
+
+2011-05-04  Joseph Myers  <joseph@codesourcery.com>
+
+	* configure: Regenerate.
+	* sim/arm/allinsn.exp (xscale*-*-*): Don't handle target.
+	* sim/arm/misc.exp (thumb*-*-*, xscale*-*-*): Don't handle
+	targets.
+	* sim/arm/iwmmxt/iwmmxt.exp: Test for arm*-*-* instead of
+	xscale*-*-*.
+	* sim/arm/thumb/allthumb.exp (thumb*-*-*): Don't handle target.
+	* sim/arm/xscale/xscale.exp: Test for arm*-*-* instead of
+	xscale*-*-*.
+
 2010-10-07  Hans-Peter Nilsson  <hp@axis.com>
 
 	* sim/cris/c/seek3.c, sim/cris/c/seek4.c: New tests.

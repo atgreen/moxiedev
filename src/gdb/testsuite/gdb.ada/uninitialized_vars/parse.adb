@@ -1,4 +1,4 @@
---  Copyright 2009 Free Software Foundation, Inc.
+--  Copyright 2009, 2011 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 
 with Parse_Controlled;
 
-procedure Parse is
+procedure Parse is -- START
 
    A  : aliased Integer := 1;
 

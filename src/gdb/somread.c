@@ -1,6 +1,6 @@
 /* Read HP PA/Risc object files for GDB.
    Copyright (C) 1991, 1992, 1994, 1995, 1996, 1998, 1999, 2000, 2001, 2002,
-   2004, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2004, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
    Written by Fred Fish at Cygnus Support.
 
    This file is part of GDB.
@@ -197,7 +197,7 @@ som_symtab_read (bfd *abfd, struct objfile *objfile,
 	         the nasty habit of placing section symbols from the literal
 	         subspaces in the middle of the program's text.  Filter
 	         those out as best we can.  Check for first and last character
-	         being '$'. 
+	         being '$'.
 
 	         And finally, the newer HP compilers emit crud like $PIC_foo$N
 	         in some circumstance (PIC code I guess).  It's also claimed
@@ -321,18 +321,18 @@ som_symfile_read (struct objfile *objfile, int symfile_flags)
   init_minimal_symbol_collection ();
   back_to = make_cleanup_discard_minimal_symbols ();
 
-  /* Process the normal SOM symbol table first. 
+  /* Process the normal SOM symbol table first.
      This reads in the DNTT and string table, but doesn't
-     actually scan the DNTT. It does scan the linker symbol
-     table and thus build up a "minimal symbol table". */
+     actually scan the DNTT.  It does scan the linker symbol
+     table and thus build up a "minimal symbol table".  */
 
   som_symtab_read (abfd, objfile, objfile->section_offsets);
 
   /* Install any minimal symbols that have been collected as the current
-     minimal symbols for this objfile. 
+     minimal symbols for this objfile.
      Further symbol-reading is done incrementally, file-by-file,
-     in a step known as "psymtab-to-symtab" expansion. hp-symtab-read.c
-     contains the code to do the actual DNTT scanning and symtab building. */
+     in a step known as "psymtab-to-symtab" expansion.  hp-symtab-read.c
+     contains the code to do the actual DNTT scanning and symtab building.  */
   install_minimal_symbols (objfile);
   do_cleanups (back_to);
 
@@ -356,9 +356,9 @@ som_new_init (struct objfile *ignore)
 }
 
 /* Perform any local cleanups required when we are done with a particular
-   objfile.  I.E, we are in the process of discarding all symbol information
+   objfile.  I.e, we are in the process of discarding all symbol information
    for an objfile, freeing up all memory held for it, and unlinking the
-   objfile struct from the global list of known objfiles. */
+   objfile struct from the global list of known objfiles.  */
 
 static void
 som_symfile_finish (struct objfile *objfile)
@@ -396,11 +396,11 @@ som_symfile_offsets (struct objfile *objfile, struct section_addr_info *addrs)
 		   SIZEOF_N_SECTION_OFFSETS (objfile->num_sections));
 
   /* FIXME: ezannoni 2000-04-20 The section names in SOM are not
-     .text, .data, etc, but $TEXT$, $DATA$,... We should initialize
-     SET_OFF_* from bfd. (See default_symfile_offsets()). But I don't
+     .text, .data, etc, but $TEXT$, $DATA$,...  We should initialize
+     SET_OFF_* from bfd.  (See default_symfile_offsets()).  But I don't
      know the correspondence between SOM sections and GDB's idea of
-     section names. So for now we default to what is was before these
-     changes.*/
+     section names.  So for now we default to what is was before these
+     changes.  */
   objfile->sect_index_text = 0;
   objfile->sect_index_data = 1;
   objfile->sect_index_bss = 2;
@@ -412,7 +412,7 @@ som_symfile_offsets (struct objfile *objfile, struct section_addr_info *addrs)
     {
       /* Note: Here is OK to compare with ".text" because this is the
          name that gdb itself gives to that section, not the SOM
-         name. */
+         name.  */
       for (i = 0; i < addrs->num_sections && addrs->other[i].name; i++)
 	if (strcmp (addrs->other[i].name, ".text") == 0)
 	  break;
@@ -430,15 +430,15 @@ som_symfile_offsets (struct objfile *objfile, struct section_addr_info *addrs)
 static const struct sym_fns som_sym_fns =
 {
   bfd_target_som_flavour,
-  som_new_init,			/* sym_new_init: init anything gbl to entire symtab */
-  som_symfile_init,		/* sym_init: read initial info, setup for sym_read() */
-  som_symfile_read,		/* sym_read: read a symbol file into symtab */
-  som_symfile_finish,		/* sym_finish: finished with file, cleanup */
-  som_symfile_offsets,		/* sym_offsets:  Translate ext. to int. relocation */
-  default_symfile_segments,	/* sym_segments: Get segment information from
-				   a file.  */
-  NULL,                         /* sym_read_linetable */
-  default_symfile_relocate,	/* sym_relocate: Relocate a debug section.  */
+  som_new_init,			/* init anything gbl to entire symtab */
+  som_symfile_init,		/* read initial info, setup for sym_read() */
+  som_symfile_read,		/* read a symbol file into symtab */
+  NULL,				/* sym_read_psymbols */
+  som_symfile_finish,		/* finished with file, cleanup */
+  som_symfile_offsets,		/* Translate ext. to int. relocation */
+  default_symfile_segments,	/* Get segment information from a file.  */
+  NULL,
+  default_symfile_relocate,	/* Relocate a debug section.  */
   &psym_functions
 };
 

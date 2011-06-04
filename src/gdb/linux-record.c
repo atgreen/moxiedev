@@ -1,6 +1,6 @@
 /* Process record and replay target code for GNU/Linux.
 
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -770,6 +770,8 @@ Do you want to stop the program?"),
         if (record_linux_sockaddr (regcache, tdep, tmpulongest, len))
           return -1;
       }
+      break;
+
     case gdb_sys_recv:
       {
         ULONGEST size;

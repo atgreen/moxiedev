@@ -1,6 +1,7 @@
 /* Target-dependent code for OpenBSD/vax.
 
-   Copyright (C) 2005, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2005, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -134,6 +135,7 @@ vaxobsd_sigtramp_frame_prev_register (struct frame_info *this_frame,
 
 static const struct frame_unwind vaxobsd_sigtramp_frame_unwind = {
   SIGTRAMP_FRAME,
+  default_frame_unwind_stop_reason,
   vaxobsd_sigtramp_frame_this_id,
   vaxobsd_sigtramp_frame_prev_register,
   NULL,

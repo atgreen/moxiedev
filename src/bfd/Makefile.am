@@ -23,6 +23,7 @@ else !INSTALL_LIBBFD
 # Empty these so that the respective installation directories will not be created.
 bfdlibdir =
 bfdincludedir =
+bfdinclude_HEADERS =
 rpath_bfdlibdir = @bfdlibdir@
 noinst_LTLIBRARIES = libbfd.la
 libbfd_la_LDFLAGS += -rpath $(rpath_bfdlibdir)
@@ -33,6 +34,7 @@ NO_WERROR = @NO_WERROR@
 AM_CFLAGS = $(WARN_CFLAGS)
 AM_CPPFLAGS = -DBINDIR='"$(bindir)"'
 if PLUGINS
+bfdinclude_HEADERS += $(INCDIR)/plugin-api.h
 LIBDL = -ldl
 endif
 
@@ -603,6 +605,7 @@ BFD64_BACKENDS = \
 	elf64-x86-64.lo \
 	elf64.lo \
 	elfn32-mips.lo \
+	elfxx-ia64.lo \
 	mach-o-x86-64.lo \
 	mmo.lo \
 	nlm32-alpha.lo \
@@ -635,6 +638,7 @@ BFD64_BACKENDS_CFILES = \
 	elf64-x86-64.c \
 	elf64.c \
 	elfn32-mips.c \
+	elfxx-ia64.c \
 	mach-o-x86-64.c \
 	mmo.c \
 	nlm32-alpha.c \
@@ -651,6 +655,7 @@ OPTIONAL_BACKENDS = \
 	irix-core.lo \
 	lynx-core.lo \
 	osf-core.lo \
+	rs6000-core.lo \
 	sco5-core.lo \
 	trad-core.lo
 
@@ -661,6 +666,7 @@ OPTIONAL_BACKENDS_CFILES = \
 	irix-core.c \
 	lynx-core.c \
 	osf-core.c \
+	rs6000-core.c \
 	sco5-core.c \
 	trad-core.c
 
@@ -707,7 +713,7 @@ SOURCE_HFILES = \
 	libnlm.h liboasys.h libpei.h libxcoff.h mach-o.h \
 	netbsd.h nlm-target.h nlmcode.h nlmswap.h ns32k.h \
 	pef.h pef-traceback.h peicode.h som.h version.h \
-	vms.h xcoff-target.h xsym.h
+	vms.h xsym.h
 
 ## ... and all .h files which are in the build tree.
 BUILD_HFILES = \
@@ -841,14 +847,14 @@ elf64-target.h : elfxx-target.h
 	sed -e s/NN/64/g < $(srcdir)/elfxx-target.h > elf64-target.new
 	mv -f elf64-target.new elf64-target.h
 
-elf32-ia64.c : elfxx-ia64.c
+elf32-ia64.c : elfnn-ia64.c
 	rm -f elf32-ia64.c
-	sed -e s/NN/32/g < $(srcdir)/elfxx-ia64.c > elf32-ia64.new
+	sed -e s/NN/32/g < $(srcdir)/elfnn-ia64.c > elf32-ia64.new
 	mv -f elf32-ia64.new elf32-ia64.c
 
-elf64-ia64.c : elfxx-ia64.c
+elf64-ia64.c : elfnn-ia64.c
 	rm -f elf64-ia64.c
-	sed -e s/NN/64/g < $(srcdir)/elfxx-ia64.c > elf64-ia64.new
+	sed -e s/NN/64/g < $(srcdir)/elfnn-ia64.c > elf64-ia64.new
 	mv -f elf64-ia64.new elf64-ia64.c
 
 peigen.c : peXXigen.c

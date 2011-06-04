@@ -1,5 +1,5 @@
 /* Portable <dirent.h>.
-   Copyright (C) 2000, 2002, 2007, 2008, 2009, 2010
+   Copyright (C) 2000, 2002, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -23,7 +23,7 @@
 /* See description of `AC_HEADER_DIRENT' in the Autoconf manual.  */
 #ifdef HAVE_DIRENT_H
 # include <dirent.h>		/* ARI: dirent.h */
-# define NAMELEN(dirent) strlen ((dirent)->d_name)	/* ARI: strlen d_name */
+# define NAMELEN(dirent) strlen ((dirent)->d_name)    /* ARI: strlen d_name */
 #else
 # define dirent direct
 # define NAMELEN(dirent) (dirent)->d_namelen	/* ARI: d_namelen */

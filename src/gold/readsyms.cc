@@ -1,6 +1,6 @@
 // readsyms.cc -- read input file symbols for gold
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -167,7 +167,7 @@ Read_symbols::run(Workqueue* workqueue)
 					    this->next_blocker_));
 }
 
-// Handle a whole lib group. Other then collecting statisticts, this just
+// Handle a whole lib group. Other than collecting statistics, this just
 // mimics what we do for regular object files in the command line.
 
 bool
@@ -347,6 +347,7 @@ Read_symbols::do_read_symbols(Workqueue* workqueue)
 						this->mapfile_,
 						this->input_argument_,
                                                 obj,
+                                                NULL,
 						NULL,
                                                 this->this_blocker_,
                                                 this->next_blocker_));
@@ -397,6 +398,8 @@ Read_symbols::do_read_symbols(Workqueue* workqueue)
         {
           this->member_->sd_ = sd;
           this->member_->obj_ = obj;
+          this->member_->arg_serial_ =
+              this->input_argument_->file().arg_serial();
           return true;
         }
 
@@ -410,6 +413,7 @@ Read_symbols::do_read_symbols(Workqueue* workqueue)
 					    this->mapfile_,
 					    this->input_argument_,
 					    obj,
+					    NULL,
 					    sd,
 					    this->this_blocker_,
 					    this->next_blocker_));
@@ -563,7 +567,9 @@ void
 Add_symbols::locks(Task_locker* tl)
 {
   tl->add(this, this->next_blocker_);
-  tl->add(this, this->object_->token());
+  Task_token* token = this->object_->token();
+  if (token != NULL)
+    tl->add(this, token);
 }
 
 // Add the symbols in the object to the symbol table.
@@ -580,6 +586,7 @@ Add_symbols::run(Workqueue*)
 
   if (!this->input_objects_->add_object(this->object_))
     {
+      gold_assert(this->sd_ != NULL);
       delete this->sd_;
       this->sd_ = NULL;
       this->object_->release();
@@ -590,13 +597,163 @@ Add_symbols::run(Workqueue*)
       Incremental_inputs* incremental_inputs =
           this->layout_->incremental_inputs();
       if (incremental_inputs != NULL)
-	incremental_inputs->report_object(this->object_, NULL);
+	{
+          if (this->library_ != NULL && !this->library_->is_reported())
+            {
+              Incremental_binary* ibase = this->layout_->incremental_base();
+              gold_assert(ibase != NULL);
+              unsigned int lib_serial = this->library_->arg_serial();
+              unsigned int lib_index = this->library_->input_file_index();
+	      Script_info* lib_script_info = ibase->get_script_info(lib_index);
+	      incremental_inputs->report_archive_begin(this->library_,
+						       lib_serial,
+						       lib_script_info);
+	    }
+	  unsigned int arg_serial = this->input_argument_->file().arg_serial();
+	  Script_info* script_info = this->input_argument_->script_info();
+	  incremental_inputs->report_object(this->object_, arg_serial,
+					    this->library_, script_info);
+	}
       this->object_->layout(this->symtab_, this->layout_, this->sd_);
       this->object_->add_symbols(this->symtab_, this->sd_, this->layout_);
       delete this->sd_;
       this->sd_ = NULL;
       this->object_->release();
     }
+}
+
+// Class Read_member.
+
+Read_member::~Read_member()
+{
+  if (this->this_blocker_ != NULL)
+    delete this->this_blocker_;
+  // next_blocker_ is deleted by the task associated with the next
+  // input file.
+}
+
+// Return whether a Read_member task is runnable.
+
+Task_token*
+Read_member::is_runnable()
+{
+  return NULL;
+}
+
+void
+Read_member::locks(Task_locker* tl)
+{
+  tl->add(this, this->next_blocker_);
+}
+
+// Run a Read_member task.
+
+void
+Read_member::run(Workqueue*)
+{
+  // This task doesn't need to do anything for now.  The Read_symbols task
+  // that is queued for the archive library will cause the archive to be
+  // processed from scratch.
+}
+
+// Class Check_script.
+
+Check_script::~Check_script()
+{
+  if (this->this_blocker_ != NULL)
+    delete this->this_blocker_;
+  // next_blocker_ is deleted by the task associated with the next
+  // input file.
+}
+
+// Return whether a Check_script task is runnable.
+
+Task_token*
+Check_script::is_runnable()
+{
+  if (this->this_blocker_ != NULL && this->this_blocker_->is_blocked())
+    return this->this_blocker_;
+  return NULL;
+}
+
+void
+Check_script::locks(Task_locker* tl)
+{
+  tl->add(this, this->next_blocker_);
+}
+
+// Run a Check_script task.
+
+void
+Check_script::run(Workqueue*)
+{
+  Incremental_inputs* incremental_inputs = this->layout_->incremental_inputs();
+  gold_assert(incremental_inputs != NULL);
+  unsigned int arg_serial = this->input_reader_->arg_serial();
+  Script_info* script_info =
+      this->ibase_->get_script_info(this->input_file_index_);
+  Timespec mtime = this->input_reader_->get_mtime();
+  incremental_inputs->report_script(script_info, arg_serial, mtime);
+}
+
+// Class Check_library.
+
+Check_library::~Check_library()
+{
+  if (this->this_blocker_ != NULL)
+    delete this->this_blocker_;
+  // next_blocker_ is deleted by the task associated with the next
+  // input file.
+}
+
+// Return whether a Check_library task is runnable.
+
+Task_token*
+Check_library::is_runnable()
+{
+  if (this->this_blocker_ != NULL && this->this_blocker_->is_blocked())
+    return this->this_blocker_;
+  return NULL;
+}
+
+void
+Check_library::locks(Task_locker* tl)
+{
+  tl->add(this, this->next_blocker_);
+}
+
+// Run a Check_library task.
+
+void
+Check_library::run(Workqueue*)
+{
+  Incremental_inputs* incremental_inputs = this->layout_->incremental_inputs();
+  gold_assert(incremental_inputs != NULL);
+  Incremental_library* lib = this->ibase_->get_library(this->input_file_index_);
+  gold_assert(lib != NULL);
+  lib->copy_unused_symbols();
+  // FIXME: Check that unused symbols remain unused.
+  if (!lib->is_reported())
+    {
+      unsigned int lib_serial = lib->arg_serial();
+      unsigned int lib_index = lib->input_file_index();
+      Script_info* script_info = this->ibase_->get_script_info(lib_index);
+      incremental_inputs->report_archive_begin(lib, lib_serial, script_info);
+    }
+  incremental_inputs->report_archive_end(lib);
+}
+
+// Class Input_group.
+
+// When we delete an Input_group we can delete the archive
+// information.
+
+Input_group::~Input_group()
+{
+  for (Input_group::const_iterator p = this->begin();
+       p != this->end();
+       ++p)
+    delete *p;
 }
 
 // Class Start_group.
@@ -680,8 +837,8 @@ Finish_group::run(Workqueue*)
 	}
     }
 
-  // Now that we're done with the archives, record the incremental layout
-  // information, then delete them.
+  // Now that we're done with the archives, record the incremental
+  // layout information.
   for (Input_group::const_iterator p = this->input_group_->begin();
        p != this->input_group_->end();
        ++p)
@@ -691,10 +848,12 @@ Finish_group::run(Workqueue*)
           this->layout_->incremental_inputs();
       if (incremental_inputs != NULL)
 	incremental_inputs->report_archive_end(*p);
-
-      delete *p;
     }
-  delete this->input_group_;
+
+  if (parameters->options().has_plugins())
+    parameters->options().plugins()->save_input_group(this->input_group_);
+  else
+    delete this->input_group_;
 }
 
 // Class Read_script

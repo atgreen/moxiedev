@@ -1,5 +1,5 @@
 #   Copyright 1988, 1990, 1991, 1992, 1994, 1995, 1997, 1998, 1999, 2000,
-#   2001, 2002, 2003, 2005, 2006, 2007, 2008, 2009, 2010
+#   2001, 2002, 2003, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 #   Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
@@ -294,6 +294,9 @@ proc watchpoint_command_test {} {
 	    pass "begin commands on watch"
 	}
     }
+    # See the 'No symbol "value...' fail below.  This command will
+    # fail if it's executed in the wrong frame.  If adjusting the
+    # test, make sure this property holds.
     gdb_test_multiple "print value" "add print command to watch" {
 	-re ">$" {
 	    pass "add print command to watch"
@@ -308,9 +311,18 @@ proc watchpoint_command_test {} {
 	"" \
 	"end commands on watch"
 
-    gdb_test "continue" \
-	"Continuing.*\[Ww\]atchpoint $wp_id deleted because the program has left the block in.*which its expression is valid.*run.c:(57|82).*" \
-	"continue with watch"
+    set test "continue with watch"
+    gdb_test_multiple "continue" "$test" {
+	-re "No symbol \"value\" in current context.\r\n$gdb_prompt $" {
+	    # Happens if GDB actually runs the watchpoints commands,
+	    # even though the watchpoint was deleted for not being in
+	    # scope.
+	    fail $test
+	}
+ 	-re "Continuing.*\[Ww\]atchpoint $wp_id deleted because the program has left the block in.*which its expression is valid.*run.c:(57|82).*$gdb_prompt $" {
+	    pass $test
+	}
+   }
 }
 
 proc test_command_prompt_position {} {
@@ -704,18 +716,17 @@ proc redefine_backtrace_test {} {
     global gdb_prompt
 
     gdb_test_multiple "define backtrace" "define backtrace" {
-	-re "Really redefine built-in.*$" {
-	    send_gdb "y\n"
-	    exp_continue
-	}
-
-	-re "End with"  {
-	    pass "define backtrace in redefine_backtrace_test"
-	}
-        default {
-	    fail "(timeout or eof) define backtrace in redefine_backtrace_test"
+	-re "Really redefine built-in command \"backtrace\"\\? \\(y or n\\) $"  {
+	    pass "define backtrace"
 	}
     }
+
+    gdb_test_multiple "y" "expect response to define backtrace" {
+	-re "End with a line saying just \"end\"\\.\r\n>$"  {
+	    pass "expect response to define backtrace"
+	}
+    }
+
     gdb_test "echo hibob\\n\nend" \
 	    "" \
 	    "enter commands in redefine_backtrace_test"

@@ -1,6 +1,6 @@
 // fileread.h -- read files for gold   -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -51,6 +51,12 @@ struct Timespec
   time_t seconds;
   int nanoseconds;
 };
+
+// Get the last modified time of an unopened file.  Returns false if the
+// file does not exist.
+
+bool
+get_mtime(const char* filename, Timespec* mtime);
 
 class Position_dependent_options;
 class Input_file_argument;
@@ -249,7 +255,7 @@ class File_read
     {
       // Data owned by File object - nothing done in destructor.
       DATA_NOT_OWNED,
-      // Data alocated with new[] and owned by this object - should
+      // Data allocated with new[] and owned by this object - should
       // use delete[].
       DATA_ALLOCATED_ARRAY,
       // Data mmapped and owned by this object - should munmap.
@@ -399,13 +405,7 @@ class File_read
   { return (file_size + (page_size - 1)) & ~ (page_size - 1); }
 
   // The maximum number of entries we will pass to ::readv.
-#ifdef HAVE_READV
   static const size_t max_readv_entries = 128;
-#else
-  // On targets that don't have readv set the max to 1 so readv is not
-  // used.
-  static const size_t max_readv_entries = 1;
-#endif
 
   // Use readv to read data.
   void

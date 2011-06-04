@@ -42,12 +42,14 @@ class Mapfile;
 class Object;
 class Relobj;
 template<int size, bool big_endian>
-class Sized_relobj;
+class Sized_relobj_file;
 template<int size, bool big_endian>
 class Sized_pluginobj;
 class Dynobj;
 template<int size, bool big_endian>
 class Sized_dynobj;
+template<int size, bool big_endian>
+class Sized_incrobj;
 class Versions;
 class Version_script_info;
 class Input_objects;
@@ -735,7 +737,7 @@ class Symbol
       return true;
 
     // A reference to a symbol defined in a dynamic object or to a
-    // symbol that is preemptible can not use a RELATIVE relocaiton.
+    // symbol that is preemptible can not use a RELATIVE relocation.
     if (this->is_from_dynobj()
         || this->is_undefined()
         || this->is_preemptible())
@@ -1258,7 +1260,7 @@ class Symbol_table
     SORT_COMMONS_BY_ALIGNMENT_ASCENDING
   };
 
-  // COUNT is an estimate of how many symbosl will be inserted in the
+  // COUNT is an estimate of how many symbols will be inserted in the
   // symbol table.  It's ok to put 0 if you don't know; a correct
   // guess will just save some CPU by reducing hashtable resizes.
   Symbol_table(unsigned int count, const Version_script_info& version_script);
@@ -1307,11 +1309,11 @@ class Symbol_table
   // *DEFINED to the number of defined symbols.
   template<int size, bool big_endian>
   void
-  add_from_relobj(Sized_relobj<size, big_endian>* relobj,
+  add_from_relobj(Sized_relobj_file<size, big_endian>* relobj,
 		  const unsigned char* syms, size_t count,
 		  size_t symndx_offset, const char* sym_names,
 		  size_t sym_name_size,
-		  typename Sized_relobj<size, big_endian>::Symbols*,
+		  typename Sized_relobj_file<size, big_endian>::Symbols*,
 		  size_t* defined);
 
   // Add one external symbol from the plugin object OBJ to the symbol table.
@@ -1333,8 +1335,15 @@ class Symbol_table
 		  const char* sym_names, size_t sym_name_size,
 		  const unsigned char* versym, size_t versym_size,
 		  const std::vector<const char*>*,
-		  typename Sized_relobj<size, big_endian>::Symbols*,
+		  typename Sized_relobj_file<size, big_endian>::Symbols*,
 		  size_t* defined);
+
+  // Add one external symbol from the incremental object OBJ to the symbol
+  // table.  Returns a pointer to the resolved symbol in the symbol table.
+  template<int size, bool big_endian>
+  Symbol*
+  add_from_incrobj(Object* obj, const char* name,
+		   const char* ver, elfcpp::Sym<size, big_endian>* sym);
 
   // Define a special symbol based on an Output_data.  It is a
   // multiple definition error if this symbol is already defined.
@@ -1466,12 +1475,17 @@ class Symbol_table
   finalize(off_t off, off_t dynoff, size_t dyn_global_index, size_t dyncount,
 	   Stringpool* pool, unsigned int* plocal_symcount);
 
+  // Set the final file offset of the symbol table.
+  void
+  set_file_offset(off_t off)
+  { this->offset_ = off; }
+
   // Status code of Symbol_table::compute_final_value.
   enum Compute_final_value_status
   {
     // No error.
     CFVS_OK,
-    // Unspported symbol section.
+    // Unsupported symbol section.
     CFVS_UNSUPPORTED_SYMBOL_SECTION,
     // No output section.
     CFVS_NO_OUTPUT_SECTION
@@ -1559,6 +1573,33 @@ class Symbol_table
 
   typedef Unordered_map<Symbol_table_key, Symbol*, Symbol_table_hash,
 			Symbol_table_eq> Symbol_table_type;
+
+  // A map from symbol name (as a pointer into the namepool) to all
+  // the locations the symbols is (weakly) defined (and certain other
+  // conditions are met).  This map will be used later to detect
+  // possible One Definition Rule (ODR) violations.
+  struct Symbol_location
+  {
+    Object* object;         // Object where the symbol is defined.
+    unsigned int shndx;     // Section-in-object where the symbol is defined.
+    off_t offset;           // Offset-in-section where the symbol is defined.
+    bool operator==(const Symbol_location& that) const
+    {
+      return (this->object == that.object
+              && this->shndx == that.shndx
+              && this->offset == that.offset);
+    }
+  };
+
+  struct Symbol_location_hash
+  {
+    size_t operator()(const Symbol_location& loc) const
+    { return reinterpret_cast<uintptr_t>(loc.object) ^ loc.offset ^ loc.shndx; }
+  };
+
+  typedef Unordered_map<const char*,
+                        Unordered_set<Symbol_location, Symbol_location_hash> >
+  Odr_map;
 
   // Make FROM a forwarder symbol to TO.
   void
@@ -1707,6 +1748,12 @@ class Symbol_table
   do_allocate_commons_list(Layout*, Commons_section_type, Commons_type*,
 			   Mapfile*, Sort_commons_order);
 
+  // Returns all of the lines attached to LOC, not just the one the
+  // instruction actually came from.  This helps the ODR checker avoid
+  // false positives.
+  static std::vector<std::string>
+  linenos_from_loc(const Task* task, const Symbol_location& loc);
+
   // Implement detect_odr_violations.
   template<int size, bool big_endian>
   void
@@ -1759,33 +1806,6 @@ class Symbol_table
   // A map from symbols with COPY relocs to the dynamic objects where
   // they are defined.
   typedef Unordered_map<const Symbol*, Dynobj*> Copied_symbol_dynobjs;
-
-  // A map from symbol name (as a pointer into the namepool) to all
-  // the locations the symbols is (weakly) defined (and certain other
-  // conditions are met).  This map will be used later to detect
-  // possible One Definition Rule (ODR) violations.
-  struct Symbol_location
-  {
-    Object* object;         // Object where the symbol is defined.
-    unsigned int shndx;     // Section-in-object where the symbol is defined.
-    off_t offset;           // Offset-in-section where the symbol is defined.
-    bool operator==(const Symbol_location& that) const
-    {
-      return (this->object == that.object
-              && this->shndx == that.shndx
-              && this->offset == that.offset);
-    }
-  };
-
-  struct Symbol_location_hash
-  {
-    size_t operator()(const Symbol_location& loc) const
-    { return reinterpret_cast<uintptr_t>(loc.object) ^ loc.offset ^ loc.shndx; }
-  };
-
-  typedef Unordered_map<const char*,
-                        Unordered_set<Symbol_location, Symbol_location_hash> >
-  Odr_map;
 
   // We increment this every time we see a new undefined symbol, for
   // use in archive groups.

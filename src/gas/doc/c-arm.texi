@@ -1,5 +1,5 @@
 @c Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-@c 2006, 2007, 2008, 2009  Free Software Foundation, Inc.
+@c 2006, 2007, 2008, 2009, 2010, 2011  Free Software Foundation, Inc.
 @c This is part of the GAS manual.
 @c For copying conditions, see the file as.texinfo.
 
@@ -102,7 +102,10 @@ recognized:
 @code{arm1020e},
 @code{arm1022e},
 @code{arm1026ej-s},
+@code{fa606te} (Faraday FA606TE processor),
+@code{fa616te} (Faraday FA616TE processor),
 @code{fa626te} (Faraday FA626TE processor),
+@code{fmp626} (Faraday FMP626 processor),
 @code{fa726te} (Faraday FA726TE processor),
 @code{arm1136j-s},
 @code{arm1136jf-s},
@@ -149,7 +152,7 @@ been added, again in ascending alphabetical order.  For example,
 
 
 The following extensions are currently supported:
-@code{idiv}, (Integer Divide Extensions for v7-A architecture),
+@code{idiv}, (Integer Divide Extensions for v7-A and v7-R architectures),
 @code{iwmmxt},
 @code{iwmmxt2},
 @code{maverick},
@@ -408,9 +411,13 @@ affix.
 
 @cindex line comment character, ARM
 @cindex ARM line comment character
-The presence of a @samp{@@} on a line indicates the start of a comment
-that extends to the end of the current line.  If a @samp{#} appears as
-the first character of a line, the whole line is treated as a comment.
+The presence of a @samp{@@} anywhere on a line indicates the start of
+a comment that extends to the end of that line.
+
+If a @samp{#} appears as the first character of a line then the whole
+line is treated as a comment, but in this case the line could also be
+a logical line number directive (@pxref{Comments}) or a preprocessor
+control command (@pxref{Preprocessing}).
 
 @cindex line separator, ARM
 @cindex statement separator, ARM
@@ -478,6 +485,8 @@ The following relocations are supported:
 @code{TLSGD},
 @code{TLSLDM},
 @code{TLSLDO},
+@code{TLSDESC},
+@code{TLSCALL},
 @code{GOTTPOFF},
 @code{GOT_PREL}
 and
@@ -863,6 +872,12 @@ creates a symbol which is an alias for another symbol (possibly not yet
 defined).  This directive also has the added property in that it marks
 the aliased symbol as being a thumb function entry point, in the same
 way that the @code{.thumb_func} directive does.
+
+@cindex @code{.tlsdescseq} directive, ARM
+@item .tlsdescseq @var{tls-variable}
+This directive is used to annotate parts of an inlined TLS descriptor
+trampoline.  Normally the trampoline is provided by the linker, and
+this directive is not needed.
 
 @c UUUUUUUUUUUUUUUUUUUUUUUUUU
 

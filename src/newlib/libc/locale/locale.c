@@ -182,6 +182,7 @@ No supporting OS subroutines are required.
 #include "lmonetary.h"
 #include "lnumeric.h"
 #include "lctype.h"
+#include "timelocal.h"
 #include "../stdlib/local.h"
 
 #define _LC_LAST      7
@@ -235,7 +236,11 @@ char __default_locale[ENCODING_LEN + 1] = DEFAULT_LOCALE;
 static char current_categories[_LC_LAST][ENCODING_LEN + 1] = {
     "C",
     "C",
+#ifdef __CYGWIN__ /* Cygwin starts with LC_CTYPE set to "C.UTF-8". */
+    "C.UTF-8",
+#else
     "C",
+#endif
     "C",
     "C",
     "C",
@@ -255,13 +260,12 @@ static const char *__get_locale_env(struct _reent *, int);
 
 #endif /* _MB_CAPABLE */
 
-#if 0 /*def __CYGWIN__  TODO: temporarily(?) disable C == UTF-8 */
+#ifdef __CYGWIN__
 static char lc_ctype_charset[ENCODING_LEN + 1] = "UTF-8";
-static char lc_message_charset[ENCODING_LEN + 1] = "UTF-8";
 #else
 static char lc_ctype_charset[ENCODING_LEN + 1] = "ASCII";
-static char lc_message_charset[ENCODING_LEN + 1] = "ASCII";
 #endif
+static char lc_message_charset[ENCODING_LEN + 1] = "ASCII";
 static int lc_ctype_cjk_lang = 0;
 
 char *
@@ -432,7 +436,7 @@ currentlocale()
 #ifdef _MB_CAPABLE
 #ifdef __CYGWIN__
 extern void __set_charset_from_locale (const char *locale, char *charset);
-extern int __set_locale_from_locale_alias (const char *, char *);
+extern char *__set_locale_from_locale_alias (const char *, char *);
 extern int __collate_load_locale (const char *, void *, const char *);
 #endif /* __CYGWIN__ */
 
@@ -495,11 +499,7 @@ restart:
   if (!strcmp (locale, "POSIX"))
     strcpy (locale, "C");
   if (!strcmp (locale, "C"))				/* Default "C" locale */
-#if 0 /*def __CYGWIN__  TODO: temporarily(?) disable C == UTF-8 */
-    strcpy (charset, "UTF-8");
-#else
     strcpy (charset, "ASCII");
-#endif
   else if (locale[0] == 'C'
 	   && (locale[1] == '-'		/* Old newlib style */
 	       || locale[1] == '.'))	/* Extension for the C locale to allow
@@ -952,7 +952,7 @@ char *
 _DEFUN_VOID(__locale_msgcharset)
 {
 #ifdef __HAVE_LOCALE_INFO__
-  return __get_current_messages_locale ()->codeset;
+  return (char *) __get_current_messages_locale ()->codeset;
 #else
   return lc_message_charset;
 #endif
@@ -972,21 +972,21 @@ _DEFUN(_localeconv_r, (data),
   if (__nlocale_changed)
     {
       struct lc_numeric_T *n = __get_current_numeric_locale ();
-      lconv.decimal_point = n->decimal_point;
-      lconv.thousands_sep = n->thousands_sep;
-      lconv.grouping = n->grouping;
+      lconv.decimal_point = (char *) n->decimal_point;
+      lconv.thousands_sep = (char *) n->thousands_sep;
+      lconv.grouping = (char *) n->grouping;
       __nlocale_changed = 0;
     }
   if (__mlocale_changed)
     {
       struct lc_monetary_T *m = __get_current_monetary_locale ();
-      lconv.int_curr_symbol = m->int_curr_symbol;
-      lconv.currency_symbol = m->currency_symbol;
-      lconv.mon_decimal_point = m->mon_decimal_point;
-      lconv.mon_thousands_sep = m->mon_thousands_sep;
-      lconv.mon_grouping = m->mon_grouping;
-      lconv.positive_sign = m->positive_sign;
-      lconv.negative_sign = m->negative_sign;
+      lconv.int_curr_symbol = (char *) m->int_curr_symbol;
+      lconv.currency_symbol = (char *) m->currency_symbol;
+      lconv.mon_decimal_point = (char *) m->mon_decimal_point;
+      lconv.mon_thousands_sep = (char *) m->mon_thousands_sep;
+      lconv.mon_grouping = (char *) m->mon_grouping;
+      lconv.positive_sign = (char *) m->positive_sign;
+      lconv.negative_sign = (char *) m->negative_sign;
       lconv.int_frac_digits = m->int_frac_digits[0];
       lconv.frac_digits = m->frac_digits[0];
       lconv.p_cs_precedes = m->p_cs_precedes[0];

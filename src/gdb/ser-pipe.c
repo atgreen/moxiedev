@@ -1,5 +1,5 @@
 /* Serial interface for a pipe to a separate program
-   Copyright (C) 1999, 2000, 2001, 2007, 2008, 2009, 2010
+   Copyright (C) 1999, 2000, 2001, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions.
@@ -45,7 +45,7 @@ struct pipe_state
     int pid;
   };
 
-/* Open up a raw pipe */
+/* Open up a raw pipe.  */
 
 static int
 pipe_open (struct serial *scb, const char *name)
@@ -80,7 +80,7 @@ pipe_open (struct serial *scb, const char *name)
      on certain platforms.  */
   pid = vfork ();
   
-  /* Error. */
+  /* Error.  */
   if (pid == -1)
     {
       close (pdes[0]);
@@ -97,7 +97,7 @@ pipe_open (struct serial *scb, const char *name)
       err_pdes[0] = err_pdes[1] = -1;
     }
 
-  /* Child. */
+  /* Child.  */
   if (pid == 0)
     {
       /* We don't want ^c to kill the connection.  */
@@ -109,7 +109,7 @@ pipe_open (struct serial *scb, const char *name)
       signal (SIGINT, SIG_IGN);
 #endif
 
-      /* re-wire pdes[1] to stdin/stdout */
+      /* Re-wire pdes[1] to stdin/stdout.  */
       close (pdes[0]);
       if (pdes[1] != STDOUT_FILENO)
 	{
@@ -125,18 +125,18 @@ pipe_open (struct serial *scb, const char *name)
 	  close (err_pdes[1]);
 	}
 #if 0
-      /* close any stray FD's - FIXME - how? */
+      /* close any stray FD's - FIXME - how?  */
       /* POSIX.2 B.3.2.2 "popen() shall ensure that any streams
          from previous popen() calls that remain open in the 
-         parent process are closed in the new child process. */
+         parent process are closed in the new child process.  */
       for (old = pidlist; old; old = old->next)
-	close (fileno (old->fp));	/* don't allow a flush */
+	close (fileno (old->fp));	/* Don't allow a flush.  */
 #endif
       execl ("/bin/sh", "sh", "-c", name, (char *) 0);
       _exit (127);
     }
 
-  /* Parent. */
+  /* Parent.  */
   close (pdes[1]);
   if (err_pdes[1] != -1)
     close (err_pdes[1]);
@@ -214,6 +214,7 @@ _initialize_ser_pipe (void)
   ops->send_break = ser_base_send_break;
   ops->go_raw = ser_base_raw;
   ops->get_tty_state = ser_base_get_tty_state;
+  ops->copy_tty_state = ser_base_copy_tty_state;
   ops->set_tty_state = ser_base_set_tty_state;
   ops->print_tty_state = ser_base_print_tty_state;
   ops->noflush_set_tty_state = ser_base_noflush_set_tty_state;

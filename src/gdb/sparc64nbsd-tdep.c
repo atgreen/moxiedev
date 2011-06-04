@@ -1,6 +1,6 @@
 /* Target-dependent code for NetBSD/sparc64.
 
-   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Based on code contributed by Wasabi Systems, Inc.
 
@@ -230,6 +230,7 @@ sparc64nbsd_sigtramp_frame_sniffer (const struct frame_unwind *self,
 static const struct frame_unwind sparc64nbsd_sigcontext_frame_unwind =
 {
   SIGTRAMP_FRAME,
+  default_frame_unwind_stop_reason,
   sparc64nbsd_sigcontext_frame_this_id,
   sparc64nbsd_sigcontext_frame_prev_register,
   NULL,

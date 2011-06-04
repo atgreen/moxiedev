@@ -1,6 +1,6 @@
 /* Python interface to symbols.
 
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -167,10 +167,25 @@ sympy_is_variable (PyObject *self, void *closure)
 			      || class == LOC_OPTIMIZED_OUT));
 }
 
+/* Implementation of gdb.Symbol.is_valid (self) -> Boolean.
+   Returns True if this Symbol still exists in GDB.  */
+
+static PyObject *
+sympy_is_valid (PyObject *self, PyObject *args)
+{
+  struct symbol *symbol = NULL;
+
+  symbol = symbol_object_to_symbol (self);
+  if (symbol == NULL)
+    Py_RETURN_FALSE;
+
+  Py_RETURN_TRUE;
+}
+
 /* Given a symbol, and a symbol_object that has previously been
    allocated and initialized, populate the symbol_object with the
    struct symbol data.  Also, register the symbol_object life-cycle
-   with the life-cycle of the the object file associated with this
+   with the life-cycle of the object file associated with this
    symbol, if needed.  */
 static void
 set_symbol (symbol_object *obj, struct symbol *symbol)
@@ -236,6 +251,7 @@ sympy_dealloc (PyObject *obj)
    A tuple with 2 elements is always returned.  The first is the symbol
    object or None, the second is a boolean with the value of
    is_a_field_of_this (see comment in lookup_symbol_in_language).  */
+
 PyObject *
 gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
 {
@@ -259,8 +275,8 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
 
       TRY_CATCH (except, RETURN_MASK_ALL)
 	{
-	  selected_frame  = get_selected_frame (_("No frame selected."));
-	  block = block_for_pc (get_frame_address_in_block (selected_frame));
+	  selected_frame = get_selected_frame (_("No frame selected."));
+	  block = get_frame_block (selected_frame, NULL);
 	}
       GDB_PY_HANDLE_EXCEPTION (except);
     }
@@ -292,6 +308,39 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
   PyTuple_SET_ITEM (ret_tuple, 1, bool_obj);
 
   return ret_tuple;
+}
+
+/* Implementation of
+   gdb.lookup_global_symbol (name [, domain]) -> symbol or None.  */
+
+PyObject *
+gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
+{
+  int domain = VAR_DOMAIN;
+  const char *name;
+  static char *keywords[] = { "name", "domain", NULL };
+  struct symbol *symbol;
+  PyObject *sym_obj;
+
+  if (! PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &name,
+				     &domain))
+    return NULL;
+
+  symbol = lookup_symbol_global (name, NULL, domain);
+
+  if (symbol)
+    {
+      sym_obj = symbol_to_symbol_object (symbol);
+      if (!sym_obj)
+	return NULL;
+    }
+  else
+    {
+      sym_obj = Py_None;
+      Py_INCREF (Py_None);
+    }
+
+  return sym_obj;
 }
 
 /* This function is called when an objfile is about to be freed.
@@ -339,7 +388,8 @@ gdbpy_initialize_symbols (void)
   PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_BLOCK", LOC_BLOCK);
   PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_CONST_BYTES",
 			   LOC_CONST_BYTES);
-  PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_UNRESOLVED", LOC_UNRESOLVED);
+  PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_UNRESOLVED",
+			   LOC_UNRESOLVED);
   PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_OPTIMIZED_OUT",
 			   LOC_OPTIMIZED_OUT);
   PyModule_AddIntConstant (gdb_module, "SYMBOL_LOC_COMPUTED", LOC_COMPUTED);
@@ -367,7 +417,8 @@ static PyGetSetDef symbol_object_getset[] = {
   { "name", sympy_get_name, NULL,
     "Name of the symbol, as it appears in the source code.", NULL },
   { "linkage_name", sympy_get_linkage_name, NULL,
-    "Name of the symbol, as used by the linker (i.e., may be mangled).", NULL },
+    "Name of the symbol, as used by the linker (i.e., may be mangled).",
+    NULL },
   { "print_name", sympy_get_print_name, NULL,
     "Name of the symbol in a form suitable for output.\n\
 This is either name or linkage_name, depending on whether the user asked GDB\n\
@@ -382,6 +433,13 @@ to display demangled or mangled names.", NULL },
   { "is_variable", sympy_is_variable, NULL,
     "True if the symbol is a variable." },
   { NULL }  /* Sentinel */
+};
+
+static PyMethodDef symbol_object_methods[] = {
+  { "is_valid", sympy_is_valid, METH_NOARGS,
+    "is_valid () -> Boolean.\n\
+Return true if this symbol is valid, false if not." },
+  {NULL}  /* Sentinel */
 };
 
 PyTypeObject symbol_object_type = {
@@ -413,7 +471,7 @@ PyTypeObject symbol_object_type = {
   0,				  /*tp_weaklistoffset */
   0,				  /*tp_iter */
   0,				  /*tp_iternext */
-  0,				  /*tp_methods */
+  symbol_object_methods,	  /*tp_methods */
   0,				  /*tp_members */
   symbol_object_getset		  /*tp_getset */
 };

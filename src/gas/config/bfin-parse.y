@@ -1,5 +1,5 @@
 /* bfin-parse.y  ADI Blackfin parser
-   Copyright 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -336,11 +336,15 @@ check_macfuncs (Macfunc *aa, Opt_mode *opa,
       aa->s1.regno |= (ab->s1.regno & CODE_MASK);
     }
 
-  if (aa->w == ab->w  && aa->P != ab->P)
+  if (aa->w == ab->w && aa->P != ab->P)
+    return yyerror ("Destination Dreg sizes (full or half) must match");
+
+  if (aa->w && ab->w)
     {
-      return yyerror ("macfuncs must differ");
-      if (aa->w && (aa->dst.regno - ab->dst.regno != 1))
-	return yyerror ("Destination Dregs must differ by one");
+      if (aa->P && (aa->dst.regno - ab->dst.regno) != 1)
+	return yyerror ("Destination Dregs (full) must differ by one");
+      if (!aa->P && aa->dst.regno != ab->dst.regno)
+	return yyerror ("Destination Dregs (half) must match");
     }
 
   /* Make sure mod flags get ORed, too.  */
@@ -455,7 +459,7 @@ dsp32shiftimm in slot1 and P-reg Store in slot2 Not Supported");
 
 /* Vector Specific.  */
 %token BYTEOP16P BYTEOP16M
-%token BYTEOP1P BYTEOP2P BYTEOP2M BYTEOP3P
+%token BYTEOP1P BYTEOP2P BYTEOP3P
 %token BYTEUNPACK BYTEPACK
 %token PACK
 %token SAA
@@ -827,6 +831,8 @@ asm_1:
 	{
 	  if (!IS_DREG ($2) || !IS_DREG ($4))
 	    return yyerror ("Dregs expected");
+	  else if (REG_SAME ($2, $4))
+	    return yyerror ("Illegal dest register combination");
 	  else if (!valid_dreg_pair (&$9, $11))
 	    return yyerror ("Bad dreg pair");
 	  else if (!valid_dreg_pair (&$13, $15))
@@ -843,6 +849,8 @@ asm_1:
 	{
 	  if (!IS_DREG ($2) || !IS_DREG ($4))
 	    return yyerror ("Dregs expected");
+	  else if (REG_SAME ($2, $4))
+	    return yyerror ("Illegal dest register combination");
 	  else if (!valid_dreg_pair (&$9, $11))
 	    return yyerror ("Bad dreg pair");
 	  else if (!valid_dreg_pair (&$13, $15))
@@ -858,6 +866,8 @@ asm_1:
 	{
 	  if (!IS_DREG ($2) || !IS_DREG ($4))
 	    return yyerror ("Dregs expected");
+	  else if (REG_SAME ($2, $4))
+	    return yyerror ("Illegal dest register combination");
 	  else if (!valid_dreg_pair (&$8, $10))
 	    return yyerror ("Bad dreg pair");
 	  else
@@ -868,6 +878,9 @@ asm_1:
 	}
 	| LPAREN REG COMMA REG RPAREN ASSIGN SEARCH REG LPAREN searchmod RPAREN
 	{
+	  if (REG_SAME ($2, $4))
+	    return yyerror ("Illegal dest register combination");
+
 	  if (IS_DREG ($2) && IS_DREG ($4) && IS_DREG ($8))
 	    {
 	      notethat ("dsp32alu: (dregs , dregs ) = SEARCH dregs (searchmod)\n");
@@ -879,6 +892,9 @@ asm_1:
 	| REG ASSIGN A_ONE_DOT_L PLUS A_ONE_DOT_H COMMA
 	  REG ASSIGN A_ZERO_DOT_L PLUS A_ZERO_DOT_H
 	{
+	  if (REG_SAME ($1, $7))
+	    return yyerror ("Illegal dest register combination");
+
 	  if (IS_DREG ($1) && IS_DREG ($7))
 	    {
 	      notethat ("dsp32alu: dregs = A1.l + A1.h, dregs = A0.l + A0.h  \n");
@@ -891,6 +907,9 @@ asm_1:
 
 	| REG ASSIGN REG_A PLUS REG_A COMMA REG ASSIGN REG_A MINUS REG_A amod1
 	{
+	  if (REG_SAME ($1, $7))
+	    return yyerror ("Resource conflict in dest reg");
+
 	  if (IS_DREG ($1) && IS_DREG ($7) && !REG_SAME ($3, $5)
 	      && IS_A1 ($9) && !IS_A1 ($11))
 	    {
@@ -934,6 +953,8 @@ asm_1:
 	  if (!IS_DREG ($1) || !IS_DREG ($3) || !IS_DREG ($5) || !IS_DREG ($7))
 	    return yyerror ("Dregs expected");
 
+	  if (REG_SAME ($1, $7))
+	    return yyerror ("Resource conflict in dest reg");
 
 	  if ($4.r0 == 1 && $10.r0 == 2)
 	    {
@@ -1050,22 +1071,6 @@ asm_1:
 	    {
 	      notethat ("dsp32alu: dregs = BYTEOP2P (dregs_pair , dregs_pair ) (rnd_op)\n");
 	      $$ = DSP32ALU (22, $13.r0, 0, &$1, &$5, &$9, $13.s0, $13.x0, $13.aop);
-	    }
-	}
-
-	| REG ASSIGN BYTEOP2M LPAREN REG COLON expr COMMA REG COLON expr RPAREN
-	  rnd_op
-	{
-	  if (!IS_DREG ($1))
-	    return yyerror ("Dregs expected");
-	  else if (!valid_dreg_pair (&$5, $7))
-	    return yyerror ("Bad dreg pair");
-	  else if (!valid_dreg_pair (&$9, $11))
-	    return yyerror ("Bad dreg pair");
-	  else
-	    {
-	      notethat ("dsp32alu: dregs = BYTEOP2M (dregs_pair , dregs_pair ) (rnd_op)\n");
-	      $$ = DSP32ALU (22, $13.r0, 0, &$1, &$5, &$9, $13.s0, $13.x0, $13.aop + 2);
 	    }
 	}
 
@@ -2404,6 +2409,9 @@ asm_1:
 
 	| BITMUX LPAREN REG COMMA REG COMMA REG_A RPAREN asr_asl
 	{
+	  if (REG_SAME ($3, $5))
+	    return yyerror ("Illegal source register combination");
+
 	  if (IS_DREG ($3) && IS_DREG ($5) && !IS_A1 ($7))
 	    {
 	      notethat ("dsp32shift: BITMUX (dregs , dregs , A0) (ASR)\n");
@@ -2697,6 +2705,9 @@ asm_1:
 	{
 	  if (IS_PREG ($3))
 	    {
+	      if ($3.regno == REG_SP || $3.regno == REG_FP)
+		return yyerror ("Bad register for TESTSET");
+
 	      notethat ("ProgCtrl: TESTSET (pregs )\n");
 	      $$ = PROGCTRL (11, $3.regno & CODE_MASK);
 	    }

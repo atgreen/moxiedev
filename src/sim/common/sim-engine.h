@@ -1,5 +1,5 @@
 /* Generic simulator halt/resume.
-   Copyright (C) 1997, 1998, 2007, 2008, 2009, 2010
+   Copyright (C) 1997, 1998, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Cygnus Support.
 
@@ -73,7 +73,7 @@ extern void sim_engine_halt
 if ((LAST_CPU) != NULL) CIA_SET (LAST_CPU, CIA)
 #endif
 
-/* NB: If a port uses the SIM_CPU_EXCEPTION_* hooks, the default 
+/* NB: If a port uses the SIM_CPU_EXCEPTION_* hooks, the default
    SIM_ENGINE_HALT_HOOK and SIM_ENGINE_RESUME_HOOK must not be used.
    They conflict in that the PC set by the HALT_HOOK may overwrite the
    proper one, as intended to be saved by the EXCEPTION_TRIGGER

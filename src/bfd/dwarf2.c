@@ -278,7 +278,7 @@ struct attr_abbrev
 /* Map of uncompressed DWARF debug section name to compressed one.  It
    is terminated by NULL uncompressed_name.  */
 
-struct dwarf_debug_section dwarf_debug_sections[] =
+const struct dwarf_debug_section dwarf_debug_sections[] =
 {
   { ".debug_abbrev",		".zdebug_abbrev" },
   { ".debug_aranges",		".zdebug_aranges" },
@@ -2148,7 +2148,7 @@ scan_unit_for_symbols (struct comp_unit *unit)
 	{
 	  info_ptr = read_attribute (&attr, &abbrev->attrs[i], unit, info_ptr);
 	  if (info_ptr == NULL)
-	    return FALSE;
+	    goto fail;
 
 	  if (func)
 	    {
@@ -2164,6 +2164,7 @@ scan_unit_for_symbols (struct comp_unit *unit)
 		  break;
 
 		case DW_AT_abstract_origin:
+		case DW_AT_specification:
 		  func->name = find_abstract_instance_name (unit, &attr);
 		  break;
 

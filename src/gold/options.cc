@@ -1,6 +1,6 @@
 // options.c -- handle command line options for gold
 
-// Copyright 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -50,7 +50,7 @@ namespace options
 {
 
 // This flag is TRUE if we should register the command-line options as they
-// are constructed.  It is set after contruction of the options within
+// are constructed.  It is set after construction of the options within
 // class Position_dependent_options.
 static bool ready_to_register = false;
 
@@ -59,7 +59,7 @@ static std::vector<const One_option*> registered_options;
 
 // These are set up at the same time -- the variables that accept one
 // dash, two, or require -z.  A single variable may be in more than
-// one of thes data structures.
+// one of these data structures.
 typedef Unordered_map<std::string, One_option*> Option_map;
 static Option_map* long_options = NULL;
 static One_option* short_options[128];
@@ -542,7 +542,7 @@ General_options::parse_end_lib(const char*, const char*,
 }
 
 // The function add_excluded_libs() in ld/ldlang.c of GNU ld breaks up a list
-// of names seperated by commas or colons and puts them in a linked list.
+// of names separated by commas or colons and puts them in a linked list.
 // We implement the same parsing of names here but store names in an unordered
 // map to speed up searching of names.
 
@@ -1214,23 +1214,24 @@ Search_directory::add_sysroot(const char* sysroot,
 
 // Add a file to the list.
 
-void
-Input_arguments::add_file(const Input_file_argument& file)
+Input_argument&
+Input_arguments::add_file(Input_file_argument& file)
 {
+  file.set_arg_serial(++this->file_count_);
   if (this->in_group_)
     {
       gold_assert(!this->input_argument_list_.empty());
       gold_assert(this->input_argument_list_.back().is_group());
-      this->input_argument_list_.back().group()->add_file(file);
+      return this->input_argument_list_.back().group()->add_file(file);
     }
-  else if (this->in_lib_)
+  if (this->in_lib_)
     {
       gold_assert(!this->input_argument_list_.empty());
       gold_assert(this->input_argument_list_.back().is_lib());
-      this->input_argument_list_.back().lib()->add_file(file);
+      return this->input_argument_list_.back().lib()->add_file(file);
     }
-  else
-    this->input_argument_list_.push_back(Input_argument(file));
+  this->input_argument_list_.push_back(Input_argument(file));
+  return this->input_argument_list_.back();
 }
 
 // Start a group.

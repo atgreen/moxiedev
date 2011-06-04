@@ -1,6 +1,6 @@
 /* Target-dependent code for the ia64.
 
-   Copyright (C) 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -195,13 +195,58 @@
 #define IA64_NAT32_REGNUM	(IA64_NAT0_REGNUM + 32)
 #define IA64_NAT127_REGNUM	(IA64_NAT0_REGNUM + 127)
 
+struct frame_info;
+struct regcache;
+
+/* A struction containing pointers to all the target-dependent operations
+   performed to setup an inferior function call. */
+
+struct ia64_infcall_ops
+{
+  /* Allocate a new register stack frame starting after the output
+     region of the current frame.  The new frame will contain SOF
+     registers, all in the output region.  This is one way of protecting
+     the stacked registers of the current frame.
+
+     Should do nothing if this operation is not permitted by the OS.  */
+  void (*allocate_new_rse_frame) (struct regcache *regcache, ULONGEST bsp,
+				  int sof);
+
+  /* Store the argument stored in BUF into the appropriate location
+     given the BSP and the SLOTNUM.  */
+  void (*store_argument_in_slot) (struct regcache *regcache, CORE_ADDR bsp,
+                                  int slotnum, gdb_byte *buf);
+
+  /* For targets where we cannot call the function directly, store
+     the address of the function we want to call at the location
+     expected by the calling sequence.  */
+  void (*set_function_addr) (struct regcache *regcache, CORE_ADDR func_addr);
+};
+
 struct gdbarch_tdep
 {
   CORE_ADDR (*sigcontext_register_address) (struct gdbarch *, CORE_ADDR, int);
   int (*pc_in_sigtramp) (CORE_ADDR);
 
+  /* Return the total size of THIS_FRAME's register frame.
+     CFM is THIS_FRAME's cfm register value.
+
+     Normally, the size of the register frame is always obtained by
+     extracting the lowest 7 bits ("cfm & 0x7f").  */
+  int (*size_of_register_frame) (struct frame_info *this_frame, ULONGEST cfm);
+
+  /* Determine the function address FADDR belongs to a shared library.
+     If it does, then return the associated global pointer.  If no shared
+     library was found to contain that function, then return zero.
+
+     This pointer may be NULL.  */
+  CORE_ADDR (*find_global_pointer_from_solib) (struct gdbarch *gdbarch,
+					       CORE_ADDR faddr);
+
   /* ISA-specific data types.  */
   struct type *ia64_ext_type;
+
+  struct ia64_infcall_ops infcall_ops;
 };
 
 extern void ia64_write_pc (struct regcache *, CORE_ADDR);

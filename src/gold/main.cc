@@ -214,7 +214,7 @@ main(int argc, char** argv)
   // The symbol table.  We're going to guess here how many symbols
   // we're going to see based on the number of input files.  Even when
   // this is off, it means at worst we don't quite optimize hashtable
-  // resizing as well as we could have (perhap using more memory).
+  // resizing as well as we could have (perhaps using more memory).
   Symbol_table symtab(command_line.number_of_input_files() * 1024,
                       command_line.version_script());
 
@@ -269,6 +269,7 @@ main(int argc, char** argv)
 	      program_name, static_cast<long long>(layout.output_file_size()));
       symtab.print_stats();
       layout.print_stats();
+      Free_list::print_stats();
     }
 
   // Issue defined symbol report.

@@ -1,6 +1,6 @@
 /* <proc_service.h> implementation.
 
-   Copyright (C) 1999, 2000, 2002, 2007, 2008, 2009, 2010
+   Copyright (C) 1999, 2000, 2002, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -189,6 +189,7 @@ ps_plog (const char *fmt, ...)
 
   va_start (args, fmt);
   vfprintf_filtered (gdb_stderr, fmt, args);
+  va_end (args);
 }
 
 /* Search for the symbol named NAME within the object named OBJ within

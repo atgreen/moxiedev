@@ -1,6 +1,6 @@
 /* ELF executable support for BFD.
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Written by Fred Fish @ Cygnus Support, from information published
@@ -198,6 +198,7 @@ elf_swap_symbol_in (bfd *abfd,
     }
   else if (dst->st_shndx >= (SHN_LORESERVE & 0xffff))
     dst->st_shndx += SHN_LORESERVE - (SHN_LORESERVE & 0xffff);
+  dst->st_target_internal = 0;
   return TRUE;
 }
 
@@ -594,26 +595,27 @@ elf_object_p (bfd *abfd)
 
       /* This is the generic ELF target.  Let it match any ELF target
 	 for which we do not have a specific backend.  */
-      for (target_ptr = bfd_target_vector; *target_ptr != NULL; target_ptr++)
-	{
-	  const struct elf_backend_data *back;
+      if (abfd->target_defaulted)
+	for (target_ptr = bfd_target_vector; *target_ptr != NULL; target_ptr++)
+	  {
+	    const struct elf_backend_data *back;
 
-	  if ((*target_ptr)->flavour != bfd_target_elf_flavour)
-	    continue;
-	  back = xvec_get_elf_backend_data (*target_ptr);
-	  if (back->s->arch_size != ARCH_SIZE)
-	    continue;
-	  if (back->elf_machine_code == i_ehdrp->e_machine
-	      || (back->elf_machine_alt1 != 0
-		  && back->elf_machine_alt1 == i_ehdrp->e_machine)
-	      || (back->elf_machine_alt2 != 0
-		  && back->elf_machine_alt2 == i_ehdrp->e_machine))
-	    {
-	      /* target_ptr is an ELF backend which matches this
-		 object file, so reject the generic ELF target.  */
-	      goto got_wrong_format_error;
-	    }
-	}
+	    if ((*target_ptr)->flavour != bfd_target_elf_flavour)
+	      continue;
+	    back = xvec_get_elf_backend_data (*target_ptr);
+	    if (back->s->arch_size != ARCH_SIZE)
+	      continue;
+	    if (back->elf_machine_code == i_ehdrp->e_machine
+		|| (back->elf_machine_alt1 != 0
+		    && back->elf_machine_alt1 == i_ehdrp->e_machine)
+		|| (back->elf_machine_alt2 != 0
+		    && back->elf_machine_alt2 == i_ehdrp->e_machine))
+	      {
+		/* target_ptr is an ELF backend which matches this
+		   object file, so reject the generic ELF target.  */
+		goto got_wrong_format_error;
+	      }
+	  }
     }
 
   if (i_ehdrp->e_type == ET_EXEC)
@@ -1281,6 +1283,20 @@ elf_slurp_symbol_table (bfd *abfd, asymbol **symptrs, bfd_boolean dynamic)
 	  else if (isym->st_shndx == SHN_COMMON)
 	    {
 	      sym->symbol.section = bfd_com_section_ptr;
+	      if ((abfd->flags & BFD_PLUGIN) != 0)
+		{
+		  asection *xc = bfd_get_section_by_name (abfd, "COMMON");
+
+		  if (xc == NULL)
+		    {
+		      flagword flags = (SEC_ALLOC | SEC_IS_COMMON | SEC_KEEP
+					| SEC_EXCLUDE);
+		      xc = bfd_make_section_with_flags (abfd, "COMMON", flags);
+		      if (xc == NULL)
+			goto error_return;
+		    }
+		  sym->symbol.section = xc;
+		}
 	      /* Elf puts the alignment into the `value' field, and
 		 the size into the `size' field.  BFD wants to see the
 		 size in the value field, and doesn't care (at the
@@ -1854,6 +1870,22 @@ NAME(_bfd_elf,bfd_from_remote_memory)
   if (loadbasep)
     *loadbasep = loadbase;
   return nbfd;
+}
+
+/* Function for ELF_R_INFO.  */
+
+bfd_vma
+NAME(elf,r_info) (bfd_vma sym, bfd_vma type)
+{
+  return ELF_R_INFO (sym, type);
+}
+
+/* Function for ELF_R_SYM.  */
+
+bfd_vma
+NAME(elf,r_sym) (bfd_vma r_info)
+{
+  return ELF_R_SYM (r_info);
 }
 
 #include "elfcore.h"

@@ -1,5 +1,5 @@
 /* Simulator memory option handling.
-   Copyright (C) 1996-1999, 2007, 2008, 2009, 2010
+   Copyright (C) 1996-1999, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Cygnus Support.
 
@@ -67,7 +67,8 @@ enum {
   OPTION_MEMORY_ALIAS,
   OPTION_MEMORY_CLEAR,
   OPTION_MEMORY_FILL,
-  OPTION_MEMORY_MAPFILE
+  OPTION_MEMORY_MAPFILE,
+  OPTION_MAP_INFO
 };
 
 static DECLARE_OPTION_HANDLER (memory_option_handler);
@@ -113,6 +114,9 @@ static const OPTION memory_options[] =
   { {"info-memory", no_argument, NULL, OPTION_MEMORY_INFO },
       '\0', NULL, NULL,
       memory_option_handler },
+  { {"map-info", no_argument, NULL, OPTION_MAP_INFO },
+      '\0', NULL, "List mapped regions",
+      memory_option_handler },
 
   { {NULL, no_argument, NULL, 0}, '\0', NULL, NULL, NULL }
 };
@@ -150,7 +154,27 @@ do_memopt_add (SIM_DESC sd,
       /* Allocate new well-aligned buffer, just as sim_core_attach(). */
       void *aligned_buffer;
       int padding = (addr % sizeof (unsigned64));
-      unsigned long bytes = (modulo == 0 ? nr_bytes : modulo) + padding;
+      unsigned long bytes;
+
+#ifdef HAVE_MMAP
+      struct stat s;
+
+      if (mmap_next_fd >= 0)
+	{
+	  /* Check that given file is big enough. */
+	  int rc = fstat (mmap_next_fd, &s);
+
+	  if (rc < 0)
+	    sim_io_error (sd, "Error, unable to stat file: %s\n",
+			  strerror (errno));
+
+	  /* Autosize the mapping to the file length.  */
+	  if (nr_bytes == 0)
+	    nr_bytes = s.st_size;
+	}
+#endif
+
+      bytes = (modulo == 0 ? nr_bytes : modulo) + padding;
 
       free_buffer = NULL;
       free_length = bytes;
@@ -159,14 +183,9 @@ do_memopt_add (SIM_DESC sd,
       /* Memory map or malloc(). */
       if (mmap_next_fd >= 0)
 	{
-	  /* Check that given file is big enough. */
-	  struct stat s;
-	  int rc;
-
 	  /* Some kernels will SIGBUS the application if mmap'd file
-	     is not large enough.  */ 
-	  rc = fstat (mmap_next_fd, &s);
-	  if (rc < 0 || s.st_size < bytes)
+	     is not large enough.  */
+	  if (s.st_size < bytes)
 	    {
 	      sim_io_error (sd,
 			    "Error, cannot confirm that mmap file is large enough "
@@ -177,12 +196,12 @@ do_memopt_add (SIM_DESC sd,
 	  if (free_buffer == 0 || free_buffer == (char*)-1) /* MAP_FAILED */
 	    {
 	      sim_io_error (sd, "Error, cannot mmap file (%s).\n",
-			    strerror(errno));
+			    strerror (errno));
 	    }
 	}
-#endif 
+#endif
 
-      /* Need heap allocation? */ 
+      /* Need heap allocation? */
       if (free_buffer == NULL)
 	{
 	  /* If filling with non-zero value, do not use clearing allocator. */
@@ -264,7 +283,7 @@ do_memopt_delete (SIM_DESC sd,
 	munmap ((*entry)->buffer, (*entry)->munmap_length);
       else
 #endif
-	zfree ((*entry)->buffer);
+	free ((*entry)->buffer);
     }
 
   /* delete it and its aliases */
@@ -275,7 +294,7 @@ do_memopt_delete (SIM_DESC sd,
       sim_memopt *dead = alias;
       alias = alias->alias;
       sim_core_detach (sd, NULL, dead->level, dead->space, dead->addr);
-      zfree (dead);
+      free (dead);
     }
   return SIM_RC_OK;
 }
@@ -366,7 +385,7 @@ memory_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt,
 	  parse_addr (arg, &level, &space, &addr);
 	  return do_memopt_delete (sd, level, space, addr);
 	}
-    
+
     case OPTION_MEMORY_REGION:
       {
 	char *chp = arg;
@@ -379,10 +398,15 @@ memory_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt,
 	chp = parse_addr (chp, &level, &space, &addr);
 	if (*chp != ',')
 	  {
-	    sim_io_eprintf (sd, "Missing size for memory-region\n");
-	    return SIM_RC_FAIL;
+	    /* let the file autosize */
+	    if (mmap_next_fd == -1)
+	      {
+		sim_io_eprintf (sd, "Missing size for memory-region\n");
+		return SIM_RC_FAIL;
+	      }
 	  }
-	chp = parse_size (chp + 1, &nr_bytes, &modulo);
+	else
+	  chp = parse_size (chp + 1, &nr_bytes, &modulo);
 	/* old style */
 	if (*chp == ',')
 	  modulo = strtoul (chp + 1, &chp, 0);
@@ -476,7 +500,7 @@ memory_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt,
 	if (mmap_next_fd < 0)
 	  {
 	    sim_io_eprintf (sd, "Cannot open file `%s': %s\n",
-			    arg, strerror(errno));
+			    arg, strerror (errno));
 	    return SIM_RC_FAIL;
 	  }
 
@@ -516,6 +540,45 @@ memory_option_handler (SIM_DESC sd, sim_cpu *cpu, int opt,
 	      }
 	    sim_io_printf (sd, "\n");
 	  }
+	return SIM_RC_OK;
+	break;
+      }
+
+    case OPTION_MAP_INFO:
+      {
+	sim_core *memory = STATE_CORE (sd);
+	unsigned nr_map;
+
+	for (nr_map = 0; nr_map < nr_maps; ++nr_map)
+	  {
+	    sim_core_map *map = &memory->common.map[nr_map];
+	    sim_core_mapping *mapping = map->first;
+
+	    if (!mapping)
+	      continue;
+
+	    sim_io_printf (sd, "%s maps:\n", map_to_str (nr_map));
+	    do
+	      {
+		unsigned modulo;
+
+		sim_io_printf (sd, " map ");
+		if (mapping->space != 0)
+		  sim_io_printf (sd, "0x%x:", mapping->space);
+		sim_io_printf (sd, "0x%08lx", (long) mapping->base);
+		if (mapping->level != 0)
+		  sim_io_printf (sd, "@0x%x", mapping->level);
+		sim_io_printf (sd, ",0x%lx", (long) mapping->nr_bytes);
+		modulo = mapping->mask + 1;
+		if (modulo != 0)
+		  sim_io_printf (sd, "%%0x%x", modulo);
+		sim_io_printf (sd, "\n");
+
+		mapping = mapping->next;
+	      }
+	    while (mapping);
+	  }
+
 	return SIM_RC_OK;
 	break;
       }
@@ -567,7 +630,7 @@ sim_memory_uninstall (SIM_DESC sd)
 	    munmap ((*entry)->buffer, (*entry)->munmap_length);
 	  else
 #endif
-	    zfree ((*entry)->buffer);
+	    free ((*entry)->buffer);
 	}
 
       /* delete it and its aliases */
@@ -581,7 +644,7 @@ sim_memory_uninstall (SIM_DESC sd)
 	  sim_memopt *dead = alias;
 	  alias = alias->alias;
 	  sim_core_detach (sd, NULL, dead->level, dead->space, dead->addr);
-	  zfree (dead);
+	  free (dead);
 	}
     }
 }

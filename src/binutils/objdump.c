@@ -1,6 +1,6 @@
 /* objdump.c -- dump information about an object file.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
@@ -65,6 +65,7 @@
 #include "filenames.h"
 #include "debug.h"
 #include "budbg.h"
+#include "objdump.h"
 
 #ifdef HAVE_MMAP
 #include <sys/mman.h>
@@ -93,6 +94,7 @@ static int dump_reloc_info;		/* -r */
 static int dump_dynamic_reloc_info;	/* -R */
 static int dump_ar_hdrs;		/* -a */
 static int dump_private_headers;	/* -p */
+static char *dump_private_options;	/* -P */
 static int prefix_addresses;		/* --prefix-addresses */
 static int with_line_numbers;		/* -l */
 static bfd_boolean with_source_code;	/* -S */
@@ -110,6 +112,7 @@ static bfd_vma start_address = (bfd_vma) -1; /* --start-address */
 static bfd_vma stop_address = (bfd_vma) -1;  /* --stop-address */
 static int dump_debugging;		/* --debugging */
 static int dump_debugging_tags;		/* --debugging-tags */
+static int suppress_bfd_header;
 static int dump_special_syms = 0;	/* --special-syms */
 static bfd_vma adjust_section_vma = 0;	/* --adjust-vma */
 static int file_start_context = 0;      /* --file-start-context */
@@ -184,6 +187,13 @@ static char *strtab;
 static bfd_size_type stabstr_size;
 
 static bfd_boolean is_relocatable = FALSE;
+
+/* Handlers for -P/--private.  */
+static const struct objdump_private_desc * const objdump_private_vectors[] =
+  {
+    OBJDUMP_PRIVATE_VECTORS
+    NULL
+  };
 
 static void
 usage (FILE *stream, int status)
@@ -195,6 +205,7 @@ usage (FILE *stream, int status)
   -a, --archive-headers    Display archive header information\n\
   -f, --file-headers       Display the contents of the overall file header\n\
   -p, --private-headers    Display object format specific file header contents\n\
+  -P, --private=OPT,OPT... Display object format specific contents\n\
   -h, --[section-]headers  Display the contents of the section headers\n\
   -x, --all-headers        Display the contents of all headers\n\
   -d, --disassemble        Display assembler contents of executable sections\n\
@@ -207,7 +218,7 @@ usage (FILE *stream, int status)
   -W[lLiaprmfFsoRt] or\n\
   --dwarf[=rawline,=decodedline,=info,=abbrev,=pubnames,=aranges,=macro,=frames,\n\
           =frames-interp,=str,=loc,=Ranges,=pubtypes,\n\
-          =trace_info,=trace_abbrev,=trace_aranges]\n\
+          =gdb_index,=trace_info,=trace_abbrev,=trace_aranges]\n\
                            Display DWARF info in the file\n\
   -t, --syms               Display the contents of the symbol table(s)\n\
   -T, --dynamic-syms       Display the contents of the dynamic symbol table\n\
@@ -220,6 +231,8 @@ usage (FILE *stream, int status)
 "));
   if (status != 2)
     {
+      const struct objdump_private_desc * const *desc;
+
       fprintf (stream, _("\n The following switches are optional:\n"));
       fprintf (stream, _("\
   -b, --target=BFDNAME           Specify the target object format as BFDNAME\n\
@@ -242,16 +255,27 @@ usage (FILE *stream, int status)
       --stop-address=ADDR        Only process data whose address is <= ADDR\n\
       --prefix-addresses         Print complete address alongside disassembly\n\
       --[no-]show-raw-insn       Display hex alongside symbolic disassembly\n\
-      --insn-width=WIDTH         Display WIDTH bytes on a signle line for -d\n\
+      --insn-width=WIDTH         Display WIDTH bytes on a single line for -d\n\
       --adjust-vma=OFFSET        Add OFFSET to all displayed section addresses\n\
       --special-syms             Include special symbols in symbol dumps\n\
       --prefix=PREFIX            Add PREFIX to absolute paths for -S\n\
-      --prefix-strip=LEVEL       Strip initial directory names for -S\n\
-\n"));
+      --prefix-strip=LEVEL       Strip initial directory names for -S\n"));
+      fprintf (stream, _("\
+      --dwarf-depth=N        Do not display DIEs at depth N or greater\n\
+      --dwarf-start=N        Display DIEs starting with N, at the same depth\n\
+                             or deeper\n\n"));
       list_supported_targets (program_name, stream);
       list_supported_architectures (program_name, stream);
 
       disassembler_usage (stream);
+
+      if (objdump_private_vectors[0] != NULL)
+        {
+          fprintf (stream,
+                   _("\nOptions supported for -P/--private switch:\n"));
+          for (desc = objdump_private_vectors; *desc != NULL; desc++)
+            (*desc)->help (stream);
+        }
     }
   if (REPORT_BUGS_TO[0] && status == 0)
     fprintf (stream, _("Report bugs to %s.\n"), REPORT_BUGS_TO);
@@ -268,7 +292,9 @@ enum option_values
     OPTION_PREFIX,
     OPTION_PREFIX_STRIP,
     OPTION_INSN_WIDTH,
-    OPTION_ADJUST_VMA
+    OPTION_ADJUST_VMA,
+    OPTION_DWARF_DEPTH,
+    OPTION_DWARF_START
   };
 
 static struct option long_options[]=
@@ -276,6 +302,7 @@ static struct option long_options[]=
   {"adjust-vma", required_argument, NULL, OPTION_ADJUST_VMA},
   {"all-headers", no_argument, NULL, 'x'},
   {"private-headers", no_argument, NULL, 'p'},
+  {"private", required_argument, NULL, 'P'},
   {"architecture", required_argument, NULL, 'm'},
   {"archive-headers", no_argument, NULL, 'a'},
   {"debugging", no_argument, NULL, 'g'},
@@ -316,6 +343,8 @@ static struct option long_options[]=
   {"prefix", required_argument, NULL, OPTION_PREFIX},
   {"prefix-strip", required_argument, NULL, OPTION_PREFIX_STRIP},
   {"insn-width", required_argument, NULL, OPTION_INSN_WIDTH},
+  {"dwarf-depth",      required_argument, 0, OPTION_DWARF_DEPTH},
+  {"dwarf-start",      required_argument, 0, OPTION_DWARF_START},
   {0, no_argument, 0, 0}
 };
 
@@ -1348,7 +1377,7 @@ show_line (bfd *abfd, asection *section, bfd_vma addr_offset)
       unsigned l;
 
       for (pp = &print_files; *pp != NULL; pp = &(*pp)->next)
-	if (strcmp ((*pp)->filename, filename) == 0)
+	if (filename_cmp ((*pp)->filename, filename) == 0)
 	  break;
       p = *pp;
 
@@ -2587,6 +2616,57 @@ dump_bfd_private_header (bfd *abfd)
   bfd_print_private_bfd_data (abfd, stdout);
 }
 
+static void
+dump_target_specific (bfd *abfd)
+{
+  const struct objdump_private_desc * const *desc;
+  struct objdump_private_option *opt;
+  char *e, *b;
+
+  /* Find the desc.  */
+  for (desc = objdump_private_vectors; *desc != NULL; desc++)
+    if ((*desc)->filter (abfd))
+      break;
+
+  if (desc == NULL)
+    {
+      non_fatal (_("option -P/--private not supported by this file"));
+      return;
+    }
+
+  /* Clear all options.  */
+  for (opt = (*desc)->options; opt->name; opt++)
+    opt->selected = FALSE;
+
+  /* Decode options.  */
+  b = dump_private_options;
+  do
+    {
+      e = strchr (b, ',');
+
+      if (e)
+        *e = 0;
+
+      for (opt = (*desc)->options; opt->name; opt++)
+        if (strcmp (opt->name, b) == 0)
+          {
+            opt->selected = TRUE;
+            break;
+          }
+      if (opt->name == NULL)
+        non_fatal (_("target specific dump '%s' not supported"), b);
+
+      if (e)
+        {
+          *e = ',';
+          b = e + 1;
+        }
+    }
+  while (e != NULL);
+
+  /* Dump.  */
+  (*desc)->dump (abfd);
+}
 
 /* Display a section in hexadecimal format with associated characters.
    Each line prefixed by the zero padded address.  */
@@ -2829,6 +2909,7 @@ dump_reloc_set (bfd *abfd, asection *sec, arelent **relpp, long relcount)
       unsigned int linenumber;
       const char *sym_name;
       const char *section_name;
+      bfd_vma addend2 = 0;
 
       if (start_address != (bfd_vma) -1
 	  && q->address < start_address)
@@ -2856,7 +2937,7 @@ dump_reloc_set (bfd *abfd, asection *sec, arelent **relpp, long relcount)
 	      && (linenumber != last_line
 		  || (filename != NULL
 		      && last_filename != NULL
-		      && strcmp (filename, last_filename) != 0)))
+		      && filename_cmp (filename, last_filename) != 0)))
 	    {
 	      printf ("%s:%u\n", filename == NULL ? "???" : filename, linenumber);
 	      last_line = linenumber;
@@ -2884,7 +2965,37 @@ dump_reloc_set (bfd *abfd, asection *sec, arelent **relpp, long relcount)
       if (q->howto == NULL)
 	printf (" *unknown*         ");
       else if (q->howto->name)
-	printf (" %-16s  ", q->howto->name);
+	{
+	  const char *name = q->howto->name;
+
+	  /* R_SPARC_OLO10 relocations contain two addends.
+	     But because 'arelent' lacks enough storage to
+	     store them both, the 64-bit ELF Sparc backend
+	     records this as two relocations.  One R_SPARC_LO10
+	     and one R_SPARC_13, both pointing to the same
+	     address.  This is merely so that we have some
+	     place to store both addend fields.
+
+	     Undo this transformation, otherwise the output
+	     will be confusing.  */
+	  if (abfd->xvec->flavour == bfd_target_elf_flavour
+	      && elf_tdata(abfd)->elf_header->e_machine == EM_SPARCV9
+	      && relcount > 1
+	      && !strcmp (q->howto->name, "R_SPARC_LO10"))
+	    {
+	      arelent *q2 = *(p + 1);
+	      if (q2 != NULL
+		  && q2->howto
+		  && q->address == q2->address
+		  && !strcmp (q2->howto->name, "R_SPARC_13"))
+		{
+		  name = "R_SPARC_OLO10";
+		  addend2 = q2->addend;
+		  p++;
+		}
+	    }
+	  printf (" %-16s  ", name);
+	}
       else
 	printf (" %-16d  ", q->howto->type);
 
@@ -2904,9 +3015,19 @@ dump_reloc_set (bfd *abfd, asection *sec, arelent **relpp, long relcount)
 	  printf ("+0x");
 	  bfd_printf_vma (abfd, q->addend);
 	}
+      if (addend2)
+	{
+	  printf ("+0x");
+	  bfd_printf_vma (abfd, addend2);
+	}
 
       printf ("\n");
     }
+
+  if (last_filename != NULL)
+    free (last_filename);
+  if (last_functionname != NULL)
+    free (last_functionname);
 }
 
 static void
@@ -3038,7 +3159,7 @@ dump_bfd (bfd *abfd)
       bfd_map_over_sections (abfd, adjust_addresses, &has_reloc);
     }
 
-  if (! dump_debugging_tags)
+  if (! dump_debugging_tags && ! suppress_bfd_header)
     printf (_("\n%s:     file format %s\n"), bfd_get_filename (abfd),
 	    abfd->xvec->name);
   if (dump_ar_hdrs)
@@ -3047,7 +3168,9 @@ dump_bfd (bfd *abfd)
     dump_bfd_header (abfd);
   if (dump_private_headers)
     dump_bfd_private_header (abfd);
-  if (! dump_debugging_tags)
+  if (dump_private_options != NULL)
+    dump_target_specific (abfd);
+  if (! dump_debugging_tags && ! suppress_bfd_header)
     putchar ('\n');
   if (dump_section_headers)
     dump_headers (abfd);
@@ -3258,7 +3381,7 @@ main (int argc, char **argv)
   set_default_bfd_target ();
 
   while ((c = getopt_long (argc, argv,
-			   "pib:m:M:VvCdDlfFaHhrRtTxsSI:j:wE:zgeGW::",
+			   "pP:ib:m:M:VvCdDlfFaHhrRtTxsSI:j:wE:zgeGW::",
 			   long_options, (int *) 0))
 	 != EOF)
     {
@@ -3375,6 +3498,10 @@ main (int argc, char **argv)
 	  dump_private_headers = TRUE;
 	  seenflag = TRUE;
 	  break;
+	case 'P':
+	  dump_private_options = optarg;
+	  seenflag = TRUE;
+	  break;
 	case 'x':
 	  dump_private_headers = TRUE;
 	  dump_symtab = TRUE;
@@ -3434,6 +3561,19 @@ main (int argc, char **argv)
 	    dwarf_select_sections_by_names (optarg);
 	  else
 	    dwarf_select_sections_all ();
+	  break;
+	case OPTION_DWARF_DEPTH:
+	  {
+	    char *cp;
+	    dwarf_cutoff_level = strtoul (optarg, & cp, 0);
+	  }
+	  break;
+	case OPTION_DWARF_START:
+	  {
+	    char *cp;
+	    dwarf_start_die = strtoul (optarg, & cp, 0);
+	    suppress_bfd_header = 1;
+	  }
 	  break;
 	case 'G':
 	  dump_stab_section_info = TRUE;

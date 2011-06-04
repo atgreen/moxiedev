@@ -1,5 +1,5 @@
 ##Copyright (C) 1991, 1992, 1993, 1994, 1995, 1996, 1999, 2000, 2002, 2003,
-##2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+##2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
 # Makefile for GDB documentation.
 # This file is part of GDB.
@@ -63,6 +63,7 @@ BUGURL_TEXI = @REPORT_BUGS_TEXI@
 # Where is the source dir for the READLINE library doc?  
 # Traditionally readline is in .. or .
 READLINE_DIR = ${gdbdir}/../readline/doc
+READLINE_TEXI_INCFLAG = @READLINE_TEXI_INCFLAG@
 
 # The GDB/MI docs come from a sibling directory ../mi
 GDBMI_DIR = ${gdbdir}/mi
@@ -108,12 +109,15 @@ PDFTEX = pdftex
 DVIPS = dvips
 
 # Main GDB manual
+# Note that this unconditionally includes the readline texi files,
+# even when --with-system-readline is used.  This is harmless because
+# these are only used as dependencies.
 GDB_DOC_SOURCE_INCLUDES = \
 	$(srcdir)/fdl.texi \
 	$(srcdir)/gpl.texi \
 	$(srcdir)/agentexpr.texi \
 	$(READLINE_DIR)/rluser.texi \
-	$(READLINE_DIR)/inc-hist.texinfo
+	$(READLINE_DIR)/hsuser.texi
 GDB_DOC_BUILD_INCLUDES = \
 	gdb-cfg.texi \
 	GDBvn.texi
@@ -166,6 +170,7 @@ html: $(HTMLFILES)
 pdf: $(PDFFILES)
 all-doc: info dvi ps # pdf
 diststuff: info
+	rm -f gdb-cfg.texi GDBvn.texi
 
 install-info: $(INFO_DEPS)
 	$(SHELL) $(srcdir)/../../mkinstalldirs $(DESTDIR)$(infodir)
@@ -303,6 +308,9 @@ GDBvn.texi : ${gdbdir}/version.in
 	if [ "$(BUGURL_TEXI)" = "@uref{http://www.gnu.org/software/gdb/bugs/}" ]; then \
 	  echo "@set BUGURL_DEFAULT" >> ./GDBvn.new; \
 	fi
+	if test -z "$(READLINE_TEXI_INCFLAG)"; then \
+	  echo "@set SYSTEM_READLINE" >> ./GDBvn.new; \
+	fi
 	mv GDBvn.new GDBvn.texi
 
 # Updated atomically
@@ -340,7 +348,7 @@ gdb.dvi: ${GDB_DOC_FILES}
 		ln $(srcdir)/GDBvn.texi . || \
 		cp $(srcdir)/GDBvn.texi . ; else true; fi
 	rm -f $(GDB_TEX_TMPS)
-	$(TEXI2DVI) -I ${READLINE_DIR} -I ${GDBMI_DIR} -I $(srcdir) \
+	$(TEXI2DVI) $(READLINE_TEXI_INCFLAG) -I ${GDBMI_DIR} -I $(srcdir) \
 		$(srcdir)/gdb.texinfo
 
 gdb.ps: gdb.dvi
@@ -352,12 +360,12 @@ gdb.pdf: ${GDB_DOC_FILES}
 		ln $(srcdir)/GDBvn.texi . || \
 		cp $(srcdir)/GDBvn.texi . ; else true; fi
 	rm -f $(GDB_TEX_TMPS)
-	$(TEXI2DVI) --pdf -I ${READLINE_DIR} -I ${GDBMI_DIR} -I $(srcdir) \
+	$(TEXI2DVI) --pdf $(READLINE_TEXI_INCFLAG) -I ${GDBMI_DIR} -I $(srcdir) \
 		$(srcdir)/gdb.texinfo
 
 # GDB MANUAL: info file
 gdb.info: ${GDB_DOC_FILES}
-	$(MAKEINFO) -I ${READLINE_DIR} -I ${GDBMI_DIR} -I $(srcdir) \
+	$(MAKEINFO) $(READLINE_TEXI_INCFLAG) -I ${GDBMI_DIR} -I $(srcdir) \
 		-o gdb.info $(srcdir)/gdb.texinfo
 
 # GDB MANUAL: roff translations
@@ -433,7 +441,7 @@ gdb.mm: $(GDB_DOC_FILES) links2roff
 # GDB MANUAL: HTML file
 
 gdb/index.html: ${GDB_DOC_FILES}
-	$(MAKEHTML) $(MAKEHTMLFLAGS) -I ${READLINE_DIR} -I ${GDBMI_DIR} -I $(srcdir) $(srcdir)/gdb.texinfo
+	$(MAKEHTML) $(MAKEHTMLFLAGS) $(READLINE_TEXI_INCFLAG) -I ${GDBMI_DIR} -I $(srcdir) $(srcdir)/gdb.texinfo
 
 # Clean these up before each run.  Avoids a catch 22 with not being
 # able to re-generate these files (to fix a corruption) because these
@@ -515,8 +523,8 @@ annotate/index.html: $(ANNOTATE_DOC_FILES)
 
 force:
 
-Makefile: Makefile.in $(host_makefile_frag) config.status
-	$(SHELL) ./config.status
+Makefile: Makefile.in $(host_makefile_frag) ../config.status
+	cd .. && $(SHELL) ./config.status doc/Makefile
 
 
 # The "least clean" level of cleaning.  Get rid of files which are
@@ -531,10 +539,10 @@ mostlyclean:
 	rm -f sedref.dvi sedref.tex tmp.sed
 
 clean: mostlyclean
-	rm -f gdb-cfg.texi
+	rm -f gdb-cfg.texi GDBvn.texi
 
 distclean: clean
-	rm -f Makefile config.status config.log
+	rm -f Makefile
 
 # GDBvn.texi, the dvi files, the info files, and the postscript files, 
 # are all part of the distribution, so it should not be removed by

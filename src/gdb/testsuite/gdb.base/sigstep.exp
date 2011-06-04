@@ -1,4 +1,4 @@
-# Copyright 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Copyright 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 # Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
@@ -61,15 +61,14 @@ if { ![runto_main] } then {
 # Run to the signal handler, validate the backtrace.
 gdb_test "break handler"
 gdb_test "continue" ".* handler .*" "continue to stepi handler"
-send_gdb "bt\n"
-gdb_expect_list "backtrace for nexti" ".*$gdb_prompt $" {
+gdb_test_sequence "bt" "backtrace for nexti" {
     "\[\r\n\]+.0 \[^\r\n\]* handler "
     "\[\r\n\]+.1  .signal handler called."
-    "\[\r\n\]+.2 \[^\r\n\]* main .*"
+    "\[\r\n\]+.2 \[^\r\n\]* main "
 }
 
 proc advance { i } {
-    global gdb_prompt
+    global gdb_prompt inferior_exited_re
     set prefix "$i from handler"
 
     # Get us back into the handler
@@ -89,7 +88,7 @@ proc advance { i } {
 	    send_gdb "$i\n"
 	    exp_continue -continue_timer
 	}
-	-re "Program exited normally.*${gdb_prompt} $" {
+	-re "$inferior_exited_re normally.*${gdb_prompt} $" {
 	    setup_kfail gdb/1639 powerpc-*-*bsd*
 	    fail "$test (program exited)"
 	}
@@ -106,7 +105,7 @@ proc advance { i } {
 }
 
 proc advancei { i } {
-    global gdb_prompt
+    global gdb_prompt inferior_exited_re
     set prefix "$i from handleri"
     set program_exited 0
 
@@ -145,7 +144,7 @@ proc advancei { i } {
 	-re "main .*${gdb_prompt} $" {
 	    fail "$test (in main)"
 	}
-	-re "Program exited normally.*${gdb_prompt} $" {
+	-re "$inferior_exited_re normally.*${gdb_prompt} $" {
 	    fail "$test (program exited)"
 	    set program_exited 1
 	}
@@ -171,7 +170,7 @@ proc advancei { i } {
 	    send_gdb "y\n"
 	    exp_continue -continue_timer
 	}
-	-re "Program exited normally.*${gdb_prompt} $" {
+	-re "$inferior_exited_re normally.*${gdb_prompt} $" {
 	    kfail gdb/1639 "$test (program exited)"
 	    set program_exited 1
 	}

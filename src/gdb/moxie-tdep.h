@@ -1,6 +1,6 @@
 /* Target-dependent code for Moxie
  
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,7 +22,7 @@
 
 struct gdbarch_tdep
 {
-  /* gdbarch target dependent data here. Currently unused for MOXIE. */
+  /* gdbarch target dependent data here.  Currently unused for MOXIE.  */
 };
 
 enum moxie_regnum

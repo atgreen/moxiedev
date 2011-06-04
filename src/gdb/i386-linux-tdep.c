@@ -1,7 +1,7 @@
 /* Target-dependent code for GNU/Linux i386.
 
-   Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
-   Free Software Foundation, Inc.
+   Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010,
+   2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -603,7 +603,8 @@ i386_linux_core_read_xcr0 (struct gdbarch *gdbarch,
 					  I386_LINUX_XSAVE_XCR0_OFFSET,
 					  8))
 	    {
-	      warning (_("Couldn't read `xcr0' bytes from `.reg-xstate' section in core file."));
+	      warning (_("Couldn't read `xcr0' bytes from "
+			 "`.reg-xstate' section in core file."));
 	      return 0;
 	    }
 
@@ -860,7 +861,7 @@ i386_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->i386_sysenter_record = i386_linux_intx80_sysenter_record;
 
   /* N_FUN symbols in shared libaries have 0 for their values and need
-     to be relocated. */
+     to be relocated.  */
   set_gdbarch_sofun_address_maybe_missing (gdbarch, 1);
 
   /* GNU/Linux uses SVR4-style shared libraries.  */
@@ -914,7 +915,7 @@ _initialize_i386_linux_tdep (void)
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_LINUX,
 			  i386_linux_init_abi);
 
-  /* Initialize the Linux target description  */
+  /* Initialize the Linux target description.  */
   initialize_tdesc_i386_linux ();
   initialize_tdesc_i386_mmx_linux ();
   initialize_tdesc_i386_avx_linux ();

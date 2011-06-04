@@ -216,6 +216,7 @@ gld${EMULATION_NAME}_add_options
     {"bexpall", no_argument, NULL, OPTION_EXPALL},
     {"bexpfull", no_argument, NULL, OPTION_EXPFULL},
     {"bexport", required_argument, NULL, OPTION_EXPORT},
+    {"bbigtoc", no_argument, NULL, OPTION_IGNORE},
     {"bf", no_argument, NULL, OPTION_ERNOTOK},
     {"bgc", no_argument, &gc, 1},
     {"bh", required_argument, NULL, OPTION_IGNORE},
@@ -607,6 +608,8 @@ gld${EMULATION_NAME}_after_open (void)
 {
   bfd_boolean r;
   struct set_info *p;
+
+  after_open_default ();
 
   /* Call ldctor_build_sets, after pretending that this is a
      relocatable link.  We do this because AIX requires relocation
@@ -1426,7 +1429,7 @@ gld${EMULATION_NAME}_open_dynamic_archive (const char *arch,
 {
   char *path;
 
-  if (!entry->is_archive)
+  if (!entry->maybe_archive)
     return FALSE;
 
   path = concat (search->name, "/lib", entry->filename, arch, ".a", NULL);

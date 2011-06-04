@@ -1,4 +1,4 @@
-/* Copyright (C) 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+/* Copyright (C) 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -61,7 +61,7 @@ i386_dr_low_set_addr (const struct i386_debug_reg_state *state, int regnum)
 CORE_ADDR
 i386_dr_low_get_addr (int regnum)
 {
-  gdb_assert (DR_FIRSTADDR <= regnum && regnum < DR_LASTADDR);
+  gdb_assert (DR_FIRSTADDR <= regnum && regnum <= DR_LASTADDR);
 
   return debug_reg_state.dr_mirror[regnum];
 }

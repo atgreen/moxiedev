@@ -1,7 +1,7 @@
 /* Low level interface to i386 running the GNU Hurd.
 
    Copyright (C) 1992, 1995, 1996, 1998, 2000, 2001, 2004, 2007, 2008, 2009,
-   2010 Free Software Foundation, Inc.
+   2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -232,7 +232,8 @@ gnu_store_registers (struct target_ops *ops,
       state = proc_get_state (thread, 1);
       if (!state)
 	{
-	  warning (_("Couldn't store registers into %s"), proc_string (thread));
+	  warning (_("Couldn't store registers into %s"),
+		   proc_string (thread));
 	  return;
 	}
 
@@ -259,7 +260,8 @@ gnu_store_registers (struct target_ops *ops,
 		  regcache_raw_supply (regcache, check_regno,
 				       REG_ADDR (state, check_regno));
 		else
-		  warning (_("... also writing this register!  Suspicious..."));
+		  warning (_("... also writing this register!  "
+			     "Suspicious..."));
 	      }
 	}
 
@@ -270,7 +272,7 @@ gnu_store_registers (struct target_ops *ops,
 	  proc_debug (thread, "storing all registers");
 
 	  for (i = 0; i < I386_NUM_GREGS; i++)
-	    if (regcache_valid_p (regcache, i))
+	    if (REG_VALID == regcache_register_status (regcache, i))
 	      regcache_raw_collect (regcache, i, REG_ADDR (state, i));
 	}
       else
@@ -278,7 +280,7 @@ gnu_store_registers (struct target_ops *ops,
 	  proc_debug (thread, "storing register %s",
 		      gdbarch_register_name (gdbarch, regno));
 
-	  gdb_assert (regcache_valid_p (regcache, regno));
+	  gdb_assert (REG_VALID == regcache_register_status (regcache, regno));
 	  regcache_raw_collect (regcache, regno, REG_ADDR (state, regno));
 	}
 

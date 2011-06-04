@@ -1,6 +1,6 @@
 // ehframe.cc -- handle exception frame sections for gold
 
-// Copyright 2006, 2007, 2008 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2010 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -104,7 +104,7 @@ Eh_frame_hdr::set_final_data_size()
   this->set_data_size(data_size);
 }
 
-// Write the data to the flie.
+// Write the data to the file.
 
 void
 Eh_frame_hdr::do_write(Output_file* of)
@@ -525,7 +525,7 @@ Eh_frame::skip_leb128(const unsigned char** pp, const unsigned char* pend)
 template<int size, bool big_endian>
 bool
 Eh_frame::add_ehframe_input_section(
-    Sized_relobj<size, big_endian>* object,
+    Sized_relobj_file<size, big_endian>* object,
     const unsigned char* symbols,
     section_size_type symbols_size,
     const unsigned char* symbol_names,
@@ -588,7 +588,7 @@ Eh_frame::add_ehframe_input_section(
 template<int size, bool big_endian>
 bool
 Eh_frame::do_add_ehframe_input_section(
-    Sized_relobj<size, big_endian>* object,
+    Sized_relobj_file<size, big_endian>* object,
     const unsigned char* symbols,
     section_size_type symbols_size,
     const unsigned char* symbol_names,
@@ -675,7 +675,7 @@ Eh_frame::do_add_ehframe_input_section(
 
 template<int size, bool big_endian>
 bool
-Eh_frame::read_cie(Sized_relobj<size, big_endian>* object,
+Eh_frame::read_cie(Sized_relobj_file<size, big_endian>* object,
 		   unsigned int shndx,
 		   const unsigned char* symbols,
 		   section_size_type symbols_size,
@@ -929,7 +929,7 @@ Eh_frame::read_cie(Sized_relobj<size, big_endian>* object,
 
 template<int size, bool big_endian>
 bool
-Eh_frame::read_fde(Sized_relobj<size, big_endian>* object,
+Eh_frame::read_fde(Sized_relobj_file<size, big_endian>* object,
 		   unsigned int shndx,
 		   const unsigned char* symbols,
 		   section_size_type symbols_size,
@@ -1132,7 +1132,7 @@ Eh_frame::do_sized_write(unsigned char* oview)
 template
 bool
 Eh_frame::add_ehframe_input_section<32, false>(
-    Sized_relobj<32, false>* object,
+    Sized_relobj_file<32, false>* object,
     const unsigned char* symbols,
     section_size_type symbols_size,
     const unsigned char* symbol_names,
@@ -1146,7 +1146,7 @@ Eh_frame::add_ehframe_input_section<32, false>(
 template
 bool
 Eh_frame::add_ehframe_input_section<32, true>(
-    Sized_relobj<32, true>* object,
+    Sized_relobj_file<32, true>* object,
     const unsigned char* symbols,
     section_size_type symbols_size,
     const unsigned char* symbol_names,
@@ -1160,7 +1160,7 @@ Eh_frame::add_ehframe_input_section<32, true>(
 template
 bool
 Eh_frame::add_ehframe_input_section<64, false>(
-    Sized_relobj<64, false>* object,
+    Sized_relobj_file<64, false>* object,
     const unsigned char* symbols,
     section_size_type symbols_size,
     const unsigned char* symbol_names,
@@ -1174,7 +1174,7 @@ Eh_frame::add_ehframe_input_section<64, false>(
 template
 bool
 Eh_frame::add_ehframe_input_section<64, true>(
-    Sized_relobj<64, true>* object,
+    Sized_relobj_file<64, true>* object,
     const unsigned char* symbols,
     section_size_type symbols_size,
     const unsigned char* symbol_names,

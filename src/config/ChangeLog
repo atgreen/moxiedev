@@ -1,3 +1,69 @@
+2011-04-20  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* bootstrap-lto.mk: Remove obsolete requirement.
+
+2011-03-24  Paolo Bonzini  <pbonzini@redhat.com>
+
+	* mt-mep: Remove, obsolete.
+	* mt-netware: Remove, obsolete.
+	* mt-wince: Remove, obsolete.
+	* mt-v810: Remove, unused.
+
+2011-03-24  Paolo Bonzini  <bonzini@gnu.org>
+
+	* mh-x86omitfp: Remove.
+
+2011-03-24  Paolo Bonzini  <bonzini@gnu.org>
+
+	* mh-cygwin: Remove obsolete variables and dependencies.
+
+2011-03-24  Paolo Bonzini  <bonzini@gnu.org>
+
+	* mh-sysv4: Remove.
+	* mh-solaris: Remove.
+
+2011-03-24  Paolo Bonzini  <bonzini@gnu.org>
+
+	* mh-sysv4: Remove AR_CFLAGS.
+
+2011-03-24  Joseph Myers  <joseph@codesourcery.com>
+
+	* mh-cxux, mh-decstation, mh-dgux386, mh-lynxrs6k, mh-ncr3000,
+	mh-necv4, mh-sco, mh-sysv5: Remove.
+
+2011-03-05  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+	    Eric Blake  <eblake@redhat.com>
+
+	* override.m4: Error out if a buggy M4 was detected, to
+	avoid spurious diffs in generated files.
+
+2011-01-25  Jakub Jelinek  <jakub@redhat.com>
+
+	* cloog.m4 (CLOOG_REQUESTED): Use $2 if --without-cloog.
+
+2011-01-10  Jan Hubicka  <jh@suse.cz>
+
+	* bootstrap-lto.mk: -fuse-linker-plugin is default now;
+	pass -fno-lto to STAGEprofile.
+
+2010-12-06  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	PR target/40125
+	PR lto/46695
+	* lthostflags.m4: New file.
+	(ACX_LT_HOST_FLAGS): Define.
+
+2010-12-02  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* mh-cygwin (LDFLAGS): Turn up stack allocation to 12MB.
+	(BOOT_LDFLAGS): Add matching stack size flag.
+	* mh-mingw (LDFLAGS): Likewise.
+	(BOOT_LDFLAGS): Likewise.
+
+2010-11-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* bootstrap-lto.mk (BOOT_ADAFLAGS): Delete.
+
 2010-11-19  Tobias Grosser  <grosser@fim.uni-passau.de>
 
 	* cloog.m4: Use AS_HELP_STRING and fix help formatting.
@@ -81,8 +147,8 @@
 2010-06-09  Iain Sandoe  <iains@gcc.gnu.org>
 
 	PR bootstrap/43170
-	* tls.m4 (GCC_CHECK_TLS): Add volatile qualifier to the test 
-	references.  Move the main () test reference ahead of 
+	* tls.m4 (GCC_CHECK_TLS): Add volatile qualifier to the test
+	references.  Move the main () test reference ahead of
 	pthread_create().  Add a comment to explain the requirements
 	of the test.
 
@@ -364,7 +430,7 @@
 
 	PR bootstrap/32009
 	* mh-ppc-darwin (BOOT_CFLAGS): Reenable.
-		
+
 2008-01-08  Jakub Jelinek  <jakub@redhat.com>
 
 	* futex.m4: New file.
@@ -438,7 +504,7 @@
 
 	* acx.m4 (ACX_CHECK_INSTALLED_TARGET_TOOL): Fixup logic for cross
 	builds.
-	
+
 2007-06-20  Mike Stump  <mrs@apple.com>
 
 	* acx.m4 (NCN_STRICT_CHECK_TARGET_TOOLS): Fix incremental builds.
@@ -463,7 +529,7 @@
 
 2007-04-11  Kai Tietz  <kai.tietz@onevision.com>
 
-	* stdint.m4: Make template compatible with older cygwin 
+	* stdint.m4: Make template compatible with older cygwin
 	types.h, wrapping each type in a __XXX_t_defined #ifdef.
 
 2007-03-26  H.J. Lu  <hongjiu.lu@intel.com>
@@ -567,7 +633,8 @@
 2006-07-25  Paolo Bonzini  <bonzini@gnu.org>
 
 	PR build/26188
-	* stdint.m4: Test for uintptr_t even on systems with uint64_t or uint32_t.
+	* stdint.m4: Test for uintptr_t even on systems with uint64_t
+	or uint32_t.
 
 2006-07-21  Steve Ellcey  <sje@cup.hp.com>
 

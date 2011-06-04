@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/sparc64.
 
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -195,6 +195,7 @@ sparc64obsd_sigtramp_frame_sniffer (const struct frame_unwind *self,
 static const struct frame_unwind sparc64obsd_frame_unwind =
 {
   SIGTRAMP_FRAME,
+  default_frame_unwind_stop_reason,
   sparc64obsd_frame_this_id,
   sparc64obsd_frame_prev_register,
   NULL,
@@ -277,6 +278,7 @@ sparc64obsd_trapframe_sniffer (const struct frame_unwind *self,
 static const struct frame_unwind sparc64obsd_trapframe_unwind =
 {
   NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
   sparc64obsd_trapframe_this_id,
   sparc64obsd_trapframe_prev_register,
   NULL,

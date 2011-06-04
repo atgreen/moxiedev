@@ -1,6 +1,6 @@
 /* Machine-independent support for SVR4 /proc (process file system)
 
-   Copyright (C) 1999, 2000, 2004, 2007, 2008, 2009, 2010
+   Copyright (C) 1999, 2000, 2004, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Written by Michael Snyder at Cygnus Solutions.
@@ -1515,7 +1515,8 @@ static struct trans signal_table[] =
   { SIGIO, "SIGIO", "Socket I/O possible" },	/* alias for SIGPOLL */
 #endif
 #ifdef SIGSTOP
-  { SIGSTOP, "SIGSTOP", "Stop, not from tty" },	/* cannot be caught or ignored */
+  { SIGSTOP, "SIGSTOP", "Stop, not from tty" },	/* cannot be caught or
+						   ignored */
 #endif
 #ifdef SIGTSTP
   { SIGTSTP, "SIGTSTP", "User stop from tty" },

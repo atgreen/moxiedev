@@ -1,5 +1,6 @@
 /* Miscellaneous simulator utilities.
-   Copyright (C) 1997, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 1997, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
    Contributed by Cygnus Support.
 
 This file is part of GDB, the GNU debugger.
@@ -26,8 +27,6 @@ void *zalloc (unsigned long size);
 
 #define ZALLOC(TYPE) (TYPE*)zalloc(sizeof (TYPE))
 #define NZALLOC(TYPE,N) (TYPE*)zalloc(sizeof (TYPE) * (N))
-
-void zfree(void*);
 
 /* Turn VALUE into a string with commas.  */
 char *sim_add_commas (char *, int, unsigned long);

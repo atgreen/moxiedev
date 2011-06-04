@@ -1,5 +1,5 @@
 /* Low level Alpha GNU/Linux interface, for GDB when running native.
-   Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -34,9 +34,8 @@
 #define ALPHA_UNIQUE_PTRACE_ADDR 65
 
 
-/*
- * See the comment in m68k-tdep.c regarding the utility of these functions.
- */
+/* See the comment in m68k-tdep.c regarding the utility of these
+   functions.  */
 
 void
 supply_gregset (struct regcache *regcache, const gdb_gregset_t *gregsetp)
@@ -57,10 +56,8 @@ fill_gregset (const struct regcache *regcache,
   alpha_fill_int_regs (regcache, regno, regp, regp + 31, regp + 32);
 }
 
-/*
- * Now we do the same thing for floating-point registers.
- * Again, see the comments in m68k-tdep.c.
- */
+/* Now we do the same thing for floating-point registers.
+   Again, see the comments in m68k-tdep.c.  */
 
 void
 supply_fpregset (struct regcache *regcache, const gdb_fpregset_t *fpregsetp)

@@ -1,4 +1,4 @@
-# Copyright 2010 Free Software Foundation, Inc.
+# Copyright 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,14 +40,18 @@ if { [gdb_compile_opencl_hostapp "${clprogram}" "${testfile}" "" ] != "" } {
 clean_restart ${testfile}
 
 # Set breakpoint at the OpenCL kernel
-gdb_test_multiple "break testkernel" "set pending breakpoint" {
-     -re ".*Function \"testkernel\" not defined.*Make breakpoint pending.*y or \\\[n\\\]. $" {
-            gdb_test "y" "Breakpoint.*testkernel.*pending." "set pending breakpoint (without symbols)"
-     }
-}
+gdb_test "tbreak testkernel" \
+    "" \
+    "Set pending breakpoint" \
+    ".*Function \"testkernel\" not defined.*Make breakpoint pending.*y or \\\[n\\\]. $" \
+    "y"
 
 gdb_run_cmd
-gdb_test "" ".*Breakpoint.*1.*testkernel.*" "run"
+gdb_test "" ".*reakpoint.*1.*testkernel.*" "run"
+
+# Continue to the marker
+gdb_breakpoint [gdb_get_line_number "marker" "${clprogram}"]
+gdb_continue_to_breakpoint "marker"
 
 # Check if the language was switched to opencl
 gdb_test "show language" "The current source language is \"auto; currently opencl\"\."

@@ -659,11 +659,14 @@ TARGET_SYSTEM_ROOT
 CONFIG_LDFLAGS
 RDYNAMIC
 ALLOCA
+PYTHON_LIBS
+PYTHON_CPPFLAGS
 PYTHON_CFLAGS
 python_prog_path
 LTLIBEXPAT
 LIBEXPAT
 HAVE_LIBEXPAT
+READLINE_TEXI_INCFLAG
 READLINE_CFLAGS
 READLINE_DEPS
 READLINE
@@ -958,6 +961,7 @@ with_pkgversion
 with_bugurl
 with_zlib
 with_libiconv_prefix
+with_iconv_bin
 with_system_readline
 with_expat
 with_gnu_ld
@@ -989,7 +993,7 @@ CPP
 YACC
 YFLAGS
 XMKMF'
-ac_subdirs_all='doc testsuite
+ac_subdirs_all='testsuite
 gdbtk
 multi-ice
 gdbserver'
@@ -1657,6 +1661,7 @@ Optional Packages:
   --with-zlib             include zlib support (auto/yes/no) default=auto
   --with-libiconv-prefix=DIR
                           search for libiconv in DIR/include and DIR/lib
+  --with-iconv-bin=PATH   specify where to find the iconv program
   --with-system-readline  use installed readline library
   --with-expat            include expat support (auto/yes/no)
   --with-gnu-ld           assume the C compiler uses GNU ld default=no
@@ -7883,7 +7888,7 @@ fi
 
 
 
-subdirs="$subdirs doc testsuite"
+subdirs="$subdirs testsuite"
 
 
 # Check whether to support alternative target configurations
@@ -9520,6 +9525,57 @@ _ACEOF
   fi
 
 
+# GDB may fork/exec the iconv program to get the list of supported character
+# sets.  Allow the user to specify where to find it.
+# There are several factors affecting the choice of option name:
+# - There is already --with-libiconv-prefix but we can't use it, it specifies
+#   the build-time location of libiconv files.
+# - The program we need to find is iconv, which comes with glibc.  The user
+#   doesn't necessarily have libiconv installed.  Therefore naming this
+#   --with-libiconv-foo feels wrong.
+# - We want the path to be relocatable, but GDB_AC_DEFINE_RELOCATABLE is
+#   defined to work on directories not files (though it really doesn't know
+#   the difference).
+# - Calling this --with-iconv-prefix is perceived to cause too much confusion
+#   with --with-libiconv-prefix.
+# Putting these together is why the option name is --with-iconv-bin.
+
+
+# Check whether --with-iconv-bin was given.
+if test "${with_iconv_bin+set}" = set; then :
+  withval=$with_iconv_bin; iconv_bin="${withval}"
+
+cat >>confdefs.h <<_ACEOF
+#define ICONV_BIN "${iconv_bin}"
+_ACEOF
+
+
+  if test "x$exec_prefix" = xNONE || test "x$exec_prefix" = 'x${prefix}'; then
+     if test "x$prefix" = xNONE; then
+     	test_prefix=/usr/local
+     else
+	test_prefix=$prefix
+     fi
+  else
+     test_prefix=$exec_prefix
+  fi
+  value=0
+  case ${iconv_bin} in
+     "${test_prefix}"|"${test_prefix}/"*|\
+	'${exec_prefix}'|'${exec_prefix}/'*)
+     value=1
+     ;;
+  esac
+
+cat >>confdefs.h <<_ACEOF
+#define ICONV_BIN_RELOCATABLE $value
+_ACEOF
+
+
+
+fi
+
+
 # On alpha-osf, it appears that libtermcap and libcurses are not compatible.
 # There is a very specific comment in /usr/include/curses.h explaining that
 # termcap routines built into libcurses must not be used.
@@ -9739,44 +9795,14 @@ if test "$with_system_readline" = yes; then
   READLINE=-lreadline
   READLINE_DEPS=
   READLINE_CFLAGS=
-
-  # readline-6.0 started to use the name `_rl_echoing_p'.
-  # `$(READLINE_DIR)/' of bundled readline would not resolve in configure.
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for readline_echoing_p" >&5
-$as_echo_n "checking for readline_echoing_p... " >&6; }
-  save_LIBS=$LIBS
-  LIBS="$LIBS $READLINE"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-extern int readline_echoing_p;
-				    return readline_echoing_p;
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  READLINE_ECHOING_P=yes
-else
-  READLINE_ECHOING_P=no
-
-$as_echo "#define readline_echoing_p _rl_echoing_p" >>confdefs.h
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  LIBS="$save_LIBS"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $READLINE_ECHOING_P" >&5
-$as_echo "$READLINE_ECHOING_P" >&6; }
+  READLINE_TEXI_INCFLAG=
 else
   READLINE='$(READLINE_DIR)/libreadline.a'
   READLINE_DEPS='$(READLINE)'
   READLINE_CFLAGS='-I$(READLINE_SRC)/..'
+  READLINE_TEXI_INCFLAG='-I $(READLINE_DIR)'
 fi
+
 
 
 
@@ -10472,6 +10498,13 @@ else
       # Assume the python binary is ${with_python}/bin/python.
       python_prog="${with_python}/bin/python"
       python_prefix=
+      # If python does not exit ${with_python}/bin, then try in
+      # ${with_python}.  On Windows/MinGW, this is where the Python
+      # executable is.
+      if test ! -x "${python_prog}"; then
+        python_prog="${with_python}/python"
+        python_prefix=
+      fi
       if test ! -x "${python_prog}"; then
         # Fall back to gdb 7.0/7.1 behaviour.
         python_prog=missing
@@ -10629,25 +10662,15 @@ fi
       fi
     fi
   else
-    # Fall back to gdb 7.0/7.1 behaviour.
-    if test -z ${python_prefix}; then
-      python_includes=
-      python_libs=
-    else
-      python_includes="-I${python_prefix}/include"
-      python_libs="-L${python_prefix}/lib"
-    fi
+    # We do not have a python executable we can use to determine where
+    # to find the Python headers and libs.  We cannot guess the include
+    # path from the python_prefix either, because that include path
+    # depends on the Python version.  So, there is nothing much we can
+    # do except assume that the compiler will be able to find those files.
+    python_includes=
+    python_libs=
     have_python_config=no
   fi
-
-  # Having "/pythonX.Y" in the include path is awkward.
-  # All those python headers get bubbled up to the top inviting lots
-  # of random collisions.  GDB originally didn't use python-config to
-  # find the compilation parameters and includes "pythonX.Y/" in the
-  # path of the, umm, include file.  So strip away this part of the
-  # output of python-config --includes.
-  python_includes=`echo "${python_includes} " \
-                        | sed -e 's,/python[0-9]*[.][0-9]* , ,g'`
 
   # If we have python-config, only try the configuration it provides.
   # Otherwise fallback on the old way of trying different versions of
@@ -10655,8 +10678,23 @@ fi
 
   have_libpython=no
   if test "${have_python_config}" = yes; then
+    # Determine the Python version by extracting "-lpython<version>"
+    # part of the python_libs. <version> is usually X.Y with X and Y
+    # being decimal numbers, but can also be XY (seen on Windows).
+    #
+    # The extraction is performed using sed with a regular expression.
+    # Initially, the regexp used was using the '?' quantifier to make
+    # the dot in the version number optional.  Unfortunately, this
+    # does not work with non-GNU versions of sed because, because of
+    # what looks like a limitation (the '?' quantifier does not work
+    # with back-references).  We work around this limitation by using
+    # the '*' quantifier instead.  It means that, in theory, we might
+    # match unexpected version strings such as "-lpython2..7", but
+    # this seems unlikely in practice.  And even if that happens,
+    # an error will be triggered later on, when checking that version
+    # number.
     python_version=`echo " ${python_libs} " \
-                         | sed -e 's,^.* -l\(python[0-9]*[.][0-9]*\) .*$,\1,'`
+                         | sed -e 's,^.* -l\(python[0-9]*[.]*[0-9]*\).*$,\1,'`
     case "${python_version}" in
     python*)
 
@@ -10673,7 +10711,7 @@ $as_echo_n "checking for ${version}... " >&6; }
   found_usable_python=no
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include "${version}/Python.h"
+#include "Python.h"
 int
 main ()
 {
@@ -10685,12 +10723,13 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
   have_libpython=${version}
                   found_usable_python=yes
-else
-  CPPFLAGS=$save_CPPFLAGS
-                  LIBS=$save_LIBS
+                  PYTHON_CPPFLAGS=$new_CPPFLAGS
+                  PYTHON_LIBS=$new_LIBS
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+  CPPFLAGS=$save_CPPFLAGS
+  LIBS=$save_LIBS
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${found_usable_python}" >&5
 $as_echo "${found_usable_python}" >&6; }
 
@@ -10715,7 +10754,7 @@ $as_echo_n "checking for ${version}... " >&6; }
   found_usable_python=no
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include "${version}/Python.h"
+#include "Python.h"
 int
 main ()
 {
@@ -10727,12 +10766,13 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
   have_libpython=${version}
                   found_usable_python=yes
-else
-  CPPFLAGS=$save_CPPFLAGS
-                  LIBS=$save_LIBS
+                  PYTHON_CPPFLAGS=$new_CPPFLAGS
+                  PYTHON_LIBS=$new_LIBS
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+  CPPFLAGS=$save_CPPFLAGS
+  LIBS=$save_LIBS
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${found_usable_python}" >&5
 $as_echo "${found_usable_python}" >&6; }
 
@@ -10752,7 +10792,7 @@ $as_echo_n "checking for ${version}... " >&6; }
   found_usable_python=no
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include "${version}/Python.h"
+#include "Python.h"
 int
 main ()
 {
@@ -10764,12 +10804,13 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
   have_libpython=${version}
                   found_usable_python=yes
-else
-  CPPFLAGS=$save_CPPFLAGS
-                  LIBS=$save_LIBS
+                  PYTHON_CPPFLAGS=$new_CPPFLAGS
+                  PYTHON_LIBS=$new_LIBS
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+  CPPFLAGS=$save_CPPFLAGS
+  LIBS=$save_LIBS
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${found_usable_python}" >&5
 $as_echo "${found_usable_python}" >&6; }
 
@@ -10789,7 +10830,7 @@ $as_echo_n "checking for ${version}... " >&6; }
   found_usable_python=no
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include "${version}/Python.h"
+#include "Python.h"
 int
 main ()
 {
@@ -10801,12 +10842,13 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
   have_libpython=${version}
                   found_usable_python=yes
-else
-  CPPFLAGS=$save_CPPFLAGS
-                  LIBS=$save_LIBS
+                  PYTHON_CPPFLAGS=$new_CPPFLAGS
+                  PYTHON_LIBS=$new_LIBS
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+  CPPFLAGS=$save_CPPFLAGS
+  LIBS=$save_LIBS
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${found_usable_python}" >&5
 $as_echo "${found_usable_python}" >&6; }
 
@@ -10826,7 +10868,7 @@ $as_echo_n "checking for ${version}... " >&6; }
   found_usable_python=no
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include "${version}/Python.h"
+#include "Python.h"
 int
 main ()
 {
@@ -10838,30 +10880,31 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
   have_libpython=${version}
                   found_usable_python=yes
-else
-  CPPFLAGS=$save_CPPFLAGS
-                  LIBS=$save_LIBS
+                  PYTHON_CPPFLAGS=$new_CPPFLAGS
+                  PYTHON_LIBS=$new_LIBS
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+  CPPFLAGS=$save_CPPFLAGS
+  LIBS=$save_LIBS
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${found_usable_python}" >&5
 $as_echo "${found_usable_python}" >&6; }
 
     fi
   fi
-  if test "${have_libpython}" = python2.7; then
+  if test "${have_libpython}" = python2.7 -o "${have_libpython}" = python27; then
 
 $as_echo "#define HAVE_LIBPYTHON2_7 1" >>confdefs.h
 
-  elif test "${have_libpython}" = python2.6; then
+  elif test "${have_libpython}" = python2.6 -o "${have_libpython}" = python26; then
 
 $as_echo "#define HAVE_LIBPYTHON2_6 1" >>confdefs.h
 
-  elif test "${have_libpython}" = python2.5; then
+  elif test "${have_libpython}" = python2.5 -o "${have_libpython}" = python25; then
 
 $as_echo "#define HAVE_LIBPYTHON2_5 1" >>confdefs.h
 
-  elif test "${have_libpython}" = python2.4; then
+  elif test "${have_libpython}" = python2.4 -o "${have_libpython}" = python24; then
 
 $as_echo "#define HAVE_LIBPYTHON2_4 1" >>confdefs.h
 
@@ -10960,6 +11003,21 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${PYTHON_CFLAGS}" >&5
 $as_echo "${PYTHON_CFLAGS}" >&6; }
   fi
+
+  # On IRIX, type siginfo is not defined.  Instead, sys/siginfo.h provides:
+  #    #if _SGIAPI
+  #    #define siginfo __siginfo
+  #    #endif
+  # The problem is that including Python causes some XOPEN macros to be
+  # unilaterally defined, and that in turn causes _SGIAPI to evaluate
+  # to false.  So, we work around this issue by defining siginfo ourself
+  # though the command-line.
+  case "$gdb_host" in
+    irix*) if test "${GCC}" = yes; then
+             CPPFLAGS="$CPPFLAGS -Dsiginfo=__siginfo"
+           fi
+           ;;
+  esac
 else
   # Even if Python support is not compiled in, we need to have these files
   # included.
@@ -10967,6 +11025,8 @@ else
   CONFIG_SRCS="$CONFIG_SRCS python/python.c python/py-value.c \
 	python/py-prettyprint.c python/py-auto-load.c"
 fi
+
+
 
 
 # ------------------------- #
@@ -14309,27 +14369,6 @@ $as_echo "$found" >&6; }
 
 if test ${build} = ${host} -a ${host} = ${target} ; then
    case ${host_os} in
-   hpux*)
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for HPUX/OSF thread support" >&5
-$as_echo_n "checking for HPUX/OSF thread support... " >&6; }
-      if test -f /usr/include/dce/cma_config.h ; then
-         if test "$GCC" = "yes" ; then
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-$as_echo "#define HAVE_HPUX_THREAD_SUPPORT 1" >>confdefs.h
-
-            CONFIG_OBS="${CONFIG_OBS} hpux-thread.o"
-            CONFIG_SRCS="${CONFIG_SRCS} hpux-thread.c"
-         else
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (suppressed because you are not using GCC)" >&5
-$as_echo "no (suppressed because you are not using GCC)" >&6; }
-         fi
-      else
-         { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      fi
-      ;;
    solaris*)
       # See if thread_db library is around for Solaris thread debugging.
       # Note that we must explicitly test for version 1 of the library
@@ -14468,6 +14507,22 @@ $as_echo "$gdb_cv_have_aix_thread_debug" >&6; }
          CONFIG_SRCS="${CONFIG_SRCS} aix-thread.c"
          CONFIG_OBS="${CONFIG_OBS} aix-thread.o"
          CONFIG_LDFLAGS="${CONFIG_LDFLAGS} -lpthdebug"
+
+         # Older versions of AIX do not provide the declaration for
+         # the getthrds function (it appears that it was introduced
+         # with AIX 6.x).
+         ac_fn_c_check_decl "$LINENO" "getthrds" "ac_cv_have_decl_getthrds" "#include <procinfo.h>
+"
+if test "x$ac_cv_have_decl_getthrds" = x""yes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_GETTHRDS $ac_have_decl
+_ACEOF
+
       fi
       ;;
    esac
@@ -15899,7 +15954,7 @@ ac_config_links="$ac_config_links $ac_config_links_1"
 $as_echo "#define GDB_DEFAULT_HOST_CHARSET \"UTF-8\"" >>confdefs.h
 
 
-ac_config_files="$ac_config_files Makefile .gdbinit:gdbinit.in gnulib/Makefile data-directory/Makefile"
+ac_config_files="$ac_config_files Makefile .gdbinit:gdbinit.in doc/Makefile gnulib/Makefile data-directory/Makefile"
 
 ac_config_commands="$ac_config_commands default"
 
@@ -16665,6 +16720,7 @@ do
     "$ac_config_links_1") CONFIG_LINKS="$CONFIG_LINKS $ac_config_links_1" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     ".gdbinit") CONFIG_FILES="$CONFIG_FILES .gdbinit:gdbinit.in" ;;
+    "doc/Makefile") CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
     "gnulib/Makefile") CONFIG_FILES="$CONFIG_FILES gnulib/Makefile" ;;
     "data-directory/Makefile") CONFIG_FILES="$CONFIG_FILES data-directory/Makefile" ;;
     "default") CONFIG_COMMANDS="$CONFIG_COMMANDS default" ;;

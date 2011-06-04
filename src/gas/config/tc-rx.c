@@ -548,7 +548,7 @@ const pseudo_typeS md_pseudo_table[] =
   /* The manual documents ".stk" but the compiler emits ".stack".  */
   { "stack",    rx_nop,         0 },
 
-  /* Theae are Renesas as100 assembler pseudo-ops that we do support.  */
+  /* These are Renesas as100 assembler pseudo-ops that we do support.  */
   { "addr",     rx_cons,        3 },
   { "align",    s_align_bytes,  2 },
   { "byte",     rx_cons,        1 },
@@ -1142,6 +1142,9 @@ static unsigned char *nops[] = { NULL, nop_1, nop_2, nop_3, nop_4, nop_5, nop_6,
 void
 rx_handle_align (fragS * frag)
 {
+  /* If handling an alignment frag, use an optimal NOP pattern.
+     Only do this if a fill value has not already been provided.
+     FIXME: This test fails if the provided fill value is zero.  */
   if ((frag->fr_type == rs_align
        || frag->fr_type == rs_align_code)
       && subseg_text_p (now_seg))
@@ -1151,16 +1154,19 @@ rx_handle_align (fragS * frag)
 		   - frag->fr_fix);
       unsigned char *base = (unsigned char *)frag->fr_literal + frag->fr_fix;
 
-      if (count > BIGGEST_NOP)
+      if (* base == 0)
 	{
-	  base[0] = 0x2e;
-	  base[1] = count;
-	  frag->fr_var = 2;
-	}
-      else if (count > 0)
-	{
-	  memcpy (base, nops[count], count);
-	  frag->fr_var = count;
+	  if (count > BIGGEST_NOP)
+	    {
+	      base[0] = 0x2e;
+	      base[1] = count;
+	      frag->fr_var = 2;
+	    }
+	  else if (count > 0)
+	    {
+	      memcpy (base, nops[count], count);
+	      frag->fr_var = count;
+	    }
 	}
     }
 
@@ -1603,19 +1609,28 @@ md_convert_frag (bfd *   abfd ATTRIBUTE_UNUSED,
       && fragP->tc_frag_data->relax[0].type == RX_RELAX_DISP)
     ri = 1;
 
+  /* We used a new frag for this opcode, so the opcode address should
+     be the frag address.  */
+  mypc = fragP->fr_address + (fragP->fr_opcode - fragP->fr_literal);
+
   /* Try to get the target address.  If we fail here, we just use the
      largest format.  */
   if (rx_frag_fix_value (fragP, segment, 0, & addr0,
 			 fragP->tc_frag_data->relax[ri].type != RX_RELAX_BRANCH, 0))
-    keep_reloc = 1;
+    {
+      /* We don't know the target address.  */
+      keep_reloc = 1;
+      addr0 = 0;
+      disp = 0;
+    }
+  else
+    {
+      /* We know the target address, and it's in addr0.  */
+      disp = (int) addr0 - (int) mypc;
+    }
 
   if (linkrelax)
     keep_reloc = 1;
-
-  /* We used a new frag for this opcode, so the opcode address should
-     be the frag address.  */
-  mypc = fragP->fr_address + (fragP->fr_opcode - fragP->fr_literal);
-  disp = (int) addr0 - (int) mypc;
 
   reloc_type = BFD_RELOC_NONE;
   reloc_adjust = 0;
@@ -1943,10 +1958,14 @@ md_convert_frag (bfd *   abfd ATTRIBUTE_UNUSED,
 int
 rx_validate_fix_sub (struct fix * f)
 {
-  /* We permit the subtraction of two symbols as a 32-bit relocation.  */
+  /* We permit the subtraction of two symbols in a few cases.  */
+  /* mov #sym1-sym2, R3 */
+  if (f->fx_r_type == BFD_RELOC_RX_32_OP)
+    return 1;
+  /* .long sym1-sym2 */
   if (f->fx_r_type == BFD_RELOC_RX_DIFF
       && ! f->fx_pcrel
-      && f->fx_size == 4)
+      && (f->fx_size == 4 || f->fx_size == 2 || f->fx_size == 1))
     return 1;
   return 0;
 }
@@ -2206,6 +2225,7 @@ arelent **
 tc_gen_reloc (asection * seg ATTRIBUTE_UNUSED, fixS * fixp)
 {
   static arelent * reloc[5];
+  int is_opcode = 0;
 
   if (fixp->fx_r_type == BFD_RELOC_NONE)
     {
@@ -2225,6 +2245,13 @@ tc_gen_reloc (asection * seg ATTRIBUTE_UNUSED, fixS * fixp)
   * reloc[0]->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc[0]->address       = fixp->fx_frag->fr_address + fixp->fx_where;
   reloc[0]->addend        = fixp->fx_offset;
+
+  if (fixp->fx_r_type == BFD_RELOC_RX_32_OP
+      && fixp->fx_subsy)
+    {
+      fixp->fx_r_type = BFD_RELOC_RX_DIFF;
+      is_opcode = 1;
+    }
 
   /* Certain BFD relocations cannot be translated directly into
      a single (non-Red Hat) RX relocation, but instead need
@@ -2254,10 +2281,16 @@ tc_gen_reloc (asection * seg ATTRIBUTE_UNUSED, fixS * fixp)
 	  reloc[3]->howto   = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_RX_ABS8);
 	  break;
 	case 2:
-	  reloc[3]->howto   = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_RX_ABS16);
+	  if (!is_opcode && target_big_endian)
+	    reloc[3]->howto   = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_RX_ABS16_REV);
+	  else
+	    reloc[3]->howto   = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_RX_ABS16);
 	  break;
 	case 4:
-	  reloc[3]->howto   = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_RX_ABS32);
+	  if (!is_opcode && target_big_endian)
+	    reloc[3]->howto   = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_RX_ABS32_REV);
+	  else
+	    reloc[3]->howto   = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_RX_ABS32);
 	  break;
 	}
       reloc[3]->addend      = 0;
@@ -2385,6 +2418,24 @@ tc_gen_reloc (asection * seg ATTRIBUTE_UNUSED, fixS * fixp)
       reloc[3]->address     = fixp->fx_frag->fr_address + fixp->fx_where;
 
       reloc[4] = NULL;
+      break;
+
+    case BFD_RELOC_RX_NEG32:
+      reloc[0]->howto         = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_RX_SYM);
+
+      reloc[1]		    = (arelent *) xmalloc (sizeof (arelent));
+      reloc[1]->howto       = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_RX_OP_NEG);
+      reloc[1]->addend      = 0;
+      reloc[1]->sym_ptr_ptr = reloc[0]->sym_ptr_ptr;
+      reloc[1]->address     = fixp->fx_frag->fr_address + fixp->fx_where;
+
+      reloc[2]		    = (arelent *) xmalloc (sizeof (arelent));
+      reloc[2]->howto       = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_RX_ABS32);
+      reloc[2]->addend      = 0;
+      reloc[2]->sym_ptr_ptr = reloc[0]->sym_ptr_ptr;
+      reloc[2]->address     = fixp->fx_frag->fr_address + fixp->fx_where;
+
+      reloc[3] = NULL;
       break;
 
     default:

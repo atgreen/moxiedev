@@ -1,6 +1,6 @@
 /* objcopy.c -- copy object file from input to output, optionally massaging it.
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
@@ -1399,7 +1399,9 @@ copy_unknown_object (bfd *ibfd, bfd *obfd)
       ncopied += tocopy;
     }
 
-  chmod (bfd_get_filename (obfd), buf.st_mode);
+  /* We should at least to be able to read it back when copying an
+     unknown object in an archive.  */
+  chmod (bfd_get_filename (obfd), buf.st_mode | S_IRUSR);
   free (cbuf);
   return TRUE;
 }
@@ -2022,6 +2024,7 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
       struct stat buf;
       int stat_status = 0;
       bfd_boolean del = TRUE;
+      bfd_boolean ok_object;
 
       /* Create an output file for this member.  */
       output_name = concat (dir, "/",
@@ -2059,44 +2062,42 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
       l->obfd = NULL;
       list = l;
 
-      if (bfd_check_format (this_element, bfd_object))
-	{
-	  /* PR binutils/3110: Cope with archives
-	     containing multiple target types.  */
-	  if (force_output_target)
-	    output_bfd = bfd_openw (output_name, output_target);
-	  else
-	    output_bfd = bfd_openw (output_name, bfd_get_target (this_element));
+      ok_object = bfd_check_format (this_element, bfd_object);
+      if (!ok_object)
+	bfd_nonfatal_message (NULL, this_element, NULL,
+			      _("Unable to recognise the format of file"));
 
-	  if (output_bfd == NULL)
+      /* PR binutils/3110: Cope with archives
+	 containing multiple target types.  */
+      if (force_output_target || !ok_object)
+	output_bfd = bfd_openw (output_name, output_target);
+      else
+	output_bfd = bfd_openw (output_name, bfd_get_target (this_element));
+
+      if (output_bfd == NULL)
+	{
+	  bfd_nonfatal_message (output_name, NULL, NULL, NULL);
+	  status = 1;
+	  return;
+	}
+
+      if (ok_object)
+	{
+	  del = !copy_object (this_element, output_bfd, input_arch);
+
+	  if (del && bfd_get_arch (this_element) == bfd_arch_unknown)
+	    /* Try again as an unknown object file.  */
+	    ok_object = FALSE;
+	  else if (!bfd_close (output_bfd))
 	    {
 	      bfd_nonfatal_message (output_name, NULL, NULL, NULL);
+	      /* Error in new object file. Don't change archive.  */
 	      status = 1;
-	      return;
 	    }
-
- 	  del = ! copy_object (this_element, output_bfd, input_arch);
-
-	  if (! del
-	      || bfd_get_arch (this_element) != bfd_arch_unknown)
-	    {
-	      if (!bfd_close (output_bfd))
-		{
-		  bfd_nonfatal_message (output_name, NULL, NULL, NULL);
-		  /* Error in new object file. Don't change archive.  */
-		  status = 1;
-		}
-	    }
-	  else
-	    goto copy_unknown_element;
 	}
-      else
-	{
-	  bfd_nonfatal_message (NULL, this_element, NULL,
-				_("Unable to recognise the format of file"));
 
-	  output_bfd = bfd_openw (output_name, output_target);
-copy_unknown_element:
+      if (!ok_object)
+	{
 	  del = !copy_unknown_object (this_element, output_bfd);
 	  if (!bfd_close_all_done (output_bfd))
 	    {
@@ -3035,7 +3036,8 @@ strip_main (int argc, char *argv[])
 	   It has already been checked in get_file_size().  */
 	stat (argv[i], &statbuf);
 
-      if (output_file == NULL || strcmp (argv[i], output_file) == 0)
+      if (output_file == NULL
+	  || filename_cmp (argv[i], output_file) == 0)
 	tmpname = make_tempname (argv[i]);
       else
 	tmpname = output_file;
@@ -3156,6 +3158,8 @@ set_pe_subsystem (const char *s)
 	pe_section_alignment = PE_DEF_SECTION_ALIGNMENT;
       break;
     }
+  if (s != subsystem)
+    free ((char *) subsystem);
 }
 
 /* Convert EFI target to PEI target.  */
@@ -3902,7 +3906,8 @@ copy_main (int argc, char *argv[])
 
   /* If there is no destination file, or the source and destination files
      are the same, then create a temp and rename the result into the input.  */
-  if (output_filename == NULL || strcmp (input_filename, output_filename) == 0)
+  if (output_filename == NULL
+      || filename_cmp (input_filename, output_filename) == 0)
     tmpname = make_tempname (input_filename);
   else
     tmpname = output_filename;

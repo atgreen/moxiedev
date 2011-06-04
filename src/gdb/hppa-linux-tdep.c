@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux running on PA-RISC, for GDB.
 
-   Copyright (C) 2004, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2004, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -56,7 +56,8 @@ hppa_linux_target_write_pc (struct regcache *regcache, CORE_ADDR v)
 {
   /* Probably this should be done by the kernel, but it isn't.  */
   regcache_cooked_write_unsigned (regcache, HPPA_PCOQ_HEAD_REGNUM, v | 0x3);
-  regcache_cooked_write_unsigned (regcache, HPPA_PCOQ_TAIL_REGNUM, (v + 4) | 0x3);
+  regcache_cooked_write_unsigned (regcache,
+				  HPPA_PCOQ_TAIL_REGNUM, (v + 4) | 0x3);
 }
 
 /* An instruction to match.  */
@@ -169,7 +170,7 @@ hppa_linux_sigtramp_find_sigcontext (struct gdbarch *gdbarch, CORE_ADDR pc)
       if (insns_match_pattern (gdbarch, pc, hppa_sigtramp, dummy))
 	{
 	  /* sigaltstack case: we have no way of knowing which offset to 
-	     use in this case; default to new kernel handling. If this is
+	     use in this case; default to new kernel handling.  If this is
 	     wrong the unwinding will fail.  */
 	  try = 2;
 	  sp = pc - pcoffs[try];
@@ -182,8 +183,8 @@ hppa_linux_sigtramp_find_sigcontext (struct gdbarch *gdbarch, CORE_ADDR pc)
 
   /* sp + sfoffs[try] points to a struct rt_sigframe, which contains
      a struct siginfo and a struct ucontext.  struct ucontext contains
-     a struct sigcontext. Return an offset to this sigcontext here.  Too 
-     bad we cannot include system specific headers :-(.  
+     a struct sigcontext.  Return an offset to this sigcontext here.  Too 
+     bad we cannot include system specific headers :-(.
      sizeof(struct siginfo) == 128
      offsetof(struct ucontext, uc_mcontext) == 24.  */
   return sp + sfoffs[try] + 128 + 24;
@@ -252,7 +253,7 @@ hppa_linux_sigtramp_frame_unwind_cache (struct frame_info *this_frame,
       scptr += 4;
     }
 
-  /* IASQ/IAOQ. */
+  /* IASQ/IAOQ.  */
   info->saved_regs[HPPA_PCSQ_HEAD_REGNUM].addr = scptr;
   scptr += 4;
   info->saved_regs[HPPA_PCSQ_TAIL_REGNUM].addr = scptr;
@@ -313,6 +314,7 @@ hppa_linux_sigtramp_frame_sniffer (const struct frame_unwind *self,
 
 static const struct frame_unwind hppa_linux_sigtramp_frame_unwind = {
   SIGTRAMP_FRAME,
+  default_frame_unwind_stop_reason,
   hppa_linux_sigtramp_frame_this_id,
   hppa_linux_sigtramp_frame_prev_register,
   NULL,
@@ -330,7 +332,8 @@ static const struct frame_unwind hppa_linux_sigtramp_frame_unwind = {
    d_un.d_ptr value is the global pointer.  */
 
 static CORE_ADDR
-hppa_linux_find_global_pointer (struct gdbarch *gdbarch, struct value *function)
+hppa_linux_find_global_pointer (struct gdbarch *gdbarch,
+				struct value *function)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct obj_section *faddr_sect;
@@ -395,7 +398,7 @@ hppa_linux_find_global_pointer (struct gdbarch *gdbarch, struct value *function)
 		    break;
 		  global_pointer = extract_unsigned_integer (buf, sizeof (buf),
 							     byte_order);
-		  /* The payoff... */
+		  /* The payoff...  */
 		  return global_pointer;
 		}
 
@@ -562,6 +565,8 @@ hppa_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 void
 _initialize_hppa_linux_tdep (void)
 {
-  gdbarch_register_osabi (bfd_arch_hppa, 0, GDB_OSABI_LINUX, hppa_linux_init_abi);
-  gdbarch_register_osabi (bfd_arch_hppa, bfd_mach_hppa20w, GDB_OSABI_LINUX, hppa_linux_init_abi);
+  gdbarch_register_osabi (bfd_arch_hppa, 0, GDB_OSABI_LINUX,
+			  hppa_linux_init_abi);
+  gdbarch_register_osabi (bfd_arch_hppa, bfd_mach_hppa20w,
+			  GDB_OSABI_LINUX, hppa_linux_init_abi);
 }

@@ -1,0 +1,87 @@
+2010-12-01  Keith Seitz  <keiths@redhat.com>
+
+	* generic/gdbtk-hooks.c (gdbtk_annotate_signal): Update to reflect
+	recnet thread_info changes.
+
+2010-11-13  Keith Seitz  <keiths@redhat.com>
+
+	* generic/gdbtk-bp.c (gdb_set_bp): Update for recent
+	create_breakpoint API update.
+
+2010-07-04  Keith Seitz  <keiths@redhat.com>
+
+	* generic/gdbtk-bp.c (gdb_set_bp): Update arguments for API
+	change in create_breakpoint.
+
+2010-06-18  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* generic/gdbtk-cmds.c: Add cygwin macros to allow compilation 
+	with old or recent cygwin version.
+	(gdb_path_conv): Use cygwin_conv_path function.
+	(gdb_eval): Adapt to new field in val_print.
+	* generic/gdbtk-register.c (get_register): Likewise.
+	* generic/gdbtk-wrapper.c (wrap_val_print): Likewise.
+	* generic/gdbtk.c (_initialize_gdbtk): Use cygwin_attach_handle_to_fd
+	call to allow compilation with old and new cygwin version.
+
+2010-04-29  Keith Seitz  <keiths@redhat.com>
+
+	insight/347
+	* generic/gdbtk-varobj.c (variable_value): Use TRY_CATCH
+	when calling varobj_set_value.
+	* library/vartree.itb (changeValue): Make note of new
+	assumption that input is decimal (unless prefixed to change
+	the input radix).
+
+2010-04-02  Keith Seitz  <keiths@redhat.com>
+
+	* generic/gdbtk-bp.c (gdb_get_breakpoint_info): Use
+	breakpoint_commands to access breakpoint commands.
+	(gdb_get_tracepoint_info): Likewise for tracepoint actions.
+
+2010-03-30  Keith Seitz  <keiths@redhat.com>
+
+	* generic/gdbtk-bp.c (gdb_get_breakpoint_info): Breakpoint
+	commands are now reference counted. Adjust data pointers.
+	(gdb_get_tracepoint_info): Likewise.
+	(gdb_actions_command): Don't free previous actions. If the
+	commands aren't valid, we would prefer to keep the old ones
+	any way. break_point_set_commands will also clobber any
+	previous results anyway.
+
+2010-03-24  Keith Seitz  <keiths@redhat.com>
+
+	* generic/gdbtk-bp.c (gdb_set_bp): set_breakpoint is no more.
+	Use create_breakpoint.
+	(gdbtk_obj_array, gdbtk_obj_array_ptr, gdbtk_obj_array_cnt):
+	New globals.
+	(gdbtk_read_next_line): New function.
+	(gdb_actions_command): Rewrite using new command_line
+	infrastructure.
+	(gdb_get_tracepoint_info): Actions are now stored in the breakpoint
+	struct's commands element.
+
+2010-03-12  Tom Tromey  <tromey@redhat.com>
+
+	* generic/gdbtk-cmds.c: Include psymtab.h, not psympriv.h.
+	(struct listfiles_info): New.
+	(do_listfiles): New function.
+	(gdb_listfiles): Use it.
+
+2010-03-12  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* generic/gdbtk-cmds.c: Include psympriv.h.
+	
+2010-01-25  Keith Seitz  <keiths@redhat.com>
+
+	* generic/gdbtk-cmds.c (gdb_set_inferior_args): set_inferior_args
+	now works as expected. Do not strdup/free the argument string.
+
+2010-01-15  Stan Shebs  <stan@codesourcery.com>
+
+	* generic/gdbtk-bp.c (gdb_trace_status): Use current_trace_status.
+
+2010-01-04  Keith Seitz  <keiths@redhat.com>
+
+	* generic/gdbtk-cmds.c (gdbtk_load_asm): print_address_symbolic
+	requires the architecture, too.

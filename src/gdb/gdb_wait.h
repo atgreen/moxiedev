@@ -1,5 +1,6 @@
 /* Standard wait macros.
-   Copyright (C) 2000, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2000, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -54,7 +55,7 @@
 /* Unfortunately, the above comment (about being compatible in all Unix 
    systems) is not quite correct for AIX, sigh.  And AIX 3.2 can generate
    status words like 0x57c (sigtrap received after load), and gdb would
-   choke on it. */
+   choke on it.  */
 
 #define WIFSTOPPED(w)	((w)&0x40)
 
@@ -76,12 +77,6 @@
 #endif
 
 /* These are not defined in POSIX, but are used by our programs.  */
-
-#define WAITTYPE	int
-
-#ifndef	WCOREDUMP
-#define WCOREDUMP(w)	(((w)&0200) != 0)
-#endif
 
 #ifndef	WSETEXIT
 # ifdef	W_EXITCODE

@@ -3,10 +3,11 @@ D/machine////
 D/math////
 D/mathfp////
 D/test////
-/Makefile.am/1.9/Mon Nov 22 20:14:10 2010/-ko/
-/Makefile.in/1.23/Mon Nov 22 20:14:10 2010/-ko/
-/aclocal.m4/1.29/Sat Nov 13 14:05:51 2010/-ko/
-/config.h.in/1.1.1.1/Sat Nov 13 14:05:51 2010/-ko/
-/configure/1.38/Mon Nov 22 20:14:11 2010/-ko/
-/configure.in/1.11/Mon Nov 22 20:14:11 2010/-ko/
-/libm.texinfo/1.14/Mon Nov 22 20:14:11 2010/-ko/
+D/complex////
+/Makefile.am/1.9/Sat Jun  4 17:41:33 2011/-ko/
+/Makefile.in/1.23/Sat Jun  4 17:41:33 2011/-ko/
+/aclocal.m4/1.30/Sat Jun  4 17:44:52 2011/-ko/
+/config.h.in/1.1.1.1/Sat Jun  4 17:41:33 2011/-ko/
+/configure/1.39/Sat Jun  4 17:44:52 2011/-ko/
+/configure.in/1.11/Sat Jun  4 17:41:33 2011/-ko/
+/libm.texinfo/1.15/Sat Jun  4 17:44:52 2011/-ko/

@@ -1,5 +1,5 @@
 /* i387-specific utility functions, for the remote server for GDB.
-   Copyright (C) 2000, 2001, 2002, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2000, 2001, 2002, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -468,61 +468,61 @@ i387_xsave_to_cache (struct regcache *regcache, const void *buf)
   int i, top;
   unsigned long val;
   unsigned int clear_bv;
-  char *p;
+  gdb_byte *p;
 
   /* The supported bits in `xstat_bv' are 1 byte.  Clear part in
      vector registers if its bit in xstat_bv is zero.  */
   clear_bv = (~fp->xstate_bv) & x86_xcr0;
 
   /* Check if any x87 registers are changed.  */
-  if ((x86_xcr0 & I386_XSTATE_X87))
+  if ((x86_xcr0 & I386_XSTATE_X87) != 0)
     {
       int st0_regnum = find_regno ("st0");
 
-      if ((clear_bv & I386_XSTATE_X87))
-	p = NULL;
-      else
-	p = (char *) buf;
-
-      for (i = 0; i < 8; i++)
+      if ((clear_bv & I386_XSTATE_X87) != 0)
 	{
-	  if (p)
-	    p = ((char *) &fp->st_space[0]) + i * 16;
-	  supply_register (regcache, i + st0_regnum, p);
+	  for (i = 0; i < 8; i++)
+	    supply_register_zeroed (regcache, i + st0_regnum);
+	}
+      else
+	{
+	  p = (gdb_byte *) &fp->st_space[0];
+	  for (i = 0; i < 8; i++)
+	    supply_register (regcache, i + st0_regnum, p + i * 16);
 	}
     }
 
-  if ((x86_xcr0 & I386_XSTATE_SSE))
+  if ((x86_xcr0 & I386_XSTATE_SSE) != 0)
     {
       int xmm0_regnum = find_regno ("xmm0");
 
       if ((clear_bv & I386_XSTATE_SSE))
-	p = NULL;
-      else
-	p = (char *) buf;
-
-      for (i = 0; i < num_xmm_registers; i++)
 	{
-	  if (p)
-	    p = ((char *) &fp->xmm_space[0]) + i * 16;
-	  supply_register (regcache, i + xmm0_regnum, p);
+	  for (i = 0; i < num_xmm_registers; i++)
+	    supply_register_zeroed (regcache, i + xmm0_regnum);
+	}
+      else
+	{
+	  p = (gdb_byte *) &fp->xmm_space[0];
+	  for (i = 0; i < num_xmm_registers; i++)
+	    supply_register (regcache, i + xmm0_regnum, p + i * 16);
 	}
     }
 
-  if ((x86_xcr0 & I386_XSTATE_AVX))
+  if ((x86_xcr0 & I386_XSTATE_AVX) != 0)
     {
       int ymm0h_regnum = find_regno ("ymm0h");
 
-      if ((clear_bv & I386_XSTATE_AVX))
-	p = NULL;
-      else
-	p = (char *) buf;
-
-      for (i = 0; i < num_xmm_registers; i++)
+      if ((clear_bv & I386_XSTATE_AVX) != 0)
 	{
-	  if (p)
-	    p = ((char *) &fp->ymmh_space[0]) + i * 16;
-	  supply_register (regcache, i + ymm0h_regnum, p);
+	  for (i = 0; i < num_xmm_registers; i++)
+	    supply_register_zeroed (regcache, i + ymm0h_regnum);
+	}
+      else
+	{
+	  p = (gdb_byte *) &fp->ymmh_space[0];
+	  for (i = 0; i < num_xmm_registers; i++)
+	    supply_register (regcache, i + ymm0h_regnum, p + i * 16);
 	}
     }
 

@@ -1,6 +1,6 @@
 /* General utility routines for the remote server for GDB.
    Copyright (C) 1986, 1989, 1993, 1995, 1996, 1997, 1999, 2000, 2002, 2003,
-   2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -40,7 +40,8 @@ static void malloc_failure (size_t size) ATTR_NORETURN;
 static void
 malloc_failure (size_t size)
 {
-  fprintf (stderr, PREFIX "ran out of memory while trying to allocate %lu bytes\n",
+  fprintf (stderr,
+	   PREFIX "ran out of memory while trying to allocate %lu bytes\n",
 	   (unsigned long) size);
   exit (1);
 }
@@ -255,26 +256,22 @@ xsnprintf (char *str, size_t size, const char *format, ...)
 }
 
 static char *
-decimal2str (char *sign, ULONGEST addr, int width)
+decimal2str (char *sign, ULONGEST addr)
 {
   /* Steal code from valprint.c:print_decimal().  Should this worry
      about the real size of addr as the above does? */
   unsigned long temp[3];
   char *str = get_cell ();
-
   int i = 0;
+  int width = 9;
+
   do
     {
       temp[i] = addr % (1000 * 1000 * 1000);
       addr /= (1000 * 1000 * 1000);
       i++;
-      width -= 9;
     }
   while (addr != 0 && i < (sizeof (temp) / sizeof (temp[0])));
-
-  width = 9;
-  if (width < 0)
-    width = 0;
 
   switch (i)
     {
@@ -303,7 +300,7 @@ decimal2str (char *sign, ULONGEST addr, int width)
 char *
 pulongest (ULONGEST u)
 {
-  return decimal2str ("", u, 0);
+  return decimal2str ("", u);
 }
 
 /* %d for LONGEST.  The result is stored in a circular static buffer,
@@ -313,9 +310,9 @@ char *
 plongest (LONGEST l)
 {
   if (l < 0)
-    return decimal2str ("-", -l, 0);
+    return decimal2str ("-", -l);
   else
-    return decimal2str ("", l, 0);
+    return decimal2str ("", l);
 }
 
 /* Eliminate warning from compiler on 32-bit systems.  */

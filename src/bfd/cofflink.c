@@ -244,8 +244,8 @@ coff_link_check_ar_symbols (bfd *abfd,
 	  if (h != (struct bfd_link_hash_entry *) NULL
 	      && h->type == bfd_link_hash_undefined)
 	    {
-	      if (! (*info->callbacks->add_archive_element)
-					(info, abfd, name, subsbfd))
+	      if (!(*info->callbacks
+		    ->add_archive_element) (info, abfd, name, subsbfd))
 		return FALSE;
 	      *pneeded = TRUE;
 	      return TRUE;
@@ -269,29 +269,38 @@ coff_link_check_archive_element (bfd *abfd,
 				 struct bfd_link_info *info,
 				 bfd_boolean *pneeded)
 {
-  bfd *subsbfd = NULL;
+  bfd *oldbfd;
+  bfd_boolean needed;
 
-  if (! _bfd_coff_get_external_symbols (abfd))
+  if (!_bfd_coff_get_external_symbols (abfd))
     return FALSE;
 
-  if (! coff_link_check_ar_symbols (abfd, info, pneeded, &subsbfd))
+  oldbfd = abfd;
+  if (!coff_link_check_ar_symbols (abfd, info, pneeded, &abfd))
     return FALSE;
 
-  /* Potentially, the add_archive_element hook may have set a
-     substitute BFD for us.  */
-  if (*pneeded
-      && subsbfd
-      && ! _bfd_coff_get_external_symbols (subsbfd))
-    return FALSE;
+  needed = *pneeded;
+  if (needed)
+    {
+      /* Potentially, the add_archive_element hook may have set a
+	 substitute BFD for us.  */
+      if (abfd != oldbfd)
+	{
+	  if (!info->keep_memory
+	      && !_bfd_coff_free_symbols (oldbfd))
+	    return FALSE;
+	  if (!_bfd_coff_get_external_symbols (abfd))
+	    return FALSE;
+	}
+      if (!coff_link_add_symbols (abfd, info))
+	return FALSE;
+    }
 
-  if (*pneeded
-      && ! coff_link_add_symbols (subsbfd ? subsbfd : abfd, info))
-    return FALSE;
-
-  if ((! info->keep_memory || ! *pneeded)
-      && ! _bfd_coff_free_symbols (abfd))
-    return FALSE;
-
+  if (!info->keep_memory || !needed)
+    {
+      if (!_bfd_coff_free_symbols (abfd))
+	return FALSE;
+    }
   return TRUE;
 }
 
@@ -2355,6 +2364,35 @@ _bfd_coff_link_input_bfd (struct coff_final_link_info *finfo, bfd *input_bfd)
 			       : finfo->internal_relocs)));
 	  if (internal_relocs == NULL)
 	    return FALSE;
+
+	  /* Run through the relocs looking for relocs against symbols
+	     coming from discarded sections and complain about them.  */
+	  irel = internal_relocs;
+	  for (; irel < &internal_relocs[o->reloc_count]; irel++)
+	    {
+	      struct coff_link_hash_entry *h;
+	      asection *ps = NULL;
+	      long symndx = irel->r_symndx;
+	      if (symndx < 0)
+		continue;
+	      h = obj_coff_sym_hashes (input_bfd)[symndx];
+	      if (h == NULL)
+		continue;
+	      while (h->root.type == bfd_link_hash_indirect
+		     || h->root.type == bfd_link_hash_warning)
+		h = (struct coff_link_hash_entry *) h->root.u.i.link;
+	      if (h->root.type == bfd_link_hash_defined
+		  || h->root.type == bfd_link_hash_defweak)
+		ps = h->root.u.def.section;
+	      if (ps == NULL)
+		continue;
+	      /* Complain if definition comes from an excluded section.  */
+	      if (ps->flags & SEC_EXCLUDE)
+		(*finfo->info->callbacks->einfo)
+		  (_("%X`%s' referenced in section `%A' of %B: "
+		     "defined in discarded section `%A' of %B\n"),
+		   h->root.root.string, o, input_bfd, ps, ps->owner);
+	    }
 
 	  /* Call processor specific code to relocate the section
              contents.  */

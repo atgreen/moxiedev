@@ -1,6 +1,6 @@
 // gold.h -- general definitions for gold   -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -35,7 +35,7 @@
   // The Solaris version of locale.h always includes libintl.h.  If we
   // have been configured with --disable-nls then ENABLE_NLS will not
   // be defined and the dummy definitions of bindtextdomain (et al)
-  // below will conflict with the defintions in libintl.h.  So we
+  // below will conflict with the definitions in libintl.h.  So we
   // define these values to prevent the bogus inclusion of libintl.h.
 # define _LIBINTL_H
 # define _LIBGETTEXT_H
@@ -133,11 +133,6 @@ extern "C" ssize_t pread(int, void*, size_t, off_t);
 
 #ifndef HAVE_FTRUNCATE
 extern "C" int ftruncate(int, off_t);
-#endif
-
-#ifndef HAVE_MREMAP
-#define MREMAP_MAYMOVE 1
-extern "C" void *mremap(void *, size_t, size_t, int, ...);
 #endif
 
 #ifndef HAVE_FFSLL

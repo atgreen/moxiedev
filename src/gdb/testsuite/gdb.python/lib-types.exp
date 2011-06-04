@@ -1,4 +1,4 @@
-# Copyright (C) 2010 Free Software Foundation, Inc.
+# Copyright (C) 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,9 +43,6 @@ if ![runto_main] then {
     fail "Can't run to main"
     return 0
 }
-
-# Ensure sys.path, et.al. are initialized properly.
-gdb_check_python_config
 
 gdb_test_no_output "python import gdb.types"
 

@@ -1,6 +1,6 @@
 // symtab.cc -- the gold symbol table
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -40,6 +40,7 @@
 #include "symtab.h"
 #include "script.h"
 #include "plugin.h"
+#include "incremental.h"
 
 namespace gold
 {
@@ -310,6 +311,11 @@ Sized_symbol<size>::allocate_common(Output_data* od, Value_type value)
 inline bool
 Symbol::should_add_dynsym_entry(Symbol_table* symtab) const
 {
+  // If the symbol is only present on plugin files, the plugin decided we
+  // don't need it.
+  if (!this->in_real_elf())
+    return false;
+
   // If the symbol is used by a dynamic relocation, we need to add it.
   if (this->needs_dynsym_entry())
     return true;
@@ -1002,7 +1008,11 @@ Symbol_table::add_from_object(Object* object,
   // Record every time we see a new undefined symbol, to speed up
   // archive groups.
   if (!was_undefined && ret->is_undefined())
-    ++this->saw_undefined_;
+    {
+      ++this->saw_undefined_;
+      if (parameters->options().has_plugins())
+	parameters->options().plugins()->new_undefined_symbol(ret);
+    }
 
   // Keep track of common symbols, to speed up common symbol
   // allocation.
@@ -1038,13 +1048,13 @@ Symbol_table::add_from_object(Object* object,
 template<int size, bool big_endian>
 void
 Symbol_table::add_from_relobj(
-    Sized_relobj<size, big_endian>* relobj,
+    Sized_relobj_file<size, big_endian>* relobj,
     const unsigned char* syms,
     size_t count,
     size_t symndx_offset,
     const char* sym_names,
     size_t sym_name_size,
-    typename Sized_relobj<size, big_endian>::Symbols* sympointers,
+    typename Sized_relobj_file<size, big_endian>::Symbols* sympointers,
     size_t* defined)
 {
   *defined = 0;
@@ -1294,7 +1304,7 @@ Symbol_table::add_from_dynobj(
     const unsigned char* versym,
     size_t versym_size,
     const std::vector<const char*>* version_map,
-    typename Sized_relobj<size, big_endian>::Symbols* sympointers,
+    typename Sized_relobj_file<size, big_endian>::Symbols* sympointers,
     size_t* defined)
 {
   *defined = 0;
@@ -1474,6 +1484,37 @@ Symbol_table::add_from_dynobj(
     }
 
   this->record_weak_aliases(&object_symbols);
+}
+
+// Add a symbol from a incremental object file.
+
+template<int size, bool big_endian>
+Symbol*
+Symbol_table::add_from_incrobj(
+    Object* obj,
+    const char* name,
+    const char* ver,
+    elfcpp::Sym<size, big_endian>* sym)
+{
+  unsigned int st_shndx = sym->get_st_shndx();
+  bool is_ordinary = st_shndx < elfcpp::SHN_LORESERVE;
+
+  Stringpool::Key ver_key = 0;
+  bool is_default_version = false;
+  bool is_forced_local = false;
+
+  Stringpool::Key name_key;
+  name = this->namepool_.add(name, true, &name_key);
+
+  Sized_symbol<size>* res;
+  res = this->add_from_object(obj, name, name_key, ver, ver_key,
+		              is_default_version, *sym, st_shndx,
+			      is_ordinary, st_shndx);
+
+  if (is_forced_local)
+    this->force_local(res);
+
+  return res;
 }
 
 // This is used to sort weak aliases.  We sort them first by section
@@ -2589,6 +2630,15 @@ Symbol_table::sized_finalize_symbol(Symbol* unsized_sym)
       return false;
     }
 
+  // If the symbol is only present on plugin files, the plugin decided we
+  // don't need it.
+  if (!sym->in_real_elf())
+    {
+      gold_assert(!sym->has_symtab_index());
+      sym->set_symtab_index(-1U);
+      return false;
+    }
+
   // Compute final symbol value.
   Compute_final_value_status status;
   Value_type value = this->compute_final_value(sym, &status);
@@ -3007,34 +3057,95 @@ Symbol_table::print_stats() const
 
 // We check for ODR violations by looking for symbols with the same
 // name for which the debugging information reports that they were
-// defined in different source locations.  When comparing the source
-// location, we consider instances with the same base filename and
-// line number to be the same.  This is because different object
-// files/shared libraries can include the same header file using
-// different paths, and we don't want to report an ODR violation in
-// that case.
+// defined in disjoint source locations.  When comparing the source
+// location, we consider instances with the same base filename to be
+// the same.  This is because different object files/shared libraries
+// can include the same header file using different paths, and
+// different optimization settings can make the line number appear to
+// be a couple lines off, and we don't want to report an ODR violation
+// in those cases.
 
 // This struct is used to compare line information, as returned by
 // Dwarf_line_info::one_addr2line.  It implements a < comparison
-// operator used with std::set.
+// operator used with std::sort.
 
 struct Odr_violation_compare
 {
   bool
   operator()(const std::string& s1, const std::string& s2) const
   {
-    std::string::size_type pos1 = s1.rfind('/');
-    std::string::size_type pos2 = s2.rfind('/');
-    if (pos1 == std::string::npos
-	|| pos2 == std::string::npos)
-      return s1 < s2;
-    return s1.compare(pos1, std::string::npos,
-		      s2, pos2, std::string::npos) < 0;
+    // Inputs should be of the form "dirname/filename:linenum" where
+    // "dirname/" is optional.  We want to compare just the filename:linenum.
+
+    // Find the last '/' in each string.
+    std::string::size_type s1begin = s1.rfind('/');
+    std::string::size_type s2begin = s2.rfind('/');
+    // If there was no '/' in a string, start at the beginning.
+    if (s1begin == std::string::npos)
+      s1begin = 0;
+    if (s2begin == std::string::npos)
+      s2begin = 0;
+    return s1.compare(s1begin, std::string::npos,
+		      s2, s2begin, std::string::npos) < 0;
   }
 };
 
+// Returns all of the lines attached to LOC, not just the one the
+// instruction actually came from.
+std::vector<std::string>
+Symbol_table::linenos_from_loc(const Task* task,
+                               const Symbol_location& loc)
+{
+  // We need to lock the object in order to read it.  This
+  // means that we have to run in a singleton Task.  If we
+  // want to run this in a general Task for better
+  // performance, we will need one Task for object, plus
+  // appropriate locking to ensure that we don't conflict with
+  // other uses of the object.  Also note, one_addr2line is not
+  // currently thread-safe.
+  Task_lock_obj<Object> tl(task, loc.object);
+
+  std::vector<std::string> result;
+  // 16 is the size of the object-cache that one_addr2line should use.
+  std::string canonical_result = Dwarf_line_info::one_addr2line(
+      loc.object, loc.shndx, loc.offset, 16, &result);
+  if (!canonical_result.empty())
+    result.push_back(canonical_result);
+  return result;
+}
+
+// OutputIterator that records if it was ever assigned to.  This
+// allows it to be used with std::set_intersection() to check for
+// intersection rather than computing the intersection.
+struct Check_intersection
+{
+  Check_intersection()
+    : value_(false)
+  {}
+
+  bool had_intersection() const
+  { return this->value_; }
+
+  Check_intersection& operator++()
+  { return *this; }
+
+  Check_intersection& operator*()
+  { return *this; }
+
+  template<typename T>
+  Check_intersection& operator=(const T&)
+  {
+    this->value_ = true;
+    return *this;
+  }
+
+ private:
+  bool value_;
+};
+
 // Check candidate_odr_violations_ to find symbols with the same name
-// but apparently different definitions (different source-file/line-no).
+// but apparently different definitions (different source-file/line-no
+// for each line assigned to the first instruction).
 
 void
 Symbol_table::detect_odr_violations(const Task* task,
@@ -3044,48 +3155,73 @@ Symbol_table::detect_odr_violations(const Task* task,
        it != candidate_odr_violations_.end();
        ++it)
     {
-      const char* symbol_name = it->first;
-      // Maps from symbol location to a sample object file we found
-      // that location in.  We use a sorted map so the location order
-      // is deterministic, but we only store an arbitrary object file
-      // to avoid copying lots of names.
-      std::map<std::string, std::string, Odr_violation_compare> line_nums;
+      const char* const symbol_name = it->first;
 
-      for (Unordered_set<Symbol_location, Symbol_location_hash>::const_iterator
-               locs = it->second.begin();
-           locs != it->second.end();
-           ++locs)
+      std::string first_object_name;
+      std::vector<std::string> first_object_linenos;
+
+      Unordered_set<Symbol_location, Symbol_location_hash>::const_iterator
+          locs = it->second.begin();
+      const Unordered_set<Symbol_location, Symbol_location_hash>::const_iterator
+          locs_end = it->second.end();
+      for (; locs != locs_end && first_object_linenos.empty(); ++locs)
         {
-	  // We need to lock the object in order to read it.  This
-	  // means that we have to run in a singleton Task.  If we
-	  // want to run this in a general Task for better
-	  // performance, we will need one Task for object, plus
-	  // appropriate locking to ensure that we don't conflict with
-	  // other uses of the object.  Also note, one_addr2line is not
-          // currently thread-safe.
-	  Task_lock_obj<Object> tl(task, locs->object);
-          // 16 is the size of the object-cache that one_addr2line should use.
-          std::string lineno = Dwarf_line_info::one_addr2line(
-              locs->object, locs->shndx, locs->offset, 16);
-          if (!lineno.empty())
-            {
-              std::string& sample_object = line_nums[lineno];
-              if (sample_object.empty())
-                sample_object = locs->object->name();
-            }
+          // Save the line numbers from the first definition to
+          // compare to the other definitions.  Ideally, we'd compare
+          // every definition to every other, but we don't want to
+          // take O(N^2) time to do this.  This shortcut may cause
+          // false negatives that appear or disappear depending on the
+          // link order, but it won't cause false positives.
+          first_object_name = locs->object->name();
+          first_object_linenos = this->linenos_from_loc(task, *locs);
         }
 
-      if (line_nums.size() > 1)
+      // Sort by Odr_violation_compare to make std::set_intersection work.
+      std::sort(first_object_linenos.begin(), first_object_linenos.end(),
+                Odr_violation_compare());
+
+      for (; locs != locs_end; ++locs)
         {
-          gold_warning(_("while linking %s: symbol '%s' defined in multiple "
-                         "places (possible ODR violation):"),
-                       output_file_name, demangle(symbol_name).c_str());
-          for (std::map<std::string, std::string>::const_iterator it2 =
-		 line_nums.begin();
-	       it2 != line_nums.end();
-	       ++it2)
-            fprintf(stderr, _("  %s from %s\n"),
-                    it2->first.c_str(), it2->second.c_str());
+          std::vector<std::string> linenos =
+              this->linenos_from_loc(task, *locs);
+          // linenos will be empty if we couldn't parse the debug info.
+          if (linenos.empty())
+            continue;
+          // Sort by Odr_violation_compare to make std::set_intersection work.
+          std::sort(linenos.begin(), linenos.end(), Odr_violation_compare());
+
+          Check_intersection intersection_result =
+              std::set_intersection(first_object_linenos.begin(),
+                                    first_object_linenos.end(),
+                                    linenos.begin(),
+                                    linenos.end(),
+                                    Check_intersection(),
+                                    Odr_violation_compare());
+          if (!intersection_result.had_intersection())
+            {
+              gold_warning(_("while linking %s: symbol '%s' defined in "
+                             "multiple places (possible ODR violation):"),
+                           output_file_name, demangle(symbol_name).c_str());
+              // This only prints one location from each definition,
+              // which may not be the location we expect to intersect
+              // with another definition.  We could print the whole
+              // set of locations, but that seems too verbose.
+              gold_assert(!first_object_linenos.empty());
+              gold_assert(!linenos.empty());
+              fprintf(stderr, _("  %s from %s\n"),
+                      first_object_linenos[0].c_str(),
+                      first_object_name.c_str());
+              fprintf(stderr, _("  %s from %s\n"),
+                      linenos[0].c_str(),
+                      locs->object->name().c_str());
+              // Only print one broken pair, to avoid needing to
+              // compare against a list of the disjoint definition
+              // locations we've found so far.  (If we kept comparing
+              // against just the first one, we'd get a lot of
+              // redundant complaints about the second definition
+              // location.)
+              break;
+            }
         }
     }
   // We only call one_addr2line() in this function, so we can clear its cache.
@@ -3159,13 +3295,13 @@ Sized_symbol<64>::allocate_common(Output_data*, Value_type);
 template
 void
 Symbol_table::add_from_relobj<32, false>(
-    Sized_relobj<32, false>* relobj,
+    Sized_relobj_file<32, false>* relobj,
     const unsigned char* syms,
     size_t count,
     size_t symndx_offset,
     const char* sym_names,
     size_t sym_name_size,
-    Sized_relobj<32, false>::Symbols* sympointers,
+    Sized_relobj_file<32, false>::Symbols* sympointers,
     size_t* defined);
 #endif
 
@@ -3173,13 +3309,13 @@ Symbol_table::add_from_relobj<32, false>(
 template
 void
 Symbol_table::add_from_relobj<32, true>(
-    Sized_relobj<32, true>* relobj,
+    Sized_relobj_file<32, true>* relobj,
     const unsigned char* syms,
     size_t count,
     size_t symndx_offset,
     const char* sym_names,
     size_t sym_name_size,
-    Sized_relobj<32, true>::Symbols* sympointers,
+    Sized_relobj_file<32, true>::Symbols* sympointers,
     size_t* defined);
 #endif
 
@@ -3187,13 +3323,13 @@ Symbol_table::add_from_relobj<32, true>(
 template
 void
 Symbol_table::add_from_relobj<64, false>(
-    Sized_relobj<64, false>* relobj,
+    Sized_relobj_file<64, false>* relobj,
     const unsigned char* syms,
     size_t count,
     size_t symndx_offset,
     const char* sym_names,
     size_t sym_name_size,
-    Sized_relobj<64, false>::Symbols* sympointers,
+    Sized_relobj_file<64, false>::Symbols* sympointers,
     size_t* defined);
 #endif
 
@@ -3201,13 +3337,13 @@ Symbol_table::add_from_relobj<64, false>(
 template
 void
 Symbol_table::add_from_relobj<64, true>(
-    Sized_relobj<64, true>* relobj,
+    Sized_relobj_file<64, true>* relobj,
     const unsigned char* syms,
     size_t count,
     size_t symndx_offset,
     const char* sym_names,
     size_t sym_name_size,
-    Sized_relobj<64, true>::Symbols* sympointers,
+    Sized_relobj_file<64, true>::Symbols* sympointers,
     size_t* defined);
 #endif
 
@@ -3263,7 +3399,7 @@ Symbol_table::add_from_dynobj<32, false>(
     const unsigned char* versym,
     size_t versym_size,
     const std::vector<const char*>* version_map,
-    Sized_relobj<32, false>::Symbols* sympointers,
+    Sized_relobj_file<32, false>::Symbols* sympointers,
     size_t* defined);
 #endif
 
@@ -3279,7 +3415,7 @@ Symbol_table::add_from_dynobj<32, true>(
     const unsigned char* versym,
     size_t versym_size,
     const std::vector<const char*>* version_map,
-    Sized_relobj<32, true>::Symbols* sympointers,
+    Sized_relobj_file<32, true>::Symbols* sympointers,
     size_t* defined);
 #endif
 
@@ -3295,7 +3431,7 @@ Symbol_table::add_from_dynobj<64, false>(
     const unsigned char* versym,
     size_t versym_size,
     const std::vector<const char*>* version_map,
-    Sized_relobj<64, false>::Symbols* sympointers,
+    Sized_relobj_file<64, false>::Symbols* sympointers,
     size_t* defined);
 #endif
 
@@ -3311,8 +3447,48 @@ Symbol_table::add_from_dynobj<64, true>(
     const unsigned char* versym,
     size_t versym_size,
     const std::vector<const char*>* version_map,
-    Sized_relobj<64, true>::Symbols* sympointers,
+    Sized_relobj_file<64, true>::Symbols* sympointers,
     size_t* defined);
+#endif
+
+#ifdef HAVE_TARGET_32_LITTLE
+template
+Symbol*
+Symbol_table::add_from_incrobj(
+    Object* obj,
+    const char* name,
+    const char* ver,
+    elfcpp::Sym<32, false>* sym);
+#endif
+
+#ifdef HAVE_TARGET_32_BIG
+template
+Symbol*
+Symbol_table::add_from_incrobj(
+    Object* obj,
+    const char* name,
+    const char* ver,
+    elfcpp::Sym<32, true>* sym);
+#endif
+
+#ifdef HAVE_TARGET_64_LITTLE
+template
+Symbol*
+Symbol_table::add_from_incrobj(
+    Object* obj,
+    const char* name,
+    const char* ver,
+    elfcpp::Sym<64, false>* sym);
+#endif
+
+#ifdef HAVE_TARGET_64_BIG
+template
+Symbol*
+Symbol_table::add_from_incrobj(
+    Object* obj,
+    const char* name,
+    const char* ver,
+    elfcpp::Sym<64, true>* sym);
 #endif
 
 #if defined(HAVE_TARGET_32_LITTLE) || defined(HAVE_TARGET_32_BIG)

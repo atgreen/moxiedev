@@ -1,4 +1,4 @@
-# Copyright (C) 2008, 2010 Free Software Foundation, Inc.
+# Copyright (C) 2008, 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -110,7 +110,6 @@ gdb_test_multiple "maint print dummy-frames" "dummy frame popped" {
 
 # Continue one last time, the program should exit normally.
 
-gdb_test "continue" "Program exited normally." \
-    "continue to program exit"
+gdb_continue_to_end "" continue 1
 
 return 0

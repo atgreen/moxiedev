@@ -1,6 +1,7 @@
 # Support routines for LD testsuite.
 #   Copyright 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
-#    2004, 2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+#    2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+#    Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -294,14 +295,14 @@ proc default_ld_compile { cc source object } {
 
 # Assemble a file.
 #
-proc default_ld_assemble { as source object } {
+proc default_ld_assemble { as in_flags source object } {
     global ASFLAGS
     global host_triplet
 
     if ![info exists ASFLAGS] { set ASFLAGS "" }
 
     set flags [big_or_little_endian]
-    set exec_output [run_host_cmd "$as" "$flags $ASFLAGS -o $object $source"]
+    set exec_output [run_host_cmd "$as" "$flags $in_flags $ASFLAGS -o $object $source"]
     set exec_output [prune_warnings $exec_output]
     if [string match "" $exec_output] then {
 	return 1
@@ -369,10 +370,7 @@ proc ld_simple_link_defsyms {} {
     set flags "--defsym __stack_chk_fail=0"
 
     # ARM targets call __gccmain
-    if {[istarget arm*-*-*]       || \
-        [istarget strongarm*-*-*] || \
-        [istarget xscale*-*-*]    || \
-        [istarget thumb-*-*] } {
+    if {[istarget arm*-*-*]} {
         append flags " --defsym __gccmain=0"
     }
 
@@ -980,26 +978,21 @@ proc run_ld_link_tests { ldtests } {
 	}
 
 	# Catch assembler errors.
-	if { $is_unresolved != 0 } {
+	if { $is_unresolved } {
 	    unresolved $testname
 	    continue
 	}
 
 	if { [regexp ".*\\.a$" $binfile] } {
 	    if { ![ar_simple_create $ar $ld_options $binfile "$objfiles"] } {
-		fail $testname
 		set failed 1
-	    } else {
-		set failed 0
 	    }
 	} elseif { ![ld_simple_link $ld $binfile "-L$srcdir/$subdir $ld_options $objfiles"] } {
 	    set maybe_failed 1
 	    set ld_output "$exec_output"
-	} else {
-	    set failed 0
 	}
 
-	if { $failed == 0 } {
+	if { !$failed } {
 	    foreach actionlist $actions {
 		set action [lindex $actionlist 0]
 		set progopts [lindex $actionlist 1]
@@ -1036,10 +1029,7 @@ proc run_ld_link_tests { ldtests } {
 			break
 		    }
 		    set maybe_failed 0
-		} elseif { $maybe_failed != 0 } {
-		    set failed 1
-		    break
-		} elseif { $dump_prog != "" } {
+		} elseif { !$maybe_failed && $dump_prog != "" } {
 		    set dumpfile [lindex $actionlist 2]
 		    set binary $dump_prog
 
@@ -1081,18 +1071,14 @@ proc run_ld_link_tests { ldtests } {
 		    remote_file host delete "dump.out"
 		}
 	    }
-
-	    if { $failed != 0 } {
-		fail $testname
-	    } else { if { $is_unresolved == 0 } {
-		pass $testname
-	    } }
 	}
 
-	# Catch action errors.
-	if { $is_unresolved != 0 } {
+	if { $is_unresolved } {
 	    unresolved $testname
-	    continue
+	} elseif { $maybe_failed || $failed } {
+	    fail $testname
+	} else {
+	    pass $testname
 	}
     }
 }
@@ -1257,6 +1243,7 @@ proc run_ld_link_exec_tests { targets_to_xfail ldtests } {
 #  4:action and options.
 #  5:name of output file
 #  6:language (optional)
+#  7:linker warnings (optional)
 #
 # Actions:
 # objdump: Apply objdump options on result.  Compare with regex (last arg).
@@ -1275,6 +1262,7 @@ proc run_cc_link_tests { ldtests } {
     global CFLAGS
     global CXXFLAGS
     global ar
+    global exec_output
 
     foreach testitem $ldtests {
 	set testname [lindex $testitem 0]
@@ -1284,6 +1272,7 @@ proc run_cc_link_tests { ldtests } {
 	set actions [lindex $testitem 4]
 	set binfile tmpdir/[lindex $testitem 5]
 	set lang [lindex $testitem 6]
+	set warnings [lindex $testitem 7]
 	set objfiles {}
 	set is_unresolved 0
 	set failed 0
@@ -1320,8 +1309,18 @@ proc run_cc_link_tests { ldtests } {
 		set failed 0
 	    }
 	} elseif { ![ld_simple_link $cc_cmd $binfile "-L$srcdir/$subdir $ldflags $objfiles"] } {
-	    fail $testname
-	    set failed 1
+	    # Check if exec_output is expected.
+	    if { $warnings != "" } then {
+		verbose -log "returned with: <$exec_output>, expected: <$warnings>"
+		if { [regexp $warnings $exec_output] } then {
+		    set failed 0
+		} else {
+		    set failed 1
+		}
+	    } else {
+		fail $testname
+		set failed 1
+	    }
 	} else {
 	    set failed 0
 	}

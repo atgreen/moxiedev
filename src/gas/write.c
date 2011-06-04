@@ -932,6 +932,8 @@ fixup_segment (fixS *fixP, segT this_segment)
 	  sub_symbol_segment = S_GET_SEGMENT (fixP->fx_subsy);
 	  if (fixP->fx_addsy != NULL
 	      && sub_symbol_segment == add_symbol_segment
+	      && !S_FORCE_RELOC (fixP->fx_addsy, 0)
+	      && !S_FORCE_RELOC (fixP->fx_subsy, 0)
 	      && !TC_FORCE_RELOCATION_SUB_SAME (fixP, add_symbol_segment))
 	    {
 	      add_number += S_GET_VALUE (fixP->fx_addsy);
@@ -945,6 +947,7 @@ fixup_segment (fixS *fixP, segT this_segment)
 #endif
 	    }
 	  else if (sub_symbol_segment == absolute_section
+		   && !S_FORCE_RELOC (fixP->fx_subsy, 0)
 		   && !TC_FORCE_RELOCATION_SUB_ABS (fixP, add_symbol_segment))
 	    {
 	      add_number -= S_GET_VALUE (fixP->fx_subsy);
@@ -952,6 +955,7 @@ fixup_segment (fixS *fixP, segT this_segment)
 	      fixP->fx_subsy = NULL;
 	    }
 	  else if (sub_symbol_segment == this_segment
+		   && !S_FORCE_RELOC (fixP->fx_subsy, 0)
 		   && !TC_FORCE_RELOCATION_SUB_LOCAL (fixP, add_symbol_segment))
 	    {
 	      add_number -= S_GET_VALUE (fixP->fx_subsy);
@@ -994,6 +998,7 @@ fixup_segment (fixS *fixP, segT this_segment)
       if (fixP->fx_addsy)
 	{
 	  if (add_symbol_segment == this_segment
+	      && !S_FORCE_RELOC (fixP->fx_addsy, 0)
 	      && !TC_FORCE_RELOCATION_LOCAL (fixP))
 	    {
 	      /* This fixup was made when the symbol's segment was
@@ -1007,6 +1012,7 @@ fixup_segment (fixS *fixP, segT this_segment)
 	      fixP->fx_pcrel = 0;
 	    }
 	  else if (add_symbol_segment == absolute_section
+		   && !S_FORCE_RELOC (fixP->fx_addsy, 0)
 		   && !TC_FORCE_RELOCATION_ABS (fixP))
 	    {
 	      add_number += S_GET_VALUE (fixP->fx_addsy);
@@ -1353,6 +1359,7 @@ compress_debug (bfd *abfd, asection *sec, void *xxx ATTRIBUTE_UNUSED)
   flagword flags = bfd_get_section_flags (abfd, sec);
 
   if (seginfo == NULL
+      || sec->size < 32
       || (flags & (SEC_ALLOC | SEC_HAS_CONTENTS)) == SEC_ALLOC)
     return;
 
@@ -1558,7 +1565,9 @@ write_contents (bfd *abfd ATTRIBUTE_UNUSED,
 		    (stdoutput, sec, buf, (file_ptr) offset,
 		     (bfd_size_type) n_per_buf * fill_size);
 		  if (!x)
-		    as_fatal (_("cannot write to output file"));
+		    as_fatal (_("cannot write to output file '%s': %s"),
+			      stdoutput->filename,
+			      bfd_errmsg (bfd_get_error ()));
 		  offset += n_per_buf * fill_size;
 		}
 	    }
@@ -1724,13 +1733,6 @@ write_object_file (void)
 		    n_warns, n_warns == 1 ? "" : "s");
       }
   }
-
-#ifdef	OBJ_VMS
-  /* Under VMS we try to be compatible with VAX-11 "C".  Thus, we call
-     a routine to check for the definition of the procedure "_main",
-     and if so -- fix it up so that it can be program entry point.  */
-  vms_check_for_main ();
-#endif /* OBJ_VMS  */
 
   /* From now on, we don't care about sub-segments.  Build one frag chain
      for each segment. Linked thru fr_next.  */

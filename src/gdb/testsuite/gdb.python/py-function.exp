@@ -1,4 +1,4 @@
-# Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+# Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,23 +20,7 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-# Usage: gdb_py_test_multiple NAME INPUT RESULT {INPUT RESULT}...
-# Run a test named NAME, consisting of multiple lines of input.
-# After each input line INPUT, search for result line RESULT.
-# Succeed if all results are seen; fail otherwise.
-proc gdb_py_test_multiple {name args} {
-    global gdb_prompt
-    foreach {input result} $args {
-	if {[gdb_test_multiple $input "$name - $input" {
-	    -re "\[\r\n\]*($result)\[\r\n\]+($gdb_prompt | *>)$" {
-		pass "$name - $input"
-	    }
-	}]} {
-	    return 1
-	}
-    }
-    return 0
-}
+load_lib gdb-python.exp
 
 # Start with a fresh gdb.
 
@@ -85,3 +69,43 @@ gdb_py_test_multiple "input int-returning function" \
 
 gdb_test "print \$yes() && \$yes()" " = 1" "call yes with &&"
 gdb_test "print \$yes() || \$yes()" " = 1" "call yes with ||"
+
+gdb_py_test_multiple "Test GDBError" \
+  "python" "" \
+  "class GDBError(gdb.Function):" "" \
+  "    def __init__(self):" "" \
+  "        gdb.Function.__init__(self, 'gdberror')" "" \
+  "    def invoke(self):" "" \
+  "        raise gdb.GdbError(\"This is a GdbError\")" "" \
+  "GDBError ()" "" \
+  "end" ""
+
+gdb_test "print \$gdberror()" "This is a GdbError.*" \
+    "Test GdbError.  There should not be a stack trace"
+
+gdb_py_test_multiple "Test Normal Error" \
+  "python" "" \
+  "class NormalError(gdb.Function):" "" \
+  "    def __init__(self):" "" \
+  "        gdb.Function.__init__(self, 'normalerror')" "" \
+  "    def invoke(self):" "" \
+  "        raise RuntimeError(\"This is a Normal Error\")" "" \
+  "NormalError ()" "" \
+  "end" ""
+
+gdb_test "print \$normalerror()" "Traceback.*File.*line 5.*in invoke.*RuntimeError.*This is a Normal Error.*" \
+    "Test a Runtime error.  There should be a stack trace."
+
+gdb_py_test_multiple "input command-calling function" \
+  "python" "" \
+  "class CallCommand(gdb.Function):" "" \
+  "    def __init__(self):" "" \
+  "        gdb.Function.__init__(self, 'call_command')" "" \
+  "    def invoke(self):" "" \
+  "        return gdb.execute('print 1', to_string=True)" "" \
+  "CallCommand ()" "" \
+  "end" ""
+
+gdb_test_no_output "set var \$foo = \$call_command()" "Setting a value from a function which executes a command."
+# There was a bug where GDB would segfault in the second call, so try calling again.
+gdb_test_no_output "set var \$foo = \$call_command()" "Setting a value from a function which executes a command, again."

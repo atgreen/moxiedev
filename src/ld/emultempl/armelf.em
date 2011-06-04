@@ -67,7 +67,7 @@ arm_elf_before_allocation (void)
 
   /* We should be able to set the size of the interworking stub section.  We
      can't do it until later if we have dynamic sections, though.  */
-  if (! elf_hash_table (&link_info)->dynamic_sections_created)
+  if (elf_hash_table (&link_info)->dynobj == NULL)
     {
       /* Here we rummage through the found bfds to collect glue information.  */
       LANG_FOR_EACH_INPUT_STATEMENT (is)
@@ -404,7 +404,7 @@ gld${EMULATION_NAME}_finish (void)
       h = bfd_link_hash_lookup (link_info.hash, entry_symbol.name,
 				FALSE, FALSE, TRUE);
       eh = (struct elf_link_hash_entry *)h;
-      if (!h || ELF_ST_TYPE(eh->type) != STT_ARM_TFUNC)
+      if (!h || eh->target_internal != ST_BRANCH_TO_THUMB)
 	return;
     }
 

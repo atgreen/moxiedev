@@ -1,6 +1,7 @@
 /* nto-tdep.h - QNX Neutrino target header.
 
-   Copyright (C) 2003, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    Contributed by QNX Software Systems Ltd.
 
@@ -64,7 +65,7 @@ struct nto_target_ops
    regset, 0 if unknown register.  */
   int (*register_area) (struct gdbarch *, int, int, unsigned *);
 
-/* Build the Neutrino register set info into the data buffer.  
+/* Build the Neutrino register set info into the data buffer.
    Return -1 if unknown regset, 0 otherwise.  */
   int (*regset_fill) (const struct regcache *, int, char *);
 
@@ -122,7 +123,7 @@ enum
   OSTYPE_NTO
 };
 
-/* These correspond to the DSMSG_* versions in dsmsgs.h. */
+/* These correspond to the DSMSG_* versions in dsmsgs.h.  */
 enum
 {
   NTO_REG_GENERAL,

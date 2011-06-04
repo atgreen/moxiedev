@@ -1,6 +1,6 @@
 /* Parse options for the GNU linker.
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011
    Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
@@ -283,6 +283,12 @@ static const struct ld_option ld_options[] =
     '\0', N_("PLUGIN"), N_("Load named plugin"), ONE_DASH },
   { {"plugin-opt", required_argument, NULL, OPTION_PLUGIN_OPT},
     '\0', N_("ARG"), N_("Send arg to last-loaded plugin"), ONE_DASH },
+  { {"flto", optional_argument, NULL, OPTION_IGNORE},
+    '\0', NULL, N_("Ignored for GCC LTO option compatibility"),
+    ONE_DASH },
+  { {"flto-partition=", required_argument, NULL, OPTION_IGNORE},
+    '\0', NULL, N_("Ignored for GCC LTO option compatibility"),
+    ONE_DASH },
 #endif /* ENABLE_PLUGINS */
   { {"Qy", no_argument, NULL, OPTION_IGNORE},
     '\0', NULL, N_("Ignored for SVR4 compatibility"), ONE_DASH },
@@ -350,8 +356,7 @@ static const struct ld_option ld_options[] =
 
   /* The next two options are deprecated because of their similarity to
      --as-needed and --no-as-needed.  They have been replaced by
-     --resolve-implicit-dynamic-symbols and
-     --no-resolve-implicit-dynamic-symbols.  */
+     --copy-dt-needed-entries and --no-copy-dt-needed-entries.  */
   { {"add-needed", no_argument, NULL, OPTION_ADD_DT_NEEDED_FOR_DYNAMIC},
     '\0', NULL, NULL, NO_HELP },
   { {"no-add-needed", no_argument, NULL, OPTION_NO_ADD_DT_NEEDED_FOR_DYNAMIC},
@@ -449,7 +454,7 @@ static const struct ld_option ld_options[] =
     '\0', NULL, N_("Do not allow unresolved references in object files"),
     TWO_DASHES },
   { {"allow-shlib-undefined", no_argument, NULL, OPTION_ALLOW_SHLIB_UNDEFINED},
-    '\0', NULL, N_("Allow unresolved references in shared libaries"),
+    '\0', NULL, N_("Allow unresolved references in shared libraries"),
     TWO_DASHES },
   { {"no-allow-shlib-undefined", no_argument, NULL,
      OPTION_NO_ALLOW_SHLIB_UNDEFINED},
@@ -555,8 +560,9 @@ static const struct ld_option ld_options[] =
 		   "                                ignore-all, report-all, ignore-in-object-files,\n"
 		   "                                ignore-in-shared-libs"),
     TWO_DASHES },
-  { {"verbose", no_argument, NULL, OPTION_VERBOSE},
-    '\0', NULL, N_("Output lots of information during link"), TWO_DASHES },
+  { {"verbose", optional_argument, NULL, OPTION_VERBOSE},
+    '\0', N_("[=NUMBER]"),
+    N_("Output lots of information during link"), TWO_DASHES },
   { {"dll-verbose", no_argument, NULL, OPTION_VERBOSE}, /* Linux.  */
     '\0', NULL, NULL, NO_HELP },
   { {"version-script", required_argument, NULL, OPTION_VERSION_SCRIPT },
@@ -1321,6 +1327,16 @@ parse_args (unsigned argc, char **argv)
 	  version_printed = TRUE;
 	  trace_file_tries = TRUE;
 	  overflow_cutoff_limit = -2;
+	  if (optarg != NULL)
+	    {
+	      char *end;
+	      int level ATTRIBUTE_UNUSED = strtoul (optarg, &end, 0);
+	      if (*end)
+		einfo (_("%P%F: invalid number `%s'\n"), optarg);
+#ifdef ENABLE_PLUGINS
+	      report_plugin_symbols = level > 1;
+#endif /* ENABLE_PLUGINS */
+	    }
 	  break;
 	case 'v':
 	  ldversion (0);

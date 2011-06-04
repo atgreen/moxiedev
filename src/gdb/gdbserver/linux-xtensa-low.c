@@ -1,5 +1,5 @@
 /* GNU/Linux/Xtensa specific low level interface, for the remote server for GDB.
-   Copyright 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -172,7 +172,8 @@ xtensa_breakpoint_at (CORE_ADDR where)
 
     (*the_target->read_memory) (where, (unsigned char *) &insn,
 				xtensa_breakpoint_len);
-    return memcmp((char *)&insn, xtensa_breakpoint, xtensa_breakpoint_len) == 0;
+    return memcmp((char *) &insn,
+		  xtensa_breakpoint, xtensa_breakpoint_len) == 0;
 }
 
 struct linux_target_ops the_low_target = {

@@ -115,15 +115,14 @@ alphabetical order.  Their affiliations are provided for reference only -
 their membership on the Steering Committee is individual and not through
 their affiliation, and they act on behalf of the GNU project.
 
-	Jim Blandy (Mozilla)
 	Andrew Cagney (Red Hat)
 	Robert Dewar (AdaCore, NYU)
 	Klee Dienes (Apple)
 	Paul Hilfinger (UC Berkeley)
-	Dan Jacobowitz (CodeSourcery)
+	Dan Jacobowitz (Google)
 	Stan Shebs (CodeSourcery)
 	Richard Stallman (FSF)
-	Ian Lance Taylor (C2)
+	Ian Lance Taylor (Google)
 	Todd Whitesel
 
 
@@ -159,12 +158,11 @@ future, if there are, a reference to the list will be included here.
 The current global maintainers are (in alphabetical order):
 
 Pedro Alves                     pedro@codesourcery.com
-Jim Blandy			jimb@red-bean.com
 Joel Brobecker			brobecker@adacore.com
 Kevin Buettner			kevinb@redhat.com
 Andrew Cagney			cagney@gnu.org
 Doug Evans			dje@google.com
-Daniel Jacobowitz		dan@codesourcery.com
+Daniel Jacobowitz		drow@false.org
 Mark Kettenis           	kettenis@gnu.org
 Jan Kratochvil			jan.kratochvil@redhat.com
 Stan Shebs			stan@codesourcery.com
@@ -255,7 +253,6 @@ the native maintainer when resolving ABI issues.
 	alpha		--target=alpha-elf ,-Werror
 
 	arm		--target=arm-elf ,-Werror
-			Richard Earnshaw	rearnsha@arm.com
 
 	avr		--target=avr ,-Werror
 			Tristan Gingold		gingold@adacore.com
@@ -367,7 +364,7 @@ MS Windows (NT, '00, 9x, Me, XP) host & native
 GNU/Linux/x86 native & host
 			Mark Kettenis		kettenis@gnu.org
 GNU/Linux MIPS native & host
-			Daniel Jacobowitz	dan@codesourcery.com
+			Daniel Jacobowitz	drow@false.org
 GNU/Linux m68k		Andreas Schwab		schwab@linux-m68k.org
 FreeBSD native & host	Mark Kettenis		kettenis@gnu.org
 
@@ -381,7 +378,7 @@ threads			Michael Snyder		msnyder@vmware.com
 language support
   Ada			Joel Brobecker		brobecker@adacore.com
 			Paul Hilfinger		hilfinger@gnat.com
-  C++			Daniel Jacobowitz	dan@codesourcery.com
+  C++			Daniel Jacobowitz	drow@false.org
   Objective C support   Adam Fedor		fedor@gnu.org
 shared libs		Kevin Buettner		kevinb@redhat.com
 MI interface		Vladimir Prus		vladimir@codesourcery.com
@@ -403,7 +400,7 @@ libgui (w/foundry, sn)	Keith Seitz		keiths@redhat.com
 
 Misc:
 
-gdb/gdbserver		Daniel Jacobowitz	dan@codesourcery.com
+gdb/gdbserver		Daniel Jacobowitz	drow@false.org
 
 Makefile.in, configure*	ALL
 
@@ -429,6 +426,7 @@ under no obligation to review posted patches - but, of course, are invited
 to do so!
 
 PowerPC			Andrew Cagney		cagney@gnu.org
+ARM			Richard Earnshaw	rearnsha@arm.com
 CRIS			Hans-Peter Nilsson	hp@axis.com
 IA64			Jeff Johnston		jjohnstn@redhat.com
 MIPS			Joel Brobecker		brobecker@adacore.com
@@ -470,6 +468,7 @@ Shrinivas Atre					shrinivasa@kpitcummins.com
 Scott Bambrough					scottb@netwinder.org
 Thiago Jung Bauermann				bauerman@br.ibm.com
 Jon Beniston					jon@beniston.com
+Gary Benson					gbenson@redhat.com
 Jan Beulich					jbeulich@novell.com
 Jim Blandy					jimb@codesourcery.com
 Philip Blundell					philb@gnu.org
@@ -489,7 +488,7 @@ Randolph Chung					tausq@debian.org
 Nick Clifton					nickc@redhat.com
 J.T. Conklin					jtc@acorntoolworks.com
 Brendan Conoboy					blc@redhat.com
-Ludovic Courtès					ludo@gnu.org
+Ludovic CourtÃ¨s					ludo@gnu.org
 DJ Delorie					dj@redhat.com
 Chris Demetriou					cgd@google.com
 Philippe De Muyter				phdm@macqel.be
@@ -530,8 +529,9 @@ Martin Hunt					hunt@redhat.com
 Jim Ingham					jingham@apple.com
 Baurzhan Ismagulov				ibr@radix50.net
 Manoj Iyer					manjo@austin.ibm.com
-Daniel Jacobowitz				dan@codesourcery.com
+Daniel Jacobowitz				drow@false.org
 Andreas Jaeger					aj@suse.de
+Janis Johnson					janisjo@codesourcery.com
 Jeff Johnston					jjohnstn@redhat.com
 Geoff Keating					geoffk@redhat.com
 Mark Kettenis					kettenis@gnu.org
@@ -546,7 +546,8 @@ Robert Lipe					rjl@sco.com
 Sandra Loosemore				sandra@codesourcery.com
 H.J. Lu						hjl.tools@gmail.com
 Michal Ludvig                                   mludvig@suse.cz
-Luis Machado					luisgpm@br.ibm.com
+Edjunior B. Machado				emachado@linux.vnet.ibm.com
+Luis Machado					lgustavo@codesourcery.com
 Glen McCready					gkm@redhat.com
 Greg McGary					greg@mcgary.org
 Roland McGrath					roland@redhat.com
@@ -572,6 +573,7 @@ Alexandre Oliva					aoliva@redhat.com
 Karen Osmond					karen.osmond@gmail.com
 Denis Pilat					denis.pilat@st.com
 Paul Pluzhnikov					ppluzhnikov@google.com
+Marek Polacek					mpolacek@redhat.com
 Vladimir Prus                                   vladimir@codesourcery.com
 Yao Qi						yao@codesourcery.com
 Qinwei						qinwei@sunnorth.com.cn
@@ -610,7 +612,8 @@ Ian Lance Taylor				ian@airs.com
 Gary Thomas					gthomas@redhat.com
 Jason Thorpe					thorpej@netbsd.org
 Caroline Tice					ctice@apple.com
-Kai Tietz					kai.tietz@onevision.com
+Kai Tietz					ktietz@redhat.com
+Andreas Tobler					andreast@fgznet.ch
 Tom Tromey					tromey@redhat.com
 David Ung					davidu@mips.com
 D Venkatasubramanian				dvenkat@noida.hcltech.com
@@ -623,9 +626,10 @@ Ken Werner					ken.werner@de.ibm.com
 Nathan Williams					nathanw@wasabisystems.com
 Bob Wilson					bob.wilson@acm.org
 Jim Wilson					wilson@tuliptree.org
+Kwok Cheung Yeung				kcy@codesourcery.com
 Elena Zannoni					elena.zannoni@oracle.com
 Eli Zaretskii					eliz@gnu.org
-Jie Zhang					jie@codesourcery.com
+Jie Zhang					jzhang918@gmail.com
 Wu Zhou						woodzltc@cn.ibm.com
 Yoshinori Sato					ysato@users.sourceforge.jp
 Hui Zhu						teawater@gmail.com
@@ -659,6 +663,7 @@ Scott Bambrough (ARM)				scottb at netwinder dot org
 Philippe De Muyter (coff)			phdm at macqel dot be
 Michael Chastain (testsuite)			mec.gnu at mindspring dot com
 Fred Fish (global)
+Jim Blandy (global)				jimb@red-bean.com
 
 
 

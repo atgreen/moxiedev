@@ -1,5 +1,6 @@
 /* SPU target-dependent code for GDB, the GNU debugger.
-   Copyright (C) 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    Contributed by Ulrich Weigand <uweigand@de.ibm.com>.
    Based on a port by Sid Manning <sid@us.ibm.com>.
@@ -43,7 +44,8 @@
 #include "block.h"
 #include "observer.h"
 #include "infcall.h"
-
+#include "dwarf2.h"
+#include "exceptions.h"
 #include "spu-tdep.h"
 
 
@@ -175,67 +177,72 @@ spu_register_type (struct gdbarch *gdbarch, int reg_nr)
       return builtin_type (gdbarch)->builtin_uint32;
 
     default:
-      internal_error (__FILE__, __LINE__, "invalid regnum");
+      internal_error (__FILE__, __LINE__, _("invalid regnum"));
     }
 }
 
 /* Pseudo registers for preferred slots - stack pointer.  */
 
-static void
+static enum register_status
 spu_pseudo_register_read_spu (struct regcache *regcache, const char *regname,
 			      gdb_byte *buf)
 {
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  enum register_status status;
   gdb_byte reg[32];
   char annex[32];
   ULONGEST id;
 
-  regcache_raw_read_unsigned (regcache, SPU_ID_REGNUM, &id);
+  status = regcache_raw_read_unsigned (regcache, SPU_ID_REGNUM, &id);
+  if (status != REG_VALID)
+    return status;
   xsnprintf (annex, sizeof annex, "%d/%s", (int) id, regname);
   memset (reg, 0, sizeof reg);
   target_read (&current_target, TARGET_OBJECT_SPU, annex,
 	       reg, 0, sizeof reg);
 
   store_unsigned_integer (buf, 4, byte_order, strtoulst (reg, NULL, 16));
+  return REG_VALID;
 }
 
-static void
+static enum register_status
 spu_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
                           int regnum, gdb_byte *buf)
 {
   gdb_byte reg[16];
   char annex[32];
   ULONGEST id;
+  enum register_status status;
 
   switch (regnum)
     {
     case SPU_SP_REGNUM:
-      regcache_raw_read (regcache, SPU_RAW_SP_REGNUM, reg);
+      status = regcache_raw_read (regcache, SPU_RAW_SP_REGNUM, reg);
+      if (status != REG_VALID)
+	return status;
       memcpy (buf, reg, 4);
-      break;
+      return status;
 
     case SPU_FPSCR_REGNUM:
-      regcache_raw_read_unsigned (regcache, SPU_ID_REGNUM, &id);
+      status = regcache_raw_read_unsigned (regcache, SPU_ID_REGNUM, &id);
+      if (status != REG_VALID)
+	return status;
       xsnprintf (annex, sizeof annex, "%d/fpcr", (int) id);
       target_read (&current_target, TARGET_OBJECT_SPU, annex, buf, 0, 16);
-      break;
+      return status;
 
     case SPU_SRR0_REGNUM:
-      spu_pseudo_register_read_spu (regcache, "srr0", buf);
-      break;
+      return spu_pseudo_register_read_spu (regcache, "srr0", buf);
 
     case SPU_LSLR_REGNUM:
-      spu_pseudo_register_read_spu (regcache, "lslr", buf);
-      break;
+      return spu_pseudo_register_read_spu (regcache, "lslr", buf);
 
     case SPU_DECR_REGNUM:
-      spu_pseudo_register_read_spu (regcache, "decr", buf);
-      break;
+      return spu_pseudo_register_read_spu (regcache, "decr", buf);
 
     case SPU_DECR_STATUS_REGNUM:
-      spu_pseudo_register_read_spu (regcache, "decr_status", buf);
-      break;
+      return spu_pseudo_register_read_spu (regcache, "decr_status", buf);
 
     default:
       internal_error (__FILE__, __LINE__, _("invalid regnum"));
@@ -353,7 +360,7 @@ spu_gdbarch_id (struct gdbarch *gdbarch)
   int id = tdep->id;
 
   /* The objfile architecture of a standalone SPU executable does not
-     provide an SPU ID.  Retrieve it from the the objfile's relocated
+     provide an SPU ID.  Retrieve it from the objfile's relocated
      address range in this special case.  */
   if (id == -1
       && symfile_objfile && symfile_objfile->obfd
@@ -449,7 +456,7 @@ enum
     op_a     = 0x0c0,
     op_ai    = 0x1c,
 
-    op_selb  = 0x4,
+    op_selb  = 0x8,
 
     op_br    = 0x64,
     op_bra   = 0x60,
@@ -813,7 +820,7 @@ spu_virtual_frame_pointer (struct gdbarch *gdbarch, CORE_ADDR pc,
     }
   else
     {
-      /* ??? We don't really know ... */
+      /* ??? We don't really know ...  */
       *reg = SPU_SP_REGNUM;
       *offset = 0;
     }
@@ -1006,7 +1013,8 @@ spu_frame_unwind_cache (struct frame_info *this_frame,
 	{
 	  /* Assume the link register is saved into its slot.  */
 	  if (backchain + 16 <= lslr)
-	    info->saved_regs[SPU_LR_REGNUM].addr = SPUADDR (id, backchain + 16);
+	    info->saved_regs[SPU_LR_REGNUM].addr = SPUADDR (id,
+							    backchain + 16);
 
           /* Frame bases.  */
 	  info->frame_base = SPUADDR (id, backchain);
@@ -1074,6 +1082,7 @@ spu_frame_prev_register (struct frame_info *this_frame,
 
 static const struct frame_unwind spu_frame_unwind = {
   NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
   spu_frame_this_id,
   spu_frame_prev_register,
   NULL,
@@ -1228,6 +1237,7 @@ spu2ppu_dealloc_cache (struct frame_info *self, void *this_cache)
 
 static const struct frame_unwind spu2ppu_unwind = {
   ARCH_FRAME,
+  default_frame_unwind_stop_reason,
   spu2ppu_this_id,
   spu2ppu_prev_register,
   NULL,
@@ -1446,6 +1456,13 @@ spu_return_value (struct gdbarch *gdbarch, struct type *func_type,
 		  gdb_byte *out, const gdb_byte *in)
 {
   enum return_value_convention rvc;
+  int opencl_vector = 0;
+
+  if (func_type
+      && TYPE_CALLING_CONVENTION (func_type) == DW_CC_GDB_IBM_OpenCL
+      && TYPE_CODE (type) == TYPE_CODE_ARRAY
+      && TYPE_VECTOR (type))
+    opencl_vector = 1;
 
   if (TYPE_LENGTH (type) <= (SPU_ARGN_REGNUM - SPU_ARG1_REGNUM + 1) * 16)
     rvc = RETURN_VALUE_REGISTER_CONVENTION;
@@ -1457,11 +1474,14 @@ spu_return_value (struct gdbarch *gdbarch, struct type *func_type,
       switch (rvc)
 	{
 	case RETURN_VALUE_REGISTER_CONVENTION:
-	  spu_value_to_regcache (regcache, SPU_ARG1_REGNUM, type, in);
+	  if (opencl_vector && TYPE_LENGTH (type) == 2)
+	    regcache_cooked_write_part (regcache, SPU_ARG1_REGNUM, 2, 2, in);
+	  else
+	    spu_value_to_regcache (regcache, SPU_ARG1_REGNUM, type, in);
 	  break;
 
 	case RETURN_VALUE_STRUCT_CONVENTION:
-	  error ("Cannot set function return value.");
+	  error (_("Cannot set function return value."));
 	  break;
 	}
     }
@@ -1470,11 +1490,14 @@ spu_return_value (struct gdbarch *gdbarch, struct type *func_type,
       switch (rvc)
 	{
 	case RETURN_VALUE_REGISTER_CONVENTION:
-	  spu_regcache_to_value (regcache, SPU_ARG1_REGNUM, type, out);
+	  if (opencl_vector && TYPE_LENGTH (type) == 2)
+	    regcache_cooked_read_part (regcache, SPU_ARG1_REGNUM, 2, 2, out);
+	  else
+	    spu_regcache_to_value (regcache, SPU_ARG1_REGNUM, type, out);
 	  break;
 
 	case RETURN_VALUE_STRUCT_CONVENTION:
-	  error ("Function return value unknown.");
+	  error (_("Function return value unknown."));
 	  break;
 	}
     }
@@ -1486,7 +1509,8 @@ spu_return_value (struct gdbarch *gdbarch, struct type *func_type,
 /* Breakpoints.  */
 
 static const gdb_byte *
-spu_breakpoint_from_pc (struct gdbarch *gdbarch, CORE_ADDR * pcptr, int *lenptr)
+spu_breakpoint_from_pc (struct gdbarch *gdbarch,
+			CORE_ADDR * pcptr, int *lenptr)
 {
   static const gdb_byte breakpoint[] = { 0x00, 0x00, 0x3f, 0xff };
 
@@ -1572,8 +1596,21 @@ spu_software_single_step (struct frame_info *frame)
 	target += SPUADDR_ADDR (pc);
       else if (reg != -1)
 	{
-	  get_frame_register_bytes (frame, reg, 0, 4, buf);
-	  target += extract_unsigned_integer (buf, 4, byte_order) & -4;
+	  int optim, unavail;
+
+	  if (get_frame_register_bytes (frame, reg, 0, 4, buf,
+					 &optim, &unavail))
+	    target += extract_unsigned_integer (buf, 4, byte_order) & -4;
+	  else
+	    {
+	      if (optim)
+		error (_("Could not determine address of "
+			 "single-step breakpoint."));
+	      if (unavail)
+		throw_error (NOT_AVAILABLE_ERROR,
+			     _("Could not determine address of "
+			       "single-step breakpoint."));
+	    }
 	}
 
       target = target & lslr;
@@ -1596,9 +1633,13 @@ spu_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte buf[4];
   CORE_ADDR jb_addr;
+  int optim, unavail;
 
   /* Jump buffer is pointed to by the argument register $r3.  */
-  get_frame_register_bytes (frame, SPU_ARG1_REGNUM, 0, 4, buf);
+  if (!get_frame_register_bytes (frame, SPU_ARG1_REGNUM, 0, 4, buf,
+				 &optim, &unavail))
+    return 0;
+
   jb_addr = extract_unsigned_integer (buf, 4, byte_order);
   if (target_read_memory (SPUADDR (tdep->id, jb_addr), buf, 4))
     return 0;
@@ -1627,8 +1668,9 @@ spu_dis_asm_print_address (bfd_vma addr, struct disassemble_info *info)
 static int
 gdb_print_insn_spu (bfd_vma memaddr, struct disassemble_info *info)
 {
-  /* The opcodes disassembler does 18-bit address arithmetic.  Make sure the
-     SPU ID encoded in the high bits is added back when we call print_address.  */
+  /* The opcodes disassembler does 18-bit address arithmetic.  Make
+     sure the SPU ID encoded in the high bits is added back when we
+     call print_address.  */
   struct disassemble_info spu_info = *info;
   struct spu_dis_asm_data data;
   data.gdbarch = info->application_data;
@@ -1662,11 +1704,12 @@ gdb_print_insn_spu (bfd_vma memaddr, struct disassemble_info *info)
 
    _ovly_table should never change.
 
-   Both tables are aligned to a 16-byte boundary, the symbols _ovly_table
-   and _ovly_buf_table are of type STT_OBJECT and their size set to the size
-   of the respective array. buf in _ovly_table is an index into _ovly_buf_table.
+   Both tables are aligned to a 16-byte boundary, the symbols
+   _ovly_table and _ovly_buf_table are of type STT_OBJECT and their
+   size set to the size of the respective array. buf in _ovly_table is
+   an index into _ovly_buf_table.
 
-   mapped is an index into _ovly_table. Both the mapped and buf indices start
+   mapped is an index into _ovly_table.  Both the mapped and buf indices start
    from one to reference the first entry in their respective tables.  */
 
 /* Using the per-objfile private data mechanism, we store for each
@@ -1709,7 +1752,8 @@ spu_get_overlay_table (struct objfile *objfile)
   if (!ovly_table_msym)
     return NULL;
 
-  ovly_buf_table_msym = lookup_minimal_symbol ("_ovly_buf_table", NULL, objfile);
+  ovly_buf_table_msym = lookup_minimal_symbol ("_ovly_buf_table",
+					       NULL, objfile);
   if (!ovly_buf_table_msym)
     return NULL;
 
@@ -2531,7 +2575,8 @@ info_spu_proxydma_command (char *args, int from_tty)
 static void
 info_spu_command (char *args, int from_tty)
 {
-  printf_unfiltered (_("\"info spu\" must be followed by the name of an SPU facility.\n"));
+  printf_unfiltered (_("\"info spu\" must be followed by "
+		       "the name of an SPU facility.\n"));
   help_list (infospucmdlist, "info spu ", -1, gdb_stdout);
 }
 

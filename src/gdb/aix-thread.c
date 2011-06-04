@@ -1,6 +1,6 @@
 /* Low level interface for debugging AIX 4.3+ pthreads.
 
-   Copyright (C) 1999, 2000, 2002, 2007, 2008, 2009, 2010
+   Copyright (C) 1999, 2000, 2002, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Written by Nick Duffek <nsd@redhat.com>.
 
@@ -57,6 +57,10 @@
 #include <sys/reg.h>
 #include <sched.h>
 #include <sys/pthdebug.h>
+
+#if !HAVE_DECL_GETTHRDS
+extern int getthrds (pid_t, struct thrdsinfo64 *, int, pthdb_tid_t *, int);
+#endif
 
 /* Whether to emit debugging output.  */
 static int debug_aix_thread;
@@ -384,7 +388,7 @@ pdc_read_regs (pthdb_user_t user,
 }
 
 /* Write register function should be able to write requested context
-   information to specified debuggee's kernel thread id. 
+   information to specified debuggee's kernel thread id.
    If successful return 0, else non-zero is returned.  */
 
 static int
@@ -647,10 +651,6 @@ get_signaled_thread (void)
   pthdb_tid_t ktid = 0;
   int result = 0;
 
-  /* getthrds(3) isn't prototyped in any AIX 4.3.3 #include file.  */
-  extern int getthrds (pid_t, struct thrdsinfo64 *, 
-		       int, pthdb_tid_t *, int);
-
   while (1)
   {
     if (getthrds (PIDGET (inferior_ptid), &thrinf, 
@@ -839,7 +839,7 @@ pd_update (int set_infpid)
   return ptid;
 }
 
-/* Try to start debugging threads in the current process. 
+/* Try to start debugging threads in the current process.
    If successful and SET_INFPID, set inferior_ptid to reflect the
    current thread.  */
 
@@ -1321,7 +1321,8 @@ fill_gprs64 (const struct regcache *regcache, uint64_t *vals)
   int regno;
 
   for (regno = 0; regno < ppc_num_gprs; regno++)
-    if (regcache_valid_p (regcache, tdep->ppc_gp0_regnum + regno))
+    if (REG_VALID == regcache_register_status (regcache,
+					       tdep->ppc_gp0_regnum + regno))
       regcache_raw_collect (regcache, tdep->ppc_gp0_regnum + regno,
 			    vals + regno);
 }
@@ -1333,7 +1334,8 @@ fill_gprs32 (const struct regcache *regcache, uint32_t *vals)
   int regno;
 
   for (regno = 0; regno < ppc_num_gprs; regno++)
-    if (regcache_valid_p (regcache, tdep->ppc_gp0_regnum + regno))
+    if (REG_VALID == regcache_register_status (regcache,
+					       tdep->ppc_gp0_regnum + regno))
       regcache_raw_collect (regcache, tdep->ppc_gp0_regnum + regno,
 			    vals + regno);
 }
@@ -1353,7 +1355,7 @@ fill_fprs (const struct regcache *regcache, double *vals)
   for (regno = tdep->ppc_fp0_regnum;
        regno < tdep->ppc_fp0_regnum + ppc_num_fprs;
        regno++)
-    if (regcache_valid_p (regcache, regno))
+    if (REG_VALID == regcache_register_status (regcache, regno))
       regcache_raw_collect (regcache, regno, vals + regno);
 }
 
@@ -1377,20 +1379,22 @@ fill_sprs64 (const struct regcache *regcache,
   gdb_assert (sizeof (*iar) == register_size
 				 (gdbarch, gdbarch_pc_regnum (gdbarch)));
 
-  if (regcache_valid_p (regcache, gdbarch_pc_regnum (gdbarch)))
+  if (REG_VALID == regcache_register_status (regcache,
+					     gdbarch_pc_regnum (gdbarch)))
     regcache_raw_collect (regcache, gdbarch_pc_regnum (gdbarch), iar);
-  if (regcache_valid_p (regcache, tdep->ppc_ps_regnum))
+  if (REG_VALID == regcache_register_status (regcache, tdep->ppc_ps_regnum))
     regcache_raw_collect (regcache, tdep->ppc_ps_regnum, msr);
-  if (regcache_valid_p (regcache, tdep->ppc_cr_regnum))
+  if (REG_VALID == regcache_register_status (regcache, tdep->ppc_cr_regnum))
     regcache_raw_collect (regcache, tdep->ppc_cr_regnum, cr);
-  if (regcache_valid_p (regcache, tdep->ppc_lr_regnum))
+  if (REG_VALID == regcache_register_status (regcache, tdep->ppc_lr_regnum))
     regcache_raw_collect (regcache, tdep->ppc_lr_regnum, lr);
-  if (regcache_valid_p (regcache, tdep->ppc_ctr_regnum))
+  if (REG_VALID == regcache_register_status (regcache, tdep->ppc_ctr_regnum))
     regcache_raw_collect (regcache, tdep->ppc_ctr_regnum, ctr);
-  if (regcache_valid_p (regcache, tdep->ppc_xer_regnum))
+  if (REG_VALID == regcache_register_status (regcache, tdep->ppc_xer_regnum))
     regcache_raw_collect (regcache, tdep->ppc_xer_regnum, xer);
   if (tdep->ppc_fpscr_regnum >= 0
-      && regcache_valid_p (regcache, tdep->ppc_fpscr_regnum))
+      && REG_VALID == regcache_register_status (regcache,
+						tdep->ppc_fpscr_regnum))
     regcache_raw_collect (regcache, tdep->ppc_fpscr_regnum, fpscr);
 }
 
@@ -1411,20 +1415,21 @@ fill_sprs32 (const struct regcache *regcache,
   gdb_assert (sizeof (*iar) == register_size (gdbarch,
 					      gdbarch_pc_regnum (gdbarch)));
 
-  if (regcache_valid_p (regcache, gdbarch_pc_regnum (gdbarch)))
+  if (REG_VALID == regcache_register_status (regcache,
+					     gdbarch_pc_regnum (gdbarch)))
     regcache_raw_collect (regcache, gdbarch_pc_regnum (gdbarch), iar);
-  if (regcache_valid_p (regcache, tdep->ppc_ps_regnum))
+  if (REG_VALID == regcache_register_status (regcache, tdep->ppc_ps_regnum))
     regcache_raw_collect (regcache, tdep->ppc_ps_regnum, msr);
-  if (regcache_valid_p (regcache, tdep->ppc_cr_regnum))
+  if (REG_VALID == regcache_register_status (regcache, tdep->ppc_cr_regnum))
     regcache_raw_collect (regcache, tdep->ppc_cr_regnum, cr);
-  if (regcache_valid_p (regcache, tdep->ppc_lr_regnum))
+  if (REG_VALID == regcache_register_status (regcache, tdep->ppc_lr_regnum))
     regcache_raw_collect (regcache, tdep->ppc_lr_regnum, lr);
-  if (regcache_valid_p (regcache, tdep->ppc_ctr_regnum))
+  if (REG_VALID == regcache_register_status (regcache, tdep->ppc_ctr_regnum))
     regcache_raw_collect (regcache, tdep->ppc_ctr_regnum, ctr);
-  if (regcache_valid_p (regcache, tdep->ppc_xer_regnum))
+  if (REG_VALID == regcache_register_status (regcache, tdep->ppc_xer_regnum))
     regcache_raw_collect (regcache, tdep->ppc_xer_regnum, xer);
   if (tdep->ppc_fpscr_regnum >= 0
-      && regcache_valid_p (regcache, tdep->ppc_fpscr_regnum))
+      && REG_VALID == regcache_register_status (regcache, tdep->ppc_fpscr_regnum))
     regcache_raw_collect (regcache, tdep->ppc_fpscr_regnum, fpscr);
 }
 
@@ -1459,7 +1464,8 @@ store_regs_user_thread (const struct regcache *regcache, pthdb_pthread_t pdtid)
   /* Collect general-purpose register values from the regcache.  */
 
   for (i = 0; i < ppc_num_gprs; i++)
-    if (regcache_valid_p (regcache, tdep->ppc_gp0_regnum + i))
+    if (REG_VALID == regcache_register_status (regcache,
+					       tdep->ppc_gp0_regnum + i))
       {
 	if (arch64)
 	  {
@@ -1494,25 +1500,30 @@ store_regs_user_thread (const struct regcache *regcache, pthdb_pthread_t pdtid)
 
       fill_sprs32 (regcache, &tmp_iar, &tmp_msr, &tmp_cr, &tmp_lr, &tmp_ctr,
 			     &tmp_xer, &tmp_fpscr);
-      if (regcache_valid_p (regcache, gdbarch_pc_regnum (gdbarch)))
+      if (REG_VALID == regcache_register_status (regcache,
+						 gdbarch_pc_regnum (gdbarch)))
 	ctx.iar = tmp_iar;
-      if (regcache_valid_p (regcache, tdep->ppc_ps_regnum))
+      if (REG_VALID == regcache_register_status (regcache, tdep->ppc_ps_regnum))
 	ctx.msr = tmp_msr;
-      if (regcache_valid_p (regcache, tdep->ppc_cr_regnum))
+      if (REG_VALID == regcache_register_status (regcache, tdep->ppc_cr_regnum))
 	ctx.cr  = tmp_cr;
-      if (regcache_valid_p (regcache, tdep->ppc_lr_regnum))
+      if (REG_VALID == regcache_register_status (regcache, tdep->ppc_lr_regnum))
 	ctx.lr  = tmp_lr;
-      if (regcache_valid_p (regcache, tdep->ppc_ctr_regnum))
+      if (REG_VALID == regcache_register_status (regcache,
+						 tdep->ppc_ctr_regnum))
 	ctx.ctr = tmp_ctr;
-      if (regcache_valid_p (regcache, tdep->ppc_xer_regnum))
+      if (REG_VALID == regcache_register_status (regcache,
+						 tdep->ppc_xer_regnum))
 	ctx.xer = tmp_xer;
-      if (regcache_valid_p (regcache, tdep->ppc_xer_regnum))
+      if (REG_VALID == regcache_register_status (regcache,
+						 tdep->ppc_xer_regnum))
 	ctx.fpscr = tmp_fpscr;
     }
 
   status = pthdb_pthread_setcontext (pd_session, pdtid, &ctx);
   if (status != PTHDB_SUCCESS)
-    error (_("aix-thread: store_registers: pthdb_pthread_setcontext returned %s"),
+    error (_("aix-thread: store_registers: "
+	     "pthdb_pthread_setcontext returned %s"),
            pd_status2str (status));
 }
 
@@ -1619,7 +1630,8 @@ store_regs_kernel_thread (const struct regcache *regcache, int regno,
 	  sprs32.pt_fpscr = tmp_fpscr;
 
 	  if (tdep->ppc_mq_regnum >= 0)
-	    if (regcache_valid_p (regcache, tdep->ppc_mq_regnum))
+	    if (REG_VALID == regcache_register_status (regcache,
+						       tdep->ppc_mq_regnum))
 	      regcache_raw_collect (regcache, tdep->ppc_mq_regnum,
 				    &sprs32.pt_mq);
 
@@ -1660,7 +1672,8 @@ aix_thread_store_registers (struct target_ops *ops,
 static LONGEST
 aix_thread_xfer_partial (struct target_ops *ops, enum target_object object,
 			 const char *annex, gdb_byte *readbuf,
-			 const gdb_byte *writebuf, ULONGEST offset, LONGEST len)
+			 const gdb_byte *writebuf,
+			 ULONGEST offset, LONGEST len)
 {
   struct cleanup *old_chain = save_inferior_ptid ();
   LONGEST xfer;
@@ -1826,9 +1839,11 @@ _initialize_aix_thread (void)
   observer_attach_new_objfile (new_objfile);
 
   add_setshow_boolean_cmd ("aix-thread", class_maintenance, &debug_aix_thread,
-			    _("Set debugging of AIX thread module."),
-			    _("Show debugging of AIX thread module."),
-			    _("Enables debugging output (used to debug GDB)."),
-			    NULL, NULL, /* FIXME: i18n: Debugging of AIX thread module is \"%d\".  */
-			    &setdebuglist, &showdebuglist);
+			   _("Set debugging of AIX thread module."),
+			   _("Show debugging of AIX thread module."),
+			   _("Enables debugging output (used to debug GDB)."),
+			   NULL, NULL,
+			   /* FIXME: i18n: Debugging of AIX thread
+			      module is \"%d\".  */
+			   &setdebuglist, &showdebuglist);
 }

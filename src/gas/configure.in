@@ -250,10 +250,10 @@ changequote([,])dnl
 	esac
 	# Decide which ABI to target by default.
 	case ${target} in
-	  mips64*-linux* | mips-sgi-irix6*)
+	  mips64*-linux* | mips-sgi-irix6* | mips64*-freebsd* | mips64*-kfreebsd*-gnu)
 	    mips_default_abi=N32_ABI
 	    ;;
-	  mips*-linux*)
+	  mips*-linux* | mips*-freebsd* | mips*-kfreebsd*-gnu)
 	    mips_default_abi=O32_ABI
 	    ;;
 	  mips64*-openbsd*)
@@ -401,7 +401,8 @@ changequote([,])dnl
 
     case ${generic_target}-${fmt} in
       mips-*-irix5*-*)	emulation="mipsbelf mipslelf mipself mipsbecoff mipslecoff mipsecoff" ;;
-      mips*-*-linux*-*) case "$endian" in
+      mips*-*-linux*-* | mips*-*-freebsd* | mips*-*-kfreebsd*-gnu)
+			case "$endian" in
 			big)	emulation="mipsbelf mipslelf mipself" ;;
 			*)	emulation="mipslelf mipsbelf mipself" ;;
 			esac ;;
@@ -617,7 +618,7 @@ AC_DEFINE_UNQUOTED(TARGET_OS,		"${target_os}",    [Target OS.])
 AC_PROG_YACC
 AM_PROG_LEX
 
-ALL_LINGUAS="fr tr es rw id ru"
+ALL_LINGUAS="fr tr es rw id ru fi"
 ZW_GNU_GETTEXT_SISTER_DIR
 AM_PO_SUBDIRS
 

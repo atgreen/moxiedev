@@ -1,7 +1,7 @@
 /* GNU/Linux/x86 specific low level interface, for the in-process
    agent library for GDB.
 
-   Copyright (C) 2010 Free Software Foundation, Inc.
+   Copyright (C) 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -178,7 +178,7 @@ supply_static_tracepoint_registers (struct regcache *regcache,
 	    }
 	    break;
 	  default:
-	    internal_error ("unhandled register size: %d",
+	    internal_error (__FILE__, __LINE__, "unhandled register size: %d",
 			    i386_st_collect_regmap[i].size);
 	  }
       }

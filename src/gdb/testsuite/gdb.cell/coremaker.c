@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2009 Free Software Foundation, Inc.
+   Copyright 2009, 2011 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -43,17 +43,24 @@ int
 main (void)
 {
   int thread_id[nr_t];
+  pthread_attr_t attr;
   pthread_t pts[nr_t];
   spe_context_ptr_t ctx[nr_t];
   unsigned int value;
   int cnt;
 
+  /* Use small thread stacks to speed up writing out core file.  */
+  pthread_attr_init (&attr);
+  pthread_attr_setstacksize (&attr, 2*PTHREAD_STACK_MIN);
+
   for (cnt = 0; cnt < nr_t; cnt++)
     {
       ctx[cnt] = spe_context_create (0, NULL);
       thread_id[cnt]
-	= pthread_create (&pts[cnt], NULL, &spe_thread, &ctx[cnt]);
+	= pthread_create (&pts[cnt], &attr, &spe_thread, &ctx[cnt]);
     }
+
+  pthread_attr_destroy (&attr);
 
   for (cnt = 0; cnt < nr_t; cnt++)
     spe_out_intr_mbox_read (ctx[cnt], &value, 1, SPE_MBOX_ALL_BLOCKING);

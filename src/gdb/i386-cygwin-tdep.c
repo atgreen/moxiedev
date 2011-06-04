@@ -1,6 +1,7 @@
 /* Target-dependent code for Cygwin running on i386's, for GDB.
 
-   Copyright (C) 2003, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -265,7 +266,7 @@ i386_cygwin_osabi_sniffer (bfd *abfd)
   char *target_name = bfd_get_target (abfd);
 
   /* Interix also uses pei-i386.
-     We need a way to distinguish between the two. */
+     We need a way to distinguish between the two.  */
   if (strcmp (target_name, "pei-i386") == 0)
     return GDB_OSABI_CYGWIN;
 

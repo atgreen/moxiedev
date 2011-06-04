@@ -1,6 +1,6 @@
 /* Native-dependent code for Solaris SPARC.
 
-   Copyright (C) 2003, 2004, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -93,7 +93,8 @@ fill_gregset (const struct regcache *regcache, prgregset_t *gregs, int regnum)
 }
 
 void
-fill_fpregset (const struct regcache *regcache, prfpregset_t *fpregs, int regnum)
+fill_fpregset (const struct regcache *regcache,
+	       prfpregset_t *fpregs, int regnum)
 {
   sparc_collect_fpregset (regcache, regnum, fpregs);
 }
@@ -107,7 +108,7 @@ _initialize_sparc_sol2_nat (void)
   struct target_ops *t;
 
   t = procfs_target ();
-#ifdef NEW_PROC_API	/* Solaris 6 and above can do HW watchpoints */
+#ifdef NEW_PROC_API	/* Solaris 6 and above can do HW watchpoints.  */
   procfs_use_watchpoints (t);
 #endif
   add_target (t);

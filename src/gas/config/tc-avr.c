@@ -24,23 +24,26 @@
 #include "as.h"
 #include "safe-ctype.h"
 #include "subsegs.h"
+#include "dw2gencfi.h"
+
 
 struct avr_opcodes_s
 {
   char *        name;
   char *        constraints;
+  char *        opcode;
   int           insn_size;		/* In words.  */
   int           isa;
   unsigned int  bin_opcode;
 };
 
 #define AVR_INSN(NAME, CONSTR, OPCODE, SIZE, ISA, BIN) \
-{#NAME, CONSTR, SIZE, ISA, BIN},
+{#NAME, CONSTR, OPCODE, SIZE, ISA, BIN},
 
 struct avr_opcodes_s avr_opcodes[] =
 {
   #include "opcode/avr.h"
-  {NULL, NULL, 0, 0, 0}
+  {NULL, NULL, NULL, 0, 0, 0}
 };
 
 const char comment_chars[] = ";";
@@ -79,6 +82,13 @@ static struct mcu_type_s mcu_types[] =
   {"avr5",       AVR_ISA_AVR51,   bfd_mach_avr5},
   {"avr51",      AVR_ISA_AVR51,   bfd_mach_avr51},
   {"avr6",       AVR_ISA_AVR6,    bfd_mach_avr6},
+  {"avrxmega1",  AVR_ISA_XMEGA,   bfd_mach_avrxmega1},
+  {"avrxmega2",  AVR_ISA_XMEGA,   bfd_mach_avrxmega2},
+  {"avrxmega3",  AVR_ISA_XMEGA,   bfd_mach_avrxmega3},
+  {"avrxmega4",  AVR_ISA_XMEGA,   bfd_mach_avrxmega4},
+  {"avrxmega5",  AVR_ISA_XMEGA,   bfd_mach_avrxmega5},
+  {"avrxmega6",  AVR_ISA_XMEGA,   bfd_mach_avrxmega6},
+  {"avrxmega7",  AVR_ISA_XMEGA,   bfd_mach_avrxmega7},
   {"at90s1200",  AVR_ISA_1200,    bfd_mach_avr1},
   {"attiny11",   AVR_ISA_AVR1,    bfd_mach_avr1},
   {"attiny12",   AVR_ISA_AVR1,    bfd_mach_avr1},
@@ -174,9 +184,11 @@ static struct mcu_type_s mcu_types[] =
   {"atmega325",  AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega325a", AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega325p", AVR_ISA_AVR5,    bfd_mach_avr5},
+  {"atmega325pa",AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega3250", AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega3250a",AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega3250p",AVR_ISA_AVR5,    bfd_mach_avr5},
+  {"atmega3250pa",AVR_ISA_AVR5,   bfd_mach_avr5},
   {"atmega328",  AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega328p", AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega329",  AVR_ISA_AVR5,    bfd_mach_avr5},
@@ -186,6 +198,7 @@ static struct mcu_type_s mcu_types[] =
   {"atmega3290", AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega3290a",AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega3290p",AVR_ISA_AVR5,    bfd_mach_avr5},
+  {"atmega3290pa",AVR_ISA_AVR5,   bfd_mach_avr5},
   {"atmega406",  AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega64",   AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega640",  AVR_ISA_AVR5,    bfd_mach_avr5},
@@ -208,10 +221,13 @@ static struct mcu_type_s mcu_types[] =
   {"atmega16hva",AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega16hva2",AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega16hvb",AVR_ISA_AVR5,    bfd_mach_avr5},
+  {"atmega16hvbrevb",AVR_ISA_AVR5,bfd_mach_avr5},
   {"atmega32hvb",AVR_ISA_AVR5,    bfd_mach_avr5},
+  {"atmega32hvbrevb",AVR_ISA_AVR5,bfd_mach_avr5},
   {"atmega64hve",AVR_ISA_AVR5,    bfd_mach_avr5},
   {"at90can32" , AVR_ISA_AVR5,    bfd_mach_avr5},
   {"at90can64" , AVR_ISA_AVR5,    bfd_mach_avr5},
+  {"at90pwm161", AVR_ISA_AVR5,    bfd_mach_avr5},
   {"at90pwm216", AVR_ISA_AVR5,    bfd_mach_avr5},
   {"at90pwm316", AVR_ISA_AVR5,    bfd_mach_avr5},
   {"atmega32c1", AVR_ISA_AVR5,    bfd_mach_avr5},
@@ -237,6 +253,27 @@ static struct mcu_type_s mcu_types[] =
   {"at90usb1287",AVR_ISA_AVR51,   bfd_mach_avr51},
   {"atmega2560", AVR_ISA_AVR6,    bfd_mach_avr6},
   {"atmega2561", AVR_ISA_AVR6,    bfd_mach_avr6},
+  {"atxmega16a4", AVR_ISA_XMEGA,  bfd_mach_avrxmega2},
+  {"atxmega16d4", AVR_ISA_XMEGA,  bfd_mach_avrxmega2},
+  {"atxmega16x1", AVR_ISA_XMEGA,  bfd_mach_avrxmega2},
+  {"atxmega32a4", AVR_ISA_XMEGA,  bfd_mach_avrxmega2},
+  {"atxmega32d4", AVR_ISA_XMEGA,  bfd_mach_avrxmega2},
+  {"atxmega32x1", AVR_ISA_XMEGA,  bfd_mach_avrxmega2},
+  {"atxmega64a3", AVR_ISA_XMEGA,  bfd_mach_avrxmega4},
+  {"atxmega64d3", AVR_ISA_XMEGA,  bfd_mach_avrxmega4},
+  {"atxmega64a1", AVR_ISA_XMEGA,  bfd_mach_avrxmega5},
+  {"atxmega64a1u",AVR_ISA_XMEGA,  bfd_mach_avrxmega5},
+  {"atxmega128a3", AVR_ISA_XMEGA, bfd_mach_avrxmega6},
+  {"atxmega128b1", AVR_ISA_XMEGA, bfd_mach_avrxmega6},
+  {"atxmega128d3", AVR_ISA_XMEGA, bfd_mach_avrxmega6},
+  {"atxmega192a3", AVR_ISA_XMEGA, bfd_mach_avrxmega6},
+  {"atxmega192d3", AVR_ISA_XMEGA, bfd_mach_avrxmega6},
+  {"atxmega256a3", AVR_ISA_XMEGA, bfd_mach_avrxmega6},
+  {"atxmega256a3b",AVR_ISA_XMEGA, bfd_mach_avrxmega6},
+  {"atxmega256a3bu",AVR_ISA_XMEGA,bfd_mach_avrxmega6},
+  {"atxmega256d3", AVR_ISA_XMEGA, bfd_mach_avrxmega6},
+  {"atxmega128a1", AVR_ISA_XMEGA, bfd_mach_avrxmega7},
+  {"atxmega128a1u", AVR_ISA_XMEGA, bfd_mach_avrxmega7},
   {NULL, 0, 0}
 };
 
@@ -398,7 +435,7 @@ void
 md_show_usage (FILE *stream)
 {
   fprintf (stream,
-      _("AVR options:\n"
+      _("AVR Assembler options:\n"
 	"  -mmcu=[avr-name] select microcontroller variant\n"
 	"                   [avr-name] can be:\n"
 	"                   avr1  - classic AVR core without data RAM\n"
@@ -413,6 +450,11 @@ md_show_usage (FILE *stream)
 	"                   avr5  - enhanced AVR core with up to 64K program memory\n"
 	"                   avr51 - enhanced AVR core with up to 128K program memory\n"
 	"                   avr6  - enhanced AVR core with up to 256K program memory\n"
+	"                   avrxmega3 - XMEGA, > 8K, <= 64K FLASH, > 64K RAM\n"
+	"                   avrxmega4 - XMEGA, > 64K, <= 128K FLASH, <= 64K RAM\n"
+	"                   avrxmega5 - XMEGA, > 64K, <= 128K FLASH, > 64K RAM\n"
+	"                   avrxmega6 - XMEGA, > 128K, <= 256K FLASH, <= 64K RAM\n"
+	"                   avrxmega7 - XMEGA, > 128K, <= 256K FLASH, > 64K RAM\n"
 	"                   or immediate microcontroller name.\n"));
   fprintf (stream,
       _("  -mall-opcodes    accept all AVR opcodes, even if not supported by MCU\n"
@@ -840,7 +882,12 @@ avr_operand (struct avr_opcodes_s *opcode,
       if (*str == '+')
 	{
 	  ++str;
-	  op_mask |= 1;
+          char *s;
+          for (s = opcode->opcode; *s; ++s)
+            {
+              if (*s == '+')
+                op_mask |= (1 << (15 - (s - opcode->opcode)));
+            }
 	}
 
       /* attiny26 can do "lpm" and "lpm r,Z" but not "lpm r,Z+".  */
@@ -957,6 +1004,16 @@ avr_operand (struct avr_opcodes_s *opcode,
       }
       break;
 
+    case 'E':
+      {
+	unsigned int x;
+
+	x = avr_get_constant (str, 15);
+	str = input_line_pointer;
+	op_mask |= (x << 4);
+      }
+      break;
+    
     case '?':
       break;
 
@@ -1487,4 +1544,19 @@ avr_cons_fix_new (fragS *frag,
 	as_bad (_("illegal %srelocation size: %d"), "`pm' ", nbytes);
       exp_mod_pm = 0;
     }
+}
+
+void
+tc_cfi_frame_initial_instructions (void)
+{
+  /* AVR6 pushes 3 bytes for calls.  */
+  int return_size = (avr_mcu->mach == bfd_mach_avr6 ? 3 : 2);
+
+  /* The CFA is the caller's stack location before the call insn.  */
+  /* Note that the stack pointer is dwarf register number 32.  */
+  cfi_add_CFA_def_cfa (32, return_size);
+
+  /* Note that AVR consistently uses post-decrement, which means that things
+     do not line up the same way as for targers that use pre-decrement.  */
+  cfi_add_CFA_offset (DWARF2_DEFAULT_RETURN_COLUMN, 1-return_size);
 }

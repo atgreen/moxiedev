@@ -43,8 +43,9 @@ D/arc////
 D/microblaze////
 D/rx////
 D/xc16x////
-/Makefile.am/1.3/Sat Nov 13 14:05:50 2010/-ko/
-/Makefile.in/1.15/Sat Nov 13 14:05:50 2010/-ko/
-/aclocal.m4/1.27/Sat Nov 13 14:05:50 2010/-ko/
-/configure/1.41/Mon Nov 22 20:13:34 2010/-ko/
-/configure.in/1.16/Mon Nov 22 20:13:34 2010/-ko/
+D/tic6x////
+/Makefile.am/1.3/Sat Jun  4 17:41:32 2011/-ko/
+/Makefile.in/1.16/Sat Jun  4 17:44:35 2011/-ko/
+/aclocal.m4/1.28/Sat Jun  4 17:44:35 2011/-ko/
+/configure/1.43/Sat Jun  4 17:44:35 2011/-ko/
+/configure.in/1.17/Sat Jun  4 17:44:35 2011/-ko/

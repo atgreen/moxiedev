@@ -1,7 +1,7 @@
 /* Main header file for the bfd library -- portable access to object files.
 
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Contributed by Cygnus Support.
@@ -291,8 +291,8 @@ typedef struct bfd_section *sec_ptr;
 #define bfd_set_section_userdata(bfd, ptr, val) (((ptr)->userdata = (val)),TRUE)
 /* Find the address one past the end of SEC.  */
 #define bfd_get_section_limit(bfd, sec) \
-  (((sec)->rawsize ? (sec)->rawsize : (sec)->size) \
-   / bfd_octets_per_byte (bfd))
+  (((bfd)->direction != write_direction && (sec)->rawsize != 0	\
+    ? (sec)->rawsize : (sec)->size) / bfd_octets_per_byte (bfd))
 
 /* Return TRUE if input section SEC has been discarded.  */
 #define elf_discarded_section(sec)				\
@@ -432,7 +432,7 @@ extern void bfd_hash_traverse
 /* Allows the default size of a hash table to be configured. New hash
    tables allocated using bfd_hash_table_init will be created with
    this size.  */
-extern void bfd_hash_set_default_size (bfd_size_type);
+extern unsigned long bfd_hash_set_default_size (unsigned long);
 
 /* This structure is used to keep track of stabs in sections
    information while linking.  */
@@ -910,6 +910,10 @@ extern bfd_boolean elf32_arm_build_stubs
 
 /* ARM unwind section editing support.  */
 extern bfd_boolean elf32_arm_fix_exidx_coverage
+(struct bfd_section **, unsigned int, struct bfd_link_info *, bfd_boolean);
+
+/* C6x unwind section editing support.  */
+extern bfd_boolean elf32_tic6x_fix_exidx_coverage
 (struct bfd_section **, unsigned int, struct bfd_link_info *, bfd_boolean);
 
 /* PowerPC @tls opcode transform/validate.  */

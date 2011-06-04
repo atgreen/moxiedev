@@ -1,3 +1,16 @@
+2011-04-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* gdb-if.c (sim_complete_command): New stub function.
+
+2011-01-11  Andrew Burgess <aburgess@broadcom.com>
+
+	* gdb-if.c (sim_store_register): Update return value to
+	match new API.
+
+2010-12-04  Masaki Muranaka  <monaka@monami-software.com>
+
+	* Makefile.in: Use CC_FOR_BUILD to build opc2c.
+
 2010-05-26  Ozkan Sezer  <sezeroz@gmail.com>
 
 	* main.c (setup_tcp_console): Check error return from socket() call

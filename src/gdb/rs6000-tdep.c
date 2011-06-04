@@ -2,7 +2,7 @@
 
    Copyright (C) 1986, 1987, 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
    1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010 Free Software Foundation, Inc.
+   2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -99,7 +99,7 @@
 /* Determine if regnum is a POWER7 Extended FP register.  */
 #define IS_EFP_PSEUDOREG(tdep, regnum) ((tdep)->ppc_efpr0_regnum >= 0 \
     && (regnum) >= (tdep)->ppc_efpr0_regnum \
-    && (regnum) < (tdep)->ppc_efpr0_regnum + ppc_num_fprs)
+    && (regnum) < (tdep)->ppc_efpr0_regnum + ppc_num_efprs)
 
 /* The list of available "set powerpc ..." and "show powerpc ..."
    commands.  */
@@ -122,7 +122,7 @@ static const char *powerpc_vector_strings[] =
 static enum powerpc_vector_abi powerpc_vector_abi_global = POWERPC_VEC_AUTO;
 static const char *powerpc_vector_abi_string = "auto";
 
-/* To be used by skip_prologue. */
+/* To be used by skip_prologue.  */
 
 struct rs6000_framedata
   {
@@ -135,8 +135,8 @@ struct rs6000_framedata
     int saved_vr;               /* smallest # of saved vr */
     int saved_ev;               /* smallest # of saved ev */
     int alloca_reg;		/* alloca register number (frame ptr) */
-    char frameless;		/* true if frameless functions. */
-    char nosavedpc;		/* true if pc not saved. */
+    char frameless;		/* true if frameless functions.  */
+    char nosavedpc;		/* true if pc not saved.  */
     char used_bl;		/* true if link register clobbered */
     int gpr_offset;		/* offset of saved gprs from prev sp */
     int fpr_offset;		/* offset of saved fprs from prev sp */
@@ -1017,7 +1017,8 @@ ppc_displaced_step_fixup (struct gdbarch *gdbarch,
 		   paddress (gdbarch, insn), paddress (gdbarch, current_pc),
 		   paddress (gdbarch, from + offset));
 
-	      regcache_cooked_write_unsigned (regs, gdbarch_pc_regnum (gdbarch),
+	      regcache_cooked_write_unsigned (regs,
+					      gdbarch_pc_regnum (gdbarch),
 					      from + offset);
 	    }
 	}
@@ -1275,7 +1276,7 @@ bl_to_blrl_insn_p (CORE_ADDR pc, int insn, enum bfd_endian byte_order)
   return 0;
 }
 
-/* Masks for decoding a branch-and-link (bl) instruction.  
+/* Masks for decoding a branch-and-link (bl) instruction.
 
    BL_MASK and BL_INSTRUCTION are used in combination with each other.
    The former is anded with the opcode in question; if the result of
@@ -1317,8 +1318,7 @@ rs6000_skip_stack_check (struct gdbarch *gdbarch, const CORE_ADDR start_pc)
 
   /* First possible sequence: A small number of probes.
          stw 0, -<some immediate>(1)
-         [repeat this instruction any (small) number of times]
-  */
+         [repeat this instruction any (small) number of times].  */
   
   if ((op & 0xffff0000) == 0x90010000)
     {
@@ -1340,8 +1340,7 @@ rs6000_skip_stack_check (struct gdbarch *gdbarch, const CORE_ADDR start_pc)
          addi 12,12,-<some immediate>
          stw 0,0(12)
          b <disp>
-         [possibly one last probe: stw 0,<some immediate>(12)]
-  */
+         [possibly one last probe: stw 0,<some immediate>(12)].  */
 
   while (1)
     {
@@ -1397,7 +1396,7 @@ rs6000_skip_stack_check (struct gdbarch *gdbarch, const CORE_ADDR start_pc)
       if ((op & 0xfc000001) != 0x48000000)
         break;
 
-      /* [possibly one last probe: stw 0,<some immediate>(12)] */
+      /* [possibly one last probe: stw 0,<some immediate>(12)].  */
       pc = pc + 4;
       op = rs6000_fetch_instruction (gdbarch, pc);
       if ((op & 0xffff0000) == 0x900c0000)
@@ -1491,8 +1490,7 @@ rs6000_skip_stack_check (struct gdbarch *gdbarch, const CORE_ADDR start_pc)
    - ev_offset is the offset of the first saved ev from the previous frame.
    - lr_offset is the offset of the saved lr
    - cr_offset is the offset of the saved cr
-   - vrsave_offset is the offset of the saved vrsave register
- */
+   - vrsave_offset is the offset of the saved vrsave register.  */
 
 static CORE_ADDR
 skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
@@ -1540,7 +1538,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
       /* Sometimes it isn't clear if an instruction is a prologue
          instruction or not.  When we encounter one of these ambiguous
 	 cases, we'll set prev_insn_was_prologue_insn to 0 (false).
-	 Otherwise, we'll assume that it really is a prologue instruction. */
+	 Otherwise, we'll assume that it really is a prologue instruction.  */
       if (prev_insn_was_prologue_insn)
 	last_prologue_pc = pc;
 
@@ -1625,7 +1623,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 	  /* nop */
 	  /* Allow nops in the prologue, but do not consider them to
 	     be part of the prologue unless followed by other prologue
-	     instructions. */
+	     instructions.  */
 	  prev_insn_was_prologue_insn = 0;
 	  continue;
 
@@ -1719,7 +1717,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 	}
       else if ((op & 0xfc000001) == 0x48000001)
 	{			/* bl foo, 
-				   to save fprs??? */
+				   to save fprs???  */
 
 	  fdata->frameless = 0;
 
@@ -1741,7 +1739,8 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 	      struct symtab_and_line prologue_sal = find_pc_line (orig_pc, 0);
 	      struct symtab_and_line this_sal = find_pc_line (pc, 0);
 
-	      if ((prologue_sal.line == 0) || (prologue_sal.line != this_sal.line))
+	      if ((prologue_sal.line == 0)
+		  || (prologue_sal.line != this_sal.line))
 		break;
 	    }
 
@@ -1750,11 +1749,11 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 	  /* At this point, make sure this is not a trampoline
 	     function (a function that simply calls another functions,
 	     and nothing else).  If the next is not a nop, this branch
-	     was part of the function prologue. */
+	     was part of the function prologue.  */
 
 	  if (op == 0x4def7b82 || op == 0)	/* crorc 15, 15, 15 */
-	    break;		/* don't skip over 
-				   this branch */
+	    break;		/* Don't skip over 
+				   this branch.  */
 
 	  fdata->used_bl = 1;
 	  continue;
@@ -1769,7 +1768,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 	}
       else if ((op & 0xfc1f016a) == 0x7c01016e)
 	{			/* stwux rX,r1,rY */
-	  /* no way to figure out what r1 is going to be */
+	  /* No way to figure out what r1 is going to be.  */
 	  fdata->frameless = 0;
 	  offset = fdata->offset;
 	  continue;
@@ -1783,7 +1782,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 	}
       else if ((op & 0xfc1f016a) == 0x7c01016a)
 	{			/* stdux rX,r1,rY */
-	  /* no way to figure out what r1 is going to be */
+	  /* No way to figure out what r1 is going to be.  */
 	  fdata->frameless = 0;
 	  offset = fdata->offset;
 	  continue;
@@ -1797,8 +1796,8 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
  	}
       /* Load up minimal toc pointer.  Do not treat an epilogue restore
 	 of r31 as a minimal TOC load.  */
-      else if (((op >> 22) == 0x20f	||	/* l r31,... or l r30,... */
-	       (op >> 22) == 0x3af)		/* ld r31,... or ld r30,... */
+      else if (((op >> 22) == 0x20f	||	/* l r31,... or l r30,...  */
+	       (op >> 22) == 0x3af)		/* ld r31,... or ld r30,...  */
 	       && !framep
 	       && !minimal_toc_loaded)
 	{
@@ -1811,7 +1810,8 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
       else if ((op & 0xfc0007fe) == 0x7c000378 &&	/* mr(.)  Rx,Ry */
                (((op >> 21) & 31) >= 3) &&              /* R3 >= Ry >= R10 */
                (((op >> 21) & 31) <= 10) &&
-               ((long) ((op >> 16) & 31) >= fdata->saved_gpr)) /* Rx: local var reg */
+               ((long) ((op >> 16) & 31)
+		>= fdata->saved_gpr)) /* Rx: local var reg */
 	{
 	  continue;
 
@@ -1893,7 +1893,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 	  vr_saved_offset = SIGNED_SHORT (op);
 
           /* This insn by itself is not part of the prologue, unless
-             if part of the pair of insns mentioned above. So do not
+             if part of the pair of insns mentioned above.  So do not
              record this insn as part of the prologue yet.  */
           prev_insn_was_prologue_insn = 0;
 	}
@@ -2051,7 +2051,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 
 #if 0
 /* I have problems with skipping over __main() that I need to address
- * sometime. Previously, I used to use misc_function_vector which
+ * sometime.  Previously, I used to use misc_function_vector which
  * didn't work as well as I wanted to be.  -MGO */
 
   /* If the first thing after skipping a prolog is a branch to a function,
@@ -2062,7 +2062,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 
 
   if ((op & 0xfc000001) == 0x48000001)
-    {				/* bl foo, an initializer function? */
+    {				/* bl foo, an initializer function?  */
       op = read_memory_integer (pc + 4, 4, byte_order);
 
       if (op == 0x4def7b82)
@@ -2090,12 +2090,12 @@ static CORE_ADDR
 rs6000_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   struct rs6000_framedata frame;
-  CORE_ADDR limit_pc, func_addr;
+  CORE_ADDR limit_pc, func_addr, func_end_addr = 0;
 
   /* See if we can determine the end of the prologue via the symbol table.
      If so, then return either PC, or the PC after the prologue, whichever
      is greater.  */
-  if (find_pc_partial_function (pc, NULL, &func_addr, NULL))
+  if (find_pc_partial_function (pc, NULL, &func_addr, &func_end_addr))
     {
       CORE_ADDR post_prologue_pc
 	= skip_prologue_using_sal (gdbarch, func_addr);
@@ -2112,6 +2112,11 @@ rs6000_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
   limit_pc = skip_prologue_using_sal (gdbarch, pc);
   if (limit_pc == 0)
     limit_pc = pc + 100;          /* Magic.  */
+
+  /* Do not allow limit_pc to be past the function end, if we know
+     where that end is...  */
+  if (func_end_addr && limit_pc > func_end_addr)
+    limit_pc = func_end_addr;
 
   pc = skip_prologue (gdbarch, pc, limit_pc, &frame);
   return pc;
@@ -2256,7 +2261,8 @@ rs6000_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
       if (op != trampoline_code[ii])
 	return 0;
     }
-  ii = get_frame_register_unsigned (frame, 11);	/* r11 holds destination addr   */
+  ii = get_frame_register_unsigned (frame, 11);	/* r11 holds destination
+						   addr.  */
   pc = read_memory_unsigned_integer (ii, tdep->wordsize, byte_order);
   return pc;
 }
@@ -2498,20 +2504,27 @@ rs6000_convert_register_p (struct gdbarch *gdbarch, int regnum,
 	     != TYPE_LENGTH (builtin_type (gdbarch)->builtin_double));
 }
 
-static void
+static int
 rs6000_register_to_value (struct frame_info *frame,
                           int regnum,
                           struct type *type,
-                          gdb_byte *to)
+                          gdb_byte *to,
+			  int *optimizedp, int *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   gdb_byte from[MAX_REGISTER_SIZE];
   
   gdb_assert (TYPE_CODE (type) == TYPE_CODE_FLT);
 
-  get_frame_register (frame, regnum, from);
+  if (!get_frame_register_bytes (frame, regnum, 0,
+				 register_size (gdbarch, regnum),
+				 from, optimizedp, unavailablep))
+    return 0;
+
   convert_typed_floating (from, builtin_type (gdbarch)->builtin_double,
 			  to, type);
+  *optimizedp = *unavailablep = 0;
+  return 1;
 }
 
 static void
@@ -2529,6 +2542,11 @@ rs6000_value_to_register (struct frame_info *frame,
 			  to, builtin_type (gdbarch)->builtin_double);
   put_frame_register (frame, regnum, to);
 }
+
+ /* The type of a function that moves the value of REG between CACHE
+    or BUF --- in either direction.  */
+typedef enum register_status (*move_ev_register_func) (struct regcache *,
+						       int, void *);
 
 /* Move SPE vector register values between a 64-bit buffer and the two
    32-bit raw register halves in a regcache.  This function handles
@@ -2553,16 +2571,16 @@ rs6000_value_to_register (struct frame_info *frame,
    MOVE, since this function can't tell at compile-time which of
    REGCACHE or BUFFER is acting as the source of the data.  If C had
    co-variant type qualifiers, ...  */
-static void
-e500_move_ev_register (void (*move) (struct regcache *regcache,
-                                     int regnum, gdb_byte *buf),
-                       struct regcache *regcache, int ev_reg,
-                       gdb_byte *buffer)
+
+static enum register_status
+e500_move_ev_register (move_ev_register_func move,
+		       struct regcache *regcache, int ev_reg, void *buffer)
 {
   struct gdbarch *arch = get_regcache_arch (regcache);
   struct gdbarch_tdep *tdep = gdbarch_tdep (arch); 
   int reg_index;
   gdb_byte *byte_buffer = buffer;
+  enum register_status status;
 
   gdb_assert (IS_SPE_PSEUDOREG (tdep, ev_reg));
 
@@ -2570,55 +2588,80 @@ e500_move_ev_register (void (*move) (struct regcache *regcache,
 
   if (gdbarch_byte_order (arch) == BFD_ENDIAN_BIG)
     {
-      move (regcache, tdep->ppc_ev0_upper_regnum + reg_index, byte_buffer);
-      move (regcache, tdep->ppc_gp0_regnum + reg_index, byte_buffer + 4);
+      status = move (regcache, tdep->ppc_ev0_upper_regnum + reg_index,
+		     byte_buffer);
+      if (status == REG_VALID)
+	status = move (regcache, tdep->ppc_gp0_regnum + reg_index,
+		       byte_buffer + 4);
     }
   else
     {
-      move (regcache, tdep->ppc_gp0_regnum + reg_index, byte_buffer);
-      move (regcache, tdep->ppc_ev0_upper_regnum + reg_index, byte_buffer + 4);
+      status = move (regcache, tdep->ppc_gp0_regnum + reg_index, byte_buffer);
+      if (status == REG_VALID)
+	status = move (regcache, tdep->ppc_ev0_upper_regnum + reg_index,
+		       byte_buffer + 4);
     }
+
+  return status;
 }
 
-static void
+static enum register_status
+do_regcache_raw_read (struct regcache *regcache, int regnum, void *buffer)
+{
+  return regcache_raw_read (regcache, regnum, buffer);
+}
+
+static enum register_status
+do_regcache_raw_write (struct regcache *regcache, int regnum, void *buffer)
+{
+  regcache_raw_write (regcache, regnum, buffer);
+
+  return REG_VALID;
+}
+
+static enum register_status
 e500_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
 			   int reg_nr, gdb_byte *buffer)
 {
-  e500_move_ev_register (regcache_raw_read, regcache, reg_nr, buffer);
+  return e500_move_ev_register (do_regcache_raw_read, regcache, reg_nr, buffer);
 }
 
 static void
 e500_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache,
 			    int reg_nr, const gdb_byte *buffer)
 {
-  e500_move_ev_register ((void (*) (struct regcache *, int, gdb_byte *))
-			 regcache_raw_write,
-			 regcache, reg_nr, (gdb_byte *) buffer);
+  e500_move_ev_register (do_regcache_raw_write, regcache,
+			 reg_nr, (void *) buffer);
 }
 
 /* Read method for DFP pseudo-registers.  */
-static void
+static enum register_status
 dfp_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
 			   int reg_nr, gdb_byte *buffer)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   int reg_index = reg_nr - tdep->ppc_dl0_regnum;
+  enum register_status status;
 
   if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
     {
       /* Read two FP registers to form a whole dl register.  */
-      regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
-			 2 * reg_index, buffer);
-      regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
-			 2 * reg_index + 1, buffer + 8);
+      status = regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
+				  2 * reg_index, buffer);
+      if (status == REG_VALID)
+	status = regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
+				    2 * reg_index + 1, buffer + 8);
     }
   else
     {
-      regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
-			 2 * reg_index + 1, buffer + 8);
-      regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
-			 2 * reg_index, buffer);
+      status = regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
+				  2 * reg_index + 1, buffer + 8);
+      if (status == REG_VALID)
+	status = regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
+				    2 * reg_index, buffer);
     }
+
+  return status;
 }
 
 /* Write method for DFP pseudo-registers.  */
@@ -2648,33 +2691,38 @@ dfp_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache,
 }
 
 /* Read method for POWER7 VSX pseudo-registers.  */
-static void
+static enum register_status
 vsx_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
 			   int reg_nr, gdb_byte *buffer)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   int reg_index = reg_nr - tdep->ppc_vsr0_regnum;
+  enum register_status status;
 
   /* Read the portion that overlaps the VMX registers.  */
   if (reg_index > 31)
-    regcache_raw_read (regcache, tdep->ppc_vr0_regnum +
-			reg_index - 32, buffer);
+    status = regcache_raw_read (regcache, tdep->ppc_vr0_regnum +
+				reg_index - 32, buffer);
   else
     /* Read the portion that overlaps the FPR registers.  */
     if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
       {
-	regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
-			reg_index, buffer);
-	regcache_raw_read (regcache, tdep->ppc_vsr0_upper_regnum +
-			reg_index, buffer + 8);
+	status = regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
+				    reg_index, buffer);
+	if (status == REG_VALID)
+	  status = regcache_raw_read (regcache, tdep->ppc_vsr0_upper_regnum +
+				      reg_index, buffer + 8);
       }
     else
       {
-	regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
-			reg_index, buffer + 8);
-	regcache_raw_read (regcache, tdep->ppc_vsr0_upper_regnum +
-			reg_index, buffer);
+	status = regcache_raw_read (regcache, tdep->ppc_fp0_regnum +
+				    reg_index, buffer + 8);
+	if (status == REG_VALID)
+	  status = regcache_raw_read (regcache, tdep->ppc_vsr0_upper_regnum +
+				      reg_index, buffer);
       }
+
+  return status;
 }
 
 /* Write method for POWER7 VSX pseudo-registers.  */
@@ -2708,16 +2756,16 @@ vsx_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache,
 }
 
 /* Read method for POWER7 Extended FP pseudo-registers.  */
-static void
+static enum register_status
 efpr_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
 			   int reg_nr, gdb_byte *buffer)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   int reg_index = reg_nr - tdep->ppc_efpr0_regnum;
 
-  /* Read the portion that overlaps the VMX registers.  */
-  regcache_raw_read (regcache, tdep->ppc_vr0_regnum +
-		     reg_index, buffer);
+  /* Read the portion that overlaps the VMX register.  */
+  return regcache_raw_read_part (regcache, tdep->ppc_vr0_regnum + reg_index, 0,
+				 register_size (gdbarch, reg_nr), buffer);
 }
 
 /* Write method for POWER7 Extended FP pseudo-registers.  */
@@ -2728,13 +2776,14 @@ efpr_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache,
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
   int reg_index = reg_nr - tdep->ppc_efpr0_regnum;
 
-  /* Write the portion that overlaps the VMX registers.  */
-  regcache_raw_write (regcache, tdep->ppc_vr0_regnum +
-		      reg_index, buffer);
+  /* Write the portion that overlaps the VMX register.  */
+  regcache_raw_write_part (regcache, tdep->ppc_vr0_regnum + reg_index, 0,
+			   register_size (gdbarch, reg_nr), buffer);
 }
 
-static void
-rs6000_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
+static enum register_status
+rs6000_pseudo_register_read (struct gdbarch *gdbarch,
+			     struct regcache *regcache,
 			     int reg_nr, gdb_byte *buffer)
 {
   struct gdbarch *regcache_arch = get_regcache_arch (regcache);
@@ -2743,13 +2792,13 @@ rs6000_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
   gdb_assert (regcache_arch == gdbarch);
 
   if (IS_SPE_PSEUDOREG (tdep, reg_nr))
-    e500_pseudo_register_read (gdbarch, regcache, reg_nr, buffer);
+    return e500_pseudo_register_read (gdbarch, regcache, reg_nr, buffer);
   else if (IS_DFP_PSEUDOREG (tdep, reg_nr))
-    dfp_pseudo_register_read (gdbarch, regcache, reg_nr, buffer);
+    return dfp_pseudo_register_read (gdbarch, regcache, reg_nr, buffer);
   else if (IS_VSX_PSEUDOREG (tdep, reg_nr))
-    vsx_pseudo_register_read (gdbarch, regcache, reg_nr, buffer);
+    return vsx_pseudo_register_read (gdbarch, regcache, reg_nr, buffer);
   else if (IS_EFP_PSEUDOREG (tdep, reg_nr))
-    efpr_pseudo_register_read (gdbarch, regcache, reg_nr, buffer);
+    return efpr_pseudo_register_read (gdbarch, regcache, reg_nr, buffer);
   else
     internal_error (__FILE__, __LINE__,
 		    _("rs6000_pseudo_register_read: "
@@ -3194,7 +3243,7 @@ rs6000_frame_cache (struct frame_info *this_frame, void **this_cache)
     }
 
   /* if != -1, fdata.saved_ev is the smallest number of saved_ev.
-     All vr's from saved_ev to ev31 are saved. ????? */
+     All vr's from saved_ev to ev31 are saved. ?????  */
   if (tdep->ppc_ev0_regnum != -1)
     {
       if (fdata.saved_ev >= 0)
@@ -3213,12 +3262,14 @@ rs6000_frame_cache (struct frame_info *this_frame, void **this_cache)
   /* If != 0, fdata.cr_offset is the offset from the frame that
      holds the CR.  */
   if (fdata.cr_offset != 0)
-    cache->saved_regs[tdep->ppc_cr_regnum].addr = cache->base + fdata.cr_offset;
+    cache->saved_regs[tdep->ppc_cr_regnum].addr
+      = cache->base + fdata.cr_offset;
 
   /* If != 0, fdata.lr_offset is the offset from the frame that
      holds the LR.  */
   if (fdata.lr_offset != 0)
-    cache->saved_regs[tdep->ppc_lr_regnum].addr = cache->base + fdata.lr_offset;
+    cache->saved_regs[tdep->ppc_lr_regnum].addr
+      = cache->base + fdata.lr_offset;
   else if (fdata.lr_register != -1)
     cache->saved_regs[tdep->ppc_lr_regnum].realreg = fdata.lr_register;
   /* The PC is found in the link register.  */
@@ -3228,7 +3279,8 @@ rs6000_frame_cache (struct frame_info *this_frame, void **this_cache)
   /* If != 0, fdata.vrsave_offset is the offset from the frame that
      holds the VRSAVE.  */
   if (fdata.vrsave_offset != 0)
-    cache->saved_regs[tdep->ppc_vrsave_regnum].addr = cache->base + fdata.vrsave_offset;
+    cache->saved_regs[tdep->ppc_vrsave_regnum].addr
+      = cache->base + fdata.vrsave_offset;
 
   if (fdata.alloca_reg < 0)
     /* If no alloca register used, then fi->frame is the value of the
@@ -3267,6 +3319,7 @@ rs6000_frame_prev_register (struct frame_info *this_frame,
 static const struct frame_unwind rs6000_frame_unwind =
 {
   NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
   rs6000_frame_this_id,
   rs6000_frame_prev_register,
   NULL,
@@ -3376,6 +3429,7 @@ bfd_uses_spe_extensions (bfd *abfd)
   if (!abfd)
     return 0;
 
+#ifdef HAVE_ELF
   /* Using Tag_GNU_Power_ABI_Vector here is a bit of a hack, as the user
      could be using the SPE vector abi without actually using any spe
      bits whatsoever.  But it's close enough for now.  */
@@ -3383,6 +3437,7 @@ bfd_uses_spe_extensions (bfd *abfd)
 					 Tag_GNU_Power_ABI_Vector);
   if (vector_abi == 3)
     return 1;
+#endif
 
   sect = bfd_get_section_by_name (abfd, ".PPC.EMB.apuinfo");
   if (!sect)
@@ -3948,7 +4003,8 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   if (have_spe || have_dfp || have_vsx)
     {
       set_gdbarch_pseudo_register_read (gdbarch, rs6000_pseudo_register_read);
-      set_gdbarch_pseudo_register_write (gdbarch, rs6000_pseudo_register_write);
+      set_gdbarch_pseudo_register_write (gdbarch,
+					 rs6000_pseudo_register_write);
     }
 
   set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
@@ -4006,13 +4062,13 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_breakpoint_from_pc (gdbarch, rs6000_breakpoint_from_pc);
 
   /* The value of symbols of type N_SO and N_FUN maybe null when
-     it shouldn't be. */
+     it shouldn't be.  */
   set_gdbarch_sofun_address_maybe_missing (gdbarch, 1);
 
   /* Handles single stepping of atomic sequences.  */
   set_gdbarch_software_single_step (gdbarch, ppc_deal_with_atomic_sequence);
   
-  /* Not sure on this. FIXMEmgo */
+  /* Not sure on this.  FIXMEmgo */
   set_gdbarch_frame_args_skip (gdbarch, 8);
 
   /* Helpers for function argument information.  */
@@ -4145,7 +4201,7 @@ powerpc_set_soft_float (char *args, int from_tty,
   /* Update the architecture.  */
   gdbarch_info_init (&info);
   if (!gdbarch_update_p (info))
-    internal_error (__FILE__, __LINE__, "could not update architecture");
+    internal_error (__FILE__, __LINE__, _("could not update architecture"));
 }
 
 static void
@@ -4172,12 +4228,23 @@ powerpc_set_vector_abi (char *args, int from_tty,
   /* Update the architecture.  */
   gdbarch_info_init (&info);
   if (!gdbarch_update_p (info))
-    internal_error (__FILE__, __LINE__, "could not update architecture");
+    internal_error (__FILE__, __LINE__, _("could not update architecture"));
+}
+
+/* Show the current setting of the exact watchpoints flag.  */
+
+static void
+show_powerpc_exact_watchpoints (struct ui_file *file, int from_tty,
+				struct cmd_list_element *c,
+				const char *value)
+{
+  fprintf_filtered (file, _("Use of exact watchpoints is %s.\n"), value);
 }
 
 /* Initialization code.  */
 
-extern initialize_file_ftype _initialize_rs6000_tdep; /* -Wmissing-prototypes */
+/* -Wmissing-prototypes */
+extern initialize_file_ftype _initialize_rs6000_tdep;
 
 void
 _initialize_rs6000_tdep (void)
@@ -4231,4 +4298,17 @@ _initialize_rs6000_tdep (void)
 			_("Show the vector ABI."),
 			NULL, powerpc_set_vector_abi, NULL,
 			&setpowerpccmdlist, &showpowerpccmdlist);
+
+  add_setshow_boolean_cmd ("exact-watchpoints", class_support,
+			   &target_exact_watchpoints,
+			   _("\
+Set whether to use just one debug register for watchpoints on scalars."),
+			   _("\
+Show whether to use just one debug register for watchpoints on scalars."),
+			   _("\
+If true, GDB will use only one debug register when watching a variable of\n\
+scalar type, thus assuming that the variable is accessed through the address\n\
+of its first byte."),
+			   NULL, show_powerpc_exact_watchpoints,
+			   &setpowerpccmdlist, &showpowerpccmdlist);
 }

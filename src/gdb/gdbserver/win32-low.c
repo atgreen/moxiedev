@@ -1,5 +1,6 @@
 /* Low level interface to Windows debugging, for gdbserver.
-   Copyright (C) 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    Contributed by Leo Zayas.  Based on "win32-nat.c" from GDB.
 
@@ -535,13 +536,15 @@ win32_create_inferior (char *program, char **program_args)
   path_ptr = getenv ("PATH");
   if (path_ptr)
     {
+      int size = cygwin_conv_path_list (CCP_POSIX_TO_WIN_A, path_ptr, NULL, 0);
       orig_path = alloca (strlen (path_ptr) + 1);
-      new_path = alloca (cygwin_posix_to_win32_path_list_buf_size (path_ptr));
+      new_path = alloca (size);
       strcpy (orig_path, path_ptr);
-      cygwin_posix_to_win32_path_list (path_ptr, new_path);
+      cygwin_conv_path_list (CCP_POSIX_TO_WIN_A, path_ptr, new_path, size);
       setenv ("PATH", new_path, 1);
-    }
-  cygwin_conv_to_win32_path (program, real_path);
+     }
+  cygwin_conv_path (CCP_POSIX_TO_WIN_A, program, real_path,
+		    MAXPATHLEN);
   program = real_path;
 #endif
 
@@ -924,7 +927,7 @@ win32_add_one_solib (const char *name, CORE_ADDR load_addr)
 #endif
 
 #ifdef __CYGWIN__
-  cygwin_conv_to_posix_path (buf, buf2);
+  cygwin_conv_path (CCP_WIN_A_TO_POSIX, buf, buf2, sizeof (buf2));
 #else
   strcpy (buf2, buf);
 #endif
@@ -1201,7 +1204,7 @@ handle_load_dll (void)
     return;
 
   /* The symbols in a dll are offset by 0x1000, which is the
-     the offset from 0 of the first byte in an image - because
+     offset from 0 of the first byte in an image - because
      of the file header and the section alignment. */
 
   load_addr = (CORE_ADDR) (uintptr_t) event->lpBaseOfDll + 0x1000;

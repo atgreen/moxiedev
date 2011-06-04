@@ -26,6 +26,16 @@ double       globald;
 test_struct  globalstruct;
 test_struct *globalp;
 int          globalarr[16];
+int          globalarr2[4];
+int          globalarr3[4];
+
+struct global_pieces {
+  unsigned int a;
+  unsigned int b;
+} global_pieces =
+  {
+    0x12345678, 0x87654321
+  };
 
 /*
  * Additional globals used in arithmetic tests
@@ -229,6 +239,12 @@ main (argc, argv, envp)
   for (i = 0; i < 15; i++)
     globalarr[i] = i;
 
+  for (i = 0; i < 4; i++)
+    globalarr2[i] = i;
+
+  for (i = 0; i < 4; i++)
+    globalarr3[3 - i] = i;
+
   mystruct.memberc = 101;
   mystruct.memberi = 102;
   mystruct.memberf = 103.3;
@@ -275,6 +291,10 @@ main (argc, argv, envp)
   globalp = 0;
   for (i = 0; i < 15; i++)
     globalarr[i] = 0;
+  for (i = 0; i < 4; i++)
+    globalarr2[i] = 0;
+  for (i = 0; i < 4; i++)
+    globalarr3[i] = 0;
 
   end ();
   return 0;

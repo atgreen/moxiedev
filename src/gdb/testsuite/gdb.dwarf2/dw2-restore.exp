@@ -1,4 +1,4 @@
-# Copyright 2009, 2010 Free Software Foundation, Inc.
+# Copyright 2009, 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 # Test handling of DW_CFA_restore_state.
 
 # This test can only be run on x86_64 targets.
-if {![istarget x86_64-*]} {
+if {![istarget x86_64-*] || ![is_lp64_target]} {
     return 0  
 }
 set testfile "dw2-restore"

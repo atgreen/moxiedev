@@ -1,6 +1,6 @@
 /* The common simulator framework for GDB, the GNU Debugger.
 
-   Copyright 2002, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2002, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney and Red Hat.
 
@@ -138,7 +138,7 @@ sim_core_trace_M (sim_cpu *cpu,
 }
 #endif
 
-  
+
 /* TAGS: sim_core_read_aligned_1 sim_core_read_aligned_2 */
 /* TAGS: sim_core_read_aligned_4 sim_core_read_aligned_8 */
 /* TAGS: sim_core_read_aligned_16 */
@@ -193,7 +193,7 @@ sim_core_read_aligned_N(sim_cpu *cpu,
   return val;
 }
 #endif
-  
+
 /* TAGS: sim_core_read_unaligned_1 sim_core_read_unaligned_2 */
 /* TAGS: sim_core_read_unaligned_4 sim_core_read_unaligned_8 */
 /* TAGS: sim_core_read_unaligned_16 */

@@ -1,4 +1,4 @@
-/* Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+/* Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -108,7 +108,7 @@ write_clbk (void *caller_context, void *address, void *buffer,
   return ESUCCESS;
 }
 
-/* Get integer regs */
+/* Get integer regs.  */
 
 static int
 get_reg_clbk(void *caller_context, pthreadDebugGetRegRtn_t regs,
@@ -120,7 +120,7 @@ get_reg_clbk(void *caller_context, pthreadDebugGetRegRtn_t regs,
   return ESUCCESS;
 }
 
-/* Set integer regs */
+/* Set integer regs.  */
 
 static int
 set_reg_clbk(void *caller_context, const pthreadDebugRegs_t *regs,
@@ -256,7 +256,7 @@ enable_dec_thread (void)
   debug ("enable_dec_thread: Thread support enabled.");
 }
 
-/* Deactivate thread support.  Do nothing is thread support is
+/* Deactivate thread support.  Do nothing if thread support is
    already inactive.  */
 
 static void
@@ -700,7 +700,7 @@ dec_thread_get_ada_task_ptid (long lwp, long thread)
     if (info->info.teb == (pthread_t) thread)
       return ptid_build_from_info (*info);
   
-  warning (_("Could not find thread id from THREAD = 0x%lx\n"), thread);
+  warning (_("Could not find thread id from THREAD = 0x%lx"), thread);
   return inferior_ptid;
 }
 

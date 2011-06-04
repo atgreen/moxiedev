@@ -1,4 +1,4 @@
-# Copyright 2010 Free Software Foundation, Inc.
+# Copyright 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ gdb_test "break here" \
   "Breakpoint.*at.*" \
   "breakpoint here"
 
-gdb_test "break there" \
+gdb_test "break main:there" \
   "Breakpoint.*at.*" \
   "breakpoint there"
 
@@ -57,3 +57,9 @@ gdb_test "cont" \
 gdb_test "cont" \
   "Breakpoint 2,.*" \
   "continue to 'here'"
+
+rerun_to_main
+
+gdb_test "cont" \
+  "Breakpoint 3,.*" \
+  "continue to 'there' after re-run"

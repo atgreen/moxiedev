@@ -98,6 +98,7 @@ typedef	unsigned long	u_long;
 
 typedef	unsigned short	ushort;		/* System V compatibility */
 typedef	unsigned int	uint;		/* System V compatibility */
+typedef	unsigned long	ulong;		/* System V compatibility */
 # endif	/*!_POSIX_SOURCE */
 
 #ifndef __clock_t_defined
@@ -353,6 +354,9 @@ typedef struct {
   int inheritsched;
   int schedpolicy;
   struct sched_param schedparam;
+#if defined(__rtems__)
+  size_t guardsize;
+#endif
 
   /* P1003.4b/D8, p. 54 adds cputime_clock_allowed attribute.  */
 #if defined(_POSIX_THREAD_CPUTIME)
@@ -459,13 +463,13 @@ typedef struct {
 
 /* POSIX Spin Lock Types */
 
+#if !defined (__CYGWIN__)
 #if defined(_POSIX_SPIN_LOCKS)
 typedef __uint32_t pthread_spinlock_t;        /* POSIX Spin Lock Object */
 #endif /* defined(_POSIX_SPIN_LOCKS) */
 
 /* POSIX Reader/Writer Lock Types */
 
-#if !defined (__CYGWIN__)
 #if defined(_POSIX_READER_WRITER_LOCKS)
 typedef __uint32_t pthread_rwlock_t;         /* POSIX RWLock Object */
 typedef struct {

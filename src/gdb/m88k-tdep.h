@@ -1,6 +1,7 @@
 /* Target-dependent code for the Motorola 88000 series.
 
-   Copyright (C) 2004, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2004, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -30,7 +31,7 @@ enum m88k_regnum
   M88K_R3_REGNUM,
   M88K_R12_REGNUM = 12,
   M88K_R30_REGNUM = 30,		/* Frame pointer.  */
-  M88K_R31_REGNUM,		/* Stack pointer. */
+  M88K_R31_REGNUM,		/* Stack pointer.  */
   M88K_EPSR_REGNUM,
   M88K_FPSR_REGNUM,
   M88K_FPCR_REGNUM,

@@ -1,6 +1,6 @@
 /* Remote utility routines for the remote server for GDB.
    Copyright (C) 1986, 1989, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -170,14 +170,21 @@ handle_accept_event (int err, gdb_client_data client_data)
 	      (char *) &tmp, sizeof (tmp));
 
 #ifndef USE_WIN32API
-  close (listen_desc);		/* No longer need this */
-
   signal (SIGPIPE, SIG_IGN);	/* If we don't do this, then gdbserver simply
 				   exits when the remote side dies.  */
-#else
-  closesocket (listen_desc);	/* No longer need this */
 #endif
 
+  if (run_once)
+    {
+#ifndef USE_WIN32API
+      close (listen_desc);		/* No longer need this */
+#else
+      closesocket (listen_desc);	/* No longer need this */
+#endif
+    }
+
+  /* Even if !RUN_ONCE no longer notice new connections.  Still keep the
+     descriptor open for add_file_handler to wait for a new connection.  */
   delete_file_handler (listen_desc);
 
   /* Convert IP address to string.  */
@@ -198,6 +205,62 @@ handle_accept_event (int err, gdb_client_data client_data)
   target_async (0);
 
   return 0;
+}
+
+/* Prepare for a later connection to a remote debugger.
+   NAME is the filename used for communication.  */
+
+void
+remote_prepare (char *name)
+{
+  char *port_str;
+#ifdef USE_WIN32API
+  static int winsock_initialized;
+#endif
+  int port;
+  struct sockaddr_in sockaddr;
+  socklen_t tmp;
+  char *port_end;
+
+  port_str = strchr (name, ':');
+  if (port_str == NULL)
+    {
+      transport_is_reliable = 0;
+      return;
+    }
+
+  port = strtoul (port_str + 1, &port_end, 10);
+  if (port_str[1] == '\0' || *port_end != '\0')
+    fatal ("Bad port argument: %s", name);
+
+#ifdef USE_WIN32API
+  if (!winsock_initialized)
+    {
+      WSADATA wsad;
+
+      WSAStartup (MAKEWORD (1, 0), &wsad);
+      winsock_initialized = 1;
+    }
+#endif
+
+  listen_desc = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (listen_desc == -1)
+    perror_with_name ("Can't open socket");
+
+  /* Allow rapid reuse of this port. */
+  tmp = 1;
+  setsockopt (listen_desc, SOL_SOCKET, SO_REUSEADDR, (char *) &tmp,
+	      sizeof (tmp));
+
+  sockaddr.sin_family = PF_INET;
+  sockaddr.sin_port = htons (port);
+  sockaddr.sin_addr.s_addr = INADDR_ANY;
+
+  if (bind (listen_desc, (struct sockaddr *) &sockaddr, sizeof (sockaddr))
+      || listen (listen_desc, 1))
+    perror_with_name ("Can't bind address");
+
+  transport_is_reliable = 1;
 }
 
 /* Open a connection to a remote debugger.
@@ -274,8 +337,6 @@ remote_open (char *name)
 
       fprintf (stderr, "Remote debugging using %s\n", name);
 
-      transport_is_reliable = 0;
-
       enable_async_notification (remote_desc);
 
       /* Register the event loop handler.  */
@@ -284,63 +345,22 @@ remote_open (char *name)
     }
   else
     {
-#ifdef USE_WIN32API
-      static int winsock_initialized;
-#endif
       int port;
+      socklen_t len;
       struct sockaddr_in sockaddr;
-      socklen_t tmp;
-      char *port_end;
 
-      port = strtoul (port_str + 1, &port_end, 10);
-      if (port_str[1] == '\0' || *port_end != '\0')
-	fatal ("Bad port argument: %s", name);
-
-#ifdef USE_WIN32API
-      if (!winsock_initialized)
-	{
-	  WSADATA wsad;
-
-	  WSAStartup (MAKEWORD (1, 0), &wsad);
-	  winsock_initialized = 1;
-	}
-#endif
-
-      listen_desc = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
-      if (listen_desc == -1)
-	perror_with_name ("Can't open socket");
-
-      /* Allow rapid reuse of this port. */
-      tmp = 1;
-      setsockopt (listen_desc, SOL_SOCKET, SO_REUSEADDR, (char *) &tmp,
-		  sizeof (tmp));
-
-      sockaddr.sin_family = PF_INET;
-      sockaddr.sin_port = htons (port);
-      sockaddr.sin_addr.s_addr = INADDR_ANY;
-
-      if (bind (listen_desc, (struct sockaddr *) &sockaddr, sizeof (sockaddr))
-	  || listen (listen_desc, 1))
-	perror_with_name ("Can't bind address");
-
-      /* If port is zero, a random port will be selected, and the
-	 fprintf below needs to know what port was selected.  */
-      if (port == 0)
-	{
-	  socklen_t len = sizeof (sockaddr);
-	  if (getsockname (listen_desc, (struct sockaddr *) &sockaddr, &len) < 0
-	      || len < sizeof (sockaddr))
-	    perror_with_name ("Can't determine port");
-	  port = ntohs (sockaddr.sin_port);
-	}
+      len = sizeof (sockaddr);
+      if (getsockname (listen_desc,
+		       (struct sockaddr *) &sockaddr, &len) < 0
+	  || len < sizeof (sockaddr))
+	perror_with_name ("Can't determine port");
+      port = ntohs (sockaddr.sin_port);
 
       fprintf (stderr, "Listening on port %d\n", port);
       fflush (stderr);
 
       /* Register the event loop handler.  */
       add_file_handler (listen_desc, handle_accept_event, NULL);
-
-      transport_is_reliable = 1;
     }
 }
 
@@ -724,7 +744,7 @@ putpkt_binary_1 (char *buf, int cnt, int is_notif)
   char *p;
   int cc;
 
-  buf2 = xmalloc (PBUFSIZ);
+  buf2 = xmalloc (strlen ("$") + cnt + strlen ("#nn") + 1);
 
   /* Copy the packet into buffer BUF2, encapsulating it
      and giving it a checksum.  */
@@ -971,7 +991,8 @@ readchar (void)
 
   if (readchar_bufcnt == 0)
     {
-      readchar_bufcnt = read (remote_desc, readchar_buf, sizeof (readchar_buf));
+      readchar_bufcnt = read (remote_desc, readchar_buf,
+			      sizeof (readchar_buf));
 
       if (readchar_bufcnt <= 0)
 	{
@@ -1083,7 +1104,9 @@ getpkt (char *buf)
 
       if (noack_mode)
 	{
-	  fprintf (stderr, "Bad checksum, sentsum=0x%x, csum=0x%x, buf=%s [no-ack-mode, Bad medium?]\n",
+	  fprintf (stderr,
+		   "Bad checksum, sentsum=0x%x, csum=0x%x, "
+		   "buf=%s [no-ack-mode, Bad medium?]\n",
 		   (c1 << 4) + c2, csum, buf);
 	  /* Not much we can do, GDB wasn't expecting an ack/nac.  */
 	  break;
@@ -1428,19 +1451,13 @@ decode_X_packet (char *from, int packet_len, CORE_ADDR *mem_addr_ptr,
 }
 
 /* Decode a qXfer write request.  */
+
 int
-decode_xfer_write (char *buf, int packet_len, char **annex, CORE_ADDR *offset,
+decode_xfer_write (char *buf, int packet_len, CORE_ADDR *offset,
 		   unsigned int *len, unsigned char *data)
 {
   char ch;
-
-  /* Extract and NUL-terminate the annex.  */
-  *annex = buf;
-  while (*buf && *buf != ':')
-    buf++;
-  if (*buf == '\0')
-    return -1;
-  *buf++ = 0;
+  char *b = buf;
 
   /* Extract the offset.  */
   *offset = 0;
@@ -1451,7 +1468,7 @@ decode_xfer_write (char *buf, int packet_len, char **annex, CORE_ADDR *offset,
     }
 
   /* Get encoded data.  */
-  packet_len -= buf - *annex;
+  packet_len -= buf - b;
   *len = remote_unescape_input ((const gdb_byte *) buf, packet_len,
 				data, packet_len);
   return 0;

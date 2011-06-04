@@ -1,5 +1,5 @@
 /* Default profiling support.
-   Copyright (C) 1996, 1997, 1998, 2000, 2001, 2007, 2008, 2009, 2010
+   Copyright (C) 1996, 1997, 1998, 2000, 2001, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Cygnus Support.
 
@@ -35,6 +35,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #endif
 #endif
 #include <ctype.h>
+
+#if !WITH_PROFILE_PC_P
+static unsigned int _profile_stub;
+# define PROFILE_PC_FREQ(p) _profile_stub
+# define PROFILE_PC_NR_BUCKETS(p) _profile_stub
+# define PROFILE_PC_SHIFT(p) _profile_stub
+# define PROFILE_PC_START(p) _profile_stub
+# define PROFILE_PC_END(p) _profile_stub
+# define PROFILE_INSN_COUNT(p) &_profile_stub
+#endif
 
 #define COMMAS(n) sim_add_commas (comma_buf, sizeof (comma_buf), (n))
 
@@ -180,7 +190,7 @@ set_profile_option_mask (SIM_DESC sd, const char *name, int mask, const char *ar
 		}
 	    }
 	}
-    }  
+    }
 
   return SIM_RC_OK;
 }
@@ -404,7 +414,7 @@ profile_option_handler (SIM_DESC sd,
 	    {
 	      PROFILE_PC_START (CPU_PROFILE_DATA (STATE_CPU (sd, cpu_nr))) = base;
 	      PROFILE_PC_END (CPU_PROFILE_DATA (STATE_CPU (sd, cpu_nr))) = bound;
-	    }	      
+	    }
 	  for (cpu_nr = 0; cpu_nr < MAX_NR_PROCESSORS; ++cpu_nr)
 	    CPU_PROFILE_FLAGS (STATE_CPU (sd, cpu_nr))[PROFILE_PC_IDX] = 1;
 	}
@@ -490,7 +500,7 @@ profile_pc_cleanup (SIM_DESC sd)
       sim_cpu *cpu = STATE_CPU (sd, n);
       PROFILE_DATA *data = CPU_PROFILE_DATA (cpu);
       if (PROFILE_PC_COUNT (data) != NULL)
-	zfree (PROFILE_PC_COUNT (data));
+	free (PROFILE_PC_COUNT (data));
       PROFILE_PC_COUNT (data) = NULL;
       if (PROFILE_PC_EVENT (data) != NULL)
 	sim_events_deschedule (sd, PROFILE_PC_EVENT (data));
@@ -525,7 +535,7 @@ profile_pc_event (SIM_DESC sd,
     PROFILE_PC_COUNT (profile) [i] += 1; /* Overflow? */
   else
     PROFILE_PC_COUNT (profile) [PROFILE_PC_NR_BUCKETS (profile)] += 1;
-  PROFILE_PC_EVENT (profile) = 
+  PROFILE_PC_EVENT (profile) =
     sim_events_schedule (sd, PROFILE_PC_FREQ (profile), profile_pc_event, cpu);
 }
 
@@ -688,7 +698,7 @@ profile_print_pc (sim_cpu *cpu, int verbose)
   /* FIXME: Is this the best place for this code? */
   {
     FILE *pf = fopen ("gmon.out", "wb");
-    
+
     if (pf == NULL)
       sim_io_eprintf (sd, "Failed to open \"gmon.out\" profile file\n");
     else
@@ -730,7 +740,7 @@ profile_print_pc (sim_cpu *cpu, int verbose)
 	  }
 	if (ok == 0)
 	  sim_io_eprintf (sd, "Failed to write to \"gmon.out\" profile file\n");
-	fclose(pf);
+	fclose (pf);
       }
   }
 
@@ -1297,6 +1307,6 @@ profile_uninstall (SIM_DESC sd)
 	}
 
       if (PROFILE_INSN_COUNT (data) != NULL)
-	zfree (PROFILE_INSN_COUNT (data));
+	free (PROFILE_INSN_COUNT (data));
     }
 }

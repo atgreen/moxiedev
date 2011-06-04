@@ -1,6 +1,6 @@
 /* The common simulator framework for GDB, the GNU Debugger.
 
-   Copyright 2002, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2002, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney and Red Hat.
 
@@ -24,7 +24,8 @@
 #include "hw-base.h"
 
 
-struct hw_handle_mapping {
+struct hw_handle_mapping
+{
   cell_word external;
   struct hw *phandle;
   struct hw_instance *ihandle;
@@ -32,7 +33,8 @@ struct hw_handle_mapping {
 };
 
 
-struct hw_handle_data {
+struct hw_handle_data
+{
   int nr_mappings;
   struct hw_handle_mapping *mappings;
 };
@@ -155,7 +157,7 @@ hw_handle_add_ihandle (struct hw *hw,
 		       struct hw_instance *internal)
 {
   struct hw_handle_data *db = hw->handles_of_hw;
-  if (hw_handle_2ihandle (hw, internal) != 0) 
+  if (hw_handle_2ihandle (hw, internal) != 0)
     {
       hw_abort (hw, "attempting to add an ihandle already in the data base");
     }
@@ -177,7 +179,7 @@ hw_handle_add_phandle (struct hw *hw,
 		       struct hw *internal)
 {
   struct hw_handle_data *db = hw->handles_of_hw;
-  if (hw_handle_2phandle (hw, internal) != 0) 
+  if (hw_handle_2phandle (hw, internal) != 0)
     {
       hw_abort (hw, "attempting to add a phandle already in the data base");
     }
@@ -206,7 +208,7 @@ hw_handle_remove_ihandle (struct hw *hw,
 	{
 	  struct hw_handle_mapping *delete = *current_map;
 	  *current_map = delete->next;
-	  zfree (delete);
+	  free (delete);
 	  return;
 	}
       current_map = &(*current_map)->next;
@@ -227,12 +229,10 @@ hw_handle_remove_phandle (struct hw *hw,
 	{
 	  struct hw_handle_mapping *delete = *current_map;
 	  *current_map = delete->next;
-	  zfree (delete);
+	  free (delete);
 	  return;
 	}
       current_map = &(*current_map)->next;
     }
   hw_abort (hw, "attempt to remove nonexistant phandle");
 }
-
-

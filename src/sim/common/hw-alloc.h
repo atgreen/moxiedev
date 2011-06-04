@@ -1,5 +1,6 @@
 /* Hardware memory allocator.
-   Copyright (C) 1998, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 1998, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
    Contributed by Cygnus Support.
 
 This file is part of GDB, the GNU debugger.
@@ -33,7 +34,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #define HW_ZALLOC(me,type) (type*) hw_zalloc (me, sizeof (type))
 #define HW_MALLOC(me,type) (type*) hw_malloc (me, sizeof (type))
-#define HW_NZALLOC(ME,TYPE,N) (TYPE*) hw_zalloc (me, sizeof (TYPE) * (N))
+#define HW_NALLOC(me,type,n) (type*) hw_malloc (me, sizeof (type) * (n))
+#define HW_NZALLOC(me,type,n) (type*) hw_zalloc (me, sizeof (type) * (n))
 
 extern void *hw_zalloc (struct hw *me, unsigned long size);
 extern void *hw_malloc (struct hw *me, unsigned long size);

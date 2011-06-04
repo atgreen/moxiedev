@@ -1,6 +1,7 @@
 /* Routines for name->symbol lookups in GDB.
    
-   Copyright (C) 2003, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    Contributed by David Carlton <carlton@bactrian.org> and by Kealia,
    Inc.
@@ -22,6 +23,8 @@
 
 #ifndef DICTIONARY_H
 #define DICTIONARY_H
+
+#include "symfile.h"
 
 /* An opaque type for dictionaries; only dictionary.c should know
    about its innards.  */
@@ -142,8 +145,7 @@ extern struct symbol *dict_iter_name_next (const char *name,
 
 extern struct symbol *dict_iter_match_first (const struct dictionary *dict,
 					     const char *name,
-					     int (*compare) (const char*, 
-							     const char *),
+					     symbol_compare_ftype *compare,
 					     struct dict_iterator *iterator);
 
 /* Advance ITERATOR to point at the next symbol in DICT whose
@@ -151,12 +153,11 @@ extern struct symbol *dict_iter_match_first (const struct dictionary *dict,
    dict_iter_match_first), or NULL if there are no more such symbols.
    Don't call this if you've previously received NULL from 
    dict_iterator_match_first or dict_iterator_match_next on this
-   iteration. And don't call it unless ITERATOR was created by a
+   iteration.  And don't call it unless ITERATOR was created by a
    previous call to dict_iter_match_first with the same NAME and COMPARE.  */
 
 extern struct symbol *dict_iter_match_next (const char *name,
-					    int (*compare) (const char*, 
-							    const char *),
+					    symbol_compare_ftype *compare,
 					    struct dict_iterator *iterator);
 
 /* Return some notion of the size of the dictionary: the number of

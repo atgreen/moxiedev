@@ -218,6 +218,16 @@ stmp-targ-include: config.status
 	      cp $$i targ-include/`basename $$i`; \
 	    else true; fi ; \
 	  done
+	-for i in $(srcdir)/libc/sys/$(sys_dir)/include/*; do \
+	    if [ -d $$i ]; then \
+		for j in $$i/*.h; do \
+		    if [ ! -d targ-include/`basename $$i` ]; then \
+		    	mkdir targ-include/`basename $$i`; \
+		    fi; \
+	      	    cp $$j targ-include/`basename $$i`/`basename $$j`; \
+		done \
+	    else true; fi ; \
+	  done
 	-for i in $(srcdir)/libc/sys/$(sys_dir)/sys/*.h; do \
 	    if [ -f $$i ]; then \
 	      cp $$i targ-include/sys/`basename $$i`; \
@@ -245,7 +255,7 @@ stmp-targ-include: config.status
 	  done
 	touch $@
 
-CLEANFILES = targ-include stmp-targ-include
+CLEANFILES = stmp-targ-include
 
 install-data-local:	install-toollibLIBRARIES
 if USE_LIBTOOL
@@ -308,9 +318,21 @@ endif
 	     $(INSTALL_DATA) $$i $(DESTDIR)$(tooldir)/include/`basename $$i`; \
 	    else true; fi ; \
 	  done ; \
+	  for i in $(srcdir)/libc/sys/$(sys_dir)/include/*; do \
+	    if [ -d $$i ]; then \
+		for j in $$i/*.h; do \
+	            $(INSTALL_DATA) $$j $(DESTDIR)$(tooldir)/include/`basename $$i`/`basename $$j`; \
+		done ; \
+	    else true; fi ; \
+	  done ; \
 	  for i in $(srcdir)/libc/sys/$(sys_dir)/machine/$(machine_dir)/include/*.h; do \
 	    if [ -f $$i ]; then \
 	     $(INSTALL_DATA) $$i $(DESTDIR)$(tooldir)/include/machine/`basename $$i`; \
+	    else true; fi ; \
+	  done ; \
+	  for i in $(NO_INCLUDE_LIST); do \
+	    if [ -f $(DESTDIR)$(tooldir)/include/$$i ]; then \
+		rm $(DESTDIR)$(tooldir)/include/$$i; \
 	    else true; fi ; \
 	  done ; \
 	else true; fi
@@ -413,3 +435,6 @@ check-DEJAGNU: site.exp
 	else \
 	   echo "WARNING: could not find \`runtest'" 1>&2 ; \
 	fi
+
+clean-local:
+	-rm -rf targ-include

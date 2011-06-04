@@ -1,6 +1,6 @@
 /* Target-dependent mdebug code for the ALPHA architecture.
    Copyright (C) 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2003, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -149,12 +149,13 @@ alpha_mdebug_frameless (struct mdebug_extra_func_info *proc_desc)
    find the prologue, then return 0.  */
 
 static CORE_ADDR
-alpha_mdebug_after_prologue (CORE_ADDR pc, struct mdebug_extra_func_info *proc_desc)
+alpha_mdebug_after_prologue (CORE_ADDR pc,
+			     struct mdebug_extra_func_info *proc_desc)
 {
   if (proc_desc)
     {
       /* If function is frameless, then we need to do it the hard way.  I
-         strongly suspect that frameless always means prologueless... */
+         strongly suspect that frameless always means prologueless...  */
       if (alpha_mdebug_frameless (proc_desc))
 	return 0;
     }
@@ -166,7 +167,8 @@ alpha_mdebug_after_prologue (CORE_ADDR pc, struct mdebug_extra_func_info *proc_d
    if we are definitively *not* in a function prologue.  */
 
 static int
-alpha_mdebug_in_prologue (CORE_ADDR pc, struct mdebug_extra_func_info *proc_desc)
+alpha_mdebug_in_prologue (CORE_ADDR pc,
+			  struct mdebug_extra_func_info *proc_desc)
 {
   CORE_ADDR after_prologue_pc = alpha_mdebug_after_prologue (pc, proc_desc);
   return (after_prologue_pc == 0 || pc < after_prologue_pc);
@@ -227,7 +229,7 @@ alpha_mdebug_frame_unwind_cache (struct frame_info *this_frame,
      register number.  */
   if (mask & (1 << returnreg))
     {
-      /* Clear bit for RA so we don't save it again later. */
+      /* Clear bit for RA so we don't save it again later.  */
       mask &= ~(1 << returnreg);
 
       info->saved_regs[returnreg].addr = reg_position;
@@ -334,6 +336,7 @@ alpha_mdebug_frame_sniffer (const struct frame_unwind *self,
 
 static const struct frame_unwind alpha_mdebug_frame_unwind = {
   NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
   alpha_mdebug_frame_this_id,
   alpha_mdebug_frame_prev_register,
   NULL,

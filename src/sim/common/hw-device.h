@@ -1,6 +1,6 @@
 /* The common simulator framework for GDB, the GNU Debugger.
 
-   Copyright 2002, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2002, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney and Red Hat.
 
@@ -294,7 +294,8 @@ typedef unsigned (hw_dma_write_buffer_method)
    The number of words determined by the number of {address,size}
    cells attributes of the device. */
 
-typedef struct _hw_unit {
+typedef struct _hw_unit
+{
   int nr_cells;
   unsigned_cell cells[4]; /* unused cells are zero */
 } hw_unit;
@@ -341,7 +342,7 @@ typedef int (hw_unit_encode_method)
       const hw_unit *unit,
       char *encoded,
       int sizeof_buf);
-     
+
 #define hw_unit_encode(bus, unit, encoded, sizeof_encoded) \
 ((bus)->to_unit_encode (bus, unit, encoded, sizeof_encoded))
 
@@ -399,7 +400,8 @@ extern char *hw_strdup (struct hw *me, const char *str);
 
    */
 
-typedef enum {
+typedef enum
+{
   hw_ioctl_break, /* unsigned_word requested_break */
   hw_ioctl_set_trace, /* void */
   hw_ioctl_create_stack, /* unsigned_word *sp, char **argv, char **envp */
@@ -433,17 +435,17 @@ int hw_ioctl
 void hw_abort
 (struct hw *me,
  const char *fmt,
- ...) __attribute__ ((format (printf, 2, 3)));
+ ...) __attribute__ ((format (printf, 2, 3), noreturn));
 
 void hw_vabort
 (struct hw *me,
  const char *fmt,
- va_list ap);
+ va_list ap) __attribute__ ((noreturn));
 
 void hw_halt
 (struct hw *me,
  int reason,
- int status);
+ int status) __attribute__ ((noreturn));
 
 
 #define hw_trace_p(hw) ((hw)->trace_of_hw_p + 0)
@@ -475,7 +477,8 @@ struct hw_instance_data;
 /* Finally the hardware device - keep your grubby little mits off of
    these internals! :-) */
 
-struct hw {
+struct hw
+{
 
   /* our relatives */
   struct hw *parent_of_hw;

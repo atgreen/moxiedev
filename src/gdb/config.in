@@ -118,6 +118,10 @@
    */
 #undef HAVE_DECL_GETOPT
 
+/* Define to 1 if you have the declaration of `getthrds', and to 0 if you
+   don't. */
+#undef HAVE_DECL_GETTHRDS
+
 /* Define to 1 if you have the declaration of `malloc', and to 0 if you don't.
    */
 #undef HAVE_DECL_MALLOC
@@ -189,9 +193,6 @@
 
 /* Define if <sys/procfs.h> has gregset_t. */
 #undef HAVE_GREGSET_T
-
-/* Define if you have HPUX threads */
-#undef HAVE_HPUX_THREAD_SUPPORT
 
 /* Define if you have the iconv() function. */
 #undef HAVE_ICONV
@@ -715,6 +716,12 @@
 /* Define to 1 if you have the `_mcleanup' function. */
 #undef HAVE__MCLEANUP
 
+/* Path of directory of iconv program. */
+#undef ICONV_BIN
+
+/* Define if the iconv directory should be relocated when GDB is moved. */
+#undef ICONV_BIN_RELOCATABLE
+
 /* Define as const if the declaration of iconv() needs const. */
 #undef ICONV_CONST
 
@@ -945,9 +952,6 @@
 
 /* Define to `int' if <sys/types.h> does not define. */
 #undef pid_t
-
-/* readline-6.0 started to use different name. */
-#undef readline_echoing_p
 
 /* Define to the equivalent of the C99 'restrict' keyword, or to
    nothing if this is not supported.  Do not define if restrict is

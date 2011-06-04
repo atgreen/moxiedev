@@ -62,7 +62,7 @@ if {[gdb_compile "${objdbgdir}/x3.o ${objdbgdir}/x2.o ${objdbgdir}/x1.o" "${binf
 for {set filenum 0} {$filenum < 2} {incr filenum 1} {
 
     # Lets test some commons
-    # Need to restart each to to make sure objects are not loaded
+    # Need to restart each to make sure objects are not loaded
     # Also cross check the address with what is actually in the
     #   object file (call the executable ${symaddrfile} to retrieve the
     #   information).
@@ -130,10 +130,10 @@ for {set filenum 0} {$filenum < 2} {incr filenum 1} {
         gdb_test "s 1" ".*25.*"
         if [istarget "hppa64-*-*"] {
             gdb_test "s 1" "0x\[0-9a-f\]+ in .*"
-            gdb_test "c" ".*Program exited normally.*"
+	    gdb_continue_to_end
         } else {
             gdb_test "s 1" "0x\[0-9a-f\]+ in _start .*"
-            gdb_test "s 1" ".*Program exited normally.*"
+            gdb_continue_to_end "" "s 1"
         }
     }
 

@@ -1,5 +1,6 @@
 /* Tcl/Tk command definitions for Insight.
-   Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2001, 2002, 2003, 2004, 2007, 2008, 2010
+   Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2001, 2002, 2003, 2004,
+   2007, 2008, 2010, 2011
    Free Software Foundation, Inc.
 
    Written by Stu Grossman <grossman@cygnus.com> of Cygnus Support.
@@ -652,9 +653,7 @@ gdb_eval (ClientData clientData, Tcl_Interp *interp,
   /* "Print" the result of the expression evaluation. */
   stb = mem_fileopen ();
   make_cleanup_ui_file_delete (stb);
-  val_print (value_type (val), value_contents (val),
-	     value_embedded_offset (val), value_address (val),
-	     stb, 0, val, &opts, current_language);
+  common_val_print (val, stb, 0, &opts, current_language);
   result = ui_file_xstrdup (stb, &dummy);
   Tcl_SetObjResult (interp, Tcl_NewStringObj (result, -1));
   xfree (result);
@@ -953,7 +952,7 @@ gdb_get_line_command (ClientData clientData, Tcl_Interp *interp,
 		      int objc, Tcl_Obj *CONST objv[])
 {
   struct symtabs_and_lines sals;
-  char *args, **canonical;
+  char *args;
 
   if (objc != 2)
     {
@@ -962,7 +961,7 @@ gdb_get_line_command (ClientData clientData, Tcl_Interp *interp,
     }
 
   args = Tcl_GetStringFromObj (objv[1], NULL);
-  sals = decode_line_1 (&args, 1, NULL, 0, &canonical, NULL);
+  sals = decode_line_1 (&args, 1, NULL, 0, NULL);
   if (sals.nelts == 1)
     {
       Tcl_SetIntObj (result_ptr->obj_ptr, sals.sals[0].line);
@@ -989,7 +988,7 @@ gdb_get_file_command (ClientData clientData, Tcl_Interp *interp,
 		      int objc, Tcl_Obj *CONST objv[])
 {
   struct symtabs_and_lines sals;
-  char *args, **canonical;
+  char *args;
 
   if (objc != 2)
     {
@@ -998,7 +997,7 @@ gdb_get_file_command (ClientData clientData, Tcl_Interp *interp,
     }
 
   args = Tcl_GetStringFromObj (objv[1], NULL);
-  sals = decode_line_1 (&args, 1, NULL, 0, &canonical, NULL);
+  sals = decode_line_1 (&args, 1, NULL, 0, NULL);
   if (sals.nelts == 1)
     {
       Tcl_SetStringObj (result_ptr->obj_ptr,
@@ -1025,7 +1024,7 @@ gdb_get_function_command (ClientData clientData, Tcl_Interp *interp,
 {
   char *function;
   struct symtabs_and_lines sals;
-  char *args, **canonical;
+  char *args;
 
   if (objc != 2)
     {
@@ -1034,7 +1033,7 @@ gdb_get_function_command (ClientData clientData, Tcl_Interp *interp,
     }
 
   args = Tcl_GetStringFromObj (objv[1], NULL);
-  sals = decode_line_1 (&args, 1, NULL, 0, &canonical, NULL);
+  sals = decode_line_1 (&args, 1, NULL, 0, NULL);
   if (sals.nelts == 1)
     {
       resolve_sal_pc (&sals.sals[0]);

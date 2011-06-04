@@ -1,6 +1,6 @@
 /* Object file "section" support for the BFD library.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Written by Cygnus Support.
 
@@ -326,6 +326,11 @@ CODE_FRAGMENT
 .     allow the back end to control what the linker does with
 .     sections.  *}
 .#define SEC_COFF_SHARED_LIBRARY 0x4000000
+.
+.  {* This input section should be copied to output in reverse order
+.     as an array of pointers.  This is for ELF linker internal use
+.     only.  *}
+.#define SEC_ELF_REVERSE_COPY 0x4000000
 .
 .  {* This section contains data which may be shared with other
 .     executables or shared objects. This is for COFF only.  *}
@@ -1456,7 +1461,10 @@ bfd_get_section_contents (bfd *abfd,
       return TRUE;
     }
 
-  sz = section->rawsize ? section->rawsize : section->size;
+  if (abfd->direction != write_direction && section->rawsize != 0)
+    sz = section->rawsize;
+  else
+    sz = section->size;
   if ((bfd_size_type) offset > sz
       || count > sz
       || offset + count > sz

@@ -1,6 +1,6 @@
 // script-sections.cc -- linker script SECTIONS for gold
 
-// Copyright 2008, 2009 Free Software Foundation, Inc.
+// Copyright 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -592,7 +592,7 @@ class Sections_element
   { }
 
   // Set section addresses.  This includes applying assignments if the
-  // the expression is an absolute value.
+  // expression is an absolute value.
   virtual void
   set_section_addresses(Symbol_table*, Layout*, uint64_t*, uint64_t*,
 			uint64_t*)
@@ -804,7 +804,7 @@ class Output_section_element
   { return false; }
 
   // Set section addresses.  This includes applying assignments if the
-  // the expression is an absolute value.
+  // expression is an absolute value.
   virtual void
   set_section_addresses(Symbol_table*, Layout*, Output_section*, uint64_t,
 			uint64_t*, uint64_t*, Output_section**, std::string*,
@@ -3561,8 +3561,8 @@ class Sort_output_sections
   operator()(const Output_section* os1, const Output_section* os2) const;
 
  private:
-  bool
-  is_before(const Output_section* os1, const Output_section* os2) const;
+  int
+  script_compare(const Output_section* os1, const Output_section* os2) const;
 
  private:
   const Script_sections::Sections_elements* elements_;
@@ -3586,55 +3586,70 @@ Sort_output_sections::operator()(const Output_section* os1,
   if (os1->address() != os2->address())
     return os1->address() < os2->address();
 
-  // Sort TLS sections to the end.
+  // If the linker script says which of these sections is first, go
+  // with what it says.
+  int i = this->script_compare(os1, os2);
+  if (i != 0)
+    return i < 0;
+
+  // Sort PROGBITS before NOBITS.
+  bool nobits1 = os1->type() == elfcpp::SHT_NOBITS;
+  bool nobits2 = os2->type() == elfcpp::SHT_NOBITS;
+  if (nobits1 != nobits2)
+    return nobits2;
+
+  // Sort PROGBITS TLS sections to the end, NOBITS TLS sections to the
+  // beginning.
   bool tls1 = (os1->flags() & elfcpp::SHF_TLS) != 0;
   bool tls2 = (os2->flags() & elfcpp::SHF_TLS) != 0;
   if (tls1 != tls2)
-    return tls2;
-
-  // Sort PROGBITS before NOBITS.
-  if (os1->type() == elfcpp::SHT_PROGBITS && os2->type() == elfcpp::SHT_NOBITS)
-    return true;
-  if (os1->type() == elfcpp::SHT_NOBITS && os2->type() == elfcpp::SHT_PROGBITS)
-    return false;
+    return nobits1 ? tls1 : tls2;
 
   // Sort non-NOLOAD before NOLOAD.
   if (os1->is_noload() && !os2->is_noload())
     return true;
   if (!os1->is_noload() && os2->is_noload())
     return true;
-  
-  // The sections have the same address. Check the section positions 
-  // in accordance with the linker script.
-  return this->is_before(os1, os2);
+
+  // The sections seem practically identical.  Sort by name to get a
+  // stable sort.
+  return os1->name() < os2->name();
 }
 
-// Return true if OS1 comes before OS2 in ELEMENTS_.  This ensures
-// that we keep empty sections in the order in which they appear in a
-// linker script.
+// Return -1 if OS1 comes before OS2 in ELEMENTS_, 1 if comes after, 0
+// if either OS1 or OS2 is not mentioned.  This ensures that we keep
+// empty sections in the order in which they appear in a linker
+// script.
 
-bool
-Sort_output_sections::is_before(const Output_section* os1,
-				const Output_section* os2) const
+int
+Sort_output_sections::script_compare(const Output_section* os1,
+				     const Output_section* os2) const
 {
   if (this->elements_ == NULL)
-    return false;
+    return 0;
 
+  bool found_os1 = false;
+  bool found_os2 = false;
   for (Script_sections::Sections_elements::const_iterator
 	 p = this->elements_->begin();
        p != this->elements_->end();
        ++p)
     {
-      if (os1 == (*p)->get_output_section())
+      if (os2 == (*p)->get_output_section())
 	{
-	  for (++p; p != this->elements_->end(); ++p)
-	    if (os2 == (*p)->get_output_section())
-	      return true;
-	  break;
+	  if (found_os1)
+	    return -1;
+	  found_os2 = true;
+	}
+      else if (os1 == (*p)->get_output_section())
+	{
+	  if (found_os2)
+	    return 1;
+	  found_os1 = true;
 	}
     }
 
-  return false;
+  return 0;
 }
 
 // Return whether OS is a BSS section.  This is a SHT_NOBITS section.
@@ -3673,7 +3688,7 @@ Script_sections::total_header_size(Layout* layout) const
   return file_header_size + segment_headers_size;
 }
 
-// Return the amount we have to subtract from the LMA to accomodate
+// Return the amount we have to subtract from the LMA to accommodate
 // headers of the given size.  The complication is that the file
 // header have to be at the start of a page, as otherwise it will not
 // be at the start of the file.

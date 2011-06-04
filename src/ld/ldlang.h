@@ -1,6 +1,6 @@
 /* ldlang.h - linker command language support
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
@@ -249,7 +249,7 @@ typedef struct lang_input_statement_struct
 
   const char *target;
 
-  unsigned int is_archive : 1;
+  unsigned int maybe_archive : 1;
 
   /* 1 means search a set of directories for this file.  */
   unsigned int search_dirs_flag : 1;
@@ -287,8 +287,13 @@ typedef struct lang_input_statement_struct
   /* Set if the file does not exist.  */
   unsigned int missing_file : 1;
 
+#ifdef ENABLE_PLUGINS
   /* Set if the file was claimed by a plugin.  */
   unsigned int claimed : 1;
+
+  /* Set if the file was claimed from an archive.  */
+  unsigned int claim_archive : 1;
+#endif /* ENABLE_PLUGINS */
 
 } lang_input_statement_type;
 
@@ -538,7 +543,7 @@ extern void lang_for_each_file
 extern void lang_reset_memory_regions
   (void);
 extern void lang_do_assignments
-  (void);
+  (lang_phase_type);
 
 #define LANG_FOR_EACH_INPUT_STATEMENT(statement)			\
   lang_input_statement_type *statement;					\
@@ -649,5 +654,8 @@ extern bfd_boolean load_symbols
 extern bfd_boolean
 ldlang_override_segment_assignment
   (struct bfd_link_info *, bfd *, asection *, asection *, bfd_boolean);
+
+extern void
+lang_ld_feature (char *);
 
 #endif

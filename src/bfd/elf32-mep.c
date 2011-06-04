@@ -1,6 +1,6 @@
 /* MeP-specific support for 32-bit ELF.
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
-   Free Software Foundation, Inc.
+   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
+   2010, 2011  Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -154,13 +154,14 @@ mep_reloc_type_lookup
 
     default:
       /* Pacify gcc -Wall.  */
-      fprintf (stderr, "mep: no reloc for code %d\n", code);
+      (*_bfd_error_handler) (_("mep: no reloc for code %d"), code);
       return NULL;
     }
 
   if (mep_elf_howto_table[type].type != type)
     {
-      fprintf (stderr, "MeP: howto %d has type %d\n", type, mep_elf_howto_table[type].type);
+      (*_bfd_error_handler) (_("MeP: howto %d has type %d"),
+			     type, mep_elf_howto_table[type].type);
       abort ();
     }
 
@@ -605,7 +606,7 @@ mep_elf_merge_private_bfd_data (bfd * ibfd, bfd * obfd)
   flagword old_flags, new_flags;
   flagword old_partial, new_partial;
 
-  /* Check if we have the same endianess.  */
+  /* Check if we have the same endianness.  */
   if (_bfd_generic_verify_endian_match (ibfd, obfd) == FALSE)
     return FALSE;
 

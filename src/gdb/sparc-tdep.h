@@ -1,6 +1,6 @@
 /* Target-dependent code for SPARC.
 
-   Copyright (C) 2003, 2004, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -146,7 +146,7 @@ struct sparc_frame_cache
   /* Do we have a frame?  */
   int frameless_p;
 
-  /* Do we have a Structure, Union or Quad-Precision return value?.  */
+  /* Do we have a Structure, Union or Quad-Precision return value?  */
   int struct_return_p;
 
   /* Table of saved registers.  */

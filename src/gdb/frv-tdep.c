@@ -1,6 +1,6 @@
 /* Target-dependent code for the Fujitsu FR-V, for GDB, the GNU Debugger.
 
-   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -264,7 +264,8 @@ set_variant_abi_fdpic (struct gdbarch_tdep *var)
 {
   var->frv_abi = FRV_ABI_FDPIC;
   var->register_names[fdpic_loadmap_exec_regnum] = xstrdup ("loadmap_exec");
-  var->register_names[fdpic_loadmap_interp_regnum] = xstrdup ("loadmap_interp");
+  var->register_names[fdpic_loadmap_interp_regnum]
+    = xstrdup ("loadmap_interp");
 }
 
 static void
@@ -299,14 +300,17 @@ frv_register_type (struct gdbarch *gdbarch, int reg)
     return builtin_type (gdbarch)->builtin_int32;
 }
 
-static void
+static enum register_status
 frv_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
                           int reg, gdb_byte *buffer)
 {
+  enum register_status status;
+
   if (reg == iacc0_regnum)
     {
-      regcache_raw_read (regcache, iacc0h_regnum, buffer);
-      regcache_raw_read (regcache, iacc0l_regnum, (bfd_byte *) buffer + 4);
+      status = regcache_raw_read (regcache, iacc0h_regnum, buffer);
+      if (status == REG_VALID)
+	status = regcache_raw_read (regcache, iacc0l_regnum, (bfd_byte *) buffer + 4);
     }
   else if (accg0_regnum <= reg && reg <= accg7_regnum)
     {
@@ -315,14 +319,22 @@ frv_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
 
       int raw_regnum = accg0123_regnum + (reg - accg0_regnum) / 4;
       int byte_num = (reg - accg0_regnum) % 4;
-      bfd_byte buf[4];
+      gdb_byte buf[4];
 
-      regcache_raw_read (regcache, raw_regnum, buf);
-      memset (buffer, 0, 4);
-      /* FR-V is big endian, so put the requested byte in the first byte
-         of the buffer allocated to hold the pseudo-register.  */
-      ((bfd_byte *) buffer)[0] = buf[byte_num];
+      status = regcache_raw_read (regcache, raw_regnum, buf);
+      if (status == REG_VALID)
+	{
+	  memset (buffer, 0, 4);
+	  /* FR-V is big endian, so put the requested byte in the
+	     first byte of the buffer allocated to hold the
+	     pseudo-register.  */
+	  buffer[0] = buf[byte_num];
+	}
     }
+  else
+    gdb_assert_not_reached ("invalid pseudo register number");
+
+  return status;
 }
 
 static void
@@ -443,7 +455,7 @@ frv_adjust_breakpoint_address (struct gdbarch *gdbarch, CORE_ADDR bpaddr)
 
   /* Find the end of the previous packing sequence.  This will be indicated
      by either attempting to access some inaccessible memory or by finding
-     an instruction word whose packing bit is set to one. */
+     an instruction word whose packing bit is set to one.  */
   while (count-- > 0 && addr >= func_start)
     {
       char instr[frv_instr_size];
@@ -536,7 +548,7 @@ frv_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
      the stack pointer to frame pointer: fp = sp + fp_offset.  */
   int fp_offset = 0;
 
-  /* Total size of frame prior to any alloca operations. */
+  /* Total size of frame prior to any alloca operations.  */
   int framesize = 0;
 
   /* Flag indicating if lr has been saved on the stack.  */
@@ -559,7 +571,7 @@ frv_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
   /* The address of the most recently scanned prologue instruction.  */
   CORE_ADDR last_prologue_pc;
 
-  /* The address of the next instruction. */
+  /* The address of the next instruction.  */
   CORE_ADDR next_pc;
 
   /* The upper bound to of the pc values to scan.  */
@@ -954,7 +966,8 @@ frv_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 
       /* If LR was saved on the stack, record its location.  */
       if (lr_saved_on_stack)
-	info->saved_regs[lr_regnum].addr = this_base - fp_offset + lr_sp_offset;
+	info->saved_regs[lr_regnum].addr
+	  = this_base - fp_offset + lr_sp_offset;
 
       /* The call instruction moves the caller's PC in the callee's LR.
 	 Since this is an unwind, do the reverse.  Copy the location of LR
@@ -1022,7 +1035,7 @@ frv_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
      to the call instruction.
      
      Skip over this instruction if present.  It won't be present in
-     non-PIC code, and even in PIC code, it might not be present. 
+     non-PIC code, and even in PIC code, it might not be present.
      (This is due to the fact that GR15, the FDPIC register, already
      contains the correct value.)
 
@@ -1122,13 +1135,15 @@ frv_extract_return_value (struct type *type, struct regcache *regcache,
   else if (len == 8)
     {
       ULONGEST regval;
+
       regcache_cooked_read_unsigned (regcache, 8, &regval);
       store_unsigned_integer (valbuf, 4, byte_order, regval);
       regcache_cooked_read_unsigned (regcache, 9, &regval);
       store_unsigned_integer ((bfd_byte *) valbuf + 4, 4, byte_order, regval);
     }
   else
-    internal_error (__FILE__, __LINE__, _("Illegal return value length: %d"), len);
+    internal_error (__FILE__, __LINE__,
+		    _("Illegal return value length: %d"), len);
 }
 
 static CORE_ADDR
@@ -1220,7 +1235,7 @@ frv_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   if (stack_space > 0)
     sp -= stack_space;
 
-  /* Make sure stack is dword aligned. */
+  /* Make sure stack is dword aligned.  */
   sp = align_down (sp, 8);
 
   stack_offset = 0;
@@ -1284,7 +1299,8 @@ frv_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	    {
 #if 0
 	      printf("  Argnum %d data %x -> offset %d (%x)\n",
-		     argnum, *((int *)val), stack_offset, (int) (sp + stack_offset));
+		     argnum, *((int *)val), stack_offset,
+		     (int) (sp + stack_offset));
 #endif
 	      write_memory (sp + stack_offset, val, partial_len);
 	      stack_offset += align_up (partial_len, 4);
@@ -1478,6 +1494,7 @@ frv_frame_prev_register (struct frame_info *this_frame,
 
 static const struct frame_unwind frv_frame_unwind = {
   NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
   frv_frame_this_id,
   frv_frame_prev_register,
   NULL,

@@ -1,4 +1,5 @@
-# Copyright 2003, 2004, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+# Copyright 2003, 2004, 2007, 2008, 2009, 2010, 2011
+# Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -115,16 +116,14 @@ gdb_expect_list "print class" "$gdb_prompt$" {
 # annotate-exited
 #
 send_gdb "continue\n"
-gdb_expect_list "continue to exit" "$gdb_prompt$" {
+gdb_expect_list "continue to exit" "$gdb_prompt$" [concat {
     "\r\n\032\032post-prompt\r\n"
     "Continuing.\r\n"
     "\r\n\032\032starting\r\n"
     "a.x is 1\r\n"
-    "\r\n\032\032exited 0\r\n"
-    "\r\n"
-    "Program exited normally.\r\n"
+    "\r\n\032\032exited 0\r\n"} [list "$inferior_exited_re normally.\r\n"] {
     "\r\n\032\032stopped\r\n"
-}
+}]
 
 #
 # delete all breakpoints

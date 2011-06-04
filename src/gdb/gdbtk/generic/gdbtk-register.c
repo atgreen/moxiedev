@@ -1,5 +1,6 @@
 /* Tcl/Tk command definitions for Insight - Registers
-   Copyright (C) 2001, 2002, 2004, 2007 Free Software Foundation, Inc.
+   Copyright (C) 2001, 2002, 2004, 2007, 2010, 2011
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -272,17 +273,18 @@ get_register_types (int regnum, map_arg arg)
 static void
 get_register (int regnum, map_arg arg)
 {
-  int realnum;
   CORE_ADDR addr;
   enum lval_type lval;
   struct type *reg_vtype;
-  gdb_byte buffer[MAX_REGISTER_SIZE];
-  int optim, format;
+  int format;
   struct cleanup *old_chain = NULL;
   struct ui_file *stb;
   long dummy;
   char *res;
- 
+  struct gdbarch *gdbarch;
+  struct value *val;
+  struct frame_info *frame;
+
   format = regformat[regnum];
   if (format == 0)
     format = 'x';
@@ -300,10 +302,11 @@ get_register (int regnum, map_arg arg)
       return;
     }
 
-  frame_register (get_selected_frame (NULL), regnum, &optim, &lval, 
-		  &addr, &realnum, buffer);
+  frame = get_selected_frame (NULL);
+  gdbarch = get_frame_arch (frame);
+  val = get_frame_register_value (frame, regnum);
 
-  if (optim)
+  if (value_optimized_out (val))
     {
       Tcl_ListObjAppendElement (NULL, result_ptr->obj_ptr,
 				Tcl_NewStringObj ("Optimized out", -1));
@@ -318,14 +321,15 @@ get_register (int regnum, map_arg arg)
       /* shouldn't happen. raw format is deprecated */
       int j;
       char *ptr, buf[1024];
+      const gdb_byte *valaddr = value_contents_for_printing (val);
 
       strcpy (buf, "0x");
       ptr = buf + 2;
-      for (j = 0; j < register_size (get_current_arch (), regnum); j++)
+      for (j = 0; j < register_size (gdbarch, regnum); j++)
 	{
-	  int idx = ((gdbarch_byte_order (get_current_arch ()) == BFD_ENDIAN_BIG)
-		     ? j : register_size (get_current_arch (), regnum) - 1 - j);
-	  sprintf (ptr, "%02x", (unsigned char) buffer[idx]);
+	  int idx = ((gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
+		     ? j : register_size (gdbarch, regnum) - 1 - j);
+	  sprintf (ptr, "%02x", (unsigned char) valaddr[idx]);
 	  ptr += 2;
 	}
       fputs_unfiltered (buf, stb);
@@ -337,17 +341,9 @@ get_register (int regnum, map_arg arg)
       get_formatted_print_options (&opts, format);
       opts.deref_ref = 1;
       opts.pretty = Val_pretty_default;
-
-      if ((TYPE_CODE (reg_vtype) == TYPE_CODE_UNION)
-	  && (strcmp (FIELD_NAME (TYPE_FIELD (reg_vtype, 0)), 
-		      gdbarch_register_name (get_current_arch (), regnum)) == 0))
-	{
-	  val_print (FIELD_TYPE (TYPE_FIELD (reg_vtype, 0)), buffer, 0, 0,
-		     stb, 0, NULL, &opts, current_language);
-	}
-      else
-	val_print (reg_vtype, buffer, 0, 0,
-		   stb, 0, NULL, &opts, current_language);
+      val_print (reg_vtype, value_contents_for_printing (val),
+		 value_embedded_offset (val), 0,
+		 stb, 0, val, &opts, current_language);
     }
   
   res = ui_file_xstrdup (stb, &dummy);

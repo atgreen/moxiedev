@@ -769,8 +769,12 @@ emit_mx (char prefix, char opcode, int shift, expressionS * arg)
       q = frag_more (2);
       *q++ = (rnum & R_IX) ? 0xDD : 0xFD;
       *q = (prefix) ? prefix : (opcode + (6 << shift));
-      emit_byte (symbol_get_value_expression (arg->X_add_symbol),
-		 BFD_RELOC_Z80_DISP8);
+      {
+	expressionS offset = *arg;
+	offset.X_op = O_symbol;
+	offset.X_add_number = 0;
+	emit_byte (&offset, BFD_RELOC_Z80_DISP8);
+      }
       if (prefix)
 	{
 	  q = frag_more (1);
@@ -1598,8 +1602,13 @@ emit_ld (char prefix_in ATTRIBUTE_UNUSED, char opcode_in ATTRIBUTE_UNUSED,
   switch (dst.X_op)
     {
     case O_md1:
-      emit_ldxhl ((dst.X_add_number & R_IX) ? 0xDD : 0xFD, 0x70,
-		  &src, symbol_get_value_expression (dst.X_add_symbol));
+      {
+        expressionS dst_offset = dst;
+	dst_offset.X_op = O_symbol;
+	dst_offset.X_add_number = 0;
+	emit_ldxhl ((dst.X_add_number & R_IX) ? 0xDD : 0xFD, 0x70,
+		    &src, &dst_offset);
+      }
       break;
 
     case O_register:
@@ -1912,7 +1921,7 @@ void
 md_apply_fix (fixS * fixP, valueT* valP, segT seg ATTRIBUTE_UNUSED)
 {
   long val = * (long *) valP;
-  char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
+  char *p_lit = fixP->fx_where + fixP->fx_frag->fr_literal;
 
   switch (fixP->fx_r_type)
     {
@@ -1928,7 +1937,7 @@ md_apply_fix (fixS * fixP, valueT* valP, segT seg ATTRIBUTE_UNUSED)
 	  if (!fixP->fx_no_overflow)
             as_bad_where (fixP->fx_file, fixP->fx_line,
 			  _("relative jump out of range"));
-	  *buf++ = val;
+	  *p_lit++ = val;
           fixP->fx_done = 1;
         }
       break;
@@ -1945,7 +1954,7 @@ md_apply_fix (fixS * fixP, valueT* valP, segT seg ATTRIBUTE_UNUSED)
 	  if (!fixP->fx_no_overflow)
             as_bad_where (fixP->fx_file, fixP->fx_line,
 			  _("index offset  out of range"));
-	  *buf++ = val;
+	  *p_lit++ = val;
           fixP->fx_done = 1;
         }
       break;
@@ -1953,34 +1962,34 @@ md_apply_fix (fixS * fixP, valueT* valP, segT seg ATTRIBUTE_UNUSED)
     case BFD_RELOC_8:
       if (val > 255 || val < -128)
 	as_warn_where (fixP->fx_file, fixP->fx_line, _("overflow"));
-      *buf++ = val;
+      *p_lit++ = val;
       fixP->fx_no_overflow = 1; 
       if (fixP->fx_addsy == NULL)
 	fixP->fx_done = 1;
       break;
 
     case BFD_RELOC_16:
-      *buf++ = val;
-      *buf++ = (val >> 8);
+      *p_lit++ = val;
+      *p_lit++ = (val >> 8);
       fixP->fx_no_overflow = 1; 
       if (fixP->fx_addsy == NULL)
 	fixP->fx_done = 1;
       break;
 
     case BFD_RELOC_24: /* Def24 may produce this.  */
-      *buf++ = val;
-      *buf++ = (val >> 8);
-      *buf++ = (val >> 16);
+      *p_lit++ = val;
+      *p_lit++ = (val >> 8);
+      *p_lit++ = (val >> 16);
       fixP->fx_no_overflow = 1; 
       if (fixP->fx_addsy == NULL)
 	fixP->fx_done = 1;
       break;
 
     case BFD_RELOC_32: /* Def32 and .long may produce this.  */
-      *buf++ = val;
-      *buf++ = (val >> 8);
-      *buf++ = (val >> 16);
-      *buf++ = (val >> 24);
+      *p_lit++ = val;
+      *p_lit++ = (val >> 8);
+      *p_lit++ = (val >> 16);
+      *p_lit++ = (val >> 24);
       if (fixP->fx_addsy == NULL)
 	fixP->fx_done = 1;
       break;

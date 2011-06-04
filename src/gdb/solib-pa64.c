@@ -1,6 +1,7 @@
 /* Handle PA64 shared libraries for GDB, the GNU Debugger.
 
-   Copyright (C) 2004, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2004, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -15,9 +16,9 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-   
-   HP in their infinite stupidity choose not to use standard ELF dynamic
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+
+/* HP in their infinite stupidity choose not to use standard ELF dynamic
    linker interfaces.  They also choose not to make their ELF dymamic
    linker interfaces compatible with the SOM dynamic linker.  The
    net result is we can not use either of the existing somsolib.c or
@@ -59,7 +60,7 @@ struct lm_info {
   CORE_ADDR desc_addr;
 };
 
-/* When adding fields, be sure to clear them in _initialize_pa64_solib. */
+/* When adding fields, be sure to clear them in _initialize_pa64_solib.  */
 typedef struct
   {
     CORE_ADDR dld_flags_addr;
@@ -75,8 +76,8 @@ dld_cache_t;
 
 static dld_cache_t dld_cache;
 
-static int
-read_dynamic_info (asection *dyninfo_sect, dld_cache_t *dld_cache_p);
+static int read_dynamic_info (asection *dyninfo_sect,
+			      dld_cache_t *dld_cache_p);
 
 static void
 pa64_relocate_section_addresses (struct so_list *so,
@@ -165,7 +166,7 @@ read_dld_descriptor (void)
   if (!dld_cache.load_map)
     return 0;
 
-  /* Read in the dld load module descriptor */
+  /* Read in the dld load module descriptor.  */
   if (dlgetmodinfo (-1, 
 		    &dld_cache.dld_desc,
 		    sizeof (dld_cache.dld_desc), 
@@ -205,7 +206,7 @@ read_dynamic_info (asection *dyninfo_sect, dld_cache_t *dld_cache_p)
     return 0;
 
   /* Scan the .dynamic section and record the items of interest. 
-     In particular, DT_HP_DLD_FLAGS */
+     In particular, DT_HP_DLD_FLAGS.  */
   for (bufend = buf + dyninfo_sect_size, entry_addr = dyninfo_addr;
        buf < bufend;
        buf += sizeof (Elf64_Dyn), entry_addr += sizeof (Elf64_Dyn))
@@ -223,14 +224,15 @@ read_dynamic_info (asection *dyninfo_sect, dld_cache_t *dld_cache_p)
 	break;
       else if (dyn_tag == DT_HP_DLD_FLAGS)
 	{
-	  /* Set dld_flags_addr and dld_flags in *dld_cache_p */
+	  /* Set dld_flags_addr and dld_flags in *dld_cache_p.  */
 	  dld_cache_p->dld_flags_addr = entry_addr + offsetof(Elf64_Dyn, d_un);
 	  if (target_read_memory (dld_cache_p->dld_flags_addr,
 	  			  (char*) &dld_cache_p->dld_flags, 
 				  sizeof (dld_cache_p->dld_flags))
 	      != 0)
 	    {
-	      error (_("Error while reading in .dynamic section of the program."));
+	      error (_("Error while reading in "
+		       ".dynamic section of the program."));
 	    }
 	}
       else if (dyn_tag == DT_HP_LOAD_MAP)
@@ -243,16 +245,17 @@ read_dynamic_info (asection *dyninfo_sect, dld_cache_t *dld_cache_p)
 				  sizeof (dld_cache_p->load_map_addr))
 	      != 0)
 	    {
-	      error (_("Error while reading in .dynamic section of the program."));
+	      error (_("Error while reading in "
+		       ".dynamic section of the program."));
 	    }
 	}
       else 
 	{
-	  /* tag is not of interest */
+	  /* Tag is not of interest.  */
 	}
     }
 
-  /* Record other information and set is_valid to 1. */
+  /* Record other information and set is_valid to 1.  */
   dld_cache_p->dyninfo_sect = dyninfo_sect;
 
   /* Verify that we read in required info.  These fields are re-set to zero
@@ -266,8 +269,7 @@ read_dynamic_info (asection *dyninfo_sect, dld_cache_t *dld_cache_p)
   return 1;
 }
 
-/*
-   bfd_lookup_symbol -- lookup the value for a specific symbol
+/* bfd_lookup_symbol -- lookup the value for a specific symbol
 
    An expensive way to lookup the value of a single symbol for
    bfd's that are only temporary anyway.  This is used by the
@@ -275,8 +277,7 @@ read_dynamic_info (asection *dyninfo_sect, dld_cache_t *dld_cache_p)
    interface structures in the shared library.
 
    Note that 0 is specifically allowed as an error return (no
-   such symbol).
- */
+   such symbol).  */
 
 static CORE_ADDR
 bfd_lookup_symbol (bfd *abfd, char *symname)
@@ -302,7 +303,7 @@ bfd_lookup_symbol (bfd *abfd, char *symname)
 	  sym = *symbol_table++;
 	  if (strcmp (sym->name, symname) == 0)
 	    {
-	      /* Bfd symbols are section relative. */
+	      /* Bfd symbols are section relative.  */
 	      symaddr = sym->value + sym->section->vma;
 	      break;
 	    }
@@ -357,10 +358,11 @@ pa64_solib_create_inferior_hook (int from_tty)
   /* If the libraries were not mapped private, warn the user.  */
   if ((dld_cache.dld_flags & DT_HP_DEBUG_PRIVATE) == 0)
     warning
-      (_("Private mapping of shared library text was not specified\n"
-	 "by the executable; setting a breakpoint in a shared library which\n"
-	 "is not privately mapped will not work.  See the HP-UX 11i v3 chatr\n"
-	 "manpage for methods to privately map shared library text."));
+      (_("\
+Private mapping of shared library text was not specified\n\
+by the executable; setting a breakpoint in a shared library which\n\
+is not privately mapped will not work.  See the HP-UX 11i v3 chatr\n\
+manpage for methods to privately map shared library text."));
 
   /* Turn on the flags we care about.  */
   dld_cache.dld_flags |= DT_HP_DEBUG_CALLBACK;
@@ -405,14 +407,15 @@ pa64_solib_create_inferior_hook (int from_tty)
       /* Make sure the dynamic linker's really a useful object.  */
       if (!bfd_check_format (tmp_bfd, bfd_object))
 	{
-	  warning (_("Unable to grok dynamic linker %s as an object file"), buf);
+	  warning (_("Unable to grok dynamic linker %s as an object file"),
+		   buf);
 	  bfd_close (tmp_bfd);
 	  return;
 	}
 
       /* We find the dynamic linker's base address by examining the
 	 current pc (which point at the entry point for the dynamic
-	 linker) and subtracting the offset of the entry point. 
+	 linker) and subtracting the offset of the entry point.
 
 	 Also note the breakpoint is the second instruction in the
 	 routine.  */
@@ -624,7 +627,7 @@ pa64_solib_get_solib_by_pc (CORE_ADDR addr)
   return retval;
 }
 
-/* pa64 libraries do not seem to set the section offsets in a standard (i.e. 
+/* pa64 libraries do not seem to set the section offsets in a standard (i.e.
    SVr4) way; the text section offset stored in the file doesn't correspond
    to the place where the library is actually loaded into memory.  Instead,
    we rely on the dll descriptor to tell us where things were loaded.  */

@@ -1,6 +1,6 @@
 /* Target-dependent, architecture-independent code for DICOS, for GDB.
 
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -81,7 +81,8 @@ dicos_load_module_p (bfd *abfd, int header_size)
   storage_needed = bfd_get_symtab_upper_bound (abfd);
   if (storage_needed < 0)
     {
-      warning (_("Can't read elf symbols from %s: %s"), bfd_get_filename (abfd),
+      warning (_("Can't read elf symbols from %s: %s"),
+	       bfd_get_filename (abfd),
 	       bfd_errmsg (bfd_get_error ()));
       return 0;
     }

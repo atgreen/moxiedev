@@ -1,7 +1,7 @@
 /* Target-machine dependent code for Renesas H8/300, for GDB.
 
    Copyright (C) 1988, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998, 1999,
-   2000, 2001, 2002, 2003, 2005, 2007, 2008, 2009, 2010
+   2000, 2001, 2002, 2003, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -71,7 +71,7 @@ struct h8300_frame_cache
   CORE_ADDR sp_offset;
   CORE_ADDR pc;
 
-  /* Flag showing that a frame has been created in the prologue code. */
+  /* Flag showing that a frame has been created in the prologue code.  */
   int uses_fp;
 
   /* Saved registers.  */
@@ -147,7 +147,7 @@ h8300_init_frame_cache (struct gdbarch *gdbarch,
 #define IS_MOVW_Rn16_SP(x)	(((x) & 0xfff0) == 0x6fe0)
 #define IS_MOVW_EXT(x)		((x) == 0x78e0)
 #define IS_MOVW_Rn24_SP(x)	(((x) & 0xfff0) == 0x6ba0)
-/* Same instructions as mov.w, just prefixed with 0x0100 */
+/* Same instructions as mov.w, just prefixed with 0x0100.  */
 #define IS_MOVL_PRE(x)		((x) == 0x0100)
 #define IS_MOVL_Rn16_SP(x)	(((x) & 0xfff0) == 0x6fe0)
 #define IS_MOVL_EXT(x)		((x) == 0x78e0)
@@ -526,6 +526,7 @@ h8300_frame_prev_register (struct frame_info *this_frame, void **this_cache,
 
 static const struct frame_unwind h8300_frame_unwind = {
   NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
   h8300_frame_this_id,
   h8300_frame_prev_register,
   NULL,
@@ -698,9 +699,8 @@ h8300_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	  else
 	    {
 	      /* Heavens to Betsy --- it's really going in registers!
-	         It would be nice if we could use write_register_bytes
-	         here, but on the h8/300s, there are gaps between
-	         the registers in the register file.  */
+	         Note that on the h8/300s, there are gaps between the
+	         registers in the register file.  */
 	      int offset;
 
 	      for (offset = 0; offset < padded_len; offset += wordsize)
@@ -771,7 +771,7 @@ h8300_extract_return_value (struct type *type, struct regcache *regcache,
 	}
       else
 	{
-	  error ("I don't know how this 8 byte value is returned.");
+	  error (_("I don't know how this 8 byte value is returned."));
 	}
       break;
     }
@@ -805,7 +805,7 @@ h8300h_extract_return_value (struct type *type, struct regcache *regcache,
 	}
       else
 	{
-	  error ("I don't know how this 8 byte value is returned.");
+	  error (_("I don't know how this 8 byte value is returned."));
 	}
       break;
     }
@@ -815,7 +815,7 @@ static int
 h8300_use_struct_convention (struct type *value_type)
 {
   /* Types of 1, 2 or 4 bytes are returned in R0/R1, everything else on the
-     stack. */
+     stack.  */
 
   if (TYPE_CODE (value_type) == TYPE_CODE_STRUCT
       || TYPE_CODE (value_type) == TYPE_CODE_UNION)
@@ -829,7 +829,7 @@ static int
 h8300h_use_struct_convention (struct type *value_type)
 {
   /* Types of 1, 2 or 4 bytes are returned in R0, INT types of 8 bytes are
-     returned in R0/R1, everything else on the stack. */
+     returned in R0/R1, everything else on the stack.  */
   if (TYPE_CODE (value_type) == TYPE_CODE_STRUCT
       || TYPE_CODE (value_type) == TYPE_CODE_UNION)
     return 1;
@@ -856,7 +856,7 @@ h8300_store_return_value (struct type *type, struct regcache *regcache,
   switch (len)
     {
     case 1:
-    case 2:			/* short... */
+    case 2:			/* short...  */
       val = extract_unsigned_integer (valbuf, len, byte_order);
       regcache_cooked_write_unsigned (regcache, E_RET0_REGNUM, val);
       break;
@@ -866,9 +866,10 @@ h8300_store_return_value (struct type *type, struct regcache *regcache,
 				      (val >> 16) & 0xffff);
       regcache_cooked_write_unsigned (regcache, E_RET1_REGNUM, val & 0xffff);
       break;
-    case 8:			/* long long, double and long double are all defined
-				   as 4 byte types so far so this shouldn't happen.  */
-      error ("I don't know how to return an 8 byte value.");
+    case 8:			/* long long, double and long double
+				   are all defined as 4 byte types so
+				   far so this shouldn't happen.  */
+      error (_("I don't know how to return an 8 byte value."));
       break;
     }
 }
@@ -944,7 +945,7 @@ static const char *
 h8300_register_name (struct gdbarch *gdbarch, int regno)
 {
   /* The register names change depending on which h8300 processor
-     type is selected. */
+     type is selected.  */
   static char *register_names[] = {
     "r0", "r1", "r2", "r3", "r4", "r5", "r6",
     "sp", "", "pc", "cycles", "tick", "inst",
@@ -953,7 +954,8 @@ h8300_register_name (struct gdbarch *gdbarch, int regno)
   if (regno < 0
       || regno >= (sizeof (register_names) / sizeof (*register_names)))
     internal_error (__FILE__, __LINE__,
-		    "h8300_register_name: illegal register number %d", regno);
+		    _("h8300_register_name: illegal register number %d"),
+		    regno);
   else
     return register_names[regno];
 }
@@ -970,7 +972,7 @@ h8300s_register_name (struct gdbarch *gdbarch, int regno)
   if (regno < 0
       || regno >= (sizeof (register_names) / sizeof (*register_names)))
     internal_error (__FILE__, __LINE__,
-		    "h8300s_register_name: illegal register number %d",
+		    _("h8300s_register_name: illegal register number %d"),
 		    regno);
   else
     return register_names[regno];
@@ -988,7 +990,7 @@ h8300sx_register_name (struct gdbarch *gdbarch, int regno)
   if (regno < 0
       || regno >= (sizeof (register_names) / sizeof (*register_names)))
     internal_error (__FILE__, __LINE__,
-		    "h8300sx_register_name: illegal register number %d",
+		    _("h8300sx_register_name: illegal register number %d"),
 		    regno);
   else
     return register_names[regno];
@@ -1124,7 +1126,8 @@ h8300_register_type (struct gdbarch *gdbarch, int regno)
   if (regno < 0 || regno >= gdbarch_num_regs (gdbarch)
 			    + gdbarch_num_pseudo_regs (gdbarch))
     internal_error (__FILE__, __LINE__,
-		    "h8300_register_type: illegal register number %d", regno);
+		    _("h8300_register_type: illegal register number %d"),
+		    regno);
   else
     {
       switch (regno)
@@ -1147,17 +1150,17 @@ h8300_register_type (struct gdbarch *gdbarch, int regno)
     }
 }
 
-static void
+static enum register_status
 h8300_pseudo_register_read (struct gdbarch *gdbarch,
 			    struct regcache *regcache, int regno,
 			    gdb_byte *buf)
 {
   if (regno == E_PSEUDO_CCR_REGNUM (gdbarch))
-    regcache_raw_read (regcache, E_CCR_REGNUM, buf);
+    return regcache_raw_read (regcache, E_CCR_REGNUM, buf);
   else if (regno == E_PSEUDO_EXR_REGNUM (gdbarch))
-    regcache_raw_read (regcache, E_EXR_REGNUM, buf);
+    return regcache_raw_read (regcache, E_EXR_REGNUM, buf);
   else
-    regcache_raw_read (regcache, regno, buf);
+    return regcache_raw_read (regcache, regno, buf);
 }
 
 static void
@@ -1335,7 +1338,7 @@ h8300_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* 
    * Miscelany
    */
-  /* Stack grows up. */
+  /* Stack grows up.  */
   set_gdbarch_inner_than (gdbarch, core_addr_lessthan);
 
   set_gdbarch_breakpoint_from_pc (gdbarch, h8300_breakpoint_from_pc);
@@ -1358,7 +1361,7 @@ h8300_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
 }
 
-extern initialize_file_ftype _initialize_h8300_tdep;	/* -Wmissing-prototypes */
+extern initialize_file_ftype _initialize_h8300_tdep; /* -Wmissing-prototypes */
 
 void
 _initialize_h8300_tdep (void)

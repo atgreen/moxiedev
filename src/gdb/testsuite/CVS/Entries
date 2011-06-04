@@ -30,11 +30,12 @@ D/gdb.c++////
 D/gdb.chill////
 D/gdb.gdbserver////
 D/gdb.twreverse////
-/.gdbinit/1.1.1.1/Sat Nov 13 14:05:47 2010/-ko/
-/ChangeLog/1.2514/Mon Nov 22 20:12:09 2010/-ko/
-/Makefile.in/1.33/Mon Nov 22 20:12:09 2010/-ko/
-/TODO/1.1.1.1/Sat Nov 13 14:05:47 2010/-ko/
-/aclocal.m4/1.4/Sat Nov 13 14:05:47 2010/-ko/
-/configure/1.35/Mon Nov 22 20:12:09 2010/-ko/
-/configure.ac/1.18/Mon Nov 22 20:12:09 2010//
-/dg-extract-results.sh/1.2/Sat Nov 13 14:05:47 2010//
+D/gdb.opencl////
+/.gdbinit/1.1.1.1/Sat Jun  4 17:41:31 2011/-ko/
+/ChangeLog/1.2738/Sat Jun  4 17:46:19 2011/-ko/
+/Makefile.in/1.39/Sat Jun  4 17:46:19 2011/-ko/
+/TODO/1.1.1.1/Sat Jun  4 17:41:31 2011/-ko/
+/aclocal.m4/1.4/Sat Jun  4 17:41:31 2011/-ko/
+/configure/1.37/Sat Jun  4 17:46:19 2011/-ko/
+/configure.ac/1.20/Sat Jun  4 17:46:19 2011//
+/dg-extract-results.sh/1.2/Sat Jun  4 17:41:31 2011//

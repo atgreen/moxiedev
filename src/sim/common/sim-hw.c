@@ -1,5 +1,6 @@
 /* Simulator hardware option handling.
-   Copyright (C) 1998, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 1998, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
    Contributed by Cygnus Support and Andrew Cagney.
 
 This file is part of GDB, the GNU debugger.
@@ -149,7 +150,7 @@ merge_device_file (struct sim_state *sd,
   struct hw *current = STATE_HW (sd)->tree;
   int line_nr;
   char device_path[1000];
-  
+
   /* try opening the file */
   description = fopen (file_name, "r");
   if (description == NULL)
@@ -157,9 +158,9 @@ merge_device_file (struct sim_state *sd,
       perror (file_name);
       return SIM_RC_FAIL;
     }
-  
+
   line_nr = 0;
-  while (fgets (device_path, sizeof(device_path), description))
+  while (fgets (device_path, sizeof (device_path), description))
     {
       char *device;
       /* check that a complete line was read */
@@ -194,13 +195,13 @@ merge_device_file (struct sim_state *sd,
 	      sim_io_eprintf (sd, "%s:%d: unexpected eof", file_name, line_nr);
 	      return SIM_RC_FAIL;
 	    }
-	  if (strchr(device_path, '\n') == NULL)
+	  if (strchr (device_path, '\n') == NULL)
 	    {
-	      fclose(description);
+	      fclose (description);
 	      sim_io_eprintf (sd, "%s:%d: line to long", file_name, line_nr);
 	      return SIM_RC_FAIL;
 	    }
-	  *strchr(device_path, '\n') = '\0';
+	  *strchr (device_path, '\n') = '\0';
 	  line_nr++;
 	}
       /* parse this line */
@@ -266,7 +267,7 @@ hw_option_handler (struct sim_state *sd, sim_cpu *cpu, int opt,
 	sim_hw_print (sd, sim_io_vprintf);
 	return SIM_RC_OK;
       }
-  
+
     case OPTION_HW_FILE:
       {
 	return merge_device_file (sd, arg);
@@ -318,8 +319,8 @@ sim_hw_init (struct sim_state *sd)
 static void
 sim_hw_uninstall (struct sim_state *sd)
 {
-  /* hw_tree_delete (STATE_HW (sd)->tree); */
-  zfree (STATE_HW (sd));
+  hw_tree_delete (STATE_HW (sd)->tree);
+  free (STATE_HW (sd));
   STATE_HW (sd) = NULL;
 }
 
@@ -332,7 +333,7 @@ sim_hw_uninstall (struct sim_state *sd)
 /* CPU: The simulation is running and the current CPU/CIA
    initiates a data transfer. */
 
-void 
+void
 sim_cpu_hw_io_read_buffer (sim_cpu *cpu,
 			   sim_cia cia,
 			   struct hw *hw,
@@ -348,7 +349,7 @@ sim_cpu_hw_io_read_buffer (sim_cpu *cpu,
     sim_engine_abort (sd, cpu, cia, "broken CPU read");
 }
 
-void 
+void
 sim_cpu_hw_io_write_buffer (sim_cpu *cpu,
 			    sim_cia cia,
 			    struct hw *hw,
@@ -369,7 +370,7 @@ sim_cpu_hw_io_write_buffer (sim_cpu *cpu,
 
 /* SYSTEM: A data transfer is being initiated by the system. */
 
-unsigned 
+unsigned
 sim_hw_io_read_buffer (struct sim_state *sd,
 		       struct hw *hw,
 		       void *dest,

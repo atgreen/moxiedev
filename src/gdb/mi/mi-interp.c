@@ -1,6 +1,6 @@
 /* MI Interpreter Definitions and Commands for GDB, the GNU debugger.
 
-   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -35,6 +35,7 @@
 #include "observer.h"
 #include "gdbthread.h"
 #include "solist.h"
+#include "gdb.h"
 
 /* These are the interpreter setup, etc. functions for the MI interpreter */
 static void mi_execute_command_wrapper (char *cmd);
@@ -64,6 +65,9 @@ static void mi_on_resume (ptid_t ptid);
 static void mi_solib_loaded (struct so_list *solib);
 static void mi_solib_unloaded (struct so_list *solib);
 static void mi_about_to_proceed (void);
+static void mi_breakpoint_created (struct breakpoint *b);
+static void mi_breakpoint_deleted (struct breakpoint *b);
+static void mi_breakpoint_modified (struct breakpoint *b);
 
 static int report_initial_inferior (struct inferior *inf, void *closure);
 
@@ -99,6 +103,9 @@ mi_interpreter_init (int top_level)
       observer_attach_solib_loaded (mi_solib_loaded);
       observer_attach_solib_unloaded (mi_solib_unloaded);
       observer_attach_about_to_proceed (mi_about_to_proceed);
+      observer_attach_breakpoint_created (mi_breakpoint_created);
+      observer_attach_breakpoint_deleted (mi_breakpoint_deleted);
+      observer_attach_breakpoint_modified (mi_breakpoint_modified);
 
       /* The initial inferior is created before this function is called, so we
 	 need to report it explicitly.  Use iteration in case future version
@@ -192,14 +199,17 @@ mi_cmd_interpreter_exec (char *command, char **argv, int argc)
   struct cleanup *old_chain;
 
   if (argc < 2)
-    error ("mi_cmd_interpreter_exec: Usage: -interpreter-exec interp command");
+    error (_("-interpreter-exec: "
+	     "Usage: -interpreter-exec interp command"));
 
   interp_to_use = interp_lookup (argv[0]);
   if (interp_to_use == NULL)
-    error ("mi_cmd_interpreter_exec: could not find interpreter \"%s\"", argv[0]);
+    error (_("-interpreter-exec: could not find interpreter \"%s\""),
+	   argv[0]);
 
   if (!interp_exec_p (interp_to_use))
-    error ("mi_cmd_interpreter_exec: interpreter \"%s\" does not support command execution",
+    error (_("-interpreter-exec: interpreter \"%s\" "
+	     "does not support command execution"),
 	      argv[0]);
 
   /* Insert the MI out hooks, making sure to also call the interpreter's hooks
@@ -231,11 +241,12 @@ mi_cmd_interpreter_exec (char *command, char **argv, int argc)
 }
 
 /*
- * mi_insert_notify_hooks - This inserts a number of hooks that are meant to produce
- * async-notify ("=") MI messages while running commands in another interpreter
- * using mi_interpreter_exec.  The canonical use for this is to allow access to
- * the gdb CLI interpreter from within the MI, while still producing MI style output
- * when actions in the CLI command change gdb's state.
+ * mi_insert_notify_hooks - This inserts a number of hooks that are
+ * meant to produce async-notify ("=") MI messages while running
+ * commands in another interpreter using mi_interpreter_exec.  The
+ * canonical use for this is to allow access to the gdb CLI
+ * interpreter from within the MI, while still producing MI style
+ * output when actions in the CLI command change gdb's state.
 */
 
 static void
@@ -355,8 +366,14 @@ mi_inferior_exit (struct inferior *inf)
   struct mi_interp *mi = top_level_interpreter_data ();
 
   target_terminal_ours ();
-  fprintf_unfiltered (mi->event_channel, "thread-group-exited,id=\"i%d\"",
-		      inf->num);
+  if (inf->has_exit_code)
+    fprintf_unfiltered (mi->event_channel,
+			"thread-group-exited,id=\"i%d\",exit-code=\"%s\"",
+			inf->num, int_string (inf->exit_code, 8, 0, 0, 1));
+  else
+    fprintf_unfiltered (mi->event_channel,
+			"thread-group-exited,id=\"i%d\"", inf->num);
+
   gdb_flush (mi->event_channel);  
 }
 
@@ -434,12 +451,101 @@ mi_about_to_proceed (void)
     {
       struct thread_info *tp = inferior_thread ();
 
-      if (tp->in_infcall)
+      if (tp->control.in_infcall)
 	return;
     }
 
   mi_proceeded = 1;
 }
+
+/* When non-zero, no MI notifications will be emitted in
+   response to breakpoint change observers.  */
+int mi_suppress_breakpoint_notifications = 0;
+
+/* Emit notification about a created breakpoint.  */
+static void
+mi_breakpoint_created (struct breakpoint *b)
+{
+  struct mi_interp *mi = top_level_interpreter_data ();
+  struct ui_out *mi_uiout = interp_ui_out (top_level_interpreter ());
+  struct gdb_exception e;
+
+  if (mi_suppress_breakpoint_notifications)
+    return;
+
+  if (b->number <= 0)
+    return;
+
+  target_terminal_ours ();
+  fprintf_unfiltered (mi->event_channel,
+		      "breakpoint-created");
+  /* We want the output from gdb_breakpoint_query to go to
+     mi->event_channel.  One approach would be to just
+     call gdb_breakpoint_query, and then use mi_out_put to
+     send the current content of mi_outout into mi->event_channel.
+     However, that will break if anything is output to mi_uiout
+     prior the calling the breakpoint_created notifications.
+     So, we use ui_out_redirect.  */
+  ui_out_redirect (mi_uiout, mi->event_channel);
+  TRY_CATCH (e, RETURN_MASK_ERROR)
+    gdb_breakpoint_query (mi_uiout, b->number, NULL);
+  ui_out_redirect (mi_uiout, NULL);
+
+  gdb_flush (mi->event_channel);
+}
+
+/* Emit notification about deleted breakpoint.  */
+static void
+mi_breakpoint_deleted (struct breakpoint *b)
+{
+  struct mi_interp *mi = top_level_interpreter_data ();
+
+  if (mi_suppress_breakpoint_notifications)
+    return;
+
+  if (b->number <= 0)
+    return;
+
+  target_terminal_ours ();
+
+  fprintf_unfiltered (mi->event_channel, "breakpoint-deleted,id=\"%d\"",
+		      b->number);
+
+  gdb_flush (mi->event_channel);
+}
+
+/* Emit notification about modified breakpoint.  */
+static void
+mi_breakpoint_modified (struct breakpoint *b)
+{
+  struct mi_interp *mi = top_level_interpreter_data ();
+  struct ui_out *mi_uiout = interp_ui_out (top_level_interpreter ());
+  struct gdb_exception e;
+
+  if (mi_suppress_breakpoint_notifications)
+    return;
+
+  if (b->number <= 0)
+    return;
+
+  target_terminal_ours ();
+  fprintf_unfiltered (mi->event_channel,
+		      "breakpoint-modified");
+  /* We want the output from gdb_breakpoint_query to go to
+     mi->event_channel.  One approach would be to just
+     call gdb_breakpoint_query, and then use mi_out_put to
+     send the current content of mi_outout into mi->event_channel.
+     However, that will break if anything is output to mi_uiout
+     prior the calling the breakpoint_created notifications.
+     So, we use ui_out_redirect.  */
+  ui_out_redirect (mi_uiout, mi->event_channel);
+  TRY_CATCH (e, RETURN_MASK_ERROR)
+    gdb_breakpoint_query (mi_uiout, b->number, NULL);
+  ui_out_redirect (mi_uiout, NULL);
+
+  gdb_flush (mi->event_channel);
+}
+
 
 static int
 mi_output_running_pid (struct thread_info *info, void *arg)
@@ -477,7 +583,7 @@ mi_on_resume (ptid_t ptid)
     tp = find_thread_ptid (ptid);
 
   /* Suppress output while calling an inferior function.  */
-  if (tp->in_infcall)
+  if (tp->control.in_infcall)
     return;
 
   /* To cater for older frontends, emit ^running, but do it only once

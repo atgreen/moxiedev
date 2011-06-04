@@ -1,6 +1,6 @@
 /* Low level interface to ptrace, for the remote server for GDB.
    Copyright (C) 1995, 1996, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <sys/param.h>
 #include <sys/ptrace.h>
+#include "linux-ptrace.h"
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -52,46 +53,8 @@
 #define SPUFS_MAGIC 0x23c9b64e
 #endif
 
-#ifndef PTRACE_GETSIGINFO
-# define PTRACE_GETSIGINFO 0x4202
-# define PTRACE_SETSIGINFO 0x4203
-#endif
-
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
-#endif
-
-/* If the system headers did not provide the constants, hard-code the normal
-   values.  */
-#ifndef PTRACE_EVENT_FORK
-
-#define PTRACE_SETOPTIONS	0x4200
-#define PTRACE_GETEVENTMSG	0x4201
-
-/* options set using PTRACE_SETOPTIONS */
-#define PTRACE_O_TRACESYSGOOD	0x00000001
-#define PTRACE_O_TRACEFORK	0x00000002
-#define PTRACE_O_TRACEVFORK	0x00000004
-#define PTRACE_O_TRACECLONE	0x00000008
-#define PTRACE_O_TRACEEXEC	0x00000010
-#define PTRACE_O_TRACEVFORKDONE	0x00000020
-#define PTRACE_O_TRACEEXIT	0x00000040
-
-/* Wait extended result codes for the above trace options.  */
-#define PTRACE_EVENT_FORK	1
-#define PTRACE_EVENT_VFORK	2
-#define PTRACE_EVENT_CLONE	3
-#define PTRACE_EVENT_EXEC	4
-#define PTRACE_EVENT_VFORK_DONE	5
-#define PTRACE_EVENT_EXIT	6
-
-#endif /* PTRACE_EVENT_FORK */
-
-/* We can't always assume that this flag is available, but all systems
-   with the ptrace event handlers also have __WALL, so it's safe to use
-   in some contexts.  */
-#ifndef __WALL
-#define __WALL          0x40000000 /* Wait for any child.  */
 #endif
 
 #ifndef W_STOPCODE
@@ -915,11 +878,6 @@ static void
 linux_join (int pid)
 {
   int status, ret;
-  struct process_info *process;
-
-  process = find_process_pid (pid);
-  if (process == NULL)
-    return;
 
   do {
     ret = my_waitpid (pid, &status, 0);
@@ -1668,7 +1626,8 @@ linux_wait_for_event (ptid_t ptid, int *wstat, int options)
       if (event_pid > 0
 	  && ptid_is_pid (ptid) && ptid_get_pid (ptid) != event_pid)
 	{
-	  struct lwp_info *event_child = find_lwp_pid (pid_to_ptid (event_pid));
+	  struct lwp_info *event_child
+	    = find_lwp_pid (pid_to_ptid (event_pid));
 
 	  if (! WIFSTOPPED (*wstat))
 	    mark_lwp_dead (event_child, *wstat);
@@ -2064,7 +2023,9 @@ retry:
 	      ourstatus->value.integer = WEXITSTATUS (w);
 
 	      if (debug_threads)
-		fprintf (stderr, "\nChild exited with retcode = %x \n", WEXITSTATUS (w));
+		fprintf (stderr,
+			 "\nChild exited with retcode = %x \n",
+			 WEXITSTATUS (w));
 	    }
 	  else
 	    {
@@ -2072,7 +2033,9 @@ retry:
 	      ourstatus->value.sig = target_signal_from_host (WTERMSIG (w));
 
 	      if (debug_threads)
-		fprintf (stderr, "\nChild terminated with signal = %x \n", WTERMSIG (w));
+		fprintf (stderr,
+			 "\nChild terminated with signal = %x \n",
+			 WTERMSIG (w));
 
 	    }
 
@@ -2296,7 +2259,8 @@ Check if we're already there.\n",
   report_to_gdb = (!maybe_internal_trap
 		   || current_inferior->last_resume_kind == resume_step
 		   || event_child->stopped_by_watchpoint
-		   || (!step_over_finished && !bp_explains_trap && !trace_event)
+		   || (!step_over_finished
+		       && !bp_explains_trap && !trace_event)
 		   || gdb_breakpoint_here (event_child->stop_pc));
 
   /* We found no reason GDB would want us to stop.  We either hit one
@@ -3176,7 +3140,8 @@ need_step_over_p (struct inferior_list_entry *entry, void *dummy)
 	{
 	  if (debug_threads)
 	    fprintf (stderr,
-		     "Need step over [LWP %ld]? yes, found breakpoint at 0x%s\n",
+		     "Need step over [LWP %ld]? yes, "
+		     "found breakpoint at 0x%s\n",
 		     lwpid_of (lwp), paddress (pc));
 
 	  /* We've found an lwp that needs stepping over --- return 1 so
@@ -4045,9 +4010,13 @@ linux_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
   register CORE_ADDR addr = memaddr & -(CORE_ADDR) sizeof (PTRACE_XFER_TYPE);
   /* Round ending address up; get number of longwords that makes.  */
   register int count
-  = (((memaddr + len) - addr) + sizeof (PTRACE_XFER_TYPE) - 1) / sizeof (PTRACE_XFER_TYPE);
+    = (((memaddr + len) - addr) + sizeof (PTRACE_XFER_TYPE) - 1)
+    / sizeof (PTRACE_XFER_TYPE);
+
   /* Allocate buffer of that many longwords.  */
-  register PTRACE_XFER_TYPE *buffer = (PTRACE_XFER_TYPE *) alloca (count * sizeof (PTRACE_XFER_TYPE));
+  register PTRACE_XFER_TYPE *buffer = (PTRACE_XFER_TYPE *)
+    alloca (count * sizeof (PTRACE_XFER_TYPE));
+
   int pid = lwpid_of (get_thread_lwp (current_inferior));
 
   if (debug_threads)
@@ -4090,7 +4059,8 @@ linux_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
 
   /* Copy data to be written over corresponding part of buffer.  */
 
-  memcpy ((char *) buffer + (memaddr & (sizeof (PTRACE_XFER_TYPE) - 1)), myaddr, len);
+  memcpy ((char *) buffer + (memaddr & (sizeof (PTRACE_XFER_TYPE) - 1)),
+	  myaddr, len);
 
   /* Write the entire buffer.  */
 
@@ -4373,6 +4343,10 @@ linux_stopped_data_address (void)
 #define PT_TEXT_ADDR 49*4
 #define PT_DATA_ADDR 50*4
 #define PT_TEXT_END_ADDR  51*4
+#elif defined(BFIN)
+#define PT_TEXT_ADDR 220
+#define PT_TEXT_END_ADDR 224
+#define PT_DATA_ADDR 228
 #endif
 
 /* Under uClinux, programs are loaded at non-zero offsets, which we need
@@ -4502,6 +4476,7 @@ list_threads (int pid, struct buffer *buffer, char **cores)
 		}
 	    }
 	}
+      closedir (dir);
     }
 
   if (cores)
@@ -4712,7 +4687,7 @@ linux_xfer_siginfo (const char *annex, unsigned char *readbuf,
 	     readbuf != NULL ? "Reading" : "Writing",
 	     pid);
 
-  if (offset > sizeof (siginfo))
+  if (offset >= sizeof (siginfo))
     return -1;
 
   if (ptrace (PTRACE_GETSIGINFO, pid, 0, &siginfo) != 0)

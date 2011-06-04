@@ -1,6 +1,6 @@
 /* Python interface to values.
 
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -34,7 +34,7 @@
 #include "python-internal.h"
 
 /* Even though Python scalar types directly map to host types, we use
-   target types here to remain consistent with the the values system in
+   target types here to remain consistent with the values system in
    GDB (which uses target arithmetic).  */
 
 /* Python's integer type corresponds to C's long type.  */
@@ -307,13 +307,13 @@ valpy_get_dynamic_type (PyObject *self, void *closure)
 static PyObject *
 valpy_lazy_string (PyObject *self, PyObject *args, PyObject *kw)
 {
-  int length = -1;
+  gdb_py_longest length = -1;
   struct value *value = ((value_object *) self)->value;
   const char *user_encoding = NULL;
   static char *keywords[] = { "encoding", "length", NULL };
   PyObject *str_obj;
 
-  if (!PyArg_ParseTupleAndKeywords (args, kw, "|si", keywords,
+  if (!PyArg_ParseTupleAndKeywords (args, kw, "|s" GDB_PY_LL_ARG, keywords,
 				    &user_encoding, &length))
     return NULL;
 
@@ -321,7 +321,8 @@ valpy_lazy_string (PyObject *self, PyObject *args, PyObject *kw)
     value = value_ind (value);
 
   str_obj = gdbpy_create_lazy_string_object (value_address (value), length,
-					     user_encoding, value_type (value));
+					     user_encoding,
+					     value_type (value));
 
   return (PyObject *) str_obj;
 }
@@ -478,7 +479,7 @@ valpy_getitem (PyObject *self, PyObject *key)
 	      type = check_typedef (value_type (tmp));
 	      if (TYPE_CODE (type) != TYPE_CODE_ARRAY
 		  && TYPE_CODE (type) != TYPE_CODE_PTR)
-		  error( _("Cannot subscript requested type."));
+		  error (_("Cannot subscript requested type."));
 	      else
 		res_val = value_subscript (tmp, value_as_long (idx));
 	    }
@@ -986,14 +987,7 @@ valpy_int (PyObject *self)
     }
   GDB_PY_HANDLE_EXCEPTION (except);
 
-#ifdef HAVE_LONG_LONG		/* Defined by Python.  */
-  /* If we have 'long long', and the value overflows a 'long', use a
-     Python Long; otherwise use a Python Int.  */
-  if (sizeof (l) > sizeof (long) && (l > PyInt_GetMax ()
-				     || l < (- (LONGEST) PyInt_GetMax ()) - 1))
-    return PyLong_FromLongLong (l);
-#endif
-  return PyInt_FromLong (l);
+  return gdb_py_object_from_longest (l);
 }
 
 /* Implements conversion to long.  */
@@ -1018,11 +1012,7 @@ valpy_long (PyObject *self)
     }
   GDB_PY_HANDLE_EXCEPTION (except);
 
-#ifdef HAVE_LONG_LONG		/* Defined by Python.  */
-  return PyLong_FromLongLong (l);
-#else
-  return PyLong_FromLong (l);
-#endif
+  return gdb_py_long_from_longest (l);
 }
 
 /* Implements conversion to float.  */
@@ -1172,13 +1162,13 @@ convert_value_from_python (PyObject *obj)
       else if (gdbpy_is_lazy_string (obj))
 	{
 	  PyObject *result;
-	  PyObject *function = PyString_FromString ("value");
 
-	  result = PyObject_CallMethodObjArgs (obj, function,  NULL);
+	  result = PyObject_CallMethodObjArgs (obj, gdbpy_value_cst,  NULL);
 	  value = value_copy (((value_object *) result)->value);
 	}
       else
-	PyErr_Format (PyExc_TypeError, _("Could not convert Python object: %s."),
+	PyErr_Format (PyExc_TypeError,
+		      _("Could not convert Python object: %s."),
 		      PyString_AsString (PyObject_Str (obj)));
     }
   if (except.reason < 0)
@@ -1238,7 +1228,8 @@ static PyGetSetDef value_object_getset[] = {
   { "address", valpy_get_address, NULL, "The address of the value.",
     NULL },
   { "is_optimized_out", valpy_get_is_optimized_out, NULL,
-    "Boolean telling whether the value is optimized out (i.e., not available).",
+    "Boolean telling whether the value is optimized "
+    "out (i.e., not available).",
     NULL },
   { "type", valpy_get_type, NULL, "Type of the value.", NULL },
   { "dynamic_type", valpy_get_dynamic_type, NULL,
@@ -1258,7 +1249,8 @@ Cast the value to the supplied type, as if by the C++\n\
 reinterpret_cast operator."
   },
   { "dereference", valpy_dereference, METH_NOARGS, "Dereferences the value." },
-  { "lazy_string", (PyCFunction) valpy_lazy_string, METH_VARARGS | METH_KEYWORDS,
+  { "lazy_string", (PyCFunction) valpy_lazy_string,
+    METH_VARARGS | METH_KEYWORDS,
     "lazy_string ([encoding]  [, length]) -> lazy_string\n\
 Return a lazy string representation of the value." },
   { "string", (PyCFunction) valpy_string, METH_VARARGS | METH_KEYWORDS,
@@ -1320,7 +1312,8 @@ PyTypeObject value_object_type = {
   0,				  /*tp_getattro*/
   0,				  /*tp_setattro*/
   0,				  /*tp_as_buffer*/
-  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES,	/*tp_flags*/
+  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES
+  | Py_TPFLAGS_BASETYPE,	  /*tp_flags*/
   "GDB value object",		  /* tp_doc */
   0,				  /* tp_traverse */
   0,				  /* tp_clear */

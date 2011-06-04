@@ -1,6 +1,6 @@
 /* Gdb/Python header for private use by Python module.
 
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -41,25 +41,17 @@
    around technique as above.  */
 #undef _FILE_OFFSET_BITS
 
+/* Include the Python header files using angle brackets rather than
+   double quotes.  On case-insensitive filesystems, this prevents us
+   from including our python/python.h header file.  */
+#include <Python.h>
+#include <frameobject.h>
 #if HAVE_LIBPYTHON2_4
-#include "python2.4/Python.h"
-#include "python2.4/frameobject.h"
 /* Py_ssize_t is not defined until 2.5.
    Logical type for Py_ssize_t is Py_intptr_t, but that fails in 64-bit
    compilation due to several apparent mistakes in python2.4 API, so we
    use 'int' instead.  */
 typedef int Py_ssize_t;
-#elif HAVE_LIBPYTHON2_5
-#include "python2.5/Python.h"
-#include "python2.5/frameobject.h"
-#elif HAVE_LIBPYTHON2_6
-#include "python2.6/Python.h"
-#include "python2.6/frameobject.h"
-#elif HAVE_LIBPYTHON2_7
-#include "python2.7/Python.h"
-#include "python2.7/frameobject.h"
-#else
-#error "Unable to find usable Python.h"
 #endif
 
 /* If Python.h does not define WITH_THREAD, then the various
@@ -73,12 +65,39 @@ typedef int Py_ssize_t;
 #define PyEval_ReleaseLock()
 #endif
 
+/* Python supplies HAVE_LONG_LONG and some `long long' support when it
+   is available.  These defines let us handle the differences more
+   cleanly.  */
+#ifdef HAVE_LONG_LONG
+
+#define GDB_PY_LL_ARG "L"
+#define GDB_PY_LLU_ARG "K"
+typedef PY_LONG_LONG gdb_py_longest;
+typedef unsigned PY_LONG_LONG gdb_py_ulongest;
+#define gdb_py_long_from_longest PyLong_FromLongLong
+#define gdb_py_long_from_ulongest PyLong_FromUnsignedLongLong
+#define gdb_py_long_as_ulongest PyLong_AsUnsignedLongLong
+
+#else /* HAVE_LONG_LONG */
+
+#define GDB_PY_LL_ARG "L"
+#define GDB_PY_LLU_ARG "K"
+typedef long gdb_py_longest;
+typedef unsigned long gdb_py_ulongest;
+#define gdb_py_long_from_longest PyLong_FromLong
+#define gdb_py_long_from_ulongest PyLong_FromUnsignedLong
+#define gdb_py_long_as_ulongest PyLong_AsUnsignedLong
+
+#endif /* HAVE_LONG_LONG */
+
+
 /* In order to be able to parse symtab_and_line_to_sal_object function 
    a real symtab_and_line structure is needed.  */
 #include "symtab.h"
 
 /* Also needed to parse enum var_types. */
 #include "command.h"
+#include "breakpoint.h"
 
 #include "exceptions.h"
 
@@ -86,11 +105,19 @@ struct block;
 struct value;
 struct language_defn;
 struct program_space;
+struct bpstats;
+struct inferior;
 
 extern PyObject *gdb_module;
 extern PyTypeObject value_object_type;
 extern PyTypeObject block_object_type;
 extern PyTypeObject symbol_object_type;
+extern PyTypeObject event_object_type;
+extern PyTypeObject events_object_type;
+extern PyTypeObject stop_event_object_type;
+
+/* Defined in py-breakpoint.c */
+typedef struct breakpoint_object breakpoint_object;
 
 typedef struct
 {
@@ -110,11 +137,15 @@ PyObject *gdbpy_history (PyObject *self, PyObject *args);
 PyObject *gdbpy_breakpoints (PyObject *, PyObject *);
 PyObject *gdbpy_frame_stop_reason_string (PyObject *, PyObject *);
 PyObject *gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw);
+PyObject *gdbpy_lookup_global_symbol (PyObject *self, PyObject *args,
+				      PyObject *kw);
+PyObject *gdbpy_newest_frame (PyObject *self, PyObject *args);
 PyObject *gdbpy_selected_frame (PyObject *self, PyObject *args);
 PyObject *gdbpy_block_for_pc (PyObject *self, PyObject *args);
 PyObject *gdbpy_lookup_type (PyObject *self, PyObject *args, PyObject *kw);
 PyObject *gdbpy_create_lazy_string_object (CORE_ADDR address, long length,
-					   const char *encoding, struct type *type);
+					   const char *encoding,
+					   struct type *type);
 PyObject *gdbpy_inferiors (PyObject *unused, PyObject *unused2);
 PyObject *gdbpy_selected_thread (PyObject *self, PyObject *args);
 PyObject *gdbpy_string_to_argv (PyObject *self, PyObject *args);
@@ -141,6 +172,7 @@ PyObject *objfpy_get_printers (PyObject *, void *);
 thread_object *create_thread_object (struct thread_info *tp);
 thread_object *find_thread_object (ptid_t ptid);
 PyObject *find_inferior_object (int pid);
+PyObject *inferior_to_inferior_object (struct inferior *inferior);
 
 struct block *block_object_to_block (PyObject *obj);
 struct symbol *symbol_object_to_symbol (PyObject *obj);
@@ -167,6 +199,15 @@ void gdbpy_initialize_lazy_string (void);
 void gdbpy_initialize_parameters (void);
 void gdbpy_initialize_thread (void);
 void gdbpy_initialize_inferior (void);
+void gdbpy_initialize_eventregistry (void);
+void gdbpy_initialize_event (void);
+void gdbpy_initialize_py_events (void);
+void gdbpy_initialize_stop_event (void);
+void gdbpy_initialize_signal_event (void);
+void gdbpy_initialize_breakpoint_event (void);
+void gdbpy_initialize_continue_event (void);
+void gdbpy_initialize_exited_event (void);
+void gdbpy_initialize_thread_event (void);
 
 struct cleanup *make_cleanup_py_decref (PyObject *py);
 
@@ -231,6 +272,7 @@ extern PyObject *gdbpy_children_cst;
 extern PyObject *gdbpy_to_string_cst;
 extern PyObject *gdbpy_display_hint_cst;
 extern PyObject *gdbpy_enabled_cst;
+extern PyObject *gdbpy_value_cst;
 
 /* Exception types.  */
 extern PyObject *gdbpy_gdb_error;
@@ -240,5 +282,9 @@ extern PyObject *gdbpy_gdberror_exc;
 extern PyObject *gdbpy_convert_exception (struct gdb_exception);
 
 int get_addr_from_python (PyObject *obj, CORE_ADDR *addr);
+
+PyObject *gdb_py_object_from_longest (LONGEST l);
+PyObject *gdb_py_object_from_ulongest (ULONGEST l);
+int gdb_py_int_as_long (PyObject *, long *);
 
 #endif /* GDB_PYTHON_INTERNAL_H */

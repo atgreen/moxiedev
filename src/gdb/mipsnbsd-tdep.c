@@ -1,6 +1,6 @@
 /* Target-dependent code for NetBSD/mips.
 
-   Copyright (C) 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Contributed by Wasabi Systems, Inc.
@@ -173,7 +173,8 @@ mipsnbsd_fill_reg (const struct regcache *regcache, char *regs, int regno)
 }
 
 void
-mipsnbsd_supply_fpreg (struct regcache *regcache, const char *fpregs, int regno)
+mipsnbsd_supply_fpreg (struct regcache *regcache,
+		       const char *fpregs, int regno)
 {
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
   int i;

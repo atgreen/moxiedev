@@ -479,6 +479,22 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "eret-1"
     run_dump_test "eret-2"
     run_dump_test "eret-3"
+    run_dump_test_arches "24k-branch-delay-1" [mips_arch_list_matching mips1]
+    run_dump_test_arches "24k-triple-stores-1" \
+				    [mips_arch_list_matching mips32r2 !octeon]
+    run_dump_test_arches "24k-triple-stores-2" [mips_arch_list_matching mips2]
+    run_dump_test_arches "24k-triple-stores-3" [mips_arch_list_matching mips3]
+    run_dump_test_arches "24k-triple-stores-4" [mips_arch_list_matching mips2]
+    run_dump_test_arches "24k-triple-stores-5" [mips_arch_list_matching mips1]
+    run_dump_test_arches "24k-triple-stores-6" [mips_arch_list_matching mips2]
+    run_dump_test_arches "24k-triple-stores-7" [mips_arch_list_matching mips2]
+    run_dump_test_arches "24k-triple-stores-8" [mips_arch_list_matching mips1]
+    run_dump_test_arches "24k-triple-stores-9" [mips_arch_list_matching mips1]
+    run_dump_test_arches "24k-triple-stores-10" [mips_arch_list_matching mips1]
+    if $elf {
+	run_dump_test_arches "24k-triple-stores-11" \
+	    [mips_arch_list_matching mips1]
+    }
 
     if $elf {
 	run_dump_test_arches "jal-svr4pic" \
@@ -702,10 +718,13 @@ if { [istarget mips*-*-vxworks*] } {
 	run_dump_test "xlr-ext"
     }
 
-    run_dump_test "relax"
+    run_dump_test_arches "relax"	[mips_arch_list_matching mips2]
+    run_dump_test_arches "relax-at"	[mips_arch_list_matching mips2]
     run_dump_test "relax-swap1-mips1"
     run_dump_test "relax-swap1-mips2"
     run_dump_test "relax-swap2"
+    run_list_test_arches "relax-bposge" "-mdsp -relax-branch" \
+					[mips_arch_list_matching mips64r2]
 
     run_list_test "illegal" "-32"
     run_list_test "baddata1" "-32"
@@ -743,7 +762,10 @@ if { [istarget mips*-*-vxworks*] } {
 	run_dump_test "elf_arch_mips64r2"
 
 	# Verify that ASE markings are handled properly.
-	if { !$no_mips16 } { run_dump_test "elf_ase_mips16" }
+	if { !$no_mips16 } {
+	    run_dump_test "elf_ase_mips16"
+	    run_dump_test "elf_ase_mips16-2"
+	}
 
  	run_dump_test "mips-gp32-fp32-pic"
  	run_dump_test "mips-gp32-fp64-pic"
@@ -827,6 +849,11 @@ if { [istarget mips*-*-vxworks*] } {
 	run_dump_test "jalr2"
 
 	run_dump_test_arches "aent"	[mips_arch_list_matching mips1]
+
+	run_dump_test_arches "branch-misc-4" \
+					[mips_arch_list_matching mips1]
+	run_dump_test_arches "branch-misc-4-64" \
+					[mips_arch_list_matching mips3]
     }
 
     if $has_newabi {
@@ -912,6 +939,10 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "loongson-2f-2"
     run_dump_test "loongson-2f-3"
 
+    run_dump_test "loongson-3a"
+    run_dump_test "loongson-3a-2"
+    run_dump_test "loongson-3a-3"
+
     run_dump_test_arches "octeon"	[mips_arch_list_matching octeon]
     run_list_test_arches "octeon-ill" "" \
 					[mips_arch_list_matching octeon]
@@ -964,6 +995,9 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "mips32-sync"
     run_dump_test_arches "mips32r2-sync" \
 					[mips_arch_list_matching mips32r2]
+    run_dump_test_arches "alnv_ps-swap" [lsort -dictionary -unique [concat \
+					[mips_arch_list_matching mips5] \
+					[mips_arch_list_matching mips32r2] ] ]
 
     if $has_newabi { run_dump_test "cfi-n64-1" }
 }

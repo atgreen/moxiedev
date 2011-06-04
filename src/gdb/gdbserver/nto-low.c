@@ -1,6 +1,6 @@
 /* QNX Neutrino specific low level interface, for the remote server
    for GDB.
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -635,7 +635,8 @@ nto_fetch_registers (struct regcache *regcache, int regno)
 	    {
 	      const unsigned int registeroffset
 		= the_low_target.register_offset (regno);
-	      supply_register (regcache, regno, ((char *)&greg) + registeroffset);
+	      supply_register (regcache, regno,
+			       ((char *)&greg) + registeroffset);
 	    }
 	}
       else

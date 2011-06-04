@@ -1,4 +1,4 @@
-# Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+# Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -53,6 +53,9 @@ class ContainerPrinter:
     def children(self):
         return self._iterator(self.val['elements'], self.val['len'])
 
+# Flag to make NoStringContainerPrinter throw an exception.
+exception_flag = False
+
 # Test a printer where to_string is None
 class NoStringContainerPrinter:
     class _iterator:
@@ -67,6 +70,8 @@ class NoStringContainerPrinter:
         def next(self):
             if self.pointer == self.end:
                 raise StopIteration
+            if exception_flag:
+                raise gdb.MemoryError, 'hi bob'
             result = self.pointer
             self.pointer = self.pointer + 1
             return ('[%d]' % int (result - self.start), result.dereference())
@@ -156,6 +161,18 @@ class pp_ls:
     def display_hint (self):
         return 'string'
 
+class pp_hint_error:
+    "Throw error from display_hint"
+
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        return 'hint_error_val'
+
+    def display_hint (self):
+        raise Exception("hint failed")
+
 class pp_outer:
     "Print struct outer"
 
@@ -240,6 +257,9 @@ def register_pretty_printers ():
 
     pretty_printers_dict[re.compile ('^struct outerstruct$')]  = pp_outer
     pretty_printers_dict[re.compile ('^outerstruct$')]  = pp_outer
+
+    pretty_printers_dict[re.compile ('^struct hint_error$')]  = pp_hint_error
+    pretty_printers_dict[re.compile ('^hint_error$')]  = pp_hint_error
 
 pretty_printers_dict = {}
 

@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/powerpc.
 
-   Copyright (C) 2004, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2004, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -44,7 +44,7 @@ extern void ppcobsd_supply_gregset (const struct regset *regset,
 				    const void *gregs, size_t len);
 
 /* Collect register REGNUM in the general-purpose register set
-   REGSET. from register cache REGCACHE into the buffer specified by
+   REGSET, from register cache REGCACHE into the buffer specified by
    GREGS and LEN.  If REGNUM is -1, do this for all registers in
    REGSET.  */
 

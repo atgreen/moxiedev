@@ -1,7 +1,7 @@
 /* Handle SunOS shared libraries for GDB, the GNU Debugger.
 
    Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000,
-   2001, 2004, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2001, 2004, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -85,7 +85,7 @@
 
 #endif
 
-/* Link map info to include in an allocated so_list entry */
+/* Link map info to include in an allocated so_list entry.  */
 
 struct lm_info
   {
@@ -96,7 +96,7 @@ struct lm_info
   };
 
 
-/* Symbols which are used to locate the base of the link map structures. */
+/* Symbols which are used to locate the base of the link map structures.  */
 
 static char *debug_base_symbols[] =
 {
@@ -139,7 +139,7 @@ static CORE_ADDR flag_addr;
 /* link map access functions */
 
 static CORE_ADDR
-LM_ADDR (struct so_list *so)
+lm_addr (struct so_list *so)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch);
   int lm_addr_offset = offsetof (struct link_map, lm_addr);
@@ -150,7 +150,7 @@ LM_ADDR (struct so_list *so)
 }
 
 static CORE_ADDR
-LM_NEXT (struct so_list *so)
+lm_next (struct so_list *so)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch);
   int lm_next_offset = offsetof (struct link_map, lm_next);
@@ -162,7 +162,7 @@ LM_NEXT (struct so_list *so)
 }
 
 static CORE_ADDR
-LM_NAME (struct so_list *so)
+lm_name (struct so_list *so)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch);
   int lm_name_offset = offsetof (struct link_map, lm_name);
@@ -173,7 +173,7 @@ LM_NAME (struct so_list *so)
 				   lm_name_size, byte_order);
 }
 
-static CORE_ADDR debug_base;	/* Base of dynamic linker structures */
+static CORE_ADDR debug_base;	/* Base of dynamic linker structures.  */
 
 /* Local function prototypes */
 
@@ -195,7 +195,7 @@ allocate_rt_common_objfile (void)
   obstack_init (&objfile->objfile_obstack);
   objfile->name = xstrdup ("rt_common");
 
-  /* Add this file onto the tail of the linked list of other such files. */
+  /* Add this file onto the tail of the linked list of other such files.  */
 
   objfile->next = NULL;
   if (object_files == NULL)
@@ -249,14 +249,14 @@ solib_add_common_symbols (CORE_ADDR rtc_symp)
 	{
 	  /* FIXME: The length of the symbol name is not available, but in the
 	     current implementation the common symbol is allocated immediately
-	     behind the name of the symbol. */
+	     behind the name of the symbol.  */
 	  len = inferior_rtc_nlist.n_value - inferior_rtc_nlist.n_un.n_strx;
 
 	  name = xmalloc (len);
 	  read_memory (SOLIB_EXTRACT_ADDRESS (inferior_rtc_nlist.n_un.n_name),
 		       name, len);
 
-	  /* Allocate the runtime common objfile if necessary. */
+	  /* Allocate the runtime common objfile if necessary.  */
 	  if (rt_common_objfile == NULL)
 	    allocate_rt_common_objfile ();
 
@@ -320,7 +320,7 @@ locate_base (void)
 
   /* For SunOS, we want to limit the search for the debug base symbol to the
      executable being debugged, since there is a duplicate named symbol in the
-     shared library.  We don't want the shared library versions. */
+     shared library.  We don't want the shared library versions.  */
 
   for (symbolp = debug_base_symbols; *symbolp != NULL; symbolp++)
     {
@@ -360,7 +360,7 @@ first_link_map_member (void)
   if (dynamic_copy.ld_version >= 2)
     {
       /* It is a version that we can deal with, so read in the secondary
-         structure and find the address of the link map list from it. */
+         structure and find the address of the link map list from it.  */
       read_memory (SOLIB_EXTRACT_ADDRESS (dynamic_copy.ld_un.ld_2),
 		   (char *) &ld_2_copy, sizeof (struct link_dynamic_2));
       lm = SOLIB_EXTRACT_ADDRESS (ld_2_copy.ld_loaded);
@@ -435,10 +435,10 @@ sunos_current_sos (void)
 
       read_memory (lm, new->lm_info->lm, sizeof (struct link_map));
 
-      lm = LM_NEXT (new);
+      lm = lm_next (new);
 
       /* Extract this shared object's name.  */
-      target_read_string (LM_NAME (new), &buffer,
+      target_read_string (lm_name (new), &buffer,
 			  SO_NAME_MAX_PATH_SIZE - 1, &errcode);
       if (errcode != 0)
 	warning (_("Can't read pathname for load map: %s."),
@@ -515,18 +515,18 @@ sunos_in_dynsym_resolve_code (CORE_ADDR pc)
 static int
 disable_break (void)
 {
-  CORE_ADDR breakpoint_addr;	/* Address where end bkpt is set */
+  CORE_ADDR breakpoint_addr;	/* Address where end bkpt is set.  */
 
   int in_debugger = 0;
 
   /* Read the debugger structure from the inferior to retrieve the
      address of the breakpoint and the original contents of the
      breakpoint address.  Remove the breakpoint by writing the original
-     contents back. */
+     contents back.  */
 
   read_memory (debug_addr, (char *) &debug_copy, sizeof (debug_copy));
 
-  /* Set `in_debugger' to zero now. */
+  /* Set `in_debugger' to zero now.  */
 
   write_memory (flag_addr, (char *) &in_debugger, sizeof (in_debugger));
 
@@ -536,11 +536,12 @@ disable_break (void)
 
   /* For the SVR4 version, we always know the breakpoint address.  For the
      SunOS version we don't know it until the above code is executed.
-     Grumble if we are stopped anywhere besides the breakpoint address. */
+     Grumble if we are stopped anywhere besides the breakpoint address.  */
 
   if (stop_pc != breakpoint_addr)
     {
-      warning (_("stopped at unknown breakpoint while handling shared libraries"));
+      warning (_("stopped at unknown breakpoint "
+		 "while handling shared libraries"));
     }
 
   return 1;
@@ -597,7 +598,7 @@ enable_break (void)
   int j;
   int in_debugger;
 
-  /* Get link_dynamic structure */
+  /* Get link_dynamic structure.  */
 
   j = target_read_memory (debug_base, (char *) &dynamic_copy,
 			  sizeof (dynamic_copy));
@@ -607,11 +608,11 @@ enable_break (void)
       return (0);
     }
 
-  /* Calc address of debugger interface structure */
+  /* Calc address of debugger interface structure.  */
 
   debug_addr = SOLIB_EXTRACT_ADDRESS (dynamic_copy.ldd);
 
-  /* Calc address of `in_debugger' member of debugger interface structure */
+  /* Calc address of `in_debugger' member of debugger interface structure.  */
 
   flag_addr = debug_addr + (CORE_ADDR) ((char *) &debug_copy.ldd_in_debugger -
 					(char *) &debug_copy);
@@ -655,7 +656,7 @@ sunos_special_symbol_handling (void)
 
   if (debug_addr == 0)
     {
-      /* Get link_dynamic structure */
+      /* Get link_dynamic structure.  */
 
       j = target_read_memory (debug_base, (char *) &dynamic_copy,
 			      sizeof (dynamic_copy));
@@ -665,7 +666,7 @@ sunos_special_symbol_handling (void)
 	  return;
 	}
 
-      /* Calc address of debugger interface structure */
+      /* Calc address of debugger interface structure.  */
       /* FIXME, this needs work for cross-debugging of core files
          (byteorder, size, alignment, etc).  */
 
@@ -673,14 +674,14 @@ sunos_special_symbol_handling (void)
     }
 
   /* Read the debugger structure from the inferior, just to make sure
-     we have a current copy. */
+     we have a current copy.  */
 
   j = target_read_memory (debug_addr, (char *) &debug_copy,
 			  sizeof (debug_copy));
   if (j)
     return;			/* unreadable */
 
-  /* Get common symbol definitions for the loaded object. */
+  /* Get common symbol definitions for the loaded object.  */
 
   if (debug_copy.ldd_cp)
     {
@@ -748,7 +749,7 @@ sunos_solib_create_inferior_hook (int from_tty)
 
   if ((debug_base = locate_base ()) == 0)
     {
-      /* Can't find the symbol or the executable is statically linked. */
+      /* Can't find the symbol or the executable is statically linked.  */
       return;
     }
 
@@ -765,22 +766,22 @@ sunos_solib_create_inferior_hook (int from_tty)
      Now run the target.  It will eventually hit the breakpoint, at
      which point all of the libraries will have been mapped in and we
      can go groveling around in the dynamic linker structures to find
-     out what we need to know about them. */
+     out what we need to know about them.  */
 
   inf = current_inferior ();
   tp = inferior_thread ();
 
   clear_proceed_status ();
 
-  inf->stop_soon = STOP_QUIETLY;
-  tp->stop_signal = TARGET_SIGNAL_0;
+  inf->control.stop_soon = STOP_QUIETLY;
+  tp->suspend.stop_signal = TARGET_SIGNAL_0;
   do
     {
-      target_resume (pid_to_ptid (-1), 0, tp->stop_signal);
-      wait_for_inferior (0);
+      target_resume (pid_to_ptid (-1), 0, tp->suspend.stop_signal);
+      wait_for_inferior ();
     }
-  while (tp->stop_signal != TARGET_SIGNAL_TRAP);
-  inf->stop_soon = NO_STOP_QUIETLY;
+  while (tp->suspend.stop_signal != TARGET_SIGNAL_TRAP);
+  inf->control.stop_soon = NO_STOP_QUIETLY;
 
   /* We are now either at the "mapping complete" breakpoint (or somewhere
      else, a condition we aren't prepared to deal with anyway), so adjust
@@ -824,8 +825,8 @@ static void
 sunos_relocate_section_addresses (struct so_list *so,
 				  struct target_section *sec)
 {
-  sec->addr += LM_ADDR (so);
-  sec->endaddr += LM_ADDR (so);
+  sec->addr += lm_addr (so);
+  sec->endaddr += lm_addr (so);
 }
 
 static struct target_so_ops sunos_so_ops;
@@ -843,6 +844,6 @@ _initialize_sunos_solib (void)
   sunos_so_ops.in_dynsym_resolve_code = sunos_in_dynsym_resolve_code;
   sunos_so_ops.bfd_open = solib_bfd_open;
 
-  /* FIXME: Don't do this here.  *_gdbarch_init() should set so_ops. */
+  /* FIXME: Don't do this here.  *_gdbarch_init() should set so_ops.  */
   current_target_so_ops = &sunos_so_ops;
 }

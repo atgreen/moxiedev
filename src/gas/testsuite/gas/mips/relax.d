@@ -1,5 +1,5 @@
-#as: -KPIC -mips3 -32 -relax-branch
-#objdump: -dr --prefix-addresses -mmips:4000
+#as: -KPIC -32 -relax-branch
+#objdump: -dr --prefix-addresses
 #name: MIPS relax
 #stderr: relax.l
 

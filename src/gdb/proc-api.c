@@ -1,6 +1,6 @@
 /* Machine independent support for SVR4 /proc (process file system) for GDB.
 
-   Copyright (C) 1999, 2000, 2001, 2003, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 1999, 2000, 2001, 2003, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Written by Michael Snyder at Cygnus Solutions.
@@ -44,7 +44,7 @@
 #ifdef HAVE_SYS_USER_H
 #include <sys/user.h>	/* for struct user */
 #endif
-#include <fcntl.h>	/* for O_RDWR etc. */
+#include <fcntl.h>	/* for O_RDWR etc.  */
 #include "gdb_wait.h"
 
 #include "proc-utils.h"
@@ -52,7 +52,7 @@
 /*  Much of the information used in the /proc interface, particularly for
     printing status information, is kept as tables of structures of the
     following form.  These tables can be used to map numeric values to
-    their symbolic names and to a string that describes their specific use. */
+    their symbolic names and to a string that describes their specific use.  */
 
 struct trans {
   long value;                   /* The numeric value */

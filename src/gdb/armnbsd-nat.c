@@ -1,7 +1,7 @@
 /* Native-dependent code for BSD Unix running on ARM's, for GDB.
 
    Copyright (C) 1988, 1989, 1991, 1992, 1994, 1996, 1999, 2002, 2004, 2007,
-   2008, 2009, 2010 Free Software Foundation, Inc.
+   2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -102,7 +102,7 @@ fetch_register (struct regcache *regcache, int regno)
       break;
 
     case ARM_PC_REGNUM:
-      /* This is ok: we're running native... */
+      /* This is ok: we're running native...  */
       inferior_registers.r_pc = gdbarch_addr_bits_remove
 				  (get_regcache_arch (regcache),
 				   inferior_registers.r_pc);

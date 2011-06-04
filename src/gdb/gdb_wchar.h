@@ -1,5 +1,5 @@
 /* Wide characters for gdb
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -78,11 +78,10 @@ typedef wint_t gdb_wint_t;
    iconv_open.  We put the endianness into the encoding name to avoid
    hosts that emit a BOM when the unadorned name is used.  */
 #if defined (__STDC_ISO_10646__)
-#if WORDS_BIGENDIAN
-#define INTERMEDIATE_ENCODING "UCS-4BE"
-#else
-#define INTERMEDIATE_ENCODING "UCS-4LE"
-#endif
+#define USE_INTERMEDIATE_ENCODING_FUNCTION
+#define INTERMEDIATE_ENCODING intermediate_encoding ()
+const char *intermediate_encoding (void);
+
 #elif defined (_LIBICONV_VERSION) && _LIBICONV_VERSION >= 0x108
 #define INTERMEDIATE_ENCODING "wchar_t"
 #else

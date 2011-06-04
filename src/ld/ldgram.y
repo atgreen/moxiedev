@@ -1,6 +1,6 @@
 /* A YACC grammar to parse a superset of the AT&T linker scripting language.
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Written by Steve Chamberlain of Cygnus Support (steve@cygnus.com).
 
@@ -126,6 +126,7 @@ static int error_index;
 %token SECTIONS PHDRS INSERT_K AFTER BEFORE
 %token DATA_SEGMENT_ALIGN DATA_SEGMENT_RELRO_END DATA_SEGMENT_END
 %token SORT_BY_NAME SORT_BY_ALIGNMENT
+%token SORT_BY_INIT_PRIORITY
 %token '{' '}'
 %token SIZEOF_HEADERS OUTPUT_FORMAT FORCE_COMMON_ALLOCATION OUTPUT_ARCH
 %token INHIBIT_COMMON_ALLOCATION
@@ -133,6 +134,7 @@ static int error_index;
 %token INCLUDE
 %token MEMORY
 %token REGION_ALIAS
+%token LD_FEATURE
 %token NOLOAD DSECT COPY INFO OVERLAY
 %token DEFINED TARGET_K SEARCH_DIR MAP ENTRY
 %token <integer> NEXT
@@ -175,7 +177,7 @@ defsym_expr:
 		NAME '=' exp
 		{
 		  ldlex_popstate();
-		  lang_add_assignment(exp_assop($3,$2,$4));
+		  lang_add_assignment (exp_defsym ($2, $4));
 		}
 	;
 
@@ -356,6 +358,8 @@ ifile_p1:
 		{ lang_add_insert ($3, 1); }
 	|	REGION_ALIAS '(' NAME ',' NAME ')'
 		{ lang_memory_region_alias ($3, $5); }
+	|	LD_FEATURE '(' NAME ')'
+		{ lang_ld_feature ($3); }
 	;
 
 input_list:
@@ -481,6 +485,12 @@ wildcard_spec:
 			  $$.name = $7;
 			  $$.sorted = by_name;
 			  $$.exclude_name_list = $5;
+			}
+	|	SORT_BY_INIT_PRIORITY '(' wildcard_name ')'
+			{
+			  $$.name = $3;
+			  $$.sorted = by_init_priority;
+			  $$.exclude_name_list = NULL;
 			}
 	;
 
@@ -650,15 +660,15 @@ end:	';' | ','
 assignment:
 		NAME '=' mustbe_exp
 		{
-		  lang_add_assignment (exp_assop ($2, $1, $3));
+		  lang_add_assignment (exp_assign ($1, $3));
 		}
 	|	NAME assign_op mustbe_exp
 		{
-		  lang_add_assignment (exp_assop ('=', $1,
-						  exp_binop ($2,
-							     exp_nameop (NAME,
-									 $1),
-							     $3)));
+		  lang_add_assignment (exp_assign ($1,
+						   exp_binop ($2,
+							      exp_nameop (NAME,
+									  $1),
+							      $3)));
 		}
 	|	PROVIDE '(' NAME '=' mustbe_exp ')'
 		{
@@ -976,7 +986,7 @@ section:	NAME 		{ ldlex_expression(); }
 		opt_exp_with_type
 		{
 		  ldlex_popstate ();
-		  lang_add_assignment (exp_assop ('=', ".", $3));
+		  lang_add_assignment (exp_assign (".", $3));
 		}
 		'{' sec_or_group_p1 '}'
 	|	INCLUDE filename

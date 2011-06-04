@@ -1,4 +1,4 @@
-# Copyright 2010 Free Software Foundation, Inc.
+# Copyright 2010, 2011 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -12,21 +12,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+load_lib dwarf.exp
 # Test some DWARF piece operators.
 
 # This test can only be run on targets which support DWARF-2 and use gas.
-# For now pick a sampling of likely targets.
-if {![istarget *-*-linux*]
-    && ![istarget *-*-gnu*]
-    && ![istarget *-*-elf*]
-    && ![istarget *-*-openbsd*]
-    && ![istarget arm-*-eabi*]
-    && ![istarget powerpc-*-eabi*]} {
+if {![dwarf2_support]} {
     return 0  
 }
 # This test can only be run on x86 targets.
-if {![istarget i?86-*]} {
+if {![is_x86_like_target]} {
     return 0  
 }
 
@@ -88,7 +82,7 @@ proc pieces_test_f6 {} {
        "set f6 breakpoint for pieces"
     gdb_continue_to_breakpoint "continue to f6 breakpoint for pieces"
     gdb_test "print a" \
-	" = {i = 7, j = 8, q = .value optimized out.}" \
+	" = {i = 7, j = 8, q = .optimized out.}" \
 	"print a with optimized out piece"
     # Note: no warning for this case.
     gdb_test_multiple "print a.i" \

@@ -1,5 +1,5 @@
 /* Host file transfer support for gdbserver.
-   Copyright (C) 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    Contributed by CodeSourcery.
 
@@ -134,7 +134,10 @@ require_data (char *p, int p_len, char **data, int *data_len)
     }
 
   if (escaped)
-    return -1;
+    {
+      free (*data);
+      return -1;
+    }
 
   *data_len = output_index;
   return 0;
@@ -415,7 +418,8 @@ handle_close (char *own_buf)
     }
 
   open_fd_p = &open_fds;
-  while (*open_fd_p && (*open_fd_p)->fd != fd)
+  /* We know that fd is in the list, thanks to require_valid_fd.  */
+  while ((*open_fd_p)->fd != fd)
     open_fd_p = &(*open_fd_p)->next;
 
   old_fd = *open_fd_p;

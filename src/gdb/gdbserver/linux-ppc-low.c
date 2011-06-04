@@ -1,7 +1,7 @@
 /* GNU/Linux/PowerPC specific low level interface, for the remote server for
    GDB.
    Copyright (C) 1995, 1996, 1998, 1999, 2000, 2001, 2002, 2005, 2007, 2008,
-   2009, 2010 Free Software Foundation, Inc.
+   2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -255,7 +255,8 @@ ppc_get_pc (struct regcache *regcache)
     {
       unsigned int pc;
       (*the_target->read_memory) (addr, (unsigned char *) &pc, 4);
-      return ((CORE_ADDR)1 << 63) | ((CORE_ADDR)fd << 32) | (CORE_ADDR) (pc - 4);
+      return ((CORE_ADDR)1 << 63)
+	| ((CORE_ADDR)fd << 32) | (CORE_ADDR) (pc - 4);
     }
   else if (register_size (0) == 4)
     {

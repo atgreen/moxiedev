@@ -1,5 +1,5 @@
 /* Darwin support for GDB, the GNU debugger.
-   Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2005, 2008, 2009, 2010
+   Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2005, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Contributed by Apple Computer, Inc.
@@ -55,7 +55,7 @@ int amd64_darwin_thread_state_reg_offset[] =
   4 * 8,			/* %rdi */
   6 * 8,			/* %rbp */
   7 * 8,			/* %rsp */
-  8 * 8,			/* %r8 ... */
+  8 * 8,			/* %r8 ...  */
   9 * 8,
   10 * 8,
   11 * 8,

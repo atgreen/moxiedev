@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -42,6 +42,10 @@ struct ns {
 
 struct lazystring {
   const char *lazy_str;
+};
+
+struct hint_error {
+  int x;
 };
 
 #ifdef __cplusplus
@@ -90,6 +94,16 @@ class Derived : public Vbase1, public Vbase2, public Vbase3
     }
 };
 
+class Fake
+{
+  int sname;
+  
+ public:
+  Fake (const int name = 0):
+  sname (name)
+  {
+  }
+};
 #endif
 
 struct substruct {
@@ -212,9 +226,10 @@ main ()
   const struct string_repr cstring = { { "const string" } };
   /* Clearing by being `static' could invoke an other GDB C++ bug.  */
   struct nullstr nullstr;
-  nostring_type nstype;
+  nostring_type nstype, nstype2;
   struct ns ns, ns2;
   struct lazystring estring, estring2;
+  struct hint_error hint_error;
 
   nstype.elements = narray;
   nstype.len = 0;
@@ -262,6 +277,7 @@ main ()
 
   Derived derived;
   
+  Fake fake (42);
 #endif
 
   add_item (&c, 23);		/* MI breakpoint here */
@@ -283,5 +299,7 @@ main ()
   nstype.elements[1] = 42;
   nstype.len = 2;
   
+  nstype2 = nstype;
+
   return 0;      /* break to inspect struct and union */
 }

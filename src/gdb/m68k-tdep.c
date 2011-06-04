@@ -1,7 +1,7 @@
 /* Target-dependent code for the Motorola 68000 series.
 
    Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -54,7 +54,7 @@
 #define P_MOVEL_SP	0x2f00
 #define P_MOVEML_SP	0x48e7
 
-/* Offset from SP to first arg on stack at first instruction of a function */
+/* Offset from SP to first arg on stack at first instruction of a function.  */
 #define SP_ARG0 (1 * 4)
 
 #if !defined (BPT_VECTOR)
@@ -171,14 +171,15 @@ static const char *m68k_register_names[] = {
   };
 
 /* Function: m68k_register_name
-   Returns the name of the standard m68k register regnum. */
+   Returns the name of the standard m68k register regnum.  */
 
 static const char *
 m68k_register_name (struct gdbarch *gdbarch, int regnum)
 {
   if (regnum < 0 || regnum >= ARRAY_SIZE (m68k_register_names))
     internal_error (__FILE__, __LINE__,
-		    _("m68k_register_name: illegal register number %d"), regnum);
+		    _("m68k_register_name: illegal register number %d"),
+		    regnum);
   else if (regnum >= M68K_FP0_REGNUM && regnum <= M68K_FPI_REGNUM
 	   && gdbarch_tdep (gdbarch)->fpregs_present == 0)
     return "";
@@ -190,7 +191,8 @@ m68k_register_name (struct gdbarch *gdbarch, int regnum)
    needs any special handling.  */
 
 static int
-m68k_convert_register_p (struct gdbarch *gdbarch, int regnum, struct type *type)
+m68k_convert_register_p (struct gdbarch *gdbarch,
+			 int regnum, struct type *type)
 {
   if (!gdbarch_tdep (gdbarch)->fpregs_present)
     return 0;
@@ -201,9 +203,10 @@ m68k_convert_register_p (struct gdbarch *gdbarch, int regnum, struct type *type)
 /* Read a value of type TYPE from register REGNUM in frame FRAME, and
    return its contents in TO.  */
 
-static void
+static int
 m68k_register_to_value (struct frame_info *frame, int regnum,
-			struct type *type, gdb_byte *to)
+			struct type *type, gdb_byte *to,
+			int *optimizedp, int *unavailablep)
 {
   gdb_byte from[M68K_MAX_REGISTER_SIZE];
   struct type *fpreg_type = register_type (get_frame_arch (frame),
@@ -214,12 +217,20 @@ m68k_register_to_value (struct frame_info *frame, int regnum,
     {
       warning (_("Cannot convert floating-point register value "
 	       "to non-floating-point type."));
-      return;
+      *optimizedp = *unavailablep = 0;
+      return 0;
     }
 
   /* Convert to TYPE.  */
-  get_frame_register (frame, regnum, from);
+
+  /* Convert to TYPE.  */
+  if (!get_frame_register_bytes (frame, regnum, 0, TYPE_LENGTH (type),
+				 from, optimizedp, unavailablep))
+    return 0;
+
   convert_typed_floating (from, fpreg_type, to, type);
+  *optimizedp = *unavailablep = 0;
+  return 1;
 }
 
 /* Write the contents FROM of a value of type TYPE into register
@@ -965,6 +976,7 @@ m68k_frame_prev_register (struct frame_info *this_frame, void **this_cache,
 static const struct frame_unwind m68k_frame_unwind =
 {
   NORMAL_FRAME,
+  default_frame_unwind_stop_reason,
   m68k_frame_this_id,
   m68k_frame_prev_register,
   NULL,
@@ -1002,7 +1014,7 @@ m68k_dummy_id (struct gdbarch *gdbarch, struct frame_info *this_frame)
 /* Figure out where the longjmp will land.  Slurp the args out of the stack.
    We expect the first arg to be a pointer to the jmp_buf structure from which
    we extract the pc (JB_PC) that we will land at.  The pc is copied into PC.
-   This routine returns true on success. */
+   This routine returns true on success.  */
 
 static int
 m68k_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
@@ -1023,7 +1035,7 @@ m68k_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
   buf = alloca (gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT);
   sp = get_frame_register_unsigned (frame, gdbarch_sp_regnum (gdbarch));
 
-  if (target_read_memory (sp + SP_ARG0,	/* Offset of first arg on stack */
+  if (target_read_memory (sp + SP_ARG0,	/* Offset of first arg on stack.  */
 			  buf, gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT))
     return 0;
 
@@ -1058,7 +1070,7 @@ m68k_svr4_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
 /* Function: m68k_gdbarch_init
    Initializer function for the m68k gdbarch vector.
-   Called by gdbarch.  Sets up the gdbarch vector(s) for this target. */
+   Called by gdbarch.  Sets up the gdbarch vector(s) for this target.  */
 
 static struct gdbarch *
 m68k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
@@ -1136,7 +1148,7 @@ m68k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* The mechanism for returning floating values from function
      and the type of long double depend on whether we're
-     on ColdFire or standard m68k. */
+     on ColdFire or standard m68k.  */
 
   if (info.bfd_arch_info && info.bfd_arch_info->mach != 0)
     {
@@ -1183,7 +1195,7 @@ m68k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_skip_prologue (gdbarch, m68k_skip_prologue);
   set_gdbarch_breakpoint_from_pc (gdbarch, m68k_local_breakpoint_from_pc);
 
-  /* Stack grows down. */
+  /* Stack grows down.  */
   set_gdbarch_inner_than (gdbarch, core_addr_lessthan);
   set_gdbarch_frame_align (gdbarch, m68k_frame_align);
 
@@ -1223,7 +1235,7 @@ m68k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       tdep->float_return = 0;
     }
 
-  /* Function call & return */
+  /* Function call & return.  */
   set_gdbarch_push_dummy_call (gdbarch, m68k_push_dummy_call);
   set_gdbarch_return_value (gdbarch, m68k_return_value);
 

@@ -1,5 +1,5 @@
 /* Target-dependent code for OSF/1 on Alpha.
-   Copyright (C) 2002, 2003, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -58,8 +58,8 @@ alpha_osf1_init_abi (struct gdbarch_info info,
   alpha_mdebug_init_abi (info, gdbarch);
 
   /* The next/step support via procfs on OSF1 is broken when running
-     on multi-processor machines. We need to use software single stepping
-     instead.  */
+     on multi-processor machines.  We need to use software single
+     stepping instead.  */
   set_gdbarch_software_single_step (gdbarch, alpha_software_single_step);
 
   tdep->sigcontext_addr = alpha_osf1_sigcontext_addr;

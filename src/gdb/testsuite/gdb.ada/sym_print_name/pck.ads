@@ -1,4 +1,4 @@
---  Copyright 2008, 2009, 2010 Free Software Foundation, Inc.
+--  Copyright 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -15,11 +15,11 @@
 
 package Pck is
    package First is
-      I : Integer := 48;
+      IntegerVar : Integer := 48;
    end First;
 
    package Second is
-      I : Integer := 74;
+      IntegerVar : Integer := 74;
    end Second;
 
    procedure Do_Nothing (Val : in out Integer);

@@ -1,6 +1,6 @@
 /* addrmap.c --- implementation of address map data structure.
 
-   Copyright (C) 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -307,7 +307,8 @@ addrmap_node_set_value (splay_tree_node node, void *value)
 
 
 static void
-addrmap_splay_tree_insert (struct addrmap_mutable *map, CORE_ADDR key, void *value)
+addrmap_splay_tree_insert (struct addrmap_mutable *map,
+			   CORE_ADDR key, void *value)
 {
   splay_tree_insert (map->tree,
                      allocate_key (map, key),

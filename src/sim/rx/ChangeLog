@@ -1,3 +1,19 @@
+2011-04-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* gdb-if.c (sim_complete_command): New stub function.
+
+2011-01-11  Andrew Burgess  <aburgess@broadcom.com>
+
+	* gdb-if.c (sim_store_register): Update return value to
+	match new API.
+
+2010-12-14  DJ Delorie  <dj@redhat.com>
+
+	* rx.c (decode_opcode): For "MVFC PC,", use the address of the
+	opcode, not the address following the opcode.
+	(decode_opcode): RXO_branchrel is relative to the opcode's PC, not
+	the address following the opcode.
+
 2010-11-11  DJ Delorie  <dj@redhat.com>
 
 	* rx.c (lsb_count): New.

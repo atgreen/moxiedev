@@ -38,6 +38,7 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 @INSTALL_LIBBFD_FALSE@am__append_1 = -rpath $(rpath_bfdlibdir)
+@PLUGINS_TRUE@am__append_2 = $(INCDIR)/plugin-api.h
 subdir = .
 DIST_COMMON = README ChangeLog $(srcdir)/Makefile.in \
 	$(srcdir)/Makefile.am $(top_srcdir)/configure \
@@ -136,8 +137,8 @@ RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	install-pdf-recursive install-ps-recursive install-recursive \
 	installcheck-recursive installdirs-recursive pdf-recursive \
 	ps-recursive uninstall-recursive
-am__bfdinclude_HEADERS_DIST = bfd.h $(INCDIR)/ansidecl.h \
-	$(INCDIR)/symcat.h $(INCDIR)/bfdlink.h
+am__bfdinclude_HEADERS_DIST = $(INCDIR)/plugin-api.h bfd.h \
+	$(INCDIR)/ansidecl.h $(INCDIR)/symcat.h $(INCDIR)/bfdlink.h
 HEADERS = $(bfdinclude_HEADERS)
 RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
   distclean-recursive maintainer-clean-recursive
@@ -327,7 +328,10 @@ bfddocdir = doc
 libbfd_la_LDFLAGS = $(am__append_1) -release `cat libtool-soversion` \
 	@SHARED_LDFLAGS@ $(am__empty)
 @INSTALL_LIBBFD_TRUE@bfdlib_LTLIBRARIES = libbfd.la
-@INSTALL_LIBBFD_TRUE@bfdinclude_HEADERS = $(BFD_H) $(INCDIR)/ansidecl.h $(INCDIR)/symcat.h $(INCDIR)/bfdlink.h
+@INSTALL_LIBBFD_FALSE@bfdinclude_HEADERS = $(am__append_2)
+@INSTALL_LIBBFD_TRUE@bfdinclude_HEADERS = $(BFD_H) \
+@INSTALL_LIBBFD_TRUE@	$(INCDIR)/ansidecl.h $(INCDIR)/symcat.h \
+@INSTALL_LIBBFD_TRUE@	$(INCDIR)/bfdlink.h $(am__append_2)
 @INSTALL_LIBBFD_FALSE@rpath_bfdlibdir = @bfdlibdir@
 @INSTALL_LIBBFD_FALSE@noinst_LTLIBRARIES = libbfd.la
 AM_CFLAGS = $(WARN_CFLAGS)
@@ -902,6 +906,7 @@ BFD64_BACKENDS = \
 	elf64-x86-64.lo \
 	elf64.lo \
 	elfn32-mips.lo \
+	elfxx-ia64.lo \
 	mach-o-x86-64.lo \
 	mmo.lo \
 	nlm32-alpha.lo \
@@ -934,6 +939,7 @@ BFD64_BACKENDS_CFILES = \
 	elf64-x86-64.c \
 	elf64.c \
 	elfn32-mips.c \
+	elfxx-ia64.c \
 	mach-o-x86-64.c \
 	mmo.c \
 	nlm32-alpha.c \
@@ -950,6 +956,7 @@ OPTIONAL_BACKENDS = \
 	irix-core.lo \
 	lynx-core.lo \
 	osf-core.lo \
+	rs6000-core.lo \
 	sco5-core.lo \
 	trad-core.lo
 
@@ -960,6 +967,7 @@ OPTIONAL_BACKENDS_CFILES = \
 	irix-core.c \
 	lynx-core.c \
 	osf-core.c \
+	rs6000-core.c \
 	sco5-core.c \
 	trad-core.c
 
@@ -1006,7 +1014,7 @@ SOURCE_HFILES = \
 	libnlm.h liboasys.h libpei.h libxcoff.h mach-o.h \
 	netbsd.h nlm-target.h nlmcode.h nlmswap.h ns32k.h \
 	pef.h pef-traceback.h peicode.h som.h version.h \
-	vms.h xcoff-target.h xsym.h
+	vms.h xsym.h
 
 BUILD_HFILES = \
 	bfdver.h elf32-target.h elf64-target.h targmatch.h bfd_stdint.h
@@ -1383,6 +1391,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/elf64.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/elflink.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/elfn32-mips.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/elfxx-ia64.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/elfxx-mips.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/elfxx-sparc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/epoc-pe-arm.Plo@am__quote@
@@ -1460,6 +1469,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/reloc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/reloc16.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/riscix.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rs6000-core.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sco5-core.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/section.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/simple.Plo@am__quote@
@@ -1888,14 +1898,14 @@ elf64-target.h : elfxx-target.h
 	sed -e s/NN/64/g < $(srcdir)/elfxx-target.h > elf64-target.new
 	mv -f elf64-target.new elf64-target.h
 
-elf32-ia64.c : elfxx-ia64.c
+elf32-ia64.c : elfnn-ia64.c
 	rm -f elf32-ia64.c
-	sed -e s/NN/32/g < $(srcdir)/elfxx-ia64.c > elf32-ia64.new
+	sed -e s/NN/32/g < $(srcdir)/elfnn-ia64.c > elf32-ia64.new
 	mv -f elf32-ia64.new elf32-ia64.c
 
-elf64-ia64.c : elfxx-ia64.c
+elf64-ia64.c : elfnn-ia64.c
 	rm -f elf64-ia64.c
-	sed -e s/NN/64/g < $(srcdir)/elfxx-ia64.c > elf64-ia64.new
+	sed -e s/NN/64/g < $(srcdir)/elfnn-ia64.c > elf64-ia64.new
 	mv -f elf64-ia64.new elf64-ia64.c
 
 peigen.c : peXXigen.c

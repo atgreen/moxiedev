@@ -1,4 +1,5 @@
-#   Copyright 1997, 1999, 2007, 2008, 2010 Free Software Foundation, Inc.
+#   Copyright 1997, 1999, 2007, 2008, 2010, 2011
+#   Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -53,7 +54,8 @@ if {![istarget "hppa*-hp-hpux*"] && ![istarget "*-linux*"]} then {
 #if { ![istarget "i\[34567\]86-*-linux*"]
 if { ![istarget "x86_64-*-linux*"] && ![istarget "i\[34567\]86-*-linux*"]
      && ![istarget "powerpc-*-linux*"] && ![istarget "powerpc64-*-linux*"]
-     && ![istarget "sparc-*-linux*"] && ![istarget "sparc64-*-linux*"] } {
+     && ![istarget "sparc-*-linux*"] && ![istarget "sparc64-*-linux*"]
+     && ![istarget "mips*-linux*"] } {
      continue
 }
 
@@ -164,8 +166,7 @@ proc check_for_program_end {} {
     # Deleting the catchpoints
     delete_breakpoints
 
-    set thistest "successful program end"
-    gdb_test "continue" "Program exited normally.*" $thistest
+    gdb_continue_to_end
 
 }
 
@@ -229,7 +230,7 @@ proc test_catch_syscall_with_wrong_args {} {
     # If it doesn't, everything is right (since we don't have
     # a syscall named "mlock" in it).  Otherwise, this is a failure.
     set thistest "catch syscall with unused syscall ($syscall_name)"
-    gdb_test "continue" "Program exited normally.*" $thistest
+    gdb_continue_to_end $thistest
 }
 
 proc test_catch_syscall_restarting_inferior {} {
@@ -277,8 +278,8 @@ proc test_catch_syscall_fail_nodatadir {} {
 proc do_syscall_tests {} {
     global gdb_prompt srcdir
 
-    # First, we need to set GDB datadir.
-    gdb_test_no_output "set data-directory [pwd]/../data-directory"
+    # NOTE: We don't have to point gdb at the correct data-directory.
+    # For the build tree that is handled by INTERNAL_GDBFLAGS.
 
     # Verify that the 'catch syscall' help is available
     set thistest "help catch syscall"

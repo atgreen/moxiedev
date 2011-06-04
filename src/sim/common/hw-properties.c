@@ -1,6 +1,6 @@
 /* The common simulator framework for GDB, the GNU Debugger.
 
-   Copyright 2002, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2002, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney and Red Hat.
 
@@ -35,7 +35,8 @@
 
 /* property entries */
 
-struct hw_property_data {
+struct hw_property_data
+{
   struct hw_property_data *next;
   struct hw_property *property;
   const void *init_array;
@@ -85,7 +86,7 @@ hw_add_property (struct hw *me,
 {
   struct hw_property_data *new_entry = NULL;
   struct hw_property *new_value = NULL;
-  
+
   /* find the list end */
   struct hw_property_data **insertion_point = &me->properties_of_hw;
   while (*insertion_point != NULL)
@@ -94,7 +95,7 @@ hw_add_property (struct hw *me,
 	return;
       insertion_point = &(*insertion_point)->next;
     }
-  
+
   /* create a new value */
   new_value = HW_ZALLOC (me, struct hw_property);
   new_value->name = (char *) strdup (property);
@@ -109,7 +110,7 @@ hw_add_property (struct hw *me,
   new_value->owner = me;
   new_value->original = original;
   new_value->disposition = disposition;
-  
+
   /* insert the value into the list */
   new_entry = HW_ZALLOC (me, struct hw_property_data);
   *insertion_point = new_entry;
@@ -210,7 +211,7 @@ hw_init_static_properties (SIM_DESC sd,
     {
       ASSERT (property->init_array != NULL);
       ASSERT (property->property->array == NULL);
-      ASSERT(property->property->disposition == permenant_object);
+      ASSERT (property->property->disposition == permenant_object);
       switch (property->property->type)
 	{
 	case array_property:
@@ -372,8 +373,8 @@ hw_add_boolean_property (struct hw *me,
 {
   signed32 new_boolean = (boolean ? -1 : 0);
   hw_add_property (me, property, boolean_property,
-		   &new_boolean, sizeof(new_boolean),
-		   &new_boolean, sizeof(new_boolean),
+		   &new_boolean, sizeof (new_boolean),
+		   &new_boolean, sizeof (new_boolean),
 		   NULL, permenant_object);
 }
 
@@ -403,7 +404,7 @@ hw_add_ihandle_runtime_property (struct hw *me,
 {
   /* enter the full path as the init array */
   hw_add_property (me, property, ihandle_property,
-		   ihandle->full_path, strlen(ihandle->full_path) + 1,
+		   ihandle->full_path, strlen (ihandle->full_path) + 1,
 		   NULL, 0,
 		   NULL, permenant_object);
 }
@@ -440,7 +441,7 @@ hw_set_ihandle_property (struct hw *me,
   cells = H2BE_cell (hw_instance_to_external (ihandle));
   hw_set_property (me, property, ihandle_property,
 		   &cells, sizeof (cells));
-		      
+
 }
 #endif
 
@@ -457,13 +458,13 @@ hw_find_ihandle_property (struct hw *me,
   if (node == NULL)
     hw_abort (me, "property \"%s\" not found", property);
   if (node->type != ihandle_property)
-    hw_abort(me, "property \"%s\" of wrong type (ihandle)", property);
+    hw_abort (me, "property \"%s\" of wrong type (ihandle)", property);
   if (node->array == NULL)
-    hw_abort(me, "runtime property \"%s\" not yet initialized", property);
+    hw_abort (me, "runtime property \"%s\" not yet initialized", property);
 
-  ASSERT (sizeof(ihandle) == node->sizeof_array);
-  memcpy (&ihandle, node->array, sizeof(ihandle));
-  instance = external_to_hw_instance (me, BE2H_cell(ihandle));
+  ASSERT (sizeof (ihandle) == node->sizeof_array);
+  memcpy (&ihandle, node->array, sizeof (ihandle));
+  instance = external_to_hw_instance (me, BE2H_cell (ihandle));
   ASSERT (instance != NULL);
   return instance;
 }
@@ -477,8 +478,8 @@ hw_add_integer_property (struct hw *me,
 {
   H2BE (integer);
   hw_add_property (me, property, integer_property,
-		   &integer, sizeof(integer),
-		   &integer, sizeof(integer),
+		   &integer, sizeof (integer),
+		   &integer, sizeof (integer),
 		   NULL, permenant_object);
 }
 
@@ -494,7 +495,7 @@ hw_find_integer_property (struct hw *me,
     hw_abort (me, "property \"%s\" not found", property);
   if (node->type != integer_property)
     hw_abort (me, "property \"%s\" of wrong type (integer)", property);
-  ASSERT (sizeof(integer) == node->sizeof_array);
+  ASSERT (sizeof (integer) == node->sizeof_array);
   memcpy (&integer, node->array, sizeof (integer));
   return BE2H_cell (integer);
 }
@@ -509,7 +510,7 @@ hw_find_integer_array_property (struct hw *me,
   int sizeof_integer = sizeof (*integer);
   signed_cell *cell;
   HW_TRACE ((me, "hw_find_integer(property=%s)\n", property));
-  
+
   /* check things sane */
   node = hw_find_property (me, property);
   if (node == NULL)
@@ -521,11 +522,11 @@ hw_find_integer_array_property (struct hw *me,
     hw_abort (me, "property \"%s\" contains an incomplete number of cells", property);
   if (node->sizeof_array <= sizeof_integer * index)
     return 0;
-  
+
   /* Find and convert the value */
   cell = ((signed_cell*)node->array) + index;
   *integer = BE2H_cell (*cell);
-  
+
   return node->sizeof_array / sizeof_integer;
 }
 
@@ -536,7 +537,7 @@ unit_address_to_cells (const hw_unit *unit,
 		       int nr_cells)
 {
   int i;
-  ASSERT(nr_cells == unit->nr_cells);
+  ASSERT (nr_cells == unit->nr_cells);
   for (i = 0; i < unit->nr_cells; i++)
     {
       *cell = H2BE_cell (unit->cells[i]);
@@ -552,7 +553,7 @@ cells_to_unit_address (const unsigned_cell *cell,
 		       int nr_cells)
 {
   int i;
-  memset(unit, 0, sizeof(*unit));
+  memset (unit, 0, sizeof (*unit));
   unit->nr_cells = nr_cells;
   for (i = 0; i < unit->nr_cells; i++)
     {
@@ -584,7 +585,7 @@ hw_add_range_array_property (struct hw *me,
   unsigned_cell *cells = hw_zalloc (me, sizeof_cells);
   unsigned_cell *cell;
   int i;
-  
+
   /* copy the property elements over */
   cell = cells;
   for (i = 0; i < nr_ranges; i++)
@@ -594,20 +595,20 @@ hw_add_range_array_property (struct hw *me,
       cell = unit_address_to_cells (&range->child_address, cell,
 				    hw_unit_nr_address_cells (me));
       /* copy the parent address */
-      cell = unit_address_to_cells (&range->parent_address, cell, 
+      cell = unit_address_to_cells (&range->parent_address, cell,
 				    hw_unit_nr_address_cells (hw_parent (me)));
       /* copy the size */
-      cell = unit_address_to_cells (&range->size, cell, 
+      cell = unit_address_to_cells (&range->size, cell,
 				    hw_unit_nr_size_cells (me));
     }
   ASSERT (cell == &cells[nr_range_property_cells (me, nr_ranges)]);
-  
+
   /* add it */
   hw_add_property (me, property, range_array_property,
 		   cells, sizeof_cells,
 		   cells, sizeof_cells,
 		   NULL, permenant_object);
-  
+
   hw_free (me, cells);
 }
 
@@ -621,38 +622,38 @@ hw_find_range_array_property (struct hw *me,
   unsigned sizeof_entry = (nr_range_property_cells (me, 1)
 			   * sizeof (unsigned_cell));
   const unsigned_cell *cells;
-  
+
   /* locate the property */
   node = hw_find_property (me, property);
   if (node == NULL)
     hw_abort (me, "property \"%s\" not found", property);
   if (node->type != range_array_property)
     hw_abort (me, "property \"%s\" of wrong type (range array)", property);
-  
+
   /* aligned ? */
   if ((node->sizeof_array % sizeof_entry) != 0)
     hw_abort (me, "property \"%s\" contains an incomplete number of entries",
 	      property);
-  
+
   /* within bounds? */
   if (node->sizeof_array < sizeof_entry * (index + 1))
     return 0;
-  
+
   /* find the range of interest */
   cells = (unsigned_cell*)((char*)node->array + sizeof_entry * index);
-  
+
   /* copy the child address out - converting as we go */
   cells = cells_to_unit_address (cells, &range->child_address,
 				 hw_unit_nr_address_cells (me));
-  
+
   /* copy the parent address out - converting as we go */
   cells = cells_to_unit_address (cells, &range->parent_address,
 				 hw_unit_nr_address_cells (hw_parent (me)));
-  
+
   /* copy the size - converting as we go */
   cells = cells_to_unit_address (cells, &range->size,
 				 hw_unit_nr_size_cells (me));
-  
+
   return node->sizeof_array / sizeof_entry;
 }
 
@@ -661,8 +662,8 @@ static unsigned
 nr_reg_property_cells (struct hw *me,
 		       int nr_regs)
 {
-  return (hw_unit_nr_address_cells (hw_parent(me))
-	  + hw_unit_nr_size_cells (hw_parent(me))
+  return (hw_unit_nr_address_cells (hw_parent (me))
+	  + hw_unit_nr_size_cells (hw_parent (me))
 	  ) * nr_regs;
 }
 
@@ -677,7 +678,7 @@ hw_add_reg_array_property (struct hw *me,
   unsigned_cell *cells = hw_zalloc (me, sizeof_cells);
   unsigned_cell *cell;
   int i;
-  
+
   /* copy the property elements over */
   cell = cells;
   for (i = 0; i < nr_regs; i++)
@@ -691,13 +692,13 @@ hw_add_reg_array_property (struct hw *me,
 				    hw_unit_nr_size_cells (hw_parent (me)));
     }
   ASSERT (cell == &cells[nr_reg_property_cells (me, nr_regs)]);
-  
+
   /* add it */
   hw_add_property (me, property, reg_array_property,
 		   cells, sizeof_cells,
 		   cells, sizeof_cells,
 		   NULL, permenant_object);
-  
+
   hw_free (me, cells);
 }
 
@@ -711,34 +712,34 @@ hw_find_reg_array_property (struct hw *me,
   unsigned sizeof_entry = (nr_reg_property_cells (me, 1)
 			   * sizeof (unsigned_cell));
   const unsigned_cell *cells;
-  
+
   /* locate the property */
   node = hw_find_property (me, property);
   if (node == NULL)
     hw_abort (me, "property \"%s\" not found", property);
   if (node->type != reg_array_property)
     hw_abort (me, "property \"%s\" of wrong type (reg array)", property);
-  
+
   /* aligned ? */
   if ((node->sizeof_array % sizeof_entry) != 0)
     hw_abort (me, "property \"%s\" contains an incomplete number of entries",
 	      property);
-  
+
   /* within bounds? */
   if (node->sizeof_array < sizeof_entry * (index + 1))
     return 0;
-  
+
   /* find the range of interest */
   cells = (unsigned_cell*)((char*)node->array + sizeof_entry * index);
-  
+
   /* copy the address out - converting as we go */
   cells = cells_to_unit_address (cells, &reg->address,
 				 hw_unit_nr_address_cells (hw_parent (me)));
-  
+
   /* copy the size out - converting as we go */
   cells = cells_to_unit_address (cells, &reg->size,
 				 hw_unit_nr_size_cells (hw_parent (me)));
-  
+
   return node->sizeof_array / sizeof_entry;
 }
 
@@ -749,8 +750,8 @@ hw_add_string_property (struct hw *me,
 			const char *string)
 {
   hw_add_property (me, property, string_property,
-		   string, strlen(string) + 1,
-		   string, strlen(string) + 1,
+		   string, strlen (string) + 1,
+		   string, strlen (string) + 1,
 		   NULL, permenant_object);
 }
 
@@ -766,7 +767,7 @@ hw_find_string_property (struct hw *me,
   if (node->type != string_property)
     hw_abort (me, "property \"%s\" of wrong type (string)", property);
   string = node->array;
-  ASSERT (strlen(string) + 1 == node->sizeof_array);
+  ASSERT (strlen (string) + 1 == node->sizeof_array);
   return string;
 }
 
@@ -826,7 +827,7 @@ hw_find_string_array_property (struct hw *me,
       if (index == 0)
 	{
 	  *string = node->array;
-	  ASSERT (strlen(*string) + 1 == node->sizeof_array);
+	  ASSERT (strlen (*string) + 1 == node->sizeof_array);
 	  return 1;
 	}
       break;
@@ -886,7 +887,7 @@ hw_add_duplicate_property (struct hw *me,
   while (master->property != original)
     {
       master = master->next;
-      ASSERT(master != NULL);
+      ASSERT (master != NULL);
     }
   /* now duplicate it */
   hw_add_property (me, property,

@@ -1,5 +1,6 @@
 /* Hardware memory allocator.
-   Copyright (C) 1998, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 1998, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
    Contributed by Cygnus Support.
 
 This file is part of GDB, the GNU debugger.
@@ -26,9 +27,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <stdlib.h>
 #endif
 
-struct hw_alloc_data {
+struct hw_alloc_data
+{
   void *alloc;
-  int zalloc_p;
   struct hw_alloc_data *next;
 };
 
@@ -54,7 +55,6 @@ hw_zalloc (struct hw *me, unsigned long size)
 {
   struct hw_alloc_data *memory = ZALLOC (struct hw_alloc_data);
   memory->alloc = zalloc (size);
-  memory->zalloc_p = 1;
   memory->next = me->alloc_of_hw;
   me->alloc_of_hw = memory;
   return memory->alloc;
@@ -65,7 +65,6 @@ hw_malloc (struct hw *me, unsigned long size)
 {
   struct hw_alloc_data *memory = ZALLOC (struct hw_alloc_data);
   memory->alloc = zalloc (size);
-  memory->zalloc_p = 0;
   memory->next = me->alloc_of_hw;
   me->alloc_of_hw = memory;
   return memory->alloc;
@@ -84,11 +83,8 @@ hw_free (struct hw *me,
 	{
 	  struct hw_alloc_data *die = (*memory);
 	  (*memory) = die->next;
-	  if (die->zalloc_p)
-	    zfree (die->alloc);
-	  else
-	    free (die->alloc);
-	  zfree (die);
+	  free (die->alloc);
+	  free (die);
 	  return;
 	}
     }

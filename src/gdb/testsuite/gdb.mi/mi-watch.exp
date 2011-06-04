@@ -1,4 +1,4 @@
-# Copyright 1999, 2000, 2001, 2002, 2004, 2005, 2007, 2008, 2009, 2010
+# Copyright 1999, 2000, 2001, 2002, 2004, 2005, 2007, 2008, 2009, 2010, 2011
 # Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
@@ -59,7 +59,7 @@ proc test_watchpoint_creation_and_listing {type} {
              "break-watch operation"
 
     mi_gdb_test "222-break-list" \
-	    "222\\\^done,BreakpointTable=\{nr_rows=\".\",nr_cols=\".\",hdr=\\\[\{width=\".*\",alignment=\".*\",col_name=\"number\",colhdr=\"Num\"\}.*colhdr=\"Type\".*colhdr=\"Disp\".*colhdr=\"Enb\".*colhdr=\"Address\".*colhdr=\"What\".*\\\],body=\\\[bkpt=\{number=\"2\",type=\".*watchpoint\",disp=\"keep\",enabled=\"y\",addr=\"\",what=\"C\",times=\"0\",original-location=\"C\"\}\\\]\}" \
+	    "222\\\^done,BreakpointTable=\{nr_rows=\".\",nr_cols=\".\",hdr=\\\[\{width=\".*\",alignment=\".*\",col_name=\"number\",colhdr=\"Num\"\}.*colhdr=\"Type\".*colhdr=\"Disp\".*colhdr=\"Enb\".*colhdr=\"Address\".*colhdr=\"What\".*\\\],body=\\\[bkpt=\{number=\"2\",type=\".*watchpoint\",disp=\"keep\",enabled=\"y\",what=\"C\",times=\"0\",original-location=\"C\"\}\\\]\}" \
                 "list of watchpoints"
 
 }

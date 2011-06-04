@@ -1,7 +1,7 @@
 /* GNU/Linux/x86-64 specific low level interface, for the in-process
    agent library for GDB.
 
-   Copyright (C) 2010 Free Software Foundation, Inc.
+   Copyright (C) 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -69,7 +69,7 @@ supply_fast_tracepoint_registers (struct regcache *regcache,
 ULONGEST __attribute__ ((visibility("default"), used))
 gdb_agent_get_raw_reg (const unsigned char *raw_regs, int regnum)
 {
-  if (regnum > X86_64_NUM_FT_COLLECT_GREGS)
+  if (regnum >= X86_64_NUM_FT_COLLECT_GREGS)
     return 0;
 
   return *(ULONGEST *) (raw_regs + x86_64_ft_collect_regmap[regnum]);

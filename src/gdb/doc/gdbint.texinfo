@@ -10,7 +10,7 @@
 
 @copying
 Copyright @copyright{} 1990, 1991, 1992, 1993, 1994, 1996, 1998, 1999,
-2000, 2001, 2002, 2003, 2004, 2005, 2006, 2008, 2009, 2010
+2000, 2001, 2002, 2003, 2004, 2005, 2006, 2008, 2009, 2010, 2011
 Free Software Foundation, Inc.
 Contributed by Cygnus Solutions.  Written by John Gilmore.
 Second Edition by Stan Shebs.
@@ -3607,7 +3607,7 @@ register should be printed.  Define a custom version of this function
 for fuller control over how the registers are displayed.
 
 The access should be for the specified architecture, @var{gdbarch},
-with output to the the file specified by the User Interface
+with output to the file specified by the User Interface
 Independent Output file handle, @var{file} (@pxref{UI-Independent
 Output, , UI-Independent Output---the @code{ui_out}
 Functions}).
@@ -5785,7 +5785,8 @@ compiler.
 
 @cindex source code formatting
 The standard GNU recommendations for formatting must be followed
-strictly.
+strictly.  Any @value{GDBN}-specific deviation from GNU
+recomendations is described below.
 
 A function declaration should not have its name in column zero.  A
 function definition should have its name in column zero.
@@ -5827,6 +5828,27 @@ and not:
 void * foo;
 void* foo;
 @end smallexample
+
+In addition, whitespace around casts and unary operators should follow
+the following guidelines:
+
+@multitable @columnfractions .2 .2 .8
+@item Use... @tab ...instead of @tab
+
+@item @code{!x}
+@tab @code{! x}
+@item @code{~x}
+@tab @code{~ x}
+@item @code{-x}
+@tab @code{- x}
+@tab (unary minus)
+@item @code{(foo) x}
+@tab @code{(foo)x}
+@tab (cast)
+@item @code{*x}
+@tab @code{* x}
+@tab (pointer dereference)
+@end multitable
 
 @subsection Comments
 

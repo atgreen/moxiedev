@@ -1,4 +1,4 @@
-# Copyright 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+# Copyright 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
 # Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
@@ -37,15 +37,15 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {deb
 }
 
 mi_gdb_test "-interpreter-exec" \
-  {\^error,msg="mi_cmd_interpreter_exec: Usage: -interpreter-exec interp command"} \
+  {\^error,msg="-interpreter-exec: Usage: -interpreter-exec interp command"} \
   "-interpreter-exec with no arguments"
 
 mi_gdb_test "-interpreter-exec console" \
-  {\^error,msg="mi_cmd_interpreter_exec: Usage: -interpreter-exec interp command"} \
+  {\^error,msg="-interpreter-exec: Usage: -interpreter-exec interp command"} \
   "-interpreter-exec with one argument"
 
 mi_gdb_test "-interpreter-exec bogus command" \
-  {\^error,msg="mi_cmd_interpreter_exec: could not find interpreter \\\"bogus\\\""} \
+  {\^error,msg="-interpreter-exec: could not find interpreter \\\"bogus\\\""} \
   "-interpreter-exec with bogus interpreter"
 
 set msg {Undefined command: \\\"bogus\\\"\.  Try \\\"help\\\"\.}
@@ -108,7 +108,7 @@ mi_execute_to "exec-continue" "breakpoint-hit" "callee4" "" ".*basics.c" $line_c
 #   {.*=breakpoint-delete,number=\"2\".*\^done} \
 #   "-interpreter-exec console \"delete 2\""
 mi_gdb_test "100-interpreter-exec console \"delete 2\"" \
-  {100\^done} \
+  {=breakpoint-deleted,id=\"2\"\r\n100\^done} \
   "-interpreter-exec console \"delete 2\""
 
 # NOTE: cagney/2003-02-03: Not yet.

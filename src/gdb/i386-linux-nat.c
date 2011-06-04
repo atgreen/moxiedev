@@ -1,7 +1,7 @@
 /* Native-dependent code for GNU/Linux i386.
 
    Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010 Free Software Foundation, Inc.
+   2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -170,7 +170,7 @@ fetch_register (struct regcache *regcache, int regno)
   regcache_raw_supply (regcache, regno, &val);
 }
 
-/* Store one register. */
+/* Store one register.  */
 
 static void
 store_register (const struct regcache *regcache, int regno)
@@ -216,8 +216,8 @@ supply_gregset (struct regcache *regcache, const elf_gregset_t *gregsetp)
 
   if (I386_LINUX_ORIG_EAX_REGNUM
 	< gdbarch_num_regs (get_regcache_arch (regcache)))
-    regcache_raw_supply (regcache, I386_LINUX_ORIG_EAX_REGNUM,
-			  regp + i386_linux_gregset_reg_offset[I386_LINUX_ORIG_EAX_REGNUM]);
+    regcache_raw_supply (regcache, I386_LINUX_ORIG_EAX_REGNUM, regp
+			 + i386_linux_gregset_reg_offset[I386_LINUX_ORIG_EAX_REGNUM]);
 }
 
 /* Fill register REGNO (if it is a general-purpose register) in
@@ -239,8 +239,8 @@ fill_gregset (const struct regcache *regcache,
   if ((regno == -1 || regno == I386_LINUX_ORIG_EAX_REGNUM)
       && I386_LINUX_ORIG_EAX_REGNUM
 	   < gdbarch_num_regs (get_regcache_arch (regcache)))
-    regcache_raw_collect (regcache, I386_LINUX_ORIG_EAX_REGNUM,
-			  regp + i386_linux_gregset_reg_offset[I386_LINUX_ORIG_EAX_REGNUM]);
+    regcache_raw_collect (regcache, I386_LINUX_ORIG_EAX_REGNUM, regp
+			  + i386_linux_gregset_reg_offset[I386_LINUX_ORIG_EAX_REGNUM]);
 }
 
 #ifdef HAVE_PTRACE_GETREGS
@@ -352,8 +352,15 @@ store_fpregs (const struct regcache *regcache, int tid, int regno)
 
 #else
 
-static void fetch_fpregs (struct regcache *regcache, int tid) {}
-static void store_fpregs (const struct regcache *regcache, int tid, int regno) {}
+static void
+fetch_fpregs (struct regcache *regcache, int tid)
+{
+}
+
+static void
+store_fpregs (const struct regcache *regcache, int tid, int regno)
+{
+}
 
 #endif
 
@@ -473,8 +480,17 @@ store_fpxregs (const struct regcache *regcache, int tid, int regno)
 
 #else
 
-static int fetch_fpxregs (struct regcache *regcache, int tid) { return 0; }
-static int store_fpxregs (const struct regcache *regcache, int tid, int regno) { return 0; }
+static int
+fetch_fpxregs (struct regcache *regcache, int tid)
+{
+  return 0;
+}
+
+static int
+store_fpxregs (const struct regcache *regcache, int tid, int regno)
+{
+  return 0;
+}
 
 #endif /* HAVE_PTRACE_GETFPXREGS */
 
@@ -778,7 +794,7 @@ ps_get_thread_area (const struct ps_prochandle *ph,
      call.
 
      Is this function needed?  I'm guessing that the `base' is the
-     address of a a descriptor that libthread_db uses to find the
+     address of a descriptor that libthread_db uses to find the
      thread local address base that GDB needs.  Perhaps that
      descriptor is defined by the ABI.  Anyway, given that
      libthread_db calls this function without prompting (gdb

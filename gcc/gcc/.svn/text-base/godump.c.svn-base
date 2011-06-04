@@ -1,5 +1,5 @@
 /* Output Go language descriptions of types.
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
    Written by Ian Lance Taylor <iant@google.com>.
 
 This file is part of GCC.
@@ -79,6 +79,8 @@ go_define (unsigned int lineno, const char *buffer)
   const char *name_end;
   char *out_buffer;
   char *q;
+  bool saw_operand;
+  bool need_operand;
   char *copy;
   hashval_t hashval;
   void **slot;
@@ -115,77 +117,259 @@ go_define (unsigned int lineno, const char *buffer)
      initial underscore, and let the user undo this as needed.  */
   out_buffer = XNEWVEC (char, strlen (p) * 2 + 1);
   q = out_buffer;
+  saw_operand = false;
+  need_operand = false;
   while (*p != '\0')
     {
-      if (ISALPHA (*p) || *p == '_')
+      switch (*p)
 	{
-	  const char *start;
-	  char *n;
+	case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+	case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
+	case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+	case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
+	case 'Y': case 'Z':
+	case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+	case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
+	case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
+	case 's': case 't': case 'u': case 'v': case 'w': case 'x':
+	case 'y': case 'z':
+	case '_':
+	  {
+	    /* The start of an identifier.  Technically we should also
+	       worry about UTF-8 identifiers, but they are not a
+	       problem for practical uses of -fdump-go-spec so we
+	       don't worry about them.  */
+	    const char *start;
+	    char *n;
 
-	  start = p;
-	  while (ISALNUM (*p) || *p == '_')
-	    ++p;
-	  n = XALLOCAVEC (char, p - start + 1);
-	  memcpy (n, start, p - start);
-	  n[p - start] = '\0';
-	  slot = htab_find_slot (macro_hash, n, NO_INSERT);
-	  if (slot == NULL || *slot == NULL)
-	    {
-	      /* This is a reference to a name which was not defined
-		 as a macro.  */
-	      fprintf (go_dump_file, "// unknowndefine %s\n", buffer);
-	      return;
-	    }
+	    if (saw_operand)
+	      goto unknown;
 
-	  *q++ = '_';
-	  memcpy (q, start, p - start);
-	  q += p - start;
-	}
-      else if (ISDIGIT (*p)
-	       || (*p == '.' && ISDIGIT (p[1])))
-	{
-	  const char *start;
-	  bool is_hex;
-
-	  start = p;
-	  is_hex = false;
-	  if (*p == '0' && (p[1] == 'x' || p[1] == 'X'))
-	    {
-	      p += 2;
-	      is_hex = true;
-	    }
-	  while (ISDIGIT (*p) || *p == '.' || *p == 'e' || *p == 'E'
-		 || (is_hex
-		     && ((*p >= 'a' && *p <= 'f')
-			 || (*p >= 'A' && *p <= 'F'))))
-	    ++p;
-	  memcpy (q, start, p - start);
-	  q += p - start;
-	  while (*p == 'u' || *p == 'U' || *p == 'l' || *p == 'L'
-		 || *p == 'f' || *p == 'F'
-		 || *p == 'd' || *p == 'D')
-	    {
-	      /* Go doesn't use any of these trailing type
-		 modifiers.  */
+	    start = p;
+	    while (ISALNUM (*p) || *p == '_')
 	      ++p;
+	    n = XALLOCAVEC (char, p - start + 1);
+	    memcpy (n, start, p - start);
+	    n[p - start] = '\0';
+	    slot = htab_find_slot (macro_hash, n, NO_INSERT);
+	    if (slot == NULL || *slot == NULL)
+	      {
+		/* This is a reference to a name which was not defined
+		   as a macro.  */
+		goto unknown;
+	      }
+
+	    *q++ = '_';
+	    memcpy (q, start, p - start);
+	    q += p - start;
+
+	    saw_operand = true;
+	    need_operand = false;
+	  }
+	  break;
+
+	case '.':
+	  if (!ISDIGIT (p[1]))
+	    goto unknown;
+	  /* Fall through.  */
+	case '0': case '1': case '2': case '3': case '4':
+	case '5': case '6': case '7': case '8': case '9':
+	  {
+	    const char *start;
+	    bool is_hex;
+
+	    start = p;
+	    is_hex = false;
+	    if (*p == '0' && (p[1] == 'x' || p[1] == 'X'))
+	      {
+		p += 2;
+		is_hex = true;
+	      }
+	    while (ISDIGIT (*p) || *p == '.' || *p == 'e' || *p == 'E'
+		   || (is_hex
+		       && ((*p >= 'a' && *p <= 'f')
+			   || (*p >= 'A' && *p <= 'F'))))
+	      ++p;
+	    memcpy (q, start, p - start);
+	    q += p - start;
+	    while (*p == 'u' || *p == 'U' || *p == 'l' || *p == 'L'
+		   || *p == 'f' || *p == 'F'
+		   || *p == 'd' || *p == 'D')
+	      {
+		/* Go doesn't use any of these trailing type
+		   modifiers.  */
+		++p;
+	      }
+
+	    /* We'll pick up the exponent, if any, as an
+	       expression.  */
+
+	    saw_operand = true;
+	    need_operand = false;
+	  }
+	  break;
+
+	case ' ': case '\t':
+	  *q++ = *p++;
+	  break;
+
+	case '(':
+	  /* Always OK, not part of an operand, presumed to start an
+	     operand.  */
+	  *q++ = *p++;
+	  saw_operand = false;
+	  need_operand = false;
+	  break;
+
+	case ')':
+	  /* OK if we don't need an operand, and presumed to indicate
+	     an operand.  */
+	  if (need_operand)
+	    goto unknown;
+	  *q++ = *p++;
+	  saw_operand = true;
+	  break;
+
+	case '+': case '-':
+	  /* Always OK, but not part of an operand.  */
+	  *q++ = *p++;
+	  saw_operand = false;
+	  break;
+
+	case '*': case '/': case '%': case '|': case '&': case '^':
+	  /* Must be a binary operator.  */
+	  if (!saw_operand)
+	    goto unknown;
+	  *q++ = *p++;
+	  saw_operand = false;
+	  need_operand = true;
+	  break;
+
+	case '=':
+	  *q++ = *p++;
+	  if (*p != '=')
+	    goto unknown;
+	  /* Must be a binary operator.  */
+	  if (!saw_operand)
+	    goto unknown;
+	  *q++ = *p++;
+	  saw_operand = false;
+	  need_operand = true;
+	  break;
+
+	case '!':
+	  *q++ = *p++;
+	  if (*p == '=')
+	    {
+	      /* Must be a binary operator.  */
+	      if (!saw_operand)
+		goto unknown;
+	      *q++ = *p++;
+	      saw_operand = false;
+	      need_operand = true;
 	    }
-	}
-      else if (ISSPACE (*p)
-	       || *p == '+' || *p == '-'
-	       || *p == '*' || *p == '/' || *p == '%'
-	       || *p == '|' || *p == '&'
-	       || *p == '>' || *p == '<'
-	       || *p == '!'
-	       || *p == '(' || *p == ')'
-	       || *p == '"' || *p == '\'')
-	*q++ = *p++;
-      else
-	{
-	  /* Something we don't recognize.  */
-	  fprintf (go_dump_file, "// unknowndefine %s\n", buffer);
-	  return;
+	  else
+	    {
+	      /* Must be a unary operator.  */
+	      if (saw_operand)
+		goto unknown;
+	      need_operand = true;
+	    }
+	  break;
+
+	case '<': case '>':
+	  /* Must be a binary operand, may be << or >> or <= or >=.  */
+	  if (!saw_operand)
+	    goto unknown;
+	  *q++ = *p++;
+	  if (*p == *(p - 1) || *p == '=')
+	    *q++ = *p++;
+	  saw_operand = false;
+	  need_operand = true;
+	  break;
+
+	case '~':
+	  /* Must be a unary operand, must be translated for Go.  */
+	  if (saw_operand)
+	    goto unknown;
+	  *q++ = '^';
+	  p++;
+	  need_operand = true;
+	  break;
+
+	case '"':
+	case '\'':
+	  {
+	    char quote;
+
+	    if (saw_operand)
+	      goto unknown;
+	    quote = *p;
+	    *q++ = *p++;
+	    while (*p != quote)
+	      {
+		int c;
+
+		if (*p == '\0')
+		  goto unknown;
+
+		if (*p != '\\')
+		  {
+		    *q++ = *p++;
+		    continue;
+		  }
+
+		*q++ = *p++;
+		switch (*p)
+		  {
+		  case '0': case '1': case '2': case '3':
+		  case '4': case '5': case '6': case '7':
+		    c = 0;
+		    while (*p >= '0' && *p <= '7')
+		      {
+			*q++ = *p++;
+			++c;
+		      }
+		    /* Go octal characters are always 3
+		       digits.  */
+		    if (c != 3)
+		      goto unknown;
+		    break;
+
+		  case 'x':
+		    *q++ = *p++;
+		    c = 0;
+		    while (ISXDIGIT (*p))
+		      {
+			*q++ = *p++;
+			++c;
+		      }
+		    /* Go hex characters are always 2 digits.  */
+		    if (c != 2)
+		      goto unknown;
+		    break;
+
+		  case 'a': case 'b': case 'f': case 'n': case 'r':
+		  case 't': case 'v': case '\\': case '\'': case '"':
+		    *q++ = *p++;
+		    break;
+
+		  default:
+		    goto unknown;
+		  }
+	      }
+	    *q++ = *p++;
+	    break;
+	  }
+
+	default:
+	  goto unknown;
 	}
     }
+
+  if (need_operand)
+    goto unknown;
+
   *q = '\0';
 
   slot = htab_find_slot_with_hash (macro_hash, copy, hashval, INSERT);
@@ -194,6 +378,12 @@ go_define (unsigned int lineno, const char *buffer)
   fprintf (go_dump_file, "const _%s = %s\n", copy, out_buffer);
 
   XDELETEVEC (out_buffer);
+  return;
+
+ unknown:
+  fprintf (go_dump_file, "// unknowndefine %s\n", buffer);
+  XDELETEVEC (out_buffer);
+  XDELETEVEC (copy);
 }
 
 /* A macro undef.  */
@@ -278,6 +468,9 @@ struct godump_container
   /* Global type definitions.  */
   htab_t type_hash;
 
+  /* Invalid types.  */
+  htab_t invalid_hash;
+
   /* Obstack used to write out a type definition.  */
   struct obstack type_obstack;
 };
@@ -314,20 +507,20 @@ go_format_type (struct godump_container *container, tree type,
 	  || TREE_CODE (type) == FUNCTION_TYPE))
     {
       tree name;
+      void **slot;
 
       name = TYPE_NAME (type);
-      if (TREE_CODE (name) == IDENTIFIER_NODE)
-	{
-	  obstack_1grow (ob, '_');
-	  go_append_string (ob, name);
-	  return ret;
-	}
-      else if (TREE_CODE (name) == TYPE_DECL)
-	{
-	  obstack_1grow (ob, '_');
-	  go_append_string (ob, DECL_NAME (name));
-	  return ret;
-	}
+      if (TREE_CODE (name) == TYPE_DECL)
+	name = DECL_NAME (name);
+
+      slot = htab_find_slot (container->invalid_hash, IDENTIFIER_POINTER (name),
+			     NO_INSERT);
+      if (slot != NULL)
+	ret = false;
+
+      obstack_1grow (ob, '_');
+      go_append_string (ob, name);
+      return ret;
     }
 
   pointer_set_insert (container->decls_seen, type);
@@ -339,8 +532,18 @@ go_format_type (struct godump_container *container, tree type,
       break;
 
     case TYPE_DECL:
-      obstack_1grow (ob, '_');
-      go_append_string (ob, DECL_NAME (type));
+      {
+	void **slot;
+
+	slot = htab_find_slot (container->invalid_hash,
+			       IDENTIFIER_POINTER (DECL_NAME (type)),
+			       NO_INSERT);
+	if (slot != NULL)
+	  ret = false;
+
+	obstack_1grow (ob, '_');
+	go_append_string (ob, DECL_NAME (type));
+      }
       break;
 
     case INTEGER_TYPE:
@@ -387,9 +590,6 @@ go_format_type (struct godump_container *container, tree type,
 	  case 64:
 	    s = "float64";
 	    break;
-	  case 80:
-	    s = "float80";
-	    break;
 	  default:
 	    snprintf (buf, sizeof buf, "INVALID-float-%u",
 		      TYPE_PRECISION (type));
@@ -414,31 +614,28 @@ go_format_type (struct godump_container *container, tree type,
 		      == FUNCTION_TYPE))))
         {
 	  tree name;
+	  void **slot;
 
 	  name = TYPE_NAME (TREE_TYPE (type));
-	  if (TREE_CODE (name) == IDENTIFIER_NODE)
-	    {
-	      obstack_grow (ob, "*_", 2);
-	      go_append_string (ob, name);
+	  if (TREE_CODE (name) == TYPE_DECL)
+	    name = DECL_NAME (name);
 
-	      /* The pointer here can be used without the struct or
-		 union definition.  So this struct or union is a a
-		 potential dummy type.  */
-	      if (RECORD_OR_UNION_TYPE_P (TREE_TYPE (type)))
-		pointer_set_insert (container->pot_dummy_types,
-				    IDENTIFIER_POINTER (name));
+	  slot = htab_find_slot (container->invalid_hash,
+				 IDENTIFIER_POINTER (name), NO_INSERT);
+	  if (slot != NULL)
+	    ret = false;
 
-	      return ret;
-	    }
-	  else if (TREE_CODE (name) == TYPE_DECL)
-	    {
-	      obstack_grow (ob, "*_", 2);
-	      go_append_string (ob, DECL_NAME (name));
-	      if (RECORD_OR_UNION_TYPE_P (TREE_TYPE (type)))
-		pointer_set_insert (container->pot_dummy_types,
-				    IDENTIFIER_POINTER (DECL_NAME (name)));
-	      return ret;
-	    }
+	  obstack_grow (ob, "*_", 2);
+	  go_append_string (ob, name);
+
+	  /* The pointer here can be used without the struct or union
+	     definition.  So this struct or union is a potential dummy
+	     type.  */
+	  if (RECORD_OR_UNION_TYPE_P (TREE_TYPE (type)))
+	    pointer_set_insert (container->pot_dummy_types,
+				IDENTIFIER_POINTER (name));
+
+	  return ret;
         }
       if (TREE_CODE (TREE_TYPE (type)) == FUNCTION_TYPE)
 	obstack_grow (ob, "func", 4);
@@ -488,11 +685,22 @@ go_format_type (struct godump_container *container, tree type,
 	     field != NULL_TREE;
 	     field = TREE_CHAIN (field))
 	  {
+	    struct obstack hold_type_obstack;
+	    bool field_ok;
+
+	    if (TREE_CODE (type) == UNION_TYPE)
+	      {
+		hold_type_obstack = container->type_obstack;
+		obstack_init (&container->type_obstack);
+	      }
+
+	    field_ok = true;
+
 	    if (DECL_NAME (field) == NULL)
 	      {
 		char buf[100];
 
-		obstack_grow (ob, "_f", 2);
+		obstack_grow (ob, "Godump_", 7);
 		snprintf (buf, sizeof buf, "%d", i);
 		obstack_grow (ob, buf, strlen (buf));
 		i++;
@@ -514,7 +722,7 @@ go_format_type (struct godump_container *container, tree type,
 	    if (DECL_BIT_FIELD (field))
 	      {
 		obstack_grow (ob, "INVALID-bit-field", 17);
-		ret = false;
+		field_ok = false;
 	      }
 	    else
               {
@@ -526,31 +734,59 @@ go_format_type (struct godump_container *container, tree type,
 			    && (TREE_CODE (TREE_TYPE (TREE_TYPE (field)))
                                 == FUNCTION_TYPE))))
 		  {
-		    tree name = TYPE_NAME (TREE_TYPE (field));
-		    if (TREE_CODE (name) == IDENTIFIER_NODE)
-		      {
-			obstack_1grow (ob, '_');
-			go_append_string (ob, name);
-		      }
-		    else if (TREE_CODE (name) == TYPE_DECL)
-		      {
-			obstack_1grow (ob, '_');
-			go_append_string (ob, DECL_NAME (name));
-		      }
+		    tree name;
+		    void **slot;
+
+		    name = TYPE_NAME (TREE_TYPE (field));
+		    if (TREE_CODE (name) == TYPE_DECL)
+		      name = DECL_NAME (name);
+
+		    slot = htab_find_slot (container->invalid_hash,
+					   IDENTIFIER_POINTER (name),
+					   NO_INSERT);
+		    if (slot != NULL)
+		      field_ok = false;
+
+		    obstack_1grow (ob, '_');
+		    go_append_string (ob, name);
 		  }
 		else
 		  {
 		    if (!go_format_type (container, TREE_TYPE (field), true,
 					 false))
-		      ret = false;
+		      field_ok = false;
 		  }
               }
 	    obstack_grow (ob, "; ", 2);
 
-	    /* Only output the first field of a union, and hope for
-	       the best.  */
+	    /* Only output the first successful field of a union, and
+	       hope for the best.  */
 	    if (TREE_CODE (type) == UNION_TYPE)
-	      break;
+	      {
+		if (!field_ok && TREE_CHAIN (field) == NULL_TREE)
+		  {
+		    field_ok = true;
+		    ret = false;
+		  }
+		if (field_ok)
+		  {
+		    unsigned int sz;
+
+		    sz = obstack_object_size (&container->type_obstack);
+		    obstack_grow (&hold_type_obstack,
+				  obstack_base (&container->type_obstack),
+				  sz);
+		  }
+		obstack_free (&container->type_obstack, NULL);
+		container->type_obstack = hold_type_obstack;
+		if (field_ok)
+		  break;
+	      }
+	    else
+	      {
+		if (!field_ok)
+		  ret = false;
+	      }
 	  }
 	obstack_1grow (ob, '}');
       }
@@ -558,9 +794,11 @@ go_format_type (struct godump_container *container, tree type,
 
     case FUNCTION_TYPE:
       {
-	tree args;
+	tree arg_type;
 	bool is_varargs;
 	tree result;
+	function_args_iterator iter;
+	bool seen_arg;
 
 	/* Go has no way to write a type which is a function but not a
 	   pointer to a function.  */
@@ -571,25 +809,21 @@ go_format_type (struct godump_container *container, tree type,
 	  }
 
 	obstack_1grow (ob, '(');
-	is_varargs = true;
-	for (args = TYPE_ARG_TYPES (type);
-	     args != NULL_TREE;
-	     args = TREE_CHAIN (args))
+	is_varargs = stdarg_p (type);
+	seen_arg = false;
+	FOREACH_FUNCTION_ARGS (type, arg_type, iter)
 	  {
-	    if (VOID_TYPE_P (TREE_VALUE (args)))
-	      {
-		gcc_assert (TREE_CHAIN (args) == NULL);
-		is_varargs = false;
-		break;
-	      }
-	    if (args != TYPE_ARG_TYPES (type))
+	    if (VOID_TYPE_P (arg_type))
+	      break;
+	    if (seen_arg)
 	      obstack_grow (ob, ", ", 2);
-	    if (!go_format_type (container, TREE_VALUE (args), true, false))
+	    if (!go_format_type (container, arg_type, true, false))
 	      ret = false;
+	    seen_arg = true;
 	  }
 	if (is_varargs)
 	  {
-	    if (TYPE_ARG_TYPES (type) != NULL_TREE)
+	    if (prototype_p (type))
 	      obstack_grow (ob, ", ", 2);
 	    obstack_grow (ob, "...interface{}", 14);
 	  }
@@ -661,9 +895,24 @@ go_output_typedef (struct godump_container *container, tree decl)
       for (element = TYPE_VALUES (TREE_TYPE (decl));
 	   element != NULL_TREE;
 	   element = TREE_CHAIN (element))
-	fprintf (go_dump_file, "const _%s = " HOST_WIDE_INT_PRINT_DEC "\n",
-		 IDENTIFIER_POINTER (TREE_PURPOSE (element)),
-		 tree_low_cst (TREE_VALUE (element), 0));
+	{
+	  const char *name;
+	  void **slot;
+
+	  name = IDENTIFIER_POINTER (TREE_PURPOSE (element));
+
+	  /* Sometimes a name will be defined as both an enum constant
+	     and a macro.  Avoid duplicate definition errors by
+	     treating enum constants as macros.  */
+	  slot = htab_find_slot (macro_hash, name, INSERT);
+	  if (*slot == NULL)
+	    {
+	      *slot = CONST_CAST (char *, name);
+	      fprintf (go_dump_file,
+		       "const _%s = " HOST_WIDE_INT_PRINT_DEC "\n",
+		       name, tree_low_cst (TREE_VALUE (element), 0));
+	    }
+	}
       pointer_set_insert (container->decls_seen, TREE_TYPE (decl));
       if (TYPE_CANONICAL (TREE_TYPE (decl)) != NULL_TREE)
 	pointer_set_insert (container->decls_seen,
@@ -683,7 +932,11 @@ go_output_typedef (struct godump_container *container, tree decl)
       *slot = CONST_CAST (void *, (const void *) type);
 
       if (!go_format_type (container, TREE_TYPE (decl), false, false))
-	fprintf (go_dump_file, "// ");
+	{
+	  fprintf (go_dump_file, "// ");
+	  slot = htab_find_slot (container->invalid_hash, type, INSERT);
+	  *slot = CONST_CAST (void *, (const void *) type);
+	}
       fprintf (go_dump_file, "type _%s ",
 	       IDENTIFIER_POINTER (DECL_NAME (decl)));
       go_output_type (container);
@@ -702,7 +955,11 @@ go_output_typedef (struct godump_container *container, tree decl)
        *slot = CONST_CAST (void *, (const void *) type);
 
        if (!go_format_type (container, TREE_TYPE (decl), false, false))
-	 fprintf (go_dump_file, "// ");
+	 {
+	   fprintf (go_dump_file, "// ");
+	   slot = htab_find_slot (container->invalid_hash, type, INSERT);
+	   *slot = CONST_CAST (void *, (const void *) type);
+	 }
        fprintf (go_dump_file, "type _%s ",
 	       IDENTIFIER_POINTER (TYPE_NAME (TREE_TYPE (decl))));
        go_output_type (container);
@@ -718,13 +975,27 @@ go_output_typedef (struct godump_container *container, tree decl)
 static void
 go_output_var (struct godump_container *container, tree decl)
 {
+  bool is_valid;
+
   if (pointer_set_contains (container->decls_seen, decl)
       || pointer_set_contains (container->decls_seen, DECL_NAME (decl)))
     return;
   pointer_set_insert (container->decls_seen, decl);
   pointer_set_insert (container->decls_seen, DECL_NAME (decl));
-  if (!go_format_type (container, TREE_TYPE (decl), true, false))
+
+  is_valid = go_format_type (container, TREE_TYPE (decl), true, false);
+  if (is_valid
+      && htab_find_slot (container->type_hash,
+			 IDENTIFIER_POINTER (DECL_NAME (decl)),
+			 NO_INSERT) != NULL)
+    {
+      /* There is already a type with this name, probably from a
+	 struct tag.  Prefer the type to the variable.  */
+      is_valid = false;
+    }
+  if (!is_valid)
     fprintf (go_dump_file, "// ");
+
   fprintf (go_dump_file, "var _%s ",
 	   IDENTIFIER_POINTER (DECL_NAME (decl)));
   go_output_type (container);
@@ -800,6 +1071,8 @@ go_finish (const char *filename)
   container.pot_dummy_types = pointer_set_create ();
   container.type_hash = htab_create (100, htab_hash_string,
                                      string_hash_eq, NULL);
+  container.invalid_hash = htab_create (10, htab_hash_string,
+					string_hash_eq, NULL);
   container.keyword_hash = htab_create (50, htab_hash_string,
                                         string_hash_eq, NULL);
   obstack_init (&container.type_obstack);
@@ -834,6 +1107,7 @@ go_finish (const char *filename)
   pointer_set_destroy (container.decls_seen);
   pointer_set_destroy (container.pot_dummy_types);
   htab_delete (container.type_hash);
+  htab_delete (container.invalid_hash);
   htab_delete (container.keyword_hash);
   obstack_free (&container.type_obstack, NULL);
 

@@ -614,6 +614,7 @@ java_init_decl_processing (void)
   integer_zero_node = build_int_cst (NULL_TREE, 0);
   integer_one_node = build_int_cst (NULL_TREE, 1);
   integer_two_node = build_int_cst (NULL_TREE, 2);
+  integer_three_node = build_int_cst (NULL_TREE, 3);
   integer_four_node = build_int_cst (NULL_TREE, 4);
   integer_minus_one_node = build_int_cst (NULL_TREE, -1);
 
@@ -1301,9 +1302,9 @@ pushdecl_function_level (tree x)
   return t;
 }
 
-/* Nonzero if we are currently in the global binding level.  */
+/* Return true if we are in the global binding level.  */
 
-int
+bool
 global_bindings_p (void)
 {
   return current_binding_level == global_binding_level;
@@ -1424,10 +1425,7 @@ poplevel (int keep, int reverse, int functionbody)
 
   block = 0;
   if (keep || functionbody)
-    {
-      block = make_node (BLOCK);
-      TREE_TYPE (block) = void_type_node;
-    }
+    block = make_node (BLOCK);
 
   if (current_binding_level->exception_range)
     expand_end_java_handler (current_binding_level->exception_range);
@@ -1455,7 +1453,7 @@ poplevel (int keep, int reverse, int functionbody)
 	    }
 	  *var = NULL;
 	    
-	  bind = build3 (BIND_EXPR, TREE_TYPE (block), BLOCK_VARS (block), 
+	  bind = build3 (BIND_EXPR, void_type_node, BLOCK_VARS (block), 
 			 BLOCK_EXPR_BODY (block), block);
 	  BIND_EXPR_BODY (bind) = current_binding_level->stmts;
 	  
@@ -1480,7 +1478,7 @@ poplevel (int keep, int reverse, int functionbody)
 
   /* In each subblock, record that this is its superior.  */
 
-  for (link = subblocks; link; link = TREE_CHAIN (link))
+  for (link = subblocks; link; link = BLOCK_CHAIN (link))
     BLOCK_SUPERCONTEXT (link) = block;
 
   /* Clear out the meanings of the local variables of this level.  */
@@ -1544,7 +1542,7 @@ poplevel (int keep, int reverse, int functionbody)
       if (block)
 	{
 	  current_binding_level->blocks
-	    = chainon (current_binding_level->blocks, block);
+	    = block_chainon (current_binding_level->blocks, block);
 	}
       /* If we did not make a block for the level just exited,
 	 any blocks made for inner levels
@@ -1553,7 +1551,7 @@ poplevel (int keep, int reverse, int functionbody)
 	 of something else.  */
       else if (subblocks)
 	current_binding_level->blocks
-	  = chainon (current_binding_level->blocks, subblocks);
+	  = block_chainon (current_binding_level->blocks, subblocks);
 
       if (bind)
 	java_add_stmt (bind);
@@ -1927,7 +1925,10 @@ java_mark_decl_local (tree decl)
 #ifdef ENABLE_CHECKING
   /* Double check that we didn't pass the function to the callgraph early.  */
   if (TREE_CODE (decl) == FUNCTION_DECL)
-    gcc_assert (!cgraph_node (decl)->local.finalized);
+    {
+      struct cgraph_node *node = cgraph_get_node (decl);
+      gcc_assert (!node || !node->local.finalized);
+    }
 #endif
   gcc_assert (!DECL_RTL_SET_P (decl));
 }

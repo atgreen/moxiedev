@@ -252,7 +252,7 @@ gfc_trans_io_runtime_check (tree cond, tree var, int error_code,
   asprintf (&message, "%s", _(msgid));
   arg3 = gfc_build_addr_expr (pchar_type_node,
 			      gfc_build_localized_cstring_const (message));
-  gfc_free(message);
+  free (message);
   
   tmp = build_call_expr_loc (input_location,
 			 gfor_fndecl_generate_error, 3, arg1, arg2, arg3);
@@ -267,13 +267,7 @@ gfc_trans_io_runtime_check (tree cond, tree var, int error_code,
     }
   else
     {
-      /* Tell the compiler that this isn't likely.  */
-      cond = fold_convert (long_integer_type_node, cond);
-      tmp = build_int_cst (long_integer_type_node, 0);
-      cond = build_call_expr_loc (input_location,
-			      built_in_decls[BUILT_IN_EXPECT], 2, cond, tmp);
-      cond = fold_convert (boolean_type_node, cond);
-
+      cond = gfc_unlikely (cond);
       tmp = build3_v (COND_EXPR, cond, body, build_empty_stmt (input_location));
       gfc_add_expr_to_block (pblock, tmp);
     }
@@ -301,7 +295,7 @@ gfc_build_io_library_fndecls (void)
   types[IOPARM_type_pchar] = pchar_type_node;
   pad_size = 16 * TREE_INT_CST_LOW (TYPE_SIZE_UNIT (pchar_type_node));
   pad_size += 32 * TREE_INT_CST_LOW (TYPE_SIZE_UNIT (integer_type_node));
-  pad_idx = build_index_type (build_int_cst (NULL_TREE, pad_size - 1));
+  pad_idx = build_index_type (size_int (pad_size - 1));
   types[IOPARM_type_pad] = build_array_type (char_type_node, pad_idx);
 
   /* pad actually contains pointers and integers so it needs to have an
@@ -717,7 +711,7 @@ set_string (stmtblock_t * block, stmtblock_t * postblock, tree var,
 	       "label", e->symtree->name);
       gfc_trans_runtime_check (true, false, cond, &se.pre, &e->where, msg,
 			       fold_convert (long_integer_type_node, tmp));
-      gfc_free (msg);
+      free (msg);
 
       gfc_add_modify (&se.pre, io,
 		 fold_convert (TREE_TYPE (io), GFC_DECL_ASSIGN_ADDR (se.expr)));
@@ -832,13 +826,13 @@ add_case (int label_value, gfc_st_label * label, stmtblock_t * body)
   if (label == NULL)
     return;			/* No label, no case */
 
-  value = build_int_cst (NULL_TREE, label_value);
+  value = build_int_cst (integer_type_node, label_value);
 
   /* Make a backend label for this case.  */
   tmp = gfc_build_label_decl (NULL_TREE);
 
   /* And the case itself.  */
-  tmp = build3_v (CASE_LABEL_EXPR, value, NULL_TREE, tmp);
+  tmp = build_case_label (value, NULL_TREE, tmp);
   gfc_add_expr_to_block (body, tmp);
 
   /* Jump to the label.  */
@@ -1456,12 +1450,13 @@ nml_full_name (const char* var_name, const char* cmp_name)
   char * full_name;
 
   full_name_length = strlen (var_name) + strlen (cmp_name) + 1;
-  full_name = (char*)gfc_getmem (full_name_length + 1);
+  full_name = XCNEWVEC (char, full_name_length + 1);
   strcpy (full_name, var_name);
   full_name = strcat (full_name, "%");
   full_name = strcat (full_name, cmp_name);
   return full_name;
 }
+
 
 /* nml_get_addr_expr builds an address expression from the
    gfc_symbol or gfc_component backend_decl's. An offset is
@@ -1475,9 +1470,6 @@ nml_get_addr_expr (gfc_symbol * sym, gfc_component * c,
 {
   tree decl = NULL_TREE;
   tree tmp;
-  tree itmp;
-  int array_flagged;
-  int dummy_arg_flagged;
 
   if (sym)
     {
@@ -1503,18 +1495,8 @@ nml_get_addr_expr (gfc_symbol * sym, gfc_component * c,
 
   /* Build indirect reference, if dummy argument.  */
 
-  dummy_arg_flagged = POINTER_TYPE_P (TREE_TYPE(tmp));
-
-  itmp = (dummy_arg_flagged) ? build_fold_indirect_ref_loc (input_location,
-							tmp) : tmp;
-
-  /* If an array, set flag and use indirect ref. if built.  */
-
-  array_flagged = (TREE_CODE (TREE_TYPE (itmp)) == ARRAY_TYPE
-		   && !TYPE_STRING_FLAG (TREE_TYPE (itmp)));
-
-  if (array_flagged)
-    tmp = itmp;
+  if (POINTER_TYPE_P (TREE_TYPE(tmp)))
+    tmp = build_fold_indirect_ref_loc (input_location, tmp);
 
   /* Treat the component of a derived type, using base_addr for
      the derived type.  */
@@ -1523,28 +1505,26 @@ nml_get_addr_expr (gfc_symbol * sym, gfc_component * c,
     tmp = fold_build3_loc (input_location, COMPONENT_REF, TREE_TYPE (tmp),
 			   base_addr, tmp, NULL_TREE);
 
-  /* If we have a derived type component, a reference to the first
-     element of the array is built.  This is done so that base_addr,
-     used in the build of the component reference, always points to
-     a RECORD_TYPE.  */
+  if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (tmp)))
+    tmp = gfc_conv_array_data (tmp);
+  else
+    {
+      if (!POINTER_TYPE_P (TREE_TYPE (tmp)))
+	tmp = gfc_build_addr_expr (NULL_TREE, tmp);
 
-  if (array_flagged)
-    tmp = gfc_build_array_ref (tmp, gfc_index_zero_node, NULL);
+      if (TREE_CODE (TREE_TYPE (tmp)) == ARRAY_TYPE)
+         tmp = gfc_build_array_ref (tmp, gfc_index_zero_node, NULL);
 
-  /* Now build the address expression.  */
-
-  tmp = gfc_build_addr_expr (NULL_TREE, tmp);
-
-  /* If scalar dummy, resolve indirect reference now.  */
-
-  if (dummy_arg_flagged && !array_flagged)
-    tmp = build_fold_indirect_ref_loc (input_location,
+      if (!POINTER_TYPE_P (TREE_TYPE (tmp)))
+	tmp = build_fold_indirect_ref_loc (input_location,
 				   tmp);
+    }
 
   gcc_assert (tmp && POINTER_TYPE_P (TREE_TYPE (tmp)));
 
   return tmp;
 }
+
 
 /* For an object VAR_NAME whose base address is BASE_ADDR, generate a
    call to iocall[IOCALL_SET_NML_VAL].  For derived type variable, recursively
@@ -1565,6 +1545,7 @@ transfer_namelist_element (stmtblock_t * block, const char * var_name,
   tree tmp;
   tree dtype;
   tree dt_parm_addr;
+  tree decl = NULL_TREE;
   int n_dim; 
   int itype;
   int rank = 0;
@@ -1588,7 +1569,10 @@ transfer_namelist_element (stmtblock_t * block, const char * var_name,
 
   if (rank)
     {
-      dt =  TREE_TYPE ((sym) ? sym->backend_decl : c->backend_decl);
+      decl = (sym) ? sym->backend_decl : c->backend_decl;
+      if (sym && sym->attr.dummy)
+        decl = build_fold_indirect_ref_loc (input_location, decl);
+      dt =  TREE_TYPE (decl);
       dtype = gfc_get_dtype (dt);
     }
   else
@@ -1622,9 +1606,9 @@ transfer_namelist_element (stmtblock_t * block, const char * var_name,
 			     iocall[IOCALL_SET_NML_VAL_DIM], 5,
 			     dt_parm_addr,
 			     IARG (n_dim),
-			     GFC_TYPE_ARRAY_STRIDE (dt, n_dim),
-			     GFC_TYPE_ARRAY_LBOUND (dt, n_dim),
-			     GFC_TYPE_ARRAY_UBOUND (dt, n_dim));
+			     gfc_conv_array_stride (decl, n_dim),
+			     gfc_conv_array_lbound (decl, n_dim),
+			     gfc_conv_array_ubound (decl, n_dim));
       gfc_add_expr_to_block (block, tmp);
     }
 
@@ -1643,7 +1627,7 @@ transfer_namelist_element (stmtblock_t * block, const char * var_name,
 	  transfer_namelist_element (block,
 				     full_name,
 				     NULL, cmp, expr);
-	  gfc_free (full_name);
+	  free (full_name);
 	}
     }
 }
@@ -2017,7 +2001,7 @@ transfer_array_component (tree expr, gfc_component * cm, locus * where)
 
   for (n = 0; n < cm->as->rank; n++)
     mpz_clear (ss->shape[n]);
-  gfc_free (ss->shape);
+  free (ss->shape);
 
   gfc_cleanup_loop (&loop);
 
@@ -2067,7 +2051,7 @@ transfer_expr (gfc_se * se, gfc_typespec * ts, tree addr_expr, gfc_code * code)
   switch (ts->type)
     {
     case BT_INTEGER:
-      arg2 = build_int_cst (NULL_TREE, kind);
+      arg2 = build_int_cst (integer_type_node, kind);
       if (last_dt == READ)
 	function = iocall[IOCALL_X_INTEGER];
       else
@@ -2076,7 +2060,7 @@ transfer_expr (gfc_se * se, gfc_typespec * ts, tree addr_expr, gfc_code * code)
       break;
 
     case BT_REAL:
-      arg2 = build_int_cst (NULL_TREE, kind);
+      arg2 = build_int_cst (integer_type_node, kind);
       if (last_dt == READ)
 	{
 	  if (gfc_real16_is_float128 && ts->kind == 16)
@@ -2095,7 +2079,7 @@ transfer_expr (gfc_se * se, gfc_typespec * ts, tree addr_expr, gfc_code * code)
       break;
 
     case BT_COMPLEX:
-      arg2 = build_int_cst (NULL_TREE, kind);
+      arg2 = build_int_cst (integer_type_node, kind);
       if (last_dt == READ)
 	{
 	  if (gfc_real16_is_float128 && ts->kind == 16)
@@ -2114,7 +2098,7 @@ transfer_expr (gfc_se * se, gfc_typespec * ts, tree addr_expr, gfc_code * code)
       break;
 
     case BT_LOGICAL:
-      arg2 = build_int_cst (NULL_TREE, kind);
+      arg2 = build_int_cst (integer_type_node, kind);
       if (last_dt == READ)
 	function = iocall[IOCALL_X_LOGICAL];
       else
@@ -2135,7 +2119,7 @@ transfer_expr (gfc_se * se, gfc_typespec * ts, tree addr_expr, gfc_code * code)
 	      arg2 = TYPE_MAX_VALUE (TYPE_DOMAIN (TREE_TYPE (tmp)));
 	      arg2 = fold_convert (gfc_charlen_type_node, arg2);
 	    }
-	  arg3 = build_int_cst (NULL_TREE, kind);
+	  arg3 = build_int_cst (integer_type_node, kind);
 	  if (last_dt == READ)
 	    function = iocall[IOCALL_X_CHARACTER_WIDE];
 	  else
@@ -2219,9 +2203,9 @@ transfer_array_desc (gfc_se * se, gfc_typespec * ts, tree addr_expr)
   if (ts->type == BT_CHARACTER)
     charlen_arg = se->string_length;
   else
-    charlen_arg = build_int_cst (NULL_TREE, 0);
+    charlen_arg = build_int_cst (gfc_charlen_type_node, 0);
 
-  kind_arg = build_int_cst (NULL_TREE, ts->kind);
+  kind_arg = build_int_cst (integer_type_node, ts->kind);
 
   tmp = gfc_build_addr_expr (NULL_TREE, dt_parm);
   if (last_dt == READ)

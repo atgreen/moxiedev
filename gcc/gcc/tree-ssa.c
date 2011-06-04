@@ -1,5 +1,5 @@
 /* Miscellaneous SSA utility functions.
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -352,6 +352,10 @@ insert_debug_temp_for_var_def (gimple_stmt_iterator *gsi, tree var)
       value = degenerate_phi_result (def_stmt);
       if (value && walk_tree (&value, find_released_ssa_name, NULL, NULL))
 	value = NULL;
+      /* error_mark_node is what fixup_noreturn_call changes PHI arguments
+	 to.  */
+      else if (value == error_mark_node)
+	value = NULL;
     }
   else if (is_gimple_assign (def_stmt))
     {
@@ -455,13 +459,19 @@ insert_debug_temp_for_var_def (gimple_stmt_iterator *gsi, tree var)
 	continue;
 
       if (value)
-	FOR_EACH_IMM_USE_ON_STMT (use_p, imm_iter)
-	  /* unshare_expr is not needed here.  vexpr is either a
-	     SINGLE_RHS, that can be safely shared, some other RHS
-	     that was unshared when we found it had a single debug
-	     use, or a DEBUG_EXPR_DECL, that can be safely
-	     shared.  */
-	  SET_USE (use_p, value);
+	{
+	  FOR_EACH_IMM_USE_ON_STMT (use_p, imm_iter)
+	    /* unshare_expr is not needed here.  vexpr is either a
+	       SINGLE_RHS, that can be safely shared, some other RHS
+	       that was unshared when we found it had a single debug
+	       use, or a DEBUG_EXPR_DECL, that can be safely
+	       shared.  */
+	    SET_USE (use_p, value);
+	  /* If we didn't replace uses with a debug decl fold the
+	     resulting expression.  Otherwise we end up with invalid IL.  */
+	  if (TREE_CODE (value) != DEBUG_EXPR_DECL)
+	    fold_stmt_inplace (stmt);
+	}
       else
 	gimple_debug_bind_reset_value (stmt);
 
@@ -494,6 +504,37 @@ insert_debug_temps_for_defs (gimple_stmt_iterator *gsi)
 	continue;
 
       insert_debug_temp_for_var_def (gsi, var);
+    }
+}
+
+/* Reset all debug stmts that use SSA_NAME(s) defined in STMT.  */
+
+void
+reset_debug_uses (gimple stmt)
+{
+  ssa_op_iter op_iter;
+  def_operand_p def_p;
+  imm_use_iterator imm_iter;
+  gimple use_stmt;
+
+  if (!MAY_HAVE_DEBUG_STMTS)
+    return;
+
+  FOR_EACH_PHI_OR_STMT_DEF (def_p, stmt, op_iter, SSA_OP_DEF)
+    {
+      tree var = DEF_FROM_PTR (def_p);
+
+      if (TREE_CODE (var) != SSA_NAME)
+	continue;
+
+      FOR_EACH_IMM_USE_STMT (use_stmt, imm_iter, var)
+	{
+	  if (!gimple_debug_bind_p (use_stmt))
+	    continue;
+
+	  gimple_debug_bind_reset_value (use_stmt);
+	  update_stmt (use_stmt);
+	}
     }
 }
 
@@ -875,7 +916,7 @@ verify_ssa (bool check_modified_stmt)
 
   gcc_assert (!need_ssa_update_p (cfun));
 
-  verify_stmts ();
+  verify_gimple_in_cfg (cfun);
 
   timevar_push (TV_TREE_SSA_VERIFY);
 
@@ -1157,7 +1198,7 @@ delete_tree_ssa (void)
   tree var;
 
   /* Remove annotations from every referenced local variable.  */
-  FOR_EACH_REFERENCED_VAR (var, rvi)
+  FOR_EACH_REFERENCED_VAR (cfun, var, rvi)
     {
       if (is_global_var (var))
 	continue;
@@ -1176,8 +1217,6 @@ delete_tree_ssa (void)
   /* We no longer maintain the SSA operand cache at this point.  */
   if (ssa_operands_active ())
     fini_ssa_operands ();
-
-  delete_alias_heapvars ();
 
   htab_delete (cfun->gimple_df->default_defs);
   cfun->gimple_df->default_defs = NULL;
@@ -1233,17 +1272,8 @@ useless_type_conversion_p (tree outer_type, tree inner_type)
 	  && TYPE_RESTRICT (outer_type))
 	return false;
 
-      /* If the outer type is (void *) or a pointer to an incomplete
-	 record type or a pointer to an unprototyped function,
-	 then the conversion is not necessary.  */
-      if (VOID_TYPE_P (TREE_TYPE (outer_type))
-	  || ((TREE_CODE (TREE_TYPE (outer_type)) == FUNCTION_TYPE
-	       || TREE_CODE (TREE_TYPE (outer_type)) == METHOD_TYPE)
-	      && (TREE_CODE (TREE_TYPE (outer_type))
-		  == TREE_CODE (TREE_TYPE (inner_type)))
-	      && !TYPE_ARG_TYPES (TREE_TYPE (outer_type))
-	      && useless_type_conversion_p (TREE_TYPE (TREE_TYPE (outer_type)),
-					    TREE_TYPE (TREE_TYPE (inner_type)))))
+      /* If the outer type is (void *), the conversion is not necessary.  */
+      if (VOID_TYPE_P (TREE_TYPE (outer_type)))
 	return true;
     }
 
@@ -1276,6 +1306,13 @@ useless_type_conversion_p (tree outer_type, tree inner_type)
 	  || TYPE_PRECISION (inner_type) != TYPE_PRECISION (outer_type))
 	return false;
 
+      /* Preserve conversions to BOOLEAN_TYPE if it is not of precision
+         one.  */
+      if (TREE_CODE (inner_type) != BOOLEAN_TYPE
+	  && TREE_CODE (outer_type) == BOOLEAN_TYPE
+	  && TYPE_PRECISION (outer_type) != 1)
+	return false;
+
       /* We don't need to preserve changes in the types minimum or
 	 maximum value in general as these do not generate code
 	 unless the types precisions are different.  */
@@ -1299,8 +1336,8 @@ useless_type_conversion_p (tree outer_type, tree inner_type)
       /* Do not lose casts to function pointer types.  */
       if ((TREE_CODE (TREE_TYPE (outer_type)) == FUNCTION_TYPE
 	   || TREE_CODE (TREE_TYPE (outer_type)) == METHOD_TYPE)
-	  && !useless_type_conversion_p (TREE_TYPE (outer_type),
-					 TREE_TYPE (inner_type)))
+	  && !(TREE_CODE (TREE_TYPE (inner_type)) == FUNCTION_TYPE
+	       || TREE_CODE (TREE_TYPE (inner_type)) == METHOD_TYPE))
 	return false;
 
       /* We do not care for const qualification of the pointed-to types
@@ -1407,7 +1444,7 @@ useless_type_conversion_p (tree outer_type, tree inner_type)
 	return false;
 
       /* A conversion to an unprototyped argument list is ok.  */
-      if (!TYPE_ARG_TYPES (outer_type))
+      if (!prototype_p (outer_type))
 	return true;
 
       /* If the unqualified argument types are compatible the conversion
@@ -1432,7 +1469,7 @@ useless_type_conversion_p (tree outer_type, tree inner_type)
 
       /* Defer to the target if necessary.  */
       if (TYPE_ATTRIBUTES (inner_type) || TYPE_ATTRIBUTES (outer_type))
-	return targetm.comp_type_attributes (outer_type, inner_type) != 0;
+	return comp_type_attributes (outer_type, inner_type) != 0;
 
       return true;
     }
@@ -1616,10 +1653,11 @@ walk_use_def_chains (tree var, walk_use_def_chains_fn fn, void *data,
    changed conditionally uninitialized to unconditionally uninitialized.  */
 
 /* Emit a warning for T, an SSA_NAME, being uninitialized.  The exact
-   warning text is in MSGID and LOCUS may contain a location or be null.  */
+   warning text is in MSGID and LOCUS may contain a location or be null.
+   WC is the warning code.  */
 
 void
-warn_uninit (tree t, const char *gmsgid, void *data)
+warn_uninit (enum opt_code wc, tree t, const char *gmsgid, void *data)
 {
   tree var = SSA_NAME_VAR (t);
   gimple context = (gimple) data;
@@ -1643,7 +1681,7 @@ warn_uninit (tree t, const char *gmsgid, void *data)
 	     : DECL_SOURCE_LOCATION (var);
   xloc = expand_location (location);
   floc = expand_location (DECL_SOURCE_LOCATION (cfun->decl));
-  if (warning_at (location, OPT_Wuninitialized, gmsgid, var))
+  if (warning_at (location, wc, gmsgid, var))
     {
       TREE_NO_WARNING (var) = 1;
 
@@ -1725,10 +1763,12 @@ warn_uninitialized_var (tree *tp, int *walk_subtrees, void *data_)
       /* We only do data flow with SSA_NAMEs, so that's all we
 	 can warn about.  */
       if (data->always_executed)
-        warn_uninit (t, "%qD is used uninitialized in this function",
+        warn_uninit (OPT_Wuninitialized,
+	             t, "%qD is used uninitialized in this function",
 		     data->stmt);
       else if (data->warn_possibly_uninitialized)
-        warn_uninit (t, "%qD may be used uninitialized in this function",
+        warn_uninit (OPT_Wuninitialized,
+	             t, "%qD may be used uninitialized in this function",
 		     data->stmt);
       *walk_subtrees = 0;
       break;
@@ -1838,18 +1878,40 @@ maybe_rewrite_mem_ref_base (tree *tp)
     tp = &TREE_OPERAND (*tp, 0);
   if (TREE_CODE (*tp) == MEM_REF
       && TREE_CODE (TREE_OPERAND (*tp, 0)) == ADDR_EXPR
-      && integer_zerop (TREE_OPERAND (*tp, 1))
       && (sym = TREE_OPERAND (TREE_OPERAND (*tp, 0), 0))
       && DECL_P (sym)
       && !TREE_ADDRESSABLE (sym)
       && symbol_marked_for_renaming (sym))
     {
-      if (!useless_type_conversion_p (TREE_TYPE (*tp),
-				      TREE_TYPE (sym)))
-	*tp = build1 (VIEW_CONVERT_EXPR,
+      if (TREE_CODE (TREE_TYPE (sym)) == VECTOR_TYPE
+	  && useless_type_conversion_p (TREE_TYPE (*tp),
+					TREE_TYPE (TREE_TYPE (sym)))
+	  && multiple_of_p (sizetype, TREE_OPERAND (*tp, 1),
+			    TYPE_SIZE_UNIT (TREE_TYPE (*tp))))
+	{
+	  *tp = build3 (BIT_FIELD_REF, TREE_TYPE (*tp), sym, 
+			TYPE_SIZE (TREE_TYPE (*tp)),
+			int_const_binop (MULT_EXPR,
+					 bitsize_int (BITS_PER_UNIT),
+					 TREE_OPERAND (*tp, 1)));
+	}
+      else if (TREE_CODE (TREE_TYPE (sym)) == COMPLEX_TYPE
+	       && useless_type_conversion_p (TREE_TYPE (*tp),
+					     TREE_TYPE (TREE_TYPE (sym))))
+	{
+	  *tp = build1 (integer_zerop (TREE_OPERAND (*tp, 1))
+			? REALPART_EXPR : IMAGPART_EXPR,
 			TREE_TYPE (*tp), sym);
-      else
-	*tp = sym;
+	}
+      else if (integer_zerop (TREE_OPERAND (*tp, 1)))
+	{
+	  if (!useless_type_conversion_p (TREE_TYPE (*tp),
+					  TREE_TYPE (sym)))
+	    *tp = build1 (VIEW_CONVERT_EXPR,
+			  TREE_TYPE (*tp), sym);
+	  else
+	    *tp = sym;
+	}
     }
 }
 
@@ -1869,11 +1931,22 @@ non_rewritable_mem_ref_base (tree ref)
     base = TREE_OPERAND (base, 0);
 
   /* But watch out for MEM_REFs we cannot lower to a
-     VIEW_CONVERT_EXPR.  */
+     VIEW_CONVERT_EXPR or a BIT_FIELD_REF.  */
   if (TREE_CODE (base) == MEM_REF
       && TREE_CODE (TREE_OPERAND (base, 0)) == ADDR_EXPR)
     {
       tree decl = TREE_OPERAND (TREE_OPERAND (base, 0), 0);
+      if ((TREE_CODE (TREE_TYPE (decl)) == VECTOR_TYPE
+	   || TREE_CODE (TREE_TYPE (decl)) == COMPLEX_TYPE)
+	  && useless_type_conversion_p (TREE_TYPE (base),
+					TREE_TYPE (TREE_TYPE (decl)))
+	  && double_int_fits_in_uhwi_p (mem_ref_offset (base))
+	  && double_int_ucmp
+	       (tree_to_double_int (TYPE_SIZE_UNIT (TREE_TYPE (decl))),
+		mem_ref_offset (base)) == 1
+	  && multiple_of_p (sizetype, TREE_OPERAND (base, 1),
+			    TYPE_SIZE_UNIT (TREE_TYPE (base))))
+	return NULL_TREE;
       if (DECL_P (decl)
 	  && (!integer_zerop (TREE_OPERAND (base, 1))
 	      || (DECL_SIZE (decl)
@@ -1883,6 +1956,34 @@ non_rewritable_mem_ref_base (tree ref)
     }
 
   return NULL_TREE;
+}
+
+/* For an lvalue tree LHS return true if it cannot be rewritten into SSA form.
+   Otherwise return true.  */
+
+static bool 
+non_rewritable_lvalue_p (tree lhs)
+{
+  /* A plain decl is always rewritable.  */
+  if (DECL_P (lhs))
+    return false;
+
+  /* A decl that is wrapped inside a MEM-REF that covers
+     it full is also rewritable.
+     ???  The following could be relaxed allowing component
+     references that do not change the access size.  */
+  if (TREE_CODE (lhs) == MEM_REF
+      && TREE_CODE (TREE_OPERAND (lhs, 0)) == ADDR_EXPR
+      && integer_zerop (TREE_OPERAND (lhs, 1)))
+    {
+      tree decl = TREE_OPERAND (TREE_OPERAND (lhs, 0), 0);
+      if (DECL_P (decl)
+	  && DECL_SIZE (decl) == TYPE_SIZE (TREE_TYPE (lhs))
+	  && (TREE_THIS_VOLATILE (decl) == TREE_THIS_VOLATILE (lhs)))
+	return false;
+    }
+
+  return true;
 }
 
 /* When possible, clear TREE_ADDRESSABLE bit or set DECL_GIMPLE_REG_P bit and
@@ -1902,7 +2003,7 @@ maybe_optimize_var (tree var, bitmap addresses_taken, bitmap not_reg_needs)
 
   /* If the variable is not in the list of referenced vars then we
      do not need to touch it nor can we rename it.  */
-  if (!referenced_var_lookup (DECL_UID (var)))
+  if (!referenced_var_lookup (cfun, DECL_UID (var)))
     return false;
 
   if (TREE_ADDRESSABLE (var)
@@ -1978,29 +2079,13 @@ execute_update_addresses_taken (void)
 	  if (code == GIMPLE_ASSIGN || code == GIMPLE_CALL)
 	    {
               tree lhs = gimple_get_lhs (stmt);
-
-              /* A plain decl does not need it set.  */
-              if (lhs && !DECL_P (lhs))
+              if (lhs
+		  && TREE_CODE (lhs) != SSA_NAME
+		  && non_rewritable_lvalue_p (lhs))
 		{
-		  tree orig_lhs = lhs;
-
-		  while (handled_component_p (lhs))
-		    lhs = TREE_OPERAND (lhs, 0);
-
-                  if (DECL_P (lhs))
-                    bitmap_set_bit (not_reg_needs, DECL_UID (lhs));
-		  else if (TREE_CODE (lhs) == MEM_REF
-			   && TREE_CODE (TREE_OPERAND (lhs, 0)) == ADDR_EXPR)
-		    {
-		      decl = TREE_OPERAND (TREE_OPERAND (lhs, 0), 0);
-		      if (DECL_P (decl)
-			  && (!integer_zerop (TREE_OPERAND (lhs, 1))
-			      || (DECL_SIZE (decl)
-				  != TYPE_SIZE (TREE_TYPE (orig_lhs)))
-			      || (TREE_THIS_VOLATILE (lhs)
-				  != TREE_THIS_VOLATILE (decl))))
-			bitmap_set_bit (not_reg_needs, DECL_UID (decl));
-		    }
+		  decl = get_base_address (lhs);
+		  if (DECL_P (decl))
+		    bitmap_set_bit (not_reg_needs, DECL_UID (decl));
                 }
 	    }
 
@@ -2027,29 +2112,17 @@ execute_update_addresses_taken (void)
 		{
 		  tree link = gimple_asm_output_op (stmt, i);
 		  tree lhs = TREE_VALUE (link);
-
-		  /* A plain decl does not need it set.  */
-		  if (!DECL_P (lhs))
+		  if (TREE_CODE (lhs) != SSA_NAME)
 		    {
-		      tree orig_lhs = lhs;
-
-		      while (handled_component_p (lhs))
-			lhs = TREE_OPERAND (lhs, 0);
-		  
-		      if (DECL_P (lhs))
-			bitmap_set_bit (not_reg_needs, DECL_UID (lhs));
-		      else if (TREE_CODE (lhs) == MEM_REF
-			       && TREE_CODE (TREE_OPERAND (lhs, 0)) == ADDR_EXPR)
-			{
-			  decl = TREE_OPERAND (TREE_OPERAND (lhs, 0), 0);
-			  if (DECL_P (decl)
-			      && (!integer_zerop (TREE_OPERAND (lhs, 1))
-				  || (TYPE_MAIN_VARIANT (TREE_TYPE (decl))
-				      != TYPE_MAIN_VARIANT (TREE_TYPE (orig_lhs)))
-				  || (TREE_THIS_VOLATILE (lhs)
-				      != TREE_THIS_VOLATILE (decl))))
-			    bitmap_set_bit (not_reg_needs, DECL_UID (decl));
-			}
+		      decl = get_base_address (lhs);
+		      if (DECL_P (decl)
+			  && (non_rewritable_lvalue_p (lhs)
+			      /* We cannot move required conversions from
+				 the lhs to the rhs in asm statements, so
+				 require we do not need any.  */
+			      || !useless_type_conversion_p
+			            (TREE_TYPE (lhs), TREE_TYPE (decl))))
+			bitmap_set_bit (not_reg_needs, DECL_UID (decl));
 		    }
 		}
 	      for (i = 0; i < gimple_asm_ninputs (stmt); ++i)
@@ -2162,6 +2235,17 @@ execute_update_addresses_taken (void)
 		    tree link = gimple_asm_input_op (stmt, i);
 		    maybe_rewrite_mem_ref_base (&TREE_VALUE (link));
 		  }
+	      }
+
+	    else if (gimple_debug_bind_p (stmt)
+		     && gimple_debug_bind_has_value_p (stmt))
+	      {
+		tree *valuep = gimple_debug_bind_get_value_ptr (stmt);
+		tree decl;
+		maybe_rewrite_mem_ref_base (valuep);
+		decl = non_rewritable_mem_ref_base (*valuep);
+		if (decl && symbol_marked_for_renaming (decl))
+		  gimple_debug_bind_reset_value (stmt);
 	      }
 
 	    if (gimple_references_memory_p (stmt)

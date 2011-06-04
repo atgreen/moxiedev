@@ -1,6 +1,6 @@
 /* Subroutines for gcc2 for pdp11.
    Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2001, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Michael K. Gschwind (mike@vlsivie.tuwien.ac.at).
 
 This file is part of GCC.
@@ -36,11 +36,11 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree.h"
 #include "expr.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "tm_p.h"
 #include "target.h"
 #include "target-def.h"
 #include "df.h"
+#include "opts.h"
 
 /* this is the current value returned by the macro FIRST_PARM_OFFSET 
    defined in tm.h */
@@ -139,9 +139,9 @@ decode_pdp11_d (const struct real_format *fmt ATTRIBUTE_UNUSED,
 /* This is where the condition code register lives.  */
 /* rtx cc0_reg_rtx; - no longer needed? */
 
-static bool pdp11_handle_option (size_t, const char *, int);
+static bool pdp11_handle_option (struct gcc_options *, struct gcc_options *,
+				 const struct cl_decoded_option *, location_t);
 static void pdp11_option_init_struct (struct gcc_options *);
-static rtx find_addr_reg (rtx); 
 static const char *singlemove_string (rtx *);
 static bool pdp11_assemble_integer (rtx, unsigned int, int);
 static void pdp11_output_function_prologue (FILE *, HOST_WIDE_INT);
@@ -157,6 +157,7 @@ static rtx pdp11_function_arg (CUMULATIVE_ARGS *, enum machine_mode,
 static void pdp11_function_arg_advance (CUMULATIVE_ARGS *,
 					enum machine_mode, const_tree, bool);
 static void pdp11_conditional_register_usage (void);
+static bool pdp11_legitimate_constant_p (enum machine_mode, rtx);
 
 /* Implement TARGET_OPTION_OPTIMIZATION_TABLE.  */
 
@@ -234,17 +235,33 @@ static const struct default_options pdp11_option_optimization_table[] =
 
 #undef  TARGET_CONDITIONAL_REGISTER_USAGE
 #define TARGET_CONDITIONAL_REGISTER_USAGE pdp11_conditional_register_usage
+
+#undef  TARGET_ASM_FUNCTION_SECTION
+#define TARGET_ASM_FUNCTION_SECTION pdp11_function_section
+
+#undef  TARGET_PRINT_OPERAND
+#define TARGET_PRINT_OPERAND pdp11_asm_print_operand
+
+#undef  TARGET_PRINT_OPERAND_PUNCT_VALID_P
+#define TARGET_PRINT_OPERAND_PUNCT_VALID_P pdp11_asm_print_operand_punct_valid_p
+
+#undef  TARGET_LEGITIMATE_CONSTANT_P
+#define TARGET_LEGITIMATE_CONSTANT_P pdp11_legitimate_constant_p
 
 /* Implement TARGET_HANDLE_OPTION.  */
 
 static bool
-pdp11_handle_option (size_t code, const char *arg ATTRIBUTE_UNUSED,
-		     int value ATTRIBUTE_UNUSED)
+pdp11_handle_option (struct gcc_options *opts,
+		     struct gcc_options *opts_set ATTRIBUTE_UNUSED,
+		     const struct cl_decoded_option *decoded,
+		     location_t loc ATTRIBUTE_UNUSED)
 {
+  size_t code = decoded->opt_index;
+
   switch (code)
     {
     case OPT_m10:
-      target_flags &= ~(MASK_40 | MASK_45);
+      opts->x_target_flags &= ~(MASK_40 | MASK_45);
       return true;
 
     default:
@@ -480,407 +497,215 @@ singlemove_string (rtx *operands)
 }
 
 
-/* Output assembler code to perform a doubleword move insn
-   with operands OPERANDS.  */
-
-const char *
-output_move_double (rtx *operands)
+/* Expand multi-word operands (SImode or DImode) into the 2 or 4
+   corresponding HImode operands.  The number of operands is given
+   as the third argument, and the required order of the parts as
+   the fourth argument.  */
+bool
+pdp11_expand_operands (rtx *operands, rtx exops[][2], int opcount, 
+		       pdp11_action *action, pdp11_partorder order)
 {
-  enum { REGOP, OFFSOP, MEMOP, PUSHOP, POPOP, CNSTOP, RNDOP } optype0, optype1;
-  rtx latehalf[2];
-  rtx addreg0 = 0, addreg1 = 0;
-
-  /* First classify both operands.  */
-
-  if (REG_P (operands[0]))
-    optype0 = REGOP;
-  else if (offsettable_memref_p (operands[0]))
-    optype0 = OFFSOP;
-  else if (GET_CODE (XEXP (operands[0], 0)) == POST_INC)
-    optype0 = POPOP;
-  else if (GET_CODE (XEXP (operands[0], 0)) == PRE_DEC)
-    optype0 = PUSHOP;
-  else if (GET_CODE (operands[0]) == MEM)
-    optype0 = MEMOP;
-  else
-    optype0 = RNDOP;
-
-  if (REG_P (operands[1]))
-    optype1 = REGOP;
-  else if (CONSTANT_P (operands[1])
-#if 0
-	   || GET_CODE (operands[1]) == CONST_DOUBLE
-#endif
-	   )
-    optype1 = CNSTOP;
-  else if (offsettable_memref_p (operands[1]))
-    optype1 = OFFSOP;
-  else if (GET_CODE (XEXP (operands[1], 0)) == POST_INC)
-    optype1 = POPOP;
-  else if (GET_CODE (XEXP (operands[1], 0)) == PRE_DEC)
-    optype1 = PUSHOP;
-  else if (GET_CODE (operands[1]) == MEM)
-    optype1 = MEMOP;
-  else
-    optype1 = RNDOP;
-
-  /* Check for the cases that the operand constraints are not
-     supposed to allow to happen.  Abort if we get one,
-     because generating code for these cases is painful.  */
-
-  gcc_assert (optype0 != RNDOP && optype1 != RNDOP);
-
-  /* If one operand is decrementing and one is incrementing
-     decrement the former register explicitly
-     and change that operand into ordinary indexing.  */
-
-  if (optype0 == PUSHOP && optype1 == POPOP)
-    {
-      operands[0] = XEXP (XEXP (operands[0], 0), 0);
-      output_asm_insn ("sub $4,%0", operands);
-      operands[0] = gen_rtx_MEM (SImode, operands[0]);
-      optype0 = OFFSOP;
-    }
-  if (optype0 == POPOP && optype1 == PUSHOP)
-    {
-      operands[1] = XEXP (XEXP (operands[1], 0), 0);
-      output_asm_insn ("sub $4,%1", operands);
-      operands[1] = gen_rtx_MEM (SImode, operands[1]);
-      optype1 = OFFSOP;
-    }
-
-  /* If an operand is an unoffsettable memory ref, find a register
-     we can increment temporarily to make it refer to the second word.  */
-
-  if (optype0 == MEMOP)
-    addreg0 = find_addr_reg (XEXP (operands[0], 0));
-
-  if (optype1 == MEMOP)
-    addreg1 = find_addr_reg (XEXP (operands[1], 0));
-
-  /* Ok, we can do one word at a time.
-     Normally we do the low-numbered word first,
-     but if either operand is autodecrementing then we
-     do the high-numbered word first.
-
-     In either case, set up in LATEHALF the operands to use
-     for the high-numbered word and in some cases alter the
-     operands in OPERANDS to be suitable for the low-numbered word.  */
-
-  if (optype0 == REGOP)
-    latehalf[0] = gen_rtx_REG (HImode, REGNO (operands[0]) + 1);
-  else if (optype0 == OFFSOP)
-    latehalf[0] = adjust_address (operands[0], HImode, 2);
-  else
-    latehalf[0] = operands[0];
-
-  if (optype1 == REGOP)
-    latehalf[1] = gen_rtx_REG (HImode, REGNO (operands[1]) + 1);
-  else if (optype1 == OFFSOP)
-    latehalf[1] = adjust_address (operands[1], HImode, 2);
-  else if (optype1 == CNSTOP)
-    {
-	if (CONSTANT_P (operands[1]))
-	{
-	    /* now the mess begins, high word is in lower word??? 
-
-	       that's what ashc makes me think, but I don't remember :-( */
-	    latehalf[1] = GEN_INT (INTVAL(operands[1]) >> 16);
-	    operands[1] = GEN_INT (INTVAL(operands[1]) & 0xff);
-	}
-	else
-	  /* immediate 32-bit values not allowed */
-	  gcc_assert (GET_CODE (operands[1]) != CONST_DOUBLE);
-    }
-  else
-    latehalf[1] = operands[1];
-
-  /* If insn is effectively movd N(sp),-(sp) then we will do the
-     high word first.  We should use the adjusted operand 1 (which is N+4(sp))
-     for the low word as well, to compensate for the first decrement of sp.  */
-  if (optype0 == PUSHOP
-      && REGNO (XEXP (XEXP (operands[0], 0), 0)) == STACK_POINTER_REGNUM
-      && reg_overlap_mentioned_p (stack_pointer_rtx, operands[1]))
-    operands[1] = latehalf[1];
-
-  /* If one or both operands autodecrementing,
-     do the two words, high-numbered first.  */
-
-  /* Likewise,  the first move would clobber the source of the second one,
-     do them in the other order.  This happens only for registers;
-     such overlap can't happen in memory unless the user explicitly
-     sets it up, and that is an undefined circumstance.  */
-
-  if (optype0 == PUSHOP || optype1 == PUSHOP
-      || (optype0 == REGOP && optype1 == REGOP
-	  && REGNO (operands[0]) == REGNO (latehalf[1])))
-    {
-      /* Make any unoffsettable addresses point at high-numbered word.  */
-      if (addreg0)
-	output_asm_insn ("add $2,%0", &addreg0);
-      if (addreg1)
-	output_asm_insn ("add $2,%0", &addreg1);
-
-      /* Do that word.  */
-      output_asm_insn (singlemove_string (latehalf), latehalf);
-
-      /* Undo the adds we just did.  */
-      if (addreg0)
-	output_asm_insn ("sub $2,%0", &addreg0);
-      if (addreg1)
-	output_asm_insn ("sub $2,%0", &addreg1);
-
-      /* Do low-numbered word.  */
-      return singlemove_string (operands);
-    }
-
-  /* Normal case: do the two words, low-numbered first.  */
-
-  output_asm_insn (singlemove_string (operands), operands);
-
-  /* Make any unoffsettable addresses point at high-numbered word.  */
-  if (addreg0)
-    output_asm_insn ("add $2,%0", &addreg0);
-  if (addreg1)
-    output_asm_insn ("add $2,%0", &addreg1);
-
-  /* Do that word.  */
-  output_asm_insn (singlemove_string (latehalf), latehalf);
-
-  /* Undo the adds we just did.  */
-  if (addreg0)
-    output_asm_insn ("sub $2,%0", &addreg0);
-  if (addreg1)
-    output_asm_insn ("sub $2,%0", &addreg1);
-
-  return "";
-}
-/* Output assembler code to perform a quadword move insn
-   with operands OPERANDS.  */
-
-const char *
-output_move_quad (rtx *operands)
-{
-  enum { REGOP, OFFSOP, MEMOP, PUSHOP, POPOP, CNSTOP, RNDOP } optype0, optype1;
-  rtx latehalf[2];
-  rtx addreg0 = 0, addreg1 = 0;
-
-  output_asm_insn(";/* movdi/df: %1 -> %0 */", operands);
+  int words, op, w, i, sh;
+  pdp11_partorder useorder;
+  bool sameoff = false;
+  enum { REGOP, OFFSOP, MEMOP, PUSHOP, POPOP, CNSTOP, RNDOP } optype;
+  REAL_VALUE_TYPE r;
+  long sval[2];
   
-  if (REG_P (operands[0]))
-    optype0 = REGOP;
-  else if (offsettable_memref_p (operands[0]))
-    optype0 = OFFSOP;
-  else if (GET_CODE (XEXP (operands[0], 0)) == POST_INC)
-    optype0 = POPOP;
-  else if (GET_CODE (XEXP (operands[0], 0)) == PRE_DEC)
-    optype0 = PUSHOP;
-  else if (GET_CODE (operands[0]) == MEM)
-    optype0 = MEMOP;
-  else
-    optype0 = RNDOP;
-
-  if (REG_P (operands[1]))
-    optype1 = REGOP;
-  else if (CONSTANT_P (operands[1])
-	   || GET_CODE (operands[1]) == CONST_DOUBLE)
-    optype1 = CNSTOP;
-  else if (offsettable_memref_p (operands[1]))
-    optype1 = OFFSOP;
-  else if (GET_CODE (XEXP (operands[1], 0)) == POST_INC)
-    optype1 = POPOP;
-  else if (GET_CODE (XEXP (operands[1], 0)) == PRE_DEC)
-    optype1 = PUSHOP;
-  else if (GET_CODE (operands[1]) == MEM)
-    optype1 = MEMOP;
-  else
-    optype1 = RNDOP;
-
-  /* Check for the cases that the operand constraints are not
-     supposed to allow to happen.  Abort if we get one,
-     because generating code for these cases is painful.  */
-
-  gcc_assert (optype0 != RNDOP && optype1 != RNDOP);
+  words = GET_MODE_BITSIZE (GET_MODE (operands[0])) / 16;
   
-  if (optype0 == REGOP || optype1 == REGOP)
-  {
-      /* check for use of clrd???? 
-         if you ever allow ac4 and ac5 (now we require secondary load) 
-	 you must check whether 
-	 you want to load into them or store from them - 
-	 then dump ac0 into $help$ movce ac4/5 to ac0, do the 
-	 store from ac0, and restore ac0 - if you can find 
-	 an unused ac[0-3], use that and you save a store and a load!*/
-
-      if (FPU_REG_P(REGNO(operands[0])))
-      {
-	  if (GET_CODE(operands[1]) == CONST_DOUBLE)
-	  {
-	      REAL_VALUE_TYPE r;
-	      REAL_VALUE_FROM_CONST_DOUBLE (r, operands[1]);
-
-	      if (REAL_VALUES_EQUAL (r, dconst0))
-		  return "{clrd|clrf} %0";
-	  }
-	      
-	  return "{ldd|movf} %1, %0";
-      }
-      
-      if (FPU_REG_P(REGNO(operands[1])))
-	  return "{std|movf} %1, %0";
-  }
-      
-  /* If one operand is decrementing and one is incrementing
-     decrement the former register explicitly
-     and change that operand into ordinary indexing.  */
-
-  if (optype0 == PUSHOP && optype1 == POPOP)
+  /* If either piece order is accepted and one is pre-decrement
+     while the other is post-increment, set order to be high order
+     word first.  That will force the pre-decrement to be turned
+     into a pointer adjust, then offset addressing.
+     Otherwise, if either operand uses pre-decrement, that means
+     the order is low order first. 
+     Otherwise, if both operands are registers and destination is
+     higher than source and they overlap, do low order word (highest
+     register number) first.  */
+  useorder = either;
+  if (opcount == 2)
     {
-      operands[0] = XEXP (XEXP (operands[0], 0), 0);
-      output_asm_insn ("sub $8,%0", operands);
-      operands[0] = gen_rtx_MEM (DImode, operands[0]);
-      optype0 = OFFSOP;
-    }
-  if (optype0 == POPOP && optype1 == PUSHOP)
-    {
-      operands[1] = XEXP (XEXP (operands[1], 0), 0);
-      output_asm_insn ("sub $8,%1", operands);
-      operands[1] = gen_rtx_MEM (SImode, operands[1]);
-      optype1 = OFFSOP;
+      if (!REG_P (operands[0]) && !REG_P (operands[1]) &&
+	  !(CONSTANT_P (operands[1]) || 
+	    GET_CODE (operands[1]) == CONST_DOUBLE) &&
+	  ((GET_CODE (XEXP (operands[0], 0)) == POST_INC &&
+	    GET_CODE (XEXP (operands[1], 0)) == PRE_DEC) ||
+	   (GET_CODE (XEXP (operands[0], 0)) == PRE_DEC &&
+	    GET_CODE (XEXP (operands[1], 0)) == POST_INC)))
+	    useorder = big;
+      else if ((!REG_P (operands[0]) &&
+		GET_CODE (XEXP (operands[0], 0)) == PRE_DEC) ||
+	       (!REG_P (operands[1]) &&
+		!(CONSTANT_P (operands[1]) || 
+		  GET_CODE (operands[1]) == CONST_DOUBLE) &&
+		GET_CODE (XEXP (operands[1], 0)) == PRE_DEC))
+	useorder = little;
+      else if (REG_P (operands[0]) && REG_P (operands[1]) &&
+	       REGNO (operands[0]) > REGNO (operands[1]) &&
+	       REGNO (operands[0]) < REGNO (operands[1]) + words)
+	    useorder = little;
+
+      /* Check for source == offset from register and dest == push of
+	 the same register.  In that case, we have to use the same
+	 offset (the one for the low order word) for all words, because
+	 the push increases the offset to each source word.
+	 In theory there are other cases like this, for example dest == pop,
+	 but those don't occur in real life so ignore those.  */
+      if (GET_CODE (operands[0]) ==  MEM 
+	  && GET_CODE (XEXP (operands[0], 0)) == PRE_DEC
+	  && REGNO (XEXP (XEXP (operands[0], 0), 0)) == STACK_POINTER_REGNUM
+	  && reg_overlap_mentioned_p (stack_pointer_rtx, operands[1]))
+	sameoff = true;
     }
 
-  /* If an operand is an unoffsettable memory ref, find a register
-     we can increment temporarily to make it refer to the second word.  */
-
-  if (optype0 == MEMOP)
-    addreg0 = find_addr_reg (XEXP (operands[0], 0));
-
-  if (optype1 == MEMOP)
-    addreg1 = find_addr_reg (XEXP (operands[1], 0));
-
-  /* Ok, we can do one word at a time.
-     Normally we do the low-numbered word first,
-     but if either operand is autodecrementing then we
-     do the high-numbered word first.
-
-     In either case, set up in LATEHALF the operands to use
-     for the high-numbered word and in some cases alter the
-     operands in OPERANDS to be suitable for the low-numbered word.  */
-
-  if (optype0 == REGOP)
-    latehalf[0] = gen_rtx_REG (SImode, REGNO (operands[0]) + 2);
-  else if (optype0 == OFFSOP)
-    latehalf[0] = adjust_address (operands[0], SImode, 4);
+  /* If the caller didn't specify order, use the one we computed,
+     or high word first if we don't care either.  If the caller did
+     specify, verify we don't have a problem with that order.
+     (If it matters to the caller, constraints need to be used to
+     ensure this case doesn't occur).  */
+  if (order == either)
+    order = (useorder == either) ? big : useorder;
   else
-    latehalf[0] = operands[0];
+    gcc_assert (useorder == either || useorder == order);
 
-  if (optype1 == REGOP)
-    latehalf[1] = gen_rtx_REG (SImode, REGNO (operands[1]) + 2);
-  else if (optype1 == OFFSOP)
-    latehalf[1] = adjust_address (operands[1], SImode, 4);
-  else if (optype1 == CNSTOP)
+  
+  for (op = 0; op < opcount; op++)
     {
-      if (GET_CODE (operands[1]) == CONST_DOUBLE)
-	{
-	  REAL_VALUE_TYPE r;
-	  long dval[2];
-	  REAL_VALUE_FROM_CONST_DOUBLE (r, operands[1]);
-	  REAL_VALUE_TO_TARGET_DOUBLE (r, dval);
-	  latehalf[1] = GEN_INT (dval[1]);
-	  operands[1] = GEN_INT	(dval[0]);
-	}
-      else if (GET_CODE(operands[1]) == CONST_INT)
-	{
-	  latehalf[1] = const0_rtx;
-	}
+      /* First classify the operand.  */
+      if (REG_P (operands[op]))
+	optype = REGOP;
+      else if (CONSTANT_P (operands[op])
+	       || GET_CODE (operands[op]) == CONST_DOUBLE)
+	optype = CNSTOP;
+      else if (GET_CODE (XEXP (operands[op], 0)) == POST_INC)
+	optype = POPOP;
+      else if (GET_CODE (XEXP (operands[op], 0)) == PRE_DEC)
+	optype = PUSHOP;
+      else if (!reload_in_progress || offsettable_memref_p (operands[op]))
+	optype = OFFSOP;
+      else if (GET_CODE (operands[op]) == MEM)
+	optype = MEMOP;
       else
-	gcc_unreachable ();
+	optype = RNDOP;
+
+      /* Check for the cases that the operand constraints are not
+	 supposed to allow to happen. Return failure for such cases.  */
+      if (optype == RNDOP)
+	return false;
+      
+      if (action != NULL)
+	action[op] = no_action;
+      
+      /* If the operand uses pre-decrement addressing but we
+	 want to get the parts high order first,
+	 decrement the former register explicitly
+	 and change the operand into ordinary indexing.  */
+      if (optype == PUSHOP && order == big)
+	{
+	  gcc_assert (action != NULL);
+	  action[op] = dec_before;
+	  operands[op] = gen_rtx_MEM (GET_MODE (operands[op]),
+				      XEXP (XEXP (operands[op], 0), 0));
+	  optype = OFFSOP;
+	}
+      /* If the operand uses post-increment mode but we want 
+	 to get the parts low order first, change the operand
+	 into ordinary indexing and remember to increment
+	 the register explicitly when we're done.  */
+      else if (optype == POPOP && order == little)
+	{
+	  gcc_assert (action != NULL);
+	  action[op] = inc_after;
+	  operands[op] = gen_rtx_MEM (GET_MODE (operands[op]),
+				      XEXP (XEXP (operands[op], 0), 0));
+	  optype = OFFSOP;
+	}
+
+      if (GET_CODE (operands[op]) == CONST_DOUBLE)
+	{
+	  REAL_VALUE_FROM_CONST_DOUBLE (r, operands[op]);
+	  REAL_VALUE_TO_TARGET_DOUBLE (r, sval);
+	}
+      
+      for (i = 0; i < words; i++)
+	{
+	  if (order == big)
+	    w = i;
+	  else if (sameoff)
+	    w = words - 1;
+	  else
+	    w = words - 1 - i;
+
+	  /* Set the output operand to be word "w" of the input.  */
+	  if (optype == REGOP)
+	    exops[i][op] = gen_rtx_REG (HImode, REGNO (operands[op]) + w);
+	  else if (optype == OFFSOP)
+	    exops[i][op] = adjust_address (operands[op], HImode, w * 2);
+	  else if (optype == CNSTOP)
+	    {
+	      if (GET_CODE (operands[op]) == CONST_DOUBLE)
+		{
+		  sh = 16 - (w & 1) * 16;
+		  exops[i][op] = gen_rtx_CONST_INT (HImode, (sval[w / 2] >> sh) & 0xffff);
+		}
+	      else
+		{
+		  sh = ((words - 1 - w) * 16);
+		  exops[i][op] = gen_rtx_CONST_INT (HImode, trunc_int_for_mode (INTVAL(operands[op]) >> sh, HImode));
+		}
+	    }
+	  else
+	    exops[i][op] = operands[op];
+	}
     }
-  else
-    latehalf[1] = operands[1];
-
-  /* If insn is effectively movd N(sp),-(sp) then we will do the
-     high word first.  We should use the adjusted operand 1 (which is N+4(sp))
-     for the low word as well, to compensate for the first decrement of sp.  */
-  if (optype0 == PUSHOP
-      && REGNO (XEXP (XEXP (operands[0], 0), 0)) == STACK_POINTER_REGNUM
-      && reg_overlap_mentioned_p (stack_pointer_rtx, operands[1]))
-    operands[1] = latehalf[1];
-
-  /* If one or both operands autodecrementing,
-     do the two words, high-numbered first.  */
-
-  /* Likewise,  the first move would clobber the source of the second one,
-     do them in the other order.  This happens only for registers;
-     such overlap can't happen in memory unless the user explicitly
-     sets it up, and that is an undefined circumstance.  */
-
-  if (optype0 == PUSHOP || optype1 == PUSHOP
-      || (optype0 == REGOP && optype1 == REGOP
-	  && REGNO (operands[0]) == REGNO (latehalf[1])))
-    {
-      /* Make any unoffsettable addresses point at high-numbered word.  */
-      if (addreg0)
-	output_asm_insn ("add $4,%0", &addreg0);
-      if (addreg1)
-	output_asm_insn ("add $4,%0", &addreg1);
-
-      /* Do that word.  */
-      output_asm_insn(output_move_double(latehalf), latehalf);
-
-      /* Undo the adds we just did.  */
-      if (addreg0)
-	output_asm_insn ("sub $4,%0", &addreg0);
-      if (addreg1)
-	output_asm_insn ("sub $4,%0", &addreg1);
-
-      /* Do low-numbered word.  */
-      return output_move_double (operands);
-    }
-
-  /* Normal case: do the two words, low-numbered first.  */
-
-  output_asm_insn (output_move_double (operands), operands);
-
-  /* Make any unoffsettable addresses point at high-numbered word.  */
-  if (addreg0)
-    output_asm_insn ("add $4,%0", &addreg0);
-  if (addreg1)
-    output_asm_insn ("add $4,%0", &addreg1);
-
-  /* Do that word.  */
-  output_asm_insn (output_move_double (latehalf), latehalf);
-
-  /* Undo the adds we just did.  */
-  if (addreg0)
-    output_asm_insn ("sub $4,%0", &addreg0);
-  if (addreg1)
-    output_asm_insn ("sub $4,%0", &addreg1);
-
-  return "";
+  return true;
 }
 
-
-/* Return a REG that occurs in ADDR with coefficient 1.
-   ADDR can be effectively incremented by incrementing REG.  */
+/* Output assembler code to perform a multiple-word move insn
+   with operands OPERANDS.  This moves 2 or 4 words depending
+   on the machine mode of the operands.  */
 
-static rtx
-find_addr_reg (rtx addr)
+const char *
+output_move_multiple (rtx *operands)
 {
-  while (GET_CODE (addr) == PLUS)
+  rtx exops[4][2];
+  pdp11_action action[2];
+  int i, words;
+  
+  words = GET_MODE_BITSIZE (GET_MODE (operands[0])) / 16;
+
+  pdp11_expand_operands (operands, exops, 2, action, either);
+  
+  /* Check for explicit decrement before.  */
+  if (action[0] == dec_before)
     {
-      if (GET_CODE (XEXP (addr, 0)) == REG)
-	addr = XEXP (addr, 0);
-      if (GET_CODE (XEXP (addr, 1)) == REG)
-	addr = XEXP (addr, 1);
-      if (CONSTANT_P (XEXP (addr, 0)))
-	addr = XEXP (addr, 1);
-      if (CONSTANT_P (XEXP (addr, 1)))
-	addr = XEXP (addr, 0);
+      operands[0] = XEXP (operands[0], 0);
+      output_asm_insn ("sub $4,%0", operands);
     }
-  if (GET_CODE (addr) == REG)
-    return addr;
-  return 0;
+  if (action[1] == dec_before)
+    {
+      operands[1] = XEXP (operands[1], 0);
+      output_asm_insn ("sub $4,%1", operands);
+    }
+
+  /* Do the words.  */
+  for (i = 0; i < words; i++)
+    output_asm_insn (singlemove_string (exops[i]), exops[i]);
+
+  /* Check for increment after.  */
+  if (action[0] == inc_after)
+    {
+      operands[0] = XEXP (operands[0], 0);
+      output_asm_insn ("add $4,%0", operands);
+    }
+  if (action[1] == inc_after)
+    {
+      operands[1] = XEXP (operands[1], 0);
+      output_asm_insn ("add $4,%1", operands);
+    }
+
+  return "";
 }
 
 /* Output an ascii string.  */
@@ -905,6 +730,60 @@ output_ascii (FILE *file, const char *p, int size)
   putc ('\n', file);
 }
 
+
+void
+pdp11_asm_output_var (FILE *file, const char *name, int size,
+		      int align, bool global)
+{
+  if (align > 8)
+    fprintf (file, "\n\t.even\n");
+  if (global)
+    {
+      fprintf (file, ".globl ");
+      assemble_name (file, name);
+    }
+  fprintf (file, "\n");
+  assemble_name (file, name);
+  fprintf (file, ": .=.+ %#ho\n", (unsigned short)size);
+}
+
+static void
+pdp11_asm_print_operand (FILE *file, rtx x, int code)
+{
+  REAL_VALUE_TYPE r;
+  long sval[2];
+ 
+  if (code == '#')
+    fprintf (file, "#");
+  else if (code == '@')
+    {
+      if (TARGET_UNIX_ASM)
+	fprintf (file, "*");
+      else
+	fprintf (file, "@");
+    }
+  else if (GET_CODE (x) == REG)
+    fprintf (file, "%s", reg_names[REGNO (x)]);
+  else if (GET_CODE (x) == MEM)
+    output_address (XEXP (x, 0));
+  else if (GET_CODE (x) == CONST_DOUBLE && GET_MODE (x) != SImode)
+    {
+      REAL_VALUE_FROM_CONST_DOUBLE (r, x);
+      REAL_VALUE_TO_TARGET_DOUBLE (r, sval);
+      fprintf (file, "$%#lo", sval[0] >> 16);
+    }
+  else
+    {
+      putc ('$', file);
+      output_addr_const_pdp11 (file, x);
+    }
+}
+
+static bool
+pdp11_asm_print_operand_punct_valid_p (unsigned char c)
+{
+  return (c == '#' || c == '@');
+}
 
 void
 print_operand_address (FILE *file, register rtx addr)
@@ -1168,6 +1047,17 @@ output_jump (enum rtx_code code, int inv, int length)
     static char buf[1000];
     const char *pos, *neg;
 
+    if (cc_prev_status.flags & CC_NO_OVERFLOW)
+      {
+	switch (code)
+	  {
+	  case GTU: code = GT; break;
+	  case LTU: code = LT; break;
+	  case GEU: code = GE; break;
+	  case LEU: code = LE; break;
+	  default: ;
+	  }
+      }
     switch (code)
       {
       case EQ: pos = "beq", neg = "bne"; break;
@@ -1221,68 +1111,38 @@ notice_update_cc_on_set(rtx exp, rtx insn ATTRIBUTE_UNUSED)
 {
     if (GET_CODE (SET_DEST (exp)) == CC0)
     { 
-	cc_status.flags = 0;					
-	cc_status.value1 = SET_DEST (exp);			
-	cc_status.value2 = SET_SRC (exp);			
-
-/*
-	if (GET_MODE(SET_SRC(exp)) == DFmode)
-	    cc_status.flags |= CC_IN_FPU;
-*/	
-    }							
-    else if ((GET_CODE (SET_DEST (exp)) == REG		
-	      || GET_CODE (SET_DEST (exp)) == MEM)		
-	     && GET_CODE (SET_SRC (exp)) != PC		
-	     && (GET_MODE (SET_DEST(exp)) == HImode		
-		 || GET_MODE (SET_DEST(exp)) == QImode)	
-		&& (GET_CODE (SET_SRC(exp)) == PLUS		
-		    || GET_CODE (SET_SRC(exp)) == MINUS	
-		    || GET_CODE (SET_SRC(exp)) == AND	
-		    || GET_CODE (SET_SRC(exp)) == IOR	
-		    || GET_CODE (SET_SRC(exp)) == XOR	
-		    || GET_CODE (SET_SRC(exp)) == NOT	
-		    || GET_CODE (SET_SRC(exp)) == NEG	
-			|| GET_CODE (SET_SRC(exp)) == REG	
-		    || GET_CODE (SET_SRC(exp)) == MEM))	
-    { 
-	cc_status.flags = 0;					
-	cc_status.value1 = SET_SRC (exp);   			
-	cc_status.value2 = SET_DEST (exp);			
-	
-	if (cc_status.value1 && GET_CODE (cc_status.value1) == REG	
-	    && cc_status.value2					
-	    && reg_overlap_mentioned_p (cc_status.value1, cc_status.value2))
-    	    cc_status.value2 = 0;					
-	if (cc_status.value1 && GET_CODE (cc_status.value1) == MEM	
-	    && cc_status.value2					
-	    && GET_CODE (cc_status.value2) == MEM)			
-	    cc_status.value2 = 0; 					
+      cc_status.flags = 0;					
+      cc_status.value1 = SET_DEST (exp);			
+      cc_status.value2 = SET_SRC (exp);			
     }							
     else if (GET_CODE (SET_SRC (exp)) == CALL)		
     { 
-	CC_STATUS_INIT; 
+      CC_STATUS_INIT; 
     }
-    else if (GET_CODE (SET_DEST (exp)) == REG)       		
-	/* what's this ? */					
-    { 
-	if ((cc_status.value1					
-	     && reg_overlap_mentioned_p (SET_DEST (exp), cc_status.value1)))
-	    cc_status.value1 = 0;				
-	if ((cc_status.value2					
-	     && reg_overlap_mentioned_p (SET_DEST (exp), cc_status.value2)))
-	    cc_status.value2 = 0;				
-    }							
     else if (SET_DEST(exp) == pc_rtx)
     { 
-	/* jump */
-    }
-    else /* if (GET_CODE (SET_DEST (exp)) == MEM)	*/	
-    {  
-	/* the last else is a bit paranoiac, but since nearly all instructions 
-	   play with condition codes, it's reasonable! */
-
-	CC_STATUS_INIT; /* paranoia*/ 
+      /* jump */
+    }	
+    else if (GET_MODE (SET_DEST(exp)) == HImode		
+	     || GET_MODE (SET_DEST(exp)) == QImode)
+    { 
+      cc_status.flags = GET_CODE (SET_SRC(exp)) == MINUS ? 0 : CC_NO_OVERFLOW;
+      cc_status.value1 = SET_SRC (exp);   			
+      cc_status.value2 = SET_DEST (exp);			
+	
+      if (cc_status.value1 && GET_CODE (cc_status.value1) == REG	
+	  && cc_status.value2					
+	  && reg_overlap_mentioned_p (cc_status.value1, cc_status.value2))
+	cc_status.value2 = 0;					
+      if (cc_status.value1 && GET_CODE (cc_status.value1) == MEM	
+	  && cc_status.value2					
+	  && GET_CODE (cc_status.value2) == MEM)			
+	cc_status.value2 = 0; 					
     }		        
+    else
+    { 
+      CC_STATUS_INIT; 
+    }
 }
 
 
@@ -1364,236 +1224,157 @@ output_block_move(rtx *operands)
 {
     static int count = 0;
     char buf[200];
+    int unroll;
+    int lastbyte = 0;
     
-    if (GET_CODE(operands[2]) == CONST_INT
-	&& ! optimize_size)
+    /* Move of zero bytes is a NOP.  */
+    if (operands[2] == const0_rtx)
+      return "";
+    
+    /* Look for moves by small constant byte counts, those we'll
+       expand to straight line code.  */
+    if (CONSTANT_P (operands[2]))
     {
-	if (INTVAL(operands[2]) < 16
-	    && INTVAL(operands[3]) == 1)
+	if (INTVAL (operands[2]) < 16
+	    && (!optimize_size || INTVAL (operands[2]) < 5)
+	    && INTVAL (operands[3]) == 1)
 	{
 	    register int i;
 	    
-	    for (i = 1; i <= INTVAL(operands[2]); i++)
+	    for (i = 1; i <= INTVAL (operands[2]); i++)
 		output_asm_insn("movb (%1)+, (%0)+", operands);
 
 	    return "";
 	}
-	else if (INTVAL(operands[2]) < 32)
+	else if (INTVAL(operands[2]) < 32
+		 && (!optimize_size || INTVAL (operands[2]) < 9)
+		 && INTVAL (operands[3]) >= 2)
 	{
 	    register int i;
 	    
-	    for (i = 1; i <= INTVAL(operands[2])/2; i++)
-		output_asm_insn("mov (%1)+, (%0)+", operands);
+	    for (i = 1; i <= INTVAL (operands[2]) / 2; i++)
+		output_asm_insn ("mov (%1)+, (%0)+", operands);
+	    if (INTVAL (operands[2]) & 1)
+	      output_asm_insn ("movb (%1), (%0)", operands);
 	    
-	    /* may I assume that moved quantity is 
-	       multiple of alignment ???
-
-	       I HOPE SO !
-	    */
-
 	    return "";
 	}
-	
-
-	/* can do other clever things, maybe... */
     }
 
-    if (CONSTANT_P(operands[2]) )
+    /* Ideally we'd look for moves that are multiples of 4 or 8
+       bytes and handle those by unrolling the move loop.  That
+       makes for a lot of code if done at run time, but it's ok
+       for constant counts.  Also, for variable counts we have
+       to worry about odd byte count with even aligned pointers.
+       On 11/40 and up we handle that case; on older machines
+       we don't and just use byte-wise moves all the time.  */
+
+    if (CONSTANT_P (operands[2]) )
     {
-	/* just move count to scratch */
-	output_asm_insn("mov %2, %4", operands);
+      if (INTVAL (operands[3]) < 2)
+	unroll = 0;
+      else
+	{
+	  lastbyte = INTVAL (operands[2]) & 1;
+
+	  if (optimize_size || INTVAL (operands[2]) & 2)
+	    unroll = 1;
+	  else if (INTVAL (operands[2]) & 4)
+	    unroll = 2;
+	  else
+	    unroll = 3;
+	}
+      
+      /* Loop count is byte count scaled by unroll.  */
+      operands[2] = GEN_INT (INTVAL (operands[2]) >> unroll);
+      output_asm_insn ("mov %2, %4", operands);
     }
     else
     {
-	/* just clobber the register */
+	/* Variable byte count; use the input register
+	   as the scratch.  */
 	operands[4] = operands[2];
-    }
-    
 
-    /* switch over alignment */
-    switch (INTVAL(operands[3]))
-    {
-      case 1:
-	
-	/* 
-	  x:
-	  movb (%1)+, (%0)+
-	  
-	  if (TARGET_45)
-	     sob %4,x
-	  else
-	     dec %4
-	     bgt x
-
-	*/
-
-	sprintf(buf, "\nmovestrhi%d:", count);
-	output_asm_insn(buf, NULL);
-	
-	output_asm_insn("movb (%1)+, (%0)+", operands);
-	
-	if (TARGET_45)
-	{
-	    sprintf(buf, "sob %%4, movestrhi%d", count);
-	    output_asm_insn(buf, operands);
-	}
+	/* Decide whether to move by words, and check
+	   the byte count for zero.  */
+	if (TARGET_40_PLUS && INTVAL (operands[3]) > 1)
+	  {
+	    unroll = 1;
+	    output_asm_insn ("asr %4", operands);
+	  }
 	else
-	{
-	    output_asm_insn("dec %4", operands);
-	    
-	    sprintf(buf, "bgt movestrhi%d", count);
-	    output_asm_insn(buf, NULL);
-	}
+	  {
+	    unroll = 0;
+	    output_asm_insn ("tst %4", operands);
+	  }
+	sprintf (buf, "beq movestrhi%d", count + 1);
+	output_asm_insn (buf, NULL);
+    }
+
+    /* Output the loop label.  */
+    sprintf (buf, "\nmovestrhi%d:", count);
+    output_asm_insn (buf, NULL);
+
+    /* Output the appropriate move instructions.  */
+    switch (unroll)
+    {
+      case 0:
+	output_asm_insn ("movb (%1)+, (%0)+", operands);
+	break;
 	
-	count ++;
+      case 1:
+	output_asm_insn ("mov (%1)+, (%0)+", operands);
 	break;
 	
       case 2:
-	
-	/* 
-	   asr %4
-
-	   x:
-
-	   mov (%1)+, (%0)+
-
-	   if (TARGET_45)
-	     sob %4, x
-	   else
-	     dec %4
-	     bgt x
-	*/
-
-      generate_compact_code:
-
-	output_asm_insn("asr %4", operands);
-
-	sprintf(buf, "\nmovestrhi%d:", count);
-	output_asm_insn(buf, NULL);
-	
-	output_asm_insn("mov (%1)+, (%0)+", operands);
-	
-	if (TARGET_45)
-	{
-	    sprintf(buf, "sob %%4, movestrhi%d", count);
-	    output_asm_insn(buf, operands);
-	}
-	else
-	{
-	    output_asm_insn("dec %4", operands);
-	    
-	    sprintf(buf, "bgt movestrhi%d", count);
-	    output_asm_insn(buf, NULL);
-	}
-	
-	count ++;
+	output_asm_insn ("mov (%1)+, (%0)+", operands);
+	output_asm_insn ("mov (%1)+, (%0)+", operands);
 	break;
-
-      case 4:
 	
-	/*
-
-	   asr %4
-	   asr %4
-
-	   x:
-
-	   mov (%1)+, (%0)+
-	   mov (%1)+, (%0)+
-
-	   if (TARGET_45)
-	     sob %4, x
-	   else
-	     dec %4
-	     bgt x
-	*/
-
-	if (optimize_size)
-	    goto generate_compact_code;
-	
-	output_asm_insn("asr %4", operands);
-	output_asm_insn("asr %4", operands);
-
-	sprintf(buf, "\nmovestrhi%d:", count);
-	output_asm_insn(buf, NULL);
-	
-	output_asm_insn("mov (%1)+, (%0)+", operands);
-	output_asm_insn("mov (%1)+, (%0)+", operands);
-	
-	if (TARGET_45)
-	{
-	    sprintf(buf, "sob %%4, movestrhi%d", count);
-	    output_asm_insn(buf, operands);
-	}
-	else
-	{
-	    output_asm_insn("dec %4", operands);
-	    
-	    sprintf(buf, "bgt movestrhi%d", count);
-	    output_asm_insn(buf, NULL);
-	}
-	
-	count ++;
-	break;
-       
       default:
-	
-	/*
-	   
-	   asr %4
-	   asr %4
-	   asr %4
-
-	   x:
-
-	   mov (%1)+, (%0)+
-	   mov (%1)+, (%0)+
-	   mov (%1)+, (%0)+
-	   mov (%1)+, (%0)+
-	   
-	   if (TARGET_45)
-	     sob %4, x
-	   else
-	     dec %4
-	     bgt x
-	*/
-
-
-	if (optimize_size)
-	    goto generate_compact_code;
-	
-	output_asm_insn("asr %4", operands);
-	output_asm_insn("asr %4", operands);
-	output_asm_insn("asr %4", operands);
-
-	sprintf(buf, "\nmovestrhi%d:", count);
-	output_asm_insn(buf, NULL);
-	
-	output_asm_insn("mov (%1)+, (%0)+", operands);
-	output_asm_insn("mov (%1)+, (%0)+", operands);
-	output_asm_insn("mov (%1)+, (%0)+", operands);
-	output_asm_insn("mov (%1)+, (%0)+", operands);
-	
-	if (TARGET_45)
-	{
-	    sprintf(buf, "sob %%4, movestrhi%d", count);
-	    output_asm_insn(buf, operands);
-	}
-	else
-	{
-	    output_asm_insn("dec %4", operands);
-	    
-	    sprintf(buf, "bgt movestrhi%d", count);
-	    output_asm_insn(buf, NULL);
-	}
-	
-	count ++;
+	output_asm_insn ("mov (%1)+, (%0)+", operands);
+	output_asm_insn ("mov (%1)+, (%0)+", operands);
+	output_asm_insn ("mov (%1)+, (%0)+", operands);
+	output_asm_insn ("mov (%1)+, (%0)+", operands);
 	break;
-	
-	;
-	
     }
+
+    /* Output the decrement and test.  */
+    if (TARGET_40_PLUS)
+      {
+	sprintf (buf, "sob %%4, movestrhi%d", count);
+	output_asm_insn (buf, operands);
+      }
+    else
+      {
+	output_asm_insn ("dec %4", operands);
+	sprintf (buf, "bgt movestrhi%d", count);
+	output_asm_insn (buf, NULL);
+      }
+    count ++;
+
+    /* If constant odd byte count, move the last byte.  */
+    if (lastbyte)
+      output_asm_insn ("movb (%1), (%0)", operands);
+    else if (!CONSTANT_P (operands[2]))
+      {
+	/* Output the destination label for the zero byte count check.  */
+	sprintf (buf, "\nmovestrhi%d:", count);
+	output_asm_insn (buf, NULL);
+	count++;
     
+	/* If we did word moves, check for trailing last byte. */
+	if (unroll)
+	  {
+	    sprintf (buf, "bcc movestrhi%d", count);
+	    output_asm_insn (buf, NULL);
+	    output_asm_insn ("movb (%1), (%0)", operands);
+	    sprintf (buf, "\nmovestrhi%d:", count);
+	    output_asm_insn (buf, NULL);
+	    count++;
+	  }
+      }
+	     
     return "";
 }
 
@@ -1822,6 +1603,7 @@ pdp11_legitimate_address_p (enum machine_mode mode,
 	return false;
       }
 }
+
 /* Return the class number of the smallest class containing
    reg number REGNO.  */
 enum reg_class
@@ -1897,7 +1679,8 @@ void
 output_addr_const_pdp11 (FILE *file, rtx x)
 {
   char buf[256];
-
+  int i;
+  
  restart:
   switch (GET_CODE (x))
     {
@@ -1921,7 +1704,13 @@ output_addr_const_pdp11 (FILE *file, rtx x)
       break;
 
     case CONST_INT:
-      fprintf (file, "%#o", (int) INTVAL (x) & 0xffff);
+      i = INTVAL (x);
+      if (i < 0)
+	{
+	  i = -i;
+	  fprintf (file, "-");
+	}
+      fprintf (file, "%#o", i & 0xffff);
       break;
 
     case CONST:
@@ -1969,16 +1758,10 @@ output_addr_const_pdp11 (FILE *file, rtx x)
 	goto restart;
 
       output_addr_const_pdp11 (file, XEXP (x, 0));
-      fprintf (file, "-");
-      if (GET_CODE (XEXP (x, 1)) == CONST_INT
-	  && INTVAL (XEXP (x, 1)) < 0)
-	{
-	  fprintf (file, targetm.asm_out.open_paren);
-	  output_addr_const_pdp11 (file, XEXP (x, 1));
-	  fprintf (file, targetm.asm_out.close_paren);
-	}
-      else
-	output_addr_const_pdp11 (file, XEXP (x, 1));
+      if (GET_CODE (XEXP (x, 1)) != CONST_INT
+	  || INTVAL (XEXP (x, 1)) >= 0)
+	fprintf (file, "-");
+      output_addr_const_pdp11 (file, XEXP (x, 1));
       break;
 
     case ZERO_EXTEND:
@@ -2136,6 +1919,23 @@ pdp11_conditional_register_usage (void)
       reg_names[12] = "fr4";
       reg_names[13] = "fr5";
     }
+}
+
+static section *
+pdp11_function_section (tree decl ATTRIBUTE_UNUSED,
+			enum node_frequency freq ATTRIBUTE_UNUSED,
+			bool startup ATTRIBUTE_UNUSED,
+			bool exit ATTRIBUTE_UNUSED)
+{
+  return NULL;
+}
+
+/* Implement TARGET_LEGITIMATE_CONSTANT_P.  */
+
+static bool
+pdp11_legitimate_constant_p (enum machine_mode mode ATTRIBUTE_UNUSED, rtx x)
+{
+  return GET_CODE (x) != CONST_DOUBLE || legitimate_const_double_p (x);
 }
 
 struct gcc_target targetm = TARGET_INITIALIZER;

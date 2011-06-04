@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/fixed-point
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2011-01-16T22:02:04.458837Z
+168876
+rsandifo
 
 
 
@@ -406,11 +406,11 @@ file
 
 
 
-2009-04-24T17:45:13.000000Z
-09308f5e952ea2928745f68347ad3f91
-2007-09-22T00:27:56.331135Z
-128661
-chaoyingfu
+2011-06-04T17:56:04.718104Z
+c97b1003aacfdd8704b17bbedd652f19
+2011-01-16T22:02:04.458837Z
+168876
+rsandifo
 
 
 
@@ -432,7 +432,7 @@ chaoyingfu
 
 
 
-1684
+1792
 
 func-struct.c
 file
@@ -1188,10 +1188,10 @@ file
 
 
 
-2009-04-24T17:45:13.000000Z
-aef6022204aa91aa3cd1da4c2eddc876
-2009-01-02T11:43:05.482508Z
-143008
+2011-06-04T17:56:04.718104Z
+af1b2eabb1bfef62072addf7cac566f7
+2011-01-16T22:02:04.458837Z
+168876
 rsandifo
 
 
@@ -1214,7 +1214,7 @@ rsandifo
 
 
 
-7893
+7905
 
 keywords-reserved.c
 file

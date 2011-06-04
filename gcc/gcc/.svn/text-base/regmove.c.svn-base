@@ -1,6 +1,6 @@
 /* Move registers around to reduce number of move instructions needed.
-   Copyright (C) 1987, 1988, 1989, 1992, 1993, 1994, 1995, 1996, 1997,
-   1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 1987, 1988, 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -41,7 +41,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "basic-block.h"
 #include "except.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "reload.h"
 #include "timevar.h"
 #include "tree-pass.h"
@@ -515,7 +514,7 @@ optimize_reg_copy_3 (rtx insn, rtx dest, rtx src)
   rtx src_reg = XEXP (src, 0);
   int src_no = REGNO (src_reg);
   int dst_no = REGNO (dest);
-  rtx p, set;
+  rtx p, set, set_insn;
   enum machine_mode old_mode;
   basic_block bb = BLOCK_FOR_INSN (insn);
 
@@ -553,6 +552,7 @@ optimize_reg_copy_3 (rtx insn, rtx dest, rtx src)
 				 GET_MODE_BITSIZE (GET_MODE (src_reg))))
     return;
 
+  set_insn = p;
   old_mode = GET_MODE (src_reg);
   PUT_MODE (src_reg, GET_MODE (src));
   XEXP (src, 0) = SET_SRC (set);
@@ -585,9 +585,19 @@ optimize_reg_copy_3 (rtx insn, rtx dest, rtx src)
     }
   else
     {
-      rtx note = find_reg_note (p, REG_EQUAL, NULL_RTX);
+      rtx note = find_reg_note (set_insn, REG_EQUAL, NULL_RTX);
       if (note)
-	remove_note (p, note);
+	{
+	  if (rtx_equal_p (XEXP (note, 0), XEXP (src, 0)))
+	    {
+	      XEXP (note, 0)
+		= gen_rtx_fmt_e (GET_CODE (src), GET_MODE (src),
+				 XEXP (note, 0));
+	      df_notes_rescan (set_insn);
+	    }
+	  else
+	    remove_note (set_insn, note);
+	}
     }
 }
 
@@ -1226,11 +1236,11 @@ regmove_optimize (void)
   df_note_add_problem ();
   df_analyze ();
 
-  if (flag_ira_loop_pressure)
-    ira_set_pseudo_classes (dump_file);
-
   regstat_init_n_sets_and_refs ();
   regstat_compute_ri ();
+
+  if (flag_ira_loop_pressure)
+    ira_set_pseudo_classes (dump_file);
 
   regno_src_regno = XNEWVEC (int, nregs);
   for (i = nregs; --i >= 0; )

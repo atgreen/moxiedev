@@ -1,4 +1,4 @@
-# Copyright (c) 1999, 2000, 2001, 2002, 2003, 2006, 2010 by Red Hat, Inc.
+# Copyright (c) 1999, 2000, 2001, 2002, 2003, 2006, 2010, 2011 by Red Hat, Inc.
 # All rights reserved.
 # Copyright 2004 Nathanael Nerode
 # 
@@ -123,6 +123,7 @@ AC_ARG_ENABLE(parallel-mark,
 )
 
 AM_CPPFLAGS="-I`cd $srcdir && ${PWDCMD-pwd}`/include"
+THREADCFLAGS=
 THREADLIBS=
 case "$THREADS" in
  no | none | single)
@@ -163,21 +164,21 @@ case "$THREADS" in
      *-*-hpux10*)
 	AC_MSG_WARN("Only HP-UX 11 POSIX threads are supported.")
 	;;
-      *-*-kfreebsd*-gnu)
+     *-*-kfreebsd*-gnu)
        AC_DEFINE(GC_FREEBSD_THREADS)
-       INCLUDES="$INCLUDES -pthread"
-       THREADDLLIBS=-pthread
+       THREADCFLAGS=-pthread
+       THREADLIBS=-pthread
        AC_DEFINE(_REENTRANT)
          if test "${enable_parallel_mark}" = yes; then
          AC_DEFINE(PARALLEL_MARK)
        fi
        AC_DEFINE(THREAD_LOCAL_ALLOC)
        AC_DEFINE(USE_COMPILER_TLS, 1,[use tls for boehm])
-               ;;
+       ;;
      *-*-freebsd*)
 	AC_MSG_WARN("FreeBSD does not yet fully support threads with Boehm GC.")
 	AC_DEFINE(GC_FREEBSD_THREADS,1,[support FreeBSD threads])
-	AM_CPPFLAGS="$AM_CPPFLAGS -pthread"
+	THREADCFLAGS=-pthread
 	THREADLIBS=-pthread
       	;;
      *-*-solaris2.8*)
@@ -193,7 +194,9 @@ case "$THREADS" in
 	# The alternate thread library was only introduced in Solaris 8 and
 	# became the default in Solaris 9, so no need for the special code
 	# above otherwise.
-	THREADLIBS=-lpthread
+	# nanosleep, sched_yield, and sem_* only live in librt before
+	# Solaris 11.
+	THREADLIBS="-lpthread -lrt"
 	;;
      *-*-irix*)
 	AC_DEFINE(GC_IRIX_THREADS,1,[support for Irix pthreads])
@@ -216,7 +219,7 @@ case "$THREADS" in
 	  # May want to enable it in other cases, too.
 	  # Measurements havent yet been done.
 	fi
-	AM_CPPFLAGS="$AM_CPPFLAGS -pthread"
+	THREADCFLAGS=-pthread
 	THREADLIBS="-lpthread -lrt"
 	;;
     esac
@@ -226,33 +229,20 @@ case "$THREADS" in
     dnl Old wine getenv may not return NULL for missing entry.
     dnl Define EMPTY_GETENV_RESULTS here to work around the bug.
     ;;
- dgux386)
-    THREADS=dgux386
-AC_MSG_RESULT($THREADLIBS)
-    # Use pthread GCC  switch
-    THREADLIBS=-pthread
-    if test "${enable_parallel_mark}" = yes; then
-        AC_DEFINE(PARALLEL_MARK,1)
-    fi
-    AC_DEFINE(THREAD_LOCAL_ALLOC,1)
-    AC_DEFINE(GC_DGUX386_THREADS,1,[support for DB/UX on I386 threads])
-    AC_DEFINE(DGUX_THREADS,1,[No description])
-    # Enable _POSIX4A_DRAFT10_SOURCE with flag -pthread
-    AM_CPPFLAGS="-pthread $AM_CPPFLAGS"
-    ;;
  aix)
     THREADS=posix
     THREADLIBS=-lpthread
     AC_DEFINE(GC_AIX_THREADS,1)
     AC_DEFINE(_REENTRANT,1)
     ;;
- decosf1 | irix | mach | os2 | solaris | dce | vxworks)
+ dce | vxworks)
     AC_MSG_ERROR(thread package $THREADS not yet supported)
     ;;
  *)
     AC_MSG_ERROR($THREADS is an unknown thread package)
     ;;
 esac
+AC_SUBST(THREADCFLAGS)
 AC_SUBST(THREADLIBS)
 
 case "$host" in
@@ -310,9 +300,12 @@ case "$host" in
   *) ;;
 esac
 
-# We never want libdl on darwin. It is a fake libdl that just ends up making
-# dyld calls anyway
 case "$host" in
+  # While IRIX 6 has libdl for the O32 and N32 ABIs, it's missing for N64
+  # and unnecessary everywhere.
+  mips-sgi-irix6*) ;;
+  # We never want libdl on darwin. It is a fake libdl that just ends up making
+  # dyld calls anyway
   *-*-darwin*) ;;
   *)
     AC_CHECK_LIB(dl, dlopen, EXTRA_TEST_LIBS="$EXTRA_TEST_LIBS -ldl")
@@ -450,22 +443,6 @@ AC_SUBST(addincludes)
 AC_SUBST(addlibs)
 AC_SUBST(addtests)
 
-#
-# Check for AViiON Machines running DGUX
-#
-ac_is_dgux=no
-AC_CHECK_HEADER(sys/dg_sys_info.h, [ac_is_dgux=yes])
-
-AC_MSG_CHECKING(if host is AViiON running DGUX)
-AC_MSG_RESULT($ac_is_dgux)
-    ## :GOTCHA: we do not check anything but sys/dg_sys_info.h
-if test $ac_is_dgux = yes; then
-    if test "$enable_full_debug" = "yes"; then
-        GC_CFLAGS="$GC_CFLAGS -mstandard"
-    fi
-    GC_CFLAGS="$GC_CFLAGS -DDGUX -D_DGUX_SOURCE -Di386 -mno-legend"
-fi
-
 dnl As of 4.13a2, the collector will not properly work on Solaris when
 dnl built with gcc and -O.  So we remove -O in the appropriate case.
 dnl Not needed anymore on Solaris.
@@ -508,9 +485,6 @@ AC_ARG_ENABLE(gc-debug,
 	AC_MSG_WARN("Client must not use -fomit-frame-pointer.")
 	AC_DEFINE(SAVE_CALL_COUNT, 8, [number of call frames saved with objects allocated through the debugging interface])
       ;;
-      i[3456]86-*-dgux*)
-	AC_DEFINE(MAKE_BACK_GRAPH,1)
-      ;;
     esac 
   fi])
 
@@ -542,5 +516,5 @@ fi
 
 AC_CONFIG_HEADERS([include/gc_config.h include/gc_ext_config.h])
 
-AC_CONFIG_FILES(Makefile include/Makefile threads.mk)
+AC_CONFIG_FILES(Makefile include/Makefile testsuite/Makefile threads.mk)
 AC_OUTPUT

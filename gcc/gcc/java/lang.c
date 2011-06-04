@@ -32,7 +32,6 @@ The Free Software Foundation is independent of Sun Microsystems, Inc.  */
 #include "input.h"
 #include "java-tree.h"
 #include "jcf.h"
-#include "toplev.h"
 #include "langhooks.h"
 #include "langhooks-def.h"
 #include "flags.h"
@@ -76,8 +75,8 @@ static tree java_eh_personality (void);
 const struct attribute_spec java_attribute_table[] =
 {
  { "nonnull",                0, -1, false, true, true,
-			      NULL },
-  { NULL,                     0, 0, false, false, false, NULL }
+			      NULL, false },
+  { NULL,                     0, 0, false, false, false, NULL, false }
 };
 
 /* Used to avoid printing error messages with bogus function
@@ -403,7 +402,9 @@ put_decl_node (tree node, int verbosity)
                  if verbosity is higher than 1.  */
               && verbosity >= 1)
 	    {
-	      put_decl_node (TYPE_NAME (DECL_CONTEXT (node)),
+	      put_decl_node (TREE_CODE (DECL_CONTEXT (node)) == FUNCTION_DECL
+			     ? DECL_CONTEXT (node)
+			     : TYPE_NAME (DECL_CONTEXT (node)),
                                verbosity);
 	      put_decl_string (".", 1);
 	    }

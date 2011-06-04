@@ -1,6 +1,6 @@
 /* Definitions for ARM running Linux-based GNU systems using ELF
    Copyright (C) 1993, 1994, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008
+   2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Philip Blundell <philb@gnu.org>
 
@@ -24,9 +24,6 @@
    any conflicting definitions and add any extras.  */
 
 /* Run-time Target Specification.  */
-#undef  TARGET_VERSION
-#define TARGET_VERSION  fputs (" (ARM GNU/Linux with ELF)", stderr);
-
 #undef  TARGET_DEFAULT_FLOAT_ABI
 #define TARGET_DEFAULT_FLOAT_ABI ARM_FLOAT_ABI_HARD
 
@@ -51,7 +48,7 @@
 
 #undef  MULTILIB_DEFAULTS
 #define MULTILIB_DEFAULTS \
-	{ "marm", "mlittle-endian", "mhard-float", "mno-thumb-interwork" }
+	{ "marm", "mlittle-endian", "mfloat-abi=hard", "mno-thumb-interwork" }
 
 /* Now we define the strings used to build the spec file.  */
 #undef  LIB_SPEC
@@ -60,17 +57,16 @@
    %{shared:-lc} \
    %{!shared:%{profile:-lc_p}%{!profile:-lc}}"
 
-#define LIBGCC_SPEC "%{msoft-float:-lfloat} %{mfloat-abi=soft*:-lfloat} -lgcc"
+#define LIBGCC_SPEC "%{mfloat-abi=soft*:-lfloat} -lgcc"
 
 #define GLIBC_DYNAMIC_LINKER "/lib/ld-linux.so.2"
 
-#define LINUX_TARGET_LINK_SPEC  "%{h*} %{version:-v} \
-   %{b} \
+#define LINUX_TARGET_LINK_SPEC  "%{h*} \
    %{static:-Bstatic} \
    %{shared:-shared} \
    %{symbolic:-Bsymbolic} \
    %{rdynamic:-export-dynamic} \
-   %{!dynamic-linker:-dynamic-linker " LINUX_DYNAMIC_LINKER "} \
+   -dynamic-linker " GNU_USER_DYNAMIC_LINKER " \
    -X \
    %{mbig-endian:-EB} %{mlittle-endian:-EL}" \
    SUBTARGET_EXTRA_LINK_SPEC
@@ -81,7 +77,7 @@
 #define TARGET_OS_CPP_BUILTINS()		\
   do						\
     {						\
-	LINUX_TARGET_OS_CPP_BUILTINS();		\
+	GNU_USER_TARGET_OS_CPP_BUILTINS();	\
     }						\
   while (0)
 

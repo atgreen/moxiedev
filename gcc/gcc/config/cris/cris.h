@@ -1,6 +1,6 @@
 /* Definitions for GCC.  Part of the machine description for CRIS.
    Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008,
-   2009, 2010 Free Software Foundation, Inc.
+   2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Axis Communications.  Written by Hans-Peter Nilsson.
 
 This file is part of GCC.
@@ -192,14 +192,13 @@ extern int cris_cpu_version;
 #undef ASM_SPEC
 #define ASM_SPEC \
  MAYBE_AS_NO_MUL_BUG_ABORT \
- "%{v:-v}\
- %(asm_subtarget)\
- %{march=*:%{cpu=*:%edo not specify both -march=... and -mcpu=...}}\
+ "%(asm_subtarget)\
+ %{march=*:%{mcpu=*:%edo not specify both -march=... and -mcpu=...}}\
  %{march=v32:--march=v32} %{mcpu=v32:--march=v32}"
 
 /* For the cris-*-elf subtarget.  */
 #define CRIS_ASM_SUBTARGET_SPEC \
- "--em=criself %{!march=*:%{!cpu=*:" CRIS_DEFAULT_ASM_ARCH_OPTION "}}"
+ "--em=criself %{!march=*:%{!mcpu=*:" CRIS_DEFAULT_ASM_ARCH_OPTION "}}"
 
 /* FIXME: We should propagate the -melf option to make the criself
    "emulation" unless a linker script is provided (-T*), but I don't know
@@ -208,11 +207,8 @@ extern int cris_cpu_version;
    time being.
 
    Note that -melf overrides -maout except that a.out-compiled libraries
-   are linked in (multilibbing).  The somewhat cryptic -rpath-link pair is
-   to avoid *only* picking up the linux multilib subdir from the "-B./"
-   option during build, while still giving it preference.  We'd need some
-   %s-variant that checked for existence of some specific file.  */
-/* Override previous definitions (svr4.h).  */
+   are linked in (multilibbing).  We'd need some %s-variant that
+   checked for existence of some specific file.  */
 #undef LINK_SPEC
 #define LINK_SPEC \
  "%{v:--verbose}\
@@ -312,8 +308,6 @@ extern int cris_cpu_version;
 #define TARGET_HAS_LZ (cris_cpu_version >= CRIS_CPU_ETRAX4)
 #define TARGET_HAS_SWAP (cris_cpu_version >= CRIS_CPU_SVINTO)
 #define TARGET_V32 (cris_cpu_version >= CRIS_CPU_V32)
-
-#define CRIS_SUBTARGET_HANDLE_OPTION(x, y, z)
 
 /* Node: Storage Layout */
 
@@ -555,8 +549,6 @@ enum reg_class
   ((OCODE) != POST_INC ? BASE_REG_CLASS : GENNONACR_REGS)
 
 #define INDEX_REG_CLASS GENERAL_REGS
-
-#define IRA_COVER_CLASSES { GENERAL_REGS, SPECIAL_REGS, LIM_REG_CLASSES }
 
 #define REG_CLASS_FROM_LETTER(C)		\
   (						\
@@ -1027,8 +1019,6 @@ struct cum_args {int regs;};
 	goto WIN;							\
     }									\
   while (0)
-
-#define LEGITIMATE_CONSTANT_P(X) 1
 
 
 /* Node: Condition Code */

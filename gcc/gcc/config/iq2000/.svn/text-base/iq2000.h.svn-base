@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler.  
    Vitesse IQ2000 processors
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GCC.
@@ -21,12 +21,16 @@
 
 /* Driver configuration.  */
 
-/* The svr4.h LIB_SPEC with -leval and --*group tacked on */
+/* A generic LIB_SPEC with -leval and --*group tacked on.  */
 #undef  LIB_SPEC
 #define LIB_SPEC "%{!shared:%{!symbolic:--start-group -lc -leval -lgcc --end-group}}"
 
 #undef STARTFILE_SPEC
 #undef ENDFILE_SPEC
+
+#undef  LINK_SPEC
+#define LINK_SPEC "%{h*} %{v:-V} \
+		   %{static:-Bstatic} %{shared:-shared} %{symbolic:-Bsymbolic}"
 
 
 /* Run-time target specifications.  */
@@ -52,21 +56,6 @@
 
 #ifndef IQ2000_ISA_DEFAULT
 #define IQ2000_ISA_DEFAULT 1
-#endif
-
-#define IQ2000_VERSION "[1.0]"
-
-#ifndef MACHINE_TYPE
-#define MACHINE_TYPE "IQ2000"
-#endif
-
-#ifndef TARGET_VERSION_INTERNAL
-#define TARGET_VERSION_INTERNAL(STREAM)					\
-  fprintf (STREAM, " %s %s", IQ2000_VERSION, MACHINE_TYPE)
-#endif
-
-#ifndef TARGET_VERSION
-#define TARGET_VERSION TARGET_VERSION_INTERNAL (stderr)
 #endif
 
 /* Storage Layout.  */
@@ -133,6 +122,18 @@
 #define LONG_DOUBLE_TYPE_SIZE	64
 #define DEFAULT_SIGNED_CHAR	1
 
+#undef  SIZE_TYPE
+#define SIZE_TYPE "unsigned int"
+
+#undef  PTRDIFF_TYPE
+#define PTRDIFF_TYPE "int"
+
+#undef  WCHAR_TYPE
+#define WCHAR_TYPE "long int"
+
+#undef  WCHAR_TYPE_SIZE
+#define WCHAR_TYPE_SIZE BITS_PER_WORD
+
 
 /* Register Basics.  */
 
@@ -193,11 +194,6 @@ enum reg_class
 
 #define N_REG_CLASSES (int) LIM_REG_CLASSES
 
-#define IRA_COVER_CLASSES	\
-{				\
-  GR_REGS, LIM_REG_CLASSES	\
-}
-
 #define REG_CLASS_NAMES						\
 {								\
   "NO_REGS",							\
@@ -219,12 +215,6 @@ enum reg_class
 
 #define INDEX_REG_CLASS NO_REGS
 
-#define REG_CLASS_FROM_LETTER(C) \
-  ((C) == 'd' ? GR_REGS :        \
-   (C) == 'b' ? ALL_REGS :       \
-   (C) == 'y' ? GR_REGS :        \
-   NO_REGS)
-
 #define REGNO_OK_FOR_INDEX_P(regno)	0
 
 #define PREFERRED_RELOAD_CLASS(X,CLASS)				\
@@ -240,53 +230,6 @@ enum reg_class
 
 #define CLASS_MAX_NREGS(CLASS, MODE)    \
   ((GET_MODE_SIZE (MODE) + UNITS_PER_WORD - 1) / UNITS_PER_WORD)
-
-/* For IQ2000:
-
-   `I'	is used for the range of constants an arithmetic insn can
-	actually contain (16-bits signed integers).
-
-   `J'	is used for the range which is just zero (i.e., $r0).
-
-   `K'	is used for the range of constants a logical insn can actually
-	contain (16-bit zero-extended integers).
-
-   `L'	is used for the range of constants that be loaded with lui
-	(i.e., the bottom 16 bits are zero).
-
-   `M'	is used for the range of constants that take two words to load
-	(i.e., not matched by `I', `K', and `L').
-
-   `N'	is used for constants 0xffffnnnn or 0xnnnnffff
-
-   `O'	is a 5-bit zero-extended integer.  */
-
-#define CONST_OK_FOR_LETTER_P(VALUE, C)					\
-  ((C) == 'I' ? ((unsigned HOST_WIDE_INT) ((VALUE) + 0x8000) < 0x10000)	\
-   : (C) == 'J' ? ((VALUE) == 0)					\
-   : (C) == 'K' ? ((unsigned HOST_WIDE_INT) (VALUE) < 0x10000)		\
-   : (C) == 'L' ? (((VALUE) & 0x0000ffff) == 0				\
-		   && (((VALUE) & ~2147483647) == 0			\
-		       || ((VALUE) & ~2147483647) == ~2147483647))	\
-   : (C) == 'M' ? ((((VALUE) & ~0x0000ffff) != 0)			\
-		   && (((VALUE) & ~0x0000ffff) != ~0x0000ffff)		\
-		   && (((VALUE) & 0x0000ffff) != 0			\
-		       || (((VALUE) & ~2147483647) != 0			\
-			   && ((VALUE) & ~2147483647) != ~2147483647)))	\
-   : (C) == 'N' ? ((((VALUE) & 0xffff) == 0xffff)			\
-		   || (((VALUE) & 0xffff0000) == 0xffff0000))		\
-   : (C) == 'O' ? ((unsigned HOST_WIDE_INT) ((VALUE) + 0x20) < 0x40)	\
-   : 0)
-
-#define CONST_DOUBLE_OK_FOR_LETTER_P(VALUE, C)				\
-  ((C) == 'G'								\
-   && (VALUE) == CONST0_RTX (GET_MODE (VALUE)))
-
-/* `R' is for memory references which take 1 word for the instruction.  */
-
-#define EXTRA_CONSTRAINT(OP,CODE)					\
-  (((CODE) == 'R')	  ? simple_memory_operand (OP, GET_MODE (OP))	\
-   : FALSE)
 
 
 /* Basic Stack Layout.  */
@@ -371,7 +314,7 @@ typedef struct iq2000_args
   int fp_code;			/* Mode of FP arguments.  */
   unsigned int num_adjusts;	/* Number of adjustments made.  */
 				/* Adjustments made to args pass in regs.  */
-  struct rtx_def * adjust[MAX_ARGS_IN_REGISTERS * 2];
+  rtx adjust[MAX_ARGS_IN_REGISTERS * 2];
 } CUMULATIVE_ARGS;
 
 /* Initialize a variable CUM of type CUMULATIVE_ARGS
@@ -445,8 +388,6 @@ typedef struct iq2000_args
 #define MAX_REGS_PER_ADDRESS 1
 
 #define REG_OK_FOR_INDEX_P(X) 0
-
-#define LEGITIMATE_CONSTANT_P(X) (1)
 
 
 /* Describing Relative Costs of Operations.  */
@@ -644,15 +585,6 @@ enum delay_type
   DELAY_NONE,				/* No delay slot.  */
   DELAY_LOAD,				/* Load from memory delay.  */
   DELAY_FCMP				/* Delay after doing c.<xx>.{d,s}.  */
-};
-
-/* Which processor to schedule for.  */
-
-enum processor_type
-{
-  PROCESSOR_DEFAULT,
-  PROCESSOR_IQ2000,
-  PROCESSOR_IQ10
 };
 
 /* Recast the cpu class to be the cpu attribute.  */
@@ -887,9 +819,6 @@ enum processor_type
 #define SDATA_SECTION_ASM_OP	"\t.sdata"	/* Small data.  */
 
 
-/* The target cpu for optimization and scheduling.  */
-extern enum processor_type iq2000_tune;
-
 /* Which instruction set architecture to use.  */
 extern int iq2000_isa;
 

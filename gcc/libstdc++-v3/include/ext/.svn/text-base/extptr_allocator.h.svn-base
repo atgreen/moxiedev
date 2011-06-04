@@ -23,8 +23,10 @@
 // <http://www.gnu.org/licenses/>.
 
 /**
- * @file ext/extptr_allocator.h
- * @author Bob Walters
+ *  @file ext/extptr_allocator.h
+ *  This file is a GNU extension to the Standard C++ Library.
+ *
+ *  @author Bob Walters
  *
  * An example allocator which uses an alternative pointer type from
  * bits/pointer.h.  Supports test cases which confirm container support
@@ -38,7 +40,9 @@
 #include <limits>
 #include <ext/pointer.h>
 
-_GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
+namespace __gnu_cxx _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
    * @brief An example allocator which uses a non-standard pointer type.
@@ -96,18 +100,23 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
       size_type max_size() const throw()
       { return std::numeric_limits<size_type>::max() / sizeof(_Tp); }
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+      template<typename _Up, typename... _Args>
+        void
+        construct(_Up* __p, _Args&&... __args)
+	{ ::new((void *)__p) _Up(std::forward<_Args>(__args)...); }
+
+      template<typename _Up>
+        void 
+        destroy(_Up* __p)
+        { __p->~_Up(); }
+#else
       void construct(pointer __p, const _Tp& __val)
       { ::new(__p.get()) _Tp(__val); }
 
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
-      template<typename... _Args>
-        void
-        construct(pointer __p, _Args&&... __args)
-        { ::new(__p.get()) _Tp(std::forward<_Args>(__args)...); }
-#endif
-
       void destroy(pointer __p)
       { __p->~_Tp(); }
+#endif
 
       template<typename _Up>
         inline bool
@@ -171,6 +180,7 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
       __larg._M_real_alloc = __tmp;
     }
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #endif /* _EXTPTR_ALLOCATOR_H */

@@ -1,5 +1,5 @@
 /* Target definitions for x86 running Darwin.
-   Copyright (C) 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2010
+   Copyright (C) 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Apple Computer Inc.
 
@@ -25,8 +25,6 @@ along with GCC; see the file COPYING3.  If not see
 
 #undef DARWIN_X86
 #define DARWIN_X86 1
-
-#define TARGET_VERSION fprintf (stderr, " (i686 Darwin)");
 
 #undef  TARGET_64BIT
 #define TARGET_64BIT OPTION_ISA_64BIT
@@ -131,7 +129,7 @@ extern int darwin_emit_branch_islands;
 
 #undef ENDFILE_SPEC
 #define ENDFILE_SPEC \
-  "%{ffast-math|funsafe-math-optimizations:crtfastmath.o%s} \
+  "%{Ofast|ffast-math|funsafe-math-optimizations:crtfastmath.o%s} \
    %{mpc32:crtprec32.o%s} \
    %{mpc64:crtprec64.o%s} \
    %{mpc80:crtprec80.o%s}"
@@ -212,22 +210,6 @@ extern int darwin_emit_branch_islands;
             fprintf (FILE, "\t%s %d\n", ALIGN_ASM_OP, (LOG)); \
         }				\
     } while (0)
-
-/* This says how to output an assembler line
-   to define a global common symbol.  */
-
-#define ASM_OUTPUT_COMMON(FILE, NAME, SIZE, ROUNDED)  \
-( fputs ("\t.comm ", (FILE)),			\
-  assemble_name ((FILE), (NAME)),		\
-  fprintf ((FILE), ","HOST_WIDE_INT_PRINT_UNSIGNED"\n", (ROUNDED)))
-
-/* This says how to output an assembler line
-   to define a local common symbol.  */
-
-#define ASM_OUTPUT_LOCAL(FILE, NAME, SIZE, ROUNDED)  \
-( fputs ("\t.lcomm ", (FILE)),			\
-  assemble_name ((FILE), (NAME)),		\
-  fprintf ((FILE), ","HOST_WIDE_INT_PRINT_UNSIGNED"\n", (ROUNDED)))
 
 /* Darwin profiling -- call mcount.  */
 #undef FUNCTION_PROFILER
@@ -324,6 +306,7 @@ do {									\
 #undef  SUBTARGET_INIT_BUILTINS
 #define SUBTARGET_INIT_BUILTINS					\
 do {								\
-  darwin_init_cfstring_builtins ((unsigned) (IX86_BUILTIN_MAX));\
+  ix86_builtins[(int) IX86_BUILTIN_CFSTRING]			\
+    = darwin_init_cfstring_builtins ((unsigned) (IX86_BUILTIN_CFSTRING));	\
+  darwin_rename_builtins ();					\
 } while(0)
-

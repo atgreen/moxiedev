@@ -1,6 +1,6 @@
 # Makefile for GNU Objective C runtime library.
 # Copyright 1993, 1995, 1996, 1997, 1998, 1999, 2001, 2002, 2003, 2004,
-# 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+# 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
 #This file is part of GCC.
 
@@ -43,6 +43,7 @@ toolexeclibdir = @toolexeclibdir@
 includedirname = @includedirname@
 libsuffix = @libsuffix@
 
+lt_host_flags = @lt_host_flags@
 extra_ldflags_libobjc = @extra_ldflags_libobjc@
 
 top_builddir = .
@@ -92,7 +93,7 @@ LIBTOOL_INSTALL = $(LIBTOOL) --mode=install
 LIBTOOL_CLEAN   = $(LIBTOOL) --mode=clean
 #LIBTOOL_UNINSTALL = $(LIBTOOL) --mode=uninstall
 
-OBJC_GCFLAGS=-DOBJC_WITH_GC=1
+OBJC_GCFLAGS=@OBJC_GCFLAGS@
 OBJC_BOEHM_GC=@OBJC_BOEHM_GC@
 OBJC_BOEHM_GC_INCLUDES=@OBJC_BOEHM_GC_INCLUDES@
 OBJC_BOEHM_GC_LIBS=../boehm-gc/libgcjgc_convenience.la $(thread_libs_and_flags)
@@ -121,29 +122,15 @@ OBJC_H = \
   objc-api.h \
   objc-decls.h \
   runtime.h \
-  thr.h \
-  \
-  hash.h \
-  objc-list.h \
-  sarray.h \
-  typedstream.h
+  thr.h
 
 # User-visible header files containing deprecated APIs, from the
 # objc/deprecated directory
 OBJC_DEPRECATED_H = \
-  METHOD_NULL.h \
   MetaClass.h \
   Object.h \
-  STR.h \
-  hash.h \
-  objc-list.h \
-  objc_error.h \
-  objc_get_uninstalled_dtable.h \
-  objc_malloc.h \
-  objc_object_alloc.h \
-  objc_unexpected_exception.h \
-  objc_valloc.h \
-  sarray.h \
+  Protocol.h \
+  objc_msg_sendv.h \
   struct_objc_category.h \
   struct_objc_class.h \
   struct_objc_ivar.h \
@@ -154,9 +141,7 @@ OBJC_DEPRECATED_H = \
   struct_objc_protocol.h \
   struct_objc_protocol_list.h \
   struct_objc_selector.h \
-  struct_objc_static_instances.h \
-  struct_objc_symtab.h \
-  typedstream.h 
+  struct_objc_symtab.h
 
 # Objective-C source files to compile
 OBJC_SOURCE_FILES = \
@@ -168,7 +153,6 @@ OBJC_SOURCE_FILES = \
 
 # C source files to compile
 C_SOURCE_FILES = \
-   archive.c \
    class.c \
    encoding.c \
    error.c \
@@ -276,38 +260,15 @@ sendmsg_gc.lo: sendmsg.c runtime-info.h
 
 # These files have separate rules because they require special
 # compiler flags.
-archive.lo: archive.c
-	$(LIBTOOL_COMPILE) $(CC) $< -c \
-	   $(ALL_CFLAGS) $(INCLUDES) -Wno-deprecated-declarations \
-	   -o $@
 
-archive_gc.lo: archive.c
-	$(LIBTOOL_COMPILE) $(CC) $< -c \
-	   $(ALL_CFLAGS) $(INCLUDES) $(OBJC_GCFLAGS) -Wno-deprecated-declarations \
-	   -o $@
-
-# -Wno-deprecated-declarations is for the objc/typedstream.h functions.
-Object.lo: Object.m
-	$(LIBTOOL_COMPILE) $(CC) $< -c \
-	   $(ALL_CFLAGS) $(INCLUDES) -fgnu-runtime -Wno-deprecated-declarations \
-	   -o $@
-
-# -Wno-deprecated-declarations is for the objc/typedstream.h functions.
-Object_gc.lo: Object.m
-	$(LIBTOOL_COMPILE) $(CC) $< -c \
-	   $(ALL_CFLAGS) $(INCLUDES) $(OBJC_GCFLAGS) -fgnu-runtime -Wno-deprecated-declarations \
-	   -o $@
-
-# -Wno-deprecated-declarations is to silence warnings from using 
-# _objc_unexpected_exception.
 exception.lo: exception.c
 	$(LIBTOOL_COMPILE) $(CC) $< -c \
-	   $(ALL_CFLAGS) $(INCLUDES) -fexceptions -Wno-deprecated-declarations \
+	   $(ALL_CFLAGS) $(INCLUDES) -fexceptions \
 	   -o $@
 
 exception_gc.lo: exception.c
 	$(LIBTOOL_COMPILE) $(CC) $< -c \
-	   $(ALL_CFLAGS) $(INCLUDES) $(OBJC_GCFLAGS) -fexceptions -Wno-deprecated-declarations \
+	   $(ALL_CFLAGS) $(INCLUDES) $(OBJC_GCFLAGS) -fexceptions \
 	   -o $@
 
 doc: info dvi pdf html
@@ -322,13 +283,13 @@ LTLDFLAGS = $(shell $(SHELL) $(top_srcdir)/../libtool-ldflags $(LDFLAGS))
 
 libobjc$(libsuffix).la: $(OBJS)
 	$(LIBTOOL_LINK) $(CC) -o $@ $(OBJS) \
-		-rpath $(toolexeclibdir) \
+		-Wc,-shared-libgcc -rpath $(toolexeclibdir) \
 		-version-info $(LIBOBJC_VERSION) $(extra_ldflags_libobjc) \
 		$(LTLDFLAGS)
 
 libobjc_gc$(libsuffix).la: $(OBJS_GC)
 	$(LIBTOOL_LINK) $(CC) -o $@ $(OBJS_GC) $(OBJC_BOEHM_GC_LIBS) \
-		-rpath $(toolexeclibdir) \
+		-Wc,-shared-libgcc -rpath $(toolexeclibdir) \
 		-version-info $(LIBOBJC_GC_VERSION) $(extra_ldflags_libobjc) \
 		$(LTLDFLAGS)
 

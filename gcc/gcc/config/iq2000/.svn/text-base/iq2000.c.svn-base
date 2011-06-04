@@ -1,5 +1,5 @@
 /* Subroutines used for code generation on Vitesse IQ2000 processors
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -21,7 +21,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
-#include <signal.h>
 #include "tm.h"
 #include "tree.h"
 #include "rtl.h"
@@ -38,7 +37,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "libfuncs.h"
 #include "recog.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "reload.h"
 #include "ggc.h"
 #include "tm_p.h"
@@ -113,9 +111,6 @@ struct GTY(()) machine_function
 /* List of all IQ2000 punctuation characters used by iq2000_print_operand.  */
 static char iq2000_print_operand_punct[256];
 
-/* The target cpu for optimization and scheduling.  */
-enum processor_type iq2000_tune;
-
 /* Which instruction set architecture to use.  */
 int iq2000_isa;
 
@@ -147,7 +142,6 @@ static enum machine_mode gpr_mode;
 
 /* Initialize the GCC target structure.  */
 static struct machine_function* iq2000_init_machine_status (void);
-static bool iq2000_handle_option      (size_t, const char *, int);
 static void iq2000_option_override    (void);
 static section *iq2000_select_rtx_section (enum machine_mode, rtx,
 					   unsigned HOST_WIDE_INT);
@@ -195,8 +189,6 @@ static const struct default_options iq2000_option_optimization_table[] =
 #define TARGET_EXPAND_BUILTIN 		iq2000_expand_builtin
 #undef  TARGET_ASM_SELECT_RTX_SECTION
 #define TARGET_ASM_SELECT_RTX_SECTION	iq2000_select_rtx_section
-#undef  TARGET_HANDLE_OPTION
-#define TARGET_HANDLE_OPTION		iq2000_handle_option
 #undef  TARGET_OPTION_OVERRIDE
 #define TARGET_OPTION_OVERRIDE		iq2000_option_override
 #undef  TARGET_OPTION_OPTIMIZATION_TABLE
@@ -1436,33 +1428,6 @@ iq2000_init_machine_status (void)
   return ggc_alloc_cleared_machine_function ();
 }
 
-/* Implement TARGET_HANDLE_OPTION.  */
-
-static bool
-iq2000_handle_option (size_t code, const char *arg, int value ATTRIBUTE_UNUSED)
-{
-  switch (code)
-    {
-    case OPT_mcpu_:
-      if (strcmp (arg, "iq10") == 0)
-	iq2000_tune = PROCESSOR_IQ10;
-      else if (strcmp (arg, "iq2000") == 0)
-	iq2000_tune = PROCESSOR_IQ2000;
-      else
-	return false;
-      return true;
-
-    case OPT_march_:
-      /* This option has no effect at the moment.  */
-      return (strcmp (arg, "default") == 0
-	      || strcmp (arg, "DEFAULT") == 0
-	      || strcmp (arg, "iq2000") == 0);
-
-    default:
-      return true;
-    }
-}
-
 /* Detect any conflicts in the switches.  */
 
 static void
@@ -2501,7 +2466,6 @@ iq2000_output_conditional_branch (rtx insn, rtx * operands, int two_operands_p,
 static void
 iq2000_init_builtins (void)
 {
-  tree endlink = void_list_node;
   tree void_ftype, void_ftype_int, void_ftype_int_int;
   tree void_ftype_int_int_int;
   tree int_ftype_int, int_ftype_int_int, int_ftype_int_int_int;
@@ -2509,76 +2473,55 @@ iq2000_init_builtins (void)
 
   /* func () */
   void_ftype
-    = build_function_type (void_type_node,
-			   tree_cons (NULL_TREE, void_type_node, endlink));
+    = build_function_type_list (void_type_node, NULL_TREE);
 
   /* func (int) */
   void_ftype_int
-    = build_function_type (void_type_node,
-			   tree_cons (NULL_TREE, integer_type_node, endlink));
+    = build_function_type_list (void_type_node, integer_type_node, NULL_TREE);
 
   /* void func (int, int) */
   void_ftype_int_int
-    = build_function_type (void_type_node,
-                           tree_cons (NULL_TREE, integer_type_node,
-                                      tree_cons (NULL_TREE, integer_type_node,
-                                                 endlink)));
+    = build_function_type_list (void_type_node,
+                                integer_type_node,
+                                integer_type_node,
+                                NULL_TREE);
 
   /* int func (int) */
   int_ftype_int
-    = build_function_type (integer_type_node,
-                           tree_cons (NULL_TREE, integer_type_node, endlink));
+    = build_function_type_list (integer_type_node,
+                                integer_type_node, NULL_TREE);
 
   /* int func (int, int) */
   int_ftype_int_int
-    = build_function_type (integer_type_node,
-                           tree_cons (NULL_TREE, integer_type_node,
-                                      tree_cons (NULL_TREE, integer_type_node,
-                                                 endlink)));
+    = build_function_type_list (integer_type_node,
+                                integer_type_node,
+                                integer_type_node,
+                                NULL_TREE);
 
   /* void func (int, int, int) */
-void_ftype_int_int_int
-    = build_function_type
-    (void_type_node,
-     tree_cons (NULL_TREE, integer_type_node,
-		tree_cons (NULL_TREE, integer_type_node,
-			   tree_cons (NULL_TREE,
-				      integer_type_node,
-				      endlink))));
-
-  /* int func (int, int, int, int) */
-  int_ftype_int_int_int_int
-    = build_function_type
-    (integer_type_node,
-     tree_cons (NULL_TREE, integer_type_node,
-		tree_cons (NULL_TREE, integer_type_node,
-			   tree_cons (NULL_TREE,
-				      integer_type_node,
-				      tree_cons (NULL_TREE,
-						 integer_type_node,
-						 endlink)))));
+  void_ftype_int_int_int
+    = build_function_type_list (void_type_node,
+                                integer_type_node,
+                                integer_type_node,
+                                integer_type_node,
+                                NULL_TREE);
 
   /* int func (int, int, int) */
   int_ftype_int_int_int
-    = build_function_type
-    (integer_type_node,
-     tree_cons (NULL_TREE, integer_type_node,
-		tree_cons (NULL_TREE, integer_type_node,
-			   tree_cons (NULL_TREE,
-				      integer_type_node,
-				      endlink))));
+    = build_function_type_list (integer_type_node,
+                                integer_type_node,
+                                integer_type_node,
+                                integer_type_node,
+                                NULL_TREE);
 
   /* int func (int, int, int, int) */
   int_ftype_int_int_int_int
-    = build_function_type
-    (integer_type_node,
-     tree_cons (NULL_TREE, integer_type_node,
-		tree_cons (NULL_TREE, integer_type_node,
-			   tree_cons (NULL_TREE,
-				      integer_type_node,
-				      tree_cons (NULL_TREE,
-						 integer_type_node,
-						 endlink)))));
+    = build_function_type_list (integer_type_node,
+                                integer_type_node,
+                                integer_type_node,
+                                integer_type_node,
+                                integer_type_node,
+                                NULL_TREE);
 
   def_builtin ("__builtin_ado16", int_ftype_int_int, IQ2000_BUILTIN_ADO16);
   def_builtin ("__builtin_ram", int_ftype_int_int_int_int, IQ2000_BUILTIN_RAM);

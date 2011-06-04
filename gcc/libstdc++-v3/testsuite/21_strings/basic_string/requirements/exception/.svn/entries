@@ -1,14 +1,14 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string/requirements/exception
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-01T11:27:50.227942Z
-155547
+2011-05-21T00:30:57.842293Z
+173992
 paolo
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2010-01-06T00:59:47.826675Z
-c5bf4fb647e3c9ceb2cfe5bee579f193
-2010-01-01T11:27:50.227942Z
-155547
+2011-06-04T18:06:03.432104Z
+1dd73b40867039c031db0bf9f4cd1e30
+2011-05-21T00:30:57.842293Z
+173992
 paolo
 
 
@@ -58,7 +58,7 @@ paolo
 
 
 
-1378
+1431
 
 basic.cc
 file
@@ -66,10 +66,10 @@ file
 
 
 
-2010-01-06T00:59:47.826675Z
-fec45001efd2e4d3f009dcb296baf515
-2010-01-01T11:27:50.227942Z
-155547
+2011-06-04T18:06:03.433104Z
+53c0cd1036d583f3a36f8b30bd4d20b8
+2011-05-21T00:30:57.842293Z
+173992
 paolo
 
 
@@ -92,7 +92,7 @@ paolo
 
 
 
-1335
+1421
 
 generation_prohibited.cc
 file

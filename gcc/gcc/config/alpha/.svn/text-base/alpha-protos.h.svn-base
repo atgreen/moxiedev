@@ -34,7 +34,7 @@ extern void alpha_output_filename (FILE *, const char *);
 extern rtx alpha_tablejump_addr_vec (rtx);
 extern rtx alpha_tablejump_best_label (rtx);
 
-extern bool alpha_legitimate_constant_p (rtx);
+extern bool alpha_legitimate_constant_p (enum machine_mode, rtx);
 extern rtx alpha_legitimize_reload_address (rtx, enum machine_mode,
 					    int, int, int);
 
@@ -117,14 +117,6 @@ extern HOST_WIDE_INT alpha_vms_initial_elimination_offset (unsigned int,
 #endif
 
 extern rtx unicosmk_add_call_info_word (rtx);
-
-#if TARGET_ABI_UNICOSMK
-extern void unicosmk_defer_case_vector (rtx, rtx);
-extern void unicosmk_add_extern (const char *);
-extern void unicosmk_output_align (FILE *, int);
-extern void unicosmk_output_common (FILE *, const char *, int, int);
-extern int unicosmk_initial_elimination_offset (int, int);
-#endif
 
 extern int some_small_symbolic_operand_int (rtx *, void *);
 extern int tls_symbolic_operand_1 (rtx, int, int);

@@ -1,6 +1,7 @@
 /* Instruction scheduling pass.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008 Free Software Foundation, Inc.
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2010
+   Free Software Foundation, Inc.
    Contributed by Michael Tiemann (tiemann@cygnus.com) Enhanced by,
    and currently maintained by, Jim Wilson (wilson@cygnus.com)
 
@@ -604,7 +605,7 @@ print_pattern (char *buf, const_rtx x, int verbose)
       sprintf (buf, "asm {%s}", XSTR (x, 0));
       break;
     case ADDR_VEC:
-      break;
+      /* Fall through.  */
     case ADDR_DIFF_VEC:
       print_value (buf, XEXP (x, 0), verbose);
       break;

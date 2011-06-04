@@ -49,7 +49,7 @@
 __float128
 cosq (__float128 x)
 {
-	__float128 y[2],z=0.0L;
+	__float128 y[2],z=0.0Q;
 	int64_t n, ix;
 
     /* High word of x. */
@@ -58,7 +58,7 @@ cosq (__float128 x)
     /* |x| ~< pi/4 */
 	ix &= 0x7fffffffffffffffLL;
 	if(ix <= 0x3ffe921fb54442d1LL)
-	  return __kernel_cosq(x,z);
+	  return __quadmath_kernel_cosq(x,z);
 
     /* cos(Inf or NaN) is NaN */
 	else if (ix>=0x7fff000000000000LL) {
@@ -70,13 +70,13 @@ cosq (__float128 x)
 
     /* argument reduction needed */
 	else {
-	    n = rem_pio2q(x,y);
+	    n = __quadmath_rem_pio2q(x,y);
 	    switch(n&3) {
-		case 0: return  __kernel_cosq(y[0],y[1]);
-		case 1: return -__kernel_sinq(y[0],y[1],1);
-		case 2: return -__kernel_cosq(y[0],y[1]);
+		case 0: return  __quadmath_kernel_cosq(y[0],y[1]);
+		case 1: return -__quadmath_kernel_sinq(y[0],y[1],1);
+		case 2: return -__quadmath_kernel_cosq(y[0],y[1]);
 		default:
-		        return  __kernel_sinq(y[0],y[1],1);
+		        return  __quadmath_kernel_sinq(y[0],y[1],1);
 	    }
 	}
 }

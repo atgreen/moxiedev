@@ -1,6 +1,6 @@
 /* Set up combined include path chain for the preprocessor.
    Copyright (C) 1986, 1987, 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2010
    Free Software Foundation, Inc.
 
    Broken out of cppinit.c and cppfiles.c and rewritten Mar 2003.
@@ -45,7 +45,7 @@
 #define DIRS_EQ(A, B) ((A)->dev == (B)->dev \
 	&& INO_T_EQ((A)->ino, (B)->ino))
 #else
-#define DIRS_EQ(A, B) (!strcmp ((A)->canonical_name, (B)->canonical_name))
+#define DIRS_EQ(A, B) (!filename_cmp ((A)->canonical_name, (B)->canonical_name))
 #endif
 
 static const char dir_separator_str[] = { DIR_SEPARATOR, 0 };
@@ -100,7 +100,7 @@ add_env_var_paths (const char *env_var, int chain)
 {
   char *p, *q, *path;
 
-  GET_ENVIRONMENT (q, env_var);
+  q = getenv (env_var);
 
   if (!q)
     return;
@@ -147,7 +147,7 @@ add_standard_paths (const char *sysroot, const char *iprefix,
 		 now.  */
 	      if (sysroot && p->add_sysroot)
 		continue;
-	      if (!strncmp (p->fname, cpp_GCC_INCLUDE_DIR, len))
+	      if (!filename_ncmp (p->fname, cpp_GCC_INCLUDE_DIR, len))
 		{
 		  char *str = concat (iprefix, p->fname + len, NULL);
 		  if (p->multilib && imultilib)
@@ -168,7 +168,7 @@ add_standard_paths (const char *sysroot, const char *iprefix,
 	  if (sysroot && p->add_sysroot)
 	    str = concat (sysroot, p->fname, NULL);
 	  else if (!p->add_sysroot && relocated
-		   && strncmp (p->fname, cpp_PREFIX, cpp_PREFIX_len) == 0)
+		   && !filename_ncmp (p->fname, cpp_PREFIX, cpp_PREFIX_len))
 	    {
  	      static const char *relocated_prefix;
 	      /* If this path starts with the configure-time prefix,

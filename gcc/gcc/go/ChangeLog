@@ -1,0 +1,285 @@
+2011-05-27  Ian Lance Taylor  <iant@google.com>
+
+	* go-backend.c: Include "output.h".
+	(go_write_export_data): New function.
+	* go-c.h (go_write_export_data): Declare.
+	* Make-lang.in (go/go-backend.o): Depend on output.h.
+	(go/export.o): Depend on $(GO_C_H).  Do not depend on
+	$(MACHMODE_H), output.h, or $(TARGET_H).
+
+2011-05-24  Joseph Myers  <joseph@codesourcery.com>
+
+	* Make-lang.in (GCCGO_OBJS): Remove prefix.o.
+	(gccgo$(exeext)): Use libcommon-target.a.
+
+2011-05-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* Make-lang.in (GCCGO_OBJS): Remove intl.o and version.o.
+
+2011-05-13  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (Gcc_backend::function_type): When building a struct
+	for multiple results, check that all fields types have a size.
+	(Gcc_backend::placeholder_pointer_type): Permit name to be empty.
+
+2011-05-12  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (Gcc_backend::local_variable): Add is_address_taken
+	parameter.
+	(Gcc_backend::parameter_variable): Likewise.
+
+2011-05-07  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* go-lang.c (global_bindings_p): Return bool and simplify.
+
+2011-05-05  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* go-gcc.cc (Gcc_backend::switch_statement): Call build_case_label.
+
+2011-05-04  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (Gcc_backend::struct_type): Call fill_in_struct.
+	(Gcc_backend::fill_in_struct): New function.
+	(Gcc_backend::array_type): Implement.
+	(Gcc_backend::fill_in_array): New function.
+	(Gcc_backend::placeholder_pointer_type): New function.
+	(Gcc_backend::set_placeholder_pointer_type): New function.
+	(Gcc_backend::set_placeholder_function_type): New function.
+	(Gcc_backend::placeholder_struct_type): New function.
+	(Gcc_backend::set_placeholder_struct_type): New function.
+	(Gcc_backend::placeholder_array_type): New function.
+	(Gcc_backend::set_placeholder_array_type): New function.
+	(Gcc_backend::named_type): New function.
+	(Gcc_backend::circular_pointer_type): New function.
+	(Gcc_backend::is_circular_pointer_type): New function.
+
+2011-04-26  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (Gcc_backend::struct_type): Implement.
+
+2011-04-25  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (Gcc_backend::error_type): Implement.
+	(Gcc_backend::string_type): Remove.
+	(Gcc_backend::function_type): Change signature and implement.
+	(Gcc_backend::struct_type): Change signature.
+	(Gcc_backend::slice_type, Gcc_backend::map_type): Remove.
+	(Gcc_backend::channel_type, Gcc_backend::interface_type): Remove.
+	(Gcc_backend::pointer_type): Check for error.
+	* Make-lang.in (go/types.o): Depend on go/gofrontend/backend.h.
+
+2011-04-25  Evan Shaw  <edsrzf@gmail.com>
+
+	* go-gcc.c (class Gcc_tree): Make get_tree const.
+	(Gcc_backend::void_type): Implement.
+	(Gcc_backend::bool_type): Implement.
+	(Gcc_backend::integer_type): Implement.
+	(Gcc_backend::float_type): Implement.
+	(Gcc_backend::complex_type): New function.
+	(Gcc_backend::pointer_type): New function.
+	(Gcc_backend::make_type): New function.
+	(type_to_tree): New function.
+
+2011-04-21  Ian Lance Taylor  <iant@google.com>
+
+	* go-system.h (go_assert, go_unreachable): Define.
+
+2011-04-19  Ian Lance Taylor  <iant@google.com>
+
+	* go-system.h: Include "intl.h".
+	* Make-lang.in (GO_SYSTEM_H): Add intl.h.
+	(go/statements.o): Remove dependencies on intl.h $(TREE_H)
+	$(GIMPLE_H) convert.h tree-iterator.h $(TREE_FLOW_H) $(REAL_H).
+
+2011-04-19  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (Gcc_backend::temporary_variable): New function.
+
+2011-04-19  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (class Bblock): Define.
+	(Gcc_backend::if_statement): Change then_block and else_block to
+	Bblock*.
+	(Gcc_backend::block): New function.
+	(Gcc_backend::block_add_statements): New function.
+	(Gcc_backend::block_statement): New function.
+	(tree_to_block, block_to_tree): New functions.
+
+2011-04-18  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc: Include "go-c.h".
+	(class Bvariable): Define.
+	(Gcc_backend::init_statement): New function.
+	(Gcc_backend::global_variable): New function.
+	(Gcc_backend::global_variable_set_init): New function.
+	(Gcc_backend::local_variable): New function.
+	(Gcc_backend::parameter_variable): New function.
+	(tree_to_type, var_to_tree): New functions.
+	* Make-lang.in (go/go-gcc.o): Depend on $(GO_C_H).
+	* (go/gogo-tree.o): Depend on go/gofrontend/backend.h.
+
+2011-04-15  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (Gcc_backend::compound_statement): New function.
+	(Gcc_backend::assignment_statement): Use error_statement.
+	(Gcc_backend::return_statement): Likewise.
+	(Gcc_backend::if_statement): Likewise.
+	(Gcc_backend::switch_statement): Likewise.
+	(Gcc_backend::statement_list): Likewise.
+
+2011-04-14  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (Backend::error_statement): New function.
+
+2011-04-13  Ian Lance Taylor  <iant@google.com>
+
+	* Make-lang.in (go/gogo-tree.o): depend on $(GO_RUNTIME_H).
+
+2011-04-13  Ian Lance Taylor  <iant@google.com>
+
+	* Make-lang.in (GO_OBJS): Add go/runtime.o.
+	(GO_RUNTIME_H): New variable.
+	(go/runtime.o): New target.
+	(go/gogo.o): Depend on $(GO_RUNTIME_H).
+	(go/statements.o): Likewise.
+
+2011-04-12  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* go-lang.c (union lang_tree_node): Check for TS_COMMON before
+	calling TREE_CHAIN.
+
+2011-04-06  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (if_statement): Use build3_loc.
+	(Gcc_backend::switch_statement): New function.
+	(Gcc_backend::statement_list): New function.
+
+2011-04-06  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (Gcc_backend::if_statement): New function.
+	(tree_to_stat): New function.
+	(expr_to_tree): Renamed from expression_to_tree.
+	(stat_to_tree): Renamed from statement_to_tree.
+
+2011-04-06  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc (Gcc_backend::expression_statement): New function.
+
+2011-04-04  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.c (class Blabel): Define.
+	(Gcc_backend::make_expression): New function.
+	(get_identifier_from_string): New function.
+	(Gcc_backend::label): New function.
+	(Gcc_backend::label_definition_statement): New function.
+	(Gcc_backend::goto_statement): New function.
+	(Gcc_backend::label_address): New function.
+	(expression_to_tree): New function.
+	* Make-lang.in (go/expressions.o): Depend on
+	go/gofrontend/backend.h.
+	(go/gogo.o): Likewise.
+
+2011-04-04  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc: #include "tree-iterator.h", "gimple.h", and "gogo.h".
+	(class Bfunction): Define.
+	(Gcc_backend::assignment_statement): Rename from assignment.
+	Check for errors.
+	(Gcc_backend::return_statement): New function.
+	(tree_to_function): New function.
+	* Make-lang.in (go/go-gcc.o): Depend on tree-iterator.h,
+	$(GIMPLE_H), and $(GO_GOGO_H).
+
+2011-04-03  Ian Lance Taylor  <iant@google.com>
+
+	* go-gcc.cc: New file.
+	* Make-lang.in (GO_OBJS): Add go/go-gcc.o.
+	(go/go-gcc.o): New target.
+	(go/go.o): Depend on go/gofrontend/backend.h.
+	(go/statements.o): Likewise.
+
+2011-02-14  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* gccgo.texi (Top, Import and Export): Fix a typo and a markup nit.
+
+2011-02-08  Ian Lance Taylor  <iant@google.com>
+
+	* go-lang.c (go_langhook_init_options_struct): Set
+	frontend_set_flag_errno_math.  Don't set x_flag_trapping_math.
+
+2011-01-31  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* gospec.c (lang_specific_driver) [HAVE_LD_STATIC_DYNAMIC] Use
+	LD_STATIC_OPTION, LD_DYNAMIC_OPTION.
+
+2011-01-21  Ian Lance Taylor  <iant@google.com>
+
+	* go-lang.c (go_langhook_init): Omit float_type_size when calling
+	go_create_gogo.
+	* go-c.h: Update declaration of go_create_gogo.
+
+2011-01-13  Ian Lance Taylor  <iant@google.com>
+
+	* go-backend.c: Include "rtl.h" and "target.h".
+	(go_imported_unsafe): New function.
+	* go-c.h (go_imported_unsafe): Declare.
+	* Make-lang.in (go/go-backend.o): Depend on $(RTL_H).
+	(go/gogo-tree.o): Remove dependency on $(RTL_H).
+	(go/unsafe.o): Depend on $(GO_C_H).
+
+2010-12-31  Joern Rennecke  <amylaar@spamcop.net>
+
+	PR go/47113
+	* go-backend.c: (go_field_alignment): Add ATTRIBUTE_UNUSED to
+	variable ‘field’ .
+
+2010-12-21  Ian Lance Taylor  <iant@google.com>
+
+	* Make-lang.in (check-go): Remove.
+	(lang_checks_parallelized): Add check-go.
+	(check_go_parallelize): Set.
+
+2010-12-13  Ian Lance Taylor  <iant@google.com>
+
+	* gospec.c (lang_specific_driver): Add a -o option if not linking
+	and there is no -o option already.
+
+2010-12-07  Ian Lance Taylor  <iant@google.com>
+
+	PR tree-optimization/46805
+	PR tree-optimization/46833
+	* go-lang.c (go_langhook_type_for_mode): Handle vector modes.
+
+2010-12-06  Ian Lance Taylor  <iant@google.com>
+
+	PR other/46789
+	PR bootstrap/46812
+	* go-lang.c (go_char_p): Define type and vectors.
+	(go_search_dirs): New static variable.
+	(go_langhook_handle_option): Use version and version/machine
+	directories for -L.
+	(go_langhook_post_options): Add non-specific -L paths.
+	* Make-lang.in (go/go-lang.o): Define DEFAULT_TARGET_VERSION and
+	DEFAULT_TARGET_MACHINE when compiling.
+	* gccgo.texi (Invoking gccgo): Only document -L for linking.
+	(Import and Export): Don't mention -L for finding import files.
+
+2010-12-03  Ian Lance Taylor  <iant@google.com>
+
+	PR bootstrap/46776
+	* go-backend.c: New file.
+	* go-c.h (go_type_alignment): Declare.
+	(go_field_alignment, go_trampoline_info): Declare.
+	* Make-lang.in (GO_OBJS): Add go/go-backend.o.
+	(go/go-backend.o): New target.
+	(go/go-lang.o): Make dependencies match source file.
+	(go/expressions.o): Don't depend on $(TM_H) $(TM_P_H).
+	(go/gogo-tree.o): Don't depend on $(TM_H).
+
+2010-12-03  Ian Lance Taylor  <iant@google.com>
+
+	* config-lang.in (build_by_default): Set to no.
+
+2010-12-02  Ian Lance Taylor  <iant@google.com>
+
+	Go frontend added to gcc repository.

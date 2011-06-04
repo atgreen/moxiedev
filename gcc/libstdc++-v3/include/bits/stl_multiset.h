@@ -1,7 +1,7 @@
 // Multiset implementation -*- C++ -*-
 
-// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-// Free Software Foundation, Inc.
+// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+// 2011 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -49,9 +49,9 @@
  * purpose.  It is provided "as is" without express or implied warranty.
  */
 
-/** @file stl_multiset.h
+/** @file bits/stl_multiset.h
  *  This is an internal header file, included by other library headers.
- *  You should not attempt to use it directly.
+ *  Do not attempt to use it directly. @headername{set}
  */
 
 #ifndef _STL_MULTISET_H
@@ -60,7 +60,9 @@
 #include <bits/concept_check.h>
 #include <initializer_list>
 
-_GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   /**
    *  @brief A standard container made up of elements, which can be retrieved
@@ -190,6 +192,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  The contents of @a x are a valid, but unspecified %multiset.
        */
       multiset(multiset&& __x)
+      noexcept(is_nothrow_copy_constructible<_Compare>::value)
       : _M_t(std::move(__x._M_t)) { }
 
       /**
@@ -273,7 +276,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       { return _M_t.key_comp(); }
       ///  Returns the memory allocation object.
       allocator_type
-      get_allocator() const
+      get_allocator() const _GLIBCXX_NOEXCEPT
       { return _M_t.get_allocator(); }
 
       /**
@@ -282,7 +285,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  according to the keys.
        */
       iterator
-      begin() const
+      begin() const _GLIBCXX_NOEXCEPT
       { return _M_t.begin(); }
 
       /**
@@ -291,7 +294,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  according to the keys.
        */
       iterator
-      end() const
+      end() const _GLIBCXX_NOEXCEPT
       { return _M_t.end(); }
 
       /**
@@ -300,7 +303,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  according to the keys.
        */
       reverse_iterator
-      rbegin() const
+      rbegin() const _GLIBCXX_NOEXCEPT
       { return _M_t.rbegin(); }
 
       /**
@@ -309,7 +312,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  according to the keys.
        */
       reverse_iterator
-      rend() const
+      rend() const _GLIBCXX_NOEXCEPT
       { return _M_t.rend(); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -319,7 +322,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  according to the keys.
        */
       iterator
-      cbegin() const
+      cbegin() const noexcept
       { return _M_t.begin(); }
 
       /**
@@ -328,7 +331,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  according to the keys.
        */
       iterator
-      cend() const
+      cend() const noexcept
       { return _M_t.end(); }
 
       /**
@@ -337,7 +340,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  according to the keys.
        */
       reverse_iterator
-      crbegin() const
+      crbegin() const noexcept
       { return _M_t.rbegin(); }
 
       /**
@@ -346,23 +349,23 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  according to the keys.
        */
       reverse_iterator
-      crend() const
+      crend() const noexcept
       { return _M_t.rend(); }
 #endif
 
       ///  Returns true if the %set is empty.
       bool
-      empty() const
+      empty() const _GLIBCXX_NOEXCEPT
       { return _M_t.empty(); }
 
       ///  Returns the size of the %set.
       size_type
-      size() const
+      size() const _GLIBCXX_NOEXCEPT
       { return _M_t.size(); }
 
       ///  Returns the maximum size of the %set.
       size_type
-      max_size() const
+      max_size() const _GLIBCXX_NOEXCEPT
       { return _M_t.max_size(); }
 
       /**
@@ -552,7 +555,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  is the user's responsibility.
        */
       void
-      clear()
+      clear() _GLIBCXX_NOEXCEPT
       { _M_t.clear(); }
 
       // multiset operations:
@@ -730,6 +733,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	 multiset<_Key, _Compare, _Alloc>& __y)
     { __x.swap(__y); }
 
-_GLIBCXX_END_NESTED_NAMESPACE
+_GLIBCXX_END_NAMESPACE_CONTAINER
+} // namespace std
 
 #endif /* _STL_MULTISET_H */

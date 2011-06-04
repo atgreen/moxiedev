@@ -1,5 +1,5 @@
 /* Variable tracking routines for the GNU compiler.
-   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of GCC.
@@ -110,12 +110,12 @@
 #include "tree-flow.h"
 #include "cselib.h"
 #include "target.h"
-#include "toplev.h"
 #include "params.h"
 #include "diagnostic.h"
 #include "tree-pretty-print.h"
 #include "pointer-set.h"
 #include "recog.h"
+#include "tm_p.h"
 
 /* var-tracking.c assumes that tree code with the same value as VALUE rtx code
    has no chance to appear in REG_EXPR/MEM_EXPRs and isn't a decl.
@@ -409,6 +409,7 @@ static void stack_adjust_offset_pre_post (rtx, HOST_WIDE_INT *,
 static void insn_stack_adjust_offset_pre_post (rtx, HOST_WIDE_INT *,
 					       HOST_WIDE_INT *);
 static bool vt_stack_adjustments (void);
+static void note_register_arguments (rtx);
 static hashval_t variable_htab_hash (const void *);
 static int variable_htab_eq (const void *, const void *);
 static void variable_htab_free (void *);
@@ -660,11 +661,15 @@ vt_stack_adjustments (void)
 	    for (insn = BB_HEAD (dest);
 		 insn != NEXT_INSN (BB_END (dest));
 		 insn = NEXT_INSN (insn))
-	      if (INSN_P (insn))
-		{
-		  insn_stack_adjust_offset_pre_post (insn, &pre, &post);
-		  offset += pre + post;
-		}
+	      {
+		if (INSN_P (insn))
+		  {
+		    insn_stack_adjust_offset_pre_post (insn, &pre, &post);
+		    offset += pre + post;
+		  }
+		if (CALL_P (insn))
+		  note_register_arguments (insn);
+	      }
 
 	  VTI (dest)->out.stack_adjust = offset;
 
@@ -700,7 +705,8 @@ vt_stack_adjustments (void)
 static rtx cfa_base_rtx;
 static HOST_WIDE_INT cfa_base_offset;
 
-/* Compute a CFA-based value for the stack pointer.  */
+/* Compute a CFA-based value for an ADJUSTMENT made to stack_pointer_rtx
+   or hard_frame_pointer_rtx.  */
 
 static inline rtx
 compute_cfa_pointer (HOST_WIDE_INT adjustment)
@@ -738,7 +744,11 @@ use_narrower_mode_test (rtx *loc, void *data)
   switch (GET_CODE (*loc))
     {
     case REG:
-      if (cselib_lookup (*loc, GET_MODE (SUBREG_REG (subreg)), 0))
+      if (cselib_lookup (*loc, GET_MODE (SUBREG_REG (subreg)), 0, VOIDmode))
+	return 1;
+      if (!validate_subreg (GET_MODE (subreg), GET_MODE (*loc),
+			    *loc, subreg_lowpart_offset (GET_MODE (subreg),
+							 GET_MODE (*loc))))
 	return 1;
       return -1;
     case PLUS:
@@ -806,6 +816,7 @@ adjust_mems (rtx loc, const_rtx old_rtx, void *data)
 	       && hard_frame_pointer_adjustment != -1
 	       && cfa_base_rtx)
 	return compute_cfa_pointer (hard_frame_pointer_adjustment);
+      gcc_checking_assert (loc != virtual_incoming_args_rtx);
       return loc;
     case MEM:
       mem = loc;
@@ -3111,8 +3122,8 @@ canonicalize_values_mark (void **slot, void *data)
 	    decl_or_value odv = dv_from_value (node->loc);
 	    void **oslot = shared_hash_find_slot_noinsert (set->vars, odv);
 
-	    oslot = set_slot_part (set, val, oslot, odv, 0,
-				   node->init, NULL_RTX);
+	    set_slot_part (set, val, oslot, odv, 0,
+			   node->init, NULL_RTX);
 
 	    VALUE_RECURSED_INTO (node->loc) = true;
 	  }
@@ -3323,8 +3334,8 @@ canonicalize_values_star (void **slot, void *data)
       }
 
   if (val)
-    cslot = set_slot_part (set, val, cslot, cdv, 0,
-			   VAR_INIT_STATUS_INITIALIZED, NULL_RTX);
+    set_slot_part (set, val, cslot, cdv, 0,
+		   VAR_INIT_STATUS_INITIALIZED, NULL_RTX);
 
   slot = clobber_slot_part (set, cval, slot, 0, NULL);
 
@@ -3395,7 +3406,7 @@ canonicalize_vars_star (void **slot, void *data)
 
   slot = set_slot_part (set, cval, slot, dv, 0,
 			node->init, node->set_src);
-  slot = clobber_slot_part (set, cval, slot, 0, node->set_src);
+  clobber_slot_part (set, cval, slot, 0, node->set_src);
 
   return 1;
 }
@@ -3954,8 +3965,10 @@ variable_post_merge_new_vals (void **slot, void *info)
 			 subsequent rounds.  */
 		      cselib_val *v;
 		      gcc_assert (!cselib_lookup (node->loc,
-						  GET_MODE (node->loc), 0));
-		      v = cselib_lookup (node->loc, GET_MODE (node->loc), 1);
+						  GET_MODE (node->loc), 0,
+						  VOIDmode));
+		      v = cselib_lookup (node->loc, GET_MODE (node->loc), 1,
+					 VOIDmode);
 		      cselib_preserve_value (v);
 		      cselib_invalidate_rtx (node->loc);
 		      cval = v->val_rtx;
@@ -4105,8 +4118,9 @@ find_mem_expr_in_1pdv (tree expr, rtx val, htab_t vars)
   VALUE_RECURSED_INTO (val) = true;
 
   for (node = var->var_part[0].loc_chain; node; node = node->next)
-    if (MEM_P (node->loc) && MEM_EXPR (node->loc) == expr
-	&& MEM_OFFSET (node->loc) == 0)
+    if (MEM_P (node->loc)
+	&& MEM_EXPR (node->loc) == expr
+	&& INT_MEM_OFFSET (node->loc) == 0)
       {
 	where = node;
 	break;
@@ -4169,11 +4183,10 @@ dataflow_set_preserve_mem_locs (void **slot, void *data)
 	{
 	  for (loc = var->var_part[0].loc_chain; loc; loc = loc->next)
 	    {
-	      /* We want to remove dying MEMs that doesn't refer to
-		 DECL.  */
+	      /* We want to remove dying MEMs that doesn't refer to DECL.  */
 	      if (GET_CODE (loc->loc) == MEM
 		  && (MEM_EXPR (loc->loc) != decl
-		      || MEM_OFFSET (loc->loc))
+		      || INT_MEM_OFFSET (loc->loc) != 0)
 		  && !mem_dies_at_call (loc->loc))
 		break;
 	      /* We want to move here MEMs that do refer to DECL.  */
@@ -4217,7 +4230,7 @@ dataflow_set_preserve_mem_locs (void **slot, void *data)
 
 	  if (GET_CODE (loc->loc) != MEM
 	      || (MEM_EXPR (loc->loc) == decl
-		  && MEM_OFFSET (loc->loc) == 0)
+		  && INT_MEM_OFFSET (loc->loc) == 0)
 	      || !mem_dies_at_call (loc->loc))
 	    {
 	      if (old_loc != loc->loc && emit_notes)
@@ -4782,18 +4795,25 @@ find_use_val (rtx x, enum machine_mode mode, struct count_use_info *cui)
   if (cui->sets)
     {
       /* This is called after uses are set up and before stores are
-	 processed bycselib, so it's safe to look up srcs, but not
+	 processed by cselib, so it's safe to look up srcs, but not
 	 dsts.  So we look up expressions that appear in srcs or in
 	 dest expressions, but we search the sets array for dests of
 	 stores.  */
       if (cui->store_p)
 	{
+	  /* Some targets represent memset and memcpy patterns
+	     by (set (mem:BLK ...) (reg:[QHSD]I ...)) or
+	     (set (mem:BLK ...) (const_int ...)) or
+	     (set (mem:BLK ...) (mem:BLK ...)).  Don't return anything
+	     in that case, otherwise we end up with mode mismatches.  */
+	  if (mode == BLKmode && MEM_P (x))
+	    return NULL;
 	  for (i = 0; i < cui->n_sets; i++)
 	    if (cui->sets[i].dest == x)
 	      return cui->sets[i].src_elt;
 	}
       else
-	return cselib_lookup (x, mode, 0);
+	return cselib_lookup (x, mode, 0, VOIDmode);
     }
 
   return NULL;
@@ -4817,19 +4837,20 @@ get_address_mode (rtx mem)
 static rtx
 replace_expr_with_values (rtx loc)
 {
-  if (REG_P (loc))
+  if (REG_P (loc) || GET_CODE (loc) == ENTRY_VALUE)
     return NULL;
   else if (MEM_P (loc))
     {
       cselib_val *addr = cselib_lookup (XEXP (loc, 0),
-					get_address_mode (loc), 0);
+					get_address_mode (loc), 0,
+					GET_MODE (loc));
       if (addr)
 	return replace_equiv_address_nv (loc, addr->val_rtx);
       else
 	return NULL;
     }
   else
-    return cselib_subst_to_values (loc);
+    return cselib_subst_to_values (loc, VOIDmode);
 }
 
 /* Determine what kind of micro operation to choose for a USE.  Return
@@ -4849,7 +4870,8 @@ use_type (rtx loc, struct count_use_info *cui, enum machine_mode *modep)
 	      rtx ploc = PAT_VAR_LOCATION_LOC (loc);
 	      if (! VAR_LOC_UNKNOWN_P (ploc))
 		{
-		  cselib_val *val = cselib_lookup (ploc, GET_MODE (loc), 1);
+		  cselib_val *val = cselib_lookup (ploc, GET_MODE (loc), 1,
+						   VOIDmode);
 
 		  /* ??? flag_float_store and volatile mems are never
 		     given values, but we could in theory use them for
@@ -4871,7 +4893,8 @@ use_type (rtx loc, struct count_use_info *cui, enum machine_mode *modep)
 	      if (REG_P (loc)
 		  || (find_use_val (loc, GET_MODE (loc), cui)
 		      && cselib_lookup (XEXP (loc, 0),
-					get_address_mode (loc), 0)))
+					get_address_mode (loc), 0,
+					GET_MODE (loc))))
 		return MO_VAL_SET;
 	    }
 	  else
@@ -4959,6 +4982,9 @@ log_op_type (rtx x, basic_block bb, rtx insn,
 /* All preserved VALUEs.  */
 static VEC (rtx, heap) *preserved_values;
 
+/* Registers used in the current function for passing parameters.  */
+static HARD_REG_SET argument_reg_set;
+
 /* Ensure VAL is preserved and remember it in a vector for vt_emit_notes.  */
 
 static void
@@ -5026,6 +5052,7 @@ add_uses (rtx *ploc, void *data)
 	  if (MEM_P (vloc)
 	      && !REG_P (XEXP (vloc, 0))
 	      && !MEM_P (XEXP (vloc, 0))
+	      && GET_CODE (XEXP (vloc, 0)) != ENTRY_VALUE
 	      && (GET_CODE (XEXP (vloc, 0)) != PLUS
 		  || XEXP (XEXP (vloc, 0), 0) != cfa_base_rtx
 		  || !CONST_INT_P (XEXP (XEXP (vloc, 0), 1))))
@@ -5033,13 +5060,15 @@ add_uses (rtx *ploc, void *data)
 	      rtx mloc = vloc;
 	      enum machine_mode address_mode = get_address_mode (mloc);
 	      cselib_val *val
-		= cselib_lookup (XEXP (mloc, 0), address_mode, 0);
+		= cselib_lookup (XEXP (mloc, 0), address_mode, 0,
+				 GET_MODE (mloc));
 
 	      if (val && !cselib_preserved_value_p (val))
 		{
 		  micro_operation moa;
 		  preserve_value (val);
-		  mloc = cselib_subst_to_values (XEXP (mloc, 0));
+		  mloc = cselib_subst_to_values (XEXP (mloc, 0),
+						 GET_MODE (mloc));
 		  moa.type = MO_VAL_USE;
 		  moa.insn = cui->insn;
 		  moa.u.loc = gen_rtx_CONCAT (address_mode,
@@ -5102,6 +5131,7 @@ add_uses (rtx *ploc, void *data)
 	  if (MEM_P (oloc)
 	      && !REG_P (XEXP (oloc, 0))
 	      && !MEM_P (XEXP (oloc, 0))
+	      && GET_CODE (XEXP (oloc, 0)) != ENTRY_VALUE
 	      && (GET_CODE (XEXP (oloc, 0)) != PLUS
 		  || XEXP (XEXP (oloc, 0), 0) != cfa_base_rtx
 		  || !CONST_INT_P (XEXP (XEXP (oloc, 0), 1))))
@@ -5109,13 +5139,15 @@ add_uses (rtx *ploc, void *data)
 	      rtx mloc = oloc;
 	      enum machine_mode address_mode = get_address_mode (mloc);
 	      cselib_val *val
-		= cselib_lookup (XEXP (mloc, 0), address_mode, 0);
+		= cselib_lookup (XEXP (mloc, 0), address_mode, 0,
+				GET_MODE (mloc));
 
 	      if (val && !cselib_preserved_value_p (val))
 		{
 		  micro_operation moa;
 		  preserve_value (val);
-		  mloc = cselib_subst_to_values (XEXP (mloc, 0));
+		  mloc = cselib_subst_to_values (XEXP (mloc, 0),
+						GET_MODE (mloc));
 		  moa.type = MO_VAL_USE;
 		  moa.insn = cui->insn;
 		  moa.u.loc = gen_rtx_CONCAT (address_mode,
@@ -5185,6 +5217,8 @@ add_uses_1 (rtx *x, void *cui)
   for_each_rtx (x, add_uses, cui);
 }
 
+#define EXPR_DEPTH (PARAM_VALUE (PARAM_MAX_VARTRACK_EXPR_DEPTH))
+
 /* Attempt to reverse the EXPR operation in the debug info.  Say for
    reg1 = reg2 + 6 even when reg2 is no longer live we
    can express its value as VAL - 6.  */
@@ -5225,7 +5259,7 @@ reverse_op (rtx val, const_rtx expr)
   if (!SCALAR_INT_MODE_P (GET_MODE (src)) || XEXP (src, 0) == cfa_base_rtx)
     return NULL_RTX;
 
-  v = cselib_lookup (XEXP (src, 0), GET_MODE (XEXP (src, 0)), 0);
+  v = cselib_lookup (XEXP (src, 0), GET_MODE (XEXP (src, 0)), 0, VOIDmode);
   if (!v || !cselib_preserved_value_p (v))
     return NULL_RTX;
 
@@ -5308,10 +5342,22 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
 	{
 	  mo.type = MO_CLOBBER;
 	  mo.u.loc = loc;
+	  if (GET_CODE (expr) == SET
+	      && SET_DEST (expr) == loc
+	      && REGNO (loc) < FIRST_PSEUDO_REGISTER
+	      && TEST_HARD_REG_BIT (argument_reg_set, REGNO (loc))
+	      && find_use_val (loc, mode, cui)
+	      && GET_CODE (SET_SRC (expr)) != ASM_OPERANDS)
+	    {
+	      gcc_checking_assert (type == MO_VAL_SET);
+	      mo.u.loc = gen_rtx_SET (VOIDmode, loc, SET_SRC (expr));
+	    }
 	}
       else
 	{
-	  if (GET_CODE (expr) == SET && SET_DEST (expr) == loc)
+	  if (GET_CODE (expr) == SET
+	      && SET_DEST (expr) == loc
+	      && GET_CODE (SET_SRC (expr)) != ASM_OPERANDS)
 	    src = var_lowpart (mode2, SET_SRC (expr));
 	  loc = var_lowpart (mode2, loc);
 
@@ -5339,6 +5385,7 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
       if (MEM_P (loc) && type == MO_VAL_SET
 	  && !REG_P (XEXP (loc, 0))
 	  && !MEM_P (XEXP (loc, 0))
+	  && GET_CODE (XEXP (loc, 0)) != ENTRY_VALUE
 	  && (GET_CODE (XEXP (loc, 0)) != PLUS
 	      || XEXP (XEXP (loc, 0), 0) != cfa_base_rtx
 	      || !CONST_INT_P (XEXP (XEXP (loc, 0), 1))))
@@ -5346,13 +5393,15 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
 	  rtx mloc = loc;
 	  enum machine_mode address_mode = get_address_mode (mloc);
 	  cselib_val *val = cselib_lookup (XEXP (mloc, 0),
-					   address_mode, 0);
+					   address_mode, 0,
+					   GET_MODE (mloc));
 
 	  if (val && !cselib_preserved_value_p (val))
 	    {
 	      preserve_value (val);
 	      mo.type = MO_VAL_USE;
-	      mloc = cselib_subst_to_values (XEXP (mloc, 0));
+	      mloc = cselib_subst_to_values (XEXP (mloc, 0),
+					     GET_MODE (mloc));
 	      mo.u.loc = gen_rtx_CONCAT (address_mode, val->val_rtx, mloc);
 	      mo.insn = cui->insn;
 	      if (dump_file && (dump_flags & TDF_DETAILS))
@@ -5369,7 +5418,9 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
 	}
       else
 	{
-	  if (GET_CODE (expr) == SET && SET_DEST (expr) == loc)
+	  if (GET_CODE (expr) == SET
+	      && SET_DEST (expr) == loc
+	      && GET_CODE (SET_SRC (expr)) != ASM_OPERANDS)
 	    src = var_lowpart (mode2, SET_SRC (expr));
 	  loc = var_lowpart (mode2, loc);
 
@@ -5411,7 +5462,7 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
 
   if (GET_CODE (PATTERN (cui->insn)) == COND_EXEC)
     {
-      cselib_val *oval = cselib_lookup (oloc, GET_MODE (oloc), 0);
+      cselib_val *oval = cselib_lookup (oloc, GET_MODE (oloc), 0, VOIDmode);
 
       gcc_assert (oval != v);
       gcc_assert (REG_P (oloc) || MEM_P (oloc));
@@ -5524,6 +5575,295 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
   VEC_safe_push (micro_operation, heap, VTI (bb)->mos, &mo);
 }
 
+/* Arguments to the call.  */
+static rtx call_arguments;
+
+/* Compute call_arguments.  */
+
+static void
+prepare_call_arguments (basic_block bb, rtx insn)
+{
+  rtx link, x;
+  rtx prev, cur, next;
+  rtx call = PATTERN (insn);
+  rtx this_arg = NULL_RTX;
+  tree type = NULL_TREE, t, fndecl = NULL_TREE;
+  tree obj_type_ref = NULL_TREE;
+  CUMULATIVE_ARGS args_so_far;
+
+  memset (&args_so_far, 0, sizeof (args_so_far));
+  if (GET_CODE (call) == PARALLEL)
+    call = XVECEXP (call, 0, 0);
+  if (GET_CODE (call) == SET)
+    call = SET_SRC (call);
+  if (GET_CODE (call) == CALL && MEM_P (XEXP (call, 0)))
+    {
+      if (GET_CODE (XEXP (XEXP (call, 0), 0)) == SYMBOL_REF)
+	{
+	  rtx symbol = XEXP (XEXP (call, 0), 0);
+	  if (SYMBOL_REF_DECL (symbol))
+	    fndecl = SYMBOL_REF_DECL (symbol);
+	}
+      if (fndecl == NULL_TREE)
+	fndecl = MEM_EXPR (XEXP (call, 0));
+      if (fndecl
+	  && TREE_CODE (TREE_TYPE (fndecl)) != FUNCTION_TYPE
+	  && TREE_CODE (TREE_TYPE (fndecl)) != METHOD_TYPE)
+	fndecl = NULL_TREE;
+      if (fndecl && TYPE_ARG_TYPES (TREE_TYPE (fndecl)))
+	type = TREE_TYPE (fndecl);
+      if (fndecl && TREE_CODE (fndecl) != FUNCTION_DECL)
+	{
+	  if (TREE_CODE (fndecl) == INDIRECT_REF
+	      && TREE_CODE (TREE_OPERAND (fndecl, 0)) == OBJ_TYPE_REF)
+	    obj_type_ref = TREE_OPERAND (fndecl, 0);
+	  fndecl = NULL_TREE;
+	}
+      if (type)
+	{
+	  for (t = TYPE_ARG_TYPES (type); t && t != void_list_node;
+	       t = TREE_CHAIN (t))
+	    if (TREE_CODE (TREE_VALUE (t)) == REFERENCE_TYPE
+		&& INTEGRAL_TYPE_P (TREE_TYPE (TREE_VALUE (t))))
+	      break;
+	  if ((t == NULL || t == void_list_node) && obj_type_ref == NULL_TREE)
+	    type = NULL;
+	  else
+	    {
+	      int nargs ATTRIBUTE_UNUSED = list_length (TYPE_ARG_TYPES (type));
+	      link = CALL_INSN_FUNCTION_USAGE (insn);
+#ifndef PCC_STATIC_STRUCT_RETURN
+	      if (aggregate_value_p (TREE_TYPE (type), type)
+		  && targetm.calls.struct_value_rtx (type, 0) == 0)
+		{
+		  tree struct_addr = build_pointer_type (TREE_TYPE (type));
+		  enum machine_mode mode = TYPE_MODE (struct_addr);
+		  rtx reg;
+		  INIT_CUMULATIVE_ARGS (args_so_far, type, NULL_RTX, fndecl,
+					nargs + 1);
+		  reg = targetm.calls.function_arg (&args_so_far, mode,
+						    struct_addr, true);
+		  targetm.calls.function_arg_advance (&args_so_far, mode,
+						      struct_addr, true);
+		  if (reg == NULL_RTX)
+		    {
+		      for (; link; link = XEXP (link, 1))
+			if (GET_CODE (XEXP (link, 0)) == USE
+			    && MEM_P (XEXP (XEXP (link, 0), 0)))
+			  {
+			    link = XEXP (link, 1);
+			    break;
+			  }
+		    }
+		}
+	      else
+#endif
+		INIT_CUMULATIVE_ARGS (args_so_far, type, NULL_RTX, fndecl,
+				      nargs);
+	      if (obj_type_ref && TYPE_ARG_TYPES (type) != void_list_node)
+		{
+		  enum machine_mode mode;
+		  t = TYPE_ARG_TYPES (type);
+		  mode = TYPE_MODE (TREE_VALUE (t));
+		  this_arg = targetm.calls.function_arg (&args_so_far, mode,
+							 TREE_VALUE (t), true);
+		  if (this_arg && !REG_P (this_arg))
+		    this_arg = NULL_RTX;
+		  else if (this_arg == NULL_RTX)
+		    {
+		      for (; link; link = XEXP (link, 1))
+			if (GET_CODE (XEXP (link, 0)) == USE
+			    && MEM_P (XEXP (XEXP (link, 0), 0)))
+			  {
+			    this_arg = XEXP (XEXP (link, 0), 0);
+			    break;
+			  }
+		    }
+		}
+	    }
+	}
+    }
+  t = type ? TYPE_ARG_TYPES (type) : NULL_TREE;
+
+  for (link = CALL_INSN_FUNCTION_USAGE (insn); link; link = XEXP (link, 1))
+    if (GET_CODE (XEXP (link, 0)) == USE)
+      {
+	rtx item = NULL_RTX;
+	x = XEXP (XEXP (link, 0), 0);
+	if (REG_P (x))
+	  {
+	    cselib_val *val = cselib_lookup (x, GET_MODE (x), 0, VOIDmode);
+	    if (val && cselib_preserved_value_p (val))
+	      item = gen_rtx_CONCAT (GET_MODE (x), x, val->val_rtx);
+	    else if (GET_MODE_CLASS (GET_MODE (x)) == MODE_INT)
+	      {
+		enum machine_mode mode = GET_MODE (x);
+
+		while ((mode = GET_MODE_WIDER_MODE (mode)) != VOIDmode
+		       && GET_MODE_BITSIZE (mode) <= BITS_PER_WORD)
+		  {
+		    rtx reg = simplify_subreg (mode, x, GET_MODE (x), 0);
+
+		    if (reg == NULL_RTX || !REG_P (reg))
+		      continue;
+		    val = cselib_lookup (reg, mode, 0, VOIDmode);
+		    if (val && cselib_preserved_value_p (val))
+		      {
+			item = gen_rtx_CONCAT (GET_MODE (x), x,
+					       lowpart_subreg (GET_MODE (x),
+							       val->val_rtx,
+							       mode));
+			break;
+		      }
+		  }
+	      }
+	  }
+	else if (MEM_P (x))
+	  {
+	    rtx mem = x;
+	    cselib_val *val;
+
+	    if (!frame_pointer_needed)
+	      {
+		struct adjust_mem_data amd;
+		amd.mem_mode = VOIDmode;
+		amd.stack_adjust = -VTI (bb)->out.stack_adjust;
+		amd.side_effects = NULL_RTX;
+		amd.store = true;
+		mem = simplify_replace_fn_rtx (mem, NULL_RTX, adjust_mems,
+					       &amd);
+		gcc_assert (amd.side_effects == NULL_RTX);
+	      }
+	    val = cselib_lookup (mem, GET_MODE (mem), 0, VOIDmode);
+	    if (val && cselib_preserved_value_p (val))
+	      item = gen_rtx_CONCAT (GET_MODE (x), copy_rtx (x), val->val_rtx);
+	  }
+	if (item)
+	  call_arguments = gen_rtx_EXPR_LIST (VOIDmode, item, call_arguments);
+	if (t && t != void_list_node)
+	  {
+	    tree argtype = TREE_VALUE (t);
+	    enum machine_mode mode = TYPE_MODE (argtype);
+	    rtx reg;
+	    if (pass_by_reference (&args_so_far, mode, argtype, true))
+	      {
+		argtype = build_pointer_type (argtype);
+		mode = TYPE_MODE (argtype);
+	      }
+	    reg = targetm.calls.function_arg (&args_so_far, mode,
+					      argtype, true);
+	    if (TREE_CODE (argtype) == REFERENCE_TYPE
+		&& INTEGRAL_TYPE_P (TREE_TYPE (argtype))
+		&& reg
+		&& REG_P (reg)
+		&& GET_MODE (reg) == mode
+		&& GET_MODE_CLASS (mode) == MODE_INT
+		&& REG_P (x)
+		&& REGNO (x) == REGNO (reg)
+		&& GET_MODE (x) == mode
+		&& item)
+	      {
+		enum machine_mode indmode
+		  = TYPE_MODE (TREE_TYPE (argtype));
+		rtx mem = gen_rtx_MEM (indmode, x);
+		cselib_val *val = cselib_lookup (mem, indmode, 0, VOIDmode);
+		if (val && cselib_preserved_value_p (val))
+		  {
+		    item = gen_rtx_CONCAT (indmode, mem, val->val_rtx);
+		    call_arguments = gen_rtx_EXPR_LIST (VOIDmode, item,
+							call_arguments);
+		  }
+		else
+		  {
+		    struct elt_loc_list *l;
+		    tree initial;
+
+		    /* Try harder, when passing address of a constant
+		       pool integer it can be easily read back.  */
+		    item = XEXP (item, 1);
+		    if (GET_CODE (item) == SUBREG)
+		      item = SUBREG_REG (item);
+		    gcc_assert (GET_CODE (item) == VALUE);
+		    val = CSELIB_VAL_PTR (item);
+		    for (l = val->locs; l; l = l->next)
+		      if (GET_CODE (l->loc) == SYMBOL_REF
+			  && TREE_CONSTANT_POOL_ADDRESS_P (l->loc)
+			  && SYMBOL_REF_DECL (l->loc)
+			  && DECL_INITIAL (SYMBOL_REF_DECL (l->loc)))
+			{
+			  initial = DECL_INITIAL (SYMBOL_REF_DECL (l->loc));
+			  if (host_integerp (initial, 0))
+			    {
+			      item = GEN_INT (tree_low_cst (initial, 0));
+			      item = gen_rtx_CONCAT (indmode, mem, item);
+			      call_arguments
+				= gen_rtx_EXPR_LIST (VOIDmode, item,
+						     call_arguments);
+			    }
+			  break;
+			}
+		  }
+	      }
+	    targetm.calls.function_arg_advance (&args_so_far, mode,
+						argtype, true);
+	    t = TREE_CHAIN (t);
+	  }
+      }
+
+  /* Reverse call_arguments chain.  */
+  prev = NULL_RTX;
+  for (cur = call_arguments; cur; cur = next)
+    {
+      next = XEXP (cur, 1);
+      XEXP (cur, 1) = prev;
+      prev = cur;
+    }
+  call_arguments = prev;
+
+  x = PATTERN (insn);
+  if (GET_CODE (x) == PARALLEL)
+    x = XVECEXP (x, 0, 0);
+  if (GET_CODE (x) == SET)
+    x = SET_SRC (x);
+  if (GET_CODE (x) == CALL && MEM_P (XEXP (x, 0)))
+    {
+      x = XEXP (XEXP (x, 0), 0);
+      if (GET_CODE (x) == SYMBOL_REF)
+	/* Don't record anything.  */;
+      else if (CONSTANT_P (x))
+	{
+	  x = gen_rtx_CONCAT (GET_MODE (x) == VOIDmode ? Pmode : GET_MODE (x),
+			      pc_rtx, x);
+	  call_arguments
+	    = gen_rtx_EXPR_LIST (VOIDmode, x, call_arguments);
+	}
+      else
+	{
+	  cselib_val *val = cselib_lookup (x, GET_MODE (x), 0, VOIDmode);
+	  if (val && cselib_preserved_value_p (val))
+	    {
+	      x = gen_rtx_CONCAT (GET_MODE (x), pc_rtx, val->val_rtx);
+	      call_arguments
+		= gen_rtx_EXPR_LIST (VOIDmode, x, call_arguments);
+	    }
+	}
+    }
+  if (this_arg)
+    {
+      enum machine_mode mode
+	= TYPE_MODE (TREE_TYPE (OBJ_TYPE_REF_EXPR (obj_type_ref)));
+      rtx clobbered = gen_rtx_MEM (mode, this_arg);
+      HOST_WIDE_INT token
+	= tree_low_cst (OBJ_TYPE_REF_TOKEN (obj_type_ref), 0);
+      if (token)
+	clobbered = plus_constant (clobbered, token * GET_MODE_SIZE (mode));
+      clobbered = gen_rtx_MEM (mode, clobbered);
+      x = gen_rtx_CONCAT (mode, gen_rtx_CLOBBER (VOIDmode, pc_rtx), clobbered);
+      call_arguments
+	= gen_rtx_EXPR_LIST (VOIDmode, x, call_arguments);
+    }
+}
+
 /* Callback for cselib_record_sets_hook, that records as micro
    operations uses and stores in an insn after cselib_record_sets has
    analyzed the sets in an insn, but before it modifies the stored
@@ -5593,7 +5933,8 @@ add_with_sets (rtx insn, struct cselib_set *sets, int n_sets)
 
       mo.type = MO_CALL;
       mo.insn = insn;
-      mo.u.loc = NULL_RTX;
+      mo.u.loc = call_arguments;
+      call_arguments = NULL_RTX;
 
       if (dump_file && (dump_flags & TDF_DETAILS))
 	log_op_type (PATTERN (insn), bb, insn, mo.type, dump_file);
@@ -6707,7 +7048,7 @@ set_variable_part (dataflow_set *set, rtx loc,
       if (!slot)
 	slot = shared_hash_find_slot_unshare (&set->vars, dv, iopt);
     }
-  slot = set_slot_part (set, loc, slot, dv, offset, initialized, set_src);
+  set_slot_part (set, loc, slot, dv, offset, initialized, set_src);
 }
 
 /* Remove all recorded register locations for the given variable part
@@ -6788,7 +7129,7 @@ clobber_variable_part (dataflow_set *set, rtx loc, decl_or_value dv,
   if (!slot)
     return;
 
-  slot = clobber_slot_part (set, loc, slot, offset, set_src);
+  clobber_slot_part (set, loc, slot, offset, set_src);
 }
 
 /* Delete the part of variable's location from dataflow set SET.  The
@@ -6887,7 +7228,7 @@ delete_variable_part (dataflow_set *set, rtx loc, decl_or_value dv,
   if (!slot)
     return;
 
-  slot = delete_slot_part (set, loc, slot, offset);
+  delete_slot_part (set, loc, slot, offset);
 }
 
 /* Structure for passing some other parameters to function
@@ -6909,6 +7250,10 @@ struct expand_loc_callback_data
      whose cur_loc has been already recomputed during current
      emit_notes_for_changes call.  */
   bool cur_loc_changed;
+
+  /* True if cur_loc should be ignored and any possible location
+     returned.  */
+  bool ignore_cur_loc;
 };
 
 /* Callback for cselib_expand_value, that looks for expressions
@@ -6922,6 +7267,7 @@ vt_expand_loc_callback (rtx x, bitmap regs, int max_depth, void *data)
     = (struct expand_loc_callback_data *) data;
   bool dummy = elcd->dummy;
   bool cur_loc_changed = elcd->cur_loc_changed;
+  rtx cur_loc;
   decl_or_value dv;
   variable var;
   location_chain loc;
@@ -6996,7 +7342,7 @@ vt_expand_loc_callback (rtx x, bitmap regs, int max_depth, void *data)
   VALUE_RECURSED_INTO (x) = true;
   result = NULL;
 
-  if (var->var_part[0].cur_loc)
+  if (var->var_part[0].cur_loc && !elcd->ignore_cur_loc)
     {
       if (dummy)
 	{
@@ -7011,12 +7357,16 @@ vt_expand_loc_callback (rtx x, bitmap regs, int max_depth, void *data)
 					     vt_expand_loc_callback, data);
       if (result)
 	set_dv_changed (dv, false);
+      cur_loc = var->var_part[0].cur_loc;
     }
-  if (!result && dv_changed_p (dv))
+  else
+    cur_loc = NULL_RTX;
+  if (!result && (dv_changed_p (dv) || elcd->ignore_cur_loc))
     {
-      set_dv_changed (dv, false);
+      if (!elcd->ignore_cur_loc)
+	set_dv_changed (dv, false);
       for (loc = var->var_part[0].loc_chain; loc; loc = loc->next)
-	if (loc->loc == var->var_part[0].cur_loc)
+	if (loc->loc == cur_loc)
 	  continue;
 	else if (dummy)
 	  {
@@ -7038,7 +7388,8 @@ vt_expand_loc_callback (rtx x, bitmap regs, int max_depth, void *data)
 	  }
       if (dummy && (result || var->var_part[0].cur_loc))
 	var->cur_loc_changed = true;
-      var->var_part[0].cur_loc = loc ? loc->loc : NULL_RTX;
+      if (!elcd->ignore_cur_loc)
+	var->var_part[0].cur_loc = loc ? loc->loc : NULL_RTX;
     }
   if (dummy)
     {
@@ -7059,7 +7410,7 @@ vt_expand_loc_callback (rtx x, bitmap regs, int max_depth, void *data)
    tables.  */
 
 static rtx
-vt_expand_loc (rtx loc, htab_t vars)
+vt_expand_loc (rtx loc, htab_t vars, bool ignore_cur_loc)
 {
   struct expand_loc_callback_data data;
 
@@ -7069,7 +7420,8 @@ vt_expand_loc (rtx loc, htab_t vars)
   data.vars = vars;
   data.dummy = false;
   data.cur_loc_changed = false;
-  loc = cselib_expand_value_rtx_cb (loc, scratch_regs, 8,
+  data.ignore_cur_loc = ignore_cur_loc;
+  loc = cselib_expand_value_rtx_cb (loc, scratch_regs, EXPR_DEPTH,
 				    vt_expand_loc_callback, &data);
 
   if (loc && MEM_P (loc))
@@ -7090,29 +7442,12 @@ vt_expand_loc_dummy (rtx loc, htab_t vars, bool *pcur_loc_changed)
   data.vars = vars;
   data.dummy = true;
   data.cur_loc_changed = false;
-  ret = cselib_dummy_expand_value_rtx_cb (loc, scratch_regs, 8,
+  data.ignore_cur_loc = false;
+  ret = cselib_dummy_expand_value_rtx_cb (loc, scratch_regs, EXPR_DEPTH,
 					  vt_expand_loc_callback, &data);
   *pcur_loc_changed = data.cur_loc_changed;
   return ret;
 }
-
-#ifdef ENABLE_RTL_CHECKING
-/* Used to verify that cur_loc_changed updating is safe.  */
-static struct pointer_map_t *emitted_notes;
-
-/* Strip REG_POINTER from REGs and MEM_POINTER from MEMs in order to
-   avoid differences in commutative operand simplification.  */
-static rtx
-strip_pointer_flags (rtx x, const_rtx old_rtx ATTRIBUTE_UNUSED,
-		     void *data ATTRIBUTE_UNUSED)
-{
-  if (REG_P (x) && REG_POINTER (x))
-    return gen_rtx_REG (GET_MODE (x), REGNO (x));
-  if (MEM_P (x) && MEM_POINTER (x))
-    return gen_rtx_MEM (GET_MODE (x), XEXP (x, 0));
-  return NULL_RTX;
-}
-#endif
 
 /* Emit the NOTE_INSN_VAR_LOCATION for variable *VARP.  DATA contains
    additional parameters: WHERE specifies whether the note shall be emitted
@@ -7158,10 +7493,8 @@ emit_note_insn_var_location (void **varp, void *data)
       if (var->n_var_parts == 0)
 	var->cur_loc_changed = true;
     }
-#ifndef ENABLE_RTL_CHECKING
   if (!var->cur_loc_changed)
     goto clear;
-#endif
   for (i = 0; i < var->n_var_parts; i++)
     {
       enum machine_mode mode, wider_mode;
@@ -7180,7 +7513,7 @@ emit_note_insn_var_location (void **varp, void *data)
 	  complete = false;
 	  continue;
 	}
-      loc2 = vt_expand_loc (var->var_part[i].cur_loc, vars);
+      loc2 = vt_expand_loc (var->var_part[i].cur_loc, vars, false);
       if (!loc2)
 	{
 	  complete = false;
@@ -7210,7 +7543,7 @@ emit_note_insn_var_location (void **varp, void *data)
 	  && mode == GET_MODE (var->var_part[j].cur_loc)
 	  && (REG_P (loc[n_var_parts]) || MEM_P (loc[n_var_parts]))
 	  && last_limit == var->var_part[j].offset
-	  && (loc2 = vt_expand_loc (var->var_part[j].cur_loc, vars))
+	  && (loc2 = vt_expand_loc (var->var_part[j].cur_loc, vars, false))
 	  && GET_CODE (loc[n_var_parts]) == GET_CODE (loc2))
 	{
 	  rtx new_loc = NULL;
@@ -7302,36 +7635,6 @@ emit_note_insn_var_location (void **varp, void *data)
       note_vl = gen_rtx_VAR_LOCATION (VOIDmode, decl,
 				      parallel, (int) initialized);
     }
-
-#ifdef ENABLE_RTL_CHECKING
-  if (note_vl)
-    {
-      void **note_slot = pointer_map_insert (emitted_notes, decl);
-      rtx pnote = (rtx) *note_slot;
-      if (!var->cur_loc_changed && (pnote || PAT_VAR_LOCATION_LOC (note_vl)))
-	{
-	  rtx old_vl, new_vl;
-	  gcc_assert (pnote);
-	  old_vl = PAT_VAR_LOCATION_LOC (pnote);
-	  new_vl = PAT_VAR_LOCATION_LOC (note_vl);
-	  if (!rtx_equal_p (old_vl, new_vl))
-	    {
-	      /* There might be differences caused by REG_POINTER
-		 differences.  REG_POINTER affects
-		 swap_commutative_operands_p.  */
-	      old_vl = simplify_replace_fn_rtx (old_vl, NULL_RTX,
-						strip_pointer_flags, NULL);
-	      new_vl = simplify_replace_fn_rtx (new_vl, NULL_RTX,
-						strip_pointer_flags, NULL);
-	      gcc_assert (rtx_equal_p (old_vl, new_vl));
-	      PAT_VAR_LOCATION_LOC (note_vl) = new_vl;
-	    }
-	}
-      *note_slot = (void *) note_vl;
-    }
-  if (!var->cur_loc_changed)
-    goto clear;
-#endif
 
   if (where != EMIT_NOTE_BEFORE_INSN)
     {
@@ -7694,6 +7997,34 @@ emit_notes_in_bb (basic_block bb, dataflow_set *set)
 	  case MO_CALL:
 	    dataflow_set_clear_at_call (set);
 	    emit_notes_for_changes (insn, EMIT_NOTE_AFTER_CALL_INSN, set->vars);
+	    {
+	      rtx arguments = mo->u.loc, *p = &arguments, note;
+	      while (*p)
+		{
+		  XEXP (XEXP (*p, 0), 1)
+		    = vt_expand_loc (XEXP (XEXP (*p, 0), 1),
+				     shared_hash_htab (set->vars), true);
+		  /* If expansion is successful, keep it in the list.  */
+		  if (XEXP (XEXP (*p, 0), 1))
+		    p = &XEXP (*p, 1);
+		  /* Otherwise, if the following item is data_value for it,
+		     drop it too too.  */
+		  else if (XEXP (*p, 1)
+			   && REG_P (XEXP (XEXP (*p, 0), 0))
+			   && MEM_P (XEXP (XEXP (XEXP (*p, 1), 0), 0))
+			   && REG_P (XEXP (XEXP (XEXP (XEXP (*p, 1), 0), 0),
+					   0))
+			   && REGNO (XEXP (XEXP (*p, 0), 0))
+			      == REGNO (XEXP (XEXP (XEXP (XEXP (*p, 1), 0),
+						    0), 0)))
+		    *p = XEXP (XEXP (*p, 1), 1);
+		  /* Just drop this item.  */
+		  else
+		    *p = XEXP (*p, 1);
+		}
+	      note = emit_note_after (NOTE_INSN_CALL_ARG_LOCATION, insn);
+	      NOTE_VAR_LOCATION (note) = arguments;
+	    }
 	    break;
 
 	  case MO_USE:
@@ -7961,9 +8292,6 @@ vt_emit_notes (void)
   basic_block bb;
   dataflow_set cur;
 
-#ifdef ENABLE_RTL_CHECKING
-  emitted_notes = pointer_map_create ();
-#endif
   gcc_assert (!htab_elements (changed_variables));
 
   /* Free memory occupied by the out hash tables, as they aren't used
@@ -8023,9 +8351,6 @@ vt_emit_notes (void)
       VEC_free (rtx, heap, changed_values_stack);
     }
 
-#ifdef ENABLE_RTL_CHECKING
-  pointer_map_destroy (emitted_notes);
-#endif
   emit_notes = false;
 }
 
@@ -8056,6 +8381,188 @@ vt_get_decl_and_offset (rtx rtl, tree *declp, HOST_WIDE_INT *offsetp)
   return false;
 }
 
+/* Helper function for vt_add_function_parameter.  RTL is
+   the expression and VAL corresponding cselib_val pointer
+   for which ENTRY_VALUE should be created.  */
+
+static void
+create_entry_value (rtx rtl, cselib_val *val)
+{
+  cselib_val *val2;
+  struct elt_loc_list *el;
+  el = (struct elt_loc_list *) ggc_alloc_cleared_atomic (sizeof (*el));
+  el->next = val->locs;
+  el->loc = gen_rtx_ENTRY_VALUE (GET_MODE (rtl));
+  ENTRY_VALUE_EXP (el->loc) = rtl;
+  el->setting_insn = get_insns ();
+  val->locs = el;
+  val2 = cselib_lookup_from_insn (el->loc, GET_MODE (rtl), true,
+				  VOIDmode, get_insns ());
+  if (val2
+      && val2 != val
+      && val2->locs
+      && rtx_equal_p (val2->locs->loc, el->loc))
+    {
+      struct elt_loc_list *el2;
+
+      preserve_value (val2);
+      el2 = (struct elt_loc_list *) ggc_alloc_cleared_atomic (sizeof (*el2));
+      el2->next = val2->locs;
+      el2->loc = val->val_rtx;
+      el2->setting_insn = get_insns ();
+      val2->locs = el2;
+    }
+}
+
+/* Insert function parameter PARM in IN and OUT sets of ENTRY_BLOCK.  */
+
+static void
+vt_add_function_parameter (tree parm)
+{
+  rtx decl_rtl = DECL_RTL_IF_SET (parm);
+  rtx incoming = DECL_INCOMING_RTL (parm);
+  tree decl;
+  enum machine_mode mode;
+  HOST_WIDE_INT offset;
+  dataflow_set *out;
+  decl_or_value dv;
+
+  if (TREE_CODE (parm) != PARM_DECL)
+    return;
+
+  if (!decl_rtl || !incoming)
+    return;
+
+  if (GET_MODE (decl_rtl) == BLKmode || GET_MODE (incoming) == BLKmode)
+    return;
+
+  /* If there is a DRAP register, rewrite the incoming location of parameters
+     passed on the stack into MEMs based on the argument pointer, as the DRAP
+     register can be reused for other purposes and we do not track locations
+     based on generic registers.  But the prerequisite is that this argument
+     pointer be also the virtual CFA pointer, see vt_initialize.  */
+  if (MEM_P (incoming)
+      && stack_realign_drap
+      && arg_pointer_rtx == cfa_base_rtx
+      && (XEXP (incoming, 0) == crtl->args.internal_arg_pointer
+	  || (GET_CODE (XEXP (incoming, 0)) == PLUS
+	      && XEXP (XEXP (incoming, 0), 0)
+		 == crtl->args.internal_arg_pointer
+	      && CONST_INT_P (XEXP (XEXP (incoming, 0), 1)))))
+    {
+      HOST_WIDE_INT off = -FIRST_PARM_OFFSET (current_function_decl);
+      if (GET_CODE (XEXP (incoming, 0)) == PLUS)
+	off += INTVAL (XEXP (XEXP (incoming, 0), 1));
+      incoming
+	= replace_equiv_address_nv (incoming,
+				    plus_constant (arg_pointer_rtx, off));
+    }
+
+  if (!vt_get_decl_and_offset (incoming, &decl, &offset))
+    {
+      if (REG_P (incoming) || MEM_P (incoming))
+	{
+	  /* This means argument is passed by invisible reference.  */
+	  offset = 0;
+	  decl = parm;
+	  incoming = gen_rtx_MEM (GET_MODE (decl_rtl), incoming);
+	}
+      else
+	{
+	  if (!vt_get_decl_and_offset (decl_rtl, &decl, &offset))
+	    return;
+	  offset += byte_lowpart_offset (GET_MODE (incoming),
+					 GET_MODE (decl_rtl));
+	}
+    }
+
+  if (!decl)
+    return;
+
+  if (parm != decl)
+    {
+      /* Assume that DECL_RTL was a pseudo that got spilled to
+	 memory.  The spill slot sharing code will force the
+	 memory to reference spill_slot_decl (%sfp), so we don't
+	 match above.  That's ok, the pseudo must have referenced
+	 the entire parameter, so just reset OFFSET.  */
+      gcc_assert (decl == get_spill_slot_decl (false));
+      offset = 0;
+    }
+
+  if (!track_loc_p (incoming, parm, offset, false, &mode, &offset))
+    return;
+
+  out = &VTI (ENTRY_BLOCK_PTR)->out;
+
+  dv = dv_from_decl (parm);
+
+  if (target_for_debug_bind (parm)
+      /* We can't deal with these right now, because this kind of
+	 variable is single-part.  ??? We could handle parallels
+	 that describe multiple locations for the same single
+	 value, but ATM we don't.  */
+      && GET_CODE (incoming) != PARALLEL)
+    {
+      cselib_val *val;
+
+      /* ??? We shouldn't ever hit this, but it may happen because
+	 arguments passed by invisible reference aren't dealt with
+	 above: incoming-rtl will have Pmode rather than the
+	 expected mode for the type.  */
+      if (offset)
+	return;
+
+      val = cselib_lookup_from_insn (var_lowpart (mode, incoming), mode, true,
+				     VOIDmode, get_insns ());
+
+      /* ??? Float-typed values in memory are not handled by
+	 cselib.  */
+      if (val)
+	{
+	  preserve_value (val);
+	  set_variable_part (out, val->val_rtx, dv, offset,
+			     VAR_INIT_STATUS_INITIALIZED, NULL, INSERT);
+	  dv = dv_from_value (val->val_rtx);
+	}
+    }
+
+  if (REG_P (incoming))
+    {
+      incoming = var_lowpart (mode, incoming);
+      gcc_assert (REGNO (incoming) < FIRST_PSEUDO_REGISTER);
+      attrs_list_insert (&out->regs[REGNO (incoming)], dv, offset,
+			 incoming);
+      set_variable_part (out, incoming, dv, offset,
+			 VAR_INIT_STATUS_INITIALIZED, NULL, INSERT);
+      if (dv_is_value_p (dv))
+	{
+	  cselib_val *val = CSELIB_VAL_PTR (dv_as_value (dv));
+	  create_entry_value (incoming, val);
+	  if (TREE_CODE (TREE_TYPE (parm)) == REFERENCE_TYPE
+	      && INTEGRAL_TYPE_P (TREE_TYPE (TREE_TYPE (parm))))
+	    {
+	      enum machine_mode indmode
+		= TYPE_MODE (TREE_TYPE (TREE_TYPE (parm)));
+	      rtx mem = gen_rtx_MEM (indmode, incoming);
+	      val = cselib_lookup_from_insn (mem, indmode, true,
+					     VOIDmode, get_insns ());
+	      if (val)
+		{
+		  preserve_value (val);
+		  create_entry_value (mem, val);
+		}
+	    }
+	}
+    }
+  else if (MEM_P (incoming))
+    {
+      incoming = var_lowpart (mode, incoming);
+      set_variable_part (out, incoming, dv, offset,
+			 VAR_INIT_STATUS_INITIALIZED, NULL, INSERT);
+    }
+}
+
 /* Insert function parameters to IN and OUT sets of ENTRY_BLOCK.  */
 
 static void
@@ -8065,118 +8572,21 @@ vt_add_function_parameters (void)
 
   for (parm = DECL_ARGUMENTS (current_function_decl);
        parm; parm = DECL_CHAIN (parm))
+    vt_add_function_parameter (parm);
+
+  if (DECL_HAS_VALUE_EXPR_P (DECL_RESULT (current_function_decl)))
     {
-      rtx decl_rtl = DECL_RTL_IF_SET (parm);
-      rtx incoming = DECL_INCOMING_RTL (parm);
-      tree decl;
-      enum machine_mode mode;
-      HOST_WIDE_INT offset;
-      dataflow_set *out;
-      decl_or_value dv;
+      tree vexpr = DECL_VALUE_EXPR (DECL_RESULT (current_function_decl));
 
-      if (TREE_CODE (parm) != PARM_DECL)
-	continue;
+      if (TREE_CODE (vexpr) == INDIRECT_REF)
+	vexpr = TREE_OPERAND (vexpr, 0);
 
-      if (!DECL_NAME (parm))
-	continue;
-
-      if (!decl_rtl || !incoming)
-	continue;
-
-      if (GET_MODE (decl_rtl) == BLKmode || GET_MODE (incoming) == BLKmode)
-	continue;
-
-      if (!vt_get_decl_and_offset (incoming, &decl, &offset))
-	{
-	  if (REG_P (incoming) || MEM_P (incoming))
-	    {
-	      /* This means argument is passed by invisible reference.  */
-	      offset = 0;
-	      decl = parm;
-	      incoming = gen_rtx_MEM (GET_MODE (decl_rtl), incoming);
-	    }
-	  else
-	    {
-	      if (!vt_get_decl_and_offset (decl_rtl, &decl, &offset))
-		continue;
-	      offset += byte_lowpart_offset (GET_MODE (incoming),
-					     GET_MODE (decl_rtl));
-	    }
-	}
-
-      if (!decl)
-	continue;
-
-      if (parm != decl)
-	{
-	  /* Assume that DECL_RTL was a pseudo that got spilled to
-	     memory.  The spill slot sharing code will force the
-	     memory to reference spill_slot_decl (%sfp), so we don't
-	     match above.  That's ok, the pseudo must have referenced
-	     the entire parameter, so just reset OFFSET.  */
-	  gcc_assert (decl == get_spill_slot_decl (false));
-	  offset = 0;
-	}
-
-      if (!track_loc_p (incoming, parm, offset, false, &mode, &offset))
-	continue;
-
-      out = &VTI (ENTRY_BLOCK_PTR)->out;
-
-      dv = dv_from_decl (parm);
-
-      if (target_for_debug_bind (parm)
-	  /* We can't deal with these right now, because this kind of
-	     variable is single-part.  ??? We could handle parallels
-	     that describe multiple locations for the same single
-	     value, but ATM we don't.  */
-	  && GET_CODE (incoming) != PARALLEL)
-	{
-	  cselib_val *val;
-
-	  /* ??? We shouldn't ever hit this, but it may happen because
-	     arguments passed by invisible reference aren't dealt with
-	     above: incoming-rtl will have Pmode rather than the
-	     expected mode for the type.  */
-	  if (offset)
-	    continue;
-
-	  val = cselib_lookup (var_lowpart (mode, incoming), mode, true);
-
-	  /* ??? Float-typed values in memory are not handled by
-	     cselib.  */
-	  if (val)
-	    {
-	      preserve_value (val);
-	      set_variable_part (out, val->val_rtx, dv, offset,
-				 VAR_INIT_STATUS_INITIALIZED, NULL, INSERT);
-	      dv = dv_from_value (val->val_rtx);
-	    }
-	}
-
-      if (REG_P (incoming))
-	{
-	  incoming = var_lowpart (mode, incoming);
-	  gcc_assert (REGNO (incoming) < FIRST_PSEUDO_REGISTER);
-	  attrs_list_insert (&out->regs[REGNO (incoming)], dv, offset,
-			     incoming);
-	  set_variable_part (out, incoming, dv, offset,
-			     VAR_INIT_STATUS_INITIALIZED, NULL, INSERT);
-	}
-      else if (MEM_P (incoming))
-	{
-	  incoming = var_lowpart (mode, incoming);
-	  set_variable_part (out, incoming, dv, offset,
-			     VAR_INIT_STATUS_INITIALIZED, NULL, INSERT);
-	}
+      if (TREE_CODE (vexpr) == PARM_DECL
+	  && DECL_ARTIFICIAL (vexpr)
+	  && !DECL_IGNORED_P (vexpr)
+	  && DECL_NAMELESS (vexpr))
+	vt_add_function_parameter (vexpr);
     }
-
-  if (MAY_HAVE_DEBUG_INSNS)
-    {
-      cselib_preserve_only_values ();
-      cselib_reset_table (cselib_get_next_uid ());
-    }
-
 }
 
 /* Return true if INSN in the prologue initializes hard_frame_pointer_rtx.  */
@@ -8202,6 +8612,23 @@ fp_setter (rtx insn)
 	  return true;
     }
   return false;
+}
+
+/* Gather all registers used for passing arguments to other functions
+   called from the current routine.  */
+
+static void
+note_register_arguments (rtx insn)
+{
+  rtx link, x;
+
+  for (link = CALL_INSN_FUNCTION_USAGE (insn); link; link = XEXP (link, 1))
+    if (GET_CODE (XEXP (link, 0)) == USE)
+      {
+	x = XEXP (XEXP (link, 0), 0);
+	if (REG_P (x) && REGNO (x) < FIRST_PSEUDO_REGISTER)
+	  SET_HARD_REG_BIT (argument_reg_set, REGNO (x));
+      }
 }
 
 /* Initialize cfa_base_rtx, create a preserved VALUE for it and
@@ -8232,11 +8659,13 @@ vt_init_cfa_base (void)
 
   /* Tell alias analysis that cfa_base_rtx should share
      find_base_term value with stack pointer or hard frame pointer.  */
-  vt_equate_reg_base_value (cfa_base_rtx,
-			    frame_pointer_needed
-			    ? hard_frame_pointer_rtx : stack_pointer_rtx);
+  if (!frame_pointer_needed)
+    vt_equate_reg_base_value (cfa_base_rtx, stack_pointer_rtx);
+  else if (!crtl->stack_realign_tried)
+    vt_equate_reg_base_value (cfa_base_rtx, hard_frame_pointer_rtx);
+
   val = cselib_lookup_from_insn (cfa_base_rtx, GET_MODE (cfa_base_rtx), 1,
-				 get_insns ());
+				 VOIDmode, get_insns ());
   preserve_value (val);
   cselib_preserve_cfa_base_value (val, REGNO (cfa_base_rtx));
   var_reg_decl_set (&VTI (ENTRY_BLOCK_PTR)->out, cfa_base_rtx,
@@ -8250,7 +8679,7 @@ vt_init_cfa_base (void)
 static bool
 vt_initialize (void)
 {
-  basic_block bb, prologue_bb = NULL;
+  basic_block bb, prologue_bb = single_succ (ENTRY_BLOCK_PTR);
   HOST_WIDE_INT fp_cfa_offset = -1;
 
   alloc_aux_for_blocks (sizeof (struct variable_tracking_info_def));
@@ -8306,6 +8735,18 @@ vt_initialize (void)
       valvar_pool = NULL;
     }
 
+  CLEAR_HARD_REG_SET (argument_reg_set);
+
+  /* In order to factor out the adjustments made to the stack pointer or to
+     the hard frame pointer and thus be able to use DW_OP_fbreg operations
+     instead of individual location lists, we're going to rewrite MEMs based
+     on them into MEMs based on the CFA by de-eliminating stack_pointer_rtx
+     or hard_frame_pointer_rtx to the virtual CFA pointer frame_pointer_rtx
+     resp. arg_pointer_rtx.  We can do this either when there is no frame
+     pointer in the function and stack adjustments are consistent for all
+     basic blocks or when there is a frame pointer and no stack realignment.
+     But we first have to check that frame_pointer_rtx resp. arg_pointer_rtx
+     has been eliminated.  */
   if (!frame_pointer_needed)
     {
       rtx reg, elim;
@@ -8348,12 +8789,49 @@ vt_initialize (void)
 	    }
 	  if (elim != hard_frame_pointer_rtx)
 	    fp_cfa_offset = -1;
-	  else
-	    prologue_bb = single_succ (ENTRY_BLOCK_PTR);
+	}
+      else
+	fp_cfa_offset = -1;
+    }
+
+  /* If the stack is realigned and a DRAP register is used, we're going to
+     rewrite MEMs based on it representing incoming locations of parameters
+     passed on the stack into MEMs based on the argument pointer.  Although
+     we aren't going to rewrite other MEMs, we still need to initialize the
+     virtual CFA pointer in order to ensure that the argument pointer will
+     be seen as a constant throughout the function.
+
+     ??? This doesn't work if FRAME_POINTER_CFA_OFFSET is defined.  */
+  else if (stack_realign_drap)
+    {
+      rtx reg, elim;
+
+#ifdef FRAME_POINTER_CFA_OFFSET
+      reg = frame_pointer_rtx;
+#else
+      reg = arg_pointer_rtx;
+#endif
+      elim = eliminate_regs (reg, VOIDmode, NULL_RTX);
+      if (elim != reg)
+	{
+	  if (GET_CODE (elim) == PLUS)
+	    elim = XEXP (elim, 0);
+	  if (elim == hard_frame_pointer_rtx)
+	    vt_init_cfa_base ();
 	}
     }
 
+  if (frame_pointer_needed)
+    {
+      rtx insn;
+      for (insn = get_insns (); insn; insn = NEXT_INSN (insn))
+	if (CALL_P (insn))
+	  note_register_arguments (insn);
+    }
+
   hard_frame_pointer_adjustment = -1;
+
+  vt_add_function_parameters ();
 
   FOR_EACH_BB (bb)
     {
@@ -8415,6 +8893,8 @@ vt_initialize (void)
 		  adjust_insn (bb, insn);
 		  if (MAY_HAVE_DEBUG_INSNS)
 		    {
+		      if (CALL_P (insn))
+			prepare_call_arguments (bb, insn);
 		      cselib_process_insn (insn);
 		      if (dump_file && (dump_flags & TDF_DETAILS))
 			{
@@ -8441,6 +8921,7 @@ vt_initialize (void)
 		    }
 
 		  if (bb == prologue_bb
+		      && fp_cfa_offset != -1
 		      && hard_frame_pointer_adjustment == -1
 		      && RTX_FRAME_RELATED_P (insn)
 		      && fp_setter (insn))
@@ -8465,7 +8946,6 @@ vt_initialize (void)
 
   hard_frame_pointer_adjustment = -1;
   VTI (ENTRY_BLOCK_PTR)->flooded = true;
-  vt_add_function_parameters ();
   cfa_base_rtx = NULL_RTX;
   return true;
 }
@@ -8631,7 +9111,7 @@ variable_tracking_main (void)
 static bool
 gate_handle_var_tracking (void)
 {
-  return (flag_var_tracking);
+  return (flag_var_tracking && !targetm.delay_vartrack);
 }
 
 

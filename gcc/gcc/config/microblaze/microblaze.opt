@@ -1,6 +1,6 @@
 ; Options for the MicroBlaze port of the compiler
 ;
-; Copyright 2009, 2010 Free Software Foundation, Inc.
+; Copyright 2009, 2010, 2011 Free Software Foundation, Inc.
 ;
 ; Contributed by Michael Eager <eager@eagercon.com>.
 ;
@@ -19,6 +19,21 @@
 ; You should have received a copy of the GNU General Public License
 ; along with GCC; see the file COPYING3.  If not see
 ; <http://www.gnu.org/licenses/>.  */
+
+Zxl-mode-bootstrap
+Driver
+
+Zxl-mode-executable
+Driver
+
+Zxl-mode-novectors
+Driver
+
+Zxl-mode-xilkernel
+Driver
+
+Zxl-mode-xmdstub
+Driver
 
 msoft-float
 Target Report RejectNegative Mask(SOFT_FLOAT)
@@ -57,7 +72,7 @@ Target Mask(PATTERN_COMPARE)
 Use pattern compare instructions
 
 mxl-stack-check
-Target Mask(STACK_CHECK)
+Target Mask(STACK_CHECK) Warn(%qs is deprecated; use -fstack-check)
 Check for stack overflow at runtime
 
 mxl-gp-opt
@@ -65,7 +80,7 @@ Target Mask(XLGPOPT)
 Use GP relative sdata/sbss sections
 
 mno-clearbss
-Target RejectNegative
+Target RejectNegative Var(flag_zero_initialized_in_bss, 0) Warn(%qs is deprecated; use -fno-zero-initialized-in-bss)
 Clear the BSS to zero and place zero initialized in BSS
 
 mxl-multiply-high
@@ -74,7 +89,7 @@ Use multiply high instructions for high part of 32x32 multiply
 
 mxl-float-convert
 Target Mask(FLOAT_CONVERT)
-Use hardware floating point converstion instructions
+Use hardware floating point conversion instructions
 
 mxl-float-sqrt
 Target Mask(FLOAT_SQRT)
@@ -95,3 +110,6 @@ Description for mxl-mode-bootstrap
 mxl-mode-novectors
 Target Mask(XL_MODE_NOVECTORS)
 Description for mxl-mode-novectors
+
+mxl-mode-xilkernel
+Target

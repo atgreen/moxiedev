@@ -1,7 +1,7 @@
 // Components for manipulating sequences of characters -*- C++ -*-
 
 // Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-// 2006, 2007, 2008, 2009, 2010
+// 2006, 2007, 2008, 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -24,9 +24,9 @@
 // see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 // <http://www.gnu.org/licenses/>.
 
-/** @file basic_string.h
+/** @file bits/basic_string.h
  *  This is an internal header file, included by other library headers.
- *  You should not attempt to use it directly.
+ *  Do not attempt to use it directly. @headername{string}
  */
 
 //
@@ -42,7 +42,9 @@
 #include <debug/debug.h>
 #include <initializer_list>
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
    *  @class basic_string basic_string.h <string>
@@ -497,7 +499,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  The newly-created string contains the exact contents of @a str.
        *  @a str is a valid, but unspecified string.
        **/
-      basic_string(basic_string&& __str)
+      basic_string(basic_string&& __str) noexcept
       : _M_dataplus(__str._M_dataplus)
       {
 #ifndef _GLIBCXX_FULLY_DYNAMIC_STRING	
@@ -528,7 +530,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       /**
        *  @brief  Destroy the string instance.
        */
-      ~basic_string()
+      ~basic_string() _GLIBCXX_NOEXCEPT
       { _M_rep()->_M_dispose(this->get_allocator()); }
 
       /**
@@ -595,7 +597,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  the %string.  Unshares the string.
        */
       iterator
-      begin()
+      begin() _GLIBCXX_NOEXCEPT
       {
 	_M_leak();
 	return iterator(_M_data());
@@ -606,7 +608,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  character in the %string.
        */
       const_iterator
-      begin() const
+      begin() const _GLIBCXX_NOEXCEPT
       { return const_iterator(_M_data()); }
 
       /**
@@ -614,7 +616,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  character in the %string.  Unshares the string.
        */
       iterator
-      end()
+      end() _GLIBCXX_NOEXCEPT
       {
 	_M_leak();
 	return iterator(_M_data() + this->size());
@@ -625,7 +627,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  last character in the %string.
        */
       const_iterator
-      end() const
+      end() const _GLIBCXX_NOEXCEPT
       { return const_iterator(_M_data() + this->size()); }
 
       /**
@@ -634,7 +636,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  order.  Unshares the string.
        */
       reverse_iterator
-      rbegin()
+      rbegin() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(this->end()); }
 
       /**
@@ -643,7 +645,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  reverse element order.
        */
       const_reverse_iterator
-      rbegin() const
+      rbegin() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(this->end()); }
 
       /**
@@ -652,7 +654,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  element order.  Unshares the string.
        */
       reverse_iterator
-      rend()
+      rend() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(this->begin()); }
 
       /**
@@ -661,7 +663,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  is done in reverse element order.
        */
       const_reverse_iterator
-      rend() const
+      rend() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(this->begin()); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -670,7 +672,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  character in the %string.
        */
       const_iterator
-      cbegin() const
+      cbegin() const noexcept
       { return const_iterator(this->_M_data()); }
 
       /**
@@ -678,7 +680,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  last character in the %string.
        */
       const_iterator
-      cend() const
+      cend() const noexcept
       { return const_iterator(this->_M_data() + this->size()); }
 
       /**
@@ -687,7 +689,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  reverse element order.
        */
       const_reverse_iterator
-      crbegin() const
+      crbegin() const noexcept
       { return const_reverse_iterator(this->end()); }
 
       /**
@@ -696,7 +698,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  is done in reverse element order.
        */
       const_reverse_iterator
-      crend() const
+      crend() const noexcept
       { return const_reverse_iterator(this->begin()); }
 #endif
 
@@ -705,18 +707,18 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       ///  Returns the number of characters in the string, not including any
       ///  null-termination.
       size_type
-      size() const
+      size() const _GLIBCXX_NOEXCEPT
       { return _M_rep()->_M_length; }
 
       ///  Returns the number of characters in the string, not including any
       ///  null-termination.
       size_type
-      length() const
+      length() const _GLIBCXX_NOEXCEPT
       { return _M_rep()->_M_length; }
 
       ///  Returns the size() of the largest possible %string.
       size_type
-      max_size() const
+      max_size() const _GLIBCXX_NOEXCEPT
       { return _Rep::_S_max_size; }
 
       /**
@@ -763,7 +765,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  before needing to allocate more memory.
        */
       size_type
-      capacity() const
+      capacity() const _GLIBCXX_NOEXCEPT
       { return _M_rep()->_M_capacity; }
 
       /**
@@ -790,7 +792,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  Erases the string, making it empty.
        */
       void
-      clear()
+      clear() _GLIBCXX_NOEXCEPT
       { _M_mutate(0, this->size(), 0); }
 
       /**
@@ -798,7 +800,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  <code>*this == ""</code>.
        */
       bool
-      empty() const
+      empty() const _GLIBCXX_NOEXCEPT
       { return this->size() == 0; }
 
       // Element access:
@@ -1761,7 +1763,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  happen.
       */
       const _CharT*
-      c_str() const
+      c_str() const _GLIBCXX_NOEXCEPT
       { return _M_data(); }
 
       /**
@@ -1771,14 +1773,14 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  happen.
       */
       const _CharT*
-      data() const
+      data() const _GLIBCXX_NOEXCEPT
       { return _M_data(); }
 
       /**
        *  @brief  Return copy of allocator used to construct this string.
       */
       allocator_type
-      get_allocator() const
+      get_allocator() const _GLIBCXX_NOEXCEPT
       { return _M_dataplus; }
 
       /**
@@ -1807,6 +1809,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       */
       size_type
       find(const basic_string& __str, size_type __pos = 0) const
+	_GLIBCXX_NOEXCEPT
       { return this->find(__str.data(), __pos, __str.size()); }
 
       /**
@@ -1837,7 +1840,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  returns npos.
       */
       size_type
-      find(_CharT __c, size_type __pos = 0) const;
+      find(_CharT __c, size_type __pos = 0) const _GLIBCXX_NOEXCEPT;
 
       /**
        *  @brief  Find last position of a string.
@@ -1851,6 +1854,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       */
       size_type
       rfind(const basic_string& __str, size_type __pos = npos) const
+	_GLIBCXX_NOEXCEPT
       { return this->rfind(__str.data(), __pos, __str.size()); }
 
       /**
@@ -1895,7 +1899,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  returns npos.
       */
       size_type
-      rfind(_CharT __c, size_type __pos = npos) const;
+      rfind(_CharT __c, size_type __pos = npos) const _GLIBCXX_NOEXCEPT;
 
       /**
        *  @brief  Find position of a character of string.
@@ -1909,6 +1913,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       */
       size_type
       find_first_of(const basic_string& __str, size_type __pos = 0) const
+	_GLIBCXX_NOEXCEPT
       { return this->find_first_of(__str.data(), __pos, __str.size()); }
 
       /**
@@ -1955,7 +1960,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  Note: equivalent to find(c, pos).
       */
       size_type
-      find_first_of(_CharT __c, size_type __pos = 0) const
+      find_first_of(_CharT __c, size_type __pos = 0) const _GLIBCXX_NOEXCEPT
       { return this->find(__c, __pos); }
 
       /**
@@ -1970,6 +1975,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       */
       size_type
       find_last_of(const basic_string& __str, size_type __pos = npos) const
+	_GLIBCXX_NOEXCEPT
       { return this->find_last_of(__str.data(), __pos, __str.size()); }
 
       /**
@@ -2016,7 +2022,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  Note: equivalent to rfind(c, pos).
       */
       size_type
-      find_last_of(_CharT __c, size_type __pos = npos) const
+      find_last_of(_CharT __c, size_type __pos = npos) const _GLIBCXX_NOEXCEPT
       { return this->rfind(__c, __pos); }
 
       /**
@@ -2031,6 +2037,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       */
       size_type
       find_first_not_of(const basic_string& __str, size_type __pos = 0) const
+	_GLIBCXX_NOEXCEPT
       { return this->find_first_not_of(__str.data(), __pos, __str.size()); }
 
       /**
@@ -2076,7 +2083,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  If not found, returns npos.
       */
       size_type
-      find_first_not_of(_CharT __c, size_type __pos = 0) const;
+      find_first_not_of(_CharT __c, size_type __pos = 0) const
+	_GLIBCXX_NOEXCEPT;
 
       /**
        *  @brief  Find last position of a character not in string.
@@ -2090,6 +2098,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       */
       size_type
       find_last_not_of(const basic_string& __str, size_type __pos = npos) const
+	_GLIBCXX_NOEXCEPT
       { return this->find_last_not_of(__str.data(), __pos, __str.size()); }
 
       /**
@@ -2135,7 +2144,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  found.  If not found, returns npos.
       */
       size_type
-      find_last_not_of(_CharT __c, size_type __pos = npos) const;
+      find_last_not_of(_CharT __c, size_type __pos = npos) const
+	_GLIBCXX_NOEXCEPT;
 
       /**
        *  @brief  Get a substring.
@@ -2362,6 +2372,56 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       __str.append(__size_type(1), __rhs);
       return __str;
     }
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  template<typename _CharT, typename _Traits, typename _Alloc>
+    inline basic_string<_CharT, _Traits, _Alloc>
+    operator+(basic_string<_CharT, _Traits, _Alloc>&& __lhs,
+	      const basic_string<_CharT, _Traits, _Alloc>& __rhs)
+    { return std::move(__lhs.append(__rhs)); }
+
+  template<typename _CharT, typename _Traits, typename _Alloc>
+    inline basic_string<_CharT, _Traits, _Alloc>
+    operator+(const basic_string<_CharT, _Traits, _Alloc>& __lhs,
+	      basic_string<_CharT, _Traits, _Alloc>&& __rhs)
+    { return std::move(__rhs.insert(0, __lhs)); }
+
+  template<typename _CharT, typename _Traits, typename _Alloc>
+    inline basic_string<_CharT, _Traits, _Alloc>
+    operator+(basic_string<_CharT, _Traits, _Alloc>&& __lhs,
+	      basic_string<_CharT, _Traits, _Alloc>&& __rhs)
+    {
+      const auto __size = __lhs.size() + __rhs.size();
+      const bool __cond = (__size > __lhs.capacity()
+			   && __size <= __rhs.capacity());
+      return __cond ? std::move(__rhs.insert(0, __lhs))
+	            : std::move(__lhs.append(__rhs));
+    }
+
+  template<typename _CharT, typename _Traits, typename _Alloc>
+    inline basic_string<_CharT, _Traits, _Alloc>
+    operator+(const _CharT* __lhs,
+	      basic_string<_CharT, _Traits, _Alloc>&& __rhs)
+    { return std::move(__rhs.insert(0, __lhs)); }
+
+  template<typename _CharT, typename _Traits, typename _Alloc>
+    inline basic_string<_CharT, _Traits, _Alloc>
+    operator+(_CharT __lhs,
+	      basic_string<_CharT, _Traits, _Alloc>&& __rhs)
+    { return std::move(__rhs.insert(0, 1, __lhs)); }
+
+  template<typename _CharT, typename _Traits, typename _Alloc>
+    inline basic_string<_CharT, _Traits, _Alloc>
+    operator+(basic_string<_CharT, _Traits, _Alloc>&& __lhs,
+	      const _CharT* __rhs)
+    { return std::move(__lhs.append(__rhs)); }
+
+  template<typename _CharT, typename _Traits, typename _Alloc>
+    inline basic_string<_CharT, _Traits, _Alloc>
+    operator+(basic_string<_CharT, _Traits, _Alloc>&& __lhs,
+	      _CharT __rhs)
+    { return std::move(__lhs.append(1, __rhs)); }
+#endif
 
   // operator ==
   /**
@@ -2695,14 +2755,17 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	    wchar_t __delim);
 #endif  
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #if (defined(__GXX_EXPERIMENTAL_CXX0X__) && defined(_GLIBCXX_USE_C99) \
      && !defined(_GLIBCXX_HAVE_BROKEN_VSWPRINTF))
 
 #include <ext/string_conversions.h>
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   // 21.4 Numeric Conversions [string.conversions].
   inline int
@@ -2909,7 +2972,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
   }
 #endif
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #endif /* __GXX_EXPERIMENTAL_CXX0X__ && _GLIBCXX_USE_C99 ... */
 
@@ -2917,7 +2981,9 @@ _GLIBCXX_END_NAMESPACE
 
 #include <bits/functional_hash.h>
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   // DR 1182.
 
@@ -2970,7 +3036,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     };
 #endif
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #endif /* __GXX_EXPERIMENTAL_CXX0X__ */
 

@@ -1,6 +1,6 @@
 /* Declarations for objc-act.c.
-   Copyright (C) 1990, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
-   Free Software Foundation, Inc.
+   Copyright (C) 1990, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009,
+   2010, 2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -26,10 +26,8 @@ along with GCC; see the file COPYING3.  If not see
 
 bool objc_init (void);
 const char *objc_printable_name (tree, int);
-tree objc_fold_obj_type_ref (tree, tree);
 int objc_gimplify_expr (tree *, gimple_seq *, gimple_seq *);
-tree objc_eh_runtime_type (tree);
-tree objc_eh_personality (void);
+void objc_common_init_ts (void);
 
 /* NB: The remaining public functions are prototyped in c-common.h, for the
    benefit of stub-objc.c and objc-act.c.  */
@@ -113,6 +111,11 @@ typedef enum objc_property_assign_semantics {
    setter, it is set to 1.  */
 #define PROPERTY_HAS_NO_SETTER(DECL) DECL_LANG_FLAG_4 (DECL)
 
+/* PROPERTY_OPTIONAL can be 0 or 1.  Normally it is 0, but if this is
+   a property declared as @optional in a @protocol, then it is set to
+   1.  */
+#define PROPERTY_OPTIONAL(DECL) DECL_LANG_FLAG_5 (DECL)
+
 /* PROPERTY_REF.  A PROPERTY_REF represents an 'object.property'
    expression.  It is normally used for property access, but when
    the Objective-C 2.0 "dot-syntax" (object.component) is used
@@ -126,7 +129,7 @@ typedef enum objc_property_assign_semantics {
 /* PROPERTY_REF_PROPERTY_DECL is the PROPERTY_DECL for the property
    used in the expression.  From it, you can get the property type,
    and the getter/setter names.  This PROPERTY_DECL could be artificial
-   if we are processing an 'object.component' syntax with no matching 
+   if we are processing an 'object.component' syntax with no matching
    declared property.  */
 #define PROPERTY_REF_PROPERTY_DECL(NODE) TREE_OPERAND (PROPERTY_REF_CHECK (NODE), 1)
 
@@ -139,33 +142,38 @@ typedef enum objc_property_assign_semantics {
    use it.  */
 #define PROPERTY_REF_GETTER_CALL(NODE) TREE_OPERAND (PROPERTY_REF_CHECK (NODE), 2)
 
+/* PROPERTY_REF_DEPRECATED_GETTER is normally set to NULL_TREE.  If
+   the property getter is deprecated, it is set to the method
+   prototype for it, which is used to generate the deprecation warning
+   when the getter is used.  */
+#define PROPERTY_REF_DEPRECATED_GETTER(NODE) TREE_OPERAND (PROPERTY_REF_CHECK (NODE), 3)
 
 /* CLASS_INTERFACE_TYPE, CLASS_IMPLEMENTATION_TYPE,
    CATEGORY_INTERFACE_TYPE, CATEGORY_IMPLEMENTATION_TYPE,
    PROTOCOL_INTERFACE_TYPE */
 /* CLASS_NAME is the name of the class.  */
-#define CLASS_NAME(CLASS) ((CLASS)->type.name)
+#define CLASS_NAME(CLASS) (TYPE_NAME (CLASS))
 /* CLASS_SUPER_NAME is the name of the superclass, or, in the case of
    categories, it is the name of the category itself.  */
-#define CLASS_SUPER_NAME(CLASS) (TYPE_CHECK (CLASS)->type.context)
+#define CLASS_SUPER_NAME(CLASS) (TYPE_CONTEXT (CLASS))
 #define CLASS_IVARS(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 0)
 #define CLASS_RAW_IVARS(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 1)
-#define CLASS_NST_METHODS(CLASS) ((CLASS)->type.minval)
-#define CLASS_CLS_METHODS(CLASS) ((CLASS)->type.maxval)
+#define CLASS_NST_METHODS(CLASS) (TYPE_MINVAL (CLASS))
+#define CLASS_CLS_METHODS(CLASS) (TYPE_MAXVAL (CLASS))
 #define CLASS_STATIC_TEMPLATE(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 2)
 #define CLASS_CATEGORY_LIST(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 3)
 #define CLASS_PROTOCOL_LIST(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 4)
 #define TOTAL_CLASS_RAW_IVARS(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 5)
+#define CLASS_HAS_EXCEPTION_ATTR(CLASS) (TYPE_LANG_FLAG_0 (CLASS))
 
-#define PROTOCOL_NAME(CLASS) ((CLASS)->type.name)
+#define PROTOCOL_NAME(CLASS) (TYPE_NAME (CLASS))
 #define PROTOCOL_LIST(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 0)
-#define PROTOCOL_NST_METHODS(CLASS) ((CLASS)->type.minval)
-#define PROTOCOL_CLS_METHODS(CLASS) ((CLASS)->type.maxval)
+#define PROTOCOL_NST_METHODS(CLASS) (TYPE_MINVAL (CLASS))
+#define PROTOCOL_CLS_METHODS(CLASS) (TYPE_MAXVAL (CLASS))
 #define PROTOCOL_FORWARD_DECL(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 1)
 #define PROTOCOL_DEFINED(CLASS) TREE_USED (CLASS)
 #define PROTOCOL_OPTIONAL_CLS_METHODS(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 2)
 #define PROTOCOL_OPTIONAL_NST_METHODS(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 3)
-
 
 /* For CATEGORY_INTERFACE_TYPE, CLASS_INTERFACE_TYPE or PROTOCOL_INTERFACE_TYPE */
 #define CLASS_PROPERTY_DECL(CLASS) TREE_VEC_ELT (TYPE_LANG_SLOT_1 (CLASS), 6)
@@ -205,6 +213,7 @@ typedef enum objc_property_assign_semantics {
 		= make_tree_vec (OBJC_INFO_SLOT_ELTS);		\
 	  }							\
 	while (0)
+
 #define DUP_TYPE_OBJC_INFO(DST, SRC)				\
 	do							\
 	  {							\
@@ -234,11 +243,14 @@ struct GTY(()) hashed_attribute {
   attr next;
   tree value;
 };
+
 struct GTY(()) hashed_entry {
   attr list;
   hash next;
   tree key;
 };
+
+#define SIZEHASHTABLE		257
 
 extern GTY ((length ("SIZEHASHTABLE"))) hash *nst_method_hash_list;
 extern GTY ((length ("SIZEHASHTABLE"))) hash *cls_method_hash_list;
@@ -246,7 +258,9 @@ extern GTY ((length ("SIZEHASHTABLE"))) hash *cls_method_hash_list;
 extern GTY ((length ("SIZEHASHTABLE"))) hash *cls_name_hash_list;
 extern GTY ((length ("SIZEHASHTABLE"))) hash *als_name_hash_list;
 
-#define SIZEHASHTABLE		257
+/* An array of all the local variables in the current function that
+   need to be marked as volatile.  */
+extern GTY(()) VEC(tree,gc) *local_variables_to_volatilize;
 
 /* Objective-C/Objective-C++ @implementation list.  */
 
@@ -254,8 +268,8 @@ struct GTY(()) imp_entry {
   struct imp_entry *next;
   tree imp_context;
   tree imp_template;
-  tree class_decl;		/* _OBJC_CLASS_<my_name>; */
-  tree meta_decl;		/* _OBJC_METACLASS_<my_name>; */
+  tree class_decl;		/* _OBJC[_v2]_CLASS/CATEGORY_<my_name>; */
+  tree meta_decl;		/* _OBJC[_v2]_METACLASS_<my_name>; */
   BOOL_BITFIELD has_cxx_cdtors : 1;
 };
 
@@ -347,6 +361,7 @@ enum objc_tree_index
     OCTI_STRING_CLASS_DECL,
     OCTI_INTERNAL_CNST_STR_TYPE,
     OCTI_SUPER_DECL,
+    OCTI_SUPER_SUPERFIELD_ID,
     OCTI_UMSG_NONNIL_DECL,
     OCTI_UMSG_NONNIL_STRET_DECL,
     OCTI_STORAGE_CLS,
@@ -379,6 +394,11 @@ enum objc_tree_index
     OCTI_COPY_STRUCT_DECL,
     OCTI_GET_PROPERTY_STRUCT_DECL,
     OCTI_SET_PROPERTY_STRUCT_DECL,
+
+    /* TODO: Add comment.  */
+    /* "V1" stuff.  */
+    OCTI_V1_PROP_LIST_TEMPL,
+    OCTI_V1_PROP_NAME_ATTR_CHAIN,
 
     OCTI_MAX
 };
@@ -419,14 +439,17 @@ extern GTY(()) tree objc_global_trees[OCTI_MAX];
 	(TREE_CODE (TYPE) == POINTER_TYPE				\
 	 && (TYPE_MAIN_VARIANT (TREE_TYPE (TYPE))			\
 	     == TREE_TYPE (objc_object_type)))
+
 #define IS_CLASS(TYPE)							\
 	(TREE_CODE (TYPE) == POINTER_TYPE				\
 	 && (TYPE_MAIN_VARIANT (TREE_TYPE (TYPE))			\
 	     == TREE_TYPE (objc_class_type)))
+
 #define IS_PROTOCOL_QUALIFIED_UNTYPED(TYPE)				\
 	((IS_ID (TYPE) || IS_CLASS (TYPE))				\
 	 && TYPE_HAS_OBJC_INFO (TREE_TYPE (TYPE))			\
 	 && TYPE_OBJC_PROTOCOL_LIST (TREE_TYPE (TYPE)))
+
 #define IS_SUPER(TYPE)							\
 	(TREE_CODE (TYPE) == POINTER_TYPE				\
 	 && TREE_TYPE (TYPE) == objc_super_template)
@@ -501,9 +524,9 @@ extern GTY(()) tree objc_global_trees[OCTI_MAX];
 #define objc_setjmp_decl	objc_global_trees[OCTI_SETJMP_DECL]
 #define objc_stack_exception_data		\
 				objc_global_trees[OCTI_STACK_EXCEPTION_DATA_DECL]
-#define objc_caught_exception	objc_global_trees[OCTI_LOCAL_EXCEPTION_DECL]	
-#define objc_rethrow_exception	objc_global_trees[OCTI_RETHROW_EXCEPTION_DECL]	
-#define objc_eval_once		objc_global_trees[OCTI_EVAL_ONCE_DECL]	
+#define objc_caught_exception	objc_global_trees[OCTI_LOCAL_EXCEPTION_DECL]
+#define objc_rethrow_exception	objc_global_trees[OCTI_RETHROW_EXCEPTION_DECL]
+#define objc_eval_once		objc_global_trees[OCTI_EVAL_ONCE_DECL]
 #define objc_catch_type		objc_global_trees[OCTI_CATCH_TYPE]
 
 #define execclass_decl		objc_global_trees[OCTI_EXECCLASS_DECL]
@@ -535,13 +558,19 @@ extern GTY(()) tree objc_global_trees[OCTI_MAX];
 #define objc_class_id		objc_global_trees[OCTI_CLS_ID]
 #define objc_object_name		objc_global_trees[OCTI_ID_NAME]
 #define objc_class_name		objc_global_trees[OCTI_CLASS_NAME]
+
+/* Constant string classes.  */
 #define constant_string_id	objc_global_trees[OCTI_CNST_STR_ID]
 #define constant_string_type	objc_global_trees[OCTI_CNST_STR_TYPE]
 #define constant_string_global_id		\
 				objc_global_trees[OCTI_CNST_STR_GLOB_ID]
 #define string_class_decl	objc_global_trees[OCTI_STRING_CLASS_DECL]
 #define internal_const_str_type	objc_global_trees[OCTI_INTERNAL_CNST_STR_TYPE]
+
 #define UOBJC_SUPER_decl	objc_global_trees[OCTI_SUPER_DECL]
+#define super_superclassfield_id \
+				objc_global_trees[OCTI_SUPER_SUPERFIELD_ID]
+
 #define objc_fast_enumeration_state_template	\
                                 objc_global_trees[OCTI_FAST_ENUM_STATE_TEMP]
 #define objc_enumeration_mutation_decl		\
@@ -549,11 +578,167 @@ extern GTY(()) tree objc_global_trees[OCTI_MAX];
 
 /* Declarations of functions used when synthesizing property
    accessors.  */
-#define objc_getProperty_decl       objc_global_trees[OCTI_GET_PROPERTY_DECL]
-#define objc_setProperty_decl       objc_global_trees[OCTI_SET_PROPERTY_DECL]
-#define objc_copyStruct_decl        objc_global_trees[OCTI_COPY_STRUCT_DECL]
-#define objc_getPropertyStruct_decl objc_global_trees[OCTI_GET_PROPERTY_STRUCT_DECL]
-#define objc_setPropertyStruct_decl objc_global_trees[OCTI_SET_PROPERTY_STRUCT_DECL]
+#define objc_getProperty_decl	objc_global_trees[OCTI_GET_PROPERTY_DECL]
+#define objc_setProperty_decl	objc_global_trees[OCTI_SET_PROPERTY_DECL]
+#define objc_copyStruct_decl	objc_global_trees[OCTI_COPY_STRUCT_DECL]
+#define objc_getPropertyStruct_decl \
+				objc_global_trees[OCTI_GET_PROPERTY_STRUCT_DECL]
+#define objc_setPropertyStruct_decl \
+				objc_global_trees[OCTI_SET_PROPERTY_STRUCT_DECL]
 
+/* TODO: Add comment.  */
+/* V1 stuff.  */
+#define objc_prop_list_ptr	objc_global_trees[OCTI_V1_PROP_LIST_TEMPL]
+#define prop_names_attr_chain	objc_global_trees[OCTI_V1_PROP_NAME_ATTR_CHAIN]
+
+/* Reserved tag definitions.  */
+
+#define OBJECT_TYPEDEF_NAME		"id"
+#define CLASS_TYPEDEF_NAME		"Class"
+
+#define TAG_OBJECT			"objc_object"
+#define TAG_CLASS			"objc_class"
+#define TAG_SUPER			"objc_super"
+#define TAG_SELECTOR			"objc_selector"
+
+#define UTAG_CLASS			"_objc_class"
+#define UTAG_IVAR			"_objc_ivar"
+#define UTAG_IVAR_LIST			"_objc_ivar_list"
+#define UTAG_METHOD			"_objc_method"
+#define UTAG_METHOD_LIST		"_objc_method_list"
+#define UTAG_CATEGORY			"_objc_category"
+#define UTAG_MODULE			"_objc_module"
+#define UTAG_SYMTAB			"_objc_symtab"
+#define UTAG_SUPER			"_objc_super"
+#define UTAG_SELECTOR			"_objc_selector"
+
+#define UTAG_PROTOCOL			"_objc_protocol"
+#define UTAG_METHOD_PROTOTYPE		"_objc_method_prototype"
+#define UTAG_METHOD_PROTOTYPE_LIST	"_objc__method_prototype_list"
+
+#define PROTOCOL_OBJECT_CLASS_NAME	"Protocol"
+
+#define TAG_EXCEPTIONTHROW		"objc_exception_throw"
+#define TAG_SYNCENTER			"objc_sync_enter"
+#define TAG_SYNCEXIT			"objc_sync_exit"
+
+/* Really should be NeXT private.  */
+#define UTAG_EXCDATA			"_objc_exception_data"
+
+#define TAG_CXX_CONSTRUCT		".cxx_construct"
+#define TAG_CXX_DESTRUCT		".cxx_destruct"
+
+#define TAG_ENUMERATION_MUTATION        "objc_enumerationMutation"
+#define TAG_FAST_ENUMERATION_STATE      "__objcFastEnumerationState"
+
+typedef enum string_section
+{
+  class_names,		/* class, category, protocol, module names */
+  meth_var_names,	/* method and variable names */
+  meth_var_types,	/* method and variable type descriptors */
+  prop_names_attr	/* property names and their attributes. */
+} string_section;
+
+#define METHOD_DEF			0
+#define METHOD_REF			1
+
+/* (Decide if these can ever be validly changed.) */
+#define OBJC_ENCODE_INLINE_DEFS		0
+#define OBJC_ENCODE_DONT_INLINE_DEFS	1
+
+#define BUFSIZE				1024
+
+#define CLS_FACTORY			0x0001L
+#define CLS_META			0x0002L
+
+/* Runtime metadata flags - ??? apparently unused.  */
+
+#define OBJC_MODIFIER_STATIC		0x00000001
+#define OBJC_MODIFIER_FINAL		0x00000002
+#define OBJC_MODIFIER_PUBLIC		0x00000004
+#define OBJC_MODIFIER_PRIVATE		0x00000008
+#define OBJC_MODIFIER_PROTECTED		0x00000010
+#define OBJC_MODIFIER_NATIVE		0x00000020
+#define OBJC_MODIFIER_SYNCHRONIZED	0x00000040
+#define OBJC_MODIFIER_ABSTRACT		0x00000080
+#define OBJC_MODIFIER_VOLATILE		0x00000100
+#define OBJC_MODIFIER_TRANSIENT		0x00000200
+#define OBJC_MODIFIER_NONE_SPECIFIED	0x80000000
+
+/* Exception handling constructs.  We begin by having the parser do most
+   of the work and passing us blocks.
+   This allows us to handle different exceptions implementations.  */
+
+/* Stack of open try blocks.  */
+
+struct objc_try_context
+{
+  struct objc_try_context *outer;
+
+  /* Statements (or statement lists) as processed by the parser.  */
+  tree try_body;
+  tree finally_body;
+
+  /* Some file position locations.  */
+  location_t try_locus;
+  location_t end_try_locus;
+  location_t end_catch_locus;
+  location_t finally_locus;
+  location_t end_finally_locus;
+
+  /* A STATEMENT_LIST of CATCH_EXPRs, appropriate for sticking into op1
+     of a TRY_CATCH_EXPR.  Even when doing Darwin setjmp.  */
+  tree catch_list;
+
+  /* The CATCH_EXPR of an open @catch clause.  */
+  tree current_catch;
+
+  /* The VAR_DECL holding  __builtin_eh_pointer (or equivalent).  */
+  tree caught_decl;
+  tree stack_decl;
+  tree rethrow_decl;
+};
+
+/*  A small number of routines used by the FE parser and the runtime code
+   generators.  Put here as inlines for efficiency in non-lto builds rather
+   than making them externs.  */
+
+extern tree objc_create_temporary_var (tree, const char *);
+
+#define objc_is_object_id(TYPE) (OBJC_TYPE_NAME (TYPE) == objc_object_id)
+#define objc_is_class_id(TYPE) (OBJC_TYPE_NAME (TYPE) == objc_class_id)
+
+/* Retrieve category interface CAT_NAME (if any) associated with CLASS.  */
+static inline tree
+lookup_category (tree klass, tree cat_name)
+{
+  tree category = CLASS_CATEGORY_LIST (klass);
+
+  while (category && CLASS_SUPER_NAME (category) != cat_name)
+    category = CLASS_CATEGORY_LIST (category);
+  return category;
+}
+
+/* Count only the fields occurring in T.  */
+static inline int
+ivar_list_length (tree t)
+{
+  int count = 0;
+
+  for (; t; t = DECL_CHAIN (t))
+    if (TREE_CODE (t) == FIELD_DECL)
+      ++count;
+
+  return count;
+}
+
+static inline tree
+is_ivar (tree decl_chain, tree ident)
+{
+  for ( ; decl_chain; decl_chain = DECL_CHAIN (decl_chain))
+    if (DECL_NAME (decl_chain) == ident)
+      return decl_chain;
+  return NULL_TREE;
+}
 
 #endif /* GCC_OBJC_ACT_H */

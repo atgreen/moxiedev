@@ -1,5 +1,5 @@
 /* Interprocedural analyses.
-   Copyright (C) 2005, 2007, 2008, 2009
+   Copyright (C) 2005, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -228,6 +228,7 @@ ipa_get_param_count (struct ipa_node_params *info)
 static inline tree
 ipa_get_param (struct ipa_node_params *info, int i)
 {
+  gcc_assert (i >= 0 && i <= info->param_count);
   return info->params[i].decl;
 }
 
@@ -237,6 +238,7 @@ ipa_get_param (struct ipa_node_params *info, int i)
 static inline bool
 ipa_is_param_used (struct ipa_node_params *info, int i)
 {
+  gcc_assert (i >= 0 && i <= info->param_count);
   return info->params[i].used;
 }
 
@@ -247,6 +249,7 @@ ipa_is_param_used (struct ipa_node_params *info, int i)
 static inline bool
 ipa_param_cannot_devirtualize_p (struct ipa_node_params *info, int i)
 {
+  gcc_assert (i >= 0 && i <= info->param_count);
   return info->params[i].cannot_devirtualize;
 }
 
@@ -256,6 +259,7 @@ ipa_param_cannot_devirtualize_p (struct ipa_node_params *info, int i)
 static inline bool
 ipa_param_types_vec_empty (struct ipa_node_params *info, int i)
 {
+  gcc_assert (i >= 0 && i <= info->param_count);
   return info->params[i].types == NULL;
 }
 
@@ -315,6 +319,7 @@ ipa_get_cs_argument_count (struct ipa_edge_args *args)
 static inline struct ipa_jump_func *
 ipa_get_ith_jump_func (struct ipa_edge_args *args, int i)
 {
+  gcc_assert (i >= 0 && i <= args->argument_count);
   return &args->jump_functions[i];
 }
 
@@ -430,7 +435,8 @@ bool ipa_propagate_indirect_call_infos (struct cgraph_edge *cs,
 					VEC (cgraph_edge_p, heap) **new_edges);
 
 /* Indirect edge and binfo processing.  */
-struct cgraph_edge *ipa_make_edge_direct_to_target (struct cgraph_edge *, tree);
+struct cgraph_edge *ipa_make_edge_direct_to_target (struct cgraph_edge *, tree,
+						    tree);
 
 
 /* Debugging interface.  */
@@ -457,6 +463,10 @@ struct ipa_parm_adjustment
   /* Type of the new parameter.  However, if by_ref is true, the real type will
      be a pointer to this type.  */
   tree type;
+
+  /* Alias refrerence type to be used in MEM_REFs when adjusting caller
+     arguments.  */
+  tree alias_ptr_type;
 
   /* The new declaration when creating/replacing a parameter.  Created by
      ipa_modify_formal_parameters, useful for functions modifying the body
@@ -510,9 +520,25 @@ void ipa_dump_param_adjustments (FILE *, ipa_parm_adjustment_vec, tree);
 void ipa_prop_write_jump_functions (cgraph_node_set set);
 void ipa_prop_read_jump_functions (void);
 void ipa_update_after_lto_read (void);
+int ipa_get_param_decl_index (struct ipa_node_params *, tree);
+void ipa_lattice_from_jfunc (struct ipa_node_params *info,
+			     struct ipcp_lattice *lat,
+			     struct ipa_jump_func *jfunc);
+tree ipa_cst_from_jfunc (struct ipa_node_params *info,
+			 struct ipa_jump_func *jfunc);
+
 
 /* From tree-sra.c:  */
 tree build_ref_for_offset (location_t, tree, HOST_WIDE_INT, tree,
 			   gimple_stmt_iterator *, bool);
+
+/* Return the lattice corresponding to the Ith formal parameter of the function
+   described by INFO.  */
+static inline struct ipcp_lattice *
+ipa_get_lattice (struct ipa_node_params *info, int i)
+{
+  gcc_assert (i >= 0 && i <= info->param_count);
+  return &(info->params[i].ipcp_lattice);
+}
 
 #endif /* IPA_PROP_H */

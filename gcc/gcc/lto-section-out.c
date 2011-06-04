@@ -1,6 +1,6 @@
 /* Functions for writing LTO sections.
 
-   Copyright (C) 2009 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
    Contributed by Kenneth Zadeck <zadeck@naturalbridge.com>
 
 This file is part of GCC.
@@ -23,7 +23,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "tm.h"
-#include "toplev.h"
 #include "tree.h"
 #include "expr.h"
 #include "params.h"
@@ -195,8 +194,8 @@ lto_write_stream (struct lto_output_stream *obs)
 
 /* Adds a new block to output stream OBS.  */
 
-static void
-append_block (struct lto_output_stream *obs)
+void
+lto_append_block (struct lto_output_stream *obs)
 {
   struct lto_char_ptr_base *new_block;
 
@@ -235,23 +234,6 @@ append_block (struct lto_output_stream *obs)
 }
 
 
-/* Write a character to the output block.  */
-
-void
-lto_output_1_stream (struct lto_output_stream *obs, char c)
-{
-  /* No space left.  */
-  if (obs->left_in_block == 0)
-    append_block (obs);
-
-  /* Write the actual character.  */
-  *obs->current_pointer = c;
-  obs->current_pointer++;
-  obs->total_size++;
-  obs->left_in_block--;
-}
-
-
 /* Write raw DATA of length LEN to the output block OB.  */
 
 void
@@ -264,7 +246,7 @@ lto_output_data_stream (struct lto_output_stream *obs, const void *data,
 
       /* No space left.  */
       if (obs->left_in_block == 0)
-	append_block (obs);
+	lto_append_block (obs);
 
       /* Determine how many bytes to copy in this loop.  */
       if (len <= obs->left_in_block)
@@ -343,6 +325,48 @@ lto_output_sleb128_stream (struct lto_output_stream *obs, HOST_WIDE_INT work)
 	byte |= 0x80;
 
       lto_output_1_stream (obs, byte);
+    }
+  while (more);
+}
+
+
+/* Pack WORK into BP in a variant of uleb format.  */
+
+void
+bp_pack_var_len_unsigned (struct bitpack_d *bp, unsigned HOST_WIDE_INT work)
+{
+  do
+    {
+      unsigned int half_byte = (work & 0x7);
+      work >>= 3;
+      if (work != 0)
+	/* More half_bytes to follow.  */
+	half_byte |= 0x8;
+
+      bp_pack_value (bp, half_byte, 4);
+    }
+  while (work != 0);
+}
+
+
+/* Pack WORK into BP in a variant of sleb format.  */
+
+void
+bp_pack_var_len_int (struct bitpack_d *bp, HOST_WIDE_INT work)
+{
+  int more, half_byte;
+
+  do
+    {
+      half_byte = (work & 0x7);
+      /* arithmetic shift */
+      work >>= 3;
+      more = !((work == 0 && (half_byte & 0x4) == 0)
+	       || (work == -1 && (half_byte & 0x4) != 0));
+      if (more)
+	half_byte |= 0x8;
+
+      bp_pack_value (bp, half_byte, 4);
     }
   while (more);
 }

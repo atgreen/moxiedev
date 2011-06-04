@@ -100,6 +100,9 @@ struct ddg;
 /* This is defined in cfgloop.h .  */
 struct loop;
 
+/* This is defined in tree-ssa-alias.h.  */
+struct ao_ref_s;
+
 /* Assembler instructions for creating various kinds of integer object.  */
 
 struct asm_int_op
@@ -172,8 +175,5 @@ struct default_options
 #include "target.def"
 
 extern struct gcc_target targetm;
-
-/* Each target can provide their own.  */
-extern struct gcc_targetcm targetcm;
 
 #endif /* GCC_TARGET_H */

@@ -1,8 +1,8 @@
 /*{{{  Comment.  */ 
 
 /* Definitions of FR30 target. 
-   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2004, 2007, 2008, 2009, 2010
-   Free Software Foundation, Inc.
+   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2004, 2007, 2008, 2009, 2010,
+   2011 Free Software Foundation, Inc.
    Contributed by Cygnus Solutions.
 
 This file is part of GCC.
@@ -25,7 +25,7 @@ along with GCC; see the file COPYING3.  If not see
 /*{{{  Run-time target specifications.  */ 
 
 #undef  ASM_SPEC
-#define ASM_SPEC "%{v}"
+#define ASM_SPEC ""
 
 /* Define this to be a string constant containing `-D' options to define the
    predefined macros that identify this machine and system.  These macros will
@@ -39,8 +39,6 @@ along with GCC; see the file COPYING3.  If not see
     }						\
    while (0)
 
-#define TARGET_VERSION fprintf (stderr, " (fr30)");
-
 #undef  STARTFILE_SPEC
 #define STARTFILE_SPEC "crt0.o%s crti.o%s crtbegin.o%s"
 
@@ -50,6 +48,13 @@ along with GCC; see the file COPYING3.  If not see
    to specify the location of a linker script in a gcc command line yet... */
 #undef  ENDFILE_SPEC
 #define ENDFILE_SPEC  "%{!mno-lsim:-lsim} crtend.o%s crtn.o%s"
+
+#undef  LIB_SPEC
+#define LIB_SPEC "-lc"
+
+#undef  LINK_SPEC
+#define LINK_SPEC "%{h*} %{v:-V} \
+		   %{static:-Bstatic} %{shared:-shared} %{symbolic:-Bsymbolic}"
 
 /*}}}*/ 
 /*{{{  Storage Layout.  */ 
@@ -90,7 +95,6 @@ along with GCC; see the file COPYING3.  If not see
 
 #define STRICT_ALIGNMENT 1
 
-/* Defined in svr4.h.  */
 #define PCC_BITFIELD_TYPE_MATTERS 1
 
 /*}}}*/ 
@@ -105,6 +109,18 @@ along with GCC; see the file COPYING3.  If not see
 #define LONG_DOUBLE_TYPE_SIZE 	64
 
 #define DEFAULT_SIGNED_CHAR 1
+
+#undef  SIZE_TYPE
+#define SIZE_TYPE "unsigned int"
+
+#undef  PTRDIFF_TYPE
+#define PTRDIFF_TYPE "int"
+
+#undef  WCHAR_TYPE
+#define WCHAR_TYPE "long int"
+
+#undef  WCHAR_TYPE_SIZE
+#define WCHAR_TYPE_SIZE BITS_PER_WORD
 
 /*}}}*/ 
 /*{{{  REGISTER BASICS.  */ 
@@ -272,11 +288,6 @@ enum reg_class
 #define GENERAL_REGS 	REAL_REGS
 #define N_REG_CLASSES 	((int) LIM_REG_CLASSES)
 
-#define IRA_COVER_CLASSES				\
-{							\
-  REAL_REGS, MULTIPLY_64_REG, LIM_REG_CLASSES		\
-}
-
 /* An initializer containing the names of the register classes as C string
    constants.  These names are used in writing some of the debugging dumps.  */
 #define REG_CLASS_NAMES \
@@ -332,30 +343,6 @@ enum reg_class
    (as well as added to a displacement).  */
 #define INDEX_REG_CLASS REAL_REGS
 
-/* A C expression which defines the machine-dependent operand constraint
-   letters for register classes.  If CHAR is such a letter, the value should be
-   the register class corresponding to it.  Otherwise, the value should be
-   `NO_REGS'.  The register letter `r', corresponding to class `GENERAL_REGS',
-   will not be passed to this macro; you do not need to handle it.
-
-   The following letters are unavailable, due to being used as
-   constraints:
-	'0'..'9'
-	'<', '>'
-	'E', 'F', 'G', 'H'
-	'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'
-	'Q', 'R', 'S', 'T', 'U'
-	'V', 'X'
-	'g', 'i', 'm', 'n', 'o', 'p', 'r', 's' */
-
-#define REG_CLASS_FROM_LETTER(CHAR) 	\
-     (  (CHAR) == 'd' ? MULTIPLY_64_REG	\
-      : (CHAR) == 'e' ? MULTIPLY_32_REG	\
-      : (CHAR) == 'h' ? HIGH_REGS	\
-      : (CHAR) == 'l' ? LOW_REGS	\
-      : (CHAR) == 'a' ? ALL_REGS	\
-      : NO_REGS)
-
 /* A C expression which is nonzero if register number NUM is suitable for use
    as a base register in operand addresses.  It may be either a suitable hard
    register or a pseudo register that has been allocated such a hard register.  */
@@ -384,53 +371,6 @@ enum reg_class
    This macro helps control the handling of multiple-word values in
    the reload pass.  */
 #define CLASS_MAX_NREGS(CLASS, MODE) HARD_REGNO_NREGS (0, MODE)
-
-/*}}}*/ 
-/*{{{  CONSTANTS.  */ 
-
-/* A C expression that defines the machine-dependent operand constraint letters
-   (`I', `J', `K', .. 'P') that specify particular ranges of integer values.
-   If C is one of those letters, the expression should check that VALUE, an
-   integer, is in the appropriate range and return 1 if so, 0 otherwise.  If C
-   is not one of those letters, the value should be 0 regardless of VALUE.  */
-#define CONST_OK_FOR_LETTER_P(VALUE, C) 			\
- (  (C) == 'I' ? IN_RANGE (VALUE,    0,       15)		\
-  : (C) == 'J' ? IN_RANGE (VALUE,  -16,       -1)		\
-  : (C) == 'K' ? IN_RANGE (VALUE,   16,       31)		\
-  : (C) == 'L' ? IN_RANGE (VALUE,    0,       (1 <<  8) - 1)	\
-  : (C) == 'M' ? IN_RANGE (VALUE,    0,       (1 << 20) - 1)	\
-  : (C) == 'P' ? IN_RANGE (VALUE,  -(1 << 8), (1 <<  8) - 1)	\
-  : 0)
-     
-/* A C expression that defines the machine-dependent operand constraint letters
-   (`G', `H') that specify particular ranges of `const_double' values.
-
-   If C is one of those letters, the expression should check that VALUE, an RTX
-   of code `const_double', is in the appropriate range and return 1 if so, 0
-   otherwise.  If C is not one of those letters, the value should be 0
-   regardless of VALUE.
-
-   `const_double' is used for all floating-point constants and for `DImode'
-   fixed-point constants.  A given letter can accept either or both kinds of
-   values.  It can use `GET_MODE' to distinguish between these kinds.  */
-#define CONST_DOUBLE_OK_FOR_LETTER_P(VALUE, C) 0
-
-/* A C expression that defines the optional machine-dependent constraint
-   letters (`Q', `R', `S', `T', `U') that can be used to segregate specific
-   types of operands, usually memory references, for the target machine.
-   Normally this macro will not be defined.  If it is required for a particular
-   target machine, it should return 1 if VALUE corresponds to the operand type
-   represented by the constraint letter C.  If C is not defined as an extra
-   constraint, the value returned should be 0 regardless of VALUE.
-
-   For example, on the ROMP, load instructions cannot have their output in r0
-   if the memory reference contains a symbolic address.  Constraint letter `Q'
-   is defined as representing a memory address that does *not* contain a
-   symbolic address.  An alternative is specified with a `Q' constraint on the
-   input and `r' on the output.  The next alternative specifies `m' on the
-   input and a register class that does not include r0 on the output.  */
-#define EXTRA_CONSTRAINT(VALUE, C) \
-   ((C) == 'Q' ? (GET_CODE (VALUE) == MEM && GET_CODE (XEXP (VALUE, 0)) == SYMBOL_REF) : 0)
 
 /*}}}*/ 
 /*{{{  Basic Stack Layout.  */ 
@@ -727,12 +667,6 @@ enum reg_class
    will reload one or both registers only if neither labeling works.  */
 #define REG_OK_FOR_INDEX_P(X) REG_OK_FOR_BASE_P (X)
 
-/* A C expression that is nonzero if X is a legitimate constant for an
-   immediate operand on the target machine.  You can assume that X satisfies
-   `CONSTANT_P', so you need not check this.  In fact, `1' is a suitable
-   definition for this macro on machines where anything `CONSTANT_P' is valid.  */
-#define LEGITIMATE_CONSTANT_P(X) 1
-
 /*}}}*/ 
 /*{{{  Describing Relative Costs of Operations */ 
 
@@ -762,13 +696,6 @@ enum reg_class
    `".data"' is right.  */
 #define DATA_SECTION_ASM_OP "\t.data"
 
-/* If defined, a C expression whose value is a string containing the
-   assembler operation to identify the following data as
-   uninitialized global data.  If not defined, and neither
-   `ASM_OUTPUT_BSS' nor `ASM_OUTPUT_ALIGNED_BSS' are defined,
-   uninitialized global data will be output in the data section if
-   `-fno-common' is passed, otherwise `ASM_OUTPUT_COMMON' will be
-   used.  */
 #define BSS_SECTION_ASM_OP "\t.section .bss"
 
 /*}}}*/ 
@@ -831,12 +758,6 @@ enum reg_class
 
 #define PRINT_OPERAND_ADDRESS(STREAM, X) fr30_print_operand_address (STREAM, X)
 
-/* If defined, C string expressions to be used for the `%R', `%L', `%U', and
-   `%I' options of `asm_fprintf' (see `final.c').  These are useful when a
-   single `md' file must support multiple assembler formats.  In that case, the
-   various `tm.h' files can define these macros differently.
-
-   USER_LABEL_PREFIX is defined in svr4.h.  */
 #define REGISTER_PREFIX "%"
 #define LOCAL_LABEL_PREFIX "."
 #define USER_LABEL_PREFIX ""
@@ -917,11 +838,6 @@ fprintf (STREAM, "\t.word .L%d\n", VALUE)
    called, in `call' RTL expressions.  On most machines this should be
    `QImode'.  */
 #define FUNCTION_MODE QImode
-
-/* If cross-compiling, don't require stdio.h etc to build libgcc.a.  */
-#if defined CROSS_DIRECTORY_STRUCTURE && ! defined inhibit_libc
-#define inhibit_libc
-#endif
 
 /*}}}*/ 
 

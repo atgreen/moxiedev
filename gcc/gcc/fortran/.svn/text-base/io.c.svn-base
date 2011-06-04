@@ -1,6 +1,6 @@
 /* Deal with I/O statements & related stuff.
    Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010
+   2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Andy Vaught
 
@@ -136,7 +136,7 @@ mode;
 /* Return the next character in the format string.  */
 
 static char
-next_char (int in_string)
+next_char (gfc_instring in_string)
 {
   static gfc_char_t c;
 
@@ -197,7 +197,7 @@ next_char_not_space (bool *error)
   char c;
   do
     {
-      error_element = c = next_char (0);
+      error_element = c = next_char (NONSTRING);
       if (c == '\t')
 	{
 	  if (gfc_option.allow_std & GFC_STD_GNU)
@@ -374,7 +374,7 @@ format_lex (void)
 
       for (;;)
 	{
-	  c = next_char (1);
+	  c = next_char (INSTRING_WARN);
 	  if (c == '\0')
 	    {
 	      token = FMT_END;
@@ -383,7 +383,7 @@ format_lex (void)
 
 	  if (c == delim)
 	    {
-	      c = next_char (1);
+	      c = next_char (INSTRING_NOWARN);
 
 	      if (c == '\0')
 		{
@@ -981,7 +981,7 @@ data_desc:
 	{
 	  while (repeat >0)
 	   {
-	     next_char (1);
+	     next_char (INSTRING_WARN);
 	     repeat -- ;
 	   }
 	}
@@ -1315,6 +1315,9 @@ match_vtag (const io_tag *tag, gfc_expr **v)
       return MATCH_ERROR;
     }
 
+  if (gfc_implicit_pure (NULL) && gfc_impure_variable (result->symtree->n.sym))
+    gfc_current_ns->proc_name->attr.implicit_pure = 0;
+
   *v = result;
   return MATCH_YES;
 }
@@ -1391,10 +1394,12 @@ resolve_tag_format (const gfc_expr *e)
 	  || e->symtree->n.sym->as == NULL
 	  || e->symtree->n.sym->as->rank == 0))
     {
-      if (e->ts.type != BT_CHARACTER && e->ts.type != BT_INTEGER)
+      if ((e->ts.type != BT_CHARACTER
+	   || e->ts.kind != gfc_default_character_kind)
+	  && e->ts.type != BT_INTEGER)
 	{
-	  gfc_error ("FORMAT tag at %L must be of type CHARACTER or INTEGER",
-		     &e->where);
+	  gfc_error ("FORMAT tag at %L must be of type default-kind CHARACTER "
+		     "or of INTEGER", &e->where);
 	  return FAILURE;
 	}
       else if (e->ts.type == BT_INTEGER && e->expr_type == EXPR_VARIABLE)
@@ -1472,6 +1477,13 @@ resolve_tag (const io_tag *tag, gfc_expr *e)
     {
       gfc_error ("%s tag at %L must be of type %s", tag->name,
 		 &e->where, gfc_basic_typename (tag->type));
+      return FAILURE;
+    }
+
+  if (e->ts.type == BT_CHARACTER && e->ts.kind != gfc_default_character_kind)
+    {
+      gfc_error ("%s tag at %L must be a character string of default kind",
+		 tag->name, &e->where);
       return FAILURE;
     }
 
@@ -1637,7 +1649,7 @@ gfc_free_open (gfc_open *open)
   gfc_free_expr (open->convert);
   gfc_free_expr (open->asynchronous);
   gfc_free_expr (open->newunit);
-  gfc_free (open);
+  free (open);
 }
 
 
@@ -1761,7 +1773,7 @@ compare_to_allowed_values (const char *specifier, const char *allowed[],
       char *s = gfc_widechar_to_char (value, -1);
       gfc_warning ("%s specifier in %s statement at %C has invalid value '%s'",
 		   specifier, statement, s);
-      gfc_free (s);
+      free (s);
       return 1;
     }
   else
@@ -1769,7 +1781,7 @@ compare_to_allowed_values (const char *specifier, const char *allowed[],
       char *s = gfc_widechar_to_char (value, -1);
       gfc_error ("%s specifier in %s statement at %C has invalid value '%s'",
 		 specifier, statement, s);
-      gfc_free (s);
+      free (s);
       return 0;
     }
 }
@@ -1823,6 +1835,9 @@ gfc_match_open (void)
       gfc_error ("OPEN statement not allowed in PURE procedure at %C");
       goto cleanup;
     }
+
+  if (gfc_implicit_pure (NULL))
+    gfc_current_ns->proc_name->attr.implicit_pure = 0;
 
   warn = (open->err || open->iostat) ? true : false;
 
@@ -2079,7 +2094,7 @@ gfc_match_open (void)
 					  -1);
 	  warn_or_error ("The STATUS specified in OPEN statement at %C is "
 			 "'%s' and no FILE specifier is present", s);
-	  gfc_free (s);
+	  free (s);
 	}
 
       /* F2003, 9.4.5: If the STATUS= specifier has the value SCRATCH,
@@ -2156,7 +2171,7 @@ gfc_free_close (gfc_close *close)
   gfc_free_expr (close->iomsg);
   gfc_free_expr (close->iostat);
   gfc_free_expr (close->status);
-  gfc_free (close);
+  free (close);
 }
 
 
@@ -2238,6 +2253,9 @@ gfc_match_close (void)
       goto cleanup;
     }
 
+  if (gfc_implicit_pure (NULL))
+    gfc_current_ns->proc_name->attr.implicit_pure = 0;
+
   warn = (close->iostat || close->err) ? true : false;
 
   /* Checks on the STATUS specifier.  */
@@ -2297,7 +2315,7 @@ gfc_free_filepos (gfc_filepos *fp)
   gfc_free_expr (fp->unit);
   gfc_free_expr (fp->iomsg);
   gfc_free_expr (fp->iostat);
-  gfc_free (fp);
+  free (fp);
 }
 
 
@@ -2384,6 +2402,9 @@ done:
 
       goto cleanup;
     }
+
+  if (gfc_implicit_pure (NULL))
+    gfc_current_ns->proc_name->attr.implicit_pure = 0;
 
   new_st.op = op;
   new_st.ext.filepos = fp;
@@ -2728,7 +2749,7 @@ gfc_free_dt (gfc_dt *dt)
   gfc_free_expr (dt->pos);
   gfc_free_expr (dt->dt_io_kind);
   /* dt->extra_comma is a link to dt_io_kind if it is set.  */
-  gfc_free (dt);
+  free (dt);
 }
 
 
@@ -3079,7 +3100,8 @@ match_io_element (io_kind k, gfc_code **cpp)
   cp = gfc_get_code ();
   cp->op = EXEC_TRANSFER;
   cp->expr1 = expr;
-  cp->ext.dt = current_dt;
+  if (k != M_INQUIRE)
+    cp->ext.dt = current_dt;
 
   *cpp = cp;
   return MATCH_YES;
@@ -3223,6 +3245,10 @@ if (condition) \
 		     "IO UNIT in %s statement at %C must be "
 		     "an internal file in a PURE procedure",
 		     io_kind_name (k));
+
+      if (gfc_implicit_pure (NULL) && (k == M_READ || k == M_WRITE))
+	gfc_current_ns->proc_name->attr.implicit_pure = 0;
+
     }
 
   if (k != M_READ)
@@ -3753,6 +3779,9 @@ gfc_match_print (void)
       return MATCH_ERROR;
     }
 
+  if (gfc_implicit_pure (NULL))
+    gfc_current_ns->proc_name->attr.implicit_pure = 0;
+
   return MATCH_YES;
 }
 
@@ -3802,7 +3831,7 @@ gfc_free_inquire (gfc_inquire *inquire)
   gfc_free_expr (inquire->sign);
   gfc_free_expr (inquire->size);
   gfc_free_expr (inquire->round);
-  gfc_free (inquire);
+  free (inquire);
 }
 
 
@@ -3909,6 +3938,9 @@ gfc_match_inquire (void)
 	  return MATCH_ERROR;
 	}
 
+      if (gfc_implicit_pure (NULL))
+	gfc_current_ns->proc_name->attr.implicit_pure = 0;
+
       new_st.block = gfc_get_code ();
       new_st.block->op = EXEC_IOLENGTH;
       terminate_io (code);
@@ -3959,6 +3991,9 @@ gfc_match_inquire (void)
       gfc_error ("INQUIRE statement not allowed in PURE procedure at %C");
       goto cleanup;
     }
+
+  if (gfc_implicit_pure (NULL))
+    gfc_current_ns->proc_name->attr.implicit_pure = 0;
   
   if (inquire->id != NULL && inquire->pending == NULL)
     {
@@ -4033,6 +4068,7 @@ gfc_resolve_inquire (gfc_inquire *inquire)
   INQUIRE_RESOLVE_TAG (&tag_s_round, inquire->round);
   INQUIRE_RESOLVE_TAG (&tag_pending, inquire->pending);
   INQUIRE_RESOLVE_TAG (&tag_size, inquire->size);
+  INQUIRE_RESOLVE_TAG (&tag_s_decimal, inquire->decimal);
 #undef INQUIRE_RESOLVE_TAG
 
   if (gfc_reference_st_label (inquire->err, ST_LABEL_TARGET) == FAILURE)
@@ -4141,6 +4177,9 @@ gfc_match_wait (void)
       gfc_error ("WAIT statement not allowed in PURE procedure at %C");
       goto cleanup;
     }
+
+  if (gfc_implicit_pure (NULL))
+    gfc_current_ns->proc_name->attr.implicit_pure = 0;
 
   new_st.op = EXEC_WAIT;
   new_st.ext.wait = wait;

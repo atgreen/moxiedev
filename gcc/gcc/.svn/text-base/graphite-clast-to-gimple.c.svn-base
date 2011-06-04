@@ -21,26 +21,13 @@ along with GCC; see the file COPYING3.  If not see
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
-#include "tm.h"
-#include "ggc.h"
-#include "tree.h"
-#include "rtl.h"
-#include "basic-block.h"
-#include "diagnostic.h"
+#include "diagnostic-core.h"
 #include "tree-flow.h"
-#include "toplev.h"
 #include "tree-dump.h"
-#include "timevar.h"
 #include "cfgloop.h"
 #include "tree-chrec.h"
 #include "tree-data-ref.h"
 #include "tree-scalar-evolution.h"
-#include "tree-pass.h"
-#include "domwalk.h"
-#include "value-prof.h"
-#include "pointer-set.h"
-#include "gimple.h"
-#include "langhooks.h"
 #include "sese.h"
 
 #ifdef HAVE_cloog
@@ -48,9 +35,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "ppl_c.h"
 #include "graphite-cloog-util.h"
 #include "graphite-ppl.h"
-#include "graphite.h"
 #include "graphite-poly.h"
-#include "graphite-scop-detection.h"
 #include "graphite-clast-to-gimple.h"
 #include "graphite-dependences.h"
 #include "graphite-cloog-compat.h"
@@ -129,8 +114,7 @@ save_clast_name_index (htab_t index_table, const char *name, int index)
 
   if (slot)
     {
-      if (*slot)
-	free (*slot);
+      free (*slot);
 
       *slot = new_clast_name_index (name, index);
     }
@@ -976,20 +960,24 @@ graphite_create_new_loop_guard (sese region, edge entry_edge,
 				     newivs_index, params_index);
   tree ub = clast_to_gcc_expression (type, stmt->UB, region, newivs,
 				     newivs_index, params_index);
-  tree one = POINTER_TYPE_P (type) ? size_one_node
-    : fold_convert (type, integer_one_node);
-  /* Adding +1 and using LT_EXPR helps with loop latches that have a
-     loop iteration count of "PARAMETER - 1".  For PARAMETER == 0 this becomes
-     2^{32|64}, and the condition lb <= ub is true, even if we do not want this.
-     However lb < ub + 1 is false, as expected.  */
-  tree ub_one = fold_build2 (POINTER_TYPE_P (type) ? POINTER_PLUS_EXPR
-			     : PLUS_EXPR, type, ub, one);
-
-  /* When ub + 1 wraps around, use lb <= ub.  */
-  if (integer_zerop (ub_one))
+  /* When ub is simply a constant or a parameter, use lb <= ub.  */
+  if (TREE_CODE (ub) == INTEGER_CST || TREE_CODE (ub) == SSA_NAME)
     cond_expr = fold_build2 (LE_EXPR, boolean_type_node, lb, ub);
   else
-    cond_expr = fold_build2 (LT_EXPR, boolean_type_node, lb, ub_one);
+    {
+      tree one = (POINTER_TYPE_P (type)
+		  ? size_one_node
+		  : fold_convert (type, integer_one_node));
+      /* Adding +1 and using LT_EXPR helps with loop latches that have a
+	 loop iteration count of "PARAMETER - 1".  For PARAMETER == 0 this becomes
+	 2^k-1 due to integer overflow, and the condition lb <= ub is true,
+	 even if we do not want this.  However lb < ub + 1 is false, as
+	 expected.  */
+      tree ub_one = fold_build2 (POINTER_TYPE_P (type) ? POINTER_PLUS_EXPR
+				 : PLUS_EXPR, type, ub, one);
+
+      cond_expr = fold_build2 (LT_EXPR, boolean_type_node, lb, ub_one);
+    }
 
   exit_edge = create_empty_if_region_on_edge (entry_edge, cond_expr);
 
@@ -1247,7 +1235,7 @@ init_cloog_input_file (int scop_number)
 
 static void
 build_cloog_prog (scop_p scop, CloogProgram *prog,
-                  CloogOptions *options, CloogState *state ATTRIBUTE_UNUSED)
+                  CloogOptions *options)
 {
   int i;
   int max_nb_loops = scop_max_loop_depth (scop);
@@ -1260,7 +1248,7 @@ build_cloog_prog (scop_p scop, CloogProgram *prog,
 
   cloog_program_set_context
     (prog, new_Cloog_Domain_from_ppl_Pointset_Powerset (SCOP_CONTEXT (scop),
-      scop_nb_params (scop), state));
+      scop_nb_params (scop), cloog_state));
   nbs = unify_scattering_dimensions (scop);
   scaldims = (int *) xmalloc (nbs * (sizeof (int)));
   cloog_program_set_nb_scattdims (prog, nbs);
@@ -1278,16 +1266,16 @@ build_cloog_prog (scop_p scop, CloogProgram *prog,
 	continue;
 
       /* Build the new statement and its block.  */
-      stmt = cloog_statement_alloc (state, pbb_index (pbb));
+      stmt = cloog_statement_alloc (cloog_state, pbb_index (pbb));
       dom = new_Cloog_Domain_from_ppl_Pointset_Powerset (PBB_DOMAIN (pbb),
                                                          scop_nb_params (scop),
-                                                         state);
+                                                         cloog_state);
       block = cloog_block_alloc (stmt, 0, NULL, pbb_dim_iter_domain (pbb));
       cloog_statement_set_usr (stmt, pbb);
 
       /* Build loop list.  */
       {
-        CloogLoop *new_loop_list = cloog_loop_malloc (state);
+        CloogLoop *new_loop_list = cloog_loop_malloc (cloog_state);
         cloog_loop_set_next (new_loop_list, loop_list);
         cloog_loop_set_domain (new_loop_list, dom);
         cloog_loop_set_block (new_loop_list, block);
@@ -1314,7 +1302,7 @@ build_cloog_prog (scop_p scop, CloogProgram *prog,
 	scat = PBB_TRANSFORMED_SCATTERING (pbb);
         dom = new_Cloog_Scattering_from_ppl_Polyhedron
           (scat, scop_nb_params (scop), pbb_nb_scattering_transform (pbb),
-           state);
+           cloog_state);
 
         cloog_set_next_scattering (new_scattering, scattering);
         cloog_set_scattering (new_scattering, dom);
@@ -1371,9 +1359,9 @@ build_cloog_prog (scop_p scop, CloogProgram *prog,
 /* Return the options that will be used in GLOOG.  */
 
 static CloogOptions *
-set_cloog_options (CloogState *state ATTRIBUTE_UNUSED)
+set_cloog_options (void)
 {
-  CloogOptions *options = cloog_options_malloc (state);
+  CloogOptions *options = cloog_options_malloc (cloog_state);
 
   /* Change cloog output language to C.  If we do use FORTRAN instead, cloog
      will stop e.g. with "ERROR: unbounded loops not allowed in FORTRAN.", if
@@ -1422,12 +1410,10 @@ set_cloog_options (CloogState *state ATTRIBUTE_UNUSED)
 void
 print_clast_stmt (FILE *file, struct clast_stmt *stmt)
 {
-  CloogState *state = cloog_state_malloc ();
-  CloogOptions *options = set_cloog_options (state);
+  CloogOptions *options = set_cloog_options ();
 
   clast_pprint (file, stmt, 0, options);
   cloog_options_free (options);
-  cloog_state_free (state);
 }
 
 /* Prints STMT to STDERR.  */
@@ -1443,14 +1429,14 @@ debug_clast_stmt (struct clast_stmt *stmt)
    without a program.  */
 
 cloog_prog_clast
-scop_to_clast (scop_p scop, CloogState *state)
+scop_to_clast (scop_p scop)
 {
-  CloogOptions *options = set_cloog_options (state);
+  CloogOptions *options = set_cloog_options ();
   cloog_prog_clast pc;
 
   /* Connect new cloog prog generation to graphite.  */
   pc.prog = cloog_program_malloc ();
-  build_cloog_prog (scop, pc.prog, options, state);
+  build_cloog_prog (scop, pc.prog, options);
   pc.prog = cloog_program_generate (pc.prog, options);
   pc.stmt = cloog_clast_create (pc.prog, options);
 
@@ -1463,10 +1449,9 @@ scop_to_clast (scop_p scop, CloogState *state)
 void
 print_generated_program (FILE *file, scop_p scop)
 {
-  CloogState *state = cloog_state_malloc ();
-  CloogOptions *options = set_cloog_options (state);
+  CloogOptions *options = set_cloog_options ();
 
-  cloog_prog_clast pc = scop_to_clast (scop, state);
+  cloog_prog_clast pc = scop_to_clast (scop);
 
   fprintf (file, "       (prog: \n");
   cloog_program_print (file, pc.prog);
@@ -1517,13 +1502,11 @@ gloog (scop_p scop, htab_t bb_pbb_mapping)
   ifsese if_region = NULL;
   htab_t newivs_index, params_index;
   cloog_prog_clast pc;
-  CloogState *state;
 
-  state = cloog_state_malloc ();
   timevar_push (TV_GRAPHITE_CODE_GEN);
   gloog_error = false;
 
-  pc = scop_to_clast (scop, state);
+  pc = scop_to_clast (scop);
 
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
@@ -1556,7 +1539,7 @@ gloog (scop_p scop, htab_t bb_pbb_mapping)
 		   &newivs, newivs_index,
 		   bb_pbb_mapping, 1, params_index);
   graphite_verify ();
-  scev_reset_htab ();
+  scev_reset ();
   recompute_all_dominators ();
   graphite_verify ();
 
@@ -1587,8 +1570,6 @@ gloog (scop_p scop, htab_t bb_pbb_mapping)
       fprintf (dump_file, "\n%d loops carried no dependency.\n",
 	       num_no_dependency);
     }
-
-  cloog_state_free (state);
 
   return !gloog_error;
 }

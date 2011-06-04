@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler for Renesas / SuperH SH.
    Copyright (C) 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Steve Chamberlain (sac@cygnus.com).
    Improved by Jim Wilson (wilson@cygnus.com).
@@ -25,9 +25,6 @@ along with GCC; see the file COPYING3.  If not see
 #define GCC_SH_H
 
 #include "config/vxworks-dummy.h"
-
-#define TARGET_VERSION \
-  fputs (" (Hitachi SH)", stderr);
 
 /* Unfortunately, insn-attrtab.c doesn't include insn-codes.h.  We can't
    include it here, because bconfig.h is also included by gencodes.c .  */
@@ -405,8 +402,7 @@ do { \
 #define SUBTARGET_LINK_EMUL_SUFFIX ""
 #define SUBTARGET_LINK_SPEC ""
 
-/* svr4.h redefines LINK_SPEC inappropriately, so go via SH_LINK_SPEC,
-   so that we can undo the damage without code replication.  */
+/* Go via SH_LINK_SPEC to avoid code replication.  */
 #define LINK_SPEC SH_LINK_SPEC
 
 #define SH_LINK_SPEC "\
@@ -1134,20 +1130,6 @@ enum reg_class
 extern enum reg_class regno_reg_class[FIRST_PSEUDO_REGISTER];
 #define REGNO_REG_CLASS(REGNO) regno_reg_class[(REGNO)]
 
-/* The following macro defines cover classes for Integrated Register
-   Allocator.  Cover classes is a set of non-intersected register
-   classes covering all hard registers used for register allocation
-   purpose.  Any move between two registers of a cover class should be
-   cheaper than load or store of the registers.  The macro value is
-   array of register classes with LIM_REG_CLASSES used as the end
-   marker.  */
-
-#define IRA_COVER_CLASSES						     \
-{									     \
-  GENERAL_REGS, FP_REGS, PR_REGS, T_REGS, MAC_REGS, TARGET_REGS,  	     \
-  FPUL_REGS, LIM_REG_CLASSES						     \
-}
-
 /* When this hook returns true for MODE, the compiler allows
    registers explicitly used in the rtl to be used as spill registers
    but prevents the compiler from extending the lifetime of these
@@ -1212,19 +1194,6 @@ extern enum reg_class regno_reg_class[FIRST_PSEUDO_REGISTER];
 
 #define CONST_OK_FOR_K08(VALUE) (((HOST_WIDE_INT)(VALUE))>= 0 \
 				 && ((HOST_WIDE_INT)(VALUE)) <= 255)
-
-/* Given an rtx X being reloaded into a reg required to be
-   in class CLASS, return the class of reg to actually use.
-   In general this is just CLASS; but on some machines
-   in some cases it is preferable to use a more restrictive class.  */
-
-#define PREFERRED_RELOAD_CLASS(X, CLASS) \
-  ((CLASS) == NO_REGS && TARGET_SHMEDIA \
-   && (GET_CODE (X) == CONST_DOUBLE \
-       || GET_CODE (X) == SYMBOL_REF \
-       || PIC_ADDR_P (X)) \
-   ? GENERAL_REGS \
-   : (CLASS)) \
 
 #if 0
 #define SECONDARY_INOUT_RELOAD_CLASS(CLASS,MODE,X,ELSE) \
@@ -1792,20 +1761,6 @@ struct sh_args {
 
 #define CONSTANT_ADDRESS_P(X)	(GET_CODE (X) == LABEL_REF)
 
-/* Nonzero if the constant value X is a legitimate general operand.  */
-/* can_store_by_pieces constructs VOIDmode CONST_DOUBLEs.  */
-
-#define LEGITIMATE_CONSTANT_P(X) \
-  (TARGET_SHMEDIA							\
-   ? ((GET_MODE (X) != DFmode						\
-       && GET_MODE_CLASS (GET_MODE (X)) != MODE_VECTOR_FLOAT)		\
-      || (X) == CONST0_RTX (GET_MODE (X))				\
-      || ! TARGET_SHMEDIA_FPU						\
-      || TARGET_SHMEDIA64)						\
-   : (GET_CODE (X) != CONST_DOUBLE					\
-      || GET_MODE (X) == DFmode || GET_MODE (X) == SFmode		\
-      || GET_MODE (X) == DImode || GET_MODE (X) == VOIDmode))
-
 /* The macros REG_OK_FOR..._P assume that the arg is a REG rtx
    and check its validity for a certain class.
    The suitable hard regs are always accepted and all pseudo regs
@@ -2144,26 +2099,10 @@ struct sh_args {
 # endif
 #endif
 
-
-/* If defined, a C expression whose value is a string containing the
-   assembler operation to identify the following data as
-   uninitialized global data.  If not defined, and neither
-   `ASM_OUTPUT_BSS' nor `ASM_OUTPUT_ALIGNED_BSS' are defined,
-   uninitialized global data will be output in the data section if
-   `-fno-common' is passed, otherwise `ASM_OUTPUT_COMMON' will be
-   used.  */
 #ifndef BSS_SECTION_ASM_OP
 #define BSS_SECTION_ASM_OP	"\t.section\t.bss"
 #endif
 
-/* Like `ASM_OUTPUT_BSS' except takes the required alignment as a
-   separate, explicit argument.  If you define this macro, it is used
-   in place of `ASM_OUTPUT_BSS', and gives you more flexibility in
-   handling the required alignment of the variable.  The alignment is
-   specified as the number of bits.
-
-   Try to use function `asm_output_aligned_bss' defined in file
-   `varasm.c' when defining this macro.  */
 #ifndef ASM_OUTPUT_ALIGNED_BSS
 #define ASM_OUTPUT_ALIGNED_BSS(FILE, DECL, NAME, SIZE, ALIGN) \
   asm_output_aligned_bss (FILE, DECL, NAME, SIZE, ALIGN)
@@ -2224,8 +2163,6 @@ struct sh_args {
 /* DBX register number for a given compiler register number.  */
 /* GDB has FPUL at 23 and FP0 at 25, so we must add one to all FP registers
    to match gdb.  */
-/* svr4.h undefines this macro, yet we really want to use the same numbers
-   for coff as for elf, so we go via another macro: SH_DBX_REGISTER_NUMBER.  */
 /* expand_builtin_init_dwarf_reg_sizes uses this to test if a
    register exists, so we should return -1 for invalid register numbers.  */
 #define DBX_REGISTER_NUMBER(REGNO) SH_DBX_REGISTER_NUMBER (REGNO)
@@ -2353,117 +2290,9 @@ struct sh_args {
 #define FINAL_PRESCAN_INSN(INSN, OPVEC, NOPERANDS) \
   final_prescan_insn ((INSN), (OPVEC), (NOPERANDS))
 
-/* Recognize machine-specific patterns that may appear within
-   constants.  Used for PIC-specific UNSPECs.  */
-#define OUTPUT_ADDR_CONST_EXTRA(STREAM, X, FAIL) \
-  do									\
-    if (GET_CODE (X) == UNSPEC)						\
-      {									\
-	switch (XINT ((X), 1))						\
-	  {								\
-	  case UNSPEC_DATALABEL:					\
-	    fputs ("datalabel ", (STREAM));				\
-	    output_addr_const ((STREAM), XVECEXP ((X), 0, 0));		\
-	    break;							\
-	  case UNSPEC_PIC:						\
-	    /* GLOBAL_OFFSET_TABLE or local symbols, no suffix.  */	\
-	    output_addr_const ((STREAM), XVECEXP ((X), 0, 0));		\
-	    break;							\
-	  case UNSPEC_GOT:						\
-	    output_addr_const ((STREAM), XVECEXP ((X), 0, 0));		\
-	    fputs ("@GOT", (STREAM));					\
-	    break;							\
-	  case UNSPEC_GOTOFF:						\
-	    output_addr_const ((STREAM), XVECEXP ((X), 0, 0));		\
-	    fputs ("@GOTOFF", (STREAM));				\
-	    break;							\
-	  case UNSPEC_PLT:						\
-	    output_addr_const ((STREAM), XVECEXP ((X), 0, 0));		\
-	    fputs ("@PLT", (STREAM));					\
-	    break;							\
-	  case UNSPEC_GOTPLT:						\
-	    output_addr_const ((STREAM), XVECEXP ((X), 0, 0));		\
-	    fputs ("@GOTPLT", (STREAM));				\
-	    break;							\
-	  case UNSPEC_DTPOFF:						\
-	    output_addr_const ((STREAM), XVECEXP ((X), 0, 0));		\
-	    fputs ("@DTPOFF", (STREAM));				\
-	    break;							\
-	  case UNSPEC_GOTTPOFF:						\
-	    output_addr_const ((STREAM), XVECEXP ((X), 0, 0));		\
-	    fputs ("@GOTTPOFF", (STREAM));				\
-	    break;							\
-	  case UNSPEC_TPOFF:						\
-	    output_addr_const ((STREAM), XVECEXP ((X), 0, 0));		\
-	    fputs ("@TPOFF", (STREAM));					\
-	    break;							\
-	  case UNSPEC_CALLER:						\
-	    {								\
-	      char name[32];						\
-	      /* LPCS stands for Label for PIC Call Site.  */		\
-	      ASM_GENERATE_INTERNAL_LABEL				\
-		(name, "LPCS", INTVAL (XVECEXP ((X), 0, 0)));		\
-	      assemble_name ((STREAM), name);				\
-	    }								\
-	    break;							\
-	  case UNSPEC_EXTRACT_S16:					\
-	  case UNSPEC_EXTRACT_U16:					\
-	    {								\
-	      rtx val, shift;						\
-									\
-	      val = XVECEXP (X, 0, 0);					\
-	      shift = XVECEXP (X, 0, 1);				\
-	      fputc ('(', STREAM);					\
-	      if (shift != const0_rtx)					\
-		fputc ('(', STREAM);					\
-	      if (GET_CODE (val) == CONST				\
-		  || GET_RTX_CLASS (GET_CODE (val)) != RTX_OBJ)		\
-		{							\
-		  fputc ('(', STREAM);					\
-		  output_addr_const (STREAM, val);			\
-		  fputc (')', STREAM);					\
-		}							\
-	      else							\
-		output_addr_const (STREAM, val);			\
-	      if (shift != const0_rtx)					\
-		{							\
-		  fputs (" >> ", STREAM);				\
-		  output_addr_const (STREAM, shift);			\
-		  fputc (')', STREAM);					\
-		}							\
-	      fputs (" & 65535)", STREAM);				\
-	    }								\
-	    break;							\
-	  case UNSPEC_SYMOFF:						\
-	    output_addr_const (STREAM, XVECEXP (X, 0, 0));		\
-	    fputc ('-', STREAM);					\
-	    if (GET_CODE (XVECEXP (X, 0, 1)) == CONST)			\
-	      {								\
-		fputc ('(', STREAM);					\
-		output_addr_const (STREAM, XVECEXP (X, 0, 1));		\
-		fputc (')', STREAM);					\
-	      }								\
-	    else							\
-	      output_addr_const (STREAM, XVECEXP (X, 0, 1));		\
-	    break;							\
-	  case UNSPEC_PCREL_SYMOFF:					\
-	    output_addr_const (STREAM, XVECEXP (X, 0, 0));		\
-	    fputs ("-(", STREAM);					\
-	    output_addr_const (STREAM, XVECEXP (X, 0, 1));		\
-	    fputs ("-.)", STREAM);					\
-	    break;							\
-	  default:							\
-	    goto FAIL;							\
-	  }								\
-	break;								\
-      }									\
-    else								\
-      goto FAIL;							\
-  while (0)
-
 
-extern struct rtx_def *sh_compare_op0;
-extern struct rtx_def *sh_compare_op1;
+extern rtx sh_compare_op0;
+extern rtx sh_compare_op1;
 
 /* Which processor to schedule for.  The elements of the enumeration must
    match exactly the cpu attribute in the sh.md file.  */

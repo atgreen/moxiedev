@@ -1,6 +1,6 @@
 /* Help friends in C++.
    Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2007, 2008  Free Software Foundation, Inc.
+   2007, 2008, 2010  Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -26,7 +26,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "cp-tree.h"
 #include "flags.h"
 #include "output.h"
-#include "toplev.h"
 
 /* Friend data structures are described in cp-tree.h.  */
 
@@ -227,7 +226,14 @@ make_friend_class (tree type, tree friend_type, bool complain)
 
   if (! MAYBE_CLASS_TYPE_P (friend_type))
     {
-      error ("invalid type %qT declared %<friend%>", friend_type);
+      /* N1791: If the type specifier in a friend declaration designates a
+	 (possibly cv-qualified) class type, that class is declared as a
+	 friend; otherwise, the friend declaration is ignored.
+
+         So don't complain in C++0x mode.  */
+      if (cxx_dialect < cxx0x)
+	pedwarn (input_location, complain ? 0 : OPT_pedantic,
+		 "invalid type %qT declared %<friend%>", friend_type);
       return;
     }
 

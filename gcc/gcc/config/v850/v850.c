@@ -1,6 +1,6 @@
 /* Subroutines for insn-output.c for NEC V850 series
    Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Jeff Law (law@cygnus.com).
 
    This file is part of GCC.
@@ -36,13 +36,13 @@
 #include "expr.h"
 #include "function.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "ggc.h"
 #include "integrate.h"
 #include "tm_p.h"
 #include "target.h"
 #include "target-def.h"
 #include "df.h"
+#include "opts.h"
 
 #ifndef streq
 #define streq(a,b) (strcmp (a, b) == 0)
@@ -51,12 +51,11 @@
 static void v850_print_operand_address (FILE *, rtx);
 
 /* Information about the various small memory areas.  */
-struct small_memory_info small_memory[ (int)SMALL_MEMORY_max ] =
+static const int small_memory_physical_max[(int) SMALL_MEMORY_max] =
 {
-  /* Name	Max	Physical max.  */
-  { "tda",	0,		256 },
-  { "sda",	0,		65536 },
-  { "zda",	0,		32768 },
+  256,
+  65536,
+  32768,
 };
 
 /* Names of the various data areas used on the v850.  */
@@ -83,58 +82,62 @@ static GTY(()) section * zdata_section;
 static GTY(()) section * zbss_section;
 
 /* Set the maximum size of small memory area TYPE to the value given
-   by VALUE.  Return true if VALUE was syntactically correct.  VALUE
-   starts with the argument separator: either "-" or "=".  */
+   by SIZE in structure OPTS (option text OPT passed at location LOC).  */
 
-static bool
-v850_handle_memory_option (enum small_memory_type type, const char *value)
+static void
+v850_handle_memory_option (enum small_memory_type type,
+			   struct gcc_options *opts, const char *opt,
+			   int size, location_t loc)
 {
-  int i, size;
-
-  if (*value != '-' && *value != '=')
-    return false;
-
-  value++;
-  for (i = 0; value[i]; i++)
-    if (!ISDIGIT (value[i]))
-      return false;
-
-  size = atoi (value);
-  if (size > small_memory[type].physical_max)
-    error ("value passed to %<-m%s%> is too large", small_memory[type].name);
+  if (size > small_memory_physical_max[type])
+    error_at (loc, "value passed in %qs is too large", opt);
   else
-    small_memory[type].max = size;
-  return true;
+    opts->x_small_memory_max[type] = size;
 }
 
 /* Implement TARGET_HANDLE_OPTION.  */
 
 static bool
-v850_handle_option (size_t code, const char *arg, int value ATTRIBUTE_UNUSED)
+v850_handle_option (struct gcc_options *opts,
+		    struct gcc_options *opts_set ATTRIBUTE_UNUSED,
+		    const struct cl_decoded_option *decoded,
+		    location_t loc)
 {
+  size_t code = decoded->opt_index;
+  int value = decoded->value;
+
   switch (code)
     {
     case OPT_mspace:
-      target_flags |= MASK_EP | MASK_PROLOG_FUNCTION;
+      opts->x_target_flags |= MASK_EP | MASK_PROLOG_FUNCTION;
       return true;
 
     case OPT_mv850:
-      target_flags &= ~(MASK_CPU ^ MASK_V850);
+      opts->x_target_flags &= ~(MASK_CPU ^ MASK_V850);
       return true;
 
     case OPT_mv850e:
     case OPT_mv850e1:
-      target_flags &= ~(MASK_CPU ^ MASK_V850E);
+      opts->x_target_flags &= ~(MASK_CPU ^ MASK_V850E);
       return true;
 
-    case OPT_mtda:
-      return v850_handle_memory_option (SMALL_MEMORY_TDA, arg);
+    case OPT_mtda_:
+      v850_handle_memory_option (SMALL_MEMORY_TDA, opts,
+				 decoded->orig_option_with_args_text,
+				 value, loc);
+      return true;
 
-    case OPT_msda:
-      return v850_handle_memory_option (SMALL_MEMORY_SDA, arg);
+    case OPT_msda_:
+      v850_handle_memory_option (SMALL_MEMORY_SDA, opts,
+				 decoded->orig_option_with_args_text,
+				 value, loc);
+      return true;
 
-    case OPT_mzda:
-      return v850_handle_memory_option (SMALL_MEMORY_ZDA, arg);
+    case OPT_mzda_:
+      v850_handle_memory_option (SMALL_MEMORY_ZDA, opts,
+				 decoded->orig_option_with_args_text,
+				 value, loc);
+      return true;
 
     default:
       return true;
@@ -796,13 +799,13 @@ v850_print_operand_punct_valid_p (unsigned char code)
    the truncate and just emit the difference of the two labels.  The
    .hword directive will automatically handle the truncation for us.
    
-   Returns 1 if rtx was handled, 0 otherwise.  */
+   Returns true if rtx was handled, false otherwise.  */
 
-int
+static bool
 v850_output_addr_const_extra (FILE * file, rtx x)
 {
   if (GET_CODE (x) != TRUNCATE)
-    return 0;
+    return false;
 
   x = XEXP (x, 0);
 
@@ -815,10 +818,10 @@ v850_output_addr_const_extra (FILE * file, rtx x)
       && GET_CODE (XEXP (x, 0)) == LABEL_REF
       && GET_CODE (XEXP (XEXP (x, 0), 0)) == CODE_LABEL
       && INSN_DELETED_P (XEXP (XEXP (x, 0), 0)))
-    return 1;
+    return true;
 
   output_addr_const (file, x);
-  return 1;
+  return true;
 }
 
 /* Return appropriate code to load up a 1, 2, or 4 integer/floating
@@ -1687,7 +1690,7 @@ expand_prologue (void)
   /* Save/setup global registers for interrupt functions right now.  */
   if (interrupt_handler)
     {
-      if (! TARGET_DISABLE_CALLT)
+      if (! TARGET_DISABLE_CALLT && (TARGET_V850E || TARGET_V850E2_ALL))
 	emit_insn (gen_callt_save_interrupt ());
       else
 	emit_insn (gen_save_interrupt ());
@@ -1769,7 +1772,7 @@ expand_prologue (void)
       /* Special case interrupt functions that save all registers for a call.  */
       if (interrupt_handler && ((1L << LINK_POINTER_REGNUM) & reg_saved) != 0)
 	{
-	  if (! TARGET_DISABLE_CALLT)
+	  if (! TARGET_DISABLE_CALLT && (TARGET_V850E || TARGET_V850E2_ALL))
 	    emit_insn (gen_callt_save_all_interrupt ());
 	  else
 	    emit_insn (gen_save_all_interrupt ());
@@ -1887,7 +1890,7 @@ expand_epilogue (void)
 	  int offset;
 	  restore_all = gen_rtx_PARALLEL (VOIDmode,
 					  rtvec_alloc (num_restore + 2));
-	  XVECEXP (restore_all, 0, 0) = gen_rtx_RETURN (VOIDmode);
+	  XVECEXP (restore_all, 0, 0) = ret_rtx;
 	  XVECEXP (restore_all, 0, 1)
 	    = gen_rtx_SET (VOIDmode, stack_pointer_rtx,
 			    gen_rtx_PLUS (Pmode,
@@ -2020,7 +2023,7 @@ expand_epilogue (void)
       /* And return or use reti for interrupt handlers.  */
       if (interrupt_handler)
         {
-          if (! TARGET_DISABLE_CALLT)
+          if (! TARGET_DISABLE_CALLT && (TARGET_V850E || TARGET_V850E2_ALL))
             emit_insn (gen_callt_return_interrupt ());
           else
             emit_jump_insn (gen_return_interrupt ());
@@ -2257,13 +2260,13 @@ v850_encode_data_area (tree decl, rtx symbol)
 	  if (size <= 0)
 	    ;
 
-	  else if (size <= small_memory [(int) SMALL_MEMORY_TDA].max)
+	  else if (size <= small_memory_max [(int) SMALL_MEMORY_TDA])
 	    v850_set_data_area (decl, DATA_AREA_TDA);
 
-	  else if (size <= small_memory [(int) SMALL_MEMORY_SDA].max)
+	  else if (size <= small_memory_max [(int) SMALL_MEMORY_SDA])
 	    v850_set_data_area (decl, DATA_AREA_SDA);
 
-	  else if (size <= small_memory [(int) SMALL_MEMORY_ZDA].max)
+	  else if (size <= small_memory_max [(int) SMALL_MEMORY_ZDA])
 	    v850_set_data_area (decl, DATA_AREA_ZDA);
 	}
       
@@ -3114,18 +3117,37 @@ v850_issue_rate (void)
 {
   return (TARGET_V850E2_ALL? 2 : 1);
 }
+
+/* Implement TARGET_LEGITIMATE_CONSTANT_P.  */
+
+static bool
+v850_legitimate_constant_p (enum machine_mode mode ATTRIBUTE_UNUSED, rtx x)
+{
+  return (GET_CODE (x) == CONST_DOUBLE
+	  || !(GET_CODE (x) == CONST
+	       && GET_CODE (XEXP (x, 0)) == PLUS
+	       && GET_CODE (XEXP (XEXP (x, 0), 0)) == SYMBOL_REF
+	       && GET_CODE (XEXP (XEXP (x, 0), 1)) == CONST_INT
+	       && !CONST_OK_FOR_K (INTVAL (XEXP (XEXP (x, 0), 1)))));
+}
 
 /* V850 specific attributes.  */
 
 static const struct attribute_spec v850_attribute_table[] =
 {
-  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
-  { "interrupt_handler", 0, 0, true,  false, false, v850_handle_interrupt_attribute },
-  { "interrupt",         0, 0, true,  false, false, v850_handle_interrupt_attribute },
-  { "sda",               0, 0, true,  false, false, v850_handle_data_area_attribute },
-  { "tda",               0, 0, true,  false, false, v850_handle_data_area_attribute },
-  { "zda",               0, 0, true,  false, false, v850_handle_data_area_attribute },
-  { NULL,                0, 0, false, false, false, NULL }
+  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler,
+       affects_type_identity } */
+  { "interrupt_handler", 0, 0, true,  false, false,
+    v850_handle_interrupt_attribute, false },
+  { "interrupt",         0, 0, true,  false, false,
+    v850_handle_interrupt_attribute, false },
+  { "sda",               0, 0, true,  false, false,
+    v850_handle_data_area_attribute, false },
+  { "tda",               0, 0, true,  false, false,
+    v850_handle_data_area_attribute, false },
+  { "zda",               0, 0, true,  false, false,
+    v850_handle_data_area_attribute, false },
+  { NULL,                0, 0, false, false, false, NULL, false }
 };
 
 /* Initialize the GCC target structure.  */
@@ -3138,6 +3160,9 @@ static const struct attribute_spec v850_attribute_table[] =
 #define TARGET_PRINT_OPERAND_ADDRESS v850_print_operand_address
 #undef  TARGET_PRINT_OPERAND_PUNCT_VALID_P
 #define TARGET_PRINT_OPERAND_PUNCT_VALID_P v850_print_operand_punct_valid_p
+
+#undef TARGET_ASM_OUTPUT_ADDR_CONST_EXTRA
+#define TARGET_ASM_OUTPUT_ADDR_CONST_EXTRA v850_output_addr_const_extra
 
 #undef  TARGET_ATTRIBUTE_TABLE
 #define TARGET_ATTRIBUTE_TABLE v850_attribute_table
@@ -3221,6 +3246,9 @@ static const struct attribute_spec v850_attribute_table[] =
 
 #undef  TARGET_OPTION_OPTIMIZATION_TABLE
 #define TARGET_OPTION_OPTIMIZATION_TABLE v850_option_optimization_table
+
+#undef  TARGET_LEGITIMATE_CONSTANT_P
+#define TARGET_LEGITIMATE_CONSTANT_P v850_legitimate_constant_p
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 

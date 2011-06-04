@@ -25,7 +25,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tm.h"
 #include "tree.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "tree-pretty-print.h"
 #include "gimple-pretty-print.h"
 #include "tree-flow.h"
@@ -144,7 +143,7 @@ compute_object_offset (const_tree expr, const_tree var)
 
     case MEM_REF:
       gcc_assert (TREE_CODE (TREE_OPERAND (expr, 0)) == ADDR_EXPR);
-      return TREE_OPERAND (expr, 1);
+      return double_int_to_tree (sizetype, mem_ref_offset (expr));
 
     default:
       return error_mark_node;
@@ -205,6 +204,12 @@ addr_object_size (struct object_size_info *osi, const_tree ptr,
       if (sz != unknown[object_size_type] && sz < offset_limit)
 	pt_var_size = size_int (sz);
     }
+  else if (pt_var
+	   && DECL_P (pt_var)
+	   && host_integerp (DECL_SIZE_UNIT (pt_var), 1)
+	   && (unsigned HOST_WIDE_INT)
+	        tree_low_cst (DECL_SIZE_UNIT (pt_var), 1) < offset_limit)
+    pt_var_size = DECL_SIZE_UNIT (pt_var);
   else if (pt_var
 	   && (SSA_VAR_P (pt_var) || TREE_CODE (pt_var) == STRING_CST)
 	   && TYPE_SIZE_UNIT (TREE_TYPE (pt_var))
@@ -349,8 +354,6 @@ addr_object_size (struct object_size_info *osi, const_tree ptr,
 	  tree bytes2 = compute_object_offset (TREE_OPERAND (ptr, 0), pt_var);
 	  if (bytes2 != error_mark_node)
 	    {
-	      bytes2 = size_binop (PLUS_EXPR, bytes2,
-				   TREE_OPERAND (pt_var, 1));
 	      if (TREE_CODE (bytes2) == INTEGER_CST
 		  && tree_int_cst_lt (pt_var_size, bytes2))
 		bytes2 = size_zero_node;

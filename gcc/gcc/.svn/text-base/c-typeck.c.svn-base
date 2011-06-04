@@ -1,6 +1,6 @@
 /* Build expressions with type checking for C compiler.
    Copyright (C) 1987, 1988, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -35,12 +35,12 @@ along with GCC; see the file COPYING3.  If not see
 #include "c-lang.h"
 #include "flags.h"
 #include "output.h"
-#include "toplev.h"
 #include "intl.h"
 #include "target.h"
 #include "tree-iterator.h"
 #include "bitmap.h"
 #include "gimple.h"
+#include "c-family/c-objc.h"
 
 /* Possible cases of implicit bad conversions.  Used to select
    diagnostic messages in convert_for_assignment.  */
@@ -97,9 +97,8 @@ static void add_pending_init (tree, tree, tree, bool, struct obstack *);
 static void set_nonincremental_init (struct obstack *);
 static void set_nonincremental_init_from_string (tree, struct obstack *);
 static tree find_init_member (tree, struct obstack *);
-static void readonly_error (tree, enum lvalue_use);
 static void readonly_warning (tree, enum lvalue_use);
-static int lvalue_or_else (const_tree, enum lvalue_use);
+static int lvalue_or_else (location_t, const_tree, enum lvalue_use);
 static void record_maybe_used_decl (tree);
 static int comptypes_internal (const_tree, const_tree, bool *, bool *);
 
@@ -508,9 +507,6 @@ composite_type (tree t1, tree t2)
 
 	/* If both args specify argument types, we must merge the two
 	   lists, argument by argument.  */
-	/* Tell global_bindings_p to return false so that variable_size
-	   doesn't die on VLAs in parameter types.  */
-	c_override_global_bindings_to_false = true;
 
 	len = list_length (p1);
 	newargs = 0;
@@ -593,7 +589,6 @@ composite_type (tree t1, tree t2)
 	  parm_done: ;
 	  }
 
-	c_override_global_bindings_to_false = false;
 	t1 = build_function_type (valtype, newargs);
 	t1 = qualify_type (t1, t2);
 	/* ... falls through ...  */
@@ -1080,7 +1075,7 @@ comptypes_internal (const_tree type1, const_tree type2, bool *enum_and_int_p,
     return 1;
 
   /* 1 if no need for warning yet, 2 if warning cause has been seen.  */
-  if (!(attrval = targetm.comp_type_attributes (t1, t2)))
+  if (!(attrval = comp_type_attributes (t1, t2)))
      return 0;
 
   /* 1 if no need for warning yet, 2 if warning cause has been seen.  */
@@ -2267,26 +2262,8 @@ build_indirect_ref (location_t loc, tree ptr, ref_operator errstring)
 	}
     }
   else if (TREE_CODE (pointer) != ERROR_MARK)
-    switch (errstring)
-      {
-         case RO_ARRAY_INDEXING:
-           error_at (loc,
-                     "invalid type argument of array indexing (have %qT)",
-                     type);
-           break;
-         case RO_UNARY_STAR:
-           error_at (loc,
-                     "invalid type argument of unary %<*%> (have %qT)",
-                     type);
-           break;
-         case RO_ARROW:
-           error_at (loc,
-                     "invalid type argument of %<->%> (have %qT)",
-                     type);
-           break;
-         default:
-           gcc_unreachable ();
-      }
+    invalid_indirection_error (loc, type, errstring);
+
   return error_mark_node;
 }
 
@@ -2831,8 +2808,7 @@ build_function_call_vec (location_t loc, tree function, VEC(tree,gc) *params,
     return error_mark_node;
 
   /* Check that the arguments to the function are valid.  */
-  check_function_arguments (TYPE_ATTRIBUTES (fntype), nargs, argarray,
-			    TYPE_ARG_TYPES (fntype));
+  check_function_arguments (fntype, nargs, argarray);
 
   if (name != NULL_TREE
       && !strncmp (IDENTIFIER_POINTER (name), "__builtin_", 10))
@@ -3583,7 +3559,8 @@ build_unary_op (location_t location,
       /* Complain about anything that is not a true lvalue.  In
 	 Objective-C, skip this check for property_refs.  */
       if (!objc_is_property_ref (arg) 
-	  && !lvalue_or_else (arg, ((code == PREINCREMENT_EXPR
+	  && !lvalue_or_else (location,
+			      arg, ((code == PREINCREMENT_EXPR
 				     || code == POSTINCREMENT_EXPR)
 				    ? lv_increment
 				    : lv_decrement)))
@@ -3755,18 +3732,12 @@ build_unary_op (location_t location,
 	  tree op0 = TREE_OPERAND (arg, 0);
 	  if (!c_mark_addressable (op0))
 	    return error_mark_node;
-	  return build_binary_op (location, PLUS_EXPR,
-				  (TREE_CODE (TREE_TYPE (op0)) == ARRAY_TYPE
-				   ? array_to_pointer_conversion (location,
-								  op0)
-				   : op0),
-				  TREE_OPERAND (arg, 1), 1);
 	}
 
       /* Anything not already handled and not a true memory reference
 	 or a non-lvalue array is an error.  */
       else if (typecode != FUNCTION_TYPE && !flag
-	       && !lvalue_or_else (arg, lv_addressof))
+	       && !lvalue_or_else (location, arg, lv_addressof))
 	return error_mark_node;
 
       /* Move address operations inside C_MAYBE_CONST_EXPR to simplify
@@ -3787,10 +3758,11 @@ build_unary_op (location_t location,
       argtype = TREE_TYPE (arg);
 
       /* If the lvalue is const or volatile, merge that into the type
-	 to which the address will point.  This should only be needed
+	 to which the address will point.  This is only needed
 	 for function types.  */
       if ((DECL_P (arg) || REFERENCE_CLASS_P (arg))
-	  && (TREE_READONLY (arg) || TREE_THIS_VOLATILE (arg)))
+	  && (TREE_READONLY (arg) || TREE_THIS_VOLATILE (arg))
+	  && TREE_CODE (argtype) == FUNCTION_TYPE)
 	{
 	  int orig_quals = TYPE_QUALS (strip_array_types (argtype));
 	  int quals = orig_quals;
@@ -3799,9 +3771,6 @@ build_unary_op (location_t location,
 	    quals |= TYPE_QUAL_CONST;
 	  if (TREE_THIS_VOLATILE (arg))
 	    quals |= TYPE_QUAL_VOLATILE;
-
-	  gcc_assert (quals == orig_quals
-		      || TREE_CODE (argtype) == FUNCTION_TYPE);
 
 	  argtype = c_build_qualified_type (argtype, quals);
 	}
@@ -3898,44 +3867,6 @@ lvalue_p (const_tree ref)
     }
 }
 
-/* Give an error for storing in something that is 'const'.  */
-
-static void
-readonly_error (tree arg, enum lvalue_use use)
-{
-  gcc_assert (use == lv_assign || use == lv_increment || use == lv_decrement
-	      || use == lv_asm);
-  /* Using this macro rather than (for example) arrays of messages
-     ensures that all the format strings are checked at compile
-     time.  */
-#define READONLY_MSG(A, I, D, AS) (use == lv_assign ? (A)		\
-				   : (use == lv_increment ? (I)		\
-				   : (use == lv_decrement ? (D) : (AS))))
-  if (TREE_CODE (arg) == COMPONENT_REF)
-    {
-      if (TYPE_READONLY (TREE_TYPE (TREE_OPERAND (arg, 0))))
-	readonly_error (TREE_OPERAND (arg, 0), use);
-      else
-	error (READONLY_MSG (G_("assignment of read-only member %qD"),
-			     G_("increment of read-only member %qD"),
-			     G_("decrement of read-only member %qD"),
-			     G_("read-only member %qD used as %<asm%> output")),
-	       TREE_OPERAND (arg, 1));
-    }
-  else if (TREE_CODE (arg) == VAR_DECL)
-    error (READONLY_MSG (G_("assignment of read-only variable %qD"),
-			 G_("increment of read-only variable %qD"),
-			 G_("decrement of read-only variable %qD"),
-			 G_("read-only variable %qD used as %<asm%> output")),
-	   arg);
-  else
-    error (READONLY_MSG (G_("assignment of read-only location %qE"),
-			 G_("increment of read-only location %qE"),
-			 G_("decrement of read-only location %qE"),
-			 G_("read-only location %qE used as %<asm%> output")),
-	   arg);
-}
-
 /* Give a warning for storing in something that is read-only in GCC
    terms but not const in ISO C terms.  */
 
@@ -3962,15 +3893,16 @@ readonly_warning (tree arg, enum lvalue_use use)
 
 /* Return nonzero if REF is an lvalue valid for this language;
    otherwise, print an error message and return zero.  USE says
-   how the lvalue is being used and so selects the error message.  */
+   how the lvalue is being used and so selects the error message.
+   LOCATION is the location at which any error should be reported.  */
 
 static int
-lvalue_or_else (const_tree ref, enum lvalue_use use)
+lvalue_or_else (location_t loc, const_tree ref, enum lvalue_use use)
 {
   int win = lvalue_p (ref);
 
   if (!win)
-    lvalue_error (use);
+    lvalue_error (loc, use);
 
   return win;
 }
@@ -4858,7 +4790,7 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
     return error_mark_node;
 
   /* For ObjC properties, defer this check.  */
-  if (!objc_is_property_ref (lhs) && !lvalue_or_else (lhs, lv_assign))
+  if (!objc_is_property_ref (lhs) && !lvalue_or_else (location, lhs, lv_assign))
     return error_mark_node;
 
   if (TREE_CODE (rhs) == EXCESS_PRECISION_EXPR)
@@ -4908,7 +4840,7 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
 	return result;
 
       /* Else, do the check that we postponed for Objective-C.  */
-      if (!lvalue_or_else (lhs, lv_assign))
+      if (!lvalue_or_else (location, lhs, lv_assign))
 	return error_mark_node;
     }
 
@@ -5329,10 +5261,10 @@ convert_for_assignment (location_t location, tree type, tree rhs,
     {
       tree ret;
       bool save = in_late_binary_op;
-      if (codel == BOOLEAN_TYPE)
+      if (codel == BOOLEAN_TYPE || codel == COMPLEX_TYPE)
 	in_late_binary_op = true;
       ret = convert_and_check (type, orig_rhs);
-      if (codel == BOOLEAN_TYPE)
+      if (codel == BOOLEAN_TYPE || codel == COMPLEX_TYPE)
 	in_late_binary_op = save;
       return ret;
     }
@@ -5605,20 +5537,16 @@ convert_for_assignment (location_t location, tree type, tree rhs,
 	      if (TYPE_QUALS_NO_ADDR_SPACE (ttr)
 		  & ~TYPE_QUALS_NO_ADDR_SPACE (ttl))
 		{
-		  /* Types differing only by the presence of the 'volatile'
-		     qualifier are acceptable if the 'volatile' has been added
-		     in by the Objective-C EH machinery.  */
-		  if (!objc_type_quals_match (ttl, ttr))
-		    WARN_FOR_QUALIFIERS (location, 0,
-					 G_("passing argument %d of %qE discards "
-					    "%qv qualifier from pointer target type"),
-					 G_("assignment discards %qv qualifier "
-					    "from pointer target type"),
-					 G_("initialization discards %qv qualifier "
-					    "from pointer target type"),
-					 G_("return discards %qv qualifier from "
-					    "pointer target type"),
-					 TYPE_QUALS (ttr) & ~TYPE_QUALS (ttl));
+		  WARN_FOR_QUALIFIERS (location, 0,
+				       G_("passing argument %d of %qE discards "
+					  "%qv qualifier from pointer target type"),
+				       G_("assignment discards %qv qualifier "
+					  "from pointer target type"),
+				       G_("initialization discards %qv qualifier "
+					  "from pointer target type"),
+				       G_("return discards %qv qualifier from "
+					  "pointer target type"),
+				       TYPE_QUALS (ttr) & ~TYPE_QUALS (ttl));
 		}
 	      /* If this is not a case of ignoring a mismatch in signedness,
 		 no warning.  */
@@ -5832,11 +5760,13 @@ store_init_value (location_t init_loc, tree decl, tree init, tree origtype)
 	      /* For int foo[] = (int [3]){1}; we need to set array size
 		 now since later on array initializer will be just the
 		 brace enclosed list of the compound literal.  */
+	      tree etype = strip_array_types (TREE_TYPE (decl));
 	      type = build_distinct_type_copy (TYPE_MAIN_VARIANT (type));
-	      TREE_TYPE (decl) = type;
 	      TYPE_DOMAIN (type) = TYPE_DOMAIN (TREE_TYPE (cldecl));
 	      layout_type (type);
 	      layout_decl (cldecl, 0);
+	      TREE_TYPE (decl)
+		= c_build_qualified_type (type, TYPE_QUALS (etype));
 	    }
 	}
     }
@@ -6701,7 +6631,7 @@ really_start_incremental_init (tree type)
     {
       /* Vectors are like simple fixed-size arrays.  */
       constructor_max_index =
-	build_int_cst (NULL_TREE, TYPE_VECTOR_SUBPARTS (constructor_type) - 1);
+	bitsize_int (TYPE_VECTOR_SUBPARTS (constructor_type) - 1);
       constructor_index = bitsize_zero_node;
       constructor_unfilled_index = constructor_index;
     }
@@ -6870,8 +6800,8 @@ push_init_level (int implicit, struct obstack * braced_init_obstack)
     {
       /* Vectors are like simple fixed-size arrays.  */
       constructor_max_index =
-	build_int_cst (NULL_TREE, TYPE_VECTOR_SUBPARTS (constructor_type) - 1);
-      constructor_index = convert (bitsizetype, integer_zero_node);
+	bitsize_int (TYPE_VECTOR_SUBPARTS (constructor_type) - 1);
+      constructor_index = bitsize_int (0);
       constructor_unfilled_index = constructor_index;
     }
   else if (TREE_CODE (constructor_type) == ARRAY_TYPE)
@@ -6991,15 +6921,23 @@ pop_init_level (int implicit, struct obstack * braced_init_obstack)
       && TREE_CODE (constructor_type) == RECORD_TYPE
       && constructor_unfilled_fields)
     {
+	bool constructor_zeroinit =
+	 (VEC_length (constructor_elt, constructor_elements) == 1
+	  && integer_zerop
+	      (VEC_index (constructor_elt, constructor_elements, 0)->value));
+
 	/* Do not warn for flexible array members or zero-length arrays.  */
 	while (constructor_unfilled_fields
 	       && (!DECL_SIZE (constructor_unfilled_fields)
 		   || integer_zerop (DECL_SIZE (constructor_unfilled_fields))))
 	  constructor_unfilled_fields = DECL_CHAIN (constructor_unfilled_fields);
 
-	/* Do not warn if this level of the initializer uses member
-	   designators; it is likely to be deliberate.  */
-	if (constructor_unfilled_fields && !constructor_designated)
+	if (constructor_unfilled_fields
+	    /* Do not warn if this level of the initializer uses member
+	       designators; it is likely to be deliberate.  */
+	    && !constructor_designated
+	    /* Do not warn about initializing with ` = {0}'.  */
+	    && !constructor_zeroinit)
 	  {
 	    push_member_name (constructor_unfilled_fields);
 	    warning_init (OPT_Wmissing_field_initializers,
@@ -8540,7 +8478,7 @@ build_asm_expr (location_t loc, tree string, tree outputs, tree inputs,
 	 get an error.  Gross, but ...  */
       STRIP_NOPS (output);
 
-      if (!lvalue_or_else (output, lv_asm))
+      if (!lvalue_or_else (loc, output, lv_asm))
 	output = error_mark_node;
 
       if (output != error_mark_node
@@ -8561,6 +8499,13 @@ build_asm_expr (location_t loc, tree string, tree outputs, tree inputs,
 	     mark it addressable.  */
 	  if (!allows_reg && !c_mark_addressable (output))
 	    output = error_mark_node;
+	  if (!(!allows_reg && allows_mem)
+	      && output != error_mark_node
+	      && VOID_TYPE_P (TREE_TYPE (output)))
+	    {
+	      error_at (loc, "invalid use of void expression");
+	      output = error_mark_node;
+	    }
 	}
       else
 	output = error_mark_node;
@@ -8587,7 +8532,12 @@ build_asm_expr (location_t loc, tree string, tree outputs, tree inputs,
 	      STRIP_NOPS (input);
 	      if (!c_mark_addressable (input))
 		input = error_mark_node;
-	  }
+	    }
+	  else if (input != error_mark_node && VOID_TYPE_P (TREE_TYPE (input)))
+	    {
+	      error_at (loc, "invalid use of void expression");
+	      input = error_mark_node;
+	    }
 	}
       else
 	input = error_mark_node;
@@ -9343,7 +9293,7 @@ c_end_compound_stmt (location_t loc, tree stmt, bool do_scope)
      do the wrong thing for ({ { 1; } }) or ({ 1; { } }).  In particular,
      STATEMENT_LISTs merge, and thus we can lose track of what statement
      was really last.  */
-  if (cur_stmt_list
+  if (building_stmt_list_p ()
       && STATEMENT_LIST_STMT_EXPR (cur_stmt_list)
       && TREE_CODE (stmt) != BIND_EXPR)
     {
@@ -10235,7 +10185,7 @@ build_binary_op (location_t location, enum tree_code code,
 		warn_for_sign_compare (location, orig_op0_folded,
 				       orig_op1_folded, op0, op1,
 				       result_type, resultcode);
-	      if (!in_late_binary_op)
+	      if (!in_late_binary_op && !int_operands)
 		{
 		  if (!op0_maybe_const || TREE_CODE (op0) != INTEGER_CST)
 		    op0 = c_wrap_maybe_const (op0, !op0_maybe_const);
@@ -10329,6 +10279,10 @@ c_objc_common_truthvalue_conversion (location_t location, tree expr)
       error_at (location, "used union type value where scalar is required");
       return error_mark_node;
 
+    case VOID_TYPE:
+      error_at (location, "void value not ignored as it ought to be");
+      return error_mark_node;
+
     case FUNCTION_TYPE:
       gcc_unreachable ();
 
@@ -10341,8 +10295,8 @@ c_objc_common_truthvalue_conversion (location_t location, tree expr)
   if (int_operands)
     expr = remove_c_maybe_const_expr (expr);
 
-  /* ??? Should we also give an error for void and vectors rather than
-     leaving those to give errors later?  */
+  /* ??? Should we also give an error for vectors rather than leaving
+     those to give errors later?  */
   expr = c_common_truthvalue_conversion (location, expr);
 
   if (TREE_CODE (expr) == INTEGER_CST && int_operands && !int_const)

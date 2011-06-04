@@ -1,7 +1,7 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/xml/validation/xmlschema
 svn://gcc.gnu.org/svn/gcc
 
@@ -298,40 +298,6 @@ has-props
 
 4437
 
-XMLSchemaTypeInfo.class
-file
-
-
-
-
-2009-04-24T17:47:50.000000Z
-1ace9a685c7ad5d7453246ed3e989799
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1095
-
 ElementDeclaration.class
 file
 
@@ -365,6 +331,40 @@ has-props
 
 
 1233
+
+XMLSchemaTypeInfo.class
+file
+
+
+
+
+2009-04-24T17:47:50.000000Z
+1ace9a685c7ad5d7453246ed3e989799
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1095
 
 Particle.class
 file
@@ -400,48 +400,14 @@ has-props
 
 558
 
-XMLSchemaElementTypeInfo.class
+AttributeDeclaration.class
 file
 
 
 
 
 2009-04-24T17:47:50.000000Z
-1686126f69a8bad95d79f0cd473c1427
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1657
-
-ValidationException.class
-file
-
-
-
-
-2009-04-24T17:47:50.000000Z
-3fd60d98395e90d84825a4f3ba15c28c
+4b2778f8ac3d0803461f8db7160ada1f
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -466,7 +432,7 @@ has-props
 
 
 
-483
+1008
 
 ComplexType.class
 file
@@ -502,14 +468,14 @@ has-props
 
 937
 
-AttributeDeclaration.class
+ValidationException.class
 file
 
 
 
 
 2009-04-24T17:47:50.000000Z
-4b2778f8ac3d0803461f8db7160ada1f
+3fd60d98395e90d84825a4f3ba15c28c
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -534,7 +500,41 @@ has-props
 
 
 
-1008
+483
+
+XMLSchemaElementTypeInfo.class
+file
+
+
+
+
+2009-04-24T17:47:50.000000Z
+1686126f69a8bad95d79f0cd473c1427
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1657
 
 XMLSchemaTypeInfoProvider.class
 file

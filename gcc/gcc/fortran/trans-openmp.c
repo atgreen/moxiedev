@@ -1,5 +1,5 @@
 /* OpenMP directive translation -- generate GCC trees from gfc_code.
-   Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Jakub Jelinek <jakub@redhat.com>
 
@@ -482,13 +482,23 @@ gfc_trans_omp_array_reduction (tree c, gfc_symbol *sym, locus where)
   gfc_symbol init_val_sym, outer_sym, intrinsic_sym;
   gfc_expr *e1, *e2, *e3, *e4;
   gfc_ref *ref;
-  tree decl, backend_decl, stmt;
+  tree decl, backend_decl, stmt, type, outer_decl;
   locus old_loc = gfc_current_locus;
   const char *iname;
   gfc_try t;
 
   decl = OMP_CLAUSE_DECL (c);
   gfc_current_locus = where;
+  type = TREE_TYPE (decl);
+  outer_decl = create_tmp_var_raw (type, NULL);
+  if (TREE_CODE (decl) == PARM_DECL
+      && TREE_CODE (type) == REFERENCE_TYPE
+      && GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (type))
+      && GFC_TYPE_ARRAY_AKIND (TREE_TYPE (type)) == GFC_ARRAY_ALLOCATABLE)
+    {
+      decl = build_fold_indirect_ref (decl);
+      type = TREE_TYPE (type);
+    }
 
   /* Create a fake symbol for init value.  */
   memset (&init_val_sym, 0, sizeof (init_val_sym));
@@ -507,7 +517,9 @@ gfc_trans_omp_array_reduction (tree c, gfc_symbol *sym, locus where)
   outer_sym.attr.dummy = 0;
   outer_sym.attr.result = 0;
   outer_sym.attr.flavor = FL_VARIABLE;
-  outer_sym.backend_decl = create_tmp_var_raw (TREE_TYPE (decl), NULL);
+  outer_sym.backend_decl = outer_decl;
+  if (decl != OMP_CLAUSE_DECL (c))
+    outer_sym.backend_decl = build_fold_indirect_ref (outer_decl);
 
   /* Create fake symtrees for it.  */
   symtree1 = gfc_new_symtree (&root1, sym->name);
@@ -624,12 +636,12 @@ gfc_trans_omp_array_reduction (tree c, gfc_symbol *sym, locus where)
 
   /* Create the init statement list.  */
   pushlevel (0);
-  if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (decl))
-      && GFC_TYPE_ARRAY_AKIND (TREE_TYPE (decl)) == GFC_ARRAY_ALLOCATABLE)
+  if (GFC_DESCRIPTOR_TYPE_P (type)
+      && GFC_TYPE_ARRAY_AKIND (type) == GFC_ARRAY_ALLOCATABLE)
     {
       /* If decl is an allocatable array, it needs to be allocated
 	 with the same bounds as the outer var.  */
-      tree type = TREE_TYPE (decl), rank, size, esize, ptr;
+      tree rank, size, esize, ptr;
       stmtblock_t block;
 
       gfc_start_block (&block);
@@ -669,8 +681,8 @@ gfc_trans_omp_array_reduction (tree c, gfc_symbol *sym, locus where)
 
   /* Create the merge statement list.  */
   pushlevel (0);
-  if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (decl))
-      && GFC_TYPE_ARRAY_AKIND (TREE_TYPE (decl)) == GFC_ARRAY_ALLOCATABLE)
+  if (GFC_DESCRIPTOR_TYPE_P (type)
+      && GFC_TYPE_ARRAY_AKIND (type) == GFC_ARRAY_ALLOCATABLE)
     {
       /* If decl is an allocatable array, it needs to be deallocated
 	 afterwards.  */
@@ -691,7 +703,7 @@ gfc_trans_omp_array_reduction (tree c, gfc_symbol *sym, locus where)
   OMP_CLAUSE_REDUCTION_MERGE (c) = stmt;
 
   /* And stick the placeholder VAR_DECL into the clause as well.  */
-  OMP_CLAUSE_REDUCTION_PLACEHOLDER (c) = outer_sym.backend_decl;
+  OMP_CLAUSE_REDUCTION_PLACEHOLDER (c) = outer_decl;
 
   gfc_current_locus = old_loc;
 
@@ -699,11 +711,10 @@ gfc_trans_omp_array_reduction (tree c, gfc_symbol *sym, locus where)
   gfc_free_expr (e2);
   gfc_free_expr (e3);
   gfc_free_expr (e4);
-  gfc_free (symtree1);
-  gfc_free (symtree2);
-  gfc_free (symtree3);
-  if (symtree4)
-    gfc_free (symtree4);
+  free (symtree1);
+  free (symtree2);
+  free (symtree3);
+  free (symtree4);
   gfc_free_array_spec (outer_sym.as);
 }
 
@@ -937,7 +948,8 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
   if (clauses->collapse)
     {
       c = build_omp_clause (where.lb->location, OMP_CLAUSE_COLLAPSE);
-      OMP_CLAUSE_COLLAPSE_EXPR (c) = build_int_cst (NULL, clauses->collapse);
+      OMP_CLAUSE_COLLAPSE_EXPR (c)
+	= build_int_cst (integer_type_node, clauses->collapse);
       omp_clauses = gfc_trans_add_clause (c, omp_clauses);
     }
 
@@ -1262,10 +1274,10 @@ gfc_trans_omp_do (gfc_code *code, stmtblock_t *pblock,
       if (simple)
 	{
 	  TREE_VEC_ELT (init, i) = build2_v (MODIFY_EXPR, dovar, from);
-	  TREE_VEC_ELT (cond, i) = fold_build2_loc (input_location, simple > 0
-						    ? LE_EXPR : GE_EXPR,
-						    boolean_type_node, dovar,
-						    to);
+	  /* The condition should not be folded.  */
+	  TREE_VEC_ELT (cond, i) = build2_loc (input_location, simple > 0
+					       ? LE_EXPR : GE_EXPR,
+					       boolean_type_node, dovar, to);
 	  TREE_VEC_ELT (incr, i) = fold_build2_loc (input_location, PLUS_EXPR,
 						    type, dovar, step);
 	  TREE_VEC_ELT (incr, i) = fold_build2_loc (input_location,
@@ -1290,9 +1302,10 @@ gfc_trans_omp_do (gfc_code *code, stmtblock_t *pblock,
 	  count = gfc_create_var (type, "count");
 	  TREE_VEC_ELT (init, i) = build2_v (MODIFY_EXPR, count,
 					     build_int_cst (type, 0));
-	  TREE_VEC_ELT (cond, i) = fold_build2_loc (input_location, LT_EXPR,
-						    boolean_type_node,
-						    count, tmp);
+	  /* The condition should not be folded.  */
+	  TREE_VEC_ELT (cond, i) = build2_loc (input_location, LT_EXPR,
+					       boolean_type_node,
+					       count, tmp);
 	  TREE_VEC_ELT (incr, i) = fold_build2_loc (input_location, PLUS_EXPR,
 						    type, count,
 						    build_int_cst (type, 1));

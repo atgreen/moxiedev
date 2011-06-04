@@ -1,5 +1,5 @@
 /* Default target hook functions.
-   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -57,7 +57,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "expr.h"
 #include "output.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "function.h"
 #include "target.h"
 #include "tm_p.h"
@@ -68,6 +67,10 @@ along with GCC; see the file COPYING3.  If not see
 #include "reload.h"
 #include "optabs.h"
 #include "recog.h"
+#include "intl.h"
+#include "opts.h"
+#include "tree-flow.h"
+#include "tree-ssa-alias.h"
 
 
 bool
@@ -121,7 +124,7 @@ default_promote_function_mode (const_tree type ATTRIBUTE_UNUSED,
 			       const_tree funtype ATTRIBUTE_UNUSED,
 			       int for_return ATTRIBUTE_UNUSED)
 {
-  if (for_return == 2)
+  if (type != NULL_TREE && for_return == 2)
     return promote_mode (type, mode, punsignedp);
   return mode;
 }
@@ -357,6 +360,17 @@ default_print_operand_punct_valid_p (unsigned char code ATTRIBUTE_UNUSED)
 #endif
 }
 
+/* The default implementation of TARGET_MANGLE_ASSEMBLER_NAME.  */
+tree
+default_mangle_assembler_name (const char *name ATTRIBUTE_UNUSED)
+{
+  const char *skipped = name + (*name == '*' ? 1 : 0);
+  const char *stripped = targetm.strip_name_encoding (skipped);
+  if (*name != '*' && user_label_prefix[0])
+    stripped = ACONCAT ((user_label_prefix, stripped, NULL));
+  return get_identifier (stripped);
+}
+
 /* The default implementation of TARGET_ASM_OUTPUT_ADDR_CONST_EXTRA.  */
 
 bool
@@ -572,13 +586,7 @@ default_function_arg_advance (CUMULATIVE_ARGS *ca ATTRIBUTE_UNUSED,
 			      const_tree type ATTRIBUTE_UNUSED,
 			      bool named ATTRIBUTE_UNUSED)
 {
-#ifdef FUNCTION_ARG_ADVANCE
-  CUMULATIVE_ARGS args = *ca;
-  FUNCTION_ARG_ADVANCE (args, mode, CONST_CAST_TREE (type), named);
-  *ca = args;
-#else
   gcc_unreachable ();
-#endif
 }
 
 rtx
@@ -587,11 +595,7 @@ default_function_arg (CUMULATIVE_ARGS *ca ATTRIBUTE_UNUSED,
 		      const_tree type ATTRIBUTE_UNUSED,
 		      bool named ATTRIBUTE_UNUSED)
 {
-#ifdef FUNCTION_ARG
-  return FUNCTION_ARG (*ca, mode, CONST_CAST_TREE (type), named);
-#else
   gcc_unreachable ();
-#endif
 }
 
 rtx
@@ -600,11 +604,7 @@ default_function_incoming_arg (CUMULATIVE_ARGS *ca ATTRIBUTE_UNUSED,
 			       const_tree type ATTRIBUTE_UNUSED,
 			       bool named ATTRIBUTE_UNUSED)
 {
-#ifdef FUNCTION_INCOMING_ARG
-  return FUNCTION_INCOMING_ARG (*ca, mode, CONST_CAST_TREE (type), named);
-#else
   gcc_unreachable ();
-#endif
 }
 
 unsigned int
@@ -841,15 +841,6 @@ default_branch_target_register_class (void)
   return NO_REGS;
 }
 
-#ifdef IRA_COVER_CLASSES
-const reg_class_t *
-default_ira_cover_classes (void)
-{
-  static reg_class_t classes[] = IRA_COVER_CLASSES;
-  return classes;
-}
-#endif
-
 reg_class_t
 default_secondary_reload (bool in_p ATTRIBUTE_UNUSED, rtx x ATTRIBUTE_UNUSED,
 			  reg_class_t reload_class_i ATTRIBUTE_UNUSED,
@@ -879,8 +870,7 @@ default_secondary_reload (bool in_p ATTRIBUTE_UNUSED, rtx x ATTRIBUTE_UNUSED,
 				reload_mode);
 
       if (icode != CODE_FOR_nothing
-	  && insn_data[(int) icode].operand[in_p].predicate
-	  && ! insn_data[(int) icode].operand[in_p].predicate (x, reload_mode))
+	  && !insn_operand_matches (icode, in_p, x))
 	icode = CODE_FOR_nothing;
       else if (icode != CODE_FOR_nothing)
 	{
@@ -938,14 +928,6 @@ default_secondary_reload (bool in_p ATTRIBUTE_UNUSED, rtx x ATTRIBUTE_UNUSED,
 	sri->t_icode = icode;
     }
   return rclass;
-}
-
-bool
-default_handle_c_option (size_t code ATTRIBUTE_UNUSED,
-			 const char *arg ATTRIBUTE_UNUSED,
-			 int value ATTRIBUTE_UNUSED)
-{
-  return false;
 }
 
 /* By default, if flag_pic is true, then neither local nor global relocs
@@ -1021,6 +1003,33 @@ bool
 default_valid_pointer_mode (enum machine_mode mode)
 {
   return (mode == ptr_mode || mode == Pmode);
+}
+
+/* Determine whether the memory reference specified by REF may alias
+   the C libraries errno location.  */
+bool
+default_ref_may_alias_errno (ao_ref *ref)
+{
+  tree base = ao_ref_base (ref);
+  /* The default implementation assumes the errno location is
+     a declaration of type int or is always accessed via a
+     pointer to int.  We assume that accesses to errno are
+     not deliberately obfuscated (even in conforming ways).  */
+  if (TYPE_UNSIGNED (TREE_TYPE (base))
+      || TYPE_MODE (TREE_TYPE (base)) != TYPE_MODE (integer_type_node))
+    return false;
+  /* The default implementation assumes an errno location
+     declaration is never defined in the current compilation unit.  */
+  if (DECL_P (base)
+      && !TREE_STATIC (base))
+    return true;
+  else if (TREE_CODE (base) == MEM_REF
+	   && TREE_CODE (TREE_OPERAND (base, 0)) == SSA_NAME)
+    {
+      struct ptr_info_def *pi = SSA_NAME_PTR_INFO (TREE_OPERAND (base, 0));
+      return !pi || pi->pt.anything || pi->pt.nonlocal;
+    }
+  return false;
 }
 
 /* Return the mode for a pointer to a given ADDRSPACE, defaulting to ptr_mode
@@ -1180,9 +1189,10 @@ default_target_can_inline_p (tree caller, tree callee)
   else if (!caller_opts)
     ret = false;
 
-  /* If both caller and callee have attributes, assume that if the pointer is
-     different, the the two functions have different target options since
-     build_target_option_node uses a hash table for the options.  */
+  /* If both caller and callee have attributes, assume that if the
+     pointer is different, the two functions have different target
+     options since build_target_option_node uses a hash table for the
+     options.  */
   else
     ret = (callee_opts == caller_opts);
 
@@ -1277,6 +1287,13 @@ default_preferred_output_reload_class (rtx x ATTRIBUTE_UNUSED,
 #endif
 }
 
+/* The default implementation of TARGET_PREFERRED_RENAME_CLASS.  */
+reg_class_t
+default_preferred_rename_class (reg_class_t rclass ATTRIBUTE_UNUSED)
+{
+  return NO_REGS;
+}
+
 /* The default implementation of TARGET_CLASS_LIKELY_SPILLED_P.  */
 
 bool
@@ -1309,14 +1326,8 @@ default_debug_unwind_info (void)
 /* Determine the exception handling mechanism for the target.  */
 
 enum unwind_info_type
-default_except_unwind_info (void)
+default_except_unwind_info (struct gcc_options *opts ATTRIBUTE_UNUSED)
 {
-  /* ??? Change the one user to the hook, then poison this.  */
-#ifdef MUST_USE_SJLJ_EXCEPTIONS
-  if (MUST_USE_SJLJ_EXCEPTIONS)
-    return UI_SJLJ;
-#endif
-
   /* Obey the configure switch to turn on sjlj exceptions.  */
 #ifdef CONFIG_SJLJ_EXCEPTIONS
   if (CONFIG_SJLJ_EXCEPTIONS)
@@ -1335,7 +1346,7 @@ default_except_unwind_info (void)
 /* To be used by targets that force dwarf2 unwind enabled.  */
 
 enum unwind_info_type
-dwarf2_except_unwind_info (void)
+dwarf2_except_unwind_info (struct gcc_options *opts ATTRIBUTE_UNUSED)
 {
   /* Obey the configure switch to turn on sjlj exceptions.  */
 #ifdef CONFIG_SJLJ_EXCEPTIONS
@@ -1349,7 +1360,7 @@ dwarf2_except_unwind_info (void)
 /* To be used by targets that force sjlj unwind enabled.  */
 
 enum unwind_info_type
-sjlj_except_unwind_info (void)
+sjlj_except_unwind_info (struct gcc_options *opts ATTRIBUTE_UNUSED)
 {
   return UI_SJLJ;
 }
@@ -1361,6 +1372,126 @@ enum machine_mode
 default_get_reg_raw_mode(int regno)
 {
   return reg_raw_mode[regno];
+}
+
+/* Return true if the state of option OPTION should be stored in PCH files
+   and checked by default_pch_valid_p.  Store the option's current state
+   in STATE if so.  */
+
+static inline bool
+option_affects_pch_p (int option, struct cl_option_state *state)
+{
+  if ((cl_options[option].flags & CL_TARGET) == 0)
+    return false;
+  if (option_flag_var (option, &global_options) == &target_flags)
+    if (targetm.check_pch_target_flags)
+      return false;
+  return get_option_state (&global_options, option, state);
+}
+
+/* Default version of get_pch_validity.
+   By default, every flag difference is fatal; that will be mostly right for
+   most targets, but completely right for very few.  */
+
+void *
+default_get_pch_validity (size_t *sz)
+{
+  struct cl_option_state state;
+  size_t i;
+  char *result, *r;
+
+  *sz = 2;
+  if (targetm.check_pch_target_flags)
+    *sz += sizeof (target_flags);
+  for (i = 0; i < cl_options_count; i++)
+    if (option_affects_pch_p (i, &state))
+      *sz += state.size;
+
+  result = r = XNEWVEC (char, *sz);
+  r[0] = flag_pic;
+  r[1] = flag_pie;
+  r += 2;
+  if (targetm.check_pch_target_flags)
+    {
+      memcpy (r, &target_flags, sizeof (target_flags));
+      r += sizeof (target_flags);
+    }
+
+  for (i = 0; i < cl_options_count; i++)
+    if (option_affects_pch_p (i, &state))
+      {
+	memcpy (r, state.data, state.size);
+	r += state.size;
+      }
+
+  return result;
+}
+
+/* Return a message which says that a PCH file was created with a different
+   setting of OPTION.  */
+
+static const char *
+pch_option_mismatch (const char *option)
+{
+  char *r;
+
+  asprintf (&r, _("created and used with differing settings of '%s'"), option);
+  if (r == NULL)
+    return _("out of memory");
+  return r;
+}
+
+/* Default version of pch_valid_p.  */
+
+const char *
+default_pch_valid_p (const void *data_p, size_t len)
+{
+  struct cl_option_state state;
+  const char *data = (const char *)data_p;
+  size_t i;
+
+  /* -fpic and -fpie also usually make a PCH invalid.  */
+  if (data[0] != flag_pic)
+    return _("created and used with different settings of -fpic");
+  if (data[1] != flag_pie)
+    return _("created and used with different settings of -fpie");
+  data += 2;
+
+  /* Check target_flags.  */
+  if (targetm.check_pch_target_flags)
+    {
+      int tf;
+      const char *r;
+
+      memcpy (&tf, data, sizeof (target_flags));
+      data += sizeof (target_flags);
+      len -= sizeof (target_flags);
+      r = targetm.check_pch_target_flags (tf);
+      if (r != NULL)
+	return r;
+    }
+
+  for (i = 0; i < cl_options_count; i++)
+    if (option_affects_pch_p (i, &state))
+      {
+	if (memcmp (data, state.data, state.size) != 0)
+	  return pch_option_mismatch (cl_options[i].opt_text);
+	data += state.size;
+	len -= state.size;
+      }
+
+  return NULL;
+}
+
+/* Default version of TARGET_HANDLE_OPTION.  */
+
+bool
+default_target_handle_option (struct gcc_options *opts ATTRIBUTE_UNUSED,
+			      struct gcc_options *opts_set ATTRIBUTE_UNUSED,
+			      const struct cl_decoded_option *decoded ATTRIBUTE_UNUSED,
+			      location_t loc ATTRIBUTE_UNUSED)
+{
+  return true;
 }
 
 const struct default_options empty_optimization_table[] =

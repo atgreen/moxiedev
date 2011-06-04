@@ -23,7 +23,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "tm.h"
-#include "toplev.h"
 #include "tree.h"
 #include "expr.h"
 #include "flags.h"
@@ -59,18 +58,9 @@ const char *lto_section_name[LTO_N_SECTION_TYPES] =
   "reference",
   "symtab",
   "opts",
-  "cgraphopt"
+  "cgraphopt",
+  "inline"
 };
-
-unsigned char
-lto_input_1_unsigned (struct lto_input_block *ib)
-{
-  if (ib->p >= ib->len)
-    internal_error ("bytecode stream: trying to read %d bytes "
-		    "after the end of the input buffer", ib->p - ib->len);
-
-  return (ib->data[ib->p++]);
-}
 
 
 /* Read an ULEB128 Number of IB.  */
@@ -129,6 +119,51 @@ lto_input_sleb128 (struct lto_input_block *ib)
       if ((byte & 0x80) == 0)
 	{
 	  if ((shift < HOST_BITS_PER_WIDE_INT) && (byte & 0x40))
+	    result |= - ((HOST_WIDE_INT)1 << shift);
+
+	  return result;
+	}
+    }
+}
+
+
+/* Unpack VAL from BP in a variant of uleb format.  */
+
+unsigned HOST_WIDE_INT
+bp_unpack_var_len_unsigned (struct bitpack_d *bp)
+{
+  unsigned HOST_WIDE_INT result = 0;
+  int shift = 0;
+  unsigned HOST_WIDE_INT half_byte;
+
+  while (true)
+    {
+      half_byte = bp_unpack_value (bp, 4);
+      result |= (half_byte & 0x7) << shift;
+      shift += 3;
+      if ((half_byte & 0x8) == 0)
+	return result;
+    }
+}
+
+
+/* Unpack VAL from BP in a variant of sleb format.  */
+
+HOST_WIDE_INT
+bp_unpack_var_len_int (struct bitpack_d *bp)
+{
+  HOST_WIDE_INT result = 0;
+  int shift = 0;
+  unsigned HOST_WIDE_INT half_byte;
+
+  while (true)
+    {
+      half_byte = bp_unpack_value (bp, 4);
+      result |= (half_byte & 0x7) << shift;
+      shift += 3;
+      if ((half_byte & 0x8) == 0)
+	{
+	  if ((shift < HOST_BITS_PER_WIDE_INT) && (half_byte & 0x4))
 	    result |= - ((HOST_WIDE_INT)1 << shift);
 
 	  return result;
@@ -485,4 +520,24 @@ lto_get_function_in_decl_state (struct lto_file_decl_data *file_data,
   temp.fn_decl = func;
   slot = htab_find_slot (file_data->function_decl_states, &temp, NO_INSERT);
   return slot? ((struct lto_in_decl_state*) *slot) : NULL;
+}
+
+
+/* Report read pass end of the section.  */
+
+void
+lto_section_overrun (struct lto_input_block *ib)
+{
+  fatal_error ("bytecode stream: trying to read %d bytes "
+	       "after the end of the input buffer", ib->p - ib->len);
+}
+
+/* Report out of range value.  */
+
+void
+lto_value_range_error (const char *purpose, HOST_WIDE_INT val,
+		       HOST_WIDE_INT min, HOST_WIDE_INT max)
+{
+  fatal_error ("%s out of range: Range is %i to %i, value is %i",
+	       purpose, (int)min, (int)max, (int)val);
 }

@@ -1,6 +1,6 @@
 /* Define per-register tables for data flow info and register allocation.
    Copyright (C) 1987, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2003, 2004, 2005, 2006, 2007, 2008 Free Software
+   1999, 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2010 Free Software
    Foundation, Inc.
 
 This file is part of GCC.
@@ -44,7 +44,7 @@ extern int max_regno;
    regstat_init_n_sets_and_refs from the current values of
    DF_REG_DEF_COUNT and DF_REG_USE_COUNT.  REG_N_REFS and REG_N_SETS
    should only be used if a pass need to change these values in some
-   magical way or or the pass needs to have accurate values for these
+   magical way or the pass needs to have accurate values for these
    and is not using incremental df scanning.
 
    At the end of a pass that uses REG_N_REFS and REG_N_SETS, a call

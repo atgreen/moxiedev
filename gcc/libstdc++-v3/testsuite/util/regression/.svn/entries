@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/util/regression
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-06-03T19:15:56.538099Z
-160231
-paolo
+2011-05-24T02:38:19.991604Z
+174100
+bkoz
 
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2010-01-06T00:59:51.530647Z
-9ad6966c40370fdb463e32c0fff6acee
-2009-12-16T05:16:46.540185Z
-155283
+2011-06-04T18:06:08.287104Z
+9836d7697ab6c8be9ada03c14cd2950f
+2011-05-24T02:38:19.991604Z
+174100
 bkoz
 
 
@@ -58,7 +58,7 @@ bkoz
 
 
 
-7096
+6996
 
 trait
 dir

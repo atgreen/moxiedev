@@ -1,6 +1,6 @@
 /* Process declarations and variables for C compiler.
    Copyright (C) 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -46,6 +46,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "opts.h"
 #include "timevar.h"
 #include "c-family/c-common.h"
+#include "c-family/c-objc.h"
 #include "c-family/c-pragma.h"
 #include "c-lang.h"
 #include "langhooks.h"
@@ -146,10 +147,6 @@ static int warn_about_return_type;
 
 static bool undef_nested_function;
 
-/* True means global_bindings_p should return false even if the scope stack
-   says we are in file scope.  */
-bool c_override_global_bindings_to_false;
-
 
 /* Each c_binding structure describes one binding of an identifier to
    a decl.  All the decls in a scope - irrespective of namespace - are
@@ -241,7 +238,7 @@ extern char C_SIZEOF_STRUCT_LANG_IDENTIFIER_isnt_accurate
 /* The resulting tree type.  */
 
 union GTY((desc ("TREE_CODE (&%h.generic) == IDENTIFIER_NODE"),
-       chain_next ("TREE_CODE (&%h.generic) == INTEGER_TYPE ? (union lang_tree_node *) TYPE_NEXT_VARIANT (&%h.generic) : ((union lang_tree_node *) TREE_CHAIN (&%h.generic))")))  lang_tree_node
+       chain_next ("TREE_CODE (&%h.generic) == INTEGER_TYPE ? (union lang_tree_node *) TYPE_NEXT_VARIANT (&%h.generic) : CODE_CONTAINS_STRUCT (TREE_CODE (&%h.generic), TS_COMMON) ? ((union lang_tree_node *) TREE_CHAIN (&%h.generic)) : NULL")))  lang_tree_node
  {
   union tree_node GTY ((tag ("0"),
 			desc ("tree_node_structure (&%h)")))
@@ -403,6 +400,13 @@ struct GTY((chain_next ("%h.outer"))) c_scope {
      up searching for labels when popping scopes, particularly since
      labels are normally only found at function scope.  */
   BOOL_BITFIELD has_label_bindings : 1;
+
+  /* True if we should issue a warning if a goto statement crosses any
+     of the bindings.  We still need to check the list of bindings to
+     find the specific ones we need to warn about.  This is true if
+     decl_jump_unsafe would return true for any of the bindings.  This
+     is used to avoid looping over all the bindings unnecessarily.  */
+  BOOL_BITFIELD has_jump_unsafe_decl : 1;
 };
 
 /* The scope currently in effect.  */
@@ -548,9 +552,36 @@ add_stmt (tree t)
 
   /* Add T to the statement-tree.  Non-side-effect statements need to be
      recorded during statement expressions.  */
+  if (!building_stmt_list_p ())
+    push_stmt_list ();
   append_to_statement_list_force (t, &cur_stmt_list);
 
   return t;
+}
+
+/* Return true if we will want to say something if a goto statement
+   crosses DECL.  */
+
+static bool
+decl_jump_unsafe (tree decl)
+{
+  if (decl == error_mark_node || TREE_TYPE (decl) == error_mark_node)
+    return false;
+
+  /* Always warn about crossing variably modified types.  */
+  if ((TREE_CODE (decl) == VAR_DECL || TREE_CODE (decl) == TYPE_DECL)
+      && variably_modified_type_p (TREE_TYPE (decl), NULL_TREE))
+    return true;
+
+  /* Otherwise, only warn if -Wgoto-misses-init and this is an
+     initialized automatic decl.  */
+  if (warn_jump_misses_init
+      && TREE_CODE (decl) == VAR_DECL
+      && !TREE_STATIC (decl)
+      && DECL_INITIAL (decl) != NULL_TREE)
+    return true;
+
+  return false;
 }
 
 
@@ -600,6 +631,9 @@ bind (tree name, tree decl, struct c_scope *scope, bool invisible,
 
   b->prev = scope->bindings;
   scope->bindings = b;
+
+  if (decl_jump_unsafe (decl))
+    scope->has_jump_unsafe_decl = 1;
 
   if (!name)
     return;
@@ -757,31 +791,6 @@ set_spot_bindings (struct c_spot_bindings *p, bool defining)
   p->left_stmt_expr = false;
 }
 
-/* Return true if we will want to say something if a goto statement
-   crosses DECL.  */
-
-static bool
-decl_jump_unsafe (tree decl)
-{
-  if (decl == error_mark_node || TREE_TYPE (decl) == error_mark_node)
-    return false;
-
-  /* Always warn about crossing variably modified types.  */
-  if ((TREE_CODE (decl) == VAR_DECL || TREE_CODE (decl) == TYPE_DECL)
-      && variably_modified_type_p (TREE_TYPE (decl), NULL_TREE))
-    return true;
-
-  /* Otherwise, only warn if -Wgoto-misses-init and this is an
-     initialized automatic decl.  */
-  if (warn_jump_misses_init
-      && TREE_CODE (decl) == VAR_DECL
-      && !TREE_STATIC (decl)
-      && DECL_INITIAL (decl) != NULL_TREE)
-    return true;
-
-  return false;
-}
-
 /* Update spot bindings P as we pop out of SCOPE.  Return true if we
    should push decls for a label.  */
 
@@ -834,14 +843,12 @@ objc_mark_locals_volatile (void *enclosing_blk)
     }
 }
 
-/* Nonzero if we are currently in file scope.  */
+/* Return true if we are in the global binding level.  */
 
-int
+bool
 global_bindings_p (void)
 {
-  return (current_scope == file_scope && !c_override_global_bindings_to_false
-	  ? -1
-	  : 0);
+  return current_scope == file_scope;
 }
 
 void
@@ -968,6 +975,7 @@ update_label_decls (struct c_scope *scope)
 	    {
 	      struct c_label_vars *label_vars;
 	      struct c_binding *b1;
+	      bool hjud;
 	      unsigned int ix;
 	      struct c_goto_bindings *g;
 
@@ -976,18 +984,26 @@ update_label_decls (struct c_scope *scope)
 	      label_vars = b->u.label;
 
 	      b1 = label_vars->label_bindings.bindings_in_scope;
+	      if (label_vars->label_bindings.scope == NULL)
+		hjud = false;
+	      else
+		hjud = label_vars->label_bindings.scope->has_jump_unsafe_decl;
 	      if (update_spot_bindings (scope, &label_vars->label_bindings))
 		{
 		  /* This label is defined in this scope.  */
-		  for (; b1 != NULL;  b1 = b1->prev)
+		  if (hjud)
 		    {
-		      /* A goto from later in the function to this
-			 label will never see the initialization of
-			 B1, if any.  Save it to issue a warning if
-			 needed.  */
-		      if (decl_jump_unsafe (b1->decl))
-			VEC_safe_push (tree, gc, label_vars->decls_in_scope,
-				       b1->decl);
+		      for (; b1 != NULL; b1 = b1->prev)
+			{
+			  /* A goto from later in the function to this
+			     label will never see the initialization
+			     of B1, if any.  Save it to issue a
+			     warning if needed.  */
+			  if (decl_jump_unsafe (b1->decl))
+			    VEC_safe_push (tree, gc,
+					   label_vars->decls_in_scope,
+					   b1->decl);
+			}
 		    }
 		}
 
@@ -1500,9 +1516,8 @@ diagnose_arglist_conflict (tree newdecl, tree olddecl,
 
   if (TREE_CODE (olddecl) != FUNCTION_DECL
       || !comptypes (TREE_TYPE (oldtype), TREE_TYPE (newtype))
-      || !((TYPE_ARG_TYPES (oldtype) == 0 && DECL_INITIAL (olddecl) == 0)
-	   ||
-	   (TYPE_ARG_TYPES (newtype) == 0 && DECL_INITIAL (newdecl) == 0)))
+      || !((!prototype_p (oldtype) && DECL_INITIAL (olddecl) == 0)
+	   || (!prototype_p (newtype) && DECL_INITIAL (newdecl) == 0)))
     return;
 
   t = TYPE_ARG_TYPES (oldtype);
@@ -1794,20 +1809,16 @@ diagnose_mismatched_decls (tree newdecl, tree olddecl,
 	  || TREE_NO_WARNING (olddecl))
 	return true;  /* Allow OLDDECL to continue in use.  */
 
-      if (pedantic && !flag_isoc1x)
+      if (variably_modified_type_p (newtype, NULL))
+	{
+	  error ("redefinition of typedef %q+D with variably modified type",
+		 newdecl);
+	  locate_old_decl (olddecl);
+	}
+      else if (pedantic && !flag_isoc1x)
 	{
 	  pedwarn (input_location, OPT_pedantic,
 		   "redefinition of typedef %q+D", newdecl);
-	  locate_old_decl (olddecl);
-	}
-      else if (variably_modified_type_p (newtype, NULL))
-	{
-	  /* Whether there is a constraint violation for the types not
-	     being the same cannot be determined at compile time; a
-	     warning that there may be one at runtime is considered
-	     appropriate (WG14 reflector message 11743, 8 May 2009).  */
-	  warning (0, "redefinition of typedef %q+D may be a constraint "
-		   "violation at runtime", newdecl);
 	  locate_old_decl (olddecl);
 	}
 
@@ -1832,7 +1843,7 @@ diagnose_mismatched_decls (tree newdecl, tree olddecl,
 	  && !C_DECL_DECLARED_BUILTIN (olddecl)
 	  && (!TREE_PUBLIC (newdecl)
 	      || (DECL_INITIAL (newdecl)
-		  && !TYPE_ARG_TYPES (TREE_TYPE (newdecl)))))
+		  && !prototype_p (TREE_TYPE (newdecl)))))
 	{
 	  warning (OPT_Wshadow, "declaration of %q+D shadows "
 		   "a built-in function", newdecl);
@@ -1869,7 +1880,7 @@ diagnose_mismatched_decls (tree newdecl, tree olddecl,
       /* If we have a prototype after an old-style function definition,
 	 the argument types must be checked specially.  */
       else if (DECL_INITIAL (olddecl)
-	       && !TYPE_ARG_TYPES (oldtype) && TYPE_ARG_TYPES (newtype)
+	       && !prototype_p (oldtype) && prototype_p (newtype)
 	       && TYPE_ACTUAL_ARG_TYPES (oldtype)
 	       && !validate_proto_after_old_defn (newdecl, newtype, oldtype))
 	{
@@ -2138,9 +2149,9 @@ merge_decls (tree newdecl, tree olddecl, tree newtype, tree oldtype)
   bool new_is_definition = (TREE_CODE (newdecl) == FUNCTION_DECL
 			    && DECL_INITIAL (newdecl) != 0);
   bool new_is_prototype = (TREE_CODE (newdecl) == FUNCTION_DECL
-			   && TYPE_ARG_TYPES (TREE_TYPE (newdecl)) != 0);
+			   && prototype_p (TREE_TYPE (newdecl)));
   bool old_is_prototype = (TREE_CODE (olddecl) == FUNCTION_DECL
-			   && TYPE_ARG_TYPES (TREE_TYPE (olddecl)) != 0);
+			   && prototype_p (TREE_TYPE (olddecl)));
   bool extern_changed = false;
 
   /* For real parm decl following a forward decl, rechain the old decl
@@ -3165,12 +3176,15 @@ check_earlier_gotos (tree label, struct c_label_vars* label_vars)
       /* We have a goto to this label.  The goto is going forward.  In
 	 g->scope, the goto is going to skip any binding which was
 	 defined after g->bindings_in_scope.  */
-      for (b = g->goto_bindings.scope->bindings;
-	   b != g->goto_bindings.bindings_in_scope;
-	   b = b->prev)
+      if (g->goto_bindings.scope->has_jump_unsafe_decl)
 	{
-	  if (decl_jump_unsafe (b->decl))
-	    warn_about_goto (g->loc, label, b->decl);
+	  for (b = g->goto_bindings.scope->bindings;
+	       b != g->goto_bindings.bindings_in_scope;
+	       b = b->prev)
+	    {
+	      if (decl_jump_unsafe (b->decl))
+		warn_about_goto (g->loc, label, b->decl);
+	    }
 	}
 
       /* We also need to warn about decls defined in any scopes
@@ -3180,14 +3194,17 @@ check_earlier_gotos (tree label, struct c_label_vars* label_vars)
 	   scope = scope->outer)
 	{
 	  gcc_assert (scope != NULL);
-	  if (scope == label_vars->label_bindings.scope)
-	    b = label_vars->label_bindings.bindings_in_scope;
-	  else
-	    b = scope->bindings;
-	  for (; b != NULL; b = b->prev)
+	  if (scope->has_jump_unsafe_decl)
 	    {
-	      if (decl_jump_unsafe (b->decl))
-		warn_about_goto (g->loc, label, b->decl);
+	      if (scope == label_vars->label_bindings.scope)
+		b = label_vars->label_bindings.bindings_in_scope;
+	      else
+		b = scope->bindings;
+	      for (; b != NULL; b = b->prev)
+		{
+		  if (decl_jump_unsafe (b->decl))
+		    warn_about_goto (g->loc, label, b->decl);
+		}
 	    }
 	}
 
@@ -3303,6 +3320,10 @@ c_check_switch_jump_warnings (struct c_spot_bindings *switch_bindings,
       struct c_binding *b;
 
       gcc_assert (scope != NULL);
+
+      if (!scope->has_jump_unsafe_decl)
+	continue;
+
       for (b = scope->bindings; b != NULL; b = b->prev)
 	{
 	  if (decl_jump_unsafe (b->decl))
@@ -3538,7 +3559,7 @@ c_builtin_function (tree decl)
   tree   id = DECL_NAME (decl);
 
   const char *name = IDENTIFIER_POINTER (id);
-  C_DECL_BUILTIN_PROTOTYPE (decl) = (TYPE_ARG_TYPES (type) != 0);
+  C_DECL_BUILTIN_PROTOTYPE (decl) = prototype_p (type);
 
   /* Should never be called on a symbol with a preexisting meaning.  */
   gcc_assert (!I_SYMBOL_BINDING (id));
@@ -3564,7 +3585,7 @@ c_builtin_function_ext_scope (tree decl)
   tree   id = DECL_NAME (decl);
 
   const char *name = IDENTIFIER_POINTER (id);
-  C_DECL_BUILTIN_PROTOTYPE (decl) = (TYPE_ARG_TYPES (type) != 0);
+  C_DECL_BUILTIN_PROTOTYPE (decl) = prototype_p (type);
 
   /* Should never be called on a symbol with a preexisting meaning.  */
   gcc_assert (!I_SYMBOL_BINDING (id));
@@ -3923,7 +3944,7 @@ start_decl (struct c_declarator *declarator, struct c_declspecs *declspecs,
     return 0;
 
   if (expr)
-    add_stmt (expr);
+    add_stmt (fold_convert (void_type_node, expr));
 
   if (TREE_CODE (decl) != FUNCTION_DECL && MAIN_NAME_P (DECL_NAME (decl)))
     warning (OPT_Wmain, "%q+D is usually a function", decl);
@@ -4000,7 +4021,7 @@ start_decl (struct c_declarator *declarator, struct c_declspecs *declspecs,
      prototypes file (if requested).  */
 
   if (TREE_CODE (decl) == FUNCTION_DECL)
-    gen_aux_info_record (decl, 0, 0, TYPE_ARG_TYPES (TREE_TYPE (decl)) != 0);
+    gen_aux_info_record (decl, 0, 0, prototype_p (TREE_TYPE (decl)));
 
   /* ANSI specifies that a tentative definition which is not merged with
      a non-tentative definition behaves exactly like a definition with an
@@ -4221,7 +4242,7 @@ finish_decl (tree decl, location_t init_loc, tree init,
 		b_ext = b_ext->shadowed;
 	      if (b_ext)
 		{
-		  if (b_ext->u.type)
+		  if (b_ext->u.type && comptypes (b_ext->u.type, type))
 		    b_ext->u.type = composite_type (b_ext->u.type, type);
 		  else
 		    b_ext->u.type = type;
@@ -4403,12 +4424,6 @@ finish_decl (tree decl, location_t init_loc, tree init,
       rest_of_decl_compilation (decl, DECL_FILE_SCOPE_P (decl), 0);
     }
 
-  /* At the end of a declaration, throw away any variable type sizes
-     of types defined inside that declaration.  There is no use
-     computing them in the following function definition.  */
-  if (current_scope == file_scope)
-    get_pending_sizes ();
-
   /* Install a cleanup (aka destructor) if one was given.  */
   if (TREE_CODE (decl) == VAR_DECL && !TREE_STATIC (decl))
     {
@@ -4453,14 +4468,17 @@ finish_decl (tree decl, location_t init_loc, tree init,
     }
 }
 
-/* Given a parsed parameter declaration, decode it into a PARM_DECL.  */
+/* Given a parsed parameter declaration, decode it into a PARM_DECL.
+   EXPR is NULL or a pointer to an expression that needs to be
+   evaluated for the side effects of array size expressions in the
+   parameters.  */
 
 tree
-grokparm (const struct c_parm *parm)
+grokparm (const struct c_parm *parm, tree *expr)
 {
   tree attrs = parm->attrs;
   tree decl = grokdeclarator (parm->declarator, parm->specs, PARM, false,
-			      NULL, &attrs, NULL, NULL, DEPRECATED_NORMAL);
+			      NULL, &attrs, expr, NULL, DEPRECATED_NORMAL);
 
   decl_attributes (&decl, attrs, 0);
 
@@ -4468,16 +4486,18 @@ grokparm (const struct c_parm *parm)
 }
 
 /* Given a parsed parameter declaration, decode it into a PARM_DECL
-   and push that on the current scope.  */
+   and push that on the current scope.  EXPR is a pointer to an
+   expression that needs to be evaluated for the side effects of array
+   size expressions in the parameters.  */
 
 void
-push_parm_decl (const struct c_parm *parm)
+push_parm_decl (const struct c_parm *parm, tree *expr)
 {
   tree attrs = parm->attrs;
   tree decl;
 
   decl = grokdeclarator (parm->declarator, parm->specs, PARM, false, NULL,
-			 &attrs, NULL, NULL, DEPRECATED_NORMAL);
+			 &attrs, expr, NULL, DEPRECATED_NORMAL);
   decl_attributes (&decl, attrs, 0);
 
   decl = pushdecl (decl);
@@ -4692,7 +4712,7 @@ check_bitfield_type_and_width (tree *type, tree *width, tree orig_name)
     {
       error ("width of %qs exceeds its type", name);
       w = max_width;
-      *width = build_int_cst (NULL_TREE, w);
+      *width = build_int_cst (integer_type_node, w);
     }
   else
     w = tree_low_cst (*width, 1);
@@ -4762,34 +4782,6 @@ warn_variable_length_array (tree name, tree size)
 		     "variable length array is used");
 	}
     }
-}
-
-/* Given a size SIZE that may not be a constant, return a SAVE_EXPR to
-   serve as the actual size-expression for a type or decl.  This is
-   like variable_size in stor-layout.c, but we make global_bindings_p
-   return negative to avoid calls to that function from outside the
-   front end resulting in errors at file scope, then call this version
-   instead from front-end code.  */
-
-static tree
-c_variable_size (tree size)
-{
-  tree save;
-
-  if (TREE_CONSTANT (size))
-    return size;
-
-  size = save_expr (size);
-
-  save = skip_simple_arithmetic (size);
-
-  if (cfun && cfun->dont_save_pending_sizes_p)
-    return size;
-
-  if (!global_bindings_p ())
-    put_pending_size (save);
-
-  return size;
 }
 
 /* Given declspecs and a declarator,
@@ -4863,7 +4855,10 @@ grokdeclarator (const struct c_declarator *declarator,
   const char *errmsg;
   tree expr_dummy;
   bool expr_const_operands_dummy;
+  enum c_declarator_kind first_non_attr_kind;
 
+  if (TREE_CODE (type) == ERROR_MARK)
+    return error_mark_node;
   if (expr == NULL)
     expr = &expr_dummy;
   if (expr_const_operands == NULL)
@@ -4880,6 +4875,7 @@ grokdeclarator (const struct c_declarator *declarator,
   {
     const struct c_declarator *decl = declarator;
 
+    first_non_attr_kind = cdk_attrs;
     while (decl)
       switch (decl->kind)
 	{
@@ -4891,6 +4887,8 @@ grokdeclarator (const struct c_declarator *declarator,
 	case cdk_pointer:
 	  funcdef_syntax = (decl->kind == cdk_function);
 	  decl = decl->declarator;
+	  if (first_non_attr_kind == cdk_attrs)
+	    first_non_attr_kind = decl->kind;
 	  break;
 
 	case cdk_attrs:
@@ -4901,6 +4899,8 @@ grokdeclarator (const struct c_declarator *declarator,
 	  loc = decl->id_loc;
 	  if (decl->u.id)
 	    name = decl->u.id;
+	  if (first_non_attr_kind == cdk_attrs)
+	    first_non_attr_kind = decl->kind;
 	  decl = 0;
 	  break;
 
@@ -5007,7 +5007,9 @@ grokdeclarator (const struct c_declarator *declarator,
     error_at (loc, "conflicting named address spaces (%s vs %s)",
 	      c_addr_space_name (as1), c_addr_space_name (as2));
 
-  if (!flag_gen_aux_info && (TYPE_QUALS (element_type)))
+  if ((TREE_CODE (type) == ARRAY_TYPE
+       || first_non_attr_kind == cdk_array)
+      && TYPE_QUALS (element_type))
     type = TYPE_MAIN_VARIANT (type);
   type_quals = ((constp ? TYPE_QUAL_CONST : 0)
 		| (restrictp ? TYPE_QUAL_RESTRICT : 0)
@@ -5319,7 +5321,7 @@ grokdeclarator (const struct c_declarator *declarator,
 		       MINUS_EXPR, which allows the -1 to get folded
 		       with the +1 that happens when building TYPE_SIZE.  */
 		    if (size_varies)
-		      size = c_variable_size (size);
+		      size = save_expr (size);
 		    if (this_size_varies && TREE_CODE (size) == INTEGER_CST)
 		      size = build2 (COMPOUND_EXPR, TREE_TYPE (size),
 				     integer_zero_node, size);
@@ -5333,15 +5335,13 @@ grokdeclarator (const struct c_declarator *declarator,
 					     convert (index_type,
 						      size_one_node));
 
-		    /* If that overflowed, the array is too big.  ???
-		       While a size of INT_MAX+1 technically shouldn't
-		       cause an overflow (because we subtract 1), the
-		       overflow is recorded during the conversion to
-		       index_type, before the subtraction.  Handling
-		       this case seems like an unnecessary
-		       complication.  */
-		    if (TREE_CODE (itype) == INTEGER_CST
-			&& TREE_OVERFLOW (itype))
+		    /* The above overflows when size does not fit
+		       in index_type.
+		       ???  While a size of INT_MAX+1 technically shouldn't
+		       cause an overflow (because we subtract 1), handling
+		       this case seems like an unnecessary complication.  */
+		    if (TREE_CODE (size) == INTEGER_CST
+			&& !int_fits_type_p (size, index_type))
 		      {
 			if (name)
 			  error_at (loc, "size of array %qE is too large",
@@ -5415,7 +5415,7 @@ grokdeclarator (const struct c_declarator *declarator,
 		  }
 	      }
 
-	     /* Complain about arrays of incomplete types.  */
+	    /* Complain about arrays of incomplete types.  */
 	    if (!COMPLETE_TYPE_P (type))
 	      {
 		error_at (loc, "array type has incomplete element type");
@@ -5540,8 +5540,6 @@ grokdeclarator (const struct c_declarator *declarator,
 	       inner layer of declarator.  */
 	    arg_info = declarator->u.arg_info;
 	    arg_types = grokparms (arg_info, really_funcdef);
-	    if (really_funcdef)
-	      put_pending_sizes (arg_info->pending_sizes);
 
 	    /* Type qualifiers before the return type of the function
 	       qualify the return type, not the function type.  */
@@ -5901,7 +5899,7 @@ grokdeclarator (const struct c_declarator *declarator,
 	if (storage_class == csc_register || threadp)
 	  {
 	    error_at (loc, "invalid storage class for function %qE", name);
-	   }
+	  }
 	else if (current_scope != file_scope)
 	  {
 	    /* Function declaration not at file scope.  Storage
@@ -6131,9 +6129,13 @@ grokparms (struct c_arg_info *arg_info, bool funcdef_flag)
   else if (arg_types && TREE_CODE (TREE_VALUE (arg_types)) == IDENTIFIER_NODE)
     {
       if (!funcdef_flag)
-	pedwarn (input_location, 0, "parameter names (without types) in function declaration");
+	{
+	  pedwarn (input_location, 0, "parameter names (without types) in function declaration");
+	  arg_info->parms = NULL_TREE;
+	}
+      else
+	arg_info->parms = arg_info->types;
 
-      arg_info->parms = arg_info->types;
       arg_info->types = 0;
       return 0;
     }
@@ -6228,10 +6230,13 @@ build_arg_info (void)
    This structure is later fed to 'grokparms' and 'store_parm_decls'.
 
    ELLIPSIS being true means the argument list ended in '...' so don't
-   append a sentinel (void_list_node) to the end of the type-list.  */
+   append a sentinel (void_list_node) to the end of the type-list.
+
+   EXPR is NULL or an expression that needs to be evaluated for the
+   side effects of array size expressions in the parameters.  */
 
 struct c_arg_info *
-get_parm_info (bool ellipsis)
+get_parm_info (bool ellipsis, tree expr)
 {
   struct c_binding *b = current_scope->bindings;
   struct c_arg_info *arg_info = build_arg_info ();
@@ -6407,7 +6412,7 @@ get_parm_info (bool ellipsis)
   arg_info->tags = tags;
   arg_info->types = types;
   arg_info->others = others;
-  arg_info->pending_sizes = get_pending_sizes ();
+  arg_info->pending_sizes = expr;
   return arg_info;
 }
 
@@ -6639,11 +6644,14 @@ grokfield (location_t loc,
 		      || TREE_CODE (type) == UNION_TYPE);
       bool ok = false;
 
-      if (type_ok)
+      if (type_ok
+	  && (flag_ms_extensions
+	      || flag_plan9_extensions
+	      || !declspecs->typedef_p))
 	{
 	  if (flag_ms_extensions || flag_plan9_extensions)
 	    ok = true;
-	  else if (TYPE_NAME (TYPE_MAIN_VARIANT (type)) == NULL)
+	  else if (TYPE_NAME (type) == NULL)
 	    ok = true;
 	  else
 	    ok = false;
@@ -6787,23 +6795,25 @@ detect_field_duplicates (tree fieldlist)
   int timeout = 10;
 
   /* If the struct is the list of instance variables of an Objective-C
-     class, then we need to add all the instance variables of
-     superclasses before checking for duplicates (since you can't have
+     class, then we need to check all the instance variables of
+     superclasses when checking for duplicates (since you can't have
      an instance variable in a subclass with the same name as an
-     instance variable in a superclass).  objc_get_interface_ivars()
-     leaves fieldlist unchanged if we are not in this case, so in that
-     case nothing changes compared to C.
-  */
+     instance variable in a superclass).  We pass on this job to the
+     Objective-C compiler.  objc_detect_field_duplicates() will return
+     false if we are not checking the list of instance variables and
+     the C frontend should proceed with the standard field duplicate
+     checks.  If we are checking the list of instance variables, the
+     ObjC frontend will do the check, emit the errors if needed, and
+     then return true.  */
   if (c_dialect_objc ())
-    fieldlist = objc_get_interface_ivars (fieldlist);
+    if (objc_detect_field_duplicates (false))
+      return;
 
   /* First, see if there are more than "a few" fields.
      This is trivially true if there are zero or one fields.  */
-  if (!fieldlist)
+  if (!fieldlist || !DECL_CHAIN (fieldlist))
     return;
-  x = DECL_CHAIN (fieldlist);
-  if (!x)
-    return;
+  x = fieldlist;
   do {
     timeout--;
     if (DECL_NAME (x) == NULL_TREE
@@ -7180,7 +7190,7 @@ finish_struct (location_t loc, tree t, tree fieldlist, tree attributes,
   /* If we're inside a function proper, i.e. not file-scope and not still
      parsing parameters, then arrange for the size of a variable sized type
      to be bound now.  */
-  if (cur_stmt_list && variably_modified_type_p (t, NULL_TREE))
+  if (building_stmt_list_p () && variably_modified_type_p (t, NULL_TREE))
     add_stmt (build_stmt (loc,
 			  DECL_EXPR, build_decl (loc, TYPE_DECL, NULL, t)));
 
@@ -7618,7 +7628,7 @@ start_function (struct c_declspecs *declspecs, struct c_declarator *declarator,
   current_function_prototype_locus = UNKNOWN_LOCATION;
   current_function_prototype_built_in = false;
   current_function_prototype_arg_types = NULL_TREE;
-  if (TYPE_ARG_TYPES (TREE_TYPE (decl1)) == 0)
+  if (!prototype_p (TREE_TYPE (decl1)))
     {
       if (old_decl != 0 && TREE_CODE (TREE_TYPE (old_decl)) == FUNCTION_TYPE
 	  && comptypes (TREE_TYPE (TREE_TYPE (decl1)),
@@ -7667,7 +7677,7 @@ start_function (struct c_declspecs *declspecs, struct c_declarator *declarator,
   /* Optionally warn of old-fashioned def with no previous prototype.  */
   if (warn_strict_prototypes
       && old_decl != error_mark_node
-      && TYPE_ARG_TYPES (TREE_TYPE (decl1)) == 0
+      && !prototype_p (TREE_TYPE (decl1))
       && C_DECL_ISNT_PROTOTYPE (old_decl))
     warning_at (loc, OPT_Wstrict_prototypes,
 		"function declaration isn%'t a prototype");
@@ -7685,7 +7695,7 @@ start_function (struct c_declspecs *declspecs, struct c_declarator *declarator,
 	   && old_decl != 0
 	   && old_decl != error_mark_node
 	   && TREE_USED (old_decl)
-	   && TYPE_ARG_TYPES (TREE_TYPE (old_decl)) == 0)
+	   && !prototype_p (TREE_TYPE (old_decl)))
     warning_at (loc, OPT_Wmissing_prototypes,
 		"%qD was used with no prototype before its definition", decl1);
   /* Optionally warn of any global def with no previous declaration.  */
@@ -8157,20 +8167,8 @@ store_parm_decls (void)
      because we throw away the array type in favor of a pointer type, and
      thus won't naturally see the SAVE_EXPR containing the increment.  All
      other pending sizes would be handled by gimplify_parameters.  */
-  {
-    VEC(tree,gc) *pending_sizes = get_pending_sizes ();
-    tree t;
-    int i;
-
-    FOR_EACH_VEC_ELT (tree, pending_sizes, i, t)
-      add_stmt (t);
-  }
-
-  /* Even though we're inside a function body, we still don't want to
-     call expand_expr to calculate the size of a variable-sized array.
-     We haven't necessarily assigned RTL to all variables yet, so it's
-     not safe to try to expand expressions involving them.  */
-  cfun->dont_save_pending_sizes_p = 1;
+  if (arg_info->pending_sizes)
+    add_stmt (arg_info->pending_sizes);
 }
 
 
@@ -8184,6 +8182,9 @@ void
 finish_function (void)
 {
   tree fndecl = current_function_decl;
+  
+  if (c_dialect_objc ())
+    objc_finish_function ();
 
   if (TREE_CODE (fndecl) == FUNCTION_DECL
       && targetm.calls.promote_prototypes (TREE_TYPE (fndecl)))
@@ -8302,7 +8303,7 @@ finish_function (void)
 	  /* Register this function with cgraph just far enough to get it
 	    added to our parent's nested function list.  Handy, since the
 	    C front end doesn't have such a list.  */
-	  (void) cgraph_node (fndecl);
+	  (void) cgraph_get_create_node (fndecl);
 	}
     }
 
@@ -8425,6 +8426,8 @@ c_push_function_context (void)
   cfun->language = p;
 
   p->base.x_stmt_tree = c_stmt_tree;
+  c_stmt_tree.x_cur_stmt_list
+    = VEC_copy (tree, gc, c_stmt_tree.x_cur_stmt_list);
   p->x_break_label = c_break_label;
   p->x_cont_label = c_cont_label;
   p->x_switch_stack = c_switch_stack;
@@ -9307,9 +9310,9 @@ declspecs_add_type (location_t loc, struct c_declspecs *specs,
       else
 	specs->type = TREE_TYPE (t);
     }
-  else if (TREE_CODE (type) != ERROR_MARK)
+  else
     {
-      if (spec.kind == ctsk_typeof)
+      if (TREE_CODE (type) != ERROR_MARK && spec.kind == ctsk_typeof)
 	{
 	  specs->typedef_p = true;
 	  if (spec.expr)
@@ -9323,11 +9326,6 @@ declspecs_add_type (location_t loc, struct c_declspecs *specs,
 	    }
 	}
       specs->type = type;
-    }
-  else
-    {
-      /* Set a dummy type here to avoid warning about implicit 'int'.  */
-      specs->type = integer_type_node;
     }
 
   return specs;
@@ -9444,6 +9442,10 @@ finish_declspecs (struct c_declspecs *specs)
       gcc_assert (!specs->long_p && !specs->long_long_p && !specs->short_p
 		  && !specs->signed_p && !specs->unsigned_p
 		  && !specs->complex_p);
+
+      /* Set a dummy type.  */
+      if (TREE_CODE (specs->type) == ERROR_MARK)
+        specs->type = integer_type_node;
       return specs;
     }
 
@@ -9791,6 +9793,8 @@ c_write_global_declarations (void)
   if (pch_file)
     return;
 
+  timevar_start (TV_PHASE_DEFERRED);
+
   /* Do the Objective-C stuff.  This is where all the Objective-C
      module stuff gets generated (symtab, class/protocol/selector
      lists etc).  */
@@ -9832,9 +9836,15 @@ c_write_global_declarations (void)
     c_write_global_declarations_1 (BLOCK_VARS (DECL_INITIAL (t)));
   c_write_global_declarations_1 (BLOCK_VARS (ext_block));
 
+  timevar_stop (TV_PHASE_DEFERRED);
+  timevar_start (TV_PHASE_CGRAPH);
+
   /* We're done parsing; proceed to optimize and emit assembly.
      FIXME: shouldn't be the front end's responsibility to call this.  */
   cgraph_finalize_compilation_unit ();
+
+  timevar_stop (TV_PHASE_CGRAPH);
+  timevar_start (TV_PHASE_DBGINFO);
 
   /* After cgraph has had a chance to emit everything that's going to
      be emitted, output debug information for globals.  */
@@ -9848,6 +9858,7 @@ c_write_global_declarations (void)
     }
 
   ext_block = NULL;
+  timevar_stop (TV_PHASE_DBGINFO);
 }
 
 /* Register reserved keyword WORD as qualifier for address space AS.  */

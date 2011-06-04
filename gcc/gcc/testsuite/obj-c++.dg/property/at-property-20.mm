@@ -37,15 +37,14 @@
 
 @interface MyClass : MyRootClass
 { }
-@property (assign) id <MyProtocolA> a;        /* { dg-warning "originally specified here" } */
-@property int b;                              /* { dg-warning "originally specified here" } */
-@property float c;                            /* { dg-warning "originally specified here" } */
-@property (assign) MyRootClass *d;            /* { dg-warning "originally specified here" } */
-@property (assign) MySubClass1 *e;            /* { dg-warning "originally specified here" } */
-/* FIXME: The compiler seems to generate messages correctly, but the testsuite still fails the test.  */
-/*@property (assign, readonly) MySubClass1 *f; */ /*  dg-warning "originally specified here"  */
-@property (assign) MySubClass3 *g;            /* { dg-warning "originally specified here" } */
-/*@property (assign, readonly) MySubClass3 *h; */ /*  dg-warning "originally specified here"  */
+@property (assign) id <MyProtocolA> a;        /* { dg-message "originally specified here" } */
+@property int b;                              /* { dg-message "originally specified here" } */
+@property float c;                            /* { dg-message "originally specified here" } */
+@property (assign) MyRootClass *d;            /* { dg-message "originally specified here" } */
+@property (assign) MySubClass1 *e;            /* { dg-message "originally specified here" } */
+@property (assign, readonly) MySubClass1 *f;  /* { dg-message "originally specified here" } */
+@property (assign) MySubClass3 *g;            /* { dg-message "originally specified here" } */
+@property (assign, readonly) MySubClass3 *h;  /* { dg-message "originally specified here"  } */
 @end
 
 /* The following are all OK because they are identical.  */
@@ -69,9 +68,9 @@
 @property int c;                              /* { dg-warning "type of property .c. conflicts with previous declaration" } */
 @property (assign) id d;                      /* { dg-warning "type of property .d. conflicts with previous declaration" } */
 @property (assign) MyRootClass *e;            /* { dg-warning "type of property .e. conflicts with previous declaration" } */
-/*@property (assign, readonly) MyRootClass *f; */ /*  dg-warning "type of property .f. conflicts with previous declaration"  */
+@property (assign, readonly) MyRootClass *f;  /* { dg-warning "type of property .f. conflicts with previous declaration" } */
 @property (assign) MySubClass2 *g;            /* { dg-warning "type of property .g. conflicts with previous declaration" } */
-/*@property (assign, readonly) MySubClass2 *h; */ /*  dg-warning "type of property .h. conflicts with previous declaration"  */
+@property (assign, readonly) MySubClass2 *h;  /* { dg-warning "type of property .h. conflicts with previous declaration" } */
 @end
 
 /* The following are OK.  */

@@ -40,7 +40,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "params.h"
 #include "flags.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "tree-inline.h"
 #include "gmp.h"
 
@@ -95,10 +94,10 @@ split_to_var_and_offset (tree expr, tree *var, mpz_t offset)
       *var = op0;
       /* Always sign extend the offset.  */
       off = tree_to_double_int (op1);
-      if (negate)
-	off = double_int_neg (off);
       off = double_int_sext (off, TYPE_PRECISION (type));
       mpz_set_double_int (offset, off, false);
+      if (negate)
+	mpz_neg (offset, offset);
       break;
 
     case INTEGER_CST:
@@ -526,10 +525,10 @@ inverse (tree x, tree mask)
       rslt = build_int_cst (type, 1);
       for (; ctr; ctr--)
 	{
-	  rslt = int_const_binop (MULT_EXPR, rslt, x, 0);
-	  x = int_const_binop (MULT_EXPR, x, x, 0);
+	  rslt = int_const_binop (MULT_EXPR, rslt, x);
+	  x = int_const_binop (MULT_EXPR, x, x);
 	}
-      rslt = int_const_binop (BIT_AND_EXPR, rslt, mask, 0);
+      rslt = int_const_binop (BIT_AND_EXPR, rslt, mask);
     }
 
   return rslt;
@@ -1891,7 +1890,7 @@ number_of_iterations_exit (struct loop *loop, edge exit,
   /* With -funsafe-loop-optimizations we assume that nothing bad can happen.
      But if we can prove that there is overflow or some other source of weird
      behavior, ignore the loop even with -funsafe-loop-optimizations.  */
-  if (integer_zerop (niter->assumptions))
+  if (integer_zerop (niter->assumptions) || !single_exit (loop))
     return false;
 
   if (flag_unsafe_loop_optimizations)
@@ -2833,6 +2832,54 @@ infer_loop_bounds_from_array (struct loop *loop, gimple stmt, bool reliable)
 }
 
 /* Determine information about number of iterations of a LOOP from the fact
+   that pointer arithmetics in STMT does not overflow.  */
+
+static void
+infer_loop_bounds_from_pointer_arith (struct loop *loop, gimple stmt)
+{
+  tree def, base, step, scev, type, low, high;
+  tree var, ptr;
+
+  if (!is_gimple_assign (stmt)
+      || gimple_assign_rhs_code (stmt) != POINTER_PLUS_EXPR)
+    return;
+
+  def = gimple_assign_lhs (stmt);
+  if (TREE_CODE (def) != SSA_NAME)
+    return;
+
+  type = TREE_TYPE (def);
+  if (!nowrap_type_p (type))
+    return;
+
+  ptr = gimple_assign_rhs1 (stmt);
+  if (!expr_invariant_in_loop_p (loop, ptr))
+    return;
+
+  var = gimple_assign_rhs2 (stmt);
+  if (TYPE_PRECISION (type) != TYPE_PRECISION (TREE_TYPE (var)))
+    return;
+
+  scev = instantiate_parameters (loop, analyze_scalar_evolution (loop, def));
+  if (chrec_contains_undetermined (scev))
+    return;
+
+  base = initial_condition_in_loop_num (scev, loop->num);
+  step = evolution_part_in_loop_num (scev, loop->num);
+
+  if (!base || !step
+      || TREE_CODE (step) != INTEGER_CST
+      || tree_contains_chrecs (base, NULL)
+      || chrec_contains_symbols_defined_in_loop (base, loop->num))
+    return;
+
+  low = lower_bound_in_type (type, type);
+  high = upper_bound_in_type (type, type);
+
+  record_nonwrapping_iv (loop, base, step, stmt, low, high, false, true);
+}
+
+/* Determine information about number of iterations of a LOOP from the fact
    that signed arithmetics in STMT does not overflow.  */
 
 static void
@@ -2908,7 +2955,10 @@ infer_loop_bounds_from_undefined (struct loop *loop)
 	  infer_loop_bounds_from_array (loop, stmt, reliable);
 
 	  if (reliable)
-	    infer_loop_bounds_from_signedness (loop, stmt);
+            {
+              infer_loop_bounds_from_signedness (loop, stmt);
+              infer_loop_bounds_from_pointer_arith (loop, stmt);
+            }
   	}
 
     }

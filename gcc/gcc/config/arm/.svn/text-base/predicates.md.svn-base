@@ -1,5 +1,5 @@
 ;; Predicate definitions for ARM and Thumb
-;; Copyright (C) 2004, 2007, 2008 Free Software Foundation, Inc.
+;; Copyright (C) 2004, 2007, 2008, 2010 Free Software Foundation, Inc.
 ;; Contributed by ARM Ltd.
 
 ;; This file is part of GCC.
@@ -83,6 +83,7 @@
      to be a register operand.  */
   return (GET_CODE (op) == REG
 	  && (REGNO (op) >= FIRST_PSEUDO_REGISTER
+	      || REGNO_REG_CLASS (REGNO (op)) == VFP_D0_D7_REGS
 	      || REGNO_REG_CLASS (REGNO (op)) == VFP_LO_REGS
 	      || (TARGET_VFPD32
 		  && REGNO_REG_CLASS (REGNO (op)) == VFP_REGS)));
@@ -609,7 +610,7 @@
 ;; TODO: We could check lane numbers more precisely based on the mode.
 (define_predicate "neon_lane_number"
   (and (match_code "const_int")
-       (match_test "INTVAL (op) >= 0 && INTVAL (op) <= 7")))
+       (match_test "INTVAL (op) >= 0 && INTVAL (op) <= 15")))
 ;; Predicates for named expanders that overlap multiple ISAs.
 
 (define_predicate "cmpdi_operand"
@@ -682,3 +683,7 @@
    } 
   return true; 
 })
+
+(define_special_predicate "neon_struct_operand"
+  (and (match_code "mem")
+       (match_test "TARGET_32BIT && neon_vector_mem_operand (op, 2)")))

@@ -37,7 +37,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-vectorizer.h"
 #include "recog.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 
 /* Function prototypes */
 static void vect_pattern_recog_1
@@ -180,7 +179,7 @@ vect_recog_dot_prod_pattern (gimple last_stmt, tree *type_in, tree *type_out)
   tree prod_type;
   loop_vec_info loop_info = STMT_VINFO_LOOP_VINFO (stmt_vinfo);
   struct loop *loop = LOOP_VINFO_LOOP (loop_info);
-  tree var, rhs;
+  tree var;
 
   if (!is_gimple_assign (last_stmt))
     return NULL;
@@ -312,8 +311,8 @@ vect_recog_dot_prod_pattern (gimple last_stmt, tree *type_in, tree *type_out)
 
   /* Pattern detected. Create a stmt to be used to replace the pattern: */
   var = vect_recog_temp_ssa_var (type, NULL);
-  rhs =	build3 (DOT_PROD_EXPR, type, oprnd00, oprnd01, oprnd1),
-  pattern_stmt = gimple_build_assign (var, rhs);
+  pattern_stmt = gimple_build_assign_with_ops3 (DOT_PROD_EXPR, var,
+						oprnd00, oprnd01, oprnd1);
 
   if (vect_print_dump_info (REPORT_DETAILS))
     {
@@ -473,6 +472,9 @@ vect_recog_pow_pattern (gimple last_stmt, tree *type_in, tree *type_out)
     return NULL;
 
   fn = gimple_call_fndecl (last_stmt);
+  if (fn == NULL_TREE || DECL_BUILT_IN_CLASS (fn) != BUILT_IN_NORMAL)
+   return NULL;
+
   switch (DECL_FUNCTION_CODE (fn))
     {
     case BUILT_IN_POWIF:

@@ -274,8 +274,15 @@ proc gcj_jni_get_cxxflags_invocation {} {
     eval lappend cxxflags "-shared-libgcc -lgcj $libiconv"
   }
 
+  # Make sure libgcc unwinder is used on 64-bit Solaris 10+/x86 rather than
+  # the libc one.
   if { [istarget "*-*-solaris*"] } {
-    lappend cxxflags "-lsocket"
+    lappend cxxflags "-shared-libgcc"
+  }
+
+  # Tru64 UNIX needs -liconv linked explicitly since gcc does the linking.
+  if { [istarget "alpha*-dec-osf*"] } {
+    lappend cxxflags $libiconv
   }
 
   return $cxxflags

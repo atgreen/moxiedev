@@ -197,9 +197,10 @@ static bool ref_indep_loop_p (struct loop *, mem_ref_p);
 /* Minimum cost of an expensive expression.  */
 #define LIM_EXPENSIVE ((unsigned) PARAM_VALUE (PARAM_LIM_EXPENSIVE))
 
-/* The outermost loop for that execution of the header guarantees that the
+/* The outermost loop for which execution of the header guarantees that the
    block will be executed.  */
 #define ALWAYS_EXECUTED_IN(BB) ((struct loop *) (BB)->aux)
+#define SET_ALWAYS_EXECUTED_IN(BB, VAL) ((BB)->aux = (void *) (VAL))
 
 static struct lim_aux_data *
 init_lim_data (gimple stmt)
@@ -676,31 +677,38 @@ extract_true_false_args_from_phi (basic_block dom, gimple phi,
      by the true edge of the predicate block and the other edge
      dominated by the false edge.  This ensures that the PHI argument
      we are going to take is completely determined by the path we
-     take from the predicate block.  */
+     take from the predicate block.
+     We can only use BB dominance checks below if the destination of
+     the true/false edges are dominated by their edge, thus only
+     have a single predecessor.  */
   extract_true_false_edges_from_block (dom, &true_edge, &false_edge);
   tem = EDGE_PRED (bb, 0);
   if (tem == true_edge
-      || tem->src == true_edge->dest
-      || dominated_by_p (CDI_DOMINATORS,
-			 tem->src, true_edge->dest))
+      || (single_pred_p (true_edge->dest)
+	  && (tem->src == true_edge->dest
+	      || dominated_by_p (CDI_DOMINATORS,
+				 tem->src, true_edge->dest))))
     arg0 = PHI_ARG_DEF (phi, tem->dest_idx);
   else if (tem == false_edge
-	   || tem->src == false_edge->dest
-	   || dominated_by_p (CDI_DOMINATORS,
-			      tem->src, false_edge->dest))
+	   || (single_pred_p (false_edge->dest)
+	       && (tem->src == false_edge->dest
+		   || dominated_by_p (CDI_DOMINATORS,
+				      tem->src, false_edge->dest))))
     arg1 = PHI_ARG_DEF (phi, tem->dest_idx);
   else
     return false;
   tem = EDGE_PRED (bb, 1);
   if (tem == true_edge
-      || tem->src == true_edge->dest
-      || dominated_by_p (CDI_DOMINATORS,
-			 tem->src, true_edge->dest))
+      || (single_pred_p (true_edge->dest)
+	  && (tem->src == true_edge->dest
+	      || dominated_by_p (CDI_DOMINATORS,
+				 tem->src, true_edge->dest))))
     arg0 = PHI_ARG_DEF (phi, tem->dest_idx);
   else if (tem == false_edge
-	   || tem->src == false_edge->dest
-	   || dominated_by_p (CDI_DOMINATORS,
-			      tem->src, false_edge->dest))
+	   || (single_pred_p (false_edge->dest)
+	       && (tem->src == false_edge->dest
+		   || dominated_by_p (CDI_DOMINATORS,
+				      tem->src, false_edge->dest))))
     arg1 = PHI_ARG_DEF (phi, tem->dest_idx);
   else
     return false;
@@ -2318,6 +2326,10 @@ can_sm_ref_p (struct loop *loop, mem_ref_p ref)
       || !for_each_index (&ref->mem, may_move_till, loop))
     return false;
 
+  /* If it can throw fail, we do not properly update EH info.  */
+  if (tree_could_throw_p (ref->mem))
+    return false;
+
   /* If it can trap, it must be always executed in LOOP.
      Readonly memory locations may trap when storing to them, but
      tree_could_trap_p is a predicate for rvalues, so check that
@@ -2369,7 +2381,7 @@ loop_suitable_for_sm (struct loop *loop ATTRIBUTE_UNUSED,
   edge ex;
 
   FOR_EACH_VEC_ELT (edge, exits, i, ex)
-    if (ex->flags & EDGE_ABNORMAL)
+    if (ex->flags & (EDGE_ABNORMAL | EDGE_EH))
       return false;
 
   return true;
@@ -2429,7 +2441,7 @@ fill_always_executed_in (struct loop *loop, sbitmap contains_call)
   edge e;
   struct loop *inn_loop = loop;
 
-  if (!loop->header->aux)
+  if (ALWAYS_EXECUTED_IN (loop->header) == NULL)
     {
       bbs = get_loop_body_in_dom_order (loop);
 
@@ -2471,7 +2483,7 @@ fill_always_executed_in (struct loop *loop, sbitmap contains_call)
 
       while (1)
 	{
-	  last->aux = loop;
+	  SET_ALWAYS_EXECUTED_IN (last, loop);
 	  if (last == loop->header)
 	    break;
 	  last = get_immediate_dominator (CDI_DOMINATORS, last);
@@ -2526,9 +2538,7 @@ tree_ssa_lim_finalize (void)
   htab_t h;
 
   FOR_EACH_BB (bb)
-    {
-      bb->aux = NULL;
-    }
+    SET_ALWAYS_EXECUTED_IN (bb, NULL);
 
   pointer_map_destroy (lim_aux_data_map);
 

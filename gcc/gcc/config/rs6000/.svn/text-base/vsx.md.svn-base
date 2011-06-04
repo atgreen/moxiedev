@@ -1,5 +1,5 @@
 ;; VSX patterns.
-;; Copyright (C) 2009, 2010
+;; Copyright (C) 2009, 2010, 2011
 ;; Free Software Foundation, Inc.
 ;; Contributed by Michael Meissner <meissner@linux.vnet.ibm.com>
 
@@ -183,25 +183,25 @@
 			     (V16QI	"QI")])
 			     
 ;; Constants for creating unspecs
-(define_constants
-  [(UNSPEC_VSX_CONCAT		500)
-   (UNSPEC_VSX_CVDPSXWS		501)
-   (UNSPEC_VSX_CVDPUXWS		502)
-   (UNSPEC_VSX_CVSPDP		503)
-   (UNSPEC_VSX_CVSXWDP		504)
-   (UNSPEC_VSX_CVUXWDP		505)
-   (UNSPEC_VSX_CVSXDSP		506)
-   (UNSPEC_VSX_CVUXDSP		507)
-   (UNSPEC_VSX_CVSPSXDS		508)
-   (UNSPEC_VSX_CVSPUXDS		509)
-   ;; 510-514 deleted
-   (UNSPEC_VSX_TDIV		515)
-   (UNSPEC_VSX_TSQRT		516)
-   (UNSPEC_VSX_XXPERMDI		517)
-   (UNSPEC_VSX_SET		518)
-   (UNSPEC_VSX_ROUND_I		519)
-   (UNSPEC_VSX_ROUND_IC		520)
-   (UNSPEC_VSX_SLDWI		521)])
+(define_c_enum "unspec"
+  [UNSPEC_VSX_CONCAT
+   UNSPEC_VSX_CVDPSXWS
+   UNSPEC_VSX_CVDPUXWS
+   UNSPEC_VSX_CVSPDP
+   UNSPEC_VSX_CVSXWDP
+   UNSPEC_VSX_CVUXWDP
+   UNSPEC_VSX_CVSXDSP
+   UNSPEC_VSX_CVUXDSP
+   UNSPEC_VSX_CVSPSXDS
+   UNSPEC_VSX_CVSPUXDS
+   UNSPEC_VSX_TDIV
+   UNSPEC_VSX_TSQRT
+   UNSPEC_VSX_XXPERMDI
+   UNSPEC_VSX_SET
+   UNSPEC_VSX_ROUND_I
+   UNSPEC_VSX_ROUND_IC
+   UNSPEC_VSX_SLDWI
+  ])
 
 ;; VSX moves
 (define_insn "*vsx_mov<mode>"
@@ -307,6 +307,19 @@
     }
 }
   [(set_attr "type" "vecstore,vecload,vecsimple,*,*,*,vecsimple,*,vecstore,vecload")])
+
+;; Explicit  load/store expanders for the builtin functions
+(define_expand "vsx_load_<mode>"
+  [(set (match_operand:VSX_M 0 "vsx_register_operand" "")
+	(match_operand:VSX_M 1 "memory_operand" ""))]
+  "VECTOR_MEM_VSX_P (<MODE>mode)"
+  "")
+
+(define_expand "vsx_store_<mode>"
+  [(set (match_operand:VEC_M 0 "memory_operand" "")
+	(match_operand:VEC_M 1 "vsx_register_operand" ""))]
+  "VECTOR_MEM_VSX_P (<MODE>mode)"
+  "")
 
 
 ;; VSX scalar and vector floating point arithmetic instructions
@@ -695,33 +708,34 @@
 ;; the fprs because we don't want to add the altivec registers to movdi/movsi.
 ;; For the unsigned tests, there isn't a generic double -> unsigned conversion
 ;; in rs6000.md so don't test VECTOR_UNIT_VSX_P, just test against VSX.
+;; Don't use vsx_register_operand here, use gpc_reg_operand to match rs6000.md.
 (define_insn "vsx_float<VSi><mode>2"
-  [(set (match_operand:VSX_B 0 "vsx_register_operand" "=<VSr>,?wa")
-	(float:VSX_B (match_operand:<VSI> 1 "vsx_register_operand" "<VSr2>,<VSr3>")))]
+  [(set (match_operand:VSX_B 0 "gpc_reg_operand" "=<VSr>,?wa")
+	(float:VSX_B (match_operand:<VSI> 1 "gpc_reg_operand" "<VSr2>,<VSr3>")))]
   "VECTOR_UNIT_VSX_P (<MODE>mode)"
   "x<VSv>cvsx<VSc><VSs> %x0,%x1"
   [(set_attr "type" "<VStype_simple>")
    (set_attr "fp_type" "<VSfptype_simple>")])
 
 (define_insn "vsx_floatuns<VSi><mode>2"
-  [(set (match_operand:VSX_B 0 "vsx_register_operand" "=<VSr>,?wa")
-	(unsigned_float:VSX_B (match_operand:<VSI> 1 "vsx_register_operand" "<VSr2>,<VSr3>")))]
+  [(set (match_operand:VSX_B 0 "gpc_reg_operand" "=<VSr>,?wa")
+	(unsigned_float:VSX_B (match_operand:<VSI> 1 "gpc_reg_operand" "<VSr2>,<VSr3>")))]
   "VECTOR_UNIT_VSX_P (<MODE>mode)"
   "x<VSv>cvux<VSc><VSs> %x0,%x1"
   [(set_attr "type" "<VStype_simple>")
    (set_attr "fp_type" "<VSfptype_simple>")])
 
 (define_insn "vsx_fix_trunc<mode><VSi>2"
-  [(set (match_operand:<VSI> 0 "vsx_register_operand" "=<VSr2>,?<VSr3>")
-	(fix:<VSI> (match_operand:VSX_B 1 "vsx_register_operand" "<VSr>,wa")))]
+  [(set (match_operand:<VSI> 0 "gpc_reg_operand" "=<VSr2>,?<VSr3>")
+	(fix:<VSI> (match_operand:VSX_B 1 "gpc_reg_operand" "<VSr>,wa")))]
   "VECTOR_UNIT_VSX_P (<MODE>mode)"
   "x<VSv>cv<VSs>sx<VSc>s %x0,%x1"
   [(set_attr "type" "<VStype_simple>")
    (set_attr "fp_type" "<VSfptype_simple>")])
 
 (define_insn "vsx_fixuns_trunc<mode><VSi>2"
-  [(set (match_operand:<VSI> 0 "vsx_register_operand" "=<VSr2>,?<VSr3>")
-	(unsigned_fix:<VSI> (match_operand:VSX_B 1 "vsx_register_operand" "<VSr>,wa")))]
+  [(set (match_operand:<VSI> 0 "gpc_reg_operand" "=<VSr2>,?<VSr3>")
+	(unsigned_fix:<VSI> (match_operand:VSX_B 1 "gpc_reg_operand" "<VSr>,wa")))]
   "VECTOR_UNIT_VSX_P (<MODE>mode)"
   "x<VSv>cv<VSs>ux<VSc>s %x0,%x1"
   [(set_attr "type" "<VStype_simple>")
@@ -813,6 +827,15 @@
 		     UNSPEC_VSX_CVSPDP))]
   "VECTOR_UNIT_VSX_P (DFmode)"
   "xscvdpsp %x0,%x1"
+  [(set_attr "type" "fp")])
+
+;; Same as vsx_xscvspdp, but use SF as the type
+(define_insn "vsx_xscvspdp_scalar2"
+  [(set (match_operand:SF 0 "vsx_register_operand" "=f")
+	(unspec:SF [(match_operand:V4SF 1 "vsx_register_operand" "wa")]
+		   UNSPEC_VSX_CVSPDP))]
+  "VECTOR_UNIT_VSX_P (DFmode)"
+  "xscvspdp %x0,%x1"
   [(set_attr "type" "fp")])
 
 ;; Convert from 64-bit to 32-bit types
@@ -1025,6 +1048,43 @@
   [(set_attr "type" "fpload")
    (set_attr "length" "4")])  
 
+;; Extract a SF element from V4SF
+(define_insn_and_split "vsx_extract_v4sf"
+  [(set (match_operand:SF 0 "vsx_register_operand" "=f,f")
+	(vec_select:SF
+	 (match_operand:V4SF 1 "vsx_register_operand" "wa,wa")
+	 (parallel [(match_operand:QI 2 "u5bit_cint_operand" "O,i")])))
+   (clobber (match_scratch:V4SF 3 "=X,0"))]
+  "VECTOR_UNIT_VSX_P (V4SFmode)"
+  "@
+   xscvspdp %x0,%x1
+   #"
+  ""
+  [(const_int 0)]
+  "
+{
+  rtx op0 = operands[0];
+  rtx op1 = operands[1];
+  rtx op2 = operands[2];
+  rtx op3 = operands[3];
+  rtx tmp;
+  HOST_WIDE_INT ele = INTVAL (op2);
+
+  if (ele == 0)
+    tmp = op1;
+  else
+    {
+      if (GET_CODE (op3) == SCRATCH)
+	op3 = gen_reg_rtx (V4SFmode);
+      emit_insn (gen_vsx_xxsldwi_v4sf (op3, op1, op1, op2));
+      tmp = op3;
+    }
+  emit_insn (gen_vsx_xscvspdp_scalar2 (op0, tmp));
+  DONE;
+}"
+  [(set_attr "length" "4,8")
+   (set_attr "type" "fp")])
+
 ;; General double word oriented permute, allow the other vector types for
 ;; optimizing the permute instruction.
 (define_insn "vsx_xxpermdi_<mode>"
@@ -1062,7 +1122,7 @@
 (define_insn "vsx_splat_<mode>"
   [(set (match_operand:VSX_D 0 "vsx_register_operand" "=wd,wd,wd,?wa,?wa,?wa")
 	(vec_duplicate:VSX_D
-	 (match_operand:<VS_scalar> 1 "input_operand" "ws,f,Z,wa,wa,Z")))]
+	 (match_operand:<VS_scalar> 1 "splat_input_operand" "ws,f,Z,wa,wa,Z")))]
   "VECTOR_MEM_VSX_P (<MODE>mode)"
   "@
    xxpermdi %x0,%x1,%x1,0
@@ -1136,3 +1196,153 @@
   "VECTOR_MEM_VSX_P (<MODE>mode)"
   "xxsldwi %x0,%x1,%x2,%3"
   [(set_attr "type" "vecperm")])
+
+
+;; Vector reduction insns and splitters
+
+(define_insn_and_split "*vsx_reduc_<VEC_reduc_name>_v2df"
+  [(set (match_operand:V2DF 0 "vfloat_operand" "=&wd,&?wa,wd,?wa")
+	(VEC_reduc:V2DF
+	 (vec_concat:V2DF
+	  (vec_select:DF
+	   (match_operand:V2DF 1 "vfloat_operand" "wd,wa,wd,wa")
+	   (parallel [(const_int 1)]))
+	  (vec_select:DF
+	   (match_dup 1)
+	   (parallel [(const_int 0)])))
+	 (match_dup 1)))
+   (clobber (match_scratch:V2DF 2 "=0,0,&wd,&wa"))]
+  "VECTOR_UNIT_VSX_P (V2DFmode)"
+  "#"
+  ""
+  [(const_int 0)]
+  "
+{
+  rtx tmp = (GET_CODE (operands[2]) == SCRATCH)
+	     ? gen_reg_rtx (V2DFmode)
+	     : operands[2];
+  emit_insn (gen_vsx_xxsldwi_v2df (tmp, operands[1], operands[1], const2_rtx));
+  emit_insn (gen_<VEC_reduc_rtx>v2df3 (operands[0], tmp, operands[1]));
+  DONE;
+}"
+  [(set_attr "length" "8")
+   (set_attr "type" "veccomplex")])
+
+(define_insn_and_split "*vsx_reduc_<VEC_reduc_name>_v4sf"
+  [(set (match_operand:V4SF 0 "vfloat_operand" "=wf,?wa")
+	(VEC_reduc:V4SF
+	 (unspec:V4SF [(const_int 0)] UNSPEC_REDUC)
+	 (match_operand:V4SF 1 "vfloat_operand" "wf,wa")))
+   (clobber (match_scratch:V4SF 2 "=&wf,&wa"))
+   (clobber (match_scratch:V4SF 3 "=&wf,&wa"))]
+  "VECTOR_UNIT_VSX_P (V4SFmode)"
+  "#"
+  ""
+  [(const_int 0)]
+  "
+{
+  rtx op0 = operands[0];
+  rtx op1 = operands[1];
+  rtx tmp2, tmp3, tmp4;
+
+  if (can_create_pseudo_p ())
+    {
+      tmp2 = gen_reg_rtx (V4SFmode);
+      tmp3 = gen_reg_rtx (V4SFmode);
+      tmp4 = gen_reg_rtx (V4SFmode);
+    }
+  else
+    {
+      tmp2 = operands[2];
+      tmp3 = operands[3];
+      tmp4 = tmp2;
+    }
+
+  emit_insn (gen_vsx_xxsldwi_v4sf (tmp2, op1, op1, const2_rtx));
+  emit_insn (gen_<VEC_reduc_rtx>v4sf3 (tmp3, tmp2, op1));
+  emit_insn (gen_vsx_xxsldwi_v4sf (tmp4, tmp3, tmp3, GEN_INT (3)));
+  emit_insn (gen_<VEC_reduc_rtx>v4sf3 (op0, tmp4, tmp3));
+  DONE;
+}"
+  [(set_attr "length" "16")
+   (set_attr "type" "veccomplex")])
+
+;; Combiner patterns with the vector reduction patterns that knows we can get
+;; to the top element of the V2DF array without doing an extract.
+
+(define_insn_and_split "*vsx_reduc_<VEC_reduc_name>_v2df_scalar"
+  [(set (match_operand:DF 0 "vfloat_operand" "=&ws,&?wa,ws,?wa")
+	(vec_select:DF
+	 (VEC_reduc:V2DF
+	  (vec_concat:V2DF
+	   (vec_select:DF
+	    (match_operand:V2DF 1 "vfloat_operand" "wd,wa,wd,wa")
+	    (parallel [(const_int 1)]))
+	   (vec_select:DF
+	    (match_dup 1)
+	    (parallel [(const_int 0)])))
+	  (match_dup 1))
+	 (parallel [(const_int 1)])))
+   (clobber (match_scratch:DF 2 "=0,0,&wd,&wa"))]
+  "VECTOR_UNIT_VSX_P (V2DFmode)"
+  "#"
+  ""
+  [(const_int 0)]
+  "
+{
+  rtx hi = gen_highpart (DFmode, operands[1]);
+  rtx lo = (GET_CODE (operands[2]) == SCRATCH)
+	    ? gen_reg_rtx (DFmode)
+	    : operands[2];
+
+  emit_insn (gen_vsx_extract_v2df (lo, operands[1], const1_rtx));
+  emit_insn (gen_<VEC_reduc_rtx>df3 (operands[0], hi, lo));
+  DONE;
+}"
+  [(set_attr "length" "8")
+   (set_attr "type" "veccomplex")])
+
+(define_insn_and_split "*vsx_reduc_<VEC_reduc_name>_v4sf_scalar"
+  [(set (match_operand:SF 0 "vfloat_operand" "=f,?f")
+	(vec_select:SF
+	 (VEC_reduc:V4SF
+	  (unspec:V4SF [(const_int 0)] UNSPEC_REDUC)
+	  (match_operand:V4SF 1 "vfloat_operand" "wf,wa"))
+	 (parallel [(const_int 3)])))
+   (clobber (match_scratch:V4SF 2 "=&wf,&wa"))
+   (clobber (match_scratch:V4SF 3 "=&wf,&wa"))
+   (clobber (match_scratch:V4SF 4 "=0,0"))]
+  "VECTOR_UNIT_VSX_P (V4SFmode)"
+  "#"
+  ""
+  [(const_int 0)]
+  "
+{
+  rtx op0 = operands[0];
+  rtx op1 = operands[1];
+  rtx tmp2, tmp3, tmp4, tmp5;
+
+  if (can_create_pseudo_p ())
+    {
+      tmp2 = gen_reg_rtx (V4SFmode);
+      tmp3 = gen_reg_rtx (V4SFmode);
+      tmp4 = gen_reg_rtx (V4SFmode);
+      tmp5 = gen_reg_rtx (V4SFmode);
+    }
+  else
+    {
+      tmp2 = operands[2];
+      tmp3 = operands[3];
+      tmp4 = tmp2;
+      tmp5 = operands[4];
+    }
+
+  emit_insn (gen_vsx_xxsldwi_v4sf (tmp2, op1, op1, const2_rtx));
+  emit_insn (gen_<VEC_reduc_rtx>v4sf3 (tmp3, tmp2, op1));
+  emit_insn (gen_vsx_xxsldwi_v4sf (tmp4, tmp3, tmp3, GEN_INT (3)));
+  emit_insn (gen_<VEC_reduc_rtx>v4sf3 (tmp5, tmp4, tmp3));
+  emit_insn (gen_vsx_xscvspdp_scalar2 (op0, tmp5));
+  DONE;
+}"
+  [(set_attr "length" "20")
+   (set_attr "type" "veccomplex")])

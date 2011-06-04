@@ -1,5 +1,5 @@
 // Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2004, 2005,
-// 2006, 2007, 2008, 2009
+// 2006, 2007, 2008, 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -26,7 +26,9 @@
 #include <cstdlib>
 #include <cstring>
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   // Definitions for static const data members of ctype_base.
   const ctype_base::mask ctype_base::space;
@@ -47,11 +49,6 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 #ifdef _GLIBCXX_USE_WCHAR_T  
   locale::id ctype<wchar_t>::id;
 #endif
-
-  // XXX At some point, just rename this file to ctype_configure_char.cc
-  // and compile it as a separate file instead of including it here.
-  // Platform-specific initialization code for ctype tables.
-#include <bits/ctype_noninline.h>
 
   const size_t ctype<char>::table_size;
 
@@ -133,4 +130,5 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
 #endif
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace

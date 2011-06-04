@@ -1,7 +1,7 @@
 // Streambuf iterators
 
 // Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-// 2006, 2007, 2009, 2010
+// 2006, 2007, 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -24,9 +24,9 @@
 // see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 // <http://www.gnu.org/licenses/>.
 
-/** @file streambuf_iterator.h
+/** @file bits/streambuf_iterator.h
  *  This is an internal header file, included by other library headers.
- *  You should not attempt to use it directly.
+ *  Do not attempt to use it directly. @headername{iterator}
  */
 
 #ifndef _STREAMBUF_ITERATOR_H
@@ -37,7 +37,9 @@
 #include <streambuf>
 #include <debug/debug.h>
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
      
   /**
    * @addtogroup iterators
@@ -93,15 +95,21 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
     public:
       ///  Construct end of input stream iterator.
-      _GLIBCXX_CONSTEXPR istreambuf_iterator() throw()
+      _GLIBCXX_CONSTEXPR istreambuf_iterator() _GLIBCXX_USE_NOEXCEPT
       : _M_sbuf(0), _M_c(traits_type::eof()) { }
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+      istreambuf_iterator(const istreambuf_iterator&) noexcept = default;
+
+      ~istreambuf_iterator() = default;
+#endif
+
       ///  Construct start of input stream iterator.
-      istreambuf_iterator(istream_type& __s) throw()
+      istreambuf_iterator(istream_type& __s) _GLIBCXX_USE_NOEXCEPT
       : _M_sbuf(__s.rdbuf()), _M_c(traits_type::eof()) { }
 
       ///  Construct start of streambuf iterator.
-      istreambuf_iterator(streambuf_type* __s) throw()
+      istreambuf_iterator(streambuf_type* __s) _GLIBCXX_USE_NOEXCEPT
       : _M_sbuf(__s), _M_c(traits_type::eof()) { }
 
       ///  Return the current character pointed to by iterator.  This returns
@@ -226,11 +234,11 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
     public:
       ///  Construct output iterator from ostream.
-      ostreambuf_iterator(ostream_type& __s) throw ()
+      ostreambuf_iterator(ostream_type& __s) _GLIBCXX_USE_NOEXCEPT
       : _M_sbuf(__s.rdbuf()), _M_failed(!_M_sbuf) { }
 
       ///  Construct output iterator from streambuf.
-      ostreambuf_iterator(streambuf_type* __s) throw ()
+      ostreambuf_iterator(streambuf_type* __s) _GLIBCXX_USE_NOEXCEPT
       : _M_sbuf(__s), _M_failed(!_M_sbuf) { }
 
       ///  Write character to streambuf.  Calls streambuf.sputc().
@@ -260,7 +268,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
       /// Return true if previous operator=() failed.
       bool
-      failed() const throw()
+      failed() const _GLIBCXX_USE_NOEXCEPT
       { return _M_failed; }
 
       ostreambuf_iterator&
@@ -337,7 +345,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	      if (__n > 1)
 		{
 		  traits_type::copy(__result, __sb->gptr(), __n);
-		  __sb->gbump(__n);
+		  __sb->__safe_gbump(__n);
 		  __result += __n;
 		  __c = __sb->underflow();
 		}
@@ -377,7 +385,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 							__n, __val);
 		  if (__p)
 		    __n = __p - __sb->gptr();
-		  __sb->gbump(__n);
+		  __sb->__safe_gbump(__n);
 		  __c = __sb->sgetc();
 		}
 	      else
@@ -394,6 +402,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
 // @} group iterators
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #endif

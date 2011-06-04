@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler,
    for IBM RS/6000 POWER running AIX V6.1.
-   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by David Edelsohn (edelsohn@gnu.org).
 
@@ -39,7 +39,7 @@ do {									\
   if (TARGET_SOFT_FLOAT && TARGET_LONG_DOUBLE_128)			\
     {									\
       rs6000_long_double_type_size = 64;				\
-      if (rs6000_explicit_options.long_double)				\
+      if (global_options_set.x_rs6000_long_double_type_size)		\
 	warning (0, "soft-float and long-double-128 are incompatible");	\
     }									\
   if (TARGET_POWERPC64 && ! TARGET_64BIT)				\
@@ -116,9 +116,9 @@ do {									\
 #define TARGET_DEFAULT (MASK_POWERPC | MASK_NEW_MNEMONICS)
 
 #undef  PROCESSOR_DEFAULT
-#define PROCESSOR_DEFAULT PROCESSOR_POWER5
+#define PROCESSOR_DEFAULT PROCESSOR_POWER7
 #undef  PROCESSOR_DEFAULT64
-#define PROCESSOR_DEFAULT64 PROCESSOR_POWER5
+#define PROCESSOR_DEFAULT64 PROCESSOR_POWER7
 
 #undef  TARGET_POWER
 #define TARGET_POWER 0
@@ -196,9 +196,5 @@ extern long long int    atoll(const char *);
    but does not have crtbegin/end.  */
 
 #define TARGET_USE_JCR_SECTION 0
-
-/* Default to 128 bit long double.  */
-
-#define RS6000_DEFAULT_LONG_DOUBLE_SIZE 128
 
 #define TARGET_AIX_VERSION 61

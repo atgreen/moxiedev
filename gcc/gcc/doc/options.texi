@@ -1,4 +1,4 @@
-@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 @c Free Software Foundation, Inc.
 @c This is part of the GCC manual.
 @c For copying conditions, see the file gcc.texi.
@@ -71,11 +71,69 @@ name of the include file.
 
 @item
 A variable record to record any additional files that the
-@file{options.c} file should include.  This is useful to provide
+@file{options.c} or @file{options-save.c} file should include.  This
+is useful to provide
 inline functions needed for target variables and/or @code{#ifdef}
 sequences to properly set up the initialization.  These records have
 two fields: the string @samp{SourceInclude} and the name of the
 include file.
+
+@item
+An enumeration record to define a set of strings that may be used as
+arguments to an option or options.  These records have three fields:
+the string @samp{Enum}, a space-separated list of properties and help
+text used to describe the set of strings in @option{--help} output.
+Properties use the same format as option properties; the following are
+valid:
+@table @code
+@item Name(@var{name})
+This property is required; @var{name} must be a name (suitable for use
+in C identifiers) used to identify the set of strings in @code{Enum}
+option properties.
+
+@item Type(@var{type})
+This property is required; @var{type} is the C type for variables set
+by options using this enumeration together with @code{Var}.
+
+@item UnknownError(@var{message})
+The message @var{message} will be used as an error message if the
+argument is invalid; for enumerations without @code{UnknownError}, a
+generic error message is used.  @var{message} should contain a single
+@samp{%qs} format, which will be used to format the invalid argument.
+@end table
+
+@item
+An enumeration value record to define one of the strings in a set
+given in an @samp{Enum} record.  These records have two fields: the
+string @samp{EnumValue} and a space-separated list of properties.
+Properties use the same format as option properties; the following are
+valid:
+@table @code
+@item Enum(@var{name})
+This property is required; @var{name} says which @samp{Enum} record
+this @samp{EnumValue} record corresponds to.
+
+@item String(@var{string})
+This property is required; @var{string} is the string option argument
+being described by this record.
+
+@item Value(@var{value})
+This property is required; it says what value (representable as
+@code{int}) should be used for the given string.
+
+@item Canonical
+This property is optional.  If present, it says the present string is
+the canonical one among all those with the given value.  Other strings
+yielding that value will be mapped to this one so specs do not need to
+handle them.
+
+@item DriverOnly
+This property is optional.  If present, the present string will only
+be accepted by the driver.  This is used for cases such as
+@option{-march=native} that are processed by the driver so that
+@samp{gcc -v} shows how the options chosen depended on the system on
+which the compiler was run.
+@end table
 
 @item
 An option definition record.  These records have the following fields:
@@ -165,6 +223,13 @@ the option name with the leading ``-'' removed.  This chain action will
 propagate through the @code{Negative} property of the option to be
 turned off.
 
+As a consequence, if you have a group of mutually-exclusive
+options, their @code{Negative} properties should form a circular chain.
+For example, if options @option{-@var{a}}, @option{-@var{b}} and
+@option{-@var{c}} are mutually exclusive, their respective @code{Negative}
+properties should be @samp{Negative(@var{b})}, @samp{Negative(@var{c})}
+and @samp{Negative(@var{a})}.
+
 @item Joined
 @itemx Separate
 The option takes a mandatory argument.  @code{Joined} indicates
@@ -200,6 +265,11 @@ option handler.  @code{UInteger} should also be used on options like
 @code{-falign-loops}=@var{n} are supported to make sure the saved
 options are given a full integer.
 
+@item ToLower
+The option's argument should be converted to lowercase as part of
+putting it in canonical form, and before comparing with the strings
+indicated by any @code{Enum} property.
+
 @item NoDriverArg
 For an option marked @code{Separate}, the option only takes an
 argument in the compiler proper, not in the driver.  This is for
@@ -225,6 +295,13 @@ option is used and 0 when the ``no-'' form is used.
 @item
 If the option takes an argument and has the @code{UInteger} property,
 @var{var} is an integer variable that stores the value of the argument.
+
+@item
+If the option takes an argument and has the @code{Enum} property,
+@var{var} is a variable (type given in the @code{Type} property of the
+@samp{Enum} record whose @code{Name} property has the same argument as
+the @code{Enum} property of this option) that stores the value of the
+argument.
 
 @item
 If the option has the @code{Defer} property, @var{var} is a pointer to
@@ -287,6 +364,12 @@ The main purpose of this property is to support synonymous options.
 The first option should use @samp{Mask(@var{name})} and the others
 should use @samp{Mask(@var{name}) MaskExists}.
 
+@item Enum(@var{name})
+The option's argument is a string from the set of strings associated
+with the corresponding @samp{Enum} record.  The string is checked and
+converted to the integer specified in the corresponding
+@samp{EnumValue} record before being passed to option handlers.
+
 @item Defer
 The option should be stored in a vector, specified with @code{Var},
 for later processing.
@@ -294,7 +377,8 @@ for later processing.
 @item Alias(@var{opt})
 @itemx Alias(@var{opt}, @var{arg})
 @itemx Alias(@var{opt}, @var{posarg}, @var{negarg})
-The option is an alias for @option{-@var{opt}}.  In the first form,
+The option is an alias for @option{-@var{opt}} (or the negative form
+of that option, depending on @code{NegativeAlias}).  In the first form,
 any argument passed to the alias is considered to be passed to
 @option{-@var{opt}}, and @option{-@var{opt}} is considered to be
 negated if the alias is used in negated form.  In the second form, the
@@ -316,6 +400,13 @@ When an @code{Alias} definition is used for an option, driver specs do
 not need to handle it and no @samp{OPT_} enumeration value is defined
 for it; only the canonical form of the option will be seen in those
 places.
+
+@item NegativeAlias
+For an option marked with @code{Alias(@var{opt})}, the option is
+considered to be an alias for the positive form of @option{-@var{opt}}
+if negated and for the negative form of @option{-@var{opt}} if not
+negated.  @code{NegativeAlias} may not be used with the forms of
+@code{Alias} taking more than one argument.
 
 @item Ignore
 This option is ignored apart from printing any warning specified using
@@ -340,6 +431,17 @@ is marked @code{Warn}, the target of the alias must not also be marked
 @item Report
 The state of the option should be printed by @option{-fverbose-asm}.
 
+@item Warning
+This is a warning option and should be shown as such in
+@option{--help} output.  This flag does not currently affect anything
+other than @option{--help}.
+
+@item Optimization
+This is an optimization option.  It should be shown as such in
+@option{--help} output, and any associated variable named using
+@code{Var} should be saved and restored when the optimization level is
+changed with @code{optimize} attributes.
+
 @item Undocumented
 The option is deliberately missing documentation and should not
 be included in the @option{--help} output.
@@ -355,4 +457,17 @@ the @option{--help} output.
 Build the @code{cl_target_option} structure to hold a copy of the
 option, add the functions @code{cl_target_option_save} and
 @code{cl_target_option_restore} to save and restore the options.
+
+@item SetByCombined
+The option may also be set by a combined option such as
+@option{-ffast-math}.  This causes the @code{gcc_options} struct to
+have a field @code{frontend_set_@var{name}}, where @code{@var{name}}
+is the name of the field holding the value of this option (without the
+leading @code{x_}).  This gives the front end a way to indicate that
+the value has been set explicitly and should not be changed by the
+combined option.  For example, some front ends use this to prevent
+@option{-ffast-math} and @option{-fno-fast-math} from changing the
+value of @option{-fmath-errno} for languages that do not use
+@code{errno}.
+
 @end table

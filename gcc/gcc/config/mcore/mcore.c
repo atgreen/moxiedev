@@ -25,7 +25,6 @@
 #include "rtl.h"
 #include "tree.h"
 #include "tm_p.h"
-#include "assert.h"
 #include "mcore.h"
 #include "regs.h"
 #include "hard-reg-set.h"
@@ -41,7 +40,6 @@
 #include "function.h"
 #include "ggc.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "target.h"
 #include "target-def.h"
 #include "df.h"
@@ -61,19 +59,6 @@ const enum reg_class regno_reg_class[FIRST_PSEUDO_REGISTER] =
   LRW_REGS,	LRW_REGS,     LRW_REGS,	    LRW_REGS,
   LRW_REGS,	LRW_REGS,     LRW_REGS,	    GENERAL_REGS,
   GENERAL_REGS, C_REGS,       NO_REGS,      NO_REGS,
-};
-
-/* Provide reg_class from a letter such as appears in the machine
-   description.  */
-const enum reg_class reg_class_from_letter[] =
-{
-  /* a */ LRW_REGS, /* b */ ONLYR1_REGS, /* c */ C_REGS,  /* d */ NO_REGS,
-  /* e */ NO_REGS, /* f */ NO_REGS, /* g */ NO_REGS, /* h */ NO_REGS,
-  /* i */ NO_REGS, /* j */ NO_REGS, /* k */ NO_REGS, /* l */ NO_REGS,
-  /* m */ NO_REGS, /* n */ NO_REGS, /* o */ NO_REGS, /* p */ NO_REGS,
-  /* q */ NO_REGS, /* r */ GENERAL_REGS, /* s */ NO_REGS, /* t */ NO_REGS,
-  /* u */ NO_REGS, /* v */ NO_REGS, /* w */ NO_REGS, /* x */ ALL_REGS,
-  /* y */ NO_REGS, /* z */ NO_REGS
 };
 
 struct mcore_frame
@@ -153,16 +138,19 @@ static unsigned int mcore_function_arg_boundary (enum machine_mode,
 static void       mcore_asm_trampoline_template (FILE *);
 static void       mcore_trampoline_init		(rtx, tree, rtx);
 static void       mcore_option_override		(void);
+static bool       mcore_legitimate_constant_p   (enum machine_mode, rtx);
 
 /* MCore specific attributes.  */
 
 static const struct attribute_spec mcore_attribute_table[] =
 {
-  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
-  { "dllexport", 0, 0, true,  false, false, NULL },
-  { "dllimport", 0, 0, true,  false, false, NULL },
-  { "naked",     0, 0, true,  false, false, mcore_handle_naked_attribute },
-  { NULL,        0, 0, false, false, false, NULL }
+  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler,
+       affects_type_identity } */
+  { "dllexport", 0, 0, true,  false, false, NULL, false },
+  { "dllimport", 0, 0, true,  false, false, NULL, false },
+  { "naked",     0, 0, true,  false, false, mcore_handle_naked_attribute,
+    false },
+  { NULL,        0, 0, false, false, false, NULL, false }
 };
 
 /* What options are we going to default to specific settings when
@@ -259,6 +247,9 @@ static const struct default_options mcore_option_optimization_table[] =
 
 #undef TARGET_EXCEPT_UNWIND_INFO
 #define TARGET_EXCEPT_UNWIND_INFO sjlj_except_unwind_info
+
+#undef TARGET_LEGITIMATE_CONSTANT_P
+#define TARGET_LEGITIMATE_CONSTANT_P mcore_legitimate_constant_p
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 
@@ -1827,7 +1818,7 @@ layout_mcore_frame (struct mcore_frame * infp)
       infp->local_growth = growths;
       all -= step;
 
-      assert (all == 0);
+      gcc_assert (all == 0);
 
       /* Finish off if we need to do so.  */
       if (outbounds)
@@ -1905,8 +1896,8 @@ layout_mcore_frame (struct mcore_frame * infp)
 
   /* Anything else that we've forgotten?, plus a few consistency checks.  */
  finish:
-  assert (infp->reg_offset >= 0);
-  assert (growths <= MAX_STACK_GROWS);
+  gcc_assert (infp->reg_offset >= 0);
+  gcc_assert (growths <= MAX_STACK_GROWS);
   
   for (i = 0; i < growths; i++)
     gcc_assert (!(infp->growth[i] % STACK_BYTES));
@@ -1993,8 +1984,7 @@ mcore_expand_prolog (void)
       
       gcc_assert (GET_CODE (x) == SYMBOL_REF);
       
-      if (mcore_current_function_name)
-	free (mcore_current_function_name);
+      free (mcore_current_function_name);
       
       mcore_current_function_name = xstrdup (XSTR (x, 0));
       
@@ -2773,7 +2763,7 @@ handle_structs_in_regs (enum machine_mode mode, const_tree type, int reg)
         }
 
       /* We assume here that NPARM_REGS == 6.  The assert checks this.  */
-      assert (ARRAY_SIZE (arg_regs) == 6);
+      gcc_assert (ARRAY_SIZE (arg_regs) == 6);
       rtvec = gen_rtvec (nregs, arg_regs[0], arg_regs[1], arg_regs[2],
 			  arg_regs[3], arg_regs[4], arg_regs[5]);
       
@@ -3218,4 +3208,14 @@ mcore_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
   emit_move_insn (mem, chain_value);
   mem = adjust_address (m_tramp, SImode, 12);
   emit_move_insn (mem, fnaddr);
+}
+
+/* Implement TARGET_LEGITIMATE_CONSTANT_P
+
+   On the MCore, allow anything but a double.  */
+
+static bool
+mcore_legitimate_constant_p (enum machine_mode mode ATTRIBUTE_UNUSED, rtx x)
+{
+  return GET_CODE (x) != CONST_DOUBLE;
 }

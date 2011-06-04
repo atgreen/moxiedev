@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/24_iterators
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-11-02T02:35:28.031851Z
-166171
-jason
+2010-12-08T01:23:41.962255Z
+167580
+paolo
 
 
 
@@ -25,6 +25,9 @@ jason
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+move_iterator
+dir
 
 ostreambuf_iterator
 dir
@@ -62,6 +65,9 @@ paolo
 
 
 957
+
+normal_iterator
+dir
 
 operations
 dir

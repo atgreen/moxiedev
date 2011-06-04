@@ -1,6 +1,6 @@
 /* Control flow graph analysis code for GNU compiler.
    Copyright (C) 1987, 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008
+   1999, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -31,7 +31,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "insn-config.h"
 #include "recog.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "tm_p.h"
 #include "vec.h"
 #include "vecprim.h"
@@ -651,7 +650,7 @@ connect_infinite_loops_to_exit (void)
 }
 
 /* Compute reverse top sort order.  This is computing a post order
-   numbering of the graph.  If INCLUDE_ENTRY_EXIT is true, then then
+   numbering of the graph.  If INCLUDE_ENTRY_EXIT is true, then
    ENTRY_BLOCK and EXIT_BLOCK are included.  If DELETE_UNREACHABLE is
    true, unreachable blocks are deleted.  */
 

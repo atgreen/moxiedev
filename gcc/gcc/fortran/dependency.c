@@ -177,6 +177,49 @@ gfc_are_identical_variables (gfc_expr *e1, gfc_expr *e2)
   return true;
 }
 
+/* Compare two functions for equality.  Returns 0 if e1==e2, -2 otherwise.  If
+   impure_ok is false, only return 0 for pure functions.  */
+
+int
+gfc_dep_compare_functions (gfc_expr *e1, gfc_expr *e2, bool impure_ok)
+{
+
+  gfc_actual_arglist *args1;
+  gfc_actual_arglist *args2;
+  
+  if (e1->expr_type != EXPR_FUNCTION || e2->expr_type != EXPR_FUNCTION)
+    return -2;
+
+  if ((e1->value.function.esym && e2->value.function.esym
+       && e1->value.function.esym == e2->value.function.esym
+       && (e1->value.function.esym->result->attr.pure || impure_ok))
+       || (e1->value.function.isym && e2->value.function.isym
+	   && e1->value.function.isym == e2->value.function.isym
+	   && (e1->value.function.isym->pure || impure_ok)))
+    {
+      args1 = e1->value.function.actual;
+      args2 = e2->value.function.actual;
+
+      /* Compare the argument lists for equality.  */
+      while (args1 && args2)
+	{
+	  /*  Bitwise xor, since C has no non-bitwise xor operator.  */
+	  if ((args1->expr == NULL) ^ (args2->expr == NULL))
+	    return -2;
+	  
+	  if (args1->expr != NULL && args2->expr != NULL
+	      && gfc_dep_compare_expr (args1->expr, args2->expr) != 0)
+	    return -2;
+	  
+	  args1 = args1->next;
+	  args2 = args2->next;
+	}
+      return (args1 || args2) ? -2 : 0;
+    }
+      else
+	return -2;      
+}
+
 /* Compare two values.  Returns 0 if e1 == e2, -1 if e1 < e2, +1 if e1 > e2,
    and -2 if the relationship could not be determined.  */
 
@@ -399,36 +442,7 @@ gfc_dep_compare_expr (gfc_expr *e1, gfc_expr *e2)
       return -2;
 
     case EXPR_FUNCTION:
-
-      /* PURE functions can be compared for argument equality.  */
-      if ((e1->value.function.esym && e2->value.function.esym
-	   && e1->value.function.esym == e2->value.function.esym
-	   && e1->value.function.esym->result->attr.pure)
-	  || (e1->value.function.isym && e2->value.function.isym
-	      && e1->value.function.isym == e2->value.function.isym
-	      && e1->value.function.isym->pure))
-	{
-	  args1 = e1->value.function.actual;
-	  args2 = e2->value.function.actual;
-
-	  /* Compare the argument lists for equality.  */
-	  while (args1 && args2)
-	    {
-	      /*  Bitwise xor, since C has no non-bitwise xor operator.  */
-	      if ((args1->expr == NULL) ^ (args2->expr == NULL))
-		return -2;
-
-	      if (args1->expr != NULL && args2->expr != NULL
-		  && gfc_dep_compare_expr (args1->expr, args2->expr) != 0)
-		return -2;
-
-	      args1 = args1->next;
-	      args2 = args2->next;
-	    }
-	  return (args1 || args2) ? -2 : 0;
-	}
-      else
-	return -2;
+      return gfc_dep_compare_functions (e1, e2, false);
       break;
 
     default:
@@ -1071,8 +1085,10 @@ check_section_vs_section (gfc_array_ref *l_ar, gfc_array_ref *r_ar, int n)
   gfc_expr *r_stride;
   gfc_expr *r_lower;
   gfc_expr *r_upper;
+  gfc_expr *one_expr;
   int r_dir;
-  bool identical_strides;
+  int stride_comparison;
+  int start_comparison;
 
   /* If they are the same range, return without more ado.  */
   if (gfc_is_same_range (l_ar, r_ar, n, 0))
@@ -1126,22 +1142,24 @@ check_section_vs_section (gfc_array_ref *l_ar, gfc_array_ref *r_ar, int n)
   if (l_dir == 0 || r_dir == 0)
     return GFC_DEP_OVERLAP;
 
-  /* Determine if the strides are equal.  */
+  /* Determine the relationship between the strides.  Set stride_comparison to
+     -2 if the dependency cannot be determined
+     -1 if l_stride < r_stride
+      0 if l_stride == r_stride
+      1 if l_stride > r_stride
+     as determined by gfc_dep_compare_expr.  */
 
-  if (l_stride)
-    {
-      if (r_stride)
-	identical_strides = gfc_dep_compare_expr (l_stride, r_stride) == 0;
-      else
-	identical_strides = gfc_expr_is_one (l_stride, 0) == 1;
-    }
+  one_expr = gfc_get_int_expr (gfc_index_integer_kind, NULL, 1);
+
+  stride_comparison = gfc_dep_compare_expr (l_stride ? l_stride : one_expr,
+					    r_stride ? r_stride : one_expr);
+
+  if (l_start && r_start)
+    start_comparison = gfc_dep_compare_expr (l_start, r_start);
   else
-    {
-      if (r_stride)
-	identical_strides = gfc_expr_is_one (r_stride, 0) == 1;
-      else
-	identical_strides = true;
-    }
+    start_comparison = -2;
+      
+  free (one_expr);
 
   /* Determine LHS upper and lower bounds.  */
   if (l_dir == 1)
@@ -1237,61 +1255,60 @@ check_section_vs_section (gfc_array_ref *l_ar, gfc_array_ref *r_ar, int n)
 
 #undef IS_CONSTANT_INTEGER
 
-  /* Check for forward dependencies x:y vs. x+1:z.  */
-  if (l_dir == 1 && r_dir == 1
-      && l_start && r_start && gfc_dep_compare_expr (l_start, r_start) == -1
-      && l_end && r_end && gfc_dep_compare_expr (l_end, r_end) == -1)
+  /* Check for forward dependencies x:y vs. x+1:z and x:y:z vs. x:y:z+1. */
+
+  if (l_dir == 1 && r_dir == 1 &&
+      (start_comparison == 0 || start_comparison == -1)
+      && (stride_comparison == 0 || stride_comparison == -1))
+	  return GFC_DEP_FORWARD;
+
+  /* Check for forward dependencies x:y:-1 vs. x-1:z:-1 and
+     x:y:-1 vs. x:y:-2.  */
+  if (l_dir == -1 && r_dir == -1 && 
+      (start_comparison == 0 || start_comparison == 1)
+      && (stride_comparison == 0 || stride_comparison == 1))
+    return GFC_DEP_FORWARD;
+
+  if (stride_comparison == 0 || stride_comparison == -1)
     {
-      if (identical_strides)
-	return GFC_DEP_FORWARD;
-    }
-
-  /* Check for forward dependencies x:y:-1 vs. x-1:z:-1.  */
-  if (l_dir == -1 && r_dir == -1
-      && l_start && r_start && gfc_dep_compare_expr (l_start, r_start) == 1
-      && l_end && r_end && gfc_dep_compare_expr (l_end, r_end) == 1)
-    {
-      if (identical_strides)
-	return GFC_DEP_FORWARD;
-    }
-
-
-  if (identical_strides)
-    {
-
       if (l_start && IS_ARRAY_EXPLICIT (l_ar->as))
 	{
 
-	  /* Check for a(low:y:s) vs. a(z:a:s) where a has a lower bound
+	  /* Check for a(low:y:s) vs. a(z:x:s) or
+	     a(low:y:s) vs. a(z:x:s+1) where a has a lower bound
 	     of low, which is always at least a forward dependence.  */
 
 	  if (r_dir == 1
 	      && gfc_dep_compare_expr (l_start, l_ar->as->lower[n]) == 0)
 	    return GFC_DEP_FORWARD;
+	}
+    }
 
-	  /* Check for a(high:y:-s) vs. a(z:a:-s) where a has a higher bound
+  if (stride_comparison == 0 || stride_comparison == 1)
+    {
+      if (l_start && IS_ARRAY_EXPLICIT (l_ar->as))
+	{
+      
+	  /* Check for a(high:y:-s) vs. a(z:x:-s) or
+	     a(high:y:-s vs. a(z:x:-s-1) where a has a higher bound
 	     of high, which is always at least a forward dependence.  */
 
 	  if (r_dir == -1
 	      && gfc_dep_compare_expr (l_start, l_ar->as->upper[n]) == 0)
 	    return GFC_DEP_FORWARD;
 	}
+    }
 
+
+  if (stride_comparison == 0)
+    {
       /* From here, check for backwards dependencies.  */
-      /* x:y vs. x+1:z.  */
-      if (l_dir == 1 && r_dir == 1
-	    && l_start && r_start
-	    && gfc_dep_compare_expr (l_start, r_start) == 1
-	    && l_end && r_end
-	    && gfc_dep_compare_expr (l_end, r_end) == 1)
+      /* x+1:y vs. x:z.  */
+      if (l_dir == 1 && r_dir == 1  && start_comparison == 1)
 	return GFC_DEP_BACKWARD;
 
-      /* x:y:-1 vs. x-1:z:-1.  */
-      if (l_dir == -1 && r_dir == -1
-	    && l_start && r_start
-	    && gfc_dep_compare_expr (l_start, r_start) == -1
-	    && l_end && r_end
-	    && gfc_dep_compare_expr (l_end, r_end) == -1)
+      /* x-1:y:-1 vs. x:z:-1.  */
+      if (l_dir == -1 && r_dir == -1 && start_comparison == -1)
 	return GFC_DEP_BACKWARD;
     }
 
@@ -1790,7 +1807,7 @@ gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref, gfc_reverse *reverse)
 
 	      /* Now deal with the loop reversal logic:  This only works on
 		 ranges and is activated by setting
-				reverse[n] == GFC_CAN_REVERSE
+				reverse[n] == GFC_ENABLE_REVERSE
 		 The ability to reverse or not is set by previous conditions
 		 in this dimension.  If reversal is not activated, the
 		 value GFC_DEP_BACKWARD is reset to GFC_DEP_OVERLAP.  */
@@ -1798,25 +1815,34 @@ gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref, gfc_reverse *reverse)
 		    && lref->u.ar.dimen_type[n] == DIMEN_RANGE)
 		{
 		  /* Set reverse if backward dependence and not inhibited.  */
-		  if (reverse && reverse[n] != GFC_CANNOT_REVERSE)
+		  if (reverse && reverse[n] == GFC_ENABLE_REVERSE)
 		    reverse[n] = (this_dep == GFC_DEP_BACKWARD) ?
 			         GFC_REVERSE_SET : reverse[n];
 
-		  /* Inhibit loop reversal if dependence not compatible.  */
-		  if (reverse && reverse[n] != GFC_REVERSE_NOT_SET
-		        && this_dep != GFC_DEP_EQUAL
-		        && this_dep != GFC_DEP_BACKWARD
-		        && this_dep != GFC_DEP_NODEP)
+		  /* Set forward if forward dependence and not inhibited.  */
+		  if (reverse && reverse[n] == GFC_ENABLE_REVERSE)
+		    reverse[n] = (this_dep == GFC_DEP_FORWARD) ?
+			         GFC_FORWARD_SET : reverse[n];
+
+		  /* Flag up overlap if dependence not compatible with
+		     the overall state of the expression.  */
+		  if (reverse && reverse[n] == GFC_REVERSE_SET
+		        && this_dep == GFC_DEP_FORWARD)
 		    {
-	              reverse[n] = GFC_CANNOT_REVERSE;
-		      if (this_dep != GFC_DEP_FORWARD)
-			this_dep = GFC_DEP_OVERLAP;
+	              reverse[n] = GFC_INHIBIT_REVERSE;
+		      this_dep = GFC_DEP_OVERLAP;
+		    }
+		  else if (reverse && reverse[n] == GFC_FORWARD_SET
+		        && this_dep == GFC_DEP_BACKWARD)
+		    {
+	              reverse[n] = GFC_INHIBIT_REVERSE;
+		      this_dep = GFC_DEP_OVERLAP;
 		    }
 
 		  /* If no intention of reversing or reversing is explicitly
 		     inhibited, convert backward dependence to overlap.  */
-		  if (this_dep == GFC_DEP_BACKWARD
-		      && (reverse == NULL || reverse[n] == GFC_CANNOT_REVERSE))
+		  if ((reverse == NULL && this_dep == GFC_DEP_BACKWARD)
+		      || (reverse != NULL && reverse[n] == GFC_INHIBIT_REVERSE))
 		    this_dep = GFC_DEP_OVERLAP;
 		}
 

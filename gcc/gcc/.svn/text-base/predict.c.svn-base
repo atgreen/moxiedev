@@ -1,5 +1,5 @@
 /* Branch prediction routines for the GNU compiler.
-   Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
+   Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -44,7 +44,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "function.h"
 #include "except.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "recog.h"
 #include "expr.h"
 #include "predict.h"
@@ -78,7 +77,7 @@ static sreal real_zero, real_one, real_almost_one, real_br_prob_base,
 static void combine_predictions_for_insn (rtx, basic_block);
 static void dump_prediction (FILE *, enum br_predictor, int, basic_block, int);
 static void predict_paths_leading_to (basic_block, enum br_predictor, enum prediction);
-static void choose_function_section (void);
+static void predict_paths_leading_to_edge (edge, enum br_predictor, enum prediction);
 static bool can_predict_insn_p (const_rtx);
 
 /* Information we hold about each branch predictor.
@@ -114,7 +113,7 @@ static const struct predictor_info predictor_info[]= {
 static inline bool
 maybe_hot_frequency_p (int freq)
 {
-  struct cgraph_node *node = cgraph_node (current_function_decl);
+  struct cgraph_node *node = cgraph_get_node (current_function_decl);
   if (!profile_info || !flag_branch_probabilities)
     {
       if (node->frequency == NODE_FREQUENCY_UNLIKELY_EXECUTED)
@@ -127,7 +126,7 @@ maybe_hot_frequency_p (int freq)
   if (node->frequency == NODE_FREQUENCY_EXECUTED_ONCE
       && freq <= (ENTRY_BLOCK_PTR->frequency * 2 / 3))
     return false;
-  if (freq < BB_FREQ_MAX / PARAM_VALUE (HOT_BB_FREQUENCY_FRACTION))
+  if (freq < ENTRY_BLOCK_PTR->frequency / PARAM_VALUE (HOT_BB_FREQUENCY_FRACTION))
     return false;
   return true;
 }
@@ -197,16 +196,32 @@ maybe_hot_edge_p (edge e)
   return maybe_hot_frequency_p (EDGE_FREQUENCY (e));
 }
 
+
 /* Return true in case BB is probably never executed.  */
+
 bool
 probably_never_executed_bb_p (const_basic_block bb)
 {
   if (profile_info && flag_branch_probabilities)
     return ((bb->count + profile_info->runs / 2) / profile_info->runs) == 0;
   if ((!profile_info || !flag_branch_probabilities)
-      && cgraph_node (current_function_decl)->frequency == NODE_FREQUENCY_UNLIKELY_EXECUTED)
+      && (cgraph_get_node (current_function_decl)->frequency
+	  == NODE_FREQUENCY_UNLIKELY_EXECUTED))
     return true;
   return false;
+}
+
+/* Return true if NODE should be optimized for size.  */
+
+bool
+cgraph_optimize_for_size_p (struct cgraph_node *node)
+{
+  if (optimize_size)
+    return true;
+  if (node && (node->frequency == NODE_FREQUENCY_UNLIKELY_EXECUTED))
+    return true;
+  else
+    return false;
 }
 
 /* Return true when current function should always be optimized for size.  */
@@ -214,10 +229,11 @@ probably_never_executed_bb_p (const_basic_block bb)
 bool
 optimize_function_for_size_p (struct function *fun)
 {
-  return (optimize_size
-	  || (fun && fun->decl
-	      && (cgraph_node (fun->decl)->frequency
-		  == NODE_FREQUENCY_UNLIKELY_EXECUTED)));
+  if (optimize_size)
+    return true;
+  if (!fun || !fun->decl)
+    return false;
+  return cgraph_optimize_for_size_p (cgraph_get_node (fun->decl));
 }
 
 /* Return true when current function should always be optimized for speed.  */
@@ -388,6 +404,15 @@ rtl_predicted_by_p (const_basic_block bb, enum br_predictor predictor)
    outgoing edges.  */
 
 static struct pointer_map_t *bb_predictions;
+
+/*  Structure representing predictions in tree level. */
+
+struct edge_prediction {
+    struct edge_prediction *ep_next;
+    edge ep_edge;
+    enum br_predictor ep_predictor;
+    int ep_probability;
+};
 
 /* Return true if the one of outgoing edges is already predicted by
    PREDICTOR.  */
@@ -1551,8 +1576,8 @@ apply_return_prediction (void)
       {
 	pred = return_prediction (PHI_ARG_DEF (phi, i), &direction);
 	if (pred != PRED_NO_PREDICTION)
-	  predict_paths_leading_to (gimple_phi_arg_edge (phi, i)->src, pred,
-				    direction);
+	  predict_paths_leading_to_edge (gimple_phi_arg_edge (phi, i), pred,
+				         direction);
       }
 }
 
@@ -1798,8 +1823,8 @@ predict_paths_for_bb (basic_block cur, basic_block bb,
       edge_iterator ei2;
       bool found = false;
 
-      /* Ignore abnormals, we predict them as not taken anyway.  */
-      if (e->flags & (EDGE_EH | EDGE_FAKE | EDGE_ABNORMAL))
+      /* Ignore fake edges and eh, we predict them as not taken anyway.  */
+      if (e->flags & (EDGE_EH | EDGE_FAKE))
 	continue;
       gcc_assert (bb == cur || dominated_by_p (CDI_POST_DOMINATORS, cur, bb));
 
@@ -1807,7 +1832,7 @@ predict_paths_for_bb (basic_block cur, basic_block bb,
 	 and does not lead to BB.  */
       FOR_EACH_EDGE (e2, ei2, e->src->succs)
 	if (e2 != e
-	    && !(e2->flags & (EDGE_EH | EDGE_FAKE | EDGE_ABNORMAL))
+	    && !(e2->flags & (EDGE_EH | EDGE_FAKE))
 	    && !dominated_by_p (CDI_POST_DOMINATORS, e2->dest, bb))
 	  {
 	    found = true;
@@ -1836,6 +1861,31 @@ predict_paths_leading_to (basic_block bb, enum br_predictor pred,
 			  enum prediction taken)
 {
   predict_paths_for_bb (bb, bb, pred, taken);
+}
+
+/* Like predict_paths_leading_to but take edge instead of basic block.  */
+
+static void
+predict_paths_leading_to_edge (edge e, enum br_predictor pred,
+			       enum prediction taken)
+{
+  bool has_nonloop_edge = false;
+  edge_iterator ei;
+  edge e2;
+
+  basic_block bb = e->src;
+  FOR_EACH_EDGE (e2, ei, bb->succs)
+    if (e2->dest != e->src && e2->dest != e->dest
+	&& !(e->flags & (EDGE_EH | EDGE_FAKE))
+	&& !dominated_by_p (CDI_POST_DOMINATORS, e->src, e2->dest))
+      {
+	has_nonloop_edge = true;
+	break;
+      }
+  if (!has_nonloop_edge)
+    predict_paths_for_bb (bb, bb, pred, taken);
+  else
+    predict_edge_def (e, pred, taken);
 }
 
 /* This is used to carry information about basic blocks.  It is
@@ -2185,8 +2235,6 @@ estimate_bb_frequencies (void)
       free_aux_for_edges ();
     }
   compute_function_frequency ();
-  if (flag_reorder_functions)
-    choose_function_section ();
 }
 
 /* Decide whether function is hot, cold or unlikely executed.  */
@@ -2194,7 +2242,7 @@ void
 compute_function_frequency (void)
 {
   basic_block bb;
-  struct cgraph_node *node = cgraph_node (current_function_decl);
+  struct cgraph_node *node = cgraph_get_node (current_function_decl);
   if (DECL_STATIC_CONSTRUCTOR (current_function_decl)
       || MAIN_NAME_P (DECL_NAME (current_function_decl)))
     node->only_called_at_startup = true;
@@ -2232,35 +2280,6 @@ compute_function_frequency (void)
     }
 }
 
-/* Choose appropriate section for the function.  */
-static void
-choose_function_section (void)
-{
-  struct cgraph_node *node = cgraph_node (current_function_decl);
-  if (DECL_SECTION_NAME (current_function_decl)
-      || !targetm.have_named_sections
-      /* Theoretically we can split the gnu.linkonce text section too,
-	 but this requires more work as the frequency needs to match
-	 for all generated objects so we need to merge the frequency
-	 of all instances.  For now just never set frequency for these.  */
-      || DECL_ONE_ONLY (current_function_decl))
-    return;
-
-  /* If we are doing the partitioning optimization, let the optimization
-     choose the correct section into which to put things.  */
-
-  if (flag_reorder_blocks_and_partition)
-    return;
-
-  if (node->frequency == NODE_FREQUENCY_HOT)
-    DECL_SECTION_NAME (current_function_decl) =
-      build_string (strlen (HOT_TEXT_SECTION_NAME), HOT_TEXT_SECTION_NAME);
-  if (node->frequency == NODE_FREQUENCY_UNLIKELY_EXECUTED)
-    DECL_SECTION_NAME (current_function_decl) =
-      build_string (strlen (UNLIKELY_EXECUTED_TEXT_SECTION_NAME),
-		    UNLIKELY_EXECUTED_TEXT_SECTION_NAME);
-}
-
 static bool
 gate_estimate_probability (void)
 {
@@ -2272,7 +2291,7 @@ tree
 build_predict_expr (enum br_predictor predictor, enum prediction taken)
 {
   tree t = build1 (PREDICT_EXPR, void_type_node,
-		   build_int_cst (NULL, predictor));
+		   build_int_cst (integer_type_node, predictor));
   SET_PREDICT_EXPR_OUTCOME (t, taken);
   return t;
 }
@@ -2287,7 +2306,7 @@ struct gimple_opt_pass pass_profile =
 {
  {
   GIMPLE_PASS,
-  "profile",				/* name */
+  "profile_estimate",			/* name */
   gate_estimate_probability,		/* gate */
   tree_estimate_probability_driver,	/* execute */
   NULL,					/* sub */

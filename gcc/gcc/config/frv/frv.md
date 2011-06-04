@@ -1,5 +1,5 @@
 ;; Frv Machine Description
-;; Copyright (C) 1999, 2000, 2001, 2003, 2004, 2005, 2007, 2008
+;; Copyright (C) 1999, 2000, 2001, 2003, 2004, 2005, 2007, 2008, 2010
 ;; Free Software Foundation, Inc.
 ;; Contributed by Red Hat, Inc.
 
@@ -1519,6 +1519,7 @@
 ;;
 
 (include "predicates.md")
+(include "constraints.md")
 
 ;; ::::::::::::::::::::
 ;; ::
@@ -4628,8 +4629,8 @@
    (clobber (match_operand:CC_CCR 5 "icr_operand" "=v,v,v,v,v"))]
   "(INTVAL (operands[3]) == 0
     || INTVAL (operands[4]) == 0
-    || (IN_RANGE_P (INTVAL (operands[3]), -2048, 2047)
-        && IN_RANGE_P (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
+    || (IN_RANGE (INTVAL (operands[3]), -2048, 2047)
+        && IN_RANGE (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
   "#"
   [(set_attr "length" "8,12,8,12,12")
    (set_attr "type" "multi")])
@@ -4645,8 +4646,8 @@
   "TARGET_HARD_FLOAT
    && (INTVAL (operands[3]) == 0
        || INTVAL (operands[4]) == 0
-       || (IN_RANGE_P (INTVAL (operands[3]), -2048, 2047)
-	   && IN_RANGE_P (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
+       || (IN_RANGE (INTVAL (operands[3]), -2048, 2047)
+	   && IN_RANGE (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
   "#"
   [(set_attr "length" "8,12,8,12,12")
    (set_attr "type" "multi")])
@@ -4713,8 +4714,8 @@
    (clobber (match_operand:CC_CCR 5 "icr_operand" "=v,v,v,v,v"))]
   "(INTVAL (operands[3]) == 0
     || INTVAL (operands[4]) == 0
-    || (IN_RANGE_P (INTVAL (operands[3]), -2048, 2047)
-        && IN_RANGE_P (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
+    || (IN_RANGE (INTVAL (operands[3]), -2048, 2047)
+        && IN_RANGE (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
   "#"
   [(set_attr "length" "8,12,8,12,12")
    (set_attr "type" "multi")])
@@ -4730,8 +4731,8 @@
   "TARGET_HARD_FLOAT
    && (INTVAL (operands[3]) == 0
        || INTVAL (operands[4]) == 0
-       || (IN_RANGE_P (INTVAL (operands[3]), -2048, 2047)
-	   && IN_RANGE_P (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
+       || (IN_RANGE (INTVAL (operands[3]), -2048, 2047)
+	   && IN_RANGE (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
   "#"
   [(set_attr "length" "8,12,8,12,12")
    (set_attr "type" "multi")])
@@ -4798,8 +4799,8 @@
    (clobber (match_operand:CC_CCR 5 "icr_operand" "=v,v,v,v,v"))]
   "(INTVAL (operands[3]) == 0
     || INTVAL (operands[4]) == 0
-    || (IN_RANGE_P (INTVAL (operands[3]), -2048, 2047)
-        && IN_RANGE_P (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
+    || (IN_RANGE (INTVAL (operands[3]), -2048, 2047)
+        && IN_RANGE (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
   "#"
   [(set_attr "length" "8,12,8,12,12")
    (set_attr "type" "multi")])
@@ -4815,8 +4816,8 @@
   "TARGET_HARD_FLOAT
    && (INTVAL (operands[3]) == 0
        || INTVAL (operands[4]) == 0
-       || (IN_RANGE_P (INTVAL (operands[3]), -2048, 2047)
-	   && IN_RANGE_P (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
+       || (IN_RANGE (INTVAL (operands[3]), -2048, 2047)
+	   && IN_RANGE (INTVAL (operands[4]) - INTVAL (operands[3]), -2048, 2047)))"
   "#"
   [(set_attr "length" "8,12,8,12,12")
    (set_attr "type" "multi")])
@@ -5564,7 +5565,7 @@
   gcc_assert (GET_CODE (operands[2]) == CONST_INT);
 
   /* If we can't generate an immediate instruction, promote to register.  */
-  if (! IN_RANGE_P (INTVAL (range), -2048, 2047))
+  if (! IN_RANGE (INTVAL (range), -2048, 2047))
     range = force_reg (SImode, range);
 
   /* If low bound is 0, we don't have to subtract it.  */
@@ -5573,7 +5574,7 @@
   else
     {
       indx = gen_reg_rtx (SImode);
-      if (IN_RANGE_P (INTVAL (low), -2047, 2048))
+      if (IN_RANGE (INTVAL (low), -2047, 2048))
 	emit_insn (gen_addsi3 (indx, operands[0], GEN_INT (- INTVAL (low))));
       else
 	emit_insn (gen_subsi3 (indx, operands[0], force_reg (SImode, low)));

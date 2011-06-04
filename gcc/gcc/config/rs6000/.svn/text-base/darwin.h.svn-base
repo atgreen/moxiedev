@@ -1,6 +1,6 @@
 /* Target definitions for PowerPC running Darwin (Mac OS X).
-   Copyright (C) 1997, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2010
-   Free Software Foundation, Inc.
+   Copyright (C) 1997, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2010,
+   2011 Free Software Foundation, Inc.
    Contributed by Apple Computer Inc.
 
    This file is part of GCC.
@@ -21,9 +21,6 @@
 
 #undef DARWIN_PPC
 #define DARWIN_PPC 1
-
-#undef  TARGET_VERSION
-#define TARGET_VERSION fprintf (stderr, " (Darwin/PowerPC)");
 
 /* The "Darwin ABI" is mostly like AIX, but with some key differences.  */
 
@@ -232,17 +229,6 @@ extern int darwin_emit_branch_islands;
 #define ASM_OUTPUT_INTERNAL_LABEL_PREFIX(FILE,PREFIX)	\
   fprintf (FILE, "%s", PREFIX)
 
-/* This says how to output an assembler line to define a global common
-   symbol.  */
-#define ASM_OUTPUT_COMMON(FILE, NAME, SIZE, ROUNDED)			\
-  do {									\
-    unsigned HOST_WIDE_INT _new_size = SIZE;				\
-    fputs ("\t.comm ", (FILE));						\
-    RS6000_OUTPUT_BASENAME ((FILE), (NAME));				\
-    if (_new_size == 0) _new_size = 1;					\
-    fprintf ((FILE), ","HOST_WIDE_INT_PRINT_UNSIGNED"\n", _new_size);	\
-  } while (0)
-
 /* Override the standard rs6000 definition.  */
 
 #undef ASM_COMMENT_START
@@ -395,10 +381,6 @@ extern int darwin_emit_branch_islands;
 #include <stdbool.h>
 #endif
 
-#if !defined(__LP64__) && !defined(DARWIN_LIBSYSTEM_HAS_UNWIND)
-#define MD_UNWIND_SUPPORT "config/rs6000/darwin-unwind.h"
-#endif
-
 /* True, iff we're generating fast turn around debugging code.  When
    true, we arrange for function prologues to start with 5 nops so
    that gdb may insert code to redirect them, and for data to be
@@ -423,10 +405,27 @@ extern int darwin_emit_branch_islands;
    default, as kernel code doesn't save/restore those registers.  */
 #define OS_MISSING_ALTIVEC (flag_mkernel || flag_apple_kext)
 
+/* Darwin has support for section anchors on powerpc*.  
+   It is disabled for any section containing a "zero-sized item" (because these
+   are re-written as size=1 to be compatible with the OSX ld64).
+   The re-writing would interfere with the computation of anchor offsets.
+   Therefore, we place zero-sized items in their own sections and make such
+   sections unavailable to section anchoring.  */
+
+#undef TARGET_ASM_OUTPUT_ANCHOR 
+#define TARGET_ASM_OUTPUT_ANCHOR darwin_asm_output_anchor
+
+#undef TARGET_USE_ANCHORS_FOR_SYMBOL_P
+#define TARGET_USE_ANCHORS_FOR_SYMBOL_P darwin_use_anchors_for_symbol_p
+
+#undef DARWIN_SECTION_ANCHORS
+#define DARWIN_SECTION_ANCHORS 1
+
 /* PPC Darwin has to rename some of the long double builtins.  */
 #undef  SUBTARGET_INIT_BUILTINS
 #define SUBTARGET_INIT_BUILTINS						\
 do {									\
   darwin_patch_builtins ();						\
-  darwin_init_cfstring_builtins ((unsigned) (RS6000_BUILTIN_COUNT));	\
+  rs6000_builtin_decls[(unsigned) (RS6000_BUILTIN_CFSTRING)]		\
+    = darwin_init_cfstring_builtins ((unsigned) (RS6000_BUILTIN_CFSTRING)); \
 } while(0)

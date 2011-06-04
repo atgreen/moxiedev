@@ -31,7 +31,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "flags.h"
 #include "tm_p.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "hashtab.h"
 #include "langhooks.h"
 #include "ggc.h"
@@ -171,7 +170,7 @@ gen_stdcall_or_fastcall_suffix (tree decl, tree id, bool fastcall)
   HOST_WIDE_INT total = 0;
   const char *old_str = IDENTIFIER_POINTER (id != NULL_TREE ? id : DECL_NAME (decl));
   char *new_str, *p;
-  tree type = TREE_TYPE (decl);
+  tree type = TREE_TYPE (DECL_ORIGIN (decl));
   tree arg;
   function_args_iterator args_iter;
 
@@ -203,7 +202,8 @@ gen_stdcall_or_fastcall_suffix (tree decl, tree id, bool fastcall)
 		       / parm_boundary_bytes * parm_boundary_bytes);
 	  total += parm_size;
 	}
-      }
+    }
+
   /* Assume max of 8 base 10 digits in the suffix.  */
   p = new_str = XALLOCAVEC (char, 1 + strlen (old_str) + 1 + 8 + 1);
   if (fastcall)
@@ -223,14 +223,36 @@ i386_pe_maybe_mangle_decl_assembler_name (tree decl, tree id)
 
   if (TREE_CODE (decl) == FUNCTION_DECL)
     { 
-      tree type_attributes = TYPE_ATTRIBUTES (TREE_TYPE (decl));
-      if (lookup_attribute ("stdcall", type_attributes))
-	new_id = gen_stdcall_or_fastcall_suffix (decl, id, false);
-      else if (lookup_attribute ("fastcall", type_attributes))
+      unsigned int ccvt = ix86_get_callcvt (TREE_TYPE (decl));
+      if ((ccvt & IX86_CALLCVT_STDCALL) != 0)
+        {
+	  if (TARGET_RTD)
+	    /* If we are using -mrtd emit undecorated symbol and let linker
+	       do the proper resolving.  */
+	    return NULL_TREE;
+	  new_id = gen_stdcall_or_fastcall_suffix (decl, id, false);
+	}
+      else if ((ccvt & IX86_CALLCVT_FASTCALL) != 0)
 	new_id = gen_stdcall_or_fastcall_suffix (decl, id, true);
     }
 
   return new_id;
+}
+
+/* Emit an assembler directive to set symbol for DECL visibility to
+   the visibility type VIS, which must not be VISIBILITY_DEFAULT.
+   As for PE there is no hidden support in gas, we just warn for
+   user-specified visibility attributes.  */
+
+void
+i386_pe_assemble_visibility (tree decl,
+			     int vis ATTRIBUTE_UNUSED)
+{
+  if (!decl
+      || !lookup_attribute ("visibility", DECL_ATTRIBUTES (decl)))
+    return;
+  warning (OPT_Wattributes, "visibility attribute not supported "
+	   "in this configuration; ignored");
 }
 
 /* This is used as a target hook to modify the DECL_ASSEMBLER_NAME
@@ -243,6 +265,20 @@ i386_pe_mangle_decl_assembler_name (tree decl, tree id)
   tree new_id = i386_pe_maybe_mangle_decl_assembler_name (decl, id);   
 
   return (new_id ? new_id : id);
+}
+
+/* This hook behaves the same as varasm.c/assemble_name(), but
+   generates the name into memory rather than outputting it to
+   a file stream.  */
+
+tree
+i386_pe_mangle_assembler_name (const char *name ATTRIBUTE_UNUSED)
+{
+  const char *skipped = name + (*name == '*' ? 1 : 0);
+  const char *stripped = targetm.strip_name_encoding (skipped);
+  if (*name != '*' && *user_label_prefix && *stripped != FASTCALL_PREFIX)
+    stripped = ACONCAT ((user_label_prefix, stripped, NULL));
+  return get_identifier (stripped);
 }
 
 void
@@ -414,15 +450,6 @@ i386_pe_section_type_flags (tree decl, const char *name, int reloc)
     flags = SECTION_CODE;
   else if (decl && decl_readonly_section (decl, reloc))
     flags = 0;
-  else if (current_function_decl
-	   && cfun
-	   && crtl->subsections.unlikely_text_section_name
-	   && strcmp (name, crtl->subsections.unlikely_text_section_name) == 0)
-    flags = SECTION_CODE;
-  else if (!decl
-	   && (!current_function_decl || !cfun)
-	   && strcmp (name, UNLIKELY_EXECUTED_TEXT_SECTION_NAME) == 0)
-    flags = SECTION_CODE;
   else
     {
       flags = SECTION_WRITE;
@@ -1097,6 +1124,9 @@ i386_pe_start_function (FILE *f, const char *name, tree decl)
   i386_pe_maybe_record_exported_symbol (decl, name, 0);
   if (write_symbols != SDB_DEBUG)
     i386_pe_declare_function_type (f, name, TREE_PUBLIC (decl));
+  /* In case section was altered by debugging output.  */
+  if (decl != NULL_TREE)
+    switch_to_section (function_section (decl));
   ASM_OUTPUT_FUNCTION_LABEL (f, name, decl);
 }
 

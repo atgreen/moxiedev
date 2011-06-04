@@ -1,5 +1,5 @@
 /* Definitions of target machine for GNU compiler, for MMIX.
-   Copyright (C) 2000, 2001, 2002, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2000, 2001, 2002, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Hans-Peter Nilsson (hp@bitrange.com)
 
@@ -142,10 +142,6 @@ struct GTY(()) machine_function
 
 #define TARGET_DEFAULT \
  (MASK_BRANCH_PREDICT | MASK_BASE_ADDRESSES | MASK_USE_RETURN_INSN)
-
-/* Unfortunately, this must not reference anything in "mmix.c".  */
-#define TARGET_VERSION \
-  fprintf (stderr, " (MMIX)")
 
 
 /* Node: Per-Function Data */
@@ -617,9 +613,6 @@ typedef struct { int regs; int lib; } CUMULATIVE_ARGS;
 #endif /* REG_OK_STRICT */
 
 #define REG_OK_FOR_INDEX_P(X) REG_OK_FOR_BASE_P (X)
-
-#define LEGITIMATE_CONSTANT_P(X) \
- mmix_legitimate_constant_p (X)
 
 
 /* Node: Condition Code */

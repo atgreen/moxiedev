@@ -905,6 +905,7 @@ dw2_output_indirect_constant_1 (splay_tree_node node,
   id = (tree) node->value;
 
   decl = build_decl (UNKNOWN_LOCATION, VAR_DECL, id, ptr_type_node);
+  SET_DECL_ASSEMBLER_NAME (decl, id);
   DECL_ARTIFICIAL (decl) = 1;
   DECL_IGNORED_P (decl) = 1;
   DECL_INITIAL (decl) = decl;
@@ -956,6 +957,7 @@ dw2_asm_output_encoded_addr_rtx (int encoding, rtx addr, bool is_public,
     {
       assemble_align (POINTER_SIZE);
       assemble_integer (addr, size, POINTER_SIZE, 1);
+      va_end (ap);
       return;
     }
 

@@ -1,14 +1,14 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/diagnostic
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-06-22T20:42:50.961849Z
-161227
+2010-12-10T19:41:48.553743Z
+167698
 jakub
 
 
@@ -93,4 +93,38 @@ jakub
 
 
 193
+
+bitfld1.C
+file
+
+
+
+
+2011-06-04T18:03:52.481104Z
+424dce5e3d57a2b34afe27e7bbf2592d
+2010-12-10T19:41:48.553743Z
+167698
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+211
 

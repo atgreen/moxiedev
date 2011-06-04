@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler, for the HP Spectrum.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Michael Tiemann (tiemann@cygnus.com) of Cygnus Support
    and Tim Moore (moore@defmacro.cs.utah.edu) of the Center for
@@ -25,29 +25,7 @@ along with GCC; see the file COPYING3.  If not see
 /* For long call handling.  */
 extern unsigned long total_code_bytes;
 
-/* Which processor to schedule for.  */
-
-enum processor_type
-{
-  PROCESSOR_700,
-  PROCESSOR_7100,
-  PROCESSOR_7100LC,
-  PROCESSOR_7200,
-  PROCESSOR_7300,
-  PROCESSOR_8000
-};
-
-/* For -mschedule= option.  */
-extern enum processor_type pa_cpu;
-
-/* For -munix= option.  */
-extern int flag_pa_unix;
-
 #define pa_cpu_attr ((enum attr_cpu)pa_cpu)
-
-/* Print subsidiary information on the compiler version in use.  */
-
-#define TARGET_VERSION fputs (" (hppa)", stderr);
 
 #define TARGET_PA_10 (!TARGET_PA_11 && !TARGET_PA_20)
 
@@ -84,6 +62,16 @@ extern int flag_pa_unix;
 /* HP-UX 11i multibyte and UNIX 98 extensions.  */
 #ifndef TARGET_HPUX_11_11
 #define TARGET_HPUX_11_11 0
+#endif
+
+/* HP-UX 11i multibyte and UNIX 2003 extensions.  */
+#ifndef TARGET_HPUX_11_31
+#define TARGET_HPUX_11_31 0
+#endif
+
+/* HP-UX long double library.  */
+#ifndef HPUX_LONG_DOUBLE_LIBRARY
+#define HPUX_LONG_DOUBLE_LIBRARY 0
 #endif
 
 /* The following three defines are potential target switches.  The current
@@ -368,7 +356,7 @@ typedef struct GTY(()) machine_function
 
 /* Function to return the rtx used to save the pic offset table register
    across function calls.  */
-extern struct rtx_def *hppa_pic_save_rtx (void);
+extern rtx hppa_pic_save_rtx (void);
 
 #define DEFAULT_PCC_STRUCT_RETURN 0
 
@@ -599,7 +587,7 @@ struct hppa_args {int words, nargs_prototype, incoming, indirect; };
   (CUM).words = 0, 							\
   (CUM).incoming = 0,							\
   (CUM).indirect = (FNTYPE) && !(FNDECL),				\
-  (CUM).nargs_prototype = (FNTYPE && TYPE_ARG_TYPES (FNTYPE)		\
+  (CUM).nargs_prototype = (FNTYPE && prototype_p (FNTYPE)		\
 			   ? (list_length (TYPE_ARG_TYPES (FNTYPE)) - 1	\
 			      + (TYPE_MODE (TREE_TYPE (FNTYPE)) == BLKmode \
 				 || pa_return_in_memory (TREE_TYPE (FNTYPE), 0))) \
@@ -822,37 +810,6 @@ extern int may_call_alloca;
 #define MIN_LEGIT_64BIT_CONST_INT ((HOST_WIDE_INT) -32 << 31)
 #define LEGITIMATE_64BIT_CONST_INT_P(X) \
   ((X) >= MIN_LEGIT_64BIT_CONST_INT && (X) < MAX_LEGIT_64BIT_CONST_INT)
-
-/* A C expression that is nonzero if X is a legitimate constant for an
-   immediate operand.
-
-   We include all constant integers and constant doubles, but not
-   floating-point, except for floating-point zero.  We reject LABEL_REFs
-   if we're not using gas or the new HP assembler. 
-
-   In 64-bit mode, we reject CONST_DOUBLES.  We also reject CONST_INTS
-   that need more than three instructions to load prior to reload.  This
-   limit is somewhat arbitrary.  It takes three instructions to load a
-   CONST_INT from memory but two are memory accesses.  It may be better
-   to increase the allowed range for CONST_INTS.  We may also be able
-   to handle CONST_DOUBLES.  */
-
-#define LEGITIMATE_CONSTANT_P(X)				\
-  ((GET_MODE_CLASS (GET_MODE (X)) != MODE_FLOAT			\
-    || (X) == CONST0_RTX (GET_MODE (X)))			\
-   && (NEW_HP_ASSEMBLER						\
-       || TARGET_GAS						\
-       || GET_CODE (X) != LABEL_REF)				\
-   && (!TARGET_64BIT						\
-       || GET_CODE (X) != CONST_DOUBLE)				\
-   && (!TARGET_64BIT						\
-       || HOST_BITS_PER_WIDE_INT <= 32				\
-       || GET_CODE (X) != CONST_INT				\
-       || reload_in_progress					\
-       || reload_completed					\
-       || LEGITIMATE_64BIT_CONST_INT_P (INTVAL (X))		\
-       || cint_ok_for_move (INTVAL (X)))			\
-   && !function_label_operand (X, VOIDmode))
 
 /* Target flags set on a symbol_ref.  */
 

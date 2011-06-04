@@ -1,34 +1,0 @@
-10
-
-dir
-167046
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/29_atomics/atomic_address
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2010-11-02T02:35:28.031851Z
-166171
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-cons
-dir
-
-requirements
-dir
-

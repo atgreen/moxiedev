@@ -34,6 +34,32 @@ static void optimize_namespace (gfc_namespace *);
 static void optimize_assignment (gfc_code *);
 static bool optimize_op (gfc_expr *);
 static bool optimize_comparison (gfc_expr *, gfc_intrinsic_op);
+static bool optimize_trim (gfc_expr *);
+static bool optimize_lexical_comparison (gfc_expr *);
+
+/* How deep we are inside an argument list.  */
+
+static int count_arglist;
+
+/* Pointer to an array of gfc_expr ** we operate on, plus its size
+   and counter.  */
+
+static gfc_expr ***expr_array;
+static int expr_size, expr_count;
+
+/* Pointer to the gfc_code we currently work on - to be able to insert
+   a block before the statement.  */
+
+static gfc_code **current_code;
+
+/* Pointer to the block to be inserted, and the statement we are
+   changing within the block.  */
+
+static gfc_code *inserted_block, **changed_statement;
+
+/* The namespace we are currently dealing with.  */
+
+gfc_namespace *current_ns;
 
 /* Entry point - run all passes for a namespace.  So far, only an
    optimization pass is run.  */
@@ -41,11 +67,16 @@ static bool optimize_comparison (gfc_expr *, gfc_intrinsic_op);
 void
 gfc_run_passes (gfc_namespace *ns)
 {
-  if (optimize)
+  if (gfc_option.flag_frontend_optimize)
     {
+      expr_size = 20;
+      expr_array = XNEWVEC(gfc_expr **, expr_size);
+
       optimize_namespace (ns);
       if (gfc_option.dump_fortran_optimized)
 	gfc_dump_parse_tree (ns, stdout);
+
+      XDELETEVEC (expr_array);
     }
 }
 
@@ -56,7 +87,18 @@ static int
 optimize_code (gfc_code **c, int *walk_subtrees ATTRIBUTE_UNUSED,
 	       void *data ATTRIBUTE_UNUSED)
 {
-  if ((*c)->op == EXEC_ASSIGN)
+
+  gfc_exec_op op;
+
+  op = (*c)->op;
+
+  if (op == EXEC_CALL || op == EXEC_COMPCALL || op == EXEC_ASSIGN_CALL
+      || op == EXEC_CALL_PPC)
+    count_arglist = 1;
+  else
+    count_arglist = 0;
+
+  if (op == EXEC_ASSIGN)
     optimize_assignment (*c);
   return 0;
 }
@@ -68,8 +110,288 @@ static int
 optimize_expr (gfc_expr **e, int *walk_subtrees ATTRIBUTE_UNUSED,
 	       void *data ATTRIBUTE_UNUSED)
 {
+  bool function_expr;
+
+  if ((*e)->expr_type == EXPR_FUNCTION)
+    {
+      count_arglist ++;
+      function_expr = true;
+    }
+  else
+    function_expr = false;
+
+  if (optimize_trim (*e))
+    gfc_simplify_expr (*e, 0);
+
+  if (optimize_lexical_comparison (*e))
+    gfc_simplify_expr (*e, 0);
+
   if ((*e)->expr_type == EXPR_OP && optimize_op (*e))
     gfc_simplify_expr (*e, 0);
+
+  if (function_expr)
+    count_arglist --;
+
+  return 0;
+}
+
+
+/* Callback function for common function elimination, called from cfe_expr_0.
+   Put all eligible function expressions into expr_array.  */
+
+static int
+cfe_register_funcs (gfc_expr **e, int *walk_subtrees ATTRIBUTE_UNUSED,
+	  void *data ATTRIBUTE_UNUSED)
+{
+
+  if ((*e)->expr_type != EXPR_FUNCTION)
+    return 0;
+
+  /* We don't do character functions with unknown charlens.  */
+  if ((*e)->ts.type == BT_CHARACTER 
+      && ((*e)->ts.u.cl == NULL || (*e)->ts.u.cl->length == NULL
+	  || (*e)->ts.u.cl->length->expr_type != EXPR_CONSTANT))
+    return 0;
+
+  /* If we don't know the shape at compile time, we create an allocatable
+     temporary variable to hold the intermediate result, but only if
+     allocation on assignment is active.  */
+
+  if ((*e)->rank > 0 && (*e)->shape == NULL && !gfc_option.flag_realloc_lhs)
+    return 0;
+  
+  /* Skip the test for pure functions if -faggressive-function-elimination
+     is specified.  */
+  if ((*e)->value.function.esym)
+    {
+      /* Don't create an array temporary for elemental functions.  */
+      if ((*e)->value.function.esym->attr.elemental && (*e)->rank > 0)
+	return 0;
+
+      /* Only eliminate potentially impure functions if the
+	 user specifically requested it.  */
+      if (!gfc_option.flag_aggressive_function_elimination
+	  && !(*e)->value.function.esym->attr.pure
+	  && !(*e)->value.function.esym->attr.implicit_pure)
+	return 0;
+    }
+
+  if ((*e)->value.function.isym)
+    {
+      /* Conversions are handled on the fly by the middle end,
+	 transpose during trans-* stages and TRANSFER by the middle end.  */
+      if ((*e)->value.function.isym->id == GFC_ISYM_CONVERSION
+	  || (*e)->value.function.isym->id == GFC_ISYM_TRANSPOSE
+	  || (*e)->value.function.isym->id == GFC_ISYM_TRANSFER)
+	return 0;
+
+      /* Don't create an array temporary for elemental functions,
+	 as this would be wasteful of memory.
+	 FIXME: Create a scalar temporary during scalarization.  */
+      if ((*e)->value.function.isym->elemental && (*e)->rank > 0)
+	return 0;
+
+      if (!(*e)->value.function.isym->pure)
+	return 0;
+    }
+
+  if (expr_count >= expr_size)
+    {
+      expr_size += expr_size;
+      expr_array = XRESIZEVEC(gfc_expr **, expr_array, expr_size);
+    }
+  expr_array[expr_count] = e;
+  expr_count ++;
+  return 0;
+}
+
+/* Returns a new expression (a variable) to be used in place of the old one,
+   with an an assignment statement before the current statement to set
+   the value of the variable. Creates a new BLOCK for the statement if
+   that hasn't already been done and puts the statement, plus the
+   newly created variables, in that block.  */
+
+static gfc_expr*
+create_var (gfc_expr * e)
+{
+  char name[GFC_MAX_SYMBOL_LEN +1];
+  static int num = 1;
+  gfc_symtree *symtree;
+  gfc_symbol *symbol;
+  gfc_expr *result;
+  gfc_code *n;
+  gfc_namespace *ns;
+  int i;
+
+  /* If the block hasn't already been created, do so.  */
+  if (inserted_block == NULL)
+    {
+      inserted_block = XCNEW (gfc_code);
+      inserted_block->op = EXEC_BLOCK;
+      inserted_block->loc = (*current_code)->loc;
+      ns = gfc_build_block_ns (current_ns);
+      inserted_block->ext.block.ns = ns;
+      inserted_block->ext.block.assoc = NULL;
+
+      ns->code = *current_code;
+      inserted_block->next = (*current_code)->next;
+      changed_statement = &(inserted_block->ext.block.ns->code);
+      (*current_code)->next = NULL;
+      /* Insert the BLOCK at the right position.  */
+      *current_code = inserted_block;
+    }
+  else
+    ns = inserted_block->ext.block.ns;
+
+  sprintf(name, "__var_%d",num++);
+  if (gfc_get_sym_tree (name, ns, &symtree, false) != 0)
+    gcc_unreachable ();
+
+  symbol = symtree->n.sym;
+  symbol->ts = e->ts;
+
+  if (e->rank > 0)
+    {
+      symbol->as = gfc_get_array_spec ();
+      symbol->as->rank = e->rank;
+
+      if (e->shape == NULL)
+	{
+	  /* We don't know the shape at compile time, so we use an
+	     allocatable. */
+	  symbol->as->type = AS_DEFERRED;
+	  symbol->attr.allocatable = 1;
+	}
+      else
+	{
+	  symbol->as->type = AS_EXPLICIT;
+	  /* Copy the shape.  */
+	  for (i=0; i<e->rank; i++)
+	    {
+	      gfc_expr *p, *q;
+      
+	      p = gfc_get_constant_expr (BT_INTEGER, gfc_default_integer_kind,
+					 &(e->where));
+	      mpz_set_si (p->value.integer, 1);
+	      symbol->as->lower[i] = p;
+	      
+	      q = gfc_get_constant_expr (BT_INTEGER, gfc_index_integer_kind,
+					 &(e->where));
+	      mpz_set (q->value.integer, e->shape[i]);
+	      symbol->as->upper[i] = q;
+	    }
+	}
+    }
+
+  symbol->attr.flavor = FL_VARIABLE;
+  symbol->attr.referenced = 1;
+  symbol->attr.dimension = e->rank > 0;
+  gfc_commit_symbol (symbol);
+
+  result = gfc_get_expr ();
+  result->expr_type = EXPR_VARIABLE;
+  result->ts = e->ts;
+  result->rank = e->rank;
+  result->shape = gfc_copy_shape (e->shape, e->rank);
+  result->symtree = symtree;
+  result->where = e->where;
+  if (e->rank > 0)
+    {
+      result->ref = gfc_get_ref ();
+      result->ref->type = REF_ARRAY;
+      result->ref->u.ar.type = AR_FULL;
+      result->ref->u.ar.where = e->where;
+      result->ref->u.ar.as = symbol->as;
+      if (gfc_option.warn_array_temp)
+	gfc_warning ("Creating array temporary at %L", &(e->where));
+    }
+
+  /* Generate the new assignment.  */
+  n = XCNEW (gfc_code);
+  n->op = EXEC_ASSIGN;
+  n->loc = (*current_code)->loc;
+  n->next = *changed_statement;
+  n->expr1 = gfc_copy_expr (result);
+  n->expr2 = e;
+  *changed_statement = n;
+
+  return result;
+}
+
+/* Warn about function elimination.  */
+
+static void
+warn_function_elimination (gfc_expr *e)
+{
+  if (e->expr_type != EXPR_FUNCTION)
+    return;
+  if (e->value.function.esym)
+    gfc_warning ("Removing call to function '%s' at %L",
+		 e->value.function.esym->name, &(e->where));
+  else if (e->value.function.isym)
+    gfc_warning ("Removing call to function '%s' at %L",
+		 e->value.function.isym->name, &(e->where));
+}
+/* Callback function for the code walker for doing common function
+   elimination.  This builds up the list of functions in the expression
+   and goes through them to detect duplicates, which it then replaces
+   by variables.  */
+
+static int
+cfe_expr_0 (gfc_expr **e, int *walk_subtrees,
+	  void *data ATTRIBUTE_UNUSED)
+{
+  int i,j;
+  gfc_expr *newvar;
+
+  expr_count = 0;
+
+  gfc_expr_walker (e, cfe_register_funcs, NULL);
+
+  /* Walk through all the functions.  */
+
+  for (i=1; i<expr_count; i++)
+    {
+      /* Skip if the function has been replaced by a variable already.  */
+      if ((*(expr_array[i]))->expr_type == EXPR_VARIABLE)
+	continue;
+
+      newvar = NULL;
+      for (j=0; j<i; j++)
+	{
+	  if (gfc_dep_compare_functions(*(expr_array[i]),
+					*(expr_array[j]), true)	== 0)
+	    {
+	      if (newvar == NULL)
+		newvar = create_var (*(expr_array[i]));
+
+	      if (gfc_option.warn_function_elimination)
+		warn_function_elimination (*(expr_array[j]));
+
+	      free (*(expr_array[j]));
+	      *(expr_array[j]) = gfc_copy_expr (newvar);
+	    }
+	}
+      if (newvar)
+	*(expr_array[i]) = newvar;
+    }
+
+  /* We did all the necessary walking in this function.  */
+  *walk_subtrees = 0;
+  return 0;
+}
+
+/* Callback function for common function elimination, called from
+   gfc_code_walker.  This keeps track of the current code, in order
+   to insert statements as needed.  */
+
+static int
+cfe_code (gfc_code **c, int *walk_subtrees ATTRIBUTE_UNUSED,
+	  void *data ATTRIBUTE_UNUSED)
+{
+  current_code = c;
+  inserted_block = NULL;
+  changed_statement = NULL;
   return 0;
 }
 
@@ -78,6 +400,10 @@ optimize_expr (gfc_expr **e, int *walk_subtrees ATTRIBUTE_UNUSED,
 static void
 optimize_namespace (gfc_namespace *ns)
 {
+
+  current_ns = ns;
+
+  gfc_code_walker (&ns->code, cfe_code, cfe_expr_0, NULL);
   gfc_code_walker (&ns->code, optimize_code, optimize_expr, NULL);
 
   for (ns = ns->contained; ns; ns = ns->sibling)
@@ -212,8 +538,36 @@ strip_function_call (gfc_expr *e)
 
   /* Graft the argument expression onto the original function.  */
   *e = *e1;
-  gfc_free (e1);
+  free (e1);
 
+}
+
+/* Optimization of lexical comparison functions.  */
+
+static bool
+optimize_lexical_comparison (gfc_expr *e)
+{
+  if (e->expr_type != EXPR_FUNCTION || e->value.function.isym == NULL)
+    return false;
+
+  switch (e->value.function.isym->id)
+    {
+    case GFC_ISYM_LLE:
+      return optimize_comparison (e, INTRINSIC_LE);
+
+    case GFC_ISYM_LGE:
+      return optimize_comparison (e, INTRINSIC_GE);
+
+    case GFC_ISYM_LGT:
+      return optimize_comparison (e, INTRINSIC_GT);
+
+    case GFC_ISYM_LLT:
+      return optimize_comparison (e, INTRINSIC_LT);
+
+    default:
+      break;
+    }
+  return false;
 }
 
 /* Recursive optimization of operators.  */
@@ -255,9 +609,25 @@ optimize_comparison (gfc_expr *e, gfc_intrinsic_op op)
   bool change;
   int eq;
   bool result;
+  gfc_actual_arglist *firstarg, *secondarg;
 
-  op1 = e->value.op.op1;
-  op2 = e->value.op.op2;
+  if (e->expr_type == EXPR_OP)
+    {
+      firstarg = NULL;
+      secondarg = NULL;
+      op1 = e->value.op.op1;
+      op2 = e->value.op.op2;
+    }
+  else if (e->expr_type == EXPR_FUNCTION)
+    {
+      /* One of the lexical comparision functions.  */
+      firstarg = e->value.function.actual;
+      secondarg = firstarg->next;
+      op1 = firstarg->expr;
+      op2 = secondarg->expr;
+    }
+  else
+    gcc_unreachable ();
 
   /* Strip off unneeded TRIM calls from string comparisons.  */
 
@@ -320,23 +690,40 @@ optimize_comparison (gfc_expr *e, gfc_intrinsic_op op)
 			&& op2_left->expr_type == EXPR_CONSTANT
 			&& op1_left->value.character.length
 			   != op2_left->value.character.length)
-		    return -2;
+		    return false;
 		  else
 		    {
-		      gfc_free (op1_left);
-		      gfc_free (op2_left);
-		      e->value.op.op1 = op1_right;
-		      e->value.op.op2 = op2_right;
+		      free (op1_left);
+		      free (op2_left);
+		      if (firstarg)
+			{
+			  firstarg->expr = op1_right;
+			  secondarg->expr = op2_right;
+			}
+		      else
+			{
+			  e->value.op.op1 = op1_right;
+			  e->value.op.op2 = op2_right;
+			}
 		      optimize_comparison (e, op);
 		      return true;
 		    }
 		}
 	      if (gfc_dep_compare_expr (op1_right, op2_right) == 0)
 		{
-		  gfc_free (op1_right);
-		  gfc_free (op2_right);
-		  e->value.op.op1 = op1_left;
-		  e->value.op.op2 = op2_left;
+		  free (op1_right);
+		  free (op2_right);
+		  if (firstarg)
+		    {
+		      firstarg->expr = op1_left;
+		      secondarg->expr = op2_left;
+		    }
+		  else
+		    {
+		      e->value.op.op1 = op1_left;
+		      e->value.op.op2 = op2_left;
+		    }
+
 		  optimize_comparison (e, op);
 		  return true;
 		}
@@ -384,8 +771,8 @@ optimize_comparison (gfc_expr *e, gfc_intrinsic_op op)
 
 	  /* Replace the expression by a constant expression.  The typespec
 	     and where remains the way it is.  */
-	  gfc_free (op1);
-	  gfc_free (op2);
+	  free (op1);
+	  free (op2);
 	  e->expr_type = EXPR_CONSTANT;
 	  e->value.logical = result;
 	  return true;
@@ -393,6 +780,85 @@ optimize_comparison (gfc_expr *e, gfc_intrinsic_op op)
     }
 
   return false;
+}
+
+/* Optimize a trim function by replacing it with an equivalent substring
+   involving a call to len_trim.  This only works for expressions where
+   variables are trimmed.  Return true if anything was modified.  */
+
+static bool
+optimize_trim (gfc_expr *e)
+{
+  gfc_expr *a;
+  gfc_ref *ref;
+  gfc_expr *fcn;
+  gfc_actual_arglist *actual_arglist, *next;
+  gfc_ref **rr = NULL;
+
+  /* Don't do this optimization within an argument list, because
+     otherwise aliasing issues may occur.  */
+
+  if (count_arglist != 1)
+    return false;
+
+  if (e->ts.type != BT_CHARACTER || e->expr_type != EXPR_FUNCTION
+      || e->value.function.isym == NULL
+      || e->value.function.isym->id != GFC_ISYM_TRIM)
+    return false;
+
+  a = e->value.function.actual->expr;
+
+  if (a->expr_type != EXPR_VARIABLE)
+    return false;
+
+  /* Follow all references to find the correct place to put the newly
+     created reference.  FIXME:  Also handle substring references and
+     array references.  Array references cause strange regressions at
+     the moment.  */
+
+  if (a->ref)
+    {
+      for (rr = &(a->ref); *rr; rr = &((*rr)->next))
+	{
+	  if ((*rr)->type == REF_SUBSTRING || (*rr)->type == REF_ARRAY)
+	    return false;
+	}
+    }
+
+  strip_function_call (e);
+
+  if (e->ref == NULL)
+    rr = &(e->ref);
+
+  /* Create the reference.  */
+
+  ref = gfc_get_ref ();
+  ref->type = REF_SUBSTRING;
+
+  /* Set the start of the reference.  */
+
+  ref->u.ss.start = gfc_get_int_expr (gfc_default_integer_kind, NULL, 1);
+
+  /* Build the function call to len_trim(x, gfc_defaul_integer_kind).  */
+
+  fcn = gfc_get_expr ();
+  fcn->expr_type = EXPR_FUNCTION;
+  fcn->value.function.isym =
+    gfc_intrinsic_function_by_id (GFC_ISYM_LEN_TRIM);
+  actual_arglist = gfc_get_actual_arglist ();
+  actual_arglist->expr = gfc_copy_expr (e);
+  next = gfc_get_actual_arglist ();
+  next->expr = gfc_get_int_expr (gfc_default_integer_kind, NULL,
+				 gfc_default_integer_kind);
+  actual_arglist->next = next;
+  fcn->value.function.actual = actual_arglist;
+
+  /* Set the end of the reference to the call to len_trim.  */
+
+  ref->u.ss.end = fcn;
+  gcc_assert (*rr == NULL);
+  *rr = ref;
+  return true;
 }
 
 #define WALK_SUBEXPR(NODE) \
@@ -457,7 +923,7 @@ gfc_expr_walker (gfc_expr **e, walk_expr_fn_t exprfn, void *data)
 	      break;
 
 	    /* Fall through to the variable case in order to walk the
-	       the reference.  */
+	       reference.  */
 
 	  case EXPR_SUBSTRING:
 	  case EXPR_VARIABLE:
@@ -524,23 +990,45 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
       int result = codefn (c, &walk_subtrees, data);
       if (result)
 	return result;
+
       if (walk_subtrees)
 	{
 	  gfc_code *b;
-	  switch ((*c)->op)
+	  gfc_actual_arglist *a;
+	  gfc_code *co;
+
+	  /* There might be statement insertions before the current code,
+	     which must not affect the expression walker.  */
+
+	  co = *c;
+
+	  switch (co->op)
 	    {
 	    case EXEC_DO:
-	      WALK_SUBEXPR ((*c)->ext.iterator->var);
-	      WALK_SUBEXPR ((*c)->ext.iterator->start);
-	      WALK_SUBEXPR ((*c)->ext.iterator->end);
-	      WALK_SUBEXPR ((*c)->ext.iterator->step);
+	      WALK_SUBEXPR (co->ext.iterator->var);
+	      WALK_SUBEXPR (co->ext.iterator->start);
+	      WALK_SUBEXPR (co->ext.iterator->end);
+	      WALK_SUBEXPR (co->ext.iterator->step);
 	      break;
+
+	    case EXEC_CALL:
+	    case EXEC_ASSIGN_CALL:
+	      for (a = co->ext.actual; a; a = a->next)
+		WALK_SUBEXPR (a->expr);
+	      break;
+
+	    case EXEC_CALL_PPC:
+	      WALK_SUBEXPR (co->expr1);
+	      for (a = co->ext.actual; a; a = a->next)
+		WALK_SUBEXPR (a->expr);
+	      break;
+
 	    case EXEC_SELECT:
-	      WALK_SUBEXPR ((*c)->expr1);
-	      for (b = (*c)->block; b; b = b->block)
+	      WALK_SUBEXPR (co->expr1);
+	      for (b = co->block; b; b = b->block)
 		{
 		  gfc_case *cp;
-		  for (cp = b->ext.case_list; cp; cp = cp->next)
+		  for (cp = b->ext.block.case_list; cp; cp = cp->next)
 		    {
 		      WALK_SUBEXPR (cp->low);
 		      WALK_SUBEXPR (cp->high);
@@ -548,18 +1036,20 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
 		  WALK_SUBCODE (b->next);
 		}
 	      continue;
+
 	    case EXEC_ALLOCATE:
 	    case EXEC_DEALLOCATE:
 	      {
 		gfc_alloc *a;
-		for (a = (*c)->ext.alloc.list; a; a = a->next)
+		for (a = co->ext.alloc.list; a; a = a->next)
 		  WALK_SUBEXPR (a->expr);
 		break;
 	      }
+
 	    case EXEC_FORALL:
 	      {
 		gfc_forall_iterator *fa;
-		for (fa = (*c)->ext.forall_iterator; fa; fa = fa->next)
+		for (fa = co->ext.forall_iterator; fa; fa = fa->next)
 		  {
 		    WALK_SUBEXPR (fa->var);
 		    WALK_SUBEXPR (fa->start);
@@ -568,107 +1058,114 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
 		  }
 		break;
 	      }
+
 	    case EXEC_OPEN:
-	      WALK_SUBEXPR ((*c)->ext.open->unit);
-	      WALK_SUBEXPR ((*c)->ext.open->file);
-	      WALK_SUBEXPR ((*c)->ext.open->status);
-	      WALK_SUBEXPR ((*c)->ext.open->access);
-	      WALK_SUBEXPR ((*c)->ext.open->form);
-	      WALK_SUBEXPR ((*c)->ext.open->recl);
-	      WALK_SUBEXPR ((*c)->ext.open->blank);
-	      WALK_SUBEXPR ((*c)->ext.open->position);
-	      WALK_SUBEXPR ((*c)->ext.open->action);
-	      WALK_SUBEXPR ((*c)->ext.open->delim);
-	      WALK_SUBEXPR ((*c)->ext.open->pad);
-	      WALK_SUBEXPR ((*c)->ext.open->iostat);
-	      WALK_SUBEXPR ((*c)->ext.open->iomsg);
-	      WALK_SUBEXPR ((*c)->ext.open->convert);
-	      WALK_SUBEXPR ((*c)->ext.open->decimal);
-	      WALK_SUBEXPR ((*c)->ext.open->encoding);
-	      WALK_SUBEXPR ((*c)->ext.open->round);
-	      WALK_SUBEXPR ((*c)->ext.open->sign);
-	      WALK_SUBEXPR ((*c)->ext.open->asynchronous);
-	      WALK_SUBEXPR ((*c)->ext.open->id);
-	      WALK_SUBEXPR ((*c)->ext.open->newunit);
+	      WALK_SUBEXPR (co->ext.open->unit);
+	      WALK_SUBEXPR (co->ext.open->file);
+	      WALK_SUBEXPR (co->ext.open->status);
+	      WALK_SUBEXPR (co->ext.open->access);
+	      WALK_SUBEXPR (co->ext.open->form);
+	      WALK_SUBEXPR (co->ext.open->recl);
+	      WALK_SUBEXPR (co->ext.open->blank);
+	      WALK_SUBEXPR (co->ext.open->position);
+	      WALK_SUBEXPR (co->ext.open->action);
+	      WALK_SUBEXPR (co->ext.open->delim);
+	      WALK_SUBEXPR (co->ext.open->pad);
+	      WALK_SUBEXPR (co->ext.open->iostat);
+	      WALK_SUBEXPR (co->ext.open->iomsg);
+	      WALK_SUBEXPR (co->ext.open->convert);
+	      WALK_SUBEXPR (co->ext.open->decimal);
+	      WALK_SUBEXPR (co->ext.open->encoding);
+	      WALK_SUBEXPR (co->ext.open->round);
+	      WALK_SUBEXPR (co->ext.open->sign);
+	      WALK_SUBEXPR (co->ext.open->asynchronous);
+	      WALK_SUBEXPR (co->ext.open->id);
+	      WALK_SUBEXPR (co->ext.open->newunit);
 	      break;
+
 	    case EXEC_CLOSE:
-	      WALK_SUBEXPR ((*c)->ext.close->unit);
-	      WALK_SUBEXPR ((*c)->ext.close->status);
-	      WALK_SUBEXPR ((*c)->ext.close->iostat);
-	      WALK_SUBEXPR ((*c)->ext.close->iomsg);
+	      WALK_SUBEXPR (co->ext.close->unit);
+	      WALK_SUBEXPR (co->ext.close->status);
+	      WALK_SUBEXPR (co->ext.close->iostat);
+	      WALK_SUBEXPR (co->ext.close->iomsg);
 	      break;
+
 	    case EXEC_BACKSPACE:
 	    case EXEC_ENDFILE:
 	    case EXEC_REWIND:
 	    case EXEC_FLUSH:
-	      WALK_SUBEXPR ((*c)->ext.filepos->unit);
-	      WALK_SUBEXPR ((*c)->ext.filepos->iostat);
-	      WALK_SUBEXPR ((*c)->ext.filepos->iomsg);
+	      WALK_SUBEXPR (co->ext.filepos->unit);
+	      WALK_SUBEXPR (co->ext.filepos->iostat);
+	      WALK_SUBEXPR (co->ext.filepos->iomsg);
 	      break;
+
 	    case EXEC_INQUIRE:
-	      WALK_SUBEXPR ((*c)->ext.inquire->unit);
-	      WALK_SUBEXPR ((*c)->ext.inquire->file);
-	      WALK_SUBEXPR ((*c)->ext.inquire->iomsg);
-	      WALK_SUBEXPR ((*c)->ext.inquire->iostat);
-	      WALK_SUBEXPR ((*c)->ext.inquire->exist);
-	      WALK_SUBEXPR ((*c)->ext.inquire->opened);
-	      WALK_SUBEXPR ((*c)->ext.inquire->number);
-	      WALK_SUBEXPR ((*c)->ext.inquire->named);
-	      WALK_SUBEXPR ((*c)->ext.inquire->name);
-	      WALK_SUBEXPR ((*c)->ext.inquire->access);
-	      WALK_SUBEXPR ((*c)->ext.inquire->sequential);
-	      WALK_SUBEXPR ((*c)->ext.inquire->direct);
-	      WALK_SUBEXPR ((*c)->ext.inquire->form);
-	      WALK_SUBEXPR ((*c)->ext.inquire->formatted);
-	      WALK_SUBEXPR ((*c)->ext.inquire->unformatted);
-	      WALK_SUBEXPR ((*c)->ext.inquire->recl);
-	      WALK_SUBEXPR ((*c)->ext.inquire->nextrec);
-	      WALK_SUBEXPR ((*c)->ext.inquire->blank);
-	      WALK_SUBEXPR ((*c)->ext.inquire->position);
-	      WALK_SUBEXPR ((*c)->ext.inquire->action);
-	      WALK_SUBEXPR ((*c)->ext.inquire->read);
-	      WALK_SUBEXPR ((*c)->ext.inquire->write);
-	      WALK_SUBEXPR ((*c)->ext.inquire->readwrite);
-	      WALK_SUBEXPR ((*c)->ext.inquire->delim);
-	      WALK_SUBEXPR ((*c)->ext.inquire->encoding);
-	      WALK_SUBEXPR ((*c)->ext.inquire->pad);
-	      WALK_SUBEXPR ((*c)->ext.inquire->iolength);
-	      WALK_SUBEXPR ((*c)->ext.inquire->convert);
-	      WALK_SUBEXPR ((*c)->ext.inquire->strm_pos);
-	      WALK_SUBEXPR ((*c)->ext.inquire->asynchronous);
-	      WALK_SUBEXPR ((*c)->ext.inquire->decimal);
-	      WALK_SUBEXPR ((*c)->ext.inquire->pending);
-	      WALK_SUBEXPR ((*c)->ext.inquire->id);
-	      WALK_SUBEXPR ((*c)->ext.inquire->sign);
-	      WALK_SUBEXPR ((*c)->ext.inquire->size);
-	      WALK_SUBEXPR ((*c)->ext.inquire->round);
+	      WALK_SUBEXPR (co->ext.inquire->unit);
+	      WALK_SUBEXPR (co->ext.inquire->file);
+	      WALK_SUBEXPR (co->ext.inquire->iomsg);
+	      WALK_SUBEXPR (co->ext.inquire->iostat);
+	      WALK_SUBEXPR (co->ext.inquire->exist);
+	      WALK_SUBEXPR (co->ext.inquire->opened);
+	      WALK_SUBEXPR (co->ext.inquire->number);
+	      WALK_SUBEXPR (co->ext.inquire->named);
+	      WALK_SUBEXPR (co->ext.inquire->name);
+	      WALK_SUBEXPR (co->ext.inquire->access);
+	      WALK_SUBEXPR (co->ext.inquire->sequential);
+	      WALK_SUBEXPR (co->ext.inquire->direct);
+	      WALK_SUBEXPR (co->ext.inquire->form);
+	      WALK_SUBEXPR (co->ext.inquire->formatted);
+	      WALK_SUBEXPR (co->ext.inquire->unformatted);
+	      WALK_SUBEXPR (co->ext.inquire->recl);
+	      WALK_SUBEXPR (co->ext.inquire->nextrec);
+	      WALK_SUBEXPR (co->ext.inquire->blank);
+	      WALK_SUBEXPR (co->ext.inquire->position);
+	      WALK_SUBEXPR (co->ext.inquire->action);
+	      WALK_SUBEXPR (co->ext.inquire->read);
+	      WALK_SUBEXPR (co->ext.inquire->write);
+	      WALK_SUBEXPR (co->ext.inquire->readwrite);
+	      WALK_SUBEXPR (co->ext.inquire->delim);
+	      WALK_SUBEXPR (co->ext.inquire->encoding);
+	      WALK_SUBEXPR (co->ext.inquire->pad);
+	      WALK_SUBEXPR (co->ext.inquire->iolength);
+	      WALK_SUBEXPR (co->ext.inquire->convert);
+	      WALK_SUBEXPR (co->ext.inquire->strm_pos);
+	      WALK_SUBEXPR (co->ext.inquire->asynchronous);
+	      WALK_SUBEXPR (co->ext.inquire->decimal);
+	      WALK_SUBEXPR (co->ext.inquire->pending);
+	      WALK_SUBEXPR (co->ext.inquire->id);
+	      WALK_SUBEXPR (co->ext.inquire->sign);
+	      WALK_SUBEXPR (co->ext.inquire->size);
+	      WALK_SUBEXPR (co->ext.inquire->round);
 	      break;
+
 	    case EXEC_WAIT:
-	      WALK_SUBEXPR ((*c)->ext.wait->unit);
-	      WALK_SUBEXPR ((*c)->ext.wait->iostat);
-	      WALK_SUBEXPR ((*c)->ext.wait->iomsg);
-	      WALK_SUBEXPR ((*c)->ext.wait->id);
+	      WALK_SUBEXPR (co->ext.wait->unit);
+	      WALK_SUBEXPR (co->ext.wait->iostat);
+	      WALK_SUBEXPR (co->ext.wait->iomsg);
+	      WALK_SUBEXPR (co->ext.wait->id);
 	      break;
+
 	    case EXEC_READ:
 	    case EXEC_WRITE:
-	      WALK_SUBEXPR ((*c)->ext.dt->io_unit);
-	      WALK_SUBEXPR ((*c)->ext.dt->format_expr);
-	      WALK_SUBEXPR ((*c)->ext.dt->rec);
-	      WALK_SUBEXPR ((*c)->ext.dt->advance);
-	      WALK_SUBEXPR ((*c)->ext.dt->iostat);
-	      WALK_SUBEXPR ((*c)->ext.dt->size);
-	      WALK_SUBEXPR ((*c)->ext.dt->iomsg);
-	      WALK_SUBEXPR ((*c)->ext.dt->id);
-	      WALK_SUBEXPR ((*c)->ext.dt->pos);
-	      WALK_SUBEXPR ((*c)->ext.dt->asynchronous);
-	      WALK_SUBEXPR ((*c)->ext.dt->blank);
-	      WALK_SUBEXPR ((*c)->ext.dt->decimal);
-	      WALK_SUBEXPR ((*c)->ext.dt->delim);
-	      WALK_SUBEXPR ((*c)->ext.dt->pad);
-	      WALK_SUBEXPR ((*c)->ext.dt->round);
-	      WALK_SUBEXPR ((*c)->ext.dt->sign);
-	      WALK_SUBEXPR ((*c)->ext.dt->extra_comma);
+	      WALK_SUBEXPR (co->ext.dt->io_unit);
+	      WALK_SUBEXPR (co->ext.dt->format_expr);
+	      WALK_SUBEXPR (co->ext.dt->rec);
+	      WALK_SUBEXPR (co->ext.dt->advance);
+	      WALK_SUBEXPR (co->ext.dt->iostat);
+	      WALK_SUBEXPR (co->ext.dt->size);
+	      WALK_SUBEXPR (co->ext.dt->iomsg);
+	      WALK_SUBEXPR (co->ext.dt->id);
+	      WALK_SUBEXPR (co->ext.dt->pos);
+	      WALK_SUBEXPR (co->ext.dt->asynchronous);
+	      WALK_SUBEXPR (co->ext.dt->blank);
+	      WALK_SUBEXPR (co->ext.dt->decimal);
+	      WALK_SUBEXPR (co->ext.dt->delim);
+	      WALK_SUBEXPR (co->ext.dt->pad);
+	      WALK_SUBEXPR (co->ext.dt->round);
+	      WALK_SUBEXPR (co->ext.dt->sign);
+	      WALK_SUBEXPR (co->ext.dt->extra_comma);
 	      break;
+
 	    case EXEC_OMP_DO:
 	    case EXEC_OMP_PARALLEL:
 	    case EXEC_OMP_PARALLEL_DO:
@@ -679,20 +1176,21 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
 	    case EXEC_OMP_WORKSHARE:
 	    case EXEC_OMP_END_SINGLE:
 	    case EXEC_OMP_TASK:
-	      if ((*c)->ext.omp_clauses)
+	      if (co->ext.omp_clauses)
 		{
-		  WALK_SUBEXPR ((*c)->ext.omp_clauses->if_expr);
-		  WALK_SUBEXPR ((*c)->ext.omp_clauses->num_threads);
-		  WALK_SUBEXPR ((*c)->ext.omp_clauses->chunk_size);
+		  WALK_SUBEXPR (co->ext.omp_clauses->if_expr);
+		  WALK_SUBEXPR (co->ext.omp_clauses->num_threads);
+		  WALK_SUBEXPR (co->ext.omp_clauses->chunk_size);
 		}
 	      break;
 	    default:
 	      break;
 	    }
-	  WALK_SUBEXPR ((*c)->expr1);
-	  WALK_SUBEXPR ((*c)->expr2);
-	  WALK_SUBEXPR ((*c)->expr3);
-	  for (b = (*c)->block; b; b = b->block)
+
+	  WALK_SUBEXPR (co->expr1);
+	  WALK_SUBEXPR (co->expr2);
+	  WALK_SUBEXPR (co->expr3);
+	  for (b = co->block; b; b = b->block)
 	    {
 	      WALK_SUBEXPR (b->expr1);
 	      WALK_SUBEXPR (b->expr2);

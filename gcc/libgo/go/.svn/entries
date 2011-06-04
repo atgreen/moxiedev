@@ -1,0 +1,196 @@
+10
+
+dir
+174639
+svn://gcc.gnu.org/svn/gcc/trunk/libgo/go
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2011-05-31T18:08:48.402537Z
+174501
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+http
+dir
+
+netchan
+dir
+
+syslog
+dir
+
+os
+dir
+
+image
+dir
+
+hash
+dir
+
+runtime
+dir
+
+rpc
+dir
+
+debug
+dir
+
+encoding
+dir
+
+unicode
+dir
+
+websocket
+dir
+
+math
+dir
+
+strings
+dir
+
+compress
+dir
+
+exp
+dir
+
+time
+dir
+
+patch
+dir
+
+big
+dir
+
+asn1
+dir
+
+tabwriter
+dir
+
+html
+dir
+
+bufio
+dir
+
+expvar
+dir
+
+utf16
+dir
+
+gob
+dir
+
+json
+dir
+
+sync
+dir
+
+testing
+dir
+
+try
+dir
+
+crypto
+dir
+
+log
+dir
+
+archive
+dir
+
+container
+dir
+
+smtp
+dir
+
+exec
+dir
+
+rand
+dir
+
+reflect
+dir
+
+net
+dir
+
+fmt
+dir
+
+bytes
+dir
+
+utf8
+dir
+
+mime
+dir
+
+sort
+dir
+
+scanner
+dir
+
+regexp
+dir
+
+cmath
+dir
+
+path
+dir
+
+strconv
+dir
+
+xml
+dir
+
+go
+dir
+
+io
+dir
+
+index
+dir
+
+flag
+dir
+
+ebnf
+dir
+
+template
+dir
+

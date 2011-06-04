@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/28_regex
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-11-14T20:05:12.353083Z
-166736
-doko
+2011-03-25T22:50:47.213754Z
+171530
+redi
 
 
 
@@ -25,18 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-05_constants
-dir
-
-08_basic_regex
-dir
-
-03_requirements
-dir
-
-04_header
-dir
 
 init-list.cc
 file
@@ -106,24 +94,33 @@ paolo
 
 944
 
-06_exception_type
+regex_error
 dir
 
-11_algorithms
+requirements
+dir
+
+sub_match
+dir
+
+traits
+dir
+
+algorithms
 dir
 
 headers
 dir
 
-07_traits
+basic_regex
 dir
 
-09_sub_match
+constants
 dir
 
-10_match_results
+iterators
 dir
 
-12_iterators
+match_results
 dir
 

@@ -1,5 +1,5 @@
 /* Data and Control Flow Analysis for Trees.
-   Copyright (C) 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Diego Novillo <dnovillo@redhat.com>
 
@@ -61,7 +61,7 @@ struct GTY(()) gimple_df {
   struct pointer_map_t * GTY((skip(""))) decls_to_pointers;
 
   /* Free list of SSA_NAMEs.  */
-  tree free_ssanames;
+  VEC(tree,gc) *free_ssanames;
 
   /* Hashtable holding definition for symbol.  If this field is not NULL, it
      means that the first reference to this variable in the function is a
@@ -171,10 +171,6 @@ struct GTY(()) var_ann_d {
      See the enum's definition for more detailed information about the
      states.  */
   ENUM_BITFIELD (need_phi_state) need_phi_state : 2;
-
-  /* True for HEAP artificial variables.  These variables represent
-     the memory area allocated by a call to malloc.  */
-  unsigned is_heapvar : 1;
 
   /* Used by var_map for the base index of ssa base variables.  */
   unsigned base_index;
@@ -286,16 +282,6 @@ static inline var_ann_t get_var_ann (tree);
 static inline void update_stmt (gimple);
 static inline int get_lineno (const_gimple);
 
-/*---------------------------------------------------------------------------
-                  Structure representing predictions in tree level.
----------------------------------------------------------------------------*/
-struct GTY((chain_next ("%h.ep_next"))) edge_prediction {
-  struct edge_prediction *ep_next;
-  edge ep_edge;
-  enum br_predictor ep_predictor;
-  int ep_probability;
-};
-
 /* Accessors for basic block annotations.  */
 static inline gimple_seq phi_nodes (const_basic_block);
 static inline void set_phi_nodes (basic_block, gimple_seq);
@@ -303,8 +289,7 @@ static inline void set_phi_nodes (basic_block, gimple_seq);
 /*---------------------------------------------------------------------------
 			      Global declarations
 ---------------------------------------------------------------------------*/
-struct GTY(()) int_tree_map {
-
+struct int_tree_map {
   unsigned int uid;
   tree to;
 };
@@ -325,12 +310,12 @@ typedef struct
    to the hashtable while using this macro.  Doing so may cause it to behave
    erratically.  */
 
-#define FOR_EACH_REFERENCED_VAR(VAR, ITER) \
-  for ((VAR) = first_referenced_var (&(ITER)); \
-       !end_referenced_vars_p (&(ITER)); \
+#define FOR_EACH_REFERENCED_VAR(FN, VAR, ITER)		\
+  for ((VAR) = first_referenced_var ((FN), &(ITER));	\
+       !end_referenced_vars_p (&(ITER));		\
        (VAR) = next_referenced_var (&(ITER)))
 
-extern tree referenced_var_lookup (unsigned int);
+extern tree referenced_var_lookup (struct function *, unsigned int);
 extern bool referenced_var_check_and_insert (tree);
 #define num_referenced_vars htab_elements (gimple_referenced_vars (cfun))
 
@@ -437,9 +422,8 @@ extern basic_block label_to_block_fn (struct function *, tree);
 #define label_to_block(t) (label_to_block_fn (cfun, t))
 extern void notice_special_calls (gimple);
 extern void clear_special_calls (void);
-extern void verify_stmts (void);
-extern void verify_gimple (void);
-extern void verify_types_in_gimple_seq (gimple_seq);
+extern void verify_gimple_in_seq (gimple_seq);
+extern void verify_gimple_in_cfg (struct function *);
 extern tree gimple_block_label (basic_block);
 extern void extract_true_false_edges_from_block (basic_block, edge *, edge *);
 extern bool gimple_duplicate_sese_region (edge, edge, basic_block *, unsigned,
@@ -527,13 +511,13 @@ extern void record_vars_into (tree, tree);
 extern void record_vars (tree);
 extern bool gimple_seq_may_fallthru (gimple_seq);
 extern bool gimple_stmt_may_fallthru (gimple);
-extern bool gimple_check_call_args (gimple);
+extern bool gimple_check_call_matching_types (gimple, tree);
 
 
 /* In tree-ssa.c  */
 
 /* Mapping for redirected edges.  */
-struct GTY(()) _edge_var_map {
+struct _edge_var_map {
   tree result;			/* PHI result.  */
   tree def;			/* PHI arg definition.  */
   source_location locus;        /* PHI arg location.  */
@@ -558,7 +542,7 @@ extern void flush_pending_stmts (edge);
 extern void verify_ssa (bool);
 extern void delete_tree_ssa (void);
 extern bool ssa_undefined_value_p (tree);
-extern void warn_uninit (tree, const char *, void *);
+extern void warn_uninit (enum opt_code, tree, const char *, void *);
 extern unsigned int warn_uninitialized_vars (bool);
 extern void execute_update_addresses_taken (void);
 
@@ -570,6 +554,7 @@ extern void walk_use_def_chains (tree, walk_use_def_chains_fn, void *, bool);
 
 void insert_debug_temps_for_defs (gimple_stmt_iterator *);
 void insert_debug_temp_for_var_def (gimple_stmt_iterator *, tree);
+void reset_debug_uses (gimple);
 void release_defs_bitset (bitmap toremove);
 
 /* In tree-into-ssa.c  */
@@ -605,6 +590,7 @@ extern void ssanames_print_statistics (void);
 
 /* In tree-ssa-ccp.c  */
 tree fold_const_aggregate_ref (tree);
+tree gimple_fold_stmt_to_constant (gimple, tree (*)(tree));
 
 /* In tree-ssa-dom.c  */
 extern void dump_dominator_optimization_stats (FILE *);
@@ -863,10 +849,11 @@ bool fixup_noreturn_call (gimple stmt);
 /* In ipa-pure-const.c  */
 void warn_function_noreturn (tree);
 
+/* In tree-ssa-ter.c  */
+bool stmt_is_replaceable_p (gimple);
+
 #include "tree-flow-inline.h"
 
 void swap_tree_operands (gimple, tree *, tree *);
-
-int least_common_multiple (int, int);
 
 #endif /* _TREE_FLOW_H  */

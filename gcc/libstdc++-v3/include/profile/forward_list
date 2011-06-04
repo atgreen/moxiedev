@@ -1,6 +1,6 @@
 // <forward_list> -*- C++ -*-
 
-// Copyright (C) 2010 Free Software Foundation, Inc.
+// Copyright (C) 2010, 2011 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -35,16 +35,16 @@
 
 #include <forward_list>
 
-namespace std
+namespace std _GLIBCXX_VISIBILITY(default)
 {
 namespace __profile
 {
   /// Class std::forward_list wrapper with performance instrumentation.
   template<typename _Tp, typename _Alloc = std::allocator<_Tp> >
     class forward_list
-    : public _GLIBCXX_STD_D::forward_list<_Tp, _Alloc>
+    : public _GLIBCXX_STD_C::forward_list<_Tp, _Alloc>
     {
-      typedef _GLIBCXX_STD_D::forward_list<_Tp, _Alloc> _Base;
+      typedef _GLIBCXX_STD_C::forward_list<_Tp, _Alloc> _Base;
 
     public:
       typedef typename _Base::size_type             size_type;
@@ -83,7 +83,7 @@ namespace __profile
       : _Base(__list)
       { }
 
-      forward_list(forward_list&& __list)
+      forward_list(forward_list&& __list) noexcept
       : _Base(std::move(__list)) { }
 
       forward_list(std::initializer_list<_Tp> __il,
@@ -91,7 +91,7 @@ namespace __profile
       : _Base(__il, __al)
       { }
 
-      ~forward_list()
+      ~forward_list() noexcept
       { }
 
       forward_list&
@@ -119,10 +119,10 @@ namespace __profile
       }
 
       _Base&
-      _M_base()       { return *this; }
+      _M_base() noexcept       { return *this; }
 
       const _Base&
-      _M_base() const { return *this; }
+      _M_base() const noexcept { return *this; }
     };
 
   template<typename _Tp, typename _Alloc>

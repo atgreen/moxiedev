@@ -1,5 +1,5 @@
 /* Definitions of target machine for GNU compiler for Xilinx MicroBlaze.
-   Copyright 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2009, 2010, 2011 Free Software Foundation, Inc.
 
    Contributed by Michael Eager <eager@eagercon.com>.
 
@@ -74,10 +74,9 @@ extern enum pipeline_type microblaze_pipe;
 
 /* Assembler specs.  */
 
-#define TARGET_ASM_SPEC "%{v}"
+#define TARGET_ASM_SPEC ""
 
 #define ASM_SPEC "\
-%{microblaze1} \
 %(target_asm_spec)"
 
 /* Extra switches sometimes passed to the linker.  */
@@ -87,14 +86,13 @@ extern enum pipeline_type microblaze_pipe;
   %{Zxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} \
   %{mxl-mode-xmdstub:-defsym _TEXT_START_ADDR=0x800} \
   %{mxl-gp-opt:%{G*}} %{!mxl-gp-opt: -G 0} \
-  %{!Wl,-T*: %{!T*: -dT xilinx.ld%s}}"
+  %{!T*: -dT xilinx.ld%s}"
 
 /* Specs for the compiler proper  */
 
 #ifndef CC1_SPEC
 #define CC1_SPEC " \
-%{G*} %{gline:%{!g:%{!g0:%{!g1:%{!g2: -g1}}}}} \
-%{save-temps: } \
+%{G*} \
 %(subtarget_cc1_spec) \
 %{mxl-multiply-high:-mcpu=v6.00.a} \
 "
@@ -103,22 +101,6 @@ extern enum pipeline_type microblaze_pipe;
 #define EXTRA_SPECS							\
   { "target_asm_spec", TARGET_ASM_SPEC },				\
   SUBTARGET_EXTRA_SPECS
-
-/* Print subsidiary information on the compiler version in use.  */
-#define MICROBLAZE_VERSION MICROBLAZE_DEFAULT_CPU
-
-#ifndef MACHINE_TYPE
-#define MACHINE_TYPE "MicroBlaze/ELF"
-#endif
-
-#ifndef TARGET_VERSION_INTERNAL
-#define TARGET_VERSION_INTERNAL(STREAM)					\
-  fprintf (STREAM, " %s %s", MACHINE_TYPE, MICROBLAZE_VERSION)
-#endif
-
-#ifndef TARGET_VERSION
-#define TARGET_VERSION TARGET_VERSION_INTERNAL (stderr)
-#endif
 
 /* Local compiler-generated symbols must have a prefix that the assembler
    understands.   */
@@ -369,7 +351,8 @@ extern enum reg_class microblaze_regno_to_class[];
 /* REGISTER AND CONSTANT CLASSES */
 
 #define SMALL_INT(X) ((unsigned HOST_WIDE_INT) (INTVAL (X) + 0x8000) < 0x10000)
-#define LARGE_INT(X) (INTVAL (X) >= 0x80000000 && INTVAL (X) <= 0xffffffff)
+#define LARGE_INT(X) \
+  (INTVAL (X) > 0 && UINTVAL (X) >= 0x80000000 && UINTVAL (X) <= 0xffffffff)
 #define PLT_ADDR_P(X) (GET_CODE (X) == UNSPEC && XINT (X,1) == UNSPEC_PLT)
 /* Test for a valid operand for a call instruction.
    Don't allow the arg pointer register or virtual regs
@@ -490,7 +473,7 @@ typedef struct microblaze_args
   /* Adjustments made to args pass in regs.  */
   /* ??? The size is doubled to work around a bug in the code that sets the 
      adjustments in function_arg.  */
-  struct rtx_def *adjust[MAX_ARGS_IN_REGISTERS * 2];
+  rtx adjust[MAX_ARGS_IN_REGISTERS * 2];
 } CUMULATIVE_ARGS;
 
 #define INIT_CUMULATIVE_ARGS(CUM,FNTYPE,LIBNAME,FNDECL,N_NAMED_ARGS)	\
@@ -540,12 +523,6 @@ typedef struct microblaze_args
 /* Define this, so that when PIC, reload won't try to reload invalid
    addresses which require two reload registers.  */
 #define LEGITIMATE_PIC_OPERAND_P(X)  (!pic_address_needs_scratch (X))
-
-/* At present, GAS doesn't understand li.[sd], so don't allow it
-   to be generated at present.  */
-#define LEGITIMATE_CONSTANT_P(X)				\
-  (GET_CODE (X) != CONST_DOUBLE					\
-    || microblaze_const_double_ok (X, GET_MODE (X)))
 
 #define CASE_VECTOR_MODE			(SImode)
 
@@ -647,8 +624,9 @@ typedef struct microblaze_args
 #undef	ASM_OUTPUT_ALIGNED_COMMON
 #define	ASM_OUTPUT_ALIGNED_COMMON(FILE, NAME, SIZE, ALIGN)		\
 do {									\
-  if (SIZE > 0 && SIZE <= microblaze_section_threshold                  \
-      && TARGET_XLGPOPT)                                               \
+  if ((SIZE) > 0 && (SIZE) <= INT_MAX					\
+      && (int) (SIZE) <= microblaze_section_threshold			\
+      && TARGET_XLGPOPT)						\
     {                                                                   \
       switch_to_section (sbss_section);					\
     }									\
@@ -666,8 +644,9 @@ do {									\
 #undef ASM_OUTPUT_ALIGNED_LOCAL
 #define	ASM_OUTPUT_ALIGNED_LOCAL(FILE, NAME, SIZE, ALIGN)		\
 do {									\
-  if (SIZE > 0 && SIZE <= microblaze_section_threshold                  \
-      && TARGET_XLGPOPT)                                               \
+  if ((SIZE) > 0 && (SIZE) <= INT_MAX					\
+      && (int) (SIZE) <= microblaze_section_threshold			\
+      && TARGET_XLGPOPT)						\
     {                                                                   \
       switch_to_section (sbss_section);					\
     }									\
@@ -736,7 +715,7 @@ do {									\
    LABELNO is an integer which is different for each call.  */
 #define ASM_FORMAT_PRIVATE_NAME(OUTPUT, NAME, LABELNO)			\
 ( (OUTPUT) = (char *) alloca (strlen ((NAME)) + 10),			\
-  sprintf ((OUTPUT), "%s.%d", (NAME), (LABELNO)))
+  sprintf ((OUTPUT), "%s.%lu", (NAME), (unsigned long)(LABELNO)))
 
 /* How to start an assembler comment.
    The leading space is important (the microblaze assembler requires it).  */
@@ -817,7 +796,8 @@ extern int save_volatiles;
 	size_directive_output = 1;					\
 	fprintf (FILE, "%s", SIZE_ASM_OP);				\
 	assemble_name (FILE, NAME);					\
-	fprintf (FILE, ",%d\n",  int_size_in_bytes (TREE_TYPE (DECL)));	\
+	fprintf (FILE, "," HOST_WIDE_INT_PRINT_DEC "\n",		\
+	int_size_in_bytes (TREE_TYPE (DECL)));				\
       }									\
     microblaze_declare_object (FILE, NAME, "", ":\n", 0);			\
   } while (0)
@@ -825,7 +805,7 @@ extern int save_volatiles;
 #undef ASM_FINISH_DECLARE_OBJECT
 #define ASM_FINISH_DECLARE_OBJECT(FILE, DECL, TOP_LEVEL, AT_END)	 \
 do {									 \
-     char *name = XSTR (XEXP (DECL_RTL (DECL), 0), 0);			 \
+     const char *name = XSTR (XEXP (DECL_RTL (DECL), 0), 0);		 \
      if (!flag_inhibit_size_directive && DECL_SIZE (DECL)		 \
          && ! AT_END && TOP_LEVEL					 \
 	 && DECL_INITIAL (DECL) == error_mark_node			 \
@@ -834,7 +814,8 @@ do {									 \
 	 size_directive_output = 1;					 \
 	 fprintf (FILE, "%s", SIZE_ASM_OP);			         \
 	 assemble_name (FILE, name);					 \
-	 fprintf (FILE, ",%d\n", int_size_in_bytes (TREE_TYPE (DECL)));  \
+	 fprintf (FILE, "," HOST_WIDE_INT_PRINT_DEC "\n",		 \
+		  int_size_in_bytes (TREE_TYPE (DECL)));		 \
        }								 \
    } while (0)
 
@@ -879,10 +860,6 @@ do {									 \
 #define SDATA2_SECTION_ASM_OP	"\t.sdata2"	/* Small RO initialized data   */
 #define SBSS_SECTION_ASM_OP     "\t.sbss"	/* Small RW uninitialized data */
 #define SBSS2_SECTION_ASM_OP    "\t.sbss2"	/* Small RO uninitialized data */
-
-#define HOT_TEXT_SECTION_NAME   ".text.hot"
-#define UNLIKELY_EXECUTED_TEXT_SECTION_NAME \
-                                ".text.unlikely"
 
 /* We do this to save a few 10s of code space that would be taken up
    by the call_FUNC () wrappers, used by the generic CRT_CALL_STATIC_FUNCTION

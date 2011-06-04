@@ -1,9 +1,9 @@
-/* Copyright (C) 2002, 2003, 2005, 2007, 2008, 2009, 2010
+/* Copyright (C) 2002, 2003, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Andy Vaught
    F2003 I/O support contributed by Jerry DeLisle
 
-This file is part of the GNU Fortran 95 runtime library (libgfortran).
+This file is part of the GNU Fortran runtime library (libgfortran).
 
 Libgfortran is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -131,45 +131,45 @@ max_value (int length, int signed_flag)
 
 
 /* convert_real()-- Convert a character representation of a floating
-   point number to the machine number.  Returns nonzero if there is a
-   range problem during conversion.  Note: many architectures
-   (e.g. IA-64, HP-PA) require that the storage pointed to by the dest
-   argument is properly aligned for the type in question.  */
+   point number to the machine number.  Returns nonzero if there is an
+   invalid input.  Note: many architectures (e.g. IA-64, HP-PA)
+   require that the storage pointed to by the dest argument is
+   properly aligned for the type in question.  */
 
 int
 convert_real (st_parameter_dt *dtp, void *dest, const char *buffer, int length)
 {
-  errno = 0;
+  char *endptr = NULL;
 
   switch (length)
     {
     case 4:
       *((GFC_REAL_4*) dest) =
 #if defined(HAVE_STRTOF)
-	gfc_strtof (buffer, NULL);
+	gfc_strtof (buffer, &endptr);
 #else
-	(GFC_REAL_4) gfc_strtod (buffer, NULL);
+	(GFC_REAL_4) gfc_strtod (buffer, &endptr);
 #endif
       break;
 
     case 8:
-      *((GFC_REAL_8*) dest) = gfc_strtod (buffer, NULL);
+      *((GFC_REAL_8*) dest) = gfc_strtod (buffer, &endptr);
       break;
 
 #if defined(HAVE_GFC_REAL_10) && defined (HAVE_STRTOLD)
     case 10:
-      *((GFC_REAL_10*) dest) = gfc_strtold (buffer, NULL);
+      *((GFC_REAL_10*) dest) = gfc_strtold (buffer, &endptr);
       break;
 #endif
 
 #if defined(HAVE_GFC_REAL_16)
 # if defined(GFC_REAL_16_IS_FLOAT128)
     case 16:
-      __qmath_(quadmath_strtopQ) (buffer, NULL, dest);
+      *((GFC_REAL_16*) dest) = __qmath_(strtoflt128) (buffer, &endptr);
       break;
 # elif defined(HAVE_STRTOLD)
     case 16:
-      *((GFC_REAL_16*) dest) = gfc_strtold (buffer, NULL);
+      *((GFC_REAL_16*) dest) = gfc_strtold (buffer, &endptr);
       break;
 # endif
 #endif
@@ -178,12 +178,81 @@ convert_real (st_parameter_dt *dtp, void *dest, const char *buffer, int length)
       internal_error (&dtp->common, "Unsupported real kind during IO");
     }
 
-  if (errno == EINVAL)
+  if (buffer == endptr)
     {
       generate_error (&dtp->common, LIBERROR_READ_VALUE,
-		      "Error during floating point read");
+  		      "Error during floating point read");
       next_record (dtp, 1);
       return 1;
+    }
+
+  return 0;
+}
+
+/* convert_infnan()-- Convert character INF/NAN representation to the
+   machine number.  Note: many architectures (e.g. IA-64, HP-PA) require
+   that the storage pointed to by the dest argument is properly aligned
+   for the type in question.  */
+
+int
+convert_infnan (st_parameter_dt *dtp, void *dest, const char *buffer,
+	        int length)
+{
+  const char *s = buffer;
+  int is_inf, plus = 1;
+
+  if (*s == '+')
+    s++;
+  else if (*s == '-')
+    {
+      s++;
+      plus = 0;
+    }
+
+  is_inf = *s == 'i';
+
+  switch (length)
+    {
+    case 4:
+      if (is_inf)
+	*((GFC_REAL_4*) dest) = plus ? __builtin_inff () : -__builtin_inff ();
+      else
+	*((GFC_REAL_4*) dest) = plus ? __builtin_nanf ("") : -__builtin_nanf ("");
+      break;
+
+    case 8:
+      if (is_inf)
+	*((GFC_REAL_8*) dest) = plus ? __builtin_inf () : -__builtin_inf ();
+      else
+	*((GFC_REAL_8*) dest) = plus ? __builtin_nan ("") : -__builtin_nan ("");
+      break;
+
+#if defined(HAVE_GFC_REAL_10)
+    case 10:
+      if (is_inf)
+	*((GFC_REAL_10*) dest) = plus ? __builtin_infl () : -__builtin_infl ();
+      else
+	*((GFC_REAL_10*) dest) = plus ? __builtin_nanl ("") : -__builtin_nanl ("");
+      break;
+#endif
+
+#if defined(HAVE_GFC_REAL_16)
+# if defined(GFC_REAL_16_IS_FLOAT128)
+    case 16:
+      *((GFC_REAL_16*) dest) = __qmath_(strtoflt128) (buffer, NULL);
+      break;
+# else
+    case 16:
+      if (is_inf)
+	*((GFC_REAL_16*) dest) = plus ? __builtin_infl () : -__builtin_infl ();
+      else
+	*((GFC_REAL_16*) dest) = plus ? __builtin_nanl ("") : -__builtin_nanl ("");
+      break;
+# endif
+#endif
+
+    default:
+      internal_error (&dtp->common, "Unsupported real kind during IO");
     }
 
   return 0;
@@ -896,7 +965,7 @@ read_f (st_parameter_dt *dtp, const fnode *f, char *dest, int length)
       else if (strcmp (save, "nan") != 0)
 	goto bad_float;
 
-      convert_real (dtp, dest, buffer, length);
+      convert_infnan (dtp, dest, buffer, length);
       return;
     }
 
@@ -1045,6 +1114,14 @@ done:
   /* Output a trailing '0' after decimal point if not yet found.  */
   if (seen_dp && !seen_dec_digit)
     *(out++) = '0';
+  /* Handle input of style "E+NN" by inserting a 0 for the
+     significand.  */
+  else if (!seen_int_digit && !seen_dec_digit)
+    {
+      notify_std (&dtp->common, GFC_STD_LEGACY, 
+		  "REAL input of style 'E+NN'");
+      *(out++) = '0';
+    }
 
   /* Print out the exponent to finish the reformatted number.  Maximum 4
      digits for the exponent.  */
@@ -1117,8 +1194,7 @@ bad_float:
 void
 read_x (st_parameter_dt *dtp, int n)
 {
-  int length;
-  char *p, q;
+  int length, q, q2;
 
   if ((dtp->u.p.current_unit->pad_status == PAD_NO || is_internal_unit (dtp))
        && dtp->u.p.current_unit->bytes_left < n)
@@ -1131,7 +1207,7 @@ read_x (st_parameter_dt *dtp, int n)
 
   if (is_internal_unit (dtp))
     {
-      p = mem_alloc_r (dtp->u.p.current_unit->s, &length);
+      mem_alloc_r (dtp->u.p.current_unit->s, &length);
       if (unlikely (length < n))
 	n = length;
       goto done;
@@ -1140,55 +1216,37 @@ read_x (st_parameter_dt *dtp, int n)
   if (dtp->u.p.sf_seen_eor)
     return;
 
-  p = fbuf_read (dtp->u.p.current_unit, &length);
-  if (p == NULL)
-    {
-      hit_eof (dtp);
-      return;
-    }
-  
-  if (length == 0 && dtp->u.p.item_count == 1)
-    {
-      if (dtp->u.p.current_unit->pad_status == PAD_NO)
-	{
-	  hit_eof (dtp);
-	  return;
-	}
-      else
-	return;
-    }
-
   n = 0;
   while (n < length)
     {
-      q = *p;
-      if (q == '\n' || q == '\r')
+      q = fbuf_getc (dtp->u.p.current_unit);
+      if (q == EOF)
+	break;
+      else if (q == '\n' || q == '\r')
 	{
 	  /* Unexpected end of line. Set the position.  */
-	  fbuf_seek (dtp->u.p.current_unit, n + 1 ,SEEK_CUR);
 	  dtp->u.p.sf_seen_eor = 1;
 
+	  /* If we see an EOR during non-advancing I/O, we need to skip
+	     the rest of the I/O statement.  Set the corresponding flag.  */
+	  if (dtp->u.p.advance_status == ADVANCE_NO || dtp->u.p.seen_dollar)
+	    dtp->u.p.eor_condition = 1;
+	    
 	  /* If we encounter a CR, it might be a CRLF.  */
 	  if (q == '\r') /* Probably a CRLF */
 	    {
-	      /* See if there is an LF. Use fbuf_read rather then fbuf_getc so
-		 the position is not advanced unless it really is an LF.  */
-	      int readlen = 1;
-	      p = fbuf_read (dtp->u.p.current_unit, &readlen);
-	      if (*p == '\n' && readlen == 1)
-	        {
-		  dtp->u.p.sf_seen_eor = 2;
-		  fbuf_seek (dtp->u.p.current_unit, 1 ,SEEK_CUR);
-		}
+	      /* See if there is an LF.  */
+	      q2 = fbuf_getc (dtp->u.p.current_unit);
+	      if (q2 == '\n')
+		dtp->u.p.sf_seen_eor = 2;
+	      else if (q2 != EOF) /* Oops, seek back.  */
+		fbuf_seek (dtp->u.p.current_unit, -1, SEEK_CUR);
 	    }
 	  goto done;
 	}
       n++;
-      p++;
     } 
 
-  fbuf_seek (dtp->u.p.current_unit, n, SEEK_CUR);
-  
  done:
   if ((dtp->common.flags & IOPARM_DT_HAS_SIZE) != 0)
     dtp->u.p.size_used += (GFC_IO_INT) n;

@@ -948,7 +948,7 @@ CND(AF_INET, "IPv4 address family")
 #endif
 
 /**
- ** Tru64 UNIX V4.0F defines AF_INET6 without IPv6 support, specificially
+ ** Tru64 UNIX V4.0F defines AF_INET6 without IPv6 support, specifically
  ** without struct sockaddr_in6.  We use _SS_MAXSIZE (used for the definition
  ** of struct sockaddr_storage on Tru64 UNIX V5.1) to detect this.
  **/
@@ -1084,7 +1084,13 @@ CND(MSG_PEEK, "Peek at incoming data")
 CND(MSG_EOR, "Send end of record")
 
 #ifndef MSG_WAITALL
+#ifdef __MINWGW32__
+/* The value of MSG_WAITALL is 8.  Nevertheless winsock.h doesn't
+   define it, but it is still usable as we link to winsock2 API.  */
+# define MSG_WAITALL (1 << 3)
+#else
 # define MSG_WAITALL -1
+#endif
 #endif
 CND(MSG_WAITALL, "Wait for full reception")
 

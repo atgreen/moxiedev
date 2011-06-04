@@ -1,7 +1,7 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/imageio/metadata
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-IIOMetadataFormatImpl.class
-file
-
-
-
-
-2009-04-24T17:48:09.000000Z
-3df3a94305c6329cceb8489a1e0b1e45
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-16110
 
 IIOMetadataFormatImpl$NodeObjectArray.class
 file
@@ -93,6 +59,40 @@ has-props
 
 
 1305
+
+IIOMetadataFormatImpl.class
+file
+
+
+
+
+2009-04-24T17:48:09.000000Z
+3df3a94305c6329cceb8489a1e0b1e45
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+16110
 
 IIOMetadataFormatImpl$NodeObject.class
 file
@@ -366,40 +366,6 @@ has-props
 
 953
 
-IIOMetadataFormatImpl$NodeObjectEnumerated.class
-file
-
-
-
-
-2009-04-24T17:48:09.000000Z
-03afd8b7c683f72a3b4313b1565c1162
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1274
-
 IIOMetadataNode.class
 file
 
@@ -433,6 +399,40 @@ has-props
 
 
 10796
+
+IIOMetadataFormatImpl$NodeObjectEnumerated.class
+file
+
+
+
+
+2009-04-24T17:48:09.000000Z
+03afd8b7c683f72a3b4313b1565c1162
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1274
 
 IIOMetadataFormat.class
 file

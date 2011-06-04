@@ -301,8 +301,7 @@ pdr_may_write_p (poly_dr_p pdr)
 static inline bool
 same_pdr_p (poly_dr_p pdr1, poly_dr_p pdr2)
 {
-  return PDR_TYPE (pdr1) == PDR_TYPE (pdr2)
-    && PDR_NB_SUBSCRIPTS (pdr1) == PDR_NB_SUBSCRIPTS (pdr2)
+  return PDR_NB_SUBSCRIPTS (pdr1) == PDR_NB_SUBSCRIPTS (pdr2)
     && PDR_BASE_OBJECT_SET (pdr1) == PDR_BASE_OBJECT_SET (pdr2);
 }
 
@@ -389,7 +388,7 @@ struct poly_bb
 #define PBB_PDR_DUPLICATES_REMOVED(PBB) (PBB->pdr_duplicates_removed)
 #define PBB_IS_REDUCTION(PBB) (PBB->is_reduction)
 
-extern void new_poly_bb (scop_p, void *, bool);
+extern poly_bb_p new_poly_bb (scop_p, void *);
 extern void free_poly_bb (poly_bb_p);
 extern void debug_loop_vec (poly_bb_p);
 extern void schedule_to_scattering (poly_bb_p, int);
@@ -412,7 +411,7 @@ extern void print_iteration_domains (FILE *, scop_p, int);
 extern void debug_iteration_domain (poly_bb_p, int);
 extern void debug_iteration_domains (scop_p, int);
 extern bool scop_do_interchange (scop_p);
-extern bool scop_do_strip_mine (scop_p);
+extern bool scop_do_strip_mine (scop_p, int);
 extern bool scop_do_block (scop_p);
 extern bool flatten_all_loops (scop_p);
 extern void pbb_number_of_iterations_at_time (poly_bb_p, graphite_dim_t, mpz_t);
@@ -432,6 +431,22 @@ number_of_write_pdrs (poly_bb_p pbb)
       res++;
 
   return res;
+}
+
+/* Returns a gimple_bb from BB.  */
+
+static inline gimple_bb_p
+gbb_from_bb (basic_block bb)
+{
+  return (gimple_bb_p) bb->aux;
+}
+
+/* The poly_bb of the BB.  */
+
+static inline poly_bb_p
+pbb_from_bb (basic_block bb)
+{
+  return GBB_PBB (gbb_from_bb (bb));
 }
 
 /* The basic block of the PBB.  */

@@ -1,5 +1,5 @@
 /* Definitions of target machine for GNU compiler.  Vxworks PowerPC version.
-   Copyright (C) 1996, 2000, 2002, 2003, 2004, 2005, 2007, 2009, 2010
+   Copyright (C) 1996, 2000, 2002, 2003, 2004, 2005, 2007, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by CodeSourcery, LLC.
 
@@ -23,9 +23,6 @@ along with GCC; see the file COPYING3.  If not see
    not use rs6000/eabi.h because we would have to override most of
    it anyway.  However, if you change that file, consider making
    analogous changes here too.  */
-
-#undef TARGET_VERSION
-#define TARGET_VERSION fprintf (stderr, " (PowerPC VxWorks)");
 
 /* CPP predefined macros.  */
 
@@ -80,14 +77,11 @@ VXWORKS_ADDITIONAL_CPP_SPEC
 
 #define CC1_SPEC						\
 "%{G*} %{mno-sdata:-msdata=none} %{msdata:-msdata=default}	\
- %{mlittle|mlittle-endian:-mstrict-align}			\
- %{profile: -p}		\
- %{fvec:-maltivec} %{fvec-eabi:-maltivec -mabi=altivec}"
+ %{mlittle|mlittle-endian:-mstrict-align}"
 
 #define ASM_SPEC \
 "%(asm_cpu) \
  %{,assembler|,assembler-with-cpp: %{mregnames} %{mno-regnames}} \
- %{v:-v} %{Qy:} %{!Qn:-Qy} %{n} %{T} %{Ym,*} %{Yd,*} %{Wa,*:%*} \
  %{mrelocatable} %{mrelocatable-lib} %{fpic:-K PIC} %{fPIC:-K PIC} -mbig"
 
 #undef  LIB_SPEC

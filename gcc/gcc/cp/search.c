@@ -1,7 +1,7 @@
 /* Breadth-first and depth-first routines for
    searching multiple-inheritance lattice for GNU C++.
    Copyright (C) 1987, 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2002, 2003, 2004, 2005, 2007, 2008, 2009
+   1999, 2000, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Michael Tiemann (tiemann@cygnus.com)
 
@@ -1451,7 +1451,7 @@ lookup_fnfields_1 (tree type, tree name)
 tree
 lookup_fnfields_slot (tree type, tree name)
 {
-  int ix = lookup_fnfields_1 (type, name);
+  int ix = lookup_fnfields_1 (complete_type (type), name);
   if (ix < 0)
     return NULL_TREE;
   return VEC_index (tree, CLASSTYPE_METHOD_VEC (type), ix);
@@ -1835,11 +1835,17 @@ check_final_overrider (tree overrider, tree basefn)
 
       if (CLASS_TYPE_P (base_return) && CLASS_TYPE_P (over_return))
 	{
-	  tree binfo = lookup_base (over_return, base_return,
-				    ba_check | ba_quiet, NULL);
+	  /* Strictly speaking, the standard requires the return type to be
+	     complete even if it only differs in cv-quals, but that seems
+	     like a bug in the wording.  */
+	  if (!same_type_ignoring_top_level_qualifiers_p (base_return, over_return))
+	    {
+	      tree binfo = lookup_base (over_return, base_return,
+					ba_check | ba_quiet, NULL);
 
-	  if (!binfo)
-	    fail = 1;
+	      if (!binfo)
+		fail = 1;
+	    }
 	}
       else if (!pedantic
 	       && can_convert (TREE_TYPE (base_type), TREE_TYPE (over_type)))
@@ -1891,7 +1897,7 @@ check_final_overrider (tree overrider, tree basefn)
     }
 
   /* Check for conflicting type attributes.  */
-  if (!targetm.comp_type_attributes (over_type, base_type))
+  if (!comp_type_attributes (over_type, base_type))
     {
       error ("conflicting type attributes specified for %q+#D", overrider);
       error ("  overriding %q+#D", basefn);
@@ -1912,6 +1918,12 @@ check_final_overrider (tree overrider, tree basefn)
 	  error ("non-deleted function %q+D", overrider);
 	  error ("overriding deleted function %q+D", basefn);
 	}
+      return 0;
+    }
+  if (DECL_FINAL_P (basefn))
+    {
+      error ("virtual function %q+D", overrider);
+      error ("overriding final function %q+D", basefn);
       return 0;
     }
   return 1;
@@ -2440,13 +2452,10 @@ lookup_conversions_r (tree binfo,
    functions in this node were selected.  This function is effectively
    performing a set of member lookups as lookup_fnfield does, but
    using the type being converted to as the unique key, rather than the
-   field name.
-   If LOOKUP_TEMPLATE_CONVS_P is TRUE, the returned TREE_LIST contains
-   the non-hidden user-defined template conversion functions too.  */
+   field name.  */
 
 tree
-lookup_conversions (tree type,
-		    bool lookup_template_convs_p)
+lookup_conversions (tree type)
 {
   tree convs, tpl_convs;
   tree list = NULL_TREE;
@@ -2472,9 +2481,6 @@ lookup_conversions (tree type,
 	  list = probe;
 	}
     }
-
-  if (lookup_template_convs_p == false)
-    tpl_convs = NULL_TREE;
 
   for (; tpl_convs; tpl_convs = TREE_CHAIN (tpl_convs))
     {

@@ -1,5 +1,5 @@
 ;; Predicate definitions for IA-64.
-;; Copyright (C) 2004, 2005, 2007 Free Software Foundation, Inc.
+;; Copyright (C) 2004, 2005, 2007, 2010 Free Software Foundation, Inc.
 ;;
 ;; This file is part of GCC.
 ;;
@@ -526,6 +526,12 @@
                     INTVAL (op) == 1   || INTVAL (op) == 4  ||
                     INTVAL (op) == 8   || INTVAL (op) == 16")))
 
+;; True if OP is one of the immediate values 0, 7, 15, 16
+(define_predicate "pmpyshr_operand"
+  (and (match_code "const_int")
+       (match_test "INTVAL (op) == 0 || INTVAL (op) == 7
+		    || INTVAL (op) == 15 || INTVAL (op) == 16")))
+
 ;; True if OP is 0..3.
 (define_predicate "const_int_2bit_operand"
   (and (match_code "const_int")
@@ -618,3 +624,7 @@
   return REG_P (op) && REG_POINTER (op);
 })
 
+;; True if this is the right-most vector element; for mux1 @brcst.
+(define_predicate "mux1_brcst_element"
+  (and (match_code "const_int")
+       (match_test "INTVAL (op) == (TARGET_BIG_ENDIAN ? 7 : 0)")))

@@ -1,7 +1,7 @@
 // vector<bool> specialization -*- C++ -*-
 
-// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-// Free Software Foundation, Inc.
+// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+// 2011 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -49,9 +49,9 @@
  * purpose.  It is provided "as is" without express or implied warranty.
  */
 
-/** @file stl_bvector.h
+/** @file bits/stl_bvector.h
  *  This is an internal header file, included by other library headers.
- *  You should not attempt to use it directly.
+ *  Do not attempt to use it directly. @headername{vector}
  */
 
 #ifndef _STL_BVECTOR_H
@@ -59,7 +59,9 @@
 
 #include <initializer_list>
 
-_GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   typedef unsigned long _Bit_type;
   enum { _S_word_bit = int(__CHAR_BIT__ * sizeof(_Bit_type)) };
@@ -72,13 +74,13 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
     _Bit_reference(_Bit_type * __x, _Bit_type __y)
     : _M_p(__x), _M_mask(__y) { }
 
-    _Bit_reference() : _M_p(0), _M_mask(0) { }
+    _Bit_reference() _GLIBCXX_NOEXCEPT : _M_p(0), _M_mask(0) { }
 
-    operator bool() const
+    operator bool() const _GLIBCXX_NOEXCEPT
     { return !!(*_M_p & _M_mask); }
 
     _Bit_reference&
-    operator=(bool __x)
+    operator=(bool __x) _GLIBCXX_NOEXCEPT
     {
       if (__x)
 	*_M_p |= _M_mask;
@@ -88,7 +90,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
     }
 
     _Bit_reference&
-    operator=(const _Bit_reference& __x)
+    operator=(const _Bit_reference& __x) _GLIBCXX_NOEXCEPT
     { return *this = bool(__x); }
 
     bool
@@ -100,7 +102,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
     { return !bool(*this) && bool(__x); }
 
     void
-    flip()
+    flip() _GLIBCXX_NOEXCEPT
     { *_M_p ^= _M_mask; }
   };
 
@@ -390,21 +392,28 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	_Bvector_impl(const _Bit_alloc_type& __a)
 	: _Bit_alloc_type(__a), _M_start(), _M_finish(), _M_end_of_storage(0)
 	{ }
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	_Bvector_impl(_Bit_alloc_type&& __a)
+	: _Bit_alloc_type(std::move(__a)), _M_start(), _M_finish(),
+	  _M_end_of_storage(0)
+	{ }
+#endif
       };
 
     public:
       typedef _Alloc allocator_type;
 
       _Bit_alloc_type&
-      _M_get_Bit_allocator()
+      _M_get_Bit_allocator() _GLIBCXX_NOEXCEPT
       { return *static_cast<_Bit_alloc_type*>(&this->_M_impl); }
 
       const _Bit_alloc_type&
-      _M_get_Bit_allocator() const
+      _M_get_Bit_allocator() const _GLIBCXX_NOEXCEPT
       { return *static_cast<const _Bit_alloc_type*>(&this->_M_impl); }
 
       allocator_type
-      get_allocator() const
+      get_allocator() const _GLIBCXX_NOEXCEPT
       { return allocator_type(_M_get_Bit_allocator()); }
 
       _Bvector_base()
@@ -414,8 +423,8 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       : _M_impl(__a) { }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-      _Bvector_base(_Bvector_base&& __x)
-      : _M_impl(__x._M_get_Bit_allocator())
+      _Bvector_base(_Bvector_base&& __x) noexcept
+      : _M_impl(std::move(__x._M_get_Bit_allocator()))
       {
 	this->_M_impl._M_start = __x._M_impl._M_start;
 	this->_M_impl._M_finish = __x._M_impl._M_finish;
@@ -446,12 +455,15 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       }
     };
 
-_GLIBCXX_END_NESTED_NAMESPACE
+_GLIBCXX_END_NAMESPACE_CONTAINER
+} // namespace std
 
 // Declare a partial specialization of vector<T, Alloc>.
 #include <bits/stl_vector.h>
 
-_GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   /**
    *  @brief  A specialization of vector for booleans which offers fixed time
@@ -527,7 +539,7 @@ template<typename _Alloc>
     }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-    vector(vector&& __x)
+    vector(vector&& __x) noexcept
     : _Base(std::move(__x)) { }
 
     vector(initializer_list<bool> __l,
@@ -548,7 +560,7 @@ template<typename _Alloc>
 	_M_initialize_dispatch(__first, __last, _Integral());
       }
 
-    ~vector() { }
+    ~vector() _GLIBCXX_NOEXCEPT { }
 
     vector&
     operator=(const vector& __x)
@@ -607,61 +619,61 @@ template<typename _Alloc>
 #endif
 
     iterator
-    begin()
+    begin() _GLIBCXX_NOEXCEPT
     { return this->_M_impl._M_start; }
 
     const_iterator
-    begin() const
+    begin() const _GLIBCXX_NOEXCEPT
     { return this->_M_impl._M_start; }
 
     iterator
-    end()
+    end() _GLIBCXX_NOEXCEPT
     { return this->_M_impl._M_finish; }
 
     const_iterator
-    end() const
+    end() const _GLIBCXX_NOEXCEPT
     { return this->_M_impl._M_finish; }
 
     reverse_iterator
-    rbegin()
+    rbegin() _GLIBCXX_NOEXCEPT
     { return reverse_iterator(end()); }
 
     const_reverse_iterator
-    rbegin() const
+    rbegin() const _GLIBCXX_NOEXCEPT
     { return const_reverse_iterator(end()); }
 
     reverse_iterator
-    rend()
+    rend() _GLIBCXX_NOEXCEPT
     { return reverse_iterator(begin()); }
 
     const_reverse_iterator
-    rend() const
+    rend() const _GLIBCXX_NOEXCEPT
     { return const_reverse_iterator(begin()); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
     const_iterator
-    cbegin() const
+    cbegin() const noexcept
     { return this->_M_impl._M_start; }
 
     const_iterator
-    cend() const
+    cend() const noexcept
     { return this->_M_impl._M_finish; }
 
     const_reverse_iterator
-    crbegin() const
+    crbegin() const noexcept
     { return const_reverse_iterator(end()); }
 
     const_reverse_iterator
-    crend() const
+    crend() const noexcept
     { return const_reverse_iterator(begin()); }
 #endif
 
     size_type
-    size() const
+    size() const _GLIBCXX_NOEXCEPT
     { return size_type(end() - begin()); }
 
     size_type
-    max_size() const
+    max_size() const _GLIBCXX_NOEXCEPT
     {
       const size_type __isize =
 	__gnu_cxx::__numeric_traits<difference_type>::__max
@@ -672,12 +684,12 @@ template<typename _Alloc>
     }
 
     size_type
-    capacity() const
+    capacity() const _GLIBCXX_NOEXCEPT
     { return size_type(const_iterator(this->_M_impl._M_end_of_storage, 0)
 		       - begin()); }
 
     bool
-    empty() const
+    empty() const _GLIBCXX_NOEXCEPT
     { return begin() == end(); }
 
     reference
@@ -736,7 +748,7 @@ template<typename _Alloc>
     // here due to the way we are implementing DR 464 in the debug-mode
     // vector class.
     void
-    data() { }
+    data() _GLIBCXX_NOEXCEPT { }
 
     void
     push_back(bool __x)
@@ -763,7 +775,7 @@ template<typename _Alloc>
 
     // [23.2.5]/1, third-to-last entry in synopsis listing
     static void
-    swap(reference __x, reference __y)
+    swap(reference __x, reference __y) _GLIBCXX_NOEXCEPT
     {
       bool __tmp = __x;
       __x = __y;
@@ -836,7 +848,7 @@ template<typename _Alloc>
 #endif
 
     void
-    flip()
+    flip() _GLIBCXX_NOEXCEPT
     {
       for (_Bit_type * __p = this->_M_impl._M_start._M_p;
 	   __p != this->_M_impl._M_end_of_storage; ++__p)
@@ -844,7 +856,7 @@ template<typename _Alloc>
     }
 
     void
-    clear()
+    clear() _GLIBCXX_NOEXCEPT
     { _M_erase_at_end(begin()); }
 
    
@@ -1026,25 +1038,29 @@ template<typename _Alloc>
     { this->_M_impl._M_finish = __pos; }
   };
 
-_GLIBCXX_END_NESTED_NAMESPACE
+_GLIBCXX_END_NAMESPACE_CONTAINER
+} // namespace std
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
 #include <bits/functional_hash.h>
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   // DR 1182.
   /// std::hash specialization for vector<bool>.
   template<typename _Alloc>
-    struct hash<_GLIBCXX_STD_D::vector<bool, _Alloc>>
-    : public __hash_base<size_t, _GLIBCXX_STD_D::vector<bool, _Alloc>>
+    struct hash<_GLIBCXX_STD_C::vector<bool, _Alloc>>
+    : public __hash_base<size_t, _GLIBCXX_STD_C::vector<bool, _Alloc>>
     {
       size_t
-      operator()(const _GLIBCXX_STD_D::vector<bool, _Alloc>& __b) const;
+      operator()(const _GLIBCXX_STD_C::vector<bool, _Alloc>& __b) const;
     };
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+}// namespace std
 
 #endif // __GXX_EXPERIMENTAL_CXX0X__
 

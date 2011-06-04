@@ -1,5 +1,5 @@
 ;; Constraint definitions for ARM and Thumb
-;; Copyright (C) 2006, 2007, 2008 Free Software Foundation, Inc.
+;; Copyright (C) 2006, 2007, 2008, 2010 Free Software Foundation, Inc.
 ;; Contributed by ARM Ltd.
 
 ;; This file is part of GCC.
@@ -31,11 +31,12 @@
 ;; The following multi-letter normal constraints have been used:
 ;; in ARM/Thumb-2 state: Da, Db, Dc, Dn, Dl, DL, Dv, Dy, Di, Dz
 ;; in Thumb-1 state: Pa, Pb, Pc, Pd
-;; in Thumb-2 state: Ps, Pt, Pu, Pv, Pw, Px
+;; in Thumb-2 state: Ps, Pt, Pu, Pv, Pw, Px, Py
 
 ;; The following memory constraints have been used:
 ;; in ARM/Thumb-2 state: Q, Ut, Uv, Uy, Un, Um, Us
 ;; in ARM state: Uq
+;; in Thumb state: Uu
 
 
 (define_register_constraint "f" "TARGET_ARM ? FPA_REGS : NO_REGS"
@@ -189,6 +190,11 @@
   (and (match_code "const_int")
        (match_test "TARGET_THUMB2 && ival >= -7 && ival <= -1")))
 
+(define_constraint "Py"
+  "@internal In Thumb-2 state a constant in the range 0 to 255"
+  (and (match_code "const_int")
+       (match_test "TARGET_THUMB2 && ival >= 0 && ival <= 255")))
+
 (define_constraint "G"
  "In ARM/Thumb-2 state a valid FPA immediate constant."
  (and (match_code "const_double")
@@ -326,6 +332,14 @@
   In ARM/Thumb-2 state an address that is a single base register."
  (and (match_code "mem")
       (match_test "REG_P (XEXP (op, 0))")))
+
+(define_memory_constraint "Uu"
+ "@internal
+  In Thumb state an address that is valid in 16bit encoding."
+ (and (match_code "mem")
+      (match_test "TARGET_THUMB
+		   && thumb1_legitimate_address_p (GET_MODE (op), XEXP (op, 0),
+						   0)")))
 
 ;; We used to have constraint letters for S and R in ARM state, but
 ;; all uses of these now appear to have been removed.

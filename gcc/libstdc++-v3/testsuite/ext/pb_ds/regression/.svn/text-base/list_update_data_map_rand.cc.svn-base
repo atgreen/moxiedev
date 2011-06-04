@@ -1,4 +1,5 @@
-// { dg-options "-DPB_DS_REGRESSION" }
+// { dg-require-time "" }
+
 // -*- C++ -*-
 
 // Copyright (C) 2005, 2006, 2009 Free Software Foundation, Inc.
@@ -31,11 +32,11 @@
 // warranty.
 
 /**
- * @file lu_data_map_rand_regression_test.cpp
+ * @file list_update_data_map_rand.cc
  * Contains a random-operation test for maps and sets.
  */
 
-// { dg-require-time "" }
+#define PB_DS_REGRESSION
 
 #include <regression/rand/assoc/rand_regression_test.hpp>
 #include <regression/common_type.hpp>

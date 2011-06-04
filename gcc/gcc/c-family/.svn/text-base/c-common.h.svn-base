@@ -1,6 +1,6 @@
 /* Definitions for c-common.c.
    Copyright (C) 1987, 1993, 1994, 1995, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -135,9 +135,10 @@ enum rid
   RID_IS_ABSTRACT,             RID_IS_BASE_OF,
   RID_IS_CONVERTIBLE_TO,       RID_IS_CLASS,
   RID_IS_EMPTY,                RID_IS_ENUM,
-  RID_IS_POD,                  RID_IS_POLYMORPHIC,
-  RID_IS_STD_LAYOUT,           RID_IS_TRIVIAL,
-  RID_IS_UNION,                RID_IS_LITERAL_TYPE,
+  RID_IS_LITERAL_TYPE,         RID_IS_POD,
+  RID_IS_POLYMORPHIC,          RID_IS_STD_LAYOUT,
+  RID_IS_TRIVIAL,              RID_IS_UNION,
+  RID_UNDERLYING_TYPE,
 
   /* C++0x */
   RID_CONSTEXPR, RID_DECLTYPE, RID_NOEXCEPT, RID_NULLPTR, RID_STATIC_ASSERT,
@@ -434,14 +435,6 @@ extern c_language_kind c_language;
 #define c_dialect_cxx()		((c_language & clk_cxx) != 0)
 #define c_dialect_objc()	((c_language & clk_objc) != 0)
 
-/* ObjC ivar visibility types.  */
-typedef enum objc_ivar_visibility_kind {
-  OBJC_IVAR_VIS_PROTECTED = 0,
-  OBJC_IVAR_VIS_PUBLIC    = 1,
-  OBJC_IVAR_VIS_PRIVATE   = 2,
-  OBJC_IVAR_VIS_PACKAGE   = 3
-} objc_ivar_visibility_kind;
-
 /* The various name of operator that appears in error messages. */
 typedef enum ref_operator {
   /* NULL */
@@ -459,8 +452,8 @@ typedef enum ref_operator {
 /* Information about a statement tree.  */
 
 struct GTY(()) stmt_tree_s {
-  /* The current statement list being collected.  */
-  tree x_cur_stmt_list;
+  /* A stack of statement lists being collected.  */
+  VEC(tree,gc) *x_cur_stmt_list;
 
   /* In C++, Nonzero if we should treat statements as full
      expressions.  In particular, this variable is no-zero if at the
@@ -490,11 +483,17 @@ struct GTY(()) c_language_function {
   struct stmt_tree_s x_stmt_tree;
 };
 
-/* When building a statement-tree, this is the current statement list
-   being collected.  It's TREE_CHAIN is a back-pointer to the previous
-   statement list.  */
+#define stmt_list_stack (current_stmt_tree ()->x_cur_stmt_list)
 
-#define cur_stmt_list (current_stmt_tree ()->x_cur_stmt_list)
+/* When building a statement-tree, this is the current statement list
+   being collected.  We define it in this convoluted way, rather than
+   using VEC_last, because it must be an lvalue.  */
+
+#define cur_stmt_list							\
+  (*(VEC_address (tree, stmt_list_stack)				\
+     + VEC_length (tree, stmt_list_stack) - 1))
+
+#define building_stmt_list_p() (!VEC_empty (tree, stmt_list_stack))
 
 /* Language-specific hooks.  */
 
@@ -627,7 +626,7 @@ extern enum cxx_dialect cxx_dialect;
 
 /* Maximum template instantiation depth.  This limit is rather
    arbitrary, but it exists to limit the time it takes to notice
-   infinite template instantiations.  */
+   excessively recursive template instantiations.  */
 
 extern int max_tinst_depth;
 
@@ -660,6 +659,15 @@ extern bool done_lexing;
 #define C_TYPE_OBJECT_OR_INCOMPLETE_P(type) \
   (!C_TYPE_FUNCTION_P (type))
 
+struct visibility_flags
+{
+  unsigned inpragma : 1;	/* True when in #pragma GCC visibility.  */
+  unsigned inlines_hidden : 1;	/* True when -finlineshidden in effect.  */
+};
+
+/* Global visibility options.  */
+extern struct visibility_flags visibility_options;
+
 /* Attribute table common to the C front ends.  */
 extern const struct attribute_spec c_common_attribute_table[];
 extern const struct attribute_spec c_common_format_attribute_table[];
@@ -685,7 +693,7 @@ extern void finish_fname_decls (void);
 extern const char *fname_as_string (int);
 extern tree fname_decl (location_t, unsigned, tree);
 
-extern void check_function_arguments (tree, int, tree *, tree);
+extern void check_function_arguments (const_tree, int, tree *);
 extern void check_function_arguments_recurse (void (*)
 					      (void *, tree,
 					       unsigned HOST_WIDE_INT),
@@ -699,6 +707,7 @@ extern tree handle_format_arg_attribute (tree *, tree, tree, int, bool *);
 extern bool attribute_takes_identifier_p (const_tree);
 extern bool c_common_handle_option (size_t, const char *, int, int, location_t,
 				    const struct cl_option_handlers *);
+extern bool default_handle_c_option (size_t, const char *, int);
 extern tree c_common_type_for_mode (enum machine_mode, int);
 extern tree c_common_type_for_size (unsigned int, int);
 extern tree c_common_fixed_point_type_for_size (unsigned int, unsigned int,
@@ -706,6 +715,7 @@ extern tree c_common_fixed_point_type_for_size (unsigned int, unsigned int,
 extern tree c_common_unsigned_type (tree);
 extern tree c_common_signed_type (tree);
 extern tree c_common_signed_or_unsigned_type (int, tree);
+extern void c_common_init_ts (void);
 extern tree c_build_bitfield_integer_type (unsigned HOST_WIDE_INT, int);
 extern bool decl_with_nonnull_addr_p (const_tree);
 extern tree c_fully_fold (tree, bool, bool *);
@@ -740,6 +750,7 @@ extern bool float_const_decimal64_p (void);
 extern bool keyword_begins_type_specifier (enum rid);
 extern bool keyword_is_storage_class_specifier (enum rid);
 extern bool keyword_is_type_qualifier (enum rid);
+extern bool keyword_is_decl_specifier (enum rid);
 
 #define c_sizeof(LOC, T)  c_sizeof_or_alignof_type (LOC, T, true, 1)
 #define c_alignof(LOC, T) c_sizeof_or_alignof_type (LOC, T, false, 1)
@@ -826,7 +837,6 @@ extern void warn_for_omitted_condop (location_t, tree);
 
 extern tree do_case (location_t, tree, tree);
 extern tree build_stmt (location_t, enum tree_code, ...);
-extern tree build_case_label (location_t, tree, tree, tree);
 extern tree build_real_imag_expr (location_t, enum tree_code, tree);
 
 /* These functions must be defined by each front-end which implements
@@ -885,6 +895,8 @@ extern bool c_cpp_error (cpp_reader *, int, int, location_t, unsigned int,
 			 const char *, va_list *)
      ATTRIBUTE_GCC_DIAG(6,0);
 
+extern bool parse_optimize_options (tree, bool);
+
 /* Positive if an implicit `extern "C"' scope has just been entered;
    negative if such a scope has just been exited.  */
 extern GTY(()) int pending_lang_change;
@@ -925,7 +937,9 @@ enum lvalue_use {
   lv_asm
 };
 
-extern void lvalue_error (enum lvalue_use);
+extern void readonly_error (tree, enum lvalue_use);
+extern void lvalue_error (location_t, enum lvalue_use);
+extern void invalid_indirection_error (location_t, tree, ref_operator);
 
 extern int complete_array_type (tree *, tree, bool);
 
@@ -950,6 +964,7 @@ extern void set_underlying_type (tree x);
 extern VEC(tree,gc) *make_tree_vector (void);
 extern void release_tree_vector (VEC(tree,gc) *);
 extern VEC(tree,gc) *make_tree_vector_single (tree);
+extern VEC(tree,gc) *make_tree_vector_from_list (tree);
 extern VEC(tree,gc) *make_tree_vector_copy (const VEC(tree,gc) *);
 
 /* In c-gimplify.c  */
@@ -976,89 +991,6 @@ extern void builtin_define_with_value (const char *, const char *, int);
 extern void c_stddef_cpp_builtins (void);
 extern void fe_file_change (const struct line_map *);
 extern void c_parse_error (const char *, enum cpp_ttype, tree, unsigned char);
-
-/* Objective-C / Objective-C++ entry points.  */
-
-/* The following ObjC/ObjC++ functions are called by the C and/or C++
-   front-ends; they all must have corresponding stubs in stub-objc.c.  */
-extern void objc_write_global_declarations (void);
-extern tree objc_is_class_name (tree);
-extern tree objc_is_object_ptr (tree);
-extern void objc_check_decl (tree);
-extern void objc_check_global_decl (tree);
-extern tree objc_common_type (tree, tree);
-extern tree objc_non_volatilized_type (tree);
-extern bool objc_compare_types (tree, tree, int, tree);
-extern bool objc_have_common_type (tree, tree, int, tree);
-extern bool objc_diagnose_private_ivar (tree);
-extern void objc_volatilize_decl (tree);
-extern bool objc_type_quals_match (tree, tree);
-extern tree objc_rewrite_function_call (tree, tree);
-extern tree objc_message_selector (void);
-extern tree objc_lookup_ivar (tree, tree);
-extern void objc_clear_super_receiver (void);
-extern int objc_is_public (tree, tree);
-extern tree objc_is_id (tree);
-extern void objc_declare_alias (tree, tree);
-extern void objc_declare_class (tree);
-extern void objc_declare_protocols (tree, tree);
-extern tree objc_build_message_expr (tree);
-extern tree objc_finish_message_expr (tree, tree, tree);
-extern tree objc_build_selector_expr (location_t, tree);
-extern tree objc_build_protocol_expr (tree);
-extern tree objc_build_encode_expr (tree);
-extern tree objc_build_string_object (tree);
-extern tree objc_get_protocol_qualified_type (tree, tree);
-extern tree objc_get_class_reference (tree);
-extern tree objc_get_class_ivars (tree);
-extern tree objc_get_interface_ivars (tree);
-extern void objc_start_class_interface (tree, tree, tree, tree);
-extern void objc_start_category_interface (tree, tree, tree, tree);
-extern void objc_start_protocol (tree, tree, tree);
-extern void objc_continue_interface (void);
-extern void objc_finish_interface (void);
-extern void objc_start_class_implementation (tree, tree);
-extern void objc_start_category_implementation (tree, tree);
-extern void objc_continue_implementation (void);
-extern void objc_finish_implementation (void);
-extern void objc_set_visibility (objc_ivar_visibility_kind);
-extern tree objc_build_method_signature (bool, tree, tree, tree, bool);
-extern void objc_add_method_declaration (bool, tree, tree);
-extern bool objc_start_method_definition (bool, tree, tree);
-extern void objc_finish_method_definition (tree);
-extern void objc_add_instance_variable (tree);
-extern tree objc_build_keyword_decl (tree, tree, tree, tree);
-extern tree objc_build_throw_stmt (location_t, tree);
-extern void objc_begin_try_stmt (location_t, tree);
-extern tree objc_finish_try_stmt (void);
-extern void objc_begin_catch_clause (tree);
-extern void objc_finish_catch_clause (void);
-extern void objc_build_finally_clause (location_t, tree);
-extern tree objc_build_synchronized (location_t, tree, tree);
-extern int objc_static_init_needed_p (void);
-extern tree objc_generate_static_init_call (tree);
-extern tree objc_generate_write_barrier (tree, enum tree_code, tree);
-extern void objc_set_method_opt (bool);
-extern void objc_finish_foreach_loop (location_t, tree, tree, tree, tree, tree);
-extern bool  objc_method_decl (enum tree_code);
-extern void objc_add_property_declaration (location_t, tree, bool, bool, bool, 
-					   bool, bool, bool, tree, tree);
-extern tree objc_maybe_build_component_ref (tree, tree);
-extern tree objc_build_class_component_ref (tree, tree);
-extern tree objc_maybe_build_modify_expr (tree, tree);
-extern tree objc_build_incr_expr_for_property_ref (location_t, enum tree_code, 
-						   tree, tree);
-extern void objc_add_synthesize_declaration (location_t, tree);
-extern void objc_add_dynamic_declaration (location_t, tree);
-extern const char * objc_maybe_printable_name (tree, int);
-extern bool objc_is_property_ref (tree);
-extern bool objc_string_ref_type_p (tree);
-extern void objc_check_format_arg (tree, tree);
-
-/* The following are provided by the C and C++ front-ends, and called by
-   ObjC/ObjC++.  */
-extern void *objc_get_current_scope (void);
-extern void objc_mark_locals_volatile (void *);
 
 /* In c-ppoutput.c  */
 extern void init_pp_output (FILE *);

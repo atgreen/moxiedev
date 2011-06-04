@@ -1,5 +1,5 @@
 /* Decompose multiword subregs.
-   Copyright (C) 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
    Contributed by Richard Henderson <rth@redhat.com>
 		  Ian Lance Taylor <iant@google.com>
 
@@ -1039,8 +1039,7 @@ resolve_shift_zext (rtx insn)
 	src_reg = expand_shift (GET_CODE (op) == ASHIFT ?
 				LSHIFT_EXPR : RSHIFT_EXPR,
 				word_mode, src_reg,
-				build_int_cst (NULL_TREE,
-					       shift_count - BITS_PER_WORD),
+				shift_count - BITS_PER_WORD,
 				dest_reg, 1);
     }
 

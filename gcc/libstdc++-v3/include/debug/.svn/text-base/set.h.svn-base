@@ -1,6 +1,6 @@
 // Debugging set implementation -*- C++ -*-
 
-// Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -34,7 +34,7 @@
 #include <debug/safe_iterator.h>
 #include <utility>
 
-namespace std 
+namespace std _GLIBCXX_VISIBILITY(default) 
 {
 namespace __debug
 {
@@ -42,12 +42,15 @@ namespace __debug
   template<typename _Key, typename _Compare = std::less<_Key>,
 	   typename _Allocator = std::allocator<_Key> >
     class set
-    : public _GLIBCXX_STD_D::set<_Key,_Compare,_Allocator>,
+    : public _GLIBCXX_STD_C::set<_Key,_Compare,_Allocator>,
       public __gnu_debug::_Safe_sequence<set<_Key, _Compare, _Allocator> >
     {
-      typedef _GLIBCXX_STD_D::set<_Key, _Compare, _Allocator> _Base;
+      typedef _GLIBCXX_STD_C::set<_Key, _Compare, _Allocator> _Base;
       typedef __gnu_debug::_Safe_sequence<set> _Safe_base;
 
+      typedef typename _Base::const_iterator _Base_const_iterator;
+      typedef typename _Base::iterator _Base_iterator;
+      typedef __gnu_debug::_Equal_to<_Base_const_iterator> _Equal;
     public:
       // types:
       typedef _Key				    key_type;
@@ -58,9 +61,9 @@ namespace __debug
       typedef typename _Base::reference             reference;
       typedef typename _Base::const_reference       const_reference;
 
-      typedef __gnu_debug::_Safe_iterator<typename _Base::iterator, set>
+      typedef __gnu_debug::_Safe_iterator<_Base_iterator, set>
                                                     iterator;
-      typedef __gnu_debug::_Safe_iterator<typename _Base::const_iterator, set>
+      typedef __gnu_debug::_Safe_iterator<_Base_const_iterator, set>
                                                     const_iterator;
 
       typedef typename _Base::size_type             size_type;
@@ -92,6 +95,7 @@ namespace __debug
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       set(set&& __x)
+      noexcept(is_nothrow_copy_constructible<_Compare>::value)
       : _Base(std::move(__x)), _Safe_base()
       { this->_M_swap(__x); }
 
@@ -101,7 +105,7 @@ namespace __debug
       : _Base(__l, __comp, __a), _Safe_base() { }
 #endif
 
-      ~set() { }
+      ~set() _GLIBCXX_NOEXCEPT { }
 
       set&
       operator=(const set& __x)
@@ -135,52 +139,52 @@ namespace __debug
 
       // iterators:
       iterator
-      begin()
+      begin() _GLIBCXX_NOEXCEPT
       { return iterator(_Base::begin(), this); }
 
       const_iterator
-      begin() const
+      begin() const _GLIBCXX_NOEXCEPT
       { return const_iterator(_Base::begin(), this); }
 
       iterator
-      end()
+      end() _GLIBCXX_NOEXCEPT
       { return iterator(_Base::end(), this); }
 
       const_iterator
-      end() const
+      end() const _GLIBCXX_NOEXCEPT
       { return const_iterator(_Base::end(), this); }
 
       reverse_iterator
-      rbegin()
+      rbegin() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(end()); }
 
       const_reverse_iterator
-      rbegin() const
+      rbegin() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(end()); }
 
       reverse_iterator
-      rend()
+      rend() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(begin()); }
 
       const_reverse_iterator
-      rend() const
+      rend() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(begin()); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       const_iterator
-      cbegin() const
+      cbegin() const noexcept
       { return const_iterator(_Base::begin(), this); }
 
       const_iterator
-      cend() const
+      cend() const noexcept
       { return const_iterator(_Base::end(), this); }
 
       const_reverse_iterator
-      crbegin() const
+      crbegin() const noexcept
       { return const_reverse_iterator(end()); }
 
       const_reverse_iterator
-      crend() const
+      crend() const noexcept
       { return const_reverse_iterator(begin()); }
 #endif
 
@@ -193,7 +197,6 @@ namespace __debug
       std::pair<iterator, bool>
       insert(const value_type& __x)
       {
-	typedef typename _Base::iterator _Base_iterator;
 	std::pair<_Base_iterator, bool> __res = _Base::insert(__x);
 	return std::pair<iterator, bool>(iterator(__res.first, this),
 					 __res.second);
@@ -248,7 +251,7 @@ namespace __debug
       erase(const_iterator __position)
       {
 	__glibcxx_check_erase(__position);
-	__position._M_invalidate();
+	this->_M_invalidate_if(_Equal(__position.base()));
 	return iterator(_Base::erase(__position.base()), this);
       }
 #else
@@ -256,7 +259,7 @@ namespace __debug
       erase(iterator __position)
       {
 	__glibcxx_check_erase(__position);
-	__position._M_invalidate();
+	this->_M_invalidate_if(_Equal(__position.base()));
 	_Base::erase(__position.base());
       }
 #endif
@@ -264,15 +267,15 @@ namespace __debug
       size_type
       erase(const key_type& __x)
       {
-	iterator __victim = find(__x);
-	if (__victim == end())
+	_Base_iterator __victim = _Base::find(__x);
+	if (__victim == _Base::end())
           return 0;
 	else
-        {
-	  __victim._M_invalidate();
-	  _Base::erase(__victim.base());
-	  return 1;
-        }
+	  {
+	    this->_M_invalidate_if(_Equal(__victim));
+	    _Base::erase(__victim);
+	    return 1;
+	  }
       }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -282,9 +285,16 @@ namespace __debug
 	// _GLIBCXX_RESOLVE_LIB_DEFECTS
 	// 151. can't currently clear() empty container
 	__glibcxx_check_erase_range(__first, __last);
-	while (__first != __last)
-	  this->erase(__first++);
-	return __last; // iterator == const_iterator
+	for (_Base_const_iterator __victim = __first.base();
+	     __victim != __last.base(); ++__victim)
+	  {
+	    _GLIBCXX_DEBUG_VERIFY(__victim != _Base::end(),
+				  _M_message(__gnu_debug::__msg_valid_range)
+				  ._M_iterator(__first, "first")
+				  ._M_iterator(__last, "last"));
+	    this->_M_invalidate_if(_Equal(__victim));
+	  }
+	return iterator(_Base::erase(__first.base(), __last.base()), this);
       }
 #else
       void
@@ -293,8 +303,16 @@ namespace __debug
 	// _GLIBCXX_RESOLVE_LIB_DEFECTS
 	// 151. can't currently clear() empty container
 	__glibcxx_check_erase_range(__first, __last);
-	while (__first != __last)
-	  this->erase(__first++);
+	for (_Base_iterator __victim = __first.base();
+	     __victim != __last.base(); ++__victim)
+	  {
+	    _GLIBCXX_DEBUG_VERIFY(__victim != _Base::end(),
+				  _M_message(__gnu_debug::__msg_valid_range)
+				  ._M_iterator(__first, "first")
+				  ._M_iterator(__last, "last"));
+	    this->_M_invalidate_if(_Equal(__victim));
+	  }
+	_Base::erase(__first.base(), __last.base());
       }
 #endif
 
@@ -306,8 +324,11 @@ namespace __debug
       }
 
       void
-      clear()
-      { this->erase(begin(), end()); }
+      clear() _GLIBCXX_NOEXCEPT
+      {
+	this->_M_invalidate_all();
+	_Base::clear();
+      }
 
       // observers:
       using _Base::key_comp;
@@ -349,7 +370,6 @@ namespace __debug
       std::pair<iterator,iterator>
       equal_range(const key_type& __x)
       {
-	typedef typename _Base::iterator _Base_iterator;
 	std::pair<_Base_iterator, _Base_iterator> __res =
         _Base::equal_range(__x);
 	return std::make_pair(iterator(__res.first, this),
@@ -361,7 +381,6 @@ namespace __debug
       std::pair<const_iterator,const_iterator>
       equal_range(const key_type& __x) const
       {
-	typedef typename _Base::const_iterator _Base_iterator;
 	std::pair<_Base_iterator, _Base_iterator> __res =
         _Base::equal_range(__x);
 	return std::make_pair(const_iterator(__res.first, this),
@@ -369,16 +388,15 @@ namespace __debug
       }
 
       _Base&
-      _M_base() { return *this; }
+      _M_base() _GLIBCXX_NOEXCEPT       { return *this; }
 
       const _Base&
-      _M_base() const { return *this; }
+      _M_base() const _GLIBCXX_NOEXCEPT { return *this; }
 
     private:
       void
       _M_invalidate_all()
       {
-	typedef typename _Base::const_iterator _Base_const_iterator;
 	typedef __gnu_debug::_Not_equal_to<_Base_const_iterator> _Not_equal;
 	this->_M_invalidate_if(_Not_equal(_M_base().end()));
       }

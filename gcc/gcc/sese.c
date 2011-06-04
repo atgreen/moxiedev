@@ -23,26 +23,14 @@ along with GCC; see the file COPYING3.  If not see
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
-#include "tm.h"
-#include "ggc.h"
-#include "tree.h"
-#include "rtl.h"
-#include "basic-block.h"
-#include "diagnostic.h"
 #include "tree-pretty-print.h"
 #include "tree-flow.h"
-#include "toplev.h"
-#include "tree-dump.h"
-#include "timevar.h"
 #include "cfgloop.h"
 #include "tree-chrec.h"
 #include "tree-data-ref.h"
 #include "tree-scalar-evolution.h"
 #include "tree-pass.h"
-#include "domwalk.h"
 #include "value-prof.h"
-#include "pointer-set.h"
-#include "gimple.h"
 #include "sese.h"
 
 /* Print to stderr the element ELT.  */
@@ -461,8 +449,7 @@ set_rename (htab_t rename_map, tree old_name, tree expr)
   if (!slot)
     return;
 
-  if (*slot)
-    free (*slot);
+  free (*slot);
 
   *slot = new_rename_map_elt (old_name, expr);
 }
@@ -471,14 +458,15 @@ set_rename (htab_t rename_map, tree old_name, tree expr)
    substitution map RENAME_MAP, inserting the gimplification code at
    GSI_TGT, for the translation REGION, with the original copied
    statement in LOOP, and using the induction variable renaming map
-   IV_MAP.  */
+   IV_MAP.  Returns true when something has been renamed.  */
 
-static void
+static bool
 rename_uses (gimple copy, htab_t rename_map, gimple_stmt_iterator *gsi_tgt,
 	     sese region, loop_p loop, VEC (tree, heap) *iv_map)
 {
   use_operand_p use_p;
   ssa_op_iter op_iter;
+  bool changed = false;
 
   if (is_gimple_debug (copy))
     {
@@ -487,7 +475,7 @@ rename_uses (gimple copy, htab_t rename_map, gimple_stmt_iterator *gsi_tgt,
       else
 	gcc_unreachable ();
 
-      return;
+      return false;
     }
 
   FOR_EACH_SSA_USE_OPERAND (use_p, copy, op_iter, SSA_OP_ALL_USES)
@@ -501,6 +489,7 @@ rename_uses (gimple copy, htab_t rename_map, gimple_stmt_iterator *gsi_tgt,
 	  || SSA_NAME_IS_DEFAULT_DEF (old_name))
 	continue;
 
+      changed = true;
       new_expr = get_rename (rename_map, old_name);
       if (new_expr)
 	{
@@ -547,8 +536,20 @@ rename_uses (gimple copy, htab_t rename_map, gimple_stmt_iterator *gsi_tgt,
 				       true, NULL_TREE);
       gsi_insert_seq_before (gsi_tgt, stmts, GSI_SAME_STMT);
       replace_exp (use_p, new_expr);
+
+      if (TREE_CODE (new_expr) == INTEGER_CST
+	  && is_gimple_assign (copy))
+	{
+	  tree rhs = gimple_assign_rhs1 (copy);
+
+	  if (TREE_CODE (rhs) == ADDR_EXPR)
+	    recompute_tree_invariant_for_addr_expr (rhs);
+	}
+
       set_rename (rename_map, old_name, new_expr);
     }
+
+  return changed;
 }
 
 /* Duplicates the statements of basic block BB into basic block NEW_BB
@@ -602,7 +603,8 @@ graphite_copy_stmts_from_block (basic_block bb, basic_block new_bb,
 	  set_rename (rename_map, old_name, new_name);
  	}
 
-      rename_uses (copy, rename_map, &gsi_tgt, region, loop, iv_map);
+      if (rename_uses (copy, rename_map, &gsi_tgt, region, loop, iv_map))
+	fold_stmt_inplace (copy);
 
       update_stmt (copy);
     }
@@ -673,8 +675,7 @@ if_region_set_false_region (ifsese if_region, sese region)
 
   SESE_EXIT (region) = false_edge;
 
-  if (if_region->false_region)
-    free (if_region->false_region);
+  free (if_region->false_region);
   if_region->false_region = region;
 
   if (slot)
@@ -787,13 +788,15 @@ scalar_evolution_in_region (sese region, loop_p loop, tree t)
   struct loop *def_loop;
   basic_block before = block_before_sese (region);
 
+  /* SCOP parameters.  */
+  if (TREE_CODE (t) == SSA_NAME
+      && !defined_in_sese_p (t, region))
+    return t;
+
   if (TREE_CODE (t) != SSA_NAME
       || loop_in_sese_p (loop, region))
     return instantiate_scev (before, loop,
 			     analyze_scalar_evolution (loop, t));
-
-  if (!defined_in_sese_p (t, region))
-    return t;
 
   def = SSA_NAME_DEF_STMT (t);
   def_loop = loop_containing_stmt (def);

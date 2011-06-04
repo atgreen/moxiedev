@@ -1,6 +1,6 @@
 /* Calculate branch probabilities, and basic block execution counts.
    Copyright (C) 1990, 1991, 1992, 1993, 1994, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
+   2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by James E. Wilson, UC Berkeley/Cygnus Support;
    based on some ideas from Dain Samples of UC Berkeley.
@@ -61,7 +61,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "function.h"
 #include "basic-block.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "coverage.h"
 #include "value-prof.h"
 #include "tree.h"
@@ -72,9 +71,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-pass.h"
 
 #include "profile.h"
-
-/* Hooks for profiling.  */
-static struct profile_hooks* profile_hooks;
 
 struct bb_info {
   unsigned int count_valid : 1;
@@ -106,13 +102,6 @@ static int total_num_branches;
 
 /* Forward declarations.  */
 static void find_spanning_tree (struct edge_list *);
-static unsigned instrument_edges (struct edge_list *);
-static void instrument_values (histogram_values);
-static void compute_branch_probabilities (void);
-static void compute_value_histograms (histogram_values);
-static gcov_type * get_exec_counts (void);
-static basic_block find_group (basic_block);
-static void union_groups (basic_block, basic_block);
 
 /* Add edge instrumentation code to the entire insn chain.
 
@@ -142,7 +131,7 @@ instrument_edges (struct edge_list *el)
 		fprintf (dump_file, "Edge %d to %d instrumented%s\n",
 			 e->src->index, e->dest->index,
 			 EDGE_CRITICAL_P (e) ? " (and split)" : "");
-	      (profile_hooks->gen_edge_profiler) (num_instr_edges++, e);
+	      gimple_gen_edge_profiler (num_instr_edges++, e);
 	    }
 	}
     }
@@ -203,31 +192,31 @@ instrument_values (histogram_values values)
       switch (hist->type)
 	{
 	case HIST_TYPE_INTERVAL:
-	  (profile_hooks->gen_interval_profiler) (hist, t, 0);
+	  gimple_gen_interval_profiler (hist, t, 0);
 	  break;
 
 	case HIST_TYPE_POW2:
-	  (profile_hooks->gen_pow2_profiler) (hist, t, 0);
+	  gimple_gen_pow2_profiler (hist, t, 0);
 	  break;
 
 	case HIST_TYPE_SINGLE_VALUE:
-	  (profile_hooks->gen_one_value_profiler) (hist, t, 0);
+	  gimple_gen_one_value_profiler (hist, t, 0);
 	  break;
 
 	case HIST_TYPE_CONST_DELTA:
-	  (profile_hooks->gen_const_delta_profiler) (hist, t, 0);
+	  gimple_gen_const_delta_profiler (hist, t, 0);
 	  break;
 
  	case HIST_TYPE_INDIR_CALL:
- 	  (profile_hooks->gen_ic_profiler) (hist, t, 0);
+ 	  gimple_gen_ic_profiler (hist, t, 0);
   	  break;
 
 	case HIST_TYPE_AVERAGE:
-	  (profile_hooks->gen_average_profiler) (hist, t, 0);
+	  gimple_gen_average_profiler (hist, t, 0);
 	  break;
 
 	case HIST_TYPE_IOR:
-	  (profile_hooks->gen_ior_profiler) (hist, t, 0);
+	  gimple_gen_ior_profiler (hist, t, 0);
 	  break;
 
 	default:
@@ -237,10 +226,12 @@ instrument_values (histogram_values values)
 }
 
 
-/* Computes hybrid profile for all matching entries in da_file.  */
+/* Computes hybrid profile for all matching entries in da_file.  
+   
+   CFG_CHECKSUM is the precomputed checksum for the CFG.  */
 
 static gcov_type *
-get_exec_counts (void)
+get_exec_counts (unsigned cfg_checksum, unsigned lineno_checksum)
 {
   unsigned num_edges = 0;
   basic_block bb;
@@ -257,7 +248,8 @@ get_exec_counts (void)
 	  num_edges++;
     }
 
-  counts = get_coverage_counts (GCOV_COUNTER_ARCS, num_edges, &profile_info);
+  counts = get_coverage_counts (GCOV_COUNTER_ARCS, num_edges, cfg_checksum,
+				lineno_checksum, &profile_info);
   if (!counts)
     return NULL;
 
@@ -413,8 +405,17 @@ read_profile_edge_counts (gcov_type *exec_counts)
 		e->count = exec_counts[exec_counts_pos++];
 		if (e->count > profile_info->sum_max)
 		  {
-		    error ("corrupted profile info: edge from %i to %i exceeds maximal count",
-			   bb->index, e->dest->index);
+		    if (flag_profile_correction)
+		      {
+			static bool informed = 0;
+			if (!informed)
+		          inform (input_location,
+			          "corrupted profile info: edge count exceeds maximal count");
+			informed = 1;
+		      }
+		    else
+		      error ("corrupted profile info: edge from %i to %i exceeds maximal count",
+			     bb->index, e->dest->index);
 		  }
 	      }
 	    else
@@ -437,10 +438,12 @@ read_profile_edge_counts (gcov_type *exec_counts)
 }
 
 /* Compute the branch probabilities for the various branches.
-   Annotate them accordingly.  */
+   Annotate them accordingly.  
+
+   CFG_CHECKSUM is the precomputed checksum for the CFG.  */
 
 static void
-compute_branch_probabilities (void)
+compute_branch_probabilities (unsigned cfg_checksum, unsigned lineno_checksum)
 {
   basic_block bb;
   int i;
@@ -449,7 +452,7 @@ compute_branch_probabilities (void)
   int passes;
   int hist_br_prob[20];
   int num_branches;
-  gcov_type *exec_counts = get_exec_counts ();
+  gcov_type *exec_counts = get_exec_counts (cfg_checksum, lineno_checksum);
   int inconsistent = 0;
 
   /* Very simple sanity checks so we catch bugs in our profiling code.  */
@@ -767,10 +770,13 @@ compute_branch_probabilities (void)
 }
 
 /* Load value histograms values whose description is stored in VALUES array
-   from .gcda file.  */
+   from .gcda file.  
+
+   CFG_CHECKSUM is the precomputed checksum for the CFG.  */
 
 static void
-compute_value_histograms (histogram_values values)
+compute_value_histograms (histogram_values values, unsigned cfg_checksum,
+                          unsigned lineno_checksum)
 {
   unsigned i, j, t, any;
   unsigned n_histogram_counters[GCOV_N_VALUE_COUNTERS];
@@ -798,7 +804,8 @@ compute_value_histograms (histogram_values values)
 
       histogram_counts[t] =
 	get_coverage_counts (COUNTER_FOR_HIST_TYPE (t),
-			     n_histogram_counters[t], NULL);
+			     n_histogram_counters[t], cfg_checksum,
+			     lineno_checksum, NULL);
       if (histogram_counts[t])
 	any = 1;
       act_count[t] = histogram_counts[t];
@@ -823,8 +830,7 @@ compute_value_histograms (histogram_values values)
     }
 
   for (t = 0; t < GCOV_N_VALUE_COUNTERS; t++)
-    if (histogram_counts[t])
-      free (histogram_counts[t]);
+    free (histogram_counts[t]);
 }
 
 /* The entry basic block will be moved around so that it has index=1,
@@ -848,7 +854,7 @@ output_location (char const *file_name, int line,
       return;
     }
 
-  name_differs = !prev_file_name || strcmp (file_name, prev_file_name);
+  name_differs = !prev_file_name || filename_cmp (file_name, prev_file_name);
   line_differs = prev_line != line;
 
   if (name_differs || line_differs)
@@ -901,6 +907,7 @@ branch_prob (void)
   unsigned num_instrumented;
   struct edge_list *el;
   histogram_values values = NULL;
+  unsigned cfg_checksum, lineno_checksum;
 
   total_num_times_called++;
 
@@ -937,7 +944,9 @@ branch_prob (void)
 	  /* It may happen that there are compiler generated statements
 	     without a locus at all.  Go through the basic block from the
 	     last to the first statement looking for a locus.  */
-	  for (gsi = gsi_last_bb (bb); !gsi_end_p (gsi); gsi_prev (&gsi))
+	  for (gsi = gsi_last_nondebug_bb (bb);
+	       !gsi_end_p (gsi);
+	       gsi_prev_nondebug (&gsi))
 	    {
 	      last = gsi_stmt (gsi);
 	      if (gimple_has_location (last))
@@ -1052,11 +1061,19 @@ branch_prob (void)
   if (dump_file)
     fprintf (dump_file, "%d ignored edges\n", ignored_edges);
 
+
+  /* Compute two different checksums. Note that we want to compute
+     the checksum in only once place, since it depends on the shape
+     of the control flow which can change during 
+     various transformations.  */
+  cfg_checksum = coverage_compute_cfg_checksum ();
+  lineno_checksum = coverage_compute_lineno_checksum ();
+
   /* Write the data from which gcov can reconstruct the basic block
      graph.  */
 
   /* Basic block flags */
-  if (coverage_begin_output ())
+  if (coverage_begin_output (lineno_checksum, cfg_checksum))
     {
       gcov_position_t offset;
 
@@ -1073,7 +1090,7 @@ branch_prob (void)
   EXIT_BLOCK_PTR->index = last_basic_block;
 
   /* Arcs */
-  if (coverage_begin_output ())
+  if (coverage_begin_output (lineno_checksum, cfg_checksum))
     {
       gcov_position_t offset;
 
@@ -1114,18 +1131,15 @@ branch_prob (void)
     }
 
   /* Line numbers.  */
-  if (coverage_begin_output ())
+  if (coverage_begin_output (lineno_checksum, cfg_checksum))
     {
-      gcov_position_t offset;
-
       /* Initialize the output.  */
       output_location (NULL, 0, NULL, NULL);
 
       FOR_EACH_BB (bb)
 	{
 	  gimple_stmt_iterator gsi;
-
-	  offset = 0;
+	  gcov_position_t offset = 0;
 
 	  if (bb == ENTRY_BLOCK_PTR->next_bb)
 	    {
@@ -1143,15 +1157,14 @@ branch_prob (void)
 				 &offset, bb);
 	    }
 
-	  /* Notice GOTO expressions we eliminated while constructing the
-	     CFG.  */
+	  /* Notice GOTO expressions eliminated while constructing the CFG.  */
 	  if (single_succ_p (bb)
 	      && single_succ_edge (bb)->goto_locus != UNKNOWN_LOCATION)
 	    {
-	      location_t curr_location = single_succ_edge (bb)->goto_locus;
-	      /* ??? The FILE/LINE API is inconsistent for these cases.  */
-	      output_location (LOCATION_FILE (curr_location),
-			       LOCATION_LINE (curr_location), &offset, bb);
+	      expanded_location curr_location
+		= expand_location (single_succ_edge (bb)->goto_locus);
+	      output_location (curr_location.file, curr_location.line,
+			       &offset, bb);
 	    }
 
 	  if (offset)
@@ -1169,13 +1182,13 @@ branch_prob (void)
 #undef BB_TO_GCOV_INDEX
 
   if (flag_profile_values)
-    find_values_to_profile (&values);
+    gimple_find_values_to_profile (&values);
 
   if (flag_branch_probabilities)
     {
-      compute_branch_probabilities ();
+      compute_branch_probabilities (cfg_checksum, lineno_checksum);
       if (flag_profile_values)
-	compute_value_histograms (values);
+	compute_value_histograms (values, cfg_checksum, lineno_checksum);
     }
 
   remove_fake_edges ();
@@ -1186,7 +1199,7 @@ branch_prob (void)
     {
       unsigned n_instrumented;
 
-      profile_hooks->init_edge_profiler ();
+      gimple_init_edge_profiler ();
 
       n_instrumented = instrument_edges (el);
 
@@ -1203,7 +1216,7 @@ branch_prob (void)
 
   VEC_free (histogram_value, heap, values);
   free_edge_list (el);
-  coverage_end_function ();
+  coverage_end_function (lineno_checksum, cfg_checksum);
 }
 
 /* Union find algorithm implementation for the basic blocks using
@@ -1369,13 +1382,4 @@ end_branch_prob (void)
 		     / total_num_branches, 5*i, 5*i+5);
 	}
     }
-}
-
-/* Set up hooks to enable tree-based profiling.  */
-
-void
-tree_register_profile_hooks (void)
-{
-  gcc_assert (current_ir_type () == IR_GIMPLE);
-  profile_hooks = &tree_profile_hooks;
 }

@@ -1,5 +1,5 @@
 /* Default target hook functions.
-   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -65,6 +65,8 @@ extern bool hook_callee_copies_named
 extern void default_print_operand (FILE *, rtx, int);
 extern void default_print_operand_address (FILE *, rtx);
 extern bool default_print_operand_punct_valid_p (unsigned char);
+extern tree default_mangle_assembler_name (const char *);
+
 extern bool default_asm_output_addr_const_extra (FILE *, rtx);
 
 extern bool default_scalar_mode_supported_p (enum machine_mode);
@@ -122,15 +124,11 @@ extern rtx default_static_chain (const_tree, bool);
 extern void default_trampoline_init (rtx, tree, rtx);
 extern int default_return_pops_args (tree, tree, int);
 extern reg_class_t default_branch_target_register_class (void);
-#ifdef IRA_COVER_CLASSES
-extern const reg_class_t *default_ira_cover_classes (void);
-#endif
 extern reg_class_t default_secondary_reload (bool, rtx, reg_class_t,
 					     enum machine_mode,
 					     secondary_reload_info *);
 extern void default_target_option_override (void);
 extern void hook_void_bitmap (bitmap);
-extern bool default_handle_c_option (size_t, const char *, int);
 extern int default_reloc_rw_mask (void);
 extern tree default_mangle_decl_assembler_name (tree, tree);
 extern tree default_emutls_var_fields (tree, tree *);
@@ -141,6 +139,7 @@ extern bool default_target_option_valid_attribute_p (tree, tree, tree, int);
 extern bool default_target_option_pragma_parse (tree, tree);
 extern bool default_target_can_inline_p (tree, tree);
 extern bool default_valid_pointer_mode (enum machine_mode);
+extern bool default_ref_may_alias_errno (struct ao_ref_s *);
 extern enum machine_mode default_addr_space_pointer_mode (addr_space_t);
 extern enum machine_mode default_addr_space_address_mode (addr_space_t);
 extern bool default_addr_space_valid_pointer_mode (enum machine_mode,
@@ -160,18 +159,28 @@ extern int default_register_move_cost (enum machine_mode, reg_class_t,
 extern bool default_profile_before_prologue (void);
 extern reg_class_t default_preferred_reload_class (rtx, reg_class_t);
 extern reg_class_t default_preferred_output_reload_class (rtx, reg_class_t);
+extern reg_class_t default_preferred_rename_class (reg_class_t rclass);
 extern bool default_class_likely_spilled_p (reg_class_t);
 
 extern enum unwind_info_type default_debug_unwind_info (void);
-extern enum unwind_info_type default_except_unwind_info (void);
-extern enum unwind_info_type dwarf2_except_unwind_info (void);
-extern enum unwind_info_type sjlj_except_unwind_info (void);
+extern enum unwind_info_type default_except_unwind_info (struct gcc_options *);
+extern enum unwind_info_type dwarf2_except_unwind_info (struct gcc_options *);
+extern enum unwind_info_type sjlj_except_unwind_info (struct gcc_options *);
 
 extern int default_label_align_after_barrier_max_skip (rtx);
 extern int default_loop_align_max_skip (rtx);
 extern int default_label_align_max_skip (rtx);
 extern int default_jump_align_max_skip (rtx);
-
+extern section * default_function_section(tree decl, enum node_frequency freq,
+					  bool startup, bool exit);
 extern enum machine_mode default_get_reg_raw_mode(int);
 
 extern const struct default_options empty_optimization_table[];
+
+extern bool default_target_handle_option (struct gcc_options *,
+					  struct gcc_options *,
+					  const struct cl_decoded_option *,
+					  location_t);
+
+extern void *default_get_pch_validity (size_t *);
+extern const char *default_pch_valid_p (const void *, size_t);

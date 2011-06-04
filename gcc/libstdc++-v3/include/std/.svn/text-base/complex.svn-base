@@ -1,7 +1,7 @@
 // The template and inlines for the -*- C++ -*- complex number classes.
 
 // Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-// 2006, 2007, 2008, 2009, 2010
+// 2006, 2007, 2008, 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -46,7 +46,9 @@
 #include <cmath>
 #include <sstream>
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
    * @defgroup complex_numbers Complex Numbers
@@ -529,12 +531,12 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
   // Values
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
   template<typename _Tp>
-    inline _Tp
+    inline constexpr _Tp
     real(const complex<_Tp>& __z)
     { return __z.real(); }
     
   template<typename _Tp>
-    inline _Tp
+    inline constexpr _Tp
     imag(const complex<_Tp>& __z)
     { return __z.imag(); }
 #else
@@ -1044,7 +1046,14 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       _GLIBCXX_CONSTEXPR complex(_ComplexT __z) : _M_value(__z) { }
 
       _GLIBCXX_CONSTEXPR complex(float __r = 0.0f, float __i = 0.0f)
-      : _M_value(__r + __i * 1.0fi) { }
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+      : _M_value{ __r, __i } { }
+#else
+      {
+	__real__ _M_value = __r;
+	__imag__ _M_value = __i;
+      }
+#endif
 
       explicit _GLIBCXX_CONSTEXPR complex(const complex<double>&);
       explicit _GLIBCXX_CONSTEXPR complex(const complex<long double>&);	
@@ -1184,7 +1193,14 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       _GLIBCXX_CONSTEXPR complex(_ComplexT __z) : _M_value(__z) { }
 
       _GLIBCXX_CONSTEXPR complex(double __r = 0.0, double __i = 0.0)
-      : _M_value(__r + __i * 1.0i) { }
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+      : _M_value{ __r, __i } { }
+#else
+      {
+	__real__ _M_value = __r;
+	__imag__ _M_value = __i;
+      }
+#endif
 
       _GLIBCXX_CONSTEXPR complex(const complex<float>& __z)
       : _M_value(__z.__rep()) { }
@@ -1326,7 +1342,14 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
       _GLIBCXX_CONSTEXPR complex(long double __r = 0.0L, 
 				 long double __i = 0.0L)
-      : _M_value(__r + __i * 1.0Li) { }
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+      : _M_value{ __r, __i } { }
+#else
+      {
+	__real__ _M_value = __r;
+	__imag__ _M_value = __i;
+      }
+#endif
 
       _GLIBCXX_CONSTEXPR complex(const complex<float>& __z)
       : _M_value(__z.__rep()) { }
@@ -1494,9 +1517,12 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
   // @} group complex_numbers
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
-_GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
+namespace __gnu_cxx _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   // See ext/type_traits.h for the primary template.
   template<typename _Tp, typename _Up>
@@ -1520,11 +1546,14 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
       typedef std::complex<typename __promote_2<_Tp, _Up>::__type> __type;
     };
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   // Forward declarations.
   template<typename _Tp> std::complex<_Tp> acos(const std::complex<_Tp>&);
@@ -1890,7 +1919,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     conj(_Tp __x)
     { return __x; }
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #endif  // __GXX_EXPERIMENTAL_CXX0X__
 

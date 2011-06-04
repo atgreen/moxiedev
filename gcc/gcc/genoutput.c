@@ -1,6 +1,6 @@
 /* Generate code from to output assembler insns as recognized from rtl.
    Copyright (C) 1987, 1988, 1992, 1994, 1995, 1997, 1998, 1999, 2000, 2002,
-   2003, 2004, 2005, 2007, 2008 Free Software Foundation, Inc.
+   2003, 2004, 2005, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -65,6 +65,8 @@ along with GCC; see the file COPYING3.  If not see
      f. `eliminable', is nonzero for operands that are matched normally by
      MATCH_OPERAND; it is zero for operands that should not be changed during
      register elimination such as MATCH_OPERATORs.
+
+     g. `allows_mem', is true for operands that accept MEM rtxes.
 
   The code number of an insn is simply its position in the machine
   description; code numbers are assigned sequentially to entries in
@@ -160,6 +162,7 @@ struct data
   int index_number;
   const char *filename;
   int lineno;
+  int n_generator_args;		/* Number of arguments passed to generator */
   int n_operands;		/* Number of operands this insn recognizes */
   int n_dups;			/* Number times match_dup appears in pattern */
   int n_alternatives;		/* Number of alternatives in each constraint */
@@ -241,7 +244,6 @@ output_prologue (void)
   printf ("#include \"insn-attr.h\"\n\n");
   printf ("#include \"recog.h\"\n\n");
   printf ("#include \"diagnostic-core.h\"\n");
-  printf ("#include \"toplev.h\"\n");
   printf ("#include \"output.h\"\n");
   printf ("#include \"target.h\"\n");
   printf ("#include \"tm-constrs.h\"\n");
@@ -256,6 +258,8 @@ output_operand_data (void)
 
   for (d = odata; d; d = d->next)
     {
+      struct pred_data *pred;
+
       printf ("  {\n");
 
       printf ("    %s,\n",
@@ -269,7 +273,12 @@ output_operand_data (void)
 
       printf ("    %d,\n", d->constraint == NULL ? 1 : 0);
 
-      printf ("    %d\n", d->eliminable);
+      printf ("    %d,\n", d->eliminable);
+
+      pred = NULL;
+      if (d->predicate)
+	pred = lookup_predicate (d->predicate);
+      printf ("    %d\n", pred && pred->codes[MEM]);
 
       printf("  },\n");
     }
@@ -394,6 +403,7 @@ output_insn_data (void)
 	printf ("    0,\n");
 
       printf ("    &operand_data[%d],\n", d->operand_number);
+      printf ("    %d,\n", d->n_generator_args);
       printf ("    %d,\n", d->n_operands);
       printf ("    %d,\n", d->n_dups);
       printf ("    %d,\n", d->n_alternatives);
@@ -418,15 +428,10 @@ output_get_insn_name (void)
 }
 
 
-/* Stores in max_opno the largest operand number present in `part', if
-   that is larger than the previous value of max_opno, and the rest of
-   the operand data into `d->operand[i]'.
+/* Stores the operand data into `d->operand[i]'.
 
    THIS_ADDRESS_P is nonzero if the containing rtx was an ADDRESS.
    THIS_STRICT_LOW is nonzero if the containing rtx was a STRICT_LOW_PART.  */
-
-static int max_opno;
-static int num_dups;
 
 static void
 scan_operands (struct data *d, rtx part, int this_address_p,
@@ -443,9 +448,7 @@ scan_operands (struct data *d, rtx part, int this_address_p,
     {
     case MATCH_OPERAND:
       opno = XINT (part, 0);
-      if (opno > max_opno)
-	max_opno = opno;
-      if (max_opno >= MAX_MAX_OPERANDS)
+      if (opno >= MAX_MAX_OPERANDS)
 	{
 	  error_with_line (d->lineno, "maximum number of operands exceeded");
 	  return;
@@ -466,9 +469,7 @@ scan_operands (struct data *d, rtx part, int this_address_p,
 
     case MATCH_SCRATCH:
       opno = XINT (part, 0);
-      if (opno > max_opno)
-	max_opno = opno;
-      if (max_opno >= MAX_MAX_OPERANDS)
+      if (opno >= MAX_MAX_OPERANDS)
 	{
 	  error_with_line (d->lineno, "maximum number of operands exceeded");
 	  return;
@@ -490,9 +491,7 @@ scan_operands (struct data *d, rtx part, int this_address_p,
     case MATCH_OPERATOR:
     case MATCH_PARALLEL:
       opno = XINT (part, 0);
-      if (opno > max_opno)
-	max_opno = opno;
-      if (max_opno >= MAX_MAX_OPERANDS)
+      if (opno >= MAX_MAX_OPERANDS)
 	{
 	  error_with_line (d->lineno, "maximum number of operands exceeded");
 	  return;
@@ -510,12 +509,6 @@ scan_operands (struct data *d, rtx part, int this_address_p,
       for (i = 0; i < XVECLEN (part, 2); i++)
 	scan_operands (d, XVECEXP (part, 2, i), 0, 0);
       return;
-
-    case MATCH_DUP:
-    case MATCH_OP_DUP:
-    case MATCH_PAR_DUP:
-      ++num_dups;
-      break;
 
     case ADDRESS:
       scan_operands (d, XEXP (part, 0), 1, 0);
@@ -831,6 +824,7 @@ validate_optab_operands (struct data *d)
 static void
 gen_insn (rtx insn, int lineno)
 {
+  struct pattern_stats stats;
   struct data *d = XNEW (struct data);
   int i;
 
@@ -849,15 +843,15 @@ gen_insn (rtx insn, int lineno)
   *idata_end = d;
   idata_end = &d->next;
 
-  max_opno = -1;
-  num_dups = 0;
   memset (d->operand, 0, sizeof (d->operand));
 
   for (i = 0; i < XVECLEN (insn, 1); i++)
     scan_operands (d, XVECEXP (insn, 1, i), 0, 0);
 
-  d->n_operands = max_opno + 1;
-  d->n_dups = num_dups;
+  get_pattern_stats (&stats, XVEC (insn, 1));
+  d->n_generator_args = stats.num_generator_args;
+  d->n_operands = stats.num_insn_operands;
+  d->n_dups = stats.num_dups;
 
 #ifndef USE_MD_CONSTRAINTS
   check_constraint_len ();
@@ -876,6 +870,7 @@ gen_insn (rtx insn, int lineno)
 static void
 gen_peephole (rtx peep, int lineno)
 {
+  struct pattern_stats stats;
   struct data *d = XNEW (struct data);
   int i;
 
@@ -891,8 +886,6 @@ gen_peephole (rtx peep, int lineno)
   *idata_end = d;
   idata_end = &d->next;
 
-  max_opno = -1;
-  num_dups = 0;
   memset (d->operand, 0, sizeof (d->operand));
 
   /* Get the number of operands by scanning all the patterns of the
@@ -901,7 +894,9 @@ gen_peephole (rtx peep, int lineno)
   for (i = 0; i < XVECLEN (peep, 0); i++)
     scan_operands (d, XVECEXP (peep, 0, i), 0, 0);
 
-  d->n_operands = max_opno + 1;
+  get_pattern_stats (&stats, XVEC (peep, 0));
+  d->n_generator_args = 0;
+  d->n_operands = stats.num_insn_operands;
   d->n_dups = 0;
 
   validate_insn_alternatives (d);
@@ -915,6 +910,7 @@ gen_peephole (rtx peep, int lineno)
 static void
 gen_expand (rtx insn, int lineno)
 {
+  struct pattern_stats stats;
   struct data *d = XNEW (struct data);
   int i;
 
@@ -933,8 +929,6 @@ gen_expand (rtx insn, int lineno)
   *idata_end = d;
   idata_end = &d->next;
 
-  max_opno = -1;
-  num_dups = 0;
   memset (d->operand, 0, sizeof (d->operand));
 
   /* Scan the operands to get the specified predicates and modes,
@@ -944,8 +938,10 @@ gen_expand (rtx insn, int lineno)
     for (i = 0; i < XVECLEN (insn, 1); i++)
       scan_operands (d, XVECEXP (insn, 1, i), 0, 0);
 
-  d->n_operands = max_opno + 1;
-  d->n_dups = num_dups;
+  get_pattern_stats (&stats, XVEC (insn, 1));
+  d->n_generator_args = stats.num_generator_args;
+  d->n_operands = stats.num_insn_operands;
+  d->n_dups = stats.num_dups;
   d->template_code = 0;
   d->output_format = INSN_OUTPUT_FORMAT_NONE;
 
@@ -960,6 +956,7 @@ gen_expand (rtx insn, int lineno)
 static void
 gen_split (rtx split, int lineno)
 {
+  struct pattern_stats stats;
   struct data *d = XNEW (struct data);
   int i;
 
@@ -975,8 +972,6 @@ gen_split (rtx split, int lineno)
   *idata_end = d;
   idata_end = &d->next;
 
-  max_opno = -1;
-  num_dups = 0;
   memset (d->operand, 0, sizeof (d->operand));
 
   /* Get the number of operands by scanning all the patterns of the
@@ -985,7 +980,9 @@ gen_split (rtx split, int lineno)
   for (i = 0; i < XVECLEN (split, 0); i++)
     scan_operands (d, XVECEXP (split, 0, i), 0, 0);
 
-  d->n_operands = max_opno + 1;
+  get_pattern_stats (&stats, XVEC (split, 0));
+  d->n_generator_args = 0;
+  d->n_operands = stats.num_insn_operands;
   d->n_dups = 0;
   d->n_alternatives = 0;
   d->template_code = 0;

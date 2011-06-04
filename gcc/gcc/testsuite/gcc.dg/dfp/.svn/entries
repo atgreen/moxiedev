@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/dfp
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-11-13T16:19:33.333671Z
-166711
-bonzini
+2011-05-10T06:05:20.690450Z
+173606
+jakub
 
 
 
@@ -161,6 +161,40 @@ janis
 
 
 3447
+
+pr48928.c
+file
+
+
+
+
+2011-06-04T17:56:04.551104Z
+8839751293dea7c31ee017e68d79c7a7
+2011-05-10T06:05:20.690450Z
+173606
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+161
 
 constants-pedantic.c
 file
@@ -474,11 +508,11 @@ file
 
 
 
-2009-04-24T17:45:12.000000Z
-206ed62b2f333d350e0ff11f33df9893
-2006-01-11T21:29:59.796568Z
-109604
-bje
+2011-06-04T17:56:04.551104Z
+60b14264ab7f13114629e2e9c0aa7792
+2010-12-10T14:20:26.998265Z
+167687
+froydnj
 
 
 
@@ -500,7 +534,7 @@ bje
 
 
 
-1713
+1829
 
 convert-dfp-round.c
 file
@@ -1012,40 +1046,6 @@ janis
 
 1563
 
-pragma-float-const-decimal64-3.c
-file
-
-
-
-
-2009-09-27T03:30:01.000000Z
-f81a9ab3a0212214f904c0cc2fe02024
-2009-09-16T16:38:49.712589Z
-151764
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1390
-
 float-constant-double.c
 file
 
@@ -1079,6 +1079,40 @@ janis
 
 
 557
+
+pragma-float-const-decimal64-3.c
+file
+
+
+
+
+2009-09-27T03:30:01.000000Z
+f81a9ab3a0212214f904c0cc2fe02024
+2009-09-16T16:38:49.712589Z
+151764
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1390
 
 pragma-float-const-decimal64-4.c
 file
@@ -1385,6 +1419,40 @@ janis
 
 
 2169
+
+pr48204.c
+file
+
+
+
+
+2011-06-04T17:56:04.551104Z
+8f20a249a1cf0ecc405e1799552e1d6f
+2011-03-24T18:58:58.925360Z
+171423
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+190
 
 keywords-reserved.c
 file

@@ -1,5 +1,5 @@
 /* If-conversion for vectorizer.
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Devang Patel <dpatel@apple.com>
 
@@ -464,8 +464,8 @@ struct ifc_dr {
 /* Returns true when the memory references of STMT are read or written
    unconditionally.  In other words, this function returns true when
    for every data reference A in STMT there exist other accesses to
-   the same data reference with predicates that add up (OR-up) to the
-   true predicate: this ensures that the data reference A is touched
+   a data reference with the same base with predicates that add up (OR-up) to
+   the true predicate: this ensures that the data reference A is touched
    (read or written) on every iteration of the if-converted loop.  */
 
 static bool
@@ -489,21 +489,38 @@ memrefs_read_or_written_unconditionally (gimple stmt,
 	  continue;
 
 	for (j = 0; VEC_iterate (data_reference_p, drs, j, b); j++)
-	  if (DR_STMT (b) != stmt
-	      && same_data_refs (a, b))
-	    {
-	      tree cb = bb_predicate (gimple_bb (DR_STMT (b)));
+          {
+            tree ref_base_a = DR_REF (a);
+            tree ref_base_b = DR_REF (b);
 
-	      if (DR_RW_UNCONDITIONALLY (b) == 1
-		  || is_true_predicate (cb)
-		  || is_true_predicate (ca = fold_or_predicates (EXPR_LOCATION (cb),
-								 ca, cb)))
-		{
-		  DR_RW_UNCONDITIONALLY (a) = 1;
-		  DR_RW_UNCONDITIONALLY (b) = 1;
-		  found = true;
-		  break;
-		}
+            if (DR_STMT (b) == stmt)
+              continue;
+
+            while (TREE_CODE (ref_base_a) == COMPONENT_REF
+                   || TREE_CODE (ref_base_a) == IMAGPART_EXPR
+                   || TREE_CODE (ref_base_a) == REALPART_EXPR)
+              ref_base_a = TREE_OPERAND (ref_base_a, 0);
+
+            while (TREE_CODE (ref_base_b) == COMPONENT_REF
+                   || TREE_CODE (ref_base_b) == IMAGPART_EXPR
+                   || TREE_CODE (ref_base_b) == REALPART_EXPR)
+              ref_base_b = TREE_OPERAND (ref_base_b, 0);
+
+  	    if (!operand_equal_p (ref_base_a, ref_base_b, 0))
+	      {
+	        tree cb = bb_predicate (gimple_bb (DR_STMT (b)));
+
+	        if (DR_RW_UNCONDITIONALLY (b) == 1
+		    || is_true_predicate (cb)
+		    || is_true_predicate (ca
+                        = fold_or_predicates (EXPR_LOCATION (cb), ca, cb)))
+		  {
+		    DR_RW_UNCONDITIONALLY (a) = 1;
+  		    DR_RW_UNCONDITIONALLY (b) = 1;
+		    found = true;
+		    break;
+		  }
+               }
 	    }
 
 	if (!found)
@@ -702,6 +719,22 @@ if_convertible_stmt_p (gimple stmt, VEC (data_reference_p, heap) *refs)
     case GIMPLE_ASSIGN:
       return if_convertible_gimple_assign_stmt_p (stmt, refs);
 
+    case GIMPLE_CALL:
+      {
+	tree fndecl = gimple_call_fndecl (stmt);
+	if (fndecl)
+	  {
+	    int flags = gimple_call_flags (stmt);
+	    if ((flags & ECF_CONST)
+		&& !(flags & ECF_LOOPING_CONST_OR_PURE)
+		/* We can only vectorize some builtins at the moment,
+		   so restrict if-conversion to those.  */
+		&& DECL_BUILT_IN (fndecl))
+	      return true;
+	  }
+	return false;
+      }
+
     default:
       /* Don't know what to do with 'em so don't do anything.  */
       if (dump_file && (dump_flags & TDF_DETAILS))
@@ -712,6 +745,20 @@ if_convertible_stmt_p (gimple stmt, VEC (data_reference_p, heap) *refs)
       return false;
       break;
     }
+
+  return true;
+}
+
+/* Return true when BB post-dominates all its predecessors.  */
+
+static bool
+bb_postdominates_preds (basic_block bb)
+{
+  unsigned i;
+
+  for (i = 0; i < EDGE_COUNT (bb->preds); i++)
+    if (!dominated_by_p (CDI_POST_DOMINATORS, EDGE_PRED (bb, i)->src, bb))
+      return false;
 
   return true;
 }
@@ -773,6 +820,11 @@ if_convertible_bb_p (struct loop *loop, basic_block bb, basic_block exit_bb)
 	  fprintf (dump_file, "Difficult to handle edges\n");
 	return false;
       }
+
+  if (EDGE_COUNT (bb->preds) == 2
+      && bb != loop->header
+      && !bb_postdominates_preds (bb))
+    return false;
 
   return true;
 }
@@ -977,6 +1029,7 @@ predicate_bbs (loop_p loop)
 
 static bool
 if_convertible_loop_p_1 (struct loop *loop,
+			 VEC (loop_p, heap) **loop_nest,
 			 VEC (data_reference_p, heap) **refs,
 			 VEC (ddr_p, heap) **ddrs)
 {
@@ -986,11 +1039,12 @@ if_convertible_loop_p_1 (struct loop *loop,
 
   /* Don't if-convert the loop when the data dependences cannot be
      computed: the loop won't be vectorized in that case.  */
-  res = compute_data_dependences_for_loop (loop, true, refs, ddrs);
+  res = compute_data_dependences_for_loop (loop, true, loop_nest, refs, ddrs);
   if (!res)
     return false;
 
   calculate_dominance_info (CDI_DOMINATORS);
+  calculate_dominance_info (CDI_POST_DOMINATORS);
 
   /* Allow statements that can be handled during if-conversion.  */
   ifc_bbs = get_loop_body_in_if_conv_order (loop);
@@ -1066,6 +1120,7 @@ if_convertible_loop_p (struct loop *loop)
   bool res = false;
   VEC (data_reference_p, heap) *refs;
   VEC (ddr_p, heap) *ddrs;
+  VEC (loop_p, heap) *loop_nest;
 
   /* Handle only innermost loop.  */
   if (!loop || loop->inner)
@@ -1099,7 +1154,8 @@ if_convertible_loop_p (struct loop *loop)
 
   refs = VEC_alloc (data_reference_p, heap, 5);
   ddrs = VEC_alloc (ddr_p, heap, 25);
-  res = if_convertible_loop_p_1 (loop, &refs, &ddrs);
+  loop_nest = VEC_alloc (loop_p, heap, 3);
+  res = if_convertible_loop_p_1 (loop, &loop_nest, &refs, &ddrs);
 
   if (flag_tree_loop_if_convert_stores)
     {
@@ -1110,6 +1166,7 @@ if_convertible_loop_p (struct loop *loop)
 	free (dr->aux);
     }
 
+  VEC_free (loop_p, heap, loop_nest);
   free_data_refs (refs);
   free_dependence_relations (ddrs);
   return res;
@@ -1257,6 +1314,9 @@ predicate_scalar_phi (gimple phi, tree cond,
 	  arg_0 = gimple_phi_arg_def (phi, 0);
 	  arg_1 = gimple_phi_arg_def (phi, 1);
 	}
+
+      gcc_checking_assert (bb == bb->loop_father->header
+			   || bb_postdominates_preds (bb));
 
       /* Build new RHS using selected condition and arguments.  */
       rhs = build3 (COND_EXPR, TREE_TYPE (res),
@@ -1577,6 +1637,7 @@ combine_blocks (struct loop *loop)
   for (i = 0; i < orig_loop_num_nodes; i++)
     {
       bb = ifc_bbs[i];
+      free_bb_predicate (bb);
       if (bb_with_exit_edge_p (loop, bb))
 	{
 	  exit_bb = bb;
@@ -1652,6 +1713,9 @@ combine_blocks (struct loop *loop)
       && exit_bb != loop->header
       && can_merge_blocks_p (loop->header, exit_bb))
     merge_blocks (loop->header, exit_bb);
+
+  free (ifc_bbs);
+  ifc_bbs = NULL;
 }
 
 /* If-convert LOOP when it is legal.  For the moment this pass has no
@@ -1713,6 +1777,8 @@ main_tree_if_conversion (void)
 
   if (changed && flag_tree_loop_if_convert_stores)
     todo |= TODO_update_ssa_only_virtuals;
+
+  free_dominance_info (CDI_POST_DOMINATORS);
 
   return todo;
 }

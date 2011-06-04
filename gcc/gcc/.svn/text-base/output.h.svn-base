@@ -1,7 +1,7 @@
 /* Declarations for insn-output.c.  These functions are defined in recog.c,
    final.c, and varasm.c.
    Copyright (C) 1987, 1991, 1994, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -269,6 +269,10 @@ extern bool default_assemble_integer (rtx, unsigned int, int);
    be outputable. */
 extern bool assemble_integer (rtx, unsigned, unsigned, int);
 
+/* Return section for TEXT_SECITON_NAME if DECL or DECL_SECTION_NAME (DECL)
+   is NULL.  */
+extern section *get_named_text_section (tree, const char *, const char *);
+
 /* An interface to assemble_integer for the common case in which a value is
    fully aligned and must be printed.  VALUE is the value of the integer
    object and SIZE is the number of bytes it contains.  */
@@ -293,6 +297,8 @@ extern rtx peephole (rtx);
 extern void output_shared_constant_pool (void);
 
 extern void output_object_blocks (void);
+
+extern void output_quoted_string (FILE *, const char *);
 
 /* Whether a constructor CTOR is a valid static constant initializer if all
    its elements are.  This used to be internal to initializer_constant_valid_p
@@ -411,6 +417,9 @@ extern const char *user_label_prefix;
 /* Default target function prologue and epilogue assembler output.  */
 extern void default_function_pro_epilogue (FILE *, HOST_WIDE_INT);
 
+/* Default target function switched text sections.  */
+extern void default_function_switched_text_sections (FILE *, tree, bool);
+
 /* Default target hook that outputs nothing to a stream.  */
 extern void no_asm_to_stream (FILE *);
 
@@ -432,7 +441,8 @@ extern void no_asm_to_stream (FILE *);
 #define SECTION_DECLARED 0x100000	/* section has been used */
 #define SECTION_STYLE_MASK 0x600000	/* bits used for SECTION_STYLE */
 #define SECTION_COMMON   0x800000	/* contains common data */
-#define SECTION_MACH_DEP 0x1000000	/* subsequent bits reserved for target */
+#define SECTION_RELRO	 0x1000000	/* data is readonly after relocation processing */
+#define SECTION_MACH_DEP 0x2000000	/* subsequent bits reserved for target */
 
 /* This SECTION_STYLE is used for unnamed sections that we can switch
    to using a special assembler directive.  */
@@ -576,6 +586,7 @@ extern section *get_unnamed_section (unsigned int, void (*) (const void *),
 				     const void *);
 extern section *get_section (const char *, unsigned int, tree);
 extern section *get_named_section (tree, const char *, int);
+extern section *get_variable_section (tree, bool);
 extern void place_block_symbol (rtx);
 extern rtx get_section_anchor (struct object_block *, HOST_WIDE_INT,
 			       enum tls_model);

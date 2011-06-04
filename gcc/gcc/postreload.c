@@ -1,7 +1,7 @@
 /* Perform simple optimizations to clean up the result of reload.
    Copyright (C) 1987, 1988, 1989, 1992, 1993, 1994, 1995, 1996, 1997,
    1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010 Free Software Foundation, Inc.
+   2010, 2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -41,7 +41,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "output.h"
 #include "cselib.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "except.h"
 #include "tree.h"
 #include "target.h"
@@ -113,6 +112,7 @@ reload_cse_simplify (rtx insn, rtx testreg)
 	  if (REG_P (value)
 	      && ! REG_FUNCTION_VALUE_P (value))
 	    value = 0;
+	  check_for_inc_dec (insn);
 	  delete_insn_and_edges (insn);
 	  return;
 	}
@@ -164,6 +164,7 @@ reload_cse_simplify (rtx insn, rtx testreg)
 
       if (i < 0)
 	{
+	  check_for_inc_dec (insn);
 	  delete_insn_and_edges (insn);
 	  /* We're done with this insn.  */
 	  return;
@@ -232,7 +233,7 @@ reload_cse_simplify_set (rtx set, rtx insn)
   int did_change = 0;
   int dreg;
   rtx src;
-  enum reg_class dclass;
+  reg_class_t dclass;
   int old_cost;
   cselib_val *val;
   struct elt_loc_list *l;
@@ -263,7 +264,7 @@ reload_cse_simplify_set (rtx set, rtx insn)
     return 0;
 #endif
 
-  val = cselib_lookup (src, GET_MODE (SET_DEST (set)), 0);
+  val = cselib_lookup (src, GET_MODE (SET_DEST (set)), 0, VOIDmode);
   if (! val)
     return 0;
 
@@ -477,7 +478,9 @@ reload_cse_simplify_operands (rtx insn, rtx testreg)
 	    continue;
 	}
 #endif /* LOAD_EXTEND_OP */
-      v = cselib_lookup (op, recog_data.operand_mode[i], 0);
+      if (side_effects_p (op))
+	continue;
+      v = cselib_lookup (op, recog_data.operand_mode[i], 0, VOIDmode);
       if (! v)
 	continue;
 
@@ -1010,6 +1013,12 @@ reload_combine_recognize_const_pattern (rtx insn)
 	      && reg_state[clobbered_regno].real_store_ruid >= use_ruid)
 	    break;
 
+#ifdef HAVE_cc0
+	  /* Do not separate cc0 setter and cc0 user on HAVE_cc0 targets.  */
+	  if (must_move_add && sets_cc0_p (PATTERN (use_insn)))
+	    break;
+#endif
+
 	  gcc_assert (reg_state[regno].store_ruid <= use_ruid);
 	  /* Avoid moving a use of ADDREG past a point where it is stored.  */
 	  if (reg_state[REGNO (addreg)].store_ruid > use_ruid)
@@ -1416,7 +1425,8 @@ reload_combine_note_store (rtx dst, const_rtx set, void *data ATTRIBUTE_UNUSED)
     {
       dst = XEXP (dst, 0);
       if (GET_CODE (dst) == PRE_INC || GET_CODE (dst) == POST_INC
-	  || GET_CODE (dst) == PRE_DEC || GET_CODE (dst) == POST_DEC)
+	  || GET_CODE (dst) == PRE_DEC || GET_CODE (dst) == POST_DEC
+	  || GET_CODE (dst) == PRE_MODIFY || GET_CODE (dst) == POST_MODIFY)
 	{
 	  regno = REGNO (XEXP (dst, 0));
 	  mode = GET_MODE (XEXP (dst, 0));

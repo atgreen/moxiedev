@@ -1,6 +1,6 @@
 // Exception Handling support header (exception_ptr class) for -*- C++ -*-
 
-// Copyright (C) 2008, 2009 Free Software Foundation
+// Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation
 //
 // This file is part of GCC.
 //
@@ -23,9 +23,9 @@
 // see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 // <http://www.gnu.org/licenses/>.
 
-/** @file exception_ptr.h
- *  This is an internal header file, included by other headers and the
- *  implementation. You should not attempt to use it directly.
+/** @file bits/exception_ptr.h
+ *  This is an internal header file, included by other library headers.
+ *  Do not attempt to use it directly. @headername{exception}
  */
 
 #ifndef _EXCEPTION_PTR_H
@@ -34,7 +34,7 @@
 #pragma GCC visibility push(default)
 
 #include <bits/c++config.h>
-#include <exception_defines.h>
+#include <bits/exception_defines.h>
 
 #if !defined(_GLIBCXX_ATOMIC_BUILTINS_4)
 #  error This platform does not support exception propagation.
@@ -97,7 +97,9 @@ namespace std
       exception_ptr(exception_ptr&& __o) throw()
       : _M_exception_object(__o._M_exception_object)
       { __o._M_exception_object = 0; }
-#else
+#endif
+
+#if !defined (__GXX_EXPERIMENTAL_CXX0X__) || defined (_GLIBCXX_EH_PTR_COMPAT)
       typedef void (exception_ptr::*__safe_bool)();
 
       // For construction from nullptr or 0.
@@ -137,7 +139,7 @@ namespace std
       operator==(const exception_ptr&, const exception_ptr&) throw() 
       __attribute__ ((__pure__));
 
-      const type_info*
+      const class type_info*
       __cxa_exception_type() const throw() __attribute__ ((__pure__));
     };
 

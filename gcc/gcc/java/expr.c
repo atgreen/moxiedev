@@ -1,6 +1,6 @@
 /* Process expressions for the GNU compiler for the Java(TM) language.
    Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008, 2010 Free Software Foundation, Inc.
+   2005, 2006, 2007, 2008, 2010, 2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -27,6 +27,12 @@ The Free Software Foundation is independent of Sun Microsystems, Inc.  */
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
+#include "tm.h"			/* For INT_TYPE_SIZE,
+				   TARGET_VTABLE_USES_DESCRIPTORS,
+				   BITS_PER_UNIT,
+				   MODIFY_JNI_METHOD_CALL and
+				   PARM_BOUNDARY.  */
+				   
 #include "tree.h"
 #include "flags.h"
 #include "java-tree.h"
@@ -36,7 +42,6 @@ The Free Software Foundation is independent of Sun Microsystems, Inc.  */
 #include "java-except.h"
 #include "parse.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "ggc.h"
 #include "tree-iterator.h"
 #include "target.h"
@@ -1875,8 +1880,8 @@ expand_java_switch (tree selector, int default_pc)
 			NULL_TREE, NULL_TREE);
   java_add_stmt (switch_expr);
 
-  x = build3 (CASE_LABEL_EXPR, void_type_node, NULL_TREE, NULL_TREE,
-	      create_artificial_label (input_location));
+  x = build_case_label (NULL_TREE, NULL_TREE,
+			create_artificial_label (input_location));
   append_to_statement_list (x, &SWITCH_BODY (switch_expr));
 
   x = build1 (GOTO_EXPR, void_type_node, lookup_label (default_pc));
@@ -1892,8 +1897,8 @@ expand_java_add_case (tree switch_expr, int match, int target_pc)
 
   value = build_int_cst (TREE_TYPE (switch_expr), match);
   
-  x = build3 (CASE_LABEL_EXPR, void_type_node, value, NULL_TREE,
-	      create_artificial_label (input_location));
+  x = build_case_label (value, NULL_TREE,
+			create_artificial_label (input_location));
   append_to_statement_list (x, &SWITCH_BODY (switch_expr));
 
   x = build1 (GOTO_EXPR, void_type_node, lookup_label (target_pc));
@@ -2650,7 +2655,6 @@ build_jni_stub (tree method)
   method_args = DECL_ARGUMENTS (method);
   block = build_block (env_var, NULL_TREE, method_args, NULL_TREE);
   TREE_SIDE_EFFECTS (block) = 1;
-  TREE_TYPE (block) = TREE_TYPE (TREE_TYPE (method));
 
   /* Compute the local `env' by calling _Jv_GetJNIEnvNewFrame.  */
   body = build2 (MODIFY_EXPR, ptr_type_node, env_var,

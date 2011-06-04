@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/25_algorithms/sort_heap
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2011-04-11T17:50:39.904416Z
+172269
+paolo
 
 
 
@@ -28,4 +28,38 @@ jakub
 
 requirements
 dir
+
+check_compare_by_value.cc
+file
+
+
+
+
+2011-06-04T18:06:00.403105Z
+378c32d980a9d272400dab0144a1af06
+2011-04-11T17:50:39.904416Z
+172269
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2309
 

@@ -1,7 +1,7 @@
 // Set implementation -*- C++ -*-
 
-// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-// Free Software Foundation, Inc.
+// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+// 2011 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -49,9 +49,9 @@
  * purpose.  It is provided "as is" without express or implied warranty.
  */
 
-/** @file stl_set.h
+/** @file bits/stl_set.h
  *  This is an internal header file, included by other library headers.
- *  You should not attempt to use it directly.
+ *  Do not attempt to use it directly. @headername{set}
  */
 
 #ifndef _STL_SET_H
@@ -60,7 +60,9 @@
 #include <bits/concept_check.h>
 #include <initializer_list>
 
-_GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   /**
    *  @brief A standard container made up of unique keys, which can be
@@ -91,7 +93,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       __glibcxx_class_requires(_Key, _SGIAssignableConcept)
       __glibcxx_class_requires4(_Compare, bool, _Key, _Key,
 				_BinaryFunctionConcept)
-      __glibcxx_class_requires2(_Key, _Alloc_value_type, _SameTypeConcept)	
+      __glibcxx_class_requires2(_Key, _Alloc_value_type, _SameTypeConcept)
 
     public:
       // typedefs:
@@ -156,9 +158,9 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  otherwise (where N is distance(first,last)).
        */
       template<typename _InputIterator>
-        set(_InputIterator __first, _InputIterator __last)
+	set(_InputIterator __first, _InputIterator __last)
 	: _M_t()
-        { _M_t._M_insert_unique(__first, __last); }
+	{ _M_t._M_insert_unique(__first, __last); }
 
       /**
        *  @brief  Builds a %set from a range.
@@ -172,11 +174,11 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  otherwise (where N is distance(first,last)).
        */
       template<typename _InputIterator>
-        set(_InputIterator __first, _InputIterator __last,
+	set(_InputIterator __first, _InputIterator __last,
 	    const _Compare& __comp,
 	    const allocator_type& __a = allocator_type())
 	: _M_t(__comp, __a)
-        { _M_t._M_insert_unique(__first, __last); }
+	{ _M_t._M_insert_unique(__first, __last); }
 
       /**
        *  @brief  %Set copy constructor.
@@ -197,6 +199,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  The contents of @a x are a valid, but unspecified %set.
        */
       set(set&& __x)
+      noexcept(is_nothrow_copy_constructible<_Compare>::value)
       : _M_t(std::move(__x._M_t)) { }
 
       /**
@@ -280,7 +283,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       { return _M_t.key_comp(); }
       ///  Returns the allocator object with which the %set was constructed.
       allocator_type
-      get_allocator() const
+      get_allocator() const _GLIBCXX_NOEXCEPT
       { return _M_t.get_allocator(); }
 
       /**
@@ -289,7 +292,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  to the keys.
        */
       iterator
-      begin() const
+      begin() const _GLIBCXX_NOEXCEPT
       { return _M_t.begin(); }
 
       /**
@@ -298,7 +301,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  to the keys.
        */
       iterator
-      end() const
+      end() const _GLIBCXX_NOEXCEPT
       { return _M_t.end(); }
 
       /**
@@ -307,7 +310,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  to the keys.
        */
       reverse_iterator
-      rbegin() const
+      rbegin() const _GLIBCXX_NOEXCEPT
       { return _M_t.rbegin(); }
 
       /**
@@ -316,7 +319,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  according to the keys.
        */
       reverse_iterator
-      rend() const
+      rend() const _GLIBCXX_NOEXCEPT
       { return _M_t.rend(); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -326,7 +329,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  to the keys.
        */
       iterator
-      cbegin() const
+      cbegin() const noexcept
       { return _M_t.begin(); }
 
       /**
@@ -335,7 +338,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  to the keys.
        */
       iterator
-      cend() const
+      cend() const noexcept
       { return _M_t.end(); }
 
       /**
@@ -344,7 +347,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  to the keys.
        */
       reverse_iterator
-      crbegin() const
+      crbegin() const noexcept
       { return _M_t.rbegin(); }
 
       /**
@@ -353,23 +356,23 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  according to the keys.
        */
       reverse_iterator
-      crend() const
+      crend() const noexcept
       { return _M_t.rend(); }
 #endif
 
       ///  Returns true if the %set is empty.
       bool
-      empty() const
+      empty() const _GLIBCXX_NOEXCEPT
       { return _M_t.empty(); }
 
       ///  Returns the size of the %set.
       size_type
-      size() const
+      size() const _GLIBCXX_NOEXCEPT
       { return _M_t.size(); }
 
       ///  Returns the maximum size of the %set.
       size_type
-      max_size() const
+      max_size() const _GLIBCXX_NOEXCEPT
       { return _M_t.max_size(); }
 
       /**
@@ -384,7 +387,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  std::swap(s1,s2) will feed to this function.
        */
       void
-      swap(set& __x)	
+      swap(set& __x)
       { _M_t.swap(__x._M_t); }
 
       // insert/erase
@@ -435,7 +438,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *
        *  For more on @a hinting, see:
        *  http://gcc.gnu.org/onlinedocs/libstdc++/manual/bk01pt07ch17.html
-       *  
+       *
        *  Insertion requires logarithmic time (if the hint is not taken).
        */
       iterator
@@ -458,9 +461,9 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  Complexity similar to that of the range constructor.
        */
       template<typename _InputIterator>
-        void
-        insert(_InputIterator __first, _InputIterator __last)
-        { _M_t._M_insert_unique(__first, __last); }
+	void
+	insert(_InputIterator __first, _InputIterator __last)
+	{ _M_t._M_insert_unique(__first, __last); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       /**
@@ -482,7 +485,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  @brief Erases an element from a %set.
        *  @param  position  An iterator pointing to the element to be erased.
        *  @return An iterator pointing to the element immediately following
-       *          @a position prior to the element being erased. If no such 
+       *          @a position prior to the element being erased. If no such
        *          element exists, end() is returned.
        *
        *  This function erases an element, pointed to by the given iterator,
@@ -567,7 +570,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  the user's responsibility.
        */
       void
-      clear()
+      clear() _GLIBCXX_NOEXCEPT
       { _M_t.clear(); }
 
       // set operations:
@@ -670,12 +673,12 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       //@}
 
       template<typename _K1, typename _C1, typename _A1>
-        friend bool
-        operator==(const set<_K1, _C1, _A1>&, const set<_K1, _C1, _A1>&);
+	friend bool
+	operator==(const set<_K1, _C1, _A1>&, const set<_K1, _C1, _A1>&);
 
       template<typename _K1, typename _C1, typename _A1>
-        friend bool
-        operator<(const set<_K1, _C1, _A1>&, const set<_K1, _C1, _A1>&);
+	friend bool
+	operator<(const set<_K1, _C1, _A1>&, const set<_K1, _C1, _A1>&);
     };
 
 
@@ -746,6 +749,6 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
     swap(set<_Key, _Compare, _Alloc>& __x, set<_Key, _Compare, _Alloc>& __y)
     { __x.swap(__y); }
 
-_GLIBCXX_END_NESTED_NAMESPACE
-
+_GLIBCXX_END_NAMESPACE_CONTAINER
+} //namespace std
 #endif /* _STL_SET_H */

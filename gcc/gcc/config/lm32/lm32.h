@@ -1,7 +1,7 @@
 /* Definitions of target machine for GNU compiler, Lattice Mico32 architecture.
    Contributed by Jon Beniston <jon@beniston.com>
 
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
 
    This file is part of GCC.
 
@@ -22,11 +22,6 @@
 /*-------------------------------*/
 /* Run-time Target Specification */
 /*-------------------------------*/
-
-/* Print subsidiary information on the compiler version in use.  */
-#ifndef TARGET_VERSION
-#define TARGET_VERSION fprintf (stderr, " (LatticeMico32)")
-#endif
 
 /* Target CPU builtins.  */
 #define TARGET_CPU_CPP_BUILTINS()                       \
@@ -54,8 +49,7 @@
 %{mdivide-enabled} \
 %{mbarrel-shift-enabled} \
 %{msign-extend-enabled} \
-%{muser-extend-enabled} \
-%{v} \
+%{muser-enabled} \
 "
 
 /* Let link script define all link options. 
@@ -240,6 +234,8 @@ enum reg_class
 
 #define ARG_POINTER_REGNUM FRAME_POINTER_REGNUM
 
+#define INCOMING_RETURN_ADDR_RTX gen_rtx_REG (SImode, RA_REGNUM)
+
 #define RETURN_ADDR_RTX(count, frame)                                   \
   lm32_return_addr_rtx (count, frame)
 
@@ -349,8 +345,6 @@ enum reg_class
 #else
 #define REG_OK_FOR_BASE_P(X) NONSTRICT_REG_OK_FOR_BASE_P(X)
 #endif
-
-#define LEGITIMATE_CONSTANT_P(X) lm32_legitimate_constant_p (X)
 
 /*-------------------------*/
 /* Condition Code Status.  */

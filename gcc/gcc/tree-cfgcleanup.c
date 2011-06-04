@@ -27,7 +27,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "basic-block.h"
 #include "output.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "flags.h"
 #include "function.h"
 #include "ggc.h"
@@ -36,7 +35,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "timevar.h"
 #include "tree-dump.h"
 #include "tree-pass.h"
-#include "toplev.h"
 #include "except.h"
 #include "cfgloop.h"
 #include "cfglayout.h"
@@ -422,7 +420,7 @@ remove_forwarder_block (basic_block bb)
 	}
     }
 
-  can_move_debug_stmts = single_pred_p (dest);
+  can_move_debug_stmts = MAY_HAVE_DEBUG_STMTS && single_pred_p (dest);
 
   /* Redirect the edges.  */
   for (ei = ei_start (bb->preds); (e = ei_safe_edge (ei)); )
@@ -478,8 +476,7 @@ remove_forwarder_block (basic_block bb)
 	gsi_next (&gsi);
     }
 
-  /* Move debug statements if the destination has just a single
-     predecessor.  */
+  /* Move debug statements if the destination has a single predecessor.  */
   if (can_move_debug_stmts)
     {
       gsi_to = gsi_after_labels (dest);

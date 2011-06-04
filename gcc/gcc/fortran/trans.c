@@ -63,19 +63,6 @@ gfc_advance_chain (tree t, int n)
 }
 
 
-/* Wrap a node in a TREE_LIST node and add it to the end of a list.  */
-
-tree
-gfc_chainon_list (tree list, tree add)
-{
-  tree l;
-
-  l = tree_cons (NULL_TREE, add, NULL_TREE);
-
-  return chainon (list, l);
-}
-
-
 /* Strip off a legitimate source ending from the input
    string NAME of length LEN.  */
 
@@ -329,6 +316,13 @@ gfc_build_array_ref (tree base, tree offset, tree decl)
   tree type = TREE_TYPE (base);
   tree tmp;
 
+  if (GFC_ARRAY_TYPE_P (type) && GFC_TYPE_ARRAY_RANK (type) == 0)
+    {
+      gcc_assert (GFC_TYPE_ARRAY_CORANK (type) > 0);
+
+      return fold_convert (TYPE_MAIN_VARIANT (type), base);
+    }
+
   gcc_assert (TREE_CODE (type) == ARRAY_TYPE);
   type = TREE_TYPE (type);
 
@@ -407,12 +401,12 @@ trans_runtime_error_vararg (bool error, locus* where, const char* msgid,
 
   arg = gfc_build_addr_expr (pchar_type_node,
 			     gfc_build_localized_cstring_const (message));
-  gfc_free(message);
+  free (message);
   
   asprintf (&message, "%s", _(msgid));
   arg2 = gfc_build_addr_expr (pchar_type_node,
 			      gfc_build_localized_cstring_const (message));
-  gfc_free(message);
+  free (message);
 
   /* Build the argument array.  */
   argarray = XALLOCAVEC (tree, nargs + 2);
@@ -505,11 +499,7 @@ gfc_trans_runtime_check (bool error, bool once, tree cond, stmtblock_t * pblock,
       else
 	cond = fold_convert (long_integer_type_node, cond);
 
-      tmp = build_int_cst (long_integer_type_node, 0);
-      cond = build_call_expr_loc (where->lb->location,
-			      built_in_decls[BUILT_IN_EXPECT], 2, cond, tmp);
-      cond = fold_convert (boolean_type_node, cond);
-
+      cond = gfc_unlikely (cond);
       tmp = fold_build3_loc (where->lb->location, COND_EXPR, void_type_node,
 			     cond, body,
 			     build_empty_stmt (where->lb->location));
@@ -519,7 +509,7 @@ gfc_trans_runtime_check (bool error, bool once, tree cond, stmtblock_t * pblock,
 
 
 /* Call malloc to allocate size bytes of memory, with special conditions:
-      + if size <= 0, return a malloced area of size 1,
+      + if size == 0, return a malloced area of size 1,
       + if malloc returns NULL, issue a runtime error.  */
 tree
 gfc_call_malloc (stmtblock_t * block, tree type, tree size)
@@ -584,37 +574,21 @@ gfc_call_malloc (stmtblock_t * block, tree type, tree size)
       if (stat)
 	*stat = 0;
 
-      // The only time this can happen is the size wraps around.
-      if (size < 0)
+      newmem = malloc (MAX (size, 1));
+      if (newmem == NULL)
       {
-	if (stat)
-	{
-	  *stat = LIBERROR_ALLOCATION;
-	  newmem = NULL;
-	}
-	else
-	  runtime_error ("Attempt to allocate negative amount of memory. "
-			 "Possible integer overflow");
+        if (stat)
+          *stat = LIBERROR_ALLOCATION;
+        else
+	  runtime_error ("Allocation would exceed memory limit");
       }
-      else
-      {
-	newmem = malloc (MAX (size, 1));
-	if (newmem == NULL)
-	{
-	  if (stat)
-	    *stat = LIBERROR_ALLOCATION;
-	  else
-	    runtime_error ("Out of memory");
-	}
-      }
-
       return newmem;
     }  */
 tree
 gfc_allocate_with_status (stmtblock_t * block, tree size, tree status)
 {
   stmtblock_t alloc_block;
-  tree res, tmp, error, msg, cond;
+  tree res, tmp, msg, cond;
   tree status_type = status ? TREE_TYPE (TREE_TYPE (status)) : NULL_TREE;
 
   /* Evaluate size only once, and make sure it has the right type.  */
@@ -640,32 +614,6 @@ gfc_allocate_with_status (stmtblock_t * block, tree size, tree status)
       gfc_add_expr_to_block (block, tmp);
     }
 
-  /* Generate the block of code handling (size < 0).  */
-  msg = gfc_build_addr_expr (pchar_type_node, gfc_build_localized_cstring_const
-			("Attempt to allocate negative amount of memory. "
-			 "Possible integer overflow"));
-  error = build_call_expr_loc (input_location,
-			   gfor_fndecl_runtime_error, 1, msg);
-
-  if (status != NULL_TREE && !integer_zerop (status))
-    {
-      /* Set the status variable if it's present.  */
-      stmtblock_t set_status_block;
-
-      gfc_start_block (&set_status_block);
-      gfc_add_modify (&set_status_block,
-		      fold_build1_loc (input_location, INDIRECT_REF,
-				       status_type, status),
-			   build_int_cst (status_type, LIBERROR_ALLOCATION));
-      gfc_add_modify (&set_status_block, res,
-			   build_int_cst (prvoid_type_node, 0));
-
-      tmp = fold_build2_loc (input_location, EQ_EXPR, boolean_type_node,
-			     status, build_int_cst (TREE_TYPE (status), 0));
-      error = fold_build3_loc (input_location, COND_EXPR, void_type_node, tmp,
-			       error, gfc_finish_block (&set_status_block));
-    }
-
   /* The allocation itself.  */
   gfc_start_block (&alloc_block);
   gfc_add_modify (&alloc_block, res,
@@ -678,7 +626,7 @@ gfc_allocate_with_status (stmtblock_t * block, tree size, tree status)
 							   1)))));
 
   msg = gfc_build_addr_expr (pchar_type_node, gfc_build_localized_cstring_const
-						("Out of memory"));
+			     ("Allocation would exceed memory limit"));
   tmp = build_call_expr_loc (input_location,
 			 gfor_fndecl_os_error, 1, msg);
 
@@ -703,12 +651,7 @@ gfc_allocate_with_status (stmtblock_t * block, tree size, tree status)
 					  build_int_cst (prvoid_type_node, 0)),
 			 tmp, build_empty_stmt (input_location));
   gfc_add_expr_to_block (&alloc_block, tmp);
-
-  cond = fold_build2_loc (input_location, LT_EXPR, boolean_type_node, size,
-			  build_int_cst (TREE_TYPE (size), 0));
-  tmp = fold_build3_loc (input_location, COND_EXPR, void_type_node, cond, error,
-			 gfc_finish_block (&alloc_block));
-  gfc_add_expr_to_block (block, tmp);
+  gfc_add_expr_to_block (block, gfc_finish_block (&alloc_block));
 
   return res;
 }
@@ -1048,11 +991,9 @@ gfc_deallocate_scalar_with_status (tree pointer, tree status, bool can_fail,
 void *
 internal_realloc (void *mem, size_t size)
 {
-  if (size < 0)
-    runtime_error ("Attempt to allocate a negative amount of memory.");
   res = realloc (mem, size);
   if (!res && size != 0)
-    _gfortran_os_error ("Out of memory");
+    _gfortran_os_error ("Allocation would exceed memory limit");
 
   if (size == 0)
     return NULL;
@@ -1062,7 +1003,7 @@ internal_realloc (void *mem, size_t size)
 tree
 gfc_call_realloc (stmtblock_t * block, tree mem, tree size)
 {
-  tree msg, res, negative, nonzero, zero, null_result, tmp;
+  tree msg, res, nonzero, zero, null_result, tmp;
   tree type = TREE_TYPE (mem);
 
   size = gfc_evaluate_now (size, block);
@@ -1072,17 +1013,6 @@ gfc_call_realloc (stmtblock_t * block, tree mem, tree size)
 
   /* Create a variable to hold the result.  */
   res = gfc_create_var (type, NULL);
-
-  /* size < 0 ?  */
-  negative = fold_build2_loc (input_location, LT_EXPR, boolean_type_node, size,
-			      build_int_cst (size_type_node, 0));
-  msg = gfc_build_addr_expr (pchar_type_node, gfc_build_localized_cstring_const
-      ("Attempt to allocate a negative amount of memory."));
-  tmp = fold_build3_loc (input_location, COND_EXPR, void_type_node, negative,
-			 build_call_expr_loc (input_location,
-					    gfor_fndecl_runtime_error, 1, msg),
-			 build_empty_stmt (input_location));
-  gfc_add_expr_to_block (block, tmp);
 
   /* Call realloc and check the result.  */
   tmp = build_call_expr_loc (input_location,
@@ -1096,7 +1026,7 @@ gfc_call_realloc (stmtblock_t * block, tree mem, tree size)
   null_result = fold_build2_loc (input_location, TRUTH_AND_EXPR, boolean_type_node,
 				 null_result, nonzero);
   msg = gfc_build_addr_expr (pchar_type_node, gfc_build_localized_cstring_const
-						("Out of memory"));
+			     ("Allocation would exceed memory limit"));
   tmp = fold_build3_loc (input_location, COND_EXPR, void_type_node,
 			 null_result,
 			 build_call_expr_loc (input_location,
@@ -1150,13 +1080,24 @@ add_expr_to_chain (tree* chain, tree expr, bool front)
     *chain = expr;
 }
 
-/* Add a statement to a block.  */
+
+/* Add a statement at the end of a block.  */
 
 void
 gfc_add_expr_to_block (stmtblock_t * block, tree expr)
 {
   gcc_assert (block);
   add_expr_to_chain (&block->head, expr, false);
+}
+
+
+/* Add a statement at the beginning of a block.  */
+
+void
+gfc_prepend_expr_to_block (stmtblock_t * block, tree expr)
+{
+  gcc_assert (block);
+  add_expr_to_chain (&block->head, expr, true);
 }
 
 
@@ -1202,7 +1143,7 @@ void
 gfc_restore_backend_locus (locus * loc)
 {
   gfc_set_backend_locus (loc);
-  gfc_free (loc->lb);
+  free (loc->lb);
 }
 
 
@@ -1304,15 +1245,20 @@ trans_code (gfc_code * code, tree cond)
 	     dependency check, too.  */
 	  {
 	    bool is_mvbits = false;
+
+	    if (code->resolved_isym)
+	      {
+		res = gfc_conv_intrinsic_subroutine (code);
+		if (res != NULL_TREE)
+		  break;
+	      }
+
 	    if (code->resolved_isym
 		&& code->resolved_isym->id == GFC_ISYM_MVBITS)
 	      is_mvbits = true;
-	    if (code->resolved_isym
-		&& code->resolved_isym->id == GFC_ISYM_MOVE_ALLOC)
-	      res = gfc_conv_intrinsic_move_alloc (code);
-	    else
-	      res = gfc_trans_call (code, is_mvbits, NULL_TREE,
-				    NULL_TREE, false);
+
+	    res = gfc_trans_call (code, is_mvbits, NULL_TREE,
+				  NULL_TREE, false);
 	  }
 	  break;
 
@@ -1613,4 +1559,20 @@ gfc_finish_wrapped_block (gfc_wrapped_block* block)
   block->cleanup = NULL_TREE;
 
   return result;
+}
+
+
+/* Helper function for marking a boolean expression tree as unlikely.  */
+
+tree
+gfc_unlikely (tree cond)
+{
+  tree tmp;
+
+  cond = fold_convert (long_integer_type_node, cond);
+  tmp = build_zero_cst (long_integer_type_node);
+  cond = build_call_expr_loc (input_location,
+			      built_in_decls[BUILT_IN_EXPECT], 2, cond, tmp);
+  cond = fold_convert (boolean_type_node, cond);
+  return cond;
 }

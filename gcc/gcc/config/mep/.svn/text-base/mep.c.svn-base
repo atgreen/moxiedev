@@ -1,5 +1,6 @@
 /* Definitions for Toshiba Media Processor
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+   2011
    Free Software Foundation, Inc.
    Contributed by Red Hat, Inc.
 
@@ -44,13 +45,13 @@ along with GCC; see the file COPYING3.  If not see
 #include "tm_p.h"
 #include "ggc.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "integrate.h"
 #include "target.h"
 #include "target-def.h"
 #include "langhooks.h"
 #include "df.h"
 #include "gimple.h"
+#include "opts.h"
 
 /* Structure of this file:
 
@@ -221,7 +222,8 @@ static rtx mep_function_arg (CUMULATIVE_ARGS *, enum machine_mode,
 static void mep_function_arg_advance (CUMULATIVE_ARGS *, enum machine_mode,
 				      const_tree, bool);
 static bool mep_vector_mode_supported_p (enum machine_mode);
-static bool mep_handle_option (size_t, const char *, int);
+static bool mep_handle_option (struct gcc_options *, struct gcc_options *,
+			       const struct cl_decoded_option *, location_t);
 static rtx  mep_allocate_initial_value (rtx);
 static void mep_asm_init_sections (void);
 static int mep_comp_type_attributes (const_tree, const_tree);
@@ -265,8 +267,6 @@ static const int mep_cmov_insns[] = {
   mep_cand3,
   mep_cor3
 };
-
-static int option_mtiny_specified = 0;
 
 
 static void
@@ -314,6 +314,58 @@ static const struct default_options mep_option_optimization_table[] =
 static void
 mep_option_override (void)
 {
+  unsigned int i;
+  int j;
+  cl_deferred_option *opt;
+  VEC(cl_deferred_option,heap) *vec
+    = (VEC(cl_deferred_option,heap) *) mep_deferred_options;
+
+  FOR_EACH_VEC_ELT (cl_deferred_option, vec, i, opt)
+    {
+      switch (opt->opt_index)
+	{
+	case OPT_mivc2:
+	  for (j = 0; j < 32; j++)
+	    fixed_regs[j + 48] = 0;
+	  for (j = 0; j < 32; j++)
+	    call_used_regs[j + 48] = 1;
+	  for (j = 6; j < 8; j++)
+	    call_used_regs[j + 48] = 0;
+
+#define RN(n,s) reg_names[FIRST_CCR_REGNO + n] = s
+	  RN (0, "$csar0");
+	  RN (1, "$cc");
+	  RN (4, "$cofr0");
+	  RN (5, "$cofr1");
+	  RN (6, "$cofa0");
+	  RN (7, "$cofa1");
+	  RN (15, "$csar1");
+
+	  RN (16, "$acc0_0");
+	  RN (17, "$acc0_1");
+	  RN (18, "$acc0_2");
+	  RN (19, "$acc0_3");
+	  RN (20, "$acc0_4");
+	  RN (21, "$acc0_5");
+	  RN (22, "$acc0_6");
+	  RN (23, "$acc0_7");
+
+	  RN (24, "$acc1_0");
+	  RN (25, "$acc1_1");
+	  RN (26, "$acc1_2");
+	  RN (27, "$acc1_3");
+	  RN (28, "$acc1_4");
+	  RN (29, "$acc1_5");
+	  RN (30, "$acc1_6");
+	  RN (31, "$acc1_7");
+#undef RN
+	  break;
+
+	default:
+	  gcc_unreachable ();
+	}
+    }
+
   if (flag_pic == 1)
     warning (OPT_fpic, "-fpic is not supported");
   if (flag_pic == 2)
@@ -324,9 +376,9 @@ mep_option_override (void)
     error ("only one of -ms and -ml may be given");
   if (TARGET_M && TARGET_L)
     error ("only one of -mm and -ml may be given");
-  if (TARGET_S && option_mtiny_specified)
+  if (TARGET_S && global_options_set.x_mep_tiny_cutoff)
     error ("only one of -ms and -mtiny= may be given");
-  if (TARGET_M && option_mtiny_specified)
+  if (TARGET_M && global_options_set.x_mep_tiny_cutoff)
     error ("only one of -mm and -mtiny= may be given");
   if (TARGET_OPT_CLIP && ! TARGET_OPT_MINMAX)
     warning (0, "-mclip currently has no effect without -mminmax");
@@ -343,7 +395,7 @@ mep_option_override (void)
     mep_tiny_cutoff = 65536;
   if (TARGET_M)
     mep_tiny_cutoff = 0;
-  if (TARGET_L && ! option_mtiny_specified)
+  if (TARGET_L && ! global_options_set.x_mep_tiny_cutoff)
     mep_tiny_cutoff = 0;
 
   if (TARGET_64BIT_CR_REGS)
@@ -1143,9 +1195,10 @@ mep_multi_slot (rtx x)
   return get_attr_slot (x) == SLOT_MULTI;
 }
 
+/* Implement TARGET_LEGITIMATE_CONSTANT_P.  */
 
-bool
-mep_legitimate_constant_p (rtx x)
+static bool
+mep_legitimate_constant_p (enum machine_mode mode ATTRIBUTE_UNUSED, rtx x)
 {
   /* We can't convert symbol values to gp- or tp-rel values after
      reload, as reload might have used $gp or $tp for other
@@ -1248,7 +1301,7 @@ mep_legitimate_address (enum machine_mode mode, rtx x, int strict)
 
   if ((mode == SImode || mode == SFmode)
       && CONSTANT_P (x)
-      && LEGITIMATE_CONSTANT_P (x)
+      && mep_legitimate_constant_p (mode, x)
       && the_tag != 't' && the_tag != 'b')
     {
       if (GET_CODE (x) != CONST_INT
@@ -4002,7 +4055,7 @@ mep_validate_interrupt (tree *node, tree name, tree args ATTRIBUTE_UNUSED,
   if (TREE_TYPE (function_type) != void_type_node)
     error ("interrupt function must have return type of void");
 
-  if (TYPE_ARG_TYPES (function_type)
+  if (prototype_p (function_type)
       && (TREE_VALUE (TYPE_ARG_TYPES (function_type)) != void_type_node
 	  || TREE_CHAIN (TYPE_ARG_TYPES (function_type)) != NULL_TREE))
     error ("interrupt function must have no arguments");
@@ -4069,16 +4122,18 @@ mep_validate_vliw (tree *node, tree name, tree args ATTRIBUTE_UNUSED,
       if (TREE_CODE (*node) == POINTER_TYPE
  	  && !gave_pointer_note)
  	{
- 	  inform (input_location, "to describe a pointer to a VLIW function, use syntax like this:");
- 	  inform (input_location, "  typedef int (__vliw *vfuncptr) ();");
+ 	  inform (input_location,
+ 	          "to describe a pointer to a VLIW function, use syntax like this:\n%s",
+ 	          "   typedef int (__vliw *vfuncptr) ();");
  	  gave_pointer_note = 1;
  	}
  
       if (TREE_CODE (*node) == ARRAY_TYPE
  	  && !gave_array_note)
  	{
- 	  inform (input_location, "to describe an array of VLIW function pointers, use syntax like this:");
- 	  inform (input_location, "  typedef int (__vliw *vfuncptr[]) ();");
+ 	  inform (input_location,
+ 	          "to describe an array of VLIW function pointers, use syntax like this:\n%s",
+ 	          "   typedef int (__vliw *vfuncptr[]) ();");
  	  gave_array_note = 1;
  	}
     }
@@ -4089,17 +4144,19 @@ mep_validate_vliw (tree *node, tree name, tree args ATTRIBUTE_UNUSED,
 
 static const struct attribute_spec mep_attribute_table[11] =
 {
-  /* name         min max decl   type   func   handler */
-  { "based",        0, 0, false, false, false, mep_validate_based_tiny },
-  { "tiny",         0, 0, false, false, false, mep_validate_based_tiny },
-  { "near",         0, 0, false, false, false, mep_validate_near_far },
-  { "far",          0, 0, false, false, false, mep_validate_near_far },
-  { "disinterrupt", 0, 0, false, false, false, mep_validate_disinterrupt },
-  { "interrupt",    0, 0, false, false, false, mep_validate_interrupt },
-  { "io",           0, 1, false, false, false, mep_validate_io_cb },
-  { "cb",           0, 1, false, false, false, mep_validate_io_cb },
-  { "vliw",         0, 0, false, true,  false, mep_validate_vliw },
-  { NULL,           0, 0, false, false, false, NULL }
+  /* name         min max decl   type   func   handler
+     affects_type_identity */
+  { "based",        0, 0, false, false, false, mep_validate_based_tiny, false },
+  { "tiny",         0, 0, false, false, false, mep_validate_based_tiny, false },
+  { "near",         0, 0, false, false, false, mep_validate_near_far, false },
+  { "far",          0, 0, false, false, false, mep_validate_near_far, false },
+  { "disinterrupt", 0, 0, false, false, false, mep_validate_disinterrupt,
+    false },
+  { "interrupt",    0, 0, false, false, false, mep_validate_interrupt, false },
+  { "io",           0, 1, false, false, false, mep_validate_io_cb, false },
+  { "cb",           0, 1, false, false, false, mep_validate_io_cb, false },
+  { "vliw",         0, 0, false, true,  false, mep_validate_vliw, false },
+  { NULL,           0, 0, false, false, false, NULL, false }
 };
 
 static bool
@@ -6079,7 +6136,7 @@ mep_init_builtins (void)
 	if (cgen_insns[i].cret_p)
 	  ret_type = mep_cgen_regnum_to_type (cgen_insns[i].regnums[0].type);
 
-	bi_type = build_function_type (ret_type, 0);
+	bi_type = build_function_type_list (ret_type, NULL_TREE);
 	add_builtin_function (cgen_intrinsics[cgen_insns[i].intrinsic],
 			      bi_type,
 			      cgen_insns[i].intrinsic, BUILT_IN_MD, NULL, NULL);
@@ -7256,72 +7313,36 @@ mep_address_cost (rtx addr ATTRIBUTE_UNUSED, bool ATTRIBUTE_UNUSED speed_p)
 }
 
 static bool
-mep_handle_option (size_t code,
-		   const char *arg ATTRIBUTE_UNUSED,
-		   int value ATTRIBUTE_UNUSED)
+mep_handle_option (struct gcc_options *opts,
+		   struct gcc_options *opts_set ATTRIBUTE_UNUSED,
+		   const struct cl_decoded_option *decoded,
+		   location_t loc ATTRIBUTE_UNUSED)
 {
-  int i;
+  size_t code = decoded->opt_index;
 
   switch (code)
     {
     case OPT_mall_opts:
-      target_flags |= MEP_ALL_OPTS;
+      opts->x_target_flags |= MEP_ALL_OPTS;
       break;
 
     case OPT_mno_opts:
-      target_flags &= ~ MEP_ALL_OPTS;
+      opts->x_target_flags &= ~ MEP_ALL_OPTS;
       break;
 
     case OPT_mcop64:
-      target_flags |= MASK_COP;
-      target_flags |= MASK_64BIT_CR_REGS;
+      opts->x_target_flags |= MASK_COP;
+      opts->x_target_flags |= MASK_64BIT_CR_REGS;
       break;
 
-    case OPT_mtiny_:
-      option_mtiny_specified = 1;
-
     case OPT_mivc2:
-      target_flags |= MASK_COP;
-      target_flags |= MASK_64BIT_CR_REGS;
-      target_flags |= MASK_VLIW;
-      target_flags |= MASK_OPT_VL64;
-      target_flags |= MASK_IVC2;
+      opts->x_target_flags |= MASK_COP;
+      opts->x_target_flags |= MASK_64BIT_CR_REGS;
+      opts->x_target_flags |= MASK_VLIW;
+      opts->x_target_flags |= MASK_OPT_VL64;
+      opts->x_target_flags |= MASK_IVC2;
 
-      for (i=0; i<32; i++)
-	fixed_regs[i+48] = 0;
-      for (i=0; i<32; i++)
-	call_used_regs[i+48] = 1;
-      for (i=6; i<8; i++)
-	call_used_regs[i+48] = 0;
-
-#define RN(n,s) reg_names[FIRST_CCR_REGNO + n] = s
-      RN (0, "$csar0");
-      RN (1, "$cc");
-      RN (4, "$cofr0");
-      RN (5, "$cofr1");
-      RN (6, "$cofa0");
-      RN (7, "$cofa1");
-      RN (15, "$csar1");
-
-      RN (16, "$acc0_0");
-      RN (17, "$acc0_1");
-      RN (18, "$acc0_2");
-      RN (19, "$acc0_3");
-      RN (20, "$acc0_4");
-      RN (21, "$acc0_5");
-      RN (22, "$acc0_6");
-      RN (23, "$acc0_7");
-
-      RN (24, "$acc1_0");
-      RN (25, "$acc1_1");
-      RN (26, "$acc1_2");
-      RN (27, "$acc1_3");
-      RN (28, "$acc1_4");
-      RN (29, "$acc1_5");
-      RN (30, "$acc1_6");
-      RN (31, "$acc1_7");
-#undef RN
-
+      /* Remaining handling of this option deferred.  */
       break;
 
     default:
@@ -7459,6 +7480,8 @@ mep_asm_init_sections (void)
 #define TARGET_CONDITIONAL_REGISTER_USAGE	mep_conditional_register_usage
 #undef  TARGET_TRAMPOLINE_INIT
 #define TARGET_TRAMPOLINE_INIT		mep_trampoline_init
+#undef  TARGET_LEGITIMATE_CONSTANT_P
+#define TARGET_LEGITIMATE_CONSTANT_P	mep_legitimate_constant_p
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 

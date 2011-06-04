@@ -37,7 +37,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "langhooks.h"
 #include "langhooks-def.h"
 #include "flags.h"
-#include "toplev.h"
 #include "tree-dump.h"
 #include "c-pretty-print.h"
 #include "cgraph.h"
@@ -99,7 +98,7 @@ c_genericize (tree fndecl)
     }
 
   /* Dump all nested functions now.  */
-  cgn = cgraph_node (fndecl);
+  cgn = cgraph_get_create_node (fndecl);
   for (cgn = cgn->nested; cgn ; cgn = cgn->next_nested)
     c_genericize (cgn->decl);
 }

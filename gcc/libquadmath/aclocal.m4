@@ -1003,9 +1003,12 @@ AC_SUBST([am__tar])
 AC_SUBST([am__untar])
 ]) # _AM_PROG_TAR
 
+m4_include([../config/acx.m4])
 m4_include([../config/depstand.m4])
 m4_include([../config/lead-dot.m4])
+m4_include([../config/lthostflags.m4])
 m4_include([../config/multi.m4])
+m4_include([../config/no-executables.m4])
 m4_include([../config/override.m4])
 m4_include([../ltoptions.m4])
 m4_include([../ltsugar.m4])

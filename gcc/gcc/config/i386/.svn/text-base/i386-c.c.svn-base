@@ -110,6 +110,10 @@ ix86_target_macros_internal (int isa_flag,
       def_or_undef (parse_in, "__bdver1");
       def_or_undef (parse_in, "__bdver1__");
       break;
+    case PROCESSOR_BTVER1:
+      def_or_undef (parse_in, "__btver1");
+      def_or_undef (parse_in, "__btver1__");
+      break;
     case PROCESSOR_PENTIUM4:
       def_or_undef (parse_in, "__pentium4");
       def_or_undef (parse_in, "__pentium4__");
@@ -118,7 +122,8 @@ ix86_target_macros_internal (int isa_flag,
       def_or_undef (parse_in, "__nocona");
       def_or_undef (parse_in, "__nocona__");
       break;
-    case PROCESSOR_CORE2:
+    case PROCESSOR_CORE2_32:
+    case PROCESSOR_CORE2_64:
       def_or_undef (parse_in, "__core2");
       def_or_undef (parse_in, "__core2__");
       break;
@@ -193,13 +198,17 @@ ix86_target_macros_internal (int isa_flag,
     case PROCESSOR_BDVER1:
       def_or_undef (parse_in, "__tune_bdver1__");
       break;
+   case PROCESSOR_BTVER1:
+      def_or_undef (parse_in, "__tune_btver1__");
+      break;
     case PROCESSOR_PENTIUM4:
       def_or_undef (parse_in, "__tune_pentium4__");
       break;
     case PROCESSOR_NOCONA:
       def_or_undef (parse_in, "__tune_nocona__");
       break;
-    case PROCESSOR_CORE2:
+    case PROCESSOR_CORE2_32:
+    case PROCESSOR_CORE2_64:
       def_or_undef (parse_in, "__tune_core2__");
       break;
     case PROCESSOR_COREI7_32:
@@ -331,14 +340,14 @@ ix86_pragma_target_parse (tree args, tree pop_target)
   ix86_target_macros_internal (prev_isa & diff_isa,
 			       prev_arch,
 			       prev_tune,
-			       (enum fpmath_unit) prev_opt->fpmath,
+			       (enum fpmath_unit) prev_opt->x_ix86_fpmath,
 			       cpp_undef);
 
   /* Define all of the macros for new options that were just turned on.  */
   ix86_target_macros_internal (cur_isa & diff_isa,
 			       cur_arch,
 			       cur_tune,
-			       (enum fpmath_unit) cur_opt->fpmath,
+			       (enum fpmath_unit) cur_opt->x_ix86_fpmath,
 			       cpp_define);
 
   return true;

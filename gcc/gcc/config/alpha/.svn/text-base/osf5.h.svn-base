@@ -1,7 +1,7 @@
 /* Definitions of target machine for GNU compiler, for DEC Alpha on
    Tru64 UNIX V5.1.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2009, 2010
+   2002, 2003, 2004, 2005, 2006, 2007, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Richard Kenner (kenner@vlsi1.ultra.nyu.edu)
 
@@ -102,7 +102,7 @@ along with GCC; see the file COPYING3.  If not see
   "%{!shared:%{pg:gcrt0.o%s}%{!pg:%{p:mcrt0.o%s}%{!p:crt0.o%s}}}"
 
 #define ENDFILE_SPEC \
-  "%{ffast-math|funsafe-math-optimizations:crtfastmath.o%s}"
+  "%{Ofast|ffast-math|funsafe-math-optimizations:crtfastmath.o%s}"
 
 #define MD_STARTFILE_PREFIX "/usr/lib/cmplrs/cc/"
 
@@ -223,6 +223,10 @@ __enable_execute_stack (void *addr)					\
 #define LD_INIT_SWITCH "-init"
 #define LD_FINI_SWITCH "-fini"
 
+/* From Tru64 UNIX Object File and Symbol Table Format Specification,
+   2.3.5 Alignment, p.19.  */
+#define MAX_OFILE_ALIGNMENT (64 * 1024 * BITS_PER_UNIT)
+
 /* Select a format to encode pointers in exception handling data.  CODE
    is 0 for data, 1 for code labels, 2 for function pointers.  GLOBAL is
    true if the symbol may be affected by dynamic relocations.
@@ -270,5 +274,3 @@ __enable_execute_stack (void *addr)					\
 
 /* Handle #pragma extern_prefix.  */
 #define TARGET_HANDLE_PRAGMA_EXTERN_PREFIX 1
-
-#define MD_UNWIND_SUPPORT "config/alpha/osf5-unwind.h"

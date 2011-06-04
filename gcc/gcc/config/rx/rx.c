@@ -1,5 +1,5 @@
 /* Subroutines used for code generation on Renesas RX processors.
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Red Hat.
 
    This file is part of GCC.
@@ -50,10 +50,18 @@
 #include "target.h"
 #include "target-def.h"
 #include "langhooks.h"
+#include "opts.h"
 
 static void rx_print_operand (FILE *, rtx, int);
 
-enum rx_cpu_types  rx_cpu_type = RX600;
+#define CC_FLAG_S	(1 << 0)
+#define CC_FLAG_Z	(1 << 1)
+#define CC_FLAG_O	(1 << 2)
+#define CC_FLAG_C	(1 << 3)
+#define CC_FLAG_FP	(1 << 4)	/* Fake, to differentiate CC_Fmode.  */
+
+static unsigned int flags_from_mode (enum machine_mode mode);
+static unsigned int flags_from_code (enum rtx_code code);
 
 /* Return true if OP is a reference to an object in a small data area.  */
 
@@ -70,13 +78,16 @@ rx_small_data_operand (rtx op)
 }
 
 static bool
-rx_is_legitimate_address (Mmode mode, rtx x, bool strict ATTRIBUTE_UNUSED)
+rx_is_legitimate_address (enum machine_mode mode, rtx x,
+			  bool strict ATTRIBUTE_UNUSED)
 {
   if (RTX_OK_FOR_BASE (x, strict))
     /* Register Indirect.  */
     return true;
 
-  if (GET_MODE_SIZE (mode) == 4
+  if ((GET_MODE_SIZE (mode) == 4
+       || GET_MODE_SIZE (mode) == 2
+       || GET_MODE_SIZE (mode) == 1)
       && (GET_CODE (x) == PRE_DEC || GET_CODE (x) == POST_INC))
     /* Pre-decrement Register Indirect or
        Post-increment Register Indirect.  */
@@ -107,7 +118,7 @@ rx_is_legitimate_address (Mmode mode, rtx x, bool strict ATTRIBUTE_UNUSED)
 
 	    if (val < 0)
 	      return false;
-	    
+
 	    switch (GET_MODE_SIZE (mode))
 	      {
 	      default: 
@@ -157,8 +168,6 @@ rx_is_legitimate_address (Mmode mode, rtx x, bool strict ATTRIBUTE_UNUSED)
 bool
 rx_is_restricted_memory_address (rtx mem, enum machine_mode mode)
 {
-  rtx base, index;
-
   if (! rx_is_legitimate_address
       (mode, mem, reload_in_progress || reload_completed))
     return false;
@@ -174,11 +183,18 @@ rx_is_restricted_memory_address (rtx mem, enum machine_mode mode)
       return false;
 
     case PLUS:
-      /* Only allow REG+INT addressing.  */
-      base = XEXP (mem, 0);
-      index = XEXP (mem, 1);
+      {
+	rtx base, index;
+	
+	/* Only allow REG+INT addressing.  */
+	base = XEXP (mem, 0);
+	index = XEXP (mem, 1);
 
-      return RX_REG_P (base) && CONST_INT_P (index);
+	if (! RX_REG_P (base) || ! CONST_INT_P (index))
+	  return false;
+
+	return IN_RANGE (INTVAL (index), 0, (0x10000 * GET_MODE_SIZE (mode)) - 1);
+      }
 
     case SYMBOL_REF:
       /* Can happen when small data is being supported.
@@ -190,8 +206,10 @@ rx_is_restricted_memory_address (rtx mem, enum machine_mode mode)
     }
 }
 
-bool
-rx_is_mode_dependent_addr (rtx addr)
+/* Implement TARGET_MODE_DEPENDENT_ADDRESS_P.  */
+
+static bool
+rx_mode_dependent_address_p (const_rtx addr)
 {
   if (GET_CODE (addr) == CONST)
     addr = XEXP (addr, 0);
@@ -314,10 +332,20 @@ rx_print_operand_address (FILE * file, rtx addr)
 	break;
       }
 
+    case CONST:
+      if (GET_CODE (XEXP (addr, 0)) == UNSPEC)
+	{
+	  addr = XEXP (addr, 0);
+	  gcc_assert (XINT (addr, 1) == UNSPEC_CONST);
+      
+	  addr = XVECEXP (addr, 0, 0);
+	  gcc_assert (CONST_INT_P (addr));
+	}
+      /* Fall through.  */
     case LABEL_REF:
     case SYMBOL_REF:
-    case CONST:
       fprintf (file, "#");
+
     default:
       output_addr_const (file, addr);
       break;
@@ -354,8 +382,6 @@ rx_assemble_integer (rtx x, unsigned int size, int is_aligned)
 }
 
 
-int rx_float_compare_mode;
-
 /* Handles the insertion of a single operand into the assembler output.
    The %<letter> directives supported are:
 
@@ -367,11 +393,14 @@ int rx_float_compare_mode;
      %L  Print low part of a DImode register, integer or address.
      %N  Print the negation of the immediate value.
      %Q  If the operand is a MEM, then correctly generate
-         register indirect or register relative addressing.  */
+         register indirect or register relative addressing.
+     %R  Like %Q but for zero-extending loads.  */
 
 static void
 rx_print_operand (FILE * file, rtx op, int letter)
 {
+  bool unsigned_load = false;
+
   switch (letter)
     {
     case 'A':
@@ -395,21 +424,83 @@ rx_print_operand (FILE * file, rtx op, int letter)
       break;
 
     case 'B':
-      switch (GET_CODE (op))
-	{
-	case LT:  fprintf (file, "lt"); break;
-	case GE:  fprintf (file, "ge"); break;
-	case GT:  fprintf (file, "gt"); break;
-	case LE:  fprintf (file, "le"); break;
-	case GEU: fprintf (file, "geu"); break;
-	case LTU: fprintf (file, "ltu"); break;
-	case GTU: fprintf (file, "gtu"); break;
-	case LEU: fprintf (file, "leu"); break;
-	case EQ:  fprintf (file, "eq"); break;
-	case NE:  fprintf (file, "ne"); break;
-	default:  debug_rtx (op); gcc_unreachable ();
-	}
-      break;
+      {
+	enum rtx_code code = GET_CODE (op);
+	enum machine_mode mode = GET_MODE (XEXP (op, 0));
+	const char *ret;
+
+	if (mode == CC_Fmode)
+	  {
+	    /* C flag is undefined, and O flag carries unordered.  None of the
+	       branch combinations that include O use it helpfully.  */
+	    switch (code)
+	      {
+	      case ORDERED:
+		ret = "no";
+		break;
+	      case UNORDERED:
+		ret = "o";
+		break;
+	      case LT:
+		ret = "n";
+		break;
+	      case GE:
+		ret = "pz";
+		break;
+	      case EQ:
+		ret = "eq";
+		break;
+	      case NE:
+		ret = "ne";
+		break;
+	      default:
+		gcc_unreachable ();
+	      }
+	  }
+	else
+	  {
+	    unsigned int flags = flags_from_mode (mode);
+
+	    switch (code)
+	      {
+	      case LT:
+		ret = (flags & CC_FLAG_O ? "lt" : "n");
+		break;
+	      case GE:
+		ret = (flags & CC_FLAG_O ? "ge" : "pz");
+		break;
+	      case GT:
+		ret = "gt";
+		break;
+	      case LE:
+		ret = "le";
+		break;
+	      case GEU:
+		ret = "geu";
+		break;
+	      case LTU:
+		ret = "ltu";
+		break;
+	      case GTU:
+		ret = "gtu";
+		break;
+	      case LEU:
+		ret = "leu";
+		break;
+	      case EQ:
+		ret = "eq";
+		break;
+	      case NE:
+		ret = "ne";
+		break;
+	      default:
+		gcc_unreachable ();
+	      }
+	    gcc_checking_assert ((flags_from_code (code) & ~flags) == 0);
+	  }
+	fputs (ret, file);
+	break;
+      }
 
     case 'C':
       gcc_assert (CONST_INT_P (op));
@@ -508,10 +599,15 @@ rx_print_operand (FILE * file, rtx op, int letter)
       rx_print_integer (file, - INTVAL (op));
       break;
 
+    case 'R':
+      gcc_assert (GET_MODE_SIZE (GET_MODE (op)) < 4);
+      unsigned_load = true;
+      /* Fall through.  */
     case 'Q':
       if (MEM_P (op))
 	{
 	  HOST_WIDE_INT offset;
+	  rtx mem = op;
 
 	  op = XEXP (op, 0);
 
@@ -546,22 +642,24 @@ rx_print_operand (FILE * file, rtx op, int letter)
 	  rx_print_operand (file, op, 0);
 	  fprintf (file, "].");
 
-	  switch (GET_MODE_SIZE (GET_MODE (op)))
+	  switch (GET_MODE_SIZE (GET_MODE (mem)))
 	    {
 	    case 1:
-	      gcc_assert (offset < 65535 * 1);
-	      fprintf (file, "B");
+	      gcc_assert (offset <= 65535 * 1);
+	      fprintf (file, unsigned_load ? "UB" : "B");
 	      break;
 	    case 2:
 	      gcc_assert (offset % 2 == 0);
-	      gcc_assert (offset < 65535 * 2);
-	      fprintf (file, "W");
+	      gcc_assert (offset <= 65535 * 2);
+	      fprintf (file, unsigned_load ? "UW" : "W");
 	      break;
-	    default:
+	    case 4:
 	      gcc_assert (offset % 4 == 0);
-	      gcc_assert (offset < 65535 * 4);
+	      gcc_assert (offset <= 65535 * 4);
 	      fprintf (file, "L");
 	      break;
+	    default:
+	      gcc_unreachable ();
 	    }
 	  break;
 	}
@@ -700,51 +798,6 @@ rx_gen_move_template (rtx * operands, bool is_movu)
 	   extension, src_template, dst_template);
   return out_template;
 }
-
-/* Returns an assembler template for a conditional branch instruction.  */
-
-const char *
-rx_gen_cond_branch_template (rtx condition, bool reversed)
-{
-  enum rtx_code code = GET_CODE (condition);
-
-  if (reversed)
-    {
-      if (rx_float_compare_mode)
-	code = reverse_condition_maybe_unordered (code);
-      else
-	code = reverse_condition (code);
-    }
-
-  /* We do not worry about encoding the branch length here as GAS knows
-     how to choose the smallest version, and how to expand a branch that
-     is to a destination that is out of range.  */
-
-  switch (code)
-    {
-    case UNEQ:	    return "bo\t1f\n\tbeq\t%0\n1:";
-    case LTGT:	    return "bo\t1f\n\tbne\t%0\n1:";
-    case UNLT:      return "bo\t1f\n\tbn\t%0\n1:";
-    case UNGE:      return "bo\t1f\n\tbpz\t%0\n1:";
-    case UNLE:      return "bo\t1f\n\tbgt\t1f\n\tbra\t%0\n1:";
-    case UNGT:      return "bo\t1f\n\tble\t1f\n\tbra\t%0\n1:";
-    case UNORDERED: return "bo\t%0";
-    case ORDERED:   return "bno\t%0";
-
-    case LT:        return rx_float_compare_mode ? "bn\t%0" : "blt\t%0";
-    case GE:        return rx_float_compare_mode ? "bpz\t%0" : "bge\t%0";
-    case GT:        return "bgt\t%0";
-    case LE:        return "ble\t%0";
-    case GEU:       return "bgeu\t%0";
-    case LTU:       return "bltu\t%0";
-    case GTU:       return "bgtu\t%0";
-    case LEU:       return "bleu\t%0";
-    case EQ:        return "beq\t%0";
-    case NE:        return "bne\t%0";
-    default:
-      gcc_unreachable ();
-    }
-}
 
 /* Return VALUE rounded up to the next ALIGNMENT boundary.  */
 
@@ -759,7 +812,7 @@ rx_round_up (unsigned int value, unsigned int alignment)
    occupied by an argument of type TYPE and mode MODE.  */
 
 static unsigned int
-rx_function_arg_size (Mmode mode, const_tree type)
+rx_function_arg_size (enum machine_mode mode, const_tree type)
 {
   unsigned int num_bytes;
 
@@ -779,7 +832,8 @@ rx_function_arg_size (Mmode mode, const_tree type)
    variable parameter list.  */
 
 static rtx
-rx_function_arg (Fargs * cum, Mmode mode, const_tree type, bool named)
+rx_function_arg (CUMULATIVE_ARGS * cum, enum machine_mode mode,
+		 const_tree type, bool named)
 {
   unsigned int next_reg;
   unsigned int bytes_so_far = *cum;
@@ -816,14 +870,14 @@ rx_function_arg (Fargs * cum, Mmode mode, const_tree type, bool named)
 }
 
 static void
-rx_function_arg_advance (Fargs * cum, Mmode mode, const_tree type,
-			 bool named ATTRIBUTE_UNUSED)
+rx_function_arg_advance (CUMULATIVE_ARGS * cum, enum machine_mode mode,
+			 const_tree type, bool named ATTRIBUTE_UNUSED)
 {
   *cum += rx_function_arg_size (mode, type);
 }
 
 static unsigned int
-rx_function_arg_boundary (Mmode mode ATTRIBUTE_UNUSED,
+rx_function_arg_boundary (enum machine_mode mode ATTRIBUTE_UNUSED,
 			  const_tree type ATTRIBUTE_UNUSED)
 {
   return 32;
@@ -841,7 +895,10 @@ rx_function_value (const_tree ret_type,
 
   /* RX ABI specifies that small integer types are
      promoted to int when returned by a function.  */
-  if (GET_MODE_SIZE (mode) > 0 && GET_MODE_SIZE (mode) < 4)
+  if (GET_MODE_SIZE (mode) > 0
+      && GET_MODE_SIZE (mode) < 4
+      && ! COMPLEX_MODE_P (mode)
+      )
     return gen_rtx_REG (SImode, FUNC_RETURN_REGNUM);
     
   return gen_rtx_REG (mode, FUNC_RETURN_REGNUM);
@@ -859,6 +916,7 @@ rx_promote_function_mode (const_tree type ATTRIBUTE_UNUSED,
 {
   if (for_return != 1
       || GET_MODE_SIZE (mode) >= 4
+      || COMPLEX_MODE_P (mode)
       || GET_MODE_SIZE (mode) < 1)
     return mode;
 
@@ -1100,10 +1158,12 @@ rx_get_stack_layout (unsigned int * lowest,
   for (save_mask = high = low = 0, reg = 1; reg < CC_REGNUM; reg++)
     {
       if ((df_regs_ever_live_p (reg)
-	   /* Always save all call clobbered registers inside interrupt
-	      handlers, even if they are not live - they may be used in
-	      routines called from this one.  */
-	   || (call_used_regs[reg] && is_interrupt_func (NULL_TREE)))
+	   /* Always save all call clobbered registers inside non-leaf
+	      interrupt handlers, even if they are not live - they may
+	      be used in (non-interrupt aware) routines called from this one.  */
+	   || (call_used_regs[reg]
+	       && is_interrupt_func (NULL_TREE)
+	       && ! current_function_is_leaf))
 	  && (! call_used_regs[reg]
 	      /* Even call clobbered registered must
 		 be pushed inside interrupt handlers.  */
@@ -1226,13 +1286,13 @@ gen_rx_store_vector (unsigned int low, unsigned int high)
   vector = gen_rtx_PARALLEL (VOIDmode, rtvec_alloc (count));
 
   XVECEXP (vector, 0, 0) =
-    gen_rtx_SET (SImode, stack_pointer_rtx,
+    gen_rtx_SET (VOIDmode, stack_pointer_rtx,
 		 gen_rtx_MINUS (SImode, stack_pointer_rtx,
 				GEN_INT ((count - 1) * UNITS_PER_WORD)));
 
   for (i = 0; i < count - 1; i++)
     XVECEXP (vector, 0, i + 1) =
-      gen_rtx_SET (SImode,
+      gen_rtx_SET (VOIDmode,
 		   gen_rtx_MEM (SImode,
 				gen_rtx_MINUS (SImode, stack_pointer_rtx,
 					       GEN_INT ((i + 1) * UNITS_PER_WORD))),
@@ -1256,6 +1316,59 @@ mark_frame_related (rtx insn)
       for (i = 0; i < (unsigned) XVECLEN (insn, 0); i++)
 	RTX_FRAME_RELATED_P (XVECEXP (insn, 0, i)) = 1;
     }
+}
+
+static bool
+ok_for_max_constant (HOST_WIDE_INT val)
+{
+  if (rx_max_constant_size == 0  || rx_max_constant_size == 4)
+    /* If there is no constraint on the size of constants
+       used as operands, then any value is legitimate.  */
+    return true;
+
+  /* rx_max_constant_size specifies the maximum number
+     of bytes that can be used to hold a signed value.  */
+  return IN_RANGE (val, (-1 << (rx_max_constant_size * 8)),
+		        ( 1 << (rx_max_constant_size * 8)));
+}
+
+/* Generate an ADD of SRC plus VAL into DEST.
+   Handles the case where VAL is too big for max_constant_value.
+   Sets FRAME_RELATED_P on the insn if IS_FRAME_RELATED is true.  */
+
+static void
+gen_safe_add (rtx dest, rtx src, rtx val, bool is_frame_related)
+{
+  rtx insn;
+
+  if (val == NULL_RTX || INTVAL (val) == 0)
+    {
+      gcc_assert (dest != src);
+
+      insn = emit_move_insn (dest, src);
+    }
+  else if (ok_for_max_constant (INTVAL (val)))
+    insn = emit_insn (gen_addsi3 (dest, src, val));
+  else
+    {
+      /* Wrap VAL in an UNSPEC so that rx_is_legitimate_constant
+	 will not reject it.  */
+      val = gen_rtx_CONST (SImode, gen_rtx_UNSPEC (SImode, gen_rtvec (1, val), UNSPEC_CONST));
+      insn = emit_insn (gen_addsi3 (dest, src, val));
+
+      if (is_frame_related)
+	/* We have to provide our own frame related note here
+	   as the dwarf2out code cannot be expected to grok
+	   our unspec.  */
+	add_reg_note (insn, REG_FRAME_RELATED_EXPR,
+		      gen_rtx_SET (SImode, dest,
+				   gen_rtx_PLUS (SImode, src, val)));
+      return;
+    }
+
+  if (is_frame_related)
+    RTX_FRAME_RELATED_P (insn) = 1;
+  return;
 }
 
 void
@@ -1347,17 +1460,8 @@ rx_expand_prologue (void)
 
   /* If needed, set up the frame pointer.  */
   if (frame_pointer_needed)
-    {
-      if (frame_size)
-	insn = emit_insn (gen_addsi3 (frame_pointer_rtx, stack_pointer_rtx,
-				      GEN_INT (- (HOST_WIDE_INT) frame_size)));
-      else
-	insn = emit_move_insn (frame_pointer_rtx, stack_pointer_rtx);
-
-      RTX_FRAME_RELATED_P (insn) = 1;
-    }
-
-  insn = NULL_RTX;
+    gen_safe_add (frame_pointer_rtx, stack_pointer_rtx,
+		  GEN_INT (- (HOST_WIDE_INT) frame_size), true);
 
   /* Allocate space for the outgoing args.
      If the stack frame has not already been set up then handle this as well.  */
@@ -1366,29 +1470,26 @@ rx_expand_prologue (void)
       if (frame_size)
 	{
 	  if (frame_pointer_needed)
-	    insn = emit_insn (gen_addsi3 (stack_pointer_rtx, frame_pointer_rtx,
-					  GEN_INT (- (HOST_WIDE_INT)
-						   stack_size)));
+	    gen_safe_add (stack_pointer_rtx, frame_pointer_rtx,
+			  GEN_INT (- (HOST_WIDE_INT) stack_size), true);
 	  else
-	    insn = emit_insn (gen_addsi3 (stack_pointer_rtx, stack_pointer_rtx,
-					  GEN_INT (- (HOST_WIDE_INT)
-						   (frame_size + stack_size))));
+	    gen_safe_add (stack_pointer_rtx, stack_pointer_rtx,
+			  GEN_INT (- (HOST_WIDE_INT) (frame_size + stack_size)),
+			  true);
 	}
       else
-	insn = emit_insn (gen_addsi3 (stack_pointer_rtx, stack_pointer_rtx,
-				      GEN_INT (- (HOST_WIDE_INT) stack_size)));
+	gen_safe_add (stack_pointer_rtx, stack_pointer_rtx,
+		      GEN_INT (- (HOST_WIDE_INT) stack_size), true);
     }
   else if (frame_size)
     {
       if (! frame_pointer_needed)
-	insn = emit_insn (gen_addsi3 (stack_pointer_rtx, stack_pointer_rtx,
-				      GEN_INT (- (HOST_WIDE_INT) frame_size)));
+	gen_safe_add (stack_pointer_rtx, stack_pointer_rtx,
+		      GEN_INT (- (HOST_WIDE_INT) frame_size), true);
       else
-	insn = emit_move_insn (stack_pointer_rtx, frame_pointer_rtx);
+	gen_safe_add (stack_pointer_rtx, frame_pointer_rtx, NULL_RTX,
+		      true);
     }
-
-  if (insn != NULL_RTX)
-    RTX_FRAME_RELATED_P (insn) = 1;
 }
 
 static void
@@ -1456,19 +1557,19 @@ gen_rx_rtsd_vector (unsigned int adjust, unsigned int low, unsigned int high)
   vector = gen_rtx_PARALLEL (VOIDmode, rtvec_alloc (count));
 
   XVECEXP (vector, 0, 0) =
-    gen_rtx_SET (SImode, stack_pointer_rtx,
+    gen_rtx_SET (VOIDmode, stack_pointer_rtx,
 		 plus_constant (stack_pointer_rtx, adjust));
 
   for (i = 0; i < count - 2; i++)
     XVECEXP (vector, 0, i + 1) =
-      gen_rtx_SET (SImode,
+      gen_rtx_SET (VOIDmode,
 		   gen_rtx_REG (SImode, low + i),
 		   gen_rtx_MEM (SImode,
 				i == 0 ? stack_pointer_rtx
 				: plus_constant (stack_pointer_rtx,
 						 i * UNITS_PER_WORD)));
 
-  XVECEXP (vector, 0, count - 1) = gen_rtx_RETURN (VOIDmode);
+  XVECEXP (vector, 0, count - 1) = ret_rtx;
 
   return vector;
 }
@@ -1485,13 +1586,13 @@ gen_rx_popm_vector (unsigned int low, unsigned int high)
   vector = gen_rtx_PARALLEL (VOIDmode, rtvec_alloc (count));
 
   XVECEXP (vector, 0, 0) =
-    gen_rtx_SET (SImode, stack_pointer_rtx,
+    gen_rtx_SET (VOIDmode, stack_pointer_rtx,
 		 plus_constant (stack_pointer_rtx,
 				(count - 1) * UNITS_PER_WORD));
 
   for (i = 0; i < count - 1; i++)
     XVECEXP (vector, 0, i + 1) =
-      gen_rtx_SET (SImode,
+      gen_rtx_SET (VOIDmode,
 		   gen_rtx_REG (SImode, low + i),
 		   gen_rtx_MEM (SImode,
 				i == 0 ? stack_pointer_rtx
@@ -1566,8 +1667,8 @@ rx_expand_epilogue (bool is_sibcall)
     {
       /* Cannot use the special instructions - deconstruct by hand.  */
       if (total_size)
-	emit_insn (gen_addsi3 (stack_pointer_rtx, stack_pointer_rtx,
-			       GEN_INT (total_size)));
+	gen_safe_add (stack_pointer_rtx, stack_pointer_rtx,
+		      GEN_INT (total_size), false);
 
       if (MUST_SAVE_ACC_REGISTER)
 	{
@@ -1659,8 +1760,8 @@ rx_expand_epilogue (bool is_sibcall)
 	  return;
 	}
 
-      emit_insn (gen_addsi3 (stack_pointer_rtx, stack_pointer_rtx,
-			     GEN_INT (total_size)));
+      gen_safe_add (stack_pointer_rtx, stack_pointer_rtx,
+		    GEN_INT (total_size), false);
     }
 
   if (low)
@@ -1824,17 +1925,19 @@ enum rx_builtin
   RX_BUILTIN_REVW,
   RX_BUILTIN_RMPA,
   RX_BUILTIN_ROUND,
-  RX_BUILTIN_SAT,
   RX_BUILTIN_SETPSW,
   RX_BUILTIN_WAIT,
   RX_BUILTIN_max
 };
 
+static GTY(()) tree rx_builtins[(int) RX_BUILTIN_max];
+
 static void
 rx_init_builtins (void)
 {
 #define ADD_RX_BUILTIN1(UC_NAME, LC_NAME, RET_TYPE, ARG_TYPE)		\
-  add_builtin_function ("__builtin_rx_" LC_NAME,			\
+   rx_builtins[RX_BUILTIN_##UC_NAME] =					\
+   add_builtin_function ("__builtin_rx_" LC_NAME,			\
 			build_function_type_list (RET_TYPE##_type_node, \
 						  ARG_TYPE##_type_node, \
 						  NULL_TREE),		\
@@ -1842,6 +1945,7 @@ rx_init_builtins (void)
 			BUILT_IN_MD, NULL, NULL_TREE)
 
 #define ADD_RX_BUILTIN2(UC_NAME, LC_NAME, RET_TYPE, ARG_TYPE1, ARG_TYPE2) \
+  rx_builtins[RX_BUILTIN_##UC_NAME] =					\
   add_builtin_function ("__builtin_rx_" LC_NAME,			\
 			build_function_type_list (RET_TYPE##_type_node, \
 						  ARG_TYPE1##_type_node,\
@@ -1851,6 +1955,7 @@ rx_init_builtins (void)
 			BUILT_IN_MD, NULL, NULL_TREE)
 
 #define ADD_RX_BUILTIN3(UC_NAME,LC_NAME,RET_TYPE,ARG_TYPE1,ARG_TYPE2,ARG_TYPE3) \
+  rx_builtins[RX_BUILTIN_##UC_NAME] =					\
   add_builtin_function ("__builtin_rx_" LC_NAME,			\
 			build_function_type_list (RET_TYPE##_type_node, \
 						  ARG_TYPE1##_type_node,\
@@ -1879,8 +1984,18 @@ rx_init_builtins (void)
   ADD_RX_BUILTIN1 (RACW,    "racw",    void,  integer);
   ADD_RX_BUILTIN1 (ROUND,   "round",   intSI, float);
   ADD_RX_BUILTIN1 (REVW,    "revw",    intSI, intSI);
-  ADD_RX_BUILTIN1 (SAT,     "sat",     intSI, intSI);
   ADD_RX_BUILTIN1 (WAIT,    "wait",    void,  void);
+}
+
+/* Return the RX builtin for CODE.  */
+
+static tree
+rx_builtin_decl (unsigned code, bool initialize_p ATTRIBUTE_UNUSED)
+{
+  if (code >= RX_BUILTIN_max)
+    return error_mark_node;
+
+  return rx_builtins[code];
 }
 
 static rtx
@@ -2077,8 +2192,6 @@ rx_expand_builtin (tree exp,
     case RX_BUILTIN_ROUND:   return rx_expand_builtin_round (op, target);
     case RX_BUILTIN_REVW:    return rx_expand_int_builtin_1_arg
 	(op, target, gen_revw, false);
-    case RX_BUILTIN_SAT:     return rx_expand_int_builtin_1_arg
-	(op, target, gen_sat, false);
     case RX_BUILTIN_WAIT:    emit_insn (gen_wait ()); return NULL_RTX;
 
     default:
@@ -2159,40 +2272,34 @@ rx_handle_func_attribute (tree * node,
 /* Table of RX specific attributes.  */
 const struct attribute_spec rx_attribute_table[] =
 {
-  /* Name, min_len, max_len, decl_req, type_req, fn_type_req, handler.  */
-  { "fast_interrupt", 0, 0, true, false, false, rx_handle_func_attribute },
-  { "interrupt",      0, 0, true, false, false, rx_handle_func_attribute },
-  { "naked",          0, 0, true, false, false, rx_handle_func_attribute },
-  { NULL,             0, 0, false, false, false, NULL }
+  /* Name, min_len, max_len, decl_req, type_req, fn_type_req, handler,
+     affects_type_identity.  */
+  { "fast_interrupt", 0, 0, true, false, false, rx_handle_func_attribute,
+    false },
+  { "interrupt",      0, 0, true, false, false, rx_handle_func_attribute,
+    false },
+  { "naked",          0, 0, true, false, false, rx_handle_func_attribute,
+    false },
+  { NULL,             0, 0, false, false, false, NULL, false }
 };
 
 /* Extra processing for target specific command line options.  */
 
 static bool
-rx_handle_option (size_t code, const char *  arg ATTRIBUTE_UNUSED, int value)
+rx_handle_option (struct gcc_options *opts,
+		  struct gcc_options *opts_set ATTRIBUTE_UNUSED,
+		  const struct cl_decoded_option *decoded,
+		  location_t loc)
 {
+  size_t code = decoded->opt_index;
+  int value = decoded->value;
+
   switch (code)
     {
     case OPT_mint_register_:
-      switch (value)
-	{
-	case 4:
-	  fixed_regs[10] = call_used_regs [10] = 1;
-	  /* Fall through.  */
-	case 3:
-	  fixed_regs[11] = call_used_regs [11] = 1;
-	  /* Fall through.  */
-	case 2:
-	  fixed_regs[12] = call_used_regs [12] = 1;
-	  /* Fall through.  */
-	case 1:
-	  fixed_regs[13] = call_used_regs [13] = 1;
-	  /* Fall through.  */
-	case 0:
-	  return true;
-	default:
-	  return false;
-	}
+      /* Make sure that the -mint-register option is in range.  Other
+	 handling in rx_option_override.  */
+      return value >= 0 && value <= 4;
       break;
 
     case OPT_mmax_constant_size_:
@@ -2200,20 +2307,13 @@ rx_handle_option (size_t code, const char *  arg ATTRIBUTE_UNUSED, int value)
       return value >= 0 && value <= 4;
 
     case OPT_mcpu_:
-      if (strcasecmp (arg, "RX610") == 0)
-	rx_cpu_type = RX610;
-      else if (strcasecmp (arg, "RX200") == 0)
-	{
-	  target_flags |= MASK_NO_USE_FPU;
-	  rx_cpu_type = RX200;
-	}
-      else if (strcasecmp (arg, "RX600") != 0)
-	warning (0, "unrecognized argument '%s' to -mcpu= option", arg);
+      if ((enum rx_cpu_types) value == RX200)
+	opts->x_target_flags |= MASK_NO_USE_FPU;
       break;
       
     case OPT_fpu:
-      if (rx_cpu_type == RX200)
-	error ("the RX200 cpu does not have FPU hardware");
+      if (opts->x_rx_cpu_type == RX200)
+	error_at (loc, "the RX200 cpu does not have FPU hardware");
       break;
 
     default:
@@ -2253,11 +2353,56 @@ rx_override_options_after_change (void)
 static void
 rx_option_override (void)
 {
+  unsigned int i;
+  cl_deferred_option *opt;
+  VEC(cl_deferred_option,heap) *vec
+    = (VEC(cl_deferred_option,heap) *) rx_deferred_options;
+
+  FOR_EACH_VEC_ELT (cl_deferred_option, vec, i, opt)
+    {
+      switch (opt->opt_index)
+	{
+	case OPT_mint_register_:
+	  switch (opt->value)
+	    {
+	    case 4:
+	      fixed_regs[10] = call_used_regs [10] = 1;
+	      /* Fall through.  */
+	    case 3:
+	      fixed_regs[11] = call_used_regs [11] = 1;
+	      /* Fall through.  */
+	    case 2:
+	      fixed_regs[12] = call_used_regs [12] = 1;
+	      /* Fall through.  */
+	    case 1:
+	      fixed_regs[13] = call_used_regs [13] = 1;
+	      /* Fall through.  */
+	    case 0:
+	      break;
+	    default:
+	      /* Error message already given because rx_handle_option
+		 returned false.  */
+	      break;
+	    }
+	  break;
+
+	default:
+	  gcc_unreachable ();
+	}
+    }
+
   /* This target defaults to strict volatile bitfields.  */
   if (flag_strict_volatile_bitfields < 0)
     flag_strict_volatile_bitfields = 1;
 
   rx_override_options_after_change ();
+
+  if (align_jumps == 0 && ! optimize_size)
+    align_jumps = 3;
+  if (align_loops == 0 && ! optimize_size)
+    align_loops = 3;
+  if (align_labels == 0 && ! optimize_size)
+    align_labels = 3;
 }
 
 /* Implement TARGET_OPTION_OPTIMIZATION_TABLE.  */
@@ -2316,57 +2461,13 @@ rx_is_ms_bitfield_layout (const_tree record_type ATTRIBUTE_UNUSED)
   /* The packed attribute overrides the MS behaviour.  */
   return ! TYPE_PACKED (record_type);
 }
-
-/* Try to generate code for the "isnv" pattern which inserts bits
-   into a word.
-     operands[0] => Location to be altered.
-     operands[1] => Number of bits to change.
-     operands[2] => Starting bit.
-     operands[3] => Value to insert.
-   Returns TRUE if successful, FALSE otherwise.  */
-
-bool
-rx_expand_insv (rtx * operands)
-{
-  if (INTVAL (operands[1]) != 1
-      || ! CONST_INT_P (operands[3]))
-    return false;
-
-  if (MEM_P (operands[0])
-      && INTVAL (operands[2]) > 7)
-    return false;
-
-  switch (INTVAL (operands[3]))
-    {
-    case 0:
-      if (MEM_P (operands[0]))
-	emit_insn (gen_bitclr_in_memory (operands[0], operands[0],
-					 operands[2]));
-      else
-	emit_insn (gen_bitclr (operands[0], operands[0], operands[2]));
-      break;
-    case 1:
-    case -1:
-      if (MEM_P (operands[0]))
-	emit_insn (gen_bitset_in_memory (operands[0], operands[0],
-					 operands[2]));
-      else
-	emit_insn (gen_bitset (operands[0], operands[0], operands[2]));
-      break;
-   default:
-      return false;
-    }
-  return true;
-}
 
 /* Returns true if X a legitimate constant for an immediate
    operand on the RX.  X is already known to satisfy CONSTANT_P.  */
 
 bool
-rx_is_legitimate_constant (rtx x)
+rx_is_legitimate_constant (enum machine_mode mode ATTRIBUTE_UNUSED, rtx x)
 {
-  HOST_WIDE_INT val;
-
   switch (GET_CODE (x))
     {
     case CONST:
@@ -2389,11 +2490,12 @@ rx_is_legitimate_constant (rtx x)
 	case SYMBOL_REF:
 	  return true;
 
-	  /* One day we may have to handle UNSPEC constants here.  */
+	case UNSPEC:
+	  return XINT (x, 1) == UNSPEC_CONST;
+
 	default:
 	  /* FIXME: Can this ever happen ?  */
-	  abort ();
-	  return false;
+	  gcc_unreachable ();
 	}
       break;
       
@@ -2409,17 +2511,7 @@ rx_is_legitimate_constant (rtx x)
       break;
     }
 
-  if (rx_max_constant_size == 0  || rx_max_constant_size == 4)
-    /* If there is no constraint on the size of constants
-       used as operands, then any value is legitimate.  */
-    return true;
-
-  val = INTVAL (x);
-
-  /* rx_max_constant_size specifies the maximum number
-     of bytes that can be used to hold a signed value.  */
-  return IN_RANGE (val, (-1 << (rx_max_constant_size * 8)),
-		        ( 1 << (rx_max_constant_size * 8)));
+  return ok_for_max_constant (INTVAL (x));
 }
 
 static int
@@ -2543,220 +2635,320 @@ rx_trampoline_init (rtx tramp, tree fndecl, rtx chain)
     }
 }
 
-
-static enum machine_mode
-rx_cc_modes_compatible (enum machine_mode m1, enum machine_mode m2)
+static int
+rx_memory_move_cost (enum machine_mode mode ATTRIBUTE_UNUSED,
+		     reg_class_t regclass ATTRIBUTE_UNUSED,
+		     bool in)
 {
-  if (m1 == CCmode)
-    return m2;
-  if (m2 == CCmode)
-    return m1;
-  if (m1 == m2)
-    return m1;
-  if (m1 == CC_ZSmode)
-    return m1;
-  if (m2 == CC_ZSmode)
-    return m2;
-  return VOIDmode;   
+  return (in ? 2 : 0) + REGISTER_MOVE_COST (mode, regclass, regclass);
 }
 
-#define CC_FLAG_S (1 << 0)
-#define CC_FLAG_Z (1 << 1)
-#define CC_FLAG_O (1 << 2)
-#define CC_FLAG_C (1 << 3)
-
-static unsigned int
-flags_needed_for_conditional (rtx conditional)
-{
-  switch (GET_CODE (conditional))
-    {
-    case LE:
-    case GT:	return CC_FLAG_S | CC_FLAG_Z | CC_FLAG_O;
-
-    case LEU:
-    case GTU:	return CC_FLAG_Z | CC_FLAG_C;
-
-    case LT:
-    case GE:	return CC_FLAG_S | CC_FLAG_O;
-
-    case LTU:
-    case GEU:	return CC_FLAG_C;
-
-    case EQ:
-    case NE:	return CC_FLAG_Z;
-
-    default:	gcc_unreachable ();
-    }
-}
+/* Convert a CC_MODE to the set of flags that it represents.  */
 
 static unsigned int
 flags_from_mode (enum machine_mode mode)
 {
   switch (mode)
     {
-    case CCmode:     return CC_FLAG_S | CC_FLAG_Z | CC_FLAG_O | CC_FLAG_C;
-    case CC_ZSmode:  return CC_FLAG_S | CC_FLAG_Z;
-    case CC_ZSOmode: return CC_FLAG_S | CC_FLAG_Z | CC_FLAG_O;
-    case CC_ZSCmode: return CC_FLAG_S | CC_FLAG_Z | CC_FLAG_C;
-    default:         gcc_unreachable ();
+    case CC_ZSmode:
+      return CC_FLAG_S | CC_FLAG_Z;
+    case CC_ZSOmode:
+      return CC_FLAG_S | CC_FLAG_Z | CC_FLAG_O;
+    case CC_ZSCmode:
+      return CC_FLAG_S | CC_FLAG_Z | CC_FLAG_C;
+    case CCmode:
+      return CC_FLAG_S | CC_FLAG_Z | CC_FLAG_O | CC_FLAG_C;
+    case CC_Fmode:
+      return CC_FLAG_FP;
+    default:
+      gcc_unreachable ();
     }
 }
 
-/* Returns true if a compare insn is redundant because it
-   would only set flags that are already set correctly.  */
+/* Convert a set of flags to a CC_MODE that can implement it.  */
+
+static enum machine_mode
+mode_from_flags (unsigned int f)
+{
+  if (f & CC_FLAG_FP)
+    return CC_Fmode;
+  if (f & CC_FLAG_O)
+    {
+      if (f & CC_FLAG_C)
+	return CCmode;
+      else
+	return CC_ZSOmode;
+    }
+  else if (f & CC_FLAG_C)
+    return CC_ZSCmode;
+  else
+    return CC_ZSmode;
+}
+
+/* Convert an RTX_CODE to the set of flags needed to implement it.
+   This assumes an integer comparison.  */
+
+static unsigned int
+flags_from_code (enum rtx_code code)
+{
+  switch (code)
+    {
+    case LT:
+    case GE:
+      return CC_FLAG_S;
+    case GT:
+    case LE:
+      return CC_FLAG_S | CC_FLAG_O | CC_FLAG_Z;
+    case GEU:
+    case LTU:
+      return CC_FLAG_C;
+    case GTU:
+    case LEU:
+      return CC_FLAG_C | CC_FLAG_Z;
+    case EQ:
+    case NE:
+      return CC_FLAG_Z;
+    default:
+      gcc_unreachable ();
+    }
+}
+
+/* Return a CC_MODE of which both M1 and M2 are subsets.  */
+
+static enum machine_mode
+rx_cc_modes_compatible (enum machine_mode m1, enum machine_mode m2)
+{
+  unsigned f;
+
+  /* Early out for identical modes.  */
+  if (m1 == m2)
+    return m1;
+
+  /* There's no valid combination for FP vs non-FP.  */
+  f = flags_from_mode (m1) | flags_from_mode (m2);
+  if (f & CC_FLAG_FP)
+    return VOIDmode;
+
+  /* Otherwise, see what mode can implement all the flags.  */
+  return mode_from_flags (f);
+}
+
+/* Return the minimal CC mode needed to implement (CMP_CODE X Y).  */
+
+enum machine_mode
+rx_select_cc_mode (enum rtx_code cmp_code, rtx x, rtx y)
+{
+  if (GET_MODE_CLASS (GET_MODE (x)) == MODE_FLOAT)
+    return CC_Fmode;
+
+  if (y != const0_rtx)
+    return CCmode;
+
+  return mode_from_flags (flags_from_code (cmp_code));
+}
+
+/* Split the conditional branch.  Emit (COMPARE C1 C2) into CC_REG with
+   CC_MODE, and use that in branches based on that compare.  */
+
+void
+rx_split_cbranch (enum machine_mode cc_mode, enum rtx_code cmp1,
+		  rtx c1, rtx c2, rtx label)
+{
+  rtx flags, x;
+
+  flags = gen_rtx_REG (cc_mode, CC_REG);
+  x = gen_rtx_COMPARE (cc_mode, c1, c2);
+  x = gen_rtx_SET (VOIDmode, flags, x);
+  emit_insn (x);
+
+  x = gen_rtx_fmt_ee (cmp1, VOIDmode, flags, const0_rtx);
+  x = gen_rtx_IF_THEN_ELSE (VOIDmode, x, label, pc_rtx);
+  x = gen_rtx_SET (VOIDmode, pc_rtx, x);
+  emit_jump_insn (x);
+}
+
+/* A helper function for matching parallels that set the flags.  */
 
 bool
-rx_compare_redundant (rtx cmp)
+rx_match_ccmode (rtx insn, enum machine_mode cc_mode)
 {
-  unsigned int flags_needed;
-  unsigned int flags_set;
-  rtx next;
-  rtx prev;
-  rtx source;
-  rtx dest;
-  static rtx cc_reg = NULL_RTX;
+  rtx op1, flags;
+  enum machine_mode flags_mode;
 
-  if (cc_reg == NULL_RTX)
-    cc_reg = gen_rtx_REG (CCmode, CC_REGNUM);
+  gcc_checking_assert (XVECLEN (PATTERN (insn), 0) == 2);
 
-  /* We can only eliminate compares against 0.  */
-  if (GET_CODE (XEXP (SET_SRC (PATTERN (cmp)), 1)) != CONST_INT
-      || INTVAL (XEXP (SET_SRC (PATTERN (cmp)), 1)) != 0)
+  op1 = XVECEXP (PATTERN (insn), 0, 1);
+  gcc_checking_assert (GET_CODE (SET_SRC (op1)) == COMPARE);
+
+  flags = SET_DEST (op1);
+  flags_mode = GET_MODE (flags);
+
+  if (GET_MODE (SET_SRC (op1)) != flags_mode)
+    return false;
+  if (GET_MODE_CLASS (flags_mode) != MODE_CC)
     return false;
 
-  /* Locate the branch insn that follows the
-     compare and which tests the bits in the PSW.  */
-  next = cmp;
-  do
-    {
-      /* If we have found an insn that sets or clobbers the CC
-	 register and it was not the IF_THEN_ELSE insn that we
-	 are looking for, then the comparison is redundant.  */
-      if (next != cmp && reg_mentioned_p (cc_reg, PATTERN (next)))
-	return true;
+  /* Ensure that the mode of FLAGS is compatible with CC_MODE.  */
+  if (flags_from_mode (flags_mode) & ~flags_from_mode (cc_mode))
+    return false;
 
-      next = next_nonnote_insn (next);
+  return true;
+}
+
+int
+rx_align_for_label (rtx lab, int uses_threshold)
+{
+  /* This is a simple heuristic to guess when an alignment would not be useful
+     because the delay due to the inserted NOPs would be greater than the delay
+     due to the misaligned branch.  If uses_threshold is zero then the alignment
+     is always useful.  */
+  if (LABEL_P (lab) && LABEL_NUSES (lab) < uses_threshold)
+    return 0;
 
-      /* If we run out of insns without finding the
-	 user then the comparison is unnecessary.  */
-      if (next == NULL_RTX)
-	return true;
-
-      /* If we have found another comparison
-	 insn then the first one is redundant.  */
-      if (INSN_P (next)
-	  && GET_CODE (PATTERN (next)) == SET
-	  && REG_P (SET_DEST (PATTERN (next)))
-	  && REGNO (SET_DEST (PATTERN (next))) == CC_REGNUM)
-	return true;
-
-      /* If we have found another arithmetic/logic insn that
-	 sets the PSW flags then the comparison is redundant.  */
-      if (INSN_P (next)
-	  && GET_CODE (PATTERN (next)) == PARALLEL
-	  && GET_CODE (XVECEXP (PATTERN (next), 0, 1)) == SET
-	  && REG_P (SET_DEST (XVECEXP (PATTERN (next), 0, 1)))
-	  && REGNO (SET_DEST (XVECEXP (PATTERN (next), 0, 1))) == CC_REGNUM)
-	return true;
-
-      /* If we have found an unconditional branch then the
-	 PSW flags might be carried along with the jump, so
-	 the comparison is necessary.  */
-      if (INSN_P (next) && JUMP_P (next))
-	{
-	  if (GET_CODE (PATTERN (next)) != SET)
-	    /* If the jump does not involve setting the PC
-	       then it is a return of some kind, and we know
-	       that the comparison is not used.  */
-	    return true;
-
-	  if (GET_CODE (SET_SRC (PATTERN (next))) != IF_THEN_ELSE)
-	    return false;
-	}
-    }
-  while (! INSN_P (next)
-	 || DEBUG_INSN_P (next)
-	 || GET_CODE (PATTERN (next)) != SET
-	 || GET_CODE (SET_SRC (PATTERN (next))) != IF_THEN_ELSE);
-
-  flags_needed = flags_needed_for_conditional (XEXP (SET_SRC (PATTERN (next)), 0));
-
-  /* Now look to see if there was a previous
-     instruction which set the PSW bits.  */
-  source = XEXP (SET_SRC (PATTERN (cmp)), 0);
-  prev = cmp;
-  do
-    {
-      /* If this insn uses/sets/clobbers the CC register
-	 and it is not the insn that we are looking for
-	 below, then we must need the comparison.  */
-      if (prev != cmp && reg_mentioned_p (cc_reg, PATTERN (prev)))
-	return false;
-
-      prev = prev_nonnote_insn (prev);
-
-      if (prev == NULL_RTX)
-	return false;
-
-      /* If we encounter an insn which changes the contents of
-	 the register which is the source of the comparison then
-	 we will definitely need the comparison.  */
-      if (INSN_P (prev)
-	  && GET_CODE (PATTERN (prev)) == SET
-	  && rtx_equal_p (SET_DEST (PATTERN (prev)), source))
-	{
-	  /* Unless this instruction is a simple register move
-	     instruction.  In which case we can continue our
-	     scan backwards, but now using the *source* of this
-	     set instruction.  */
-	  if (REG_P (SET_SRC (PATTERN (prev))))
-	    source = SET_SRC (PATTERN (prev));
-	  /* We can also survive a sign-extension if the test is
-	     for EQ/NE.  Note the same does not apply to zero-
-	     extension as this can turn a non-zero bit-pattern
-	     into zero.  */
-	  else if (flags_needed == CC_FLAG_Z
-		   && GET_CODE (SET_SRC (PATTERN (prev))) == SIGN_EXTEND)
-	    source = XEXP (SET_SRC (PATTERN (prev)), 0);
-	  else
-	    return false;
-	}
-
-      /* A label means a possible branch into the
-	 code here, so we have to stop scanning.  */
-      if (LABEL_P (prev))
-	return false;
-    }
-  while (! INSN_P (prev)
-	 || DEBUG_INSN_P (prev)
-	 || GET_CODE (PATTERN (prev)) != PARALLEL
-	 || GET_CODE (XVECEXP (PATTERN (prev), 0, 1)) != SET
-	 || ! REG_P (SET_DEST (XVECEXP (PATTERN (prev), 0, 1)))
-	 || REGNO (SET_DEST (XVECEXP (PATTERN (prev), 0, 1))) != CC_REGNUM);
-
-  flags_set = flags_from_mode (GET_MODE (SET_DEST (XVECEXP (PATTERN (prev), 0, 1))));
-
-  dest = SET_DEST (XVECEXP (PATTERN (prev), 0, 0));
-  /* The destination of the previous arithmetic/logic instruction
-     must match the source in the comparison operation.  For registers
-     we ignore the mode as there may have been a sign-extension involved.  */
-  if (! rtx_equal_p (source, dest))
-    {
-      if (REG_P (source) && REG_P (dest) && REGNO (dest) == REGNO (source))
-	;
-      else
-	return false;
-    }
-
-  return ((flags_set & flags_needed) == flags_needed);
+  return optimize_size ? 1 : 3;
 }
 
 static int
-rx_memory_move_cost (enum machine_mode mode, reg_class_t regclass, bool in)
+rx_max_skip_for_label (rtx lab)
 {
-  return 2 + memory_move_secondary_cost (mode, regclass, in);
+  int opsize;
+  rtx op;
+
+  if (lab == NULL_RTX)
+    return 0;
+
+  op = lab;
+  do
+    {
+      op = next_nonnote_nondebug_insn (op);
+    }
+  while (op && (LABEL_P (op)
+		|| (INSN_P (op) && GET_CODE (PATTERN (op)) == USE)));
+  if (!op)
+    return 0;
+
+  opsize = get_attr_length (op);
+  if (opsize >= 0 && opsize < 8)
+    return opsize - 1;
+  return 0;
+}
+
+/* Compute the real length of the extending load-and-op instructions.  */
+
+int
+rx_adjust_insn_length (rtx insn, int current_length)
+{
+  rtx extend, mem, offset;
+  bool zero;
+  int factor;
+
+  switch (INSN_CODE (insn))
+    {
+    default:
+      return current_length;
+
+    case CODE_FOR_plussi3_zero_extendhi:
+    case CODE_FOR_andsi3_zero_extendhi:
+    case CODE_FOR_iorsi3_zero_extendhi:
+    case CODE_FOR_xorsi3_zero_extendhi:
+    case CODE_FOR_divsi3_zero_extendhi:
+    case CODE_FOR_udivsi3_zero_extendhi:
+    case CODE_FOR_minussi3_zero_extendhi:
+    case CODE_FOR_smaxsi3_zero_extendhi:
+    case CODE_FOR_sminsi3_zero_extendhi:
+    case CODE_FOR_multsi3_zero_extendhi:
+    case CODE_FOR_comparesi3_zero_extendhi:
+      zero = true;
+      factor = 2;
+      break;
+
+    case CODE_FOR_plussi3_sign_extendhi:
+    case CODE_FOR_andsi3_sign_extendhi:
+    case CODE_FOR_iorsi3_sign_extendhi:
+    case CODE_FOR_xorsi3_sign_extendhi:
+    case CODE_FOR_divsi3_sign_extendhi:
+    case CODE_FOR_udivsi3_sign_extendhi:
+    case CODE_FOR_minussi3_sign_extendhi:
+    case CODE_FOR_smaxsi3_sign_extendhi:
+    case CODE_FOR_sminsi3_sign_extendhi:
+    case CODE_FOR_multsi3_sign_extendhi:
+    case CODE_FOR_comparesi3_sign_extendhi:
+      zero = false;
+      factor = 2;
+      break;
+      
+    case CODE_FOR_plussi3_zero_extendqi:
+    case CODE_FOR_andsi3_zero_extendqi:
+    case CODE_FOR_iorsi3_zero_extendqi:
+    case CODE_FOR_xorsi3_zero_extendqi:
+    case CODE_FOR_divsi3_zero_extendqi:
+    case CODE_FOR_udivsi3_zero_extendqi:
+    case CODE_FOR_minussi3_zero_extendqi:
+    case CODE_FOR_smaxsi3_zero_extendqi:
+    case CODE_FOR_sminsi3_zero_extendqi:
+    case CODE_FOR_multsi3_zero_extendqi:
+    case CODE_FOR_comparesi3_zero_extendqi:
+      zero = true;
+      factor = 1;
+      break;
+      
+    case CODE_FOR_plussi3_sign_extendqi:
+    case CODE_FOR_andsi3_sign_extendqi:
+    case CODE_FOR_iorsi3_sign_extendqi:
+    case CODE_FOR_xorsi3_sign_extendqi:
+    case CODE_FOR_divsi3_sign_extendqi:
+    case CODE_FOR_udivsi3_sign_extendqi:
+    case CODE_FOR_minussi3_sign_extendqi:
+    case CODE_FOR_smaxsi3_sign_extendqi:
+    case CODE_FOR_sminsi3_sign_extendqi:
+    case CODE_FOR_multsi3_sign_extendqi:
+    case CODE_FOR_comparesi3_sign_extendqi:
+      zero = false;
+      factor = 1;
+      break;
+    }      
+
+  /* We are expecting: (SET (REG) (<OP> (REG) (<EXTEND> (MEM)))).  */
+  extend = single_set (insn);
+  gcc_assert (extend != NULL_RTX);
+
+  extend = SET_SRC (extend);
+  if (GET_CODE (XEXP (extend, 0)) == ZERO_EXTEND
+      || GET_CODE (XEXP (extend, 0)) == SIGN_EXTEND)
+    extend = XEXP (extend, 0);
+  else
+    extend = XEXP (extend, 1);
+
+  gcc_assert ((zero && (GET_CODE (extend) == ZERO_EXTEND))
+	      || (! zero && (GET_CODE (extend) == SIGN_EXTEND)));
+    
+  mem = XEXP (extend, 0);
+  gcc_checking_assert (MEM_P (mem));
+  if (REG_P (XEXP (mem, 0)))
+    return (zero && factor == 1) ? 2 : 3;
+
+  /* We are expecting: (MEM (PLUS (REG) (CONST_INT))).  */
+  gcc_checking_assert (GET_CODE (XEXP (mem, 0)) == PLUS);
+  gcc_checking_assert (REG_P (XEXP (XEXP (mem, 0), 0)));
+
+  offset = XEXP (XEXP (mem, 0), 1);
+  gcc_checking_assert (GET_CODE (offset) == CONST_INT);
+
+  if (IN_RANGE (INTVAL (offset), 0, 255 * factor))
+    return (zero && factor == 1) ? 3 : 4;
+
+  return (zero && factor == 1) ? 4 : 5;
 }
 
+#undef  TARGET_ASM_JUMP_ALIGN_MAX_SKIP
+#define TARGET_ASM_JUMP_ALIGN_MAX_SKIP			rx_max_skip_for_label
+#undef  TARGET_ASM_LOOP_ALIGN_MAX_SKIP
+#define TARGET_ASM_LOOP_ALIGN_MAX_SKIP			rx_max_skip_for_label
+#undef  TARGET_LABEL_ALIGN_AFTER_BARRIER_MAX_SKIP
+#define TARGET_LABEL_ALIGN_AFTER_BARRIER_MAX_SKIP	rx_max_skip_for_label
+#undef  TARGET_ASM_LABEL_ALIGN_MAX_SKIP
+#define TARGET_ASM_LABEL_ALIGN_MAX_SKIP			rx_max_skip_for_label
+
 #undef  TARGET_FUNCTION_VALUE
 #define TARGET_FUNCTION_VALUE		rx_function_value
 
@@ -2781,6 +2973,9 @@ rx_memory_move_cost (enum machine_mode mode, reg_class_t regclass, bool in)
 #undef  TARGET_INIT_BUILTINS
 #define TARGET_INIT_BUILTINS		rx_init_builtins
 
+#undef  TARGET_BUILTIN_DECL
+#define TARGET_BUILTIN_DECL		rx_builtin_decl
+
 #undef  TARGET_EXPAND_BUILTIN
 #define TARGET_EXPAND_BUILTIN		rx_expand_builtin
 
@@ -2804,6 +2999,9 @@ rx_memory_move_cost (enum machine_mode mode, reg_class_t regclass, bool in)
 
 #undef  TARGET_LEGITIMATE_ADDRESS_P
 #define TARGET_LEGITIMATE_ADDRESS_P		rx_is_legitimate_address
+
+#undef  TARGET_MODE_DEPENDENT_ADDRESS_P
+#define TARGET_MODE_DEPENDENT_ADDRESS_P		rx_mode_dependent_address_p
 
 #undef  TARGET_ALLOCATE_STACK_SLOTS_FOR_ARGS
 #define TARGET_ALLOCATE_STACK_SLOTS_FOR_ARGS	rx_allocate_stack_slots_for_args
@@ -2883,6 +3081,12 @@ rx_memory_move_cost (enum machine_mode mode, reg_class_t regclass, bool in)
 #undef  TARGET_EXCEPT_UNWIND_INFO
 #define TARGET_EXCEPT_UNWIND_INFO		sjlj_except_unwind_info
 
+#undef  TARGET_FLAGS_REGNUM
+#define TARGET_FLAGS_REGNUM			CC_REG
+
+#undef  TARGET_LEGITIMATE_CONSTANT_P
+#define TARGET_LEGITIMATE_CONSTANT_P		rx_is_legitimate_constant
+
 struct gcc_target targetm = TARGET_INITIALIZER;
 
-/* #include "gt-rx.h" */
+#include "gt-rx.h"

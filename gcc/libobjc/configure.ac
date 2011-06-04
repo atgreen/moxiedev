@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 #   Copyright 1994, 1995, 1996, 1997, 1998, 1999, 2001, 2002, 2003, 2004
-#   2005, 2006, 2009 Free Software Foundation, Inc.
+#   2005, 2006, 2009, 2011 Free Software Foundation, Inc.
 #   Originally contributed by Dave Love (d.love@dl.ac.uk).
 #
 #This file is part of GCC.
@@ -27,7 +27,7 @@ GCC_TOPLEV_SUBDIRS
 # We need the following definitions because AC_PROG_LIBTOOL relies on them
 PACKAGE=libobjc
 # Version is pulled out to make it a bit easier to change using sed.
-VERSION=2:0:0
+VERSION=3:0:0
 AC_SUBST(VERSION)
 
 # This works around the fact that libtool configuration may change LD
@@ -63,15 +63,25 @@ AC_ARG_ENABLE(objc-gc,
                           the GNU Objective-C runtime.],
 [case $enable_objc_gc in
   no)
+    OBJC_GCFLAGS=''
     OBJC_BOEHM_GC=''
     OBJC_BOEHM_GC_INCLUDES=''
     ;;
   *)
-    OBJC_BOEHM_GC=libobjc_gc.la
+    OBJC_GCFLAGS='-DOBJC_WITH_GC=1'
+    OBJC_BOEHM_GC='libobjc_gc$(libsuffix).la'
     OBJC_BOEHM_GC_INCLUDES='-I$(top_srcdir)/../boehm-gc/include -I../boehm-gc/include'
+    case "${host}" in
+      alpha*-dec-osf*)
+        # boehm-gc headers include <pthread.h>, which needs to be compiled
+	# with -pthread on Tru64 UNIX.
+        OBJC_GCFLAGS="${OBJC_GCFLAGS} -pthread"
+	;;
+    esac
     ;;
 esac],
-[OBJC_BOEHM_GC=''; OBJC_BOEHM_GC_INCLUDES=''])
+[OBJC_GCFLAGS=''; OBJC_BOEHM_GC=''; OBJC_BOEHM_GC_INCLUDES=''])
+AC_SUBST(OBJC_GCFLAGS)
 AC_SUBST(OBJC_BOEHM_GC)
 AC_SUBST(OBJC_BOEHM_GC_INCLUDES)
 
@@ -156,14 +166,15 @@ AC_PROG_CC
 m4_rename_force([real_PRECIOUS],[_AC_ARG_VAR_PRECIOUS])
 
 # extra LD Flags which are required for targets
+ACX_LT_HOST_FLAGS
 case "${host}" in
   *-darwin*)
     # Darwin needs -single_module when linking libobjc
-    extra_ldflags_libobjc=-Wl,-single_module
+    extra_ldflags_libobjc='$(lt_host_flags) -Wl,-single_module'
     ;;
   *-cygwin*|*-mingw*)
     # Tell libtool to build DLLs on Windows
-    extra_ldflags_libobjc='-no-undefined -bindir $(bindir)'
+    extra_ldflags_libobjc='$(lt_host_flags)'
     ;;
 esac
 AC_SUBST(extra_ldflags_libobjc)

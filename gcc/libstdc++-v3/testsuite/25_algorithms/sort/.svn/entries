@@ -1,14 +1,14 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/25_algorithms/sort
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-12T17:16:25.493050Z
-155841
+2011-03-09T18:30:11.537623Z
+170827
 paolo
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:50:22.000000Z
-d69752e84705e5f5ba5700a6f6bead00
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2011-06-04T18:06:00.467104Z
+8b217dfe751f04accc85cce9bb268033
+2011-01-30T22:39:36.569542Z
+169421
+bkoz
 
 
 
@@ -58,7 +58,7 @@ jakub
 
 
 
-1005
+1021
 
 vectorbool.cc
 file
@@ -198,6 +198,40 @@ jakub
 
 
 955
+
+check_compare_by_value.cc
+file
+
+
+
+
+2011-06-04T18:06:00.467104Z
+75a9c700db4148dc69131d29ab868eaf
+2011-03-09T18:30:11.537623Z
+170827
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2344
 
 moveable.cc
 file

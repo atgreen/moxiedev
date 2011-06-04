@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/sysdep
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-09-22T18:58:13.455857Z
-152041
-davek
+2011-05-31T13:02:40.749987Z
+174480
+dodji
 
 
 
@@ -26,16 +26,16 @@ davek
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-powerpc
-dir
-
 arm
 dir
 
-m68k
+powerpc
 dir
 
 alpha
+dir
+
+m68k
 dir
 
 i386
@@ -84,10 +84,13 @@ dir
 ia64
 dir
 
+mips
+dir
+
 sparc
 dir
 
-mips
+sh
 dir
 
 descriptor-y.h
@@ -124,12 +127,9 @@ rth
 
 219
 
-sh
+generic
 dir
 
 x86-64
-dir
-
-generic
 dir
 

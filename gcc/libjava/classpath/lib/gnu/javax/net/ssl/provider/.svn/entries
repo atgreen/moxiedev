@@ -1,7 +1,7 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/javax/net/ssl/provider
 svn://gcc.gnu.org/svn/gcc
 
@@ -706,40 +706,6 @@ has-props
 
 3468
 
-ClientHandshake.class
-file
-
-
-
-
-2010-02-03T11:42:26.776654Z
-2e36f3992ad3a506c979772a87a40fbe
-2010-01-06T17:46:48.717189Z
-155678
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-31112
-
 ClientDiffieHellmanPublic.class
 file
 
@@ -774,16 +740,16 @@ has-props
 
 2671
 
-ClientHandshake$GenCertVerify.class
+ClientHandshake.class
 file
 
 
 
 
-2009-04-24T17:47:44.000000Z
-514ba2dfac9465eb0814be4879ce2249
-2008-06-28T13:29:13.958049Z
-137223
+2010-02-03T11:42:26.776654Z
+2e36f3992ad3a506c979772a87a40fbe
+2010-01-06T17:46:48.717189Z
+155678
 doko
 has-props
 
@@ -806,7 +772,7 @@ has-props
 
 
 
-2856
+31112
 
 ServerDHParams.class
 file
@@ -842,14 +808,14 @@ has-props
 
 4428
 
-SRPTrustManagerFactory$Manager.class
+ClientHandshake$GenCertVerify.class
 file
 
 
 
 
 2009-04-24T17:47:44.000000Z
-1f6f134b1ee8c50da8642e370e1d7029
+514ba2dfac9465eb0814be4879ce2249
 2008-06-28T13:29:13.958049Z
 137223
 doko
@@ -874,7 +840,7 @@ has-props
 
 
 
-2766
+2856
 
 SSLContextImpl.class
 file
@@ -909,6 +875,40 @@ has-props
 
 
 5552
+
+SRPTrustManagerFactory$Manager.class
+file
+
+
+
+
+2009-04-24T17:47:44.000000Z
+1f6f134b1ee8c50da8642e370e1d7029
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2766
 
 ClientHandshake$ParamsVerifier.class
 file
@@ -978,40 +978,6 @@ has-props
 
 2494
 
-ServerHelloBuilder.class
-file
-
-
-
-
-2009-04-24T17:47:44.000000Z
-c7920f152003a40add47fd5506a336fd
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3225
-
 Signature.class
 file
 
@@ -1045,6 +1011,40 @@ has-props
 
 
 3037
+
+ServerHelloBuilder.class
+file
+
+
+
+
+2009-04-24T17:47:44.000000Z
+c7920f152003a40add47fd5506a336fd
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3225
 
 KeyExchangeAlgorithm.class
 file
@@ -2304,40 +2304,6 @@ has-props
 
 2864
 
-MaxFragmentLength.class
-file
-
-
-
-
-2009-04-24T17:47:44.000000Z
-0c956148f64671300030e506384406bf
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1861
-
 SSLRSASignatureImpl.class
 file
 
@@ -2371,6 +2337,40 @@ has-props
 
 
 5048
+
+MaxFragmentLength.class
+file
+
+
+
+
+2009-04-24T17:47:44.000000Z
+0c956148f64671300030e506384406bf
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1861
 
 Extension.class
 file
@@ -2508,17 +2508,17 @@ has-props
 
 3261
 
-CompressionMethodList.class
+SessionImpl$PrivateData.class
 file
 
 
 
 
 2009-04-24T17:47:44.000000Z
-f81ed3d059260f9feeb79e639a706e21
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+a25aa1623899e023677d007abbc72d0c
+2008-06-28T13:29:13.958049Z
+137223
+doko
 has-props
 
 
@@ -2540,7 +2540,7 @@ has-props
 
 
 
-3860
+545
 
 ClientHandshake$ClientDHGen.class
 file
@@ -2576,17 +2576,17 @@ has-props
 
 3790
 
-SessionImpl$PrivateData.class
+CompressionMethodList.class
 file
 
 
 
 
 2009-04-24T17:47:44.000000Z
-a25aa1623899e023677d007abbc72d0c
-2008-06-28T13:29:13.958049Z
-137223
-doko
+f81ed3d059260f9feeb79e639a706e21
+2007-07-27T21:14:19.002073Z
+126998
+tromey
 has-props
 
 
@@ -2608,7 +2608,7 @@ has-props
 
 
 
-545
+3860
 
 X509KeyManagerFactory$Manager.class
 file
@@ -2644,17 +2644,17 @@ has-props
 
 5309
 
-Util$2.class
+TLSRandom.class
 file
 
 
 
 
-2010-02-03T11:42:26.811556Z
-cbad8e8367b2d6eb0c75acdbff89836a
-2010-01-06T17:46:48.717189Z
-155678
-doko
+2009-04-24T17:47:44.000000Z
+d9956ea8c4822dd5c909c2e982b38ecf
+2006-12-12T18:41:51.528840Z
+119793
+tromey
 has-props
 
 
@@ -2676,7 +2676,7 @@ has-props
 
 
 
-725
+4306
 
 TrustedAuthorities$TrustedAuthority.class
 file
@@ -2712,50 +2712,16 @@ has-props
 
 3246
 
-TLSRandom.class
+Util$2.class
 file
 
 
 
 
-2009-04-24T17:47:44.000000Z
-d9956ea8c4822dd5c909c2e982b38ecf
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4306
-
-ProtocolVersion.class
-file
-
-
-
-
-2009-04-24T17:47:44.000000Z
-dbbd925a9b1c599c91d6570b7426c0b3
-2008-06-28T13:29:13.958049Z
-137223
+2010-02-03T11:42:26.811556Z
+cbad8e8367b2d6eb0c75acdbff89836a
+2010-01-06T17:46:48.717189Z
+155678
 doko
 has-props
 
@@ -2778,7 +2744,7 @@ has-props
 
 
 
-3435
+725
 
 ServerHandshake$RSA_PSKExchange.class
 file
@@ -2813,6 +2779,40 @@ has-props
 
 
 2897
+
+ProtocolVersion.class
+file
+
+
+
+
+2009-04-24T17:47:44.000000Z
+dbbd925a9b1c599c91d6570b7426c0b3
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3435
 
 ServerNameList$NameType.class
 file
@@ -3120,40 +3120,6 @@ has-props
 
 274
 
-DiffieHellman.class
-file
-
-
-
-
-2009-04-24T17:47:44.000000Z
-043eab871e699b2c7b0800bd39db120d
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8733
-
 SimpleSessionContext$1.class
 file
 
@@ -3187,6 +3153,40 @@ has-props
 
 
 1391
+
+DiffieHellman.class
+file
+
+
+
+
+2009-04-24T17:47:44.000000Z
+043eab871e699b2c7b0800bd39db120d
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8733
 
 CertificateURL$URLAndOptionalHash.class
 file
@@ -3358,40 +3358,6 @@ has-props
 
 1785
 
-CertificateRequestBuilder.class
-file
-
-
-
-
-2009-04-24T17:47:44.000000Z
-5e9b3fd8ed0b4ca0a0a81c8c142d29dd
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3027
-
 SSLRandom.class
 file
 
@@ -3425,6 +3391,40 @@ has-props
 
 
 3093
+
+CertificateRequestBuilder.class
+file
+
+
+
+
+2009-04-24T17:47:44.000000Z
+5e9b3fd8ed0b4ca0a0a81c8c142d29dd
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3027
 
 Alert$Level.class
 file
@@ -3562,40 +3562,6 @@ has-props
 
 1006
 
-Util.class
-file
-
-
-
-
-2009-04-24T17:47:44.000000Z
-e14bb83697b64657b4b720aa77f99a16
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7451
-
 ServerRSA_PSKParameters.class
 file
 
@@ -3629,6 +3595,40 @@ has-props
 
 
 844
+
+Util.class
+file
+
+
+
+
+2009-04-24T17:47:44.000000Z
+e14bb83697b64657b4b720aa77f99a16
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7451
 
 ServerRSAParams.class
 file
@@ -3698,40 +3698,6 @@ has-props
 
 885
 
-SSLEngineImpl$Mode.class
-file
-
-
-
-
-2009-04-24T17:47:44.000000Z
-8c7d80827526e6b4d80acb05cd0e6498
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1197
-
 TruncatedHMAC.class
 file
 
@@ -3765,6 +3731,40 @@ has-props
 
 
 1206
+
+SSLEngineImpl$Mode.class
+file
+
+
+
+
+2009-04-24T17:47:44.000000Z
+8c7d80827526e6b4d80acb05cd0e6498
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1197
 
 CertificateURL$Iterator.class
 file
@@ -3902,51 +3902,17 @@ has-props
 
 2131
 
-X509TrustManagerFactory.class
-file
-
-
-
-
-2009-04-24T17:47:45.000000Z
-3a474e4b668b0617d52b36d216470244
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4623
-
-X500PrincipalList.class
+ClientHandshake$State.class
 file
 
 
 
 
 2009-04-24T17:47:44.000000Z
-055f1de2326549ae0095195b9bc73b92
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+97d04d5e9b961b30f3aecfe24a577ffd
+2008-06-28T13:29:13.958049Z
+137223
+doko
 has-props
 
 
@@ -3968,7 +3934,7 @@ has-props
 
 
 
-4562
+2213
 
 ClientKeyExchange.class
 file
@@ -4004,48 +3970,14 @@ has-props
 
 3517
 
-ClientHandshake$State.class
+X500PrincipalList.class
 file
 
 
 
 
 2009-04-24T17:47:44.000000Z
-97d04d5e9b961b30f3aecfe24a577ffd
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2213
-
-CertificateURL$CertChainType.class
-file
-
-
-
-
-2009-04-24T17:47:44.000000Z
-d804659bd6d6fae4f66db48083076a1f
+055f1de2326549ae0095195b9bc73b92
 2007-07-27T21:14:19.002073Z
 126998
 tromey
@@ -4070,7 +4002,41 @@ has-props
 
 
 
-1447
+4562
+
+X509TrustManagerFactory.class
+file
+
+
+
+
+2009-04-24T17:47:45.000000Z
+3a474e4b668b0617d52b36d216470244
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4623
 
 Handshake$Type.class
 file
@@ -4105,6 +4071,40 @@ has-props
 
 
 2593
+
+CertificateURL$CertChainType.class
+file
+
+
+
+
+2009-04-24T17:47:44.000000Z
+d804659bd6d6fae4f66db48083076a1f
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1447
 
 Util$WrappedBuffer.class
 file
@@ -4174,40 +4174,6 @@ has-props
 
 1068
 
-X509KeyManagerFactory.class
-file
-
-
-
-
-2009-04-24T17:47:44.000000Z
-9373c5d5b66e45f56781993fb445c400
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5245
-
 DelegatedTask.class
 file
 
@@ -4241,6 +4207,40 @@ has-props
 
 
 1599
+
+X509KeyManagerFactory.class
+file
+
+
+
+
+2009-04-24T17:47:44.000000Z
+9373c5d5b66e45f56781993fb445c400
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5245
 
 Util$1.class
 file

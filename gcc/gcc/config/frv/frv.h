@@ -1,6 +1,6 @@
 /* Target macros for the FRV port of GCC.
    Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009,
-   2010
+   2010, 2011
    Free Software Foundation, Inc.
    Contributed by Red Hat Inc.
 
@@ -26,12 +26,6 @@
 /* Frv general purpose macros.  */
 /* Align an address.  */
 #define ADDR_ALIGN(addr,align) (((addr) + (align) - 1) & ~((align) - 1))
-
-/* Return true if a value is inside a range.  */
-#define IN_RANGE_P(VALUE, LOW, HIGH)				\
-  (   (((HOST_WIDE_INT)(VALUE)) >= (HOST_WIDE_INT)(LOW))	\
-   && (((HOST_WIDE_INT)(VALUE)) <= ((HOST_WIDE_INT)(HIGH))))
-
 
 /* Driver configuration.  */
 
@@ -61,17 +55,9 @@
 # define SUBTARGET_DRIVER_SELF_SPECS
 #endif
 
-/* A C string constant that tells the GCC driver program options to pass to
-   the assembler.  It can also specify how to translate options you give to GNU
-   CC into options for GCC to pass to the assembler.  See the file `sun3.h'
-   for an example of this.
-
-   Do not define this macro if it does not need to do anything.
-
-   Defined in svr4.h.  */
 #undef  ASM_SPEC
 #define ASM_SPEC "\
-%{G*} %{v} %{n} %{T} %{Ym,*} %{Yd,*} %{Wa,*:%*} \
+%{G*} \
 %{mtomcat-stats} \
 %{!mno-eflags: \
     %{mcpu=*} \
@@ -85,24 +71,9 @@
     %{mno-fdpic:-mnopic} %{mfdpic} \
     %{fpic|fpie: -mpic} %{fPIC|fPIE: -mPIC} %{mlibrary-pic}}"
 
-/* Another C string constant used much like `LINK_SPEC'.  The difference
-   between the two is that `STARTFILE_SPEC' is used at the very beginning of
-   the command given to the linker.
-
-   If this macro is not defined, a default is provided that loads the standard
-   C startup file from the usual place.  See `gcc.c'.
-
-   Defined in svr4.h.  */
 #undef  STARTFILE_SPEC
 #define STARTFILE_SPEC "crt0%O%s frvbegin%O%s"
 
-/* Another C string constant used much like `LINK_SPEC'.  The difference
-   between the two is that `ENDFILE_SPEC' is used at the very end of the
-   command given to the linker.
-
-   Do not define this macro if it does not need to do anything.
-
-   Defined in svr4.h.  */
 #undef  ENDFILE_SPEC
 #define ENDFILE_SPEC "frvend%O%s"
 
@@ -148,35 +119,14 @@
 /* For ABI compliance, we need to put bss data into the normal data section.  */
 #define CC1_SPEC "%{G*}"
 
-/* A C string constant that tells the GCC driver program options to pass to
-   the linker.  It can also specify how to translate options you give to GCC
-   into options for GCC to pass to the linker.
-
-   Do not define this macro if it does not need to do anything.
-
-   Defined in svr4.h.  */
-/* Override the svr4.h version with one that dispenses without the svr4
-   shared library options, notably -G.  */
 #undef	LINK_SPEC
 #define LINK_SPEC "\
 %{h*} %{v:-V} \
-%{b} \
 %{mfdpic:-melf32frvfd -z text} \
 %{static:-dn -Bstatic} \
 %{shared:-Bdynamic} \
 %{symbolic:-Bsymbolic} \
-%{G*} \
-%{YP,*} \
-%{Qy:} %{!Qn:-Qy}"
-
-/* Another C string constant used much like `LINK_SPEC'.  The difference
-   between the two is that `LIB_SPEC' is used at the end of the command given
-   to the linker.
-
-   If this macro is not defined, a default is provided that loads the standard
-   C library from the usual place.  See `gcc.c'.
-
-   Defined in svr4.h.  */
+%{G*}"
 
 #undef  LIB_SPEC
 #define LIB_SPEC "--start-group -lc -lsim --end-group"
@@ -287,19 +237,6 @@
 #ifndef HAVE_AS_TLS
 #define HAVE_AS_TLS 0
 #endif
-
-/* This macro is a C statement to print on `stderr' a string describing the
-   particular machine description choice.  Every machine description should
-   define `TARGET_VERSION'.  For example:
-
-        #ifdef MOTOROLA
-        #define TARGET_VERSION \
-          fprintf (stderr, " (68k, Motorola syntax)");
-        #else
-        #define TARGET_VERSION \
-          fprintf (stderr, " (68k, MIT syntax)");
-        #endif  */
-#define TARGET_VERSION fprintf (stderr, _(" (frv)"))
 
 #define LABEL_ALIGN_AFTER_BARRIER(LABEL) (TARGET_ALIGN_LABELS ? 3 : 0)
 
@@ -435,67 +372,6 @@
    slower in that case, define this macro as 0.  */
 #define STRICT_ALIGNMENT 1
 
-/* Define this if you wish to imitate the way many other C compilers handle
-   alignment of bitfields and the structures that contain them.
-
-   The behavior is that the type written for a bit-field (`int', `short', or
-   other integer type) imposes an alignment for the entire structure, as if the
-   structure really did contain an ordinary field of that type.  In addition,
-   the bit-field is placed within the structure so that it would fit within such
-   a field, not crossing a boundary for it.
-
-   Thus, on most machines, a bit-field whose type is written as `int' would not
-   cross a four-byte boundary, and would force four-byte alignment for the
-   whole structure.  (The alignment used may not be four bytes; it is
-   controlled by the other alignment parameters.)
-
-   If the macro is defined, its definition should be a C expression; a nonzero
-   value for the expression enables this behavior.
-
-   Note that if this macro is not defined, or its value is zero, some bitfields
-   may cross more than one alignment boundary.  The compiler can support such
-   references if there are `insv', `extv', and `extzv' insns that can directly
-   reference memory.
-
-   The other known way of making bitfields work is to define
-   `STRUCTURE_SIZE_BOUNDARY' as large as `BIGGEST_ALIGNMENT'.  Then every
-   structure can be accessed with fullwords.
-
-   Unless the machine has bit-field instructions or you define
-   `STRUCTURE_SIZE_BOUNDARY' that way, you must define
-   `PCC_BITFIELD_TYPE_MATTERS' to have a nonzero value.
-
-   If your aim is to make GCC use the same conventions for laying out
-   bitfields as are used by another compiler, here is how to investigate what
-   the other compiler does.  Compile and run this program:
-
-        struct foo1
-        {
-          char x;
-          char :0;
-          char y;
-        };
-
-        struct foo2
-        {
-          char x;
-          int :0;
-          char y;
-        };
-
-        main ()
-        {
-          printf ("Size of foo1 is %d\n",
-                  sizeof (struct foo1));
-          printf ("Size of foo2 is %d\n",
-                  sizeof (struct foo2));
-          exit (0);
-        }
-
-   If this prints 2 and 5, then the compiler's behavior is what you would get
-   from `PCC_BITFIELD_TYPE_MATTERS'.
-
-   Defined in svr4.h.  */
 #define PCC_BITFIELD_TYPE_MATTERS 1
 
 
@@ -514,6 +390,18 @@
    should be signed or unsigned by default.  The user can always override this
    default with the options `-fsigned-char' and `-funsigned-char'.  */
 #define DEFAULT_SIGNED_CHAR 1
+
+#undef  SIZE_TYPE
+#define SIZE_TYPE "unsigned int"
+
+#undef  PTRDIFF_TYPE
+#define PTRDIFF_TYPE "int"
+
+#undef  WCHAR_TYPE
+#define WCHAR_TYPE "long int"
+
+#undef  WCHAR_TYPE_SIZE
+#define WCHAR_TYPE_SIZE BITS_PER_WORD
 
 
 /* General purpose registers.  */
@@ -605,18 +493,18 @@
 #define IACC_FIRST	(SPR_FIRST + 2)
 #define IACC_LAST	(SPR_FIRST + 3)
 
-#define GPR_P(R)	IN_RANGE_P (R, GPR_FIRST, GPR_LAST)
+#define GPR_P(R)	IN_RANGE (R, GPR_FIRST, GPR_LAST)
 #define GPR_OR_AP_P(R)	(GPR_P (R) || (R) == ARG_POINTER_REGNUM)
-#define FPR_P(R)	IN_RANGE_P (R, FPR_FIRST, FPR_LAST)
-#define CC_P(R)		IN_RANGE_P (R, CC_FIRST, CC_LAST)
-#define ICC_P(R)	IN_RANGE_P (R, ICC_FIRST, ICC_LAST)
-#define FCC_P(R)	IN_RANGE_P (R, FCC_FIRST, FCC_LAST)
-#define CR_P(R)		IN_RANGE_P (R, CR_FIRST, CR_LAST)
-#define ICR_P(R)	IN_RANGE_P (R, ICR_FIRST, ICR_LAST)
-#define FCR_P(R)	IN_RANGE_P (R, FCR_FIRST, FCR_LAST)
-#define ACC_P(R)	IN_RANGE_P (R, ACC_FIRST, ACC_LAST)
-#define ACCG_P(R)	IN_RANGE_P (R, ACCG_FIRST, ACCG_LAST)
-#define SPR_P(R)	IN_RANGE_P (R, SPR_FIRST, SPR_LAST)
+#define FPR_P(R)	IN_RANGE (R, FPR_FIRST, FPR_LAST)
+#define CC_P(R)		IN_RANGE (R, CC_FIRST, CC_LAST)
+#define ICC_P(R)	IN_RANGE (R, ICC_FIRST, ICC_LAST)
+#define FCC_P(R)	IN_RANGE (R, FCC_FIRST, FCC_LAST)
+#define CR_P(R)		IN_RANGE (R, CR_FIRST, CR_LAST)
+#define ICR_P(R)	IN_RANGE (R, ICR_FIRST, ICR_LAST)
+#define FCR_P(R)	IN_RANGE (R, FCR_FIRST, FCR_LAST)
+#define ACC_P(R)	IN_RANGE (R, ACC_FIRST, ACC_LAST)
+#define ACCG_P(R)	IN_RANGE (R, ACCG_FIRST, ACCG_LAST)
+#define SPR_P(R)	IN_RANGE (R, SPR_FIRST, SPR_LAST)
 
 #define GPR_OR_PSEUDO_P(R)	(GPR_P (R) || (R) >= FIRST_PSEUDO_REGISTER)
 #define FPR_OR_PSEUDO_P(R)	(FPR_P (R) || (R) >= FIRST_PSEUDO_REGISTER)
@@ -976,14 +864,9 @@ enum reg_class
   FDPIC_CALL_REGS,
   SPR_REGS,
   QUAD_ACC_REGS,
-  EVEN_ACC_REGS,
-  ACC_REGS,
   ACCG_REGS,
   QUAD_FPR_REGS,
-  FEVEN_REGS,
-  FPR_REGS,
   QUAD_REGS,
-  EVEN_REGS,
   GPR_REGS,
   ALL_REGS,
   LIM_REG_CLASSES
@@ -1016,14 +899,9 @@ enum reg_class
    "FDPIC_CALL_REGS",							\
    "SPR_REGS",								\
    "QUAD_ACC_REGS",							\
-   "EVEN_ACC_REGS",							\
-   "ACC_REGS",								\
    "ACCG_REGS",								\
    "QUAD_FPR_REGS",							\
-   "FEVEN_REGS",							\
-   "FPR_REGS",								\
    "QUAD_REGS",								\
-   "EVEN_REGS",								\
    "GPR_REGS",								\
    "ALL_REGS"								\
 }
@@ -1057,32 +935,18 @@ enum reg_class
   { 0x0000c000,0x00000000,0x00000000,0x00000000,0x00000000,0x0}, /* FDPIC_CALL_REGS */\
   { 0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x1e00}, /* SPR_REGS */\
   { 0x00000000,0x00000000,0x00000000,0x00000000,0x0fff0000,0x0}, /* QUAD_ACC */\
-  { 0x00000000,0x00000000,0x00000000,0x00000000,0x0fff0000,0x0}, /* EVEN_ACC */\
-  { 0x00000000,0x00000000,0x00000000,0x00000000,0x0fff0000,0x0}, /* ACC_REGS */\
   { 0x00000000,0x00000000,0x00000000,0x00000000,0xf0000000,0xff}, /* ACCG_REGS*/\
   { 0x00000000,0x00000000,0xffffffff,0xffffffff,0x00000000,0x0}, /* QUAD_FPR */\
-  { 0x00000000,0x00000000,0xffffffff,0xffffffff,0x00000000,0x0}, /* FEVEN_REG*/\
-  { 0x00000000,0x00000000,0xffffffff,0xffffffff,0x00000000,0x0}, /* FPR_REGS */\
   { 0x0ffffffc,0xffffffff,0x00000000,0x00000000,0x00000000,0x0}, /* QUAD_REGS*/\
-  { 0xfffffffc,0xffffffff,0x00000000,0x00000000,0x00000000,0x0}, /* EVEN_REGS*/\
   { 0xffffffff,0xffffffff,0x00000000,0x00000000,0x00000000,0x100}, /* GPR_REGS */\
   { 0xffffffff,0xffffffff,0xffffffff,0xffffffff,0xffffffff,0x1fff}, /* ALL_REGS */\
 }
 
-/* The following macro defines cover classes for Integrated Register
-   Allocator.  Cover classes is a set of non-intersected register
-   classes covering all hard registers used for register allocation
-   purpose.  Any move between two registers of a cover class should be
-   cheaper than load or store of the registers.  The macro value is
-   array of register classes with LIM_REG_CLASSES used as the end
-   marker.  */
-
-#define IRA_COVER_CLASSES						\
-{									\
-  GPR_REGS, FPR_REGS, ACC_REGS, ICR_REGS, FCR_REGS, ICC_REGS, FCC_REGS, \
-  ACCG_REGS, SPR_REGS,							\
-  LIM_REG_CLASSES							\
-}
+#define EVEN_ACC_REGS   QUAD_ACC_REGS
+#define ACC_REGS        QUAD_ACC_REGS
+#define FEVEN_REGS      QUAD_FPR_REGS
+#define FPR_REGS        QUAD_FPR_REGS
+#define EVEN_REGS       QUAD_REGS
 
 /* A C expression whose value is a register class containing hard register
    REGNO.  In general there is more than one such class; choose a class which
@@ -1101,25 +965,6 @@ extern enum reg_class regno_reg_class[];
    value is either multiplied by a scale factor or added to another register
    (as well as added to a displacement).  */
 #define INDEX_REG_CLASS GPR_REGS
-
-/* A C expression which defines the machine-dependent operand constraint
-   letters for register classes.  If CHAR is such a letter, the value should be
-   the register class corresponding to it.  Otherwise, the value should be
-   `NO_REGS'.  The register letter `r', corresponding to class `GENERAL_REGS',
-   will not be passed to this macro; you do not need to handle it.
-
-   The following letters are unavailable, due to being used as
-   constraints:
-	'0'..'9'
-	'<', '>'
-	'E', 'F', 'G', 'H'
-	'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'
-	'Q', 'R', 'S', 'T', 'U'
-	'V', 'X'
-	'g', 'i', 'm', 'n', 'o', 'p', 'r', 's' */
-
-extern enum reg_class reg_class_from_letter[];
-#define REG_CLASS_FROM_LETTER(CHAR) reg_class_from_letter [(unsigned char)(CHAR)]
 
 /* A C expression which is nonzero if register number NUM is suitable for use
    as a base register in operand addresses.  It may be either a suitable hard
@@ -1165,124 +1010,6 @@ extern enum reg_class reg_class_from_letter[];
 #define CLASS_MAX_NREGS(CLASS, MODE) frv_class_max_nregs (CLASS, MODE)
 
 #define ZERO_P(x) (x == CONST0_RTX (GET_MODE (x)))
-
-/* 6-bit signed immediate.  */
-#define CONST_OK_FOR_I(VALUE) IN_RANGE_P(VALUE, -32, 31)
-/* 10-bit signed immediate.  */
-#define CONST_OK_FOR_J(VALUE) IN_RANGE_P(VALUE, -512, 511)
-/* Unused */
-#define CONST_OK_FOR_K(VALUE)  0
-/* 16-bit signed immediate.  */
-#define CONST_OK_FOR_L(VALUE) IN_RANGE_P(VALUE, -32768, 32767)
-/* 16-bit unsigned immediate.  */
-#define CONST_OK_FOR_M(VALUE)  IN_RANGE_P (VALUE, 0, 65535)
-/* 12-bit signed immediate that is negative.  */
-#define CONST_OK_FOR_N(VALUE) IN_RANGE_P(VALUE, -2048, -1)
-/* Zero */
-#define CONST_OK_FOR_O(VALUE) ((VALUE) == 0)
-/* 12-bit signed immediate that is negative.  */
-#define CONST_OK_FOR_P(VALUE) IN_RANGE_P(VALUE, 1, 2047)
-
-/* A C expression that defines the machine-dependent operand constraint letters
-   (`I', `J', `K', .. 'P') that specify particular ranges of integer values.
-   If C is one of those letters, the expression should check that VALUE, an
-   integer, is in the appropriate range and return 1 if so, 0 otherwise.  If C
-   is not one of those letters, the value should be 0 regardless of VALUE.  */
-#define CONST_OK_FOR_LETTER_P(VALUE, C)		\
-  (  (C) == 'I' ? CONST_OK_FOR_I (VALUE)        \
-   : (C) == 'J' ? CONST_OK_FOR_J (VALUE)        \
-   : (C) == 'K' ? CONST_OK_FOR_K (VALUE)        \
-   : (C) == 'L' ? CONST_OK_FOR_L (VALUE)        \
-   : (C) == 'M' ? CONST_OK_FOR_M (VALUE)        \
-   : (C) == 'N' ? CONST_OK_FOR_N (VALUE)        \
-   : (C) == 'O' ? CONST_OK_FOR_O (VALUE)        \
-   : (C) == 'P' ? CONST_OK_FOR_P (VALUE)        \
-   : 0)
-
-
-/* A C expression that defines the machine-dependent operand constraint letters
-   (`G', `H') that specify particular ranges of `const_double' values.
-
-   If C is one of those letters, the expression should check that VALUE, an RTX
-   of code `const_double', is in the appropriate range and return 1 if so, 0
-   otherwise.  If C is not one of those letters, the value should be 0
-   regardless of VALUE.
-
-   `const_double' is used for all floating-point constants and for `DImode'
-   fixed-point constants.  A given letter can accept either or both kinds of
-   values.  It can use `GET_MODE' to distinguish between these kinds.  */
-
-#define CONST_DOUBLE_OK_FOR_G(VALUE)					\
-  ((GET_MODE (VALUE) == VOIDmode 					\
-    && CONST_DOUBLE_LOW (VALUE) == 0					\
-    && CONST_DOUBLE_HIGH (VALUE) == 0)					\
-   || ((GET_MODE (VALUE) == SFmode					\
-        || GET_MODE (VALUE) == DFmode)					\
-       && (VALUE) == CONST0_RTX (GET_MODE (VALUE))))
-
-#define CONST_DOUBLE_OK_FOR_H(VALUE) 0
-
-#define CONST_DOUBLE_OK_FOR_LETTER_P(VALUE, C)				\
-  (  (C) == 'G' ? CONST_DOUBLE_OK_FOR_G (VALUE)				\
-   : (C) == 'H' ? CONST_DOUBLE_OK_FOR_H (VALUE)				\
-   : 0)
-
-/* A C expression that defines the optional machine-dependent constraint
-   letters (`Q', `R', `S', `T', `U') that can be used to segregate specific
-   types of operands, usually memory references, for the target machine.
-   Normally this macro will not be defined.  If it is required for a particular
-   target machine, it should return 1 if VALUE corresponds to the operand type
-   represented by the constraint letter C.  If C is not defined as an extra
-   constraint, the value returned should be 0 regardless of VALUE.
-
-   For example, on the ROMP, load instructions cannot have their output in r0
-   if the memory reference contains a symbolic address.  Constraint letter `Q'
-   is defined as representing a memory address that does *not* contain a
-   symbolic address.  An alternative is specified with a `Q' constraint on the
-   input and `r' on the output.  The next alternative specifies `m' on the
-   input and a register class that does not include r0 on the output.  */
-
-/* 12-bit relocations.  */
-#define EXTRA_CONSTRAINT_FOR_Q(VALUE)					\
-  (got12_operand (VALUE, GET_MODE (VALUE)))
-
-/* Double word memory ops that take one instruction.  */
-#define EXTRA_CONSTRAINT_FOR_R(VALUE)					\
-  (dbl_memory_one_insn_operand (VALUE, GET_MODE (VALUE)))
-
-/* SYMBOL_REF */
-#define EXTRA_CONSTRAINT_FOR_S(VALUE) \
-  (CONSTANT_P (VALUE) && call_operand (VALUE, VOIDmode))
-
-/* Double word memory ops that take two instructions.  */
-#define EXTRA_CONSTRAINT_FOR_T(VALUE)					\
-  (dbl_memory_two_insn_operand (VALUE, GET_MODE (VALUE)))
-
-/* Memory operand for conditional execution.  */
-#define EXTRA_CONSTRAINT_FOR_U(VALUE)					\
-  (condexec_memory_operand (VALUE, GET_MODE (VALUE)))
-
-#define EXTRA_CONSTRAINT(VALUE, C)					\
-  (  (C) == 'Q'   ? EXTRA_CONSTRAINT_FOR_Q (VALUE)			\
-   : (C) == 'R' ? EXTRA_CONSTRAINT_FOR_R (VALUE)			\
-   : (C) == 'S' ? EXTRA_CONSTRAINT_FOR_S (VALUE)			\
-   : (C) == 'T' ? EXTRA_CONSTRAINT_FOR_T (VALUE)			\
-   : (C) == 'U' ? EXTRA_CONSTRAINT_FOR_U (VALUE)			\
-   : 0)
-
-#define EXTRA_MEMORY_CONSTRAINT(C,STR) \
-  ((C) == 'U' || (C) == 'R' || (C) == 'T')
-
-#define CONSTRAINT_LEN(C, STR) \
-  ((C) == 'D' ? 3 : DEFAULT_CONSTRAINT_LEN ((C), (STR)))
-
-#define REG_CLASS_FROM_CONSTRAINT(C, STR) \
-  (((C) == 'D' && (STR)[1] == '8' && (STR)[2] == '9') ? GR89_REGS : \
-   ((C) == 'D' && (STR)[1] == '0' && (STR)[2] == '9') ? GR9_REGS : \
-   ((C) == 'D' && (STR)[1] == '0' && (STR)[2] == '8') ? GR8_REGS : \
-   ((C) == 'D' && (STR)[1] == '1' && (STR)[2] == '4') ? FDPIC_FPTR_REGS : \
-   ((C) == 'D' && (STR)[1] == '1' && (STR)[2] == '5') ? FDPIC_REGS : \
-   REG_CLASS_FROM_LETTER ((C)))
 
 
 /* Basic Stack Layout.  */
@@ -1694,9 +1421,9 @@ __trampoline_setup (addr, size, fnaddr, sc)				\
       exit (-1);							\
     }									\
 									\
-  /* Create a function descriptor with the address of the code below
-     and NULL as the FDPIC value.  We don't need the real GOT value
-     here, since we don't use it, so we use NULL, that is just as
+  /* Create a function descriptor with the address of the code below	\
+     and NULL as the FDPIC value.  We don't need the real GOT value	\
+     here, since we don't use it, so we use NULL, that is just as	\
      good.  */								\
   desc[0] = to;								\
   desc[1] = NULL;							\
@@ -1766,12 +1493,6 @@ __asm__("\n"								\
 
 #define FIND_BASE_TERM frv_find_base_term
 
-/* A C expression that is nonzero if X is a legitimate constant for an
-   immediate operand on the target machine.  You can assume that X satisfies
-   `CONSTANT_P', so you need not check this.  In fact, `1' is a suitable
-   definition for this macro on machines where anything `CONSTANT_P' is valid.  */
-#define LEGITIMATE_CONSTANT_P(X) frv_legitimate_constant_p (X)
-
 /* The load-and-update commands allow pre-modification in addresses.
    The index has to be in a register.  */
 #define HAVE_PRE_MODIFY_REG 1
@@ -1838,26 +1559,10 @@ __asm__("\n"								\
    `".data"' is right.  */
 #define DATA_SECTION_ASM_OP "\t.data"
 
-/* If defined, a C expression whose value is a string containing the
-   assembler operation to identify the following data as
-   uninitialized global data.  If not defined, and neither
-   `ASM_OUTPUT_BSS' nor `ASM_OUTPUT_ALIGNED_BSS' are defined,
-   uninitialized global data will be output in the data section if
-   `-fno-common' is passed, otherwise `ASM_OUTPUT_COMMON' will be
-   used.  */
 #define BSS_SECTION_ASM_OP "\t.section .bss,\"aw\""
 
 /* Short Data Support */
 #define SDATA_SECTION_ASM_OP	"\t.section .sdata,\"aw\""
-
-/* On svr4, we *do* have support for the .init and .fini sections, and we
-   can put stuff in there to be executed before and after `main'.  We let
-   crtstuff.c and other files know this by defining the following symbols.
-   The definitions say how to change sections to the .init and .fini
-   sections.  This is the same for all known svr4 assemblers.
-
-   The standard System V.4 macros will work, but they look ugly in the
-   assembly output, so redefine them.  */
 
 #undef	INIT_SECTION_ASM_OP
 #undef	FINI_SECTION_ASM_OP
@@ -1937,13 +1642,6 @@ do {									\
    variables are output.  */
 #undef ASM_OUTPUT_LOCAL
 
-/* Like `ASM_OUTPUT_LOCAL' except takes the required alignment as a separate,
-   explicit argument.  If you define this macro, it is used in place of
-   `ASM_OUTPUT_LOCAL', and gives you more flexibility in handling the required
-   alignment of the variable.  The alignment is specified as the number of
-   bits.
-
-   Defined in svr4.h.  */
 #undef ASM_OUTPUT_ALIGNED_LOCAL
 
 /* This is for final.c, because it is used by ASM_DECLARE_OBJECT_NAME.  */
@@ -1984,21 +1682,6 @@ do {									\
 /* Globalizing directive for a label.  */
 #define GLOBAL_ASM_OP "\t.globl "
 
-/* A C statement to store into the string STRING a label whose name is made
-   from the string PREFIX and the number NUM.
-
-   This string, when output subsequently by `assemble_name', should produce the
-   output that `(*targetm.asm_out.internal_label)' would produce with the same PREFIX
-   and NUM.
-
-   If the string begins with `*', then `assemble_name' will output the rest of
-   the string unchanged.  It is often convenient for
-   `ASM_GENERATE_INTERNAL_LABEL' to use `*' in this way.  If the string doesn't
-   start with `*', then `ASM_OUTPUT_LABELREF' gets to output the string, and
-   may change it.  (Of course, `ASM_OUTPUT_LABELREF' is also part of your
-   machine description, so you should know what it does on your machine.)
-
-   Defined in svr4.h.  */
 #undef ASM_GENERATE_INTERNAL_LABEL
 #define ASM_GENERATE_INTERNAL_LABEL(LABEL, PREFIX, NUM)			\
 do {									\
@@ -2008,13 +1691,6 @@ do {									\
 
 /* Macros Controlling Initialization Routines.  */
 
-/* If defined, a C string constant for the assembler operation to identify the
-   following data as initialization code.  If not defined, GCC will assume
-   such a section does not exist.  When you are using special sections for
-   initialization and termination functions, this macro also controls how
-   `crtstuff.c' and `libgcc2.c' arrange to run the initialization functions.
-
-   Defined in svr4.h.  */
 #undef INIT_SECTION_ASM_OP
 
 /* If defined, `main' will call `__main' despite the presence of
@@ -2108,12 +1784,6 @@ do {									\
 #define FINAL_PRESCAN_INSN(INSN, OPVEC, NOPERANDS)\
   frv_final_prescan_insn (INSN, OPVEC, NOPERANDS)
 
-/* If defined, C string expressions to be used for the `%R', `%L', `%U', and
-   `%I' options of `asm_fprintf' (see `final.c').  These are useful when a
-   single `md' file must support multiple assembler formats.  In that case, the
-   various `tm.h' files can define these macros differently.
-
-   USER_LABEL_PREFIX is defined in svr4.h.  */
 #undef USER_LABEL_PREFIX
 #define USER_LABEL_PREFIX ""
 #define REGISTER_PREFIX ""
@@ -2170,11 +1840,6 @@ fprintf (STREAM, "\t.word .L%d\n", VALUE)
 
 /* Assembler Commands for Alignment.  */
 
-/* A C statement to output to the stdio stream STREAM an assembler instruction
-   to advance the location counter by NBYTES bytes.  Those bytes should be zero
-   when loaded.  NBYTES will be a C expression of type `int'.
-
-   Defined in svr4.h.  */
 #undef  ASM_OUTPUT_SKIP
 #define ASM_OUTPUT_SKIP(STREAM, NBYTES) \
   fprintf (STREAM, "\t.zero\t%u\n", (int)(NBYTES))
@@ -2210,17 +1875,6 @@ fprintf (STREAM, "\t.word .L%d\n", VALUE)
    This declaration is required.  */
 #define DBX_REGISTER_NUMBER(REGNO) (REGNO)
 
-/* A C expression that returns the type of debugging output GCC produces
-   when the user specifies `-g' or `-ggdb'.  Define this if you have arranged
-   for GCC to support more than one format of debugging output.  Currently,
-   the allowable values are `DBX_DEBUG', `SDB_DEBUG', `DWARF_DEBUG',
-   `DWARF2_DEBUG', and `XCOFF_DEBUG'.
-
-   The value of this macro only affects the default debugging output; the user
-   can always get a specific type of output by using `-gstabs', `-gcoff',
-   `-gdwarf-1', `-gdwarf-2', or `-gxcoff'.
-
-   Defined in svr4.h.  */
 #undef  PREFERRED_DEBUGGING_TYPE
 #define PREFERRED_DEBUGGING_TYPE DWARF2_DEBUG
 

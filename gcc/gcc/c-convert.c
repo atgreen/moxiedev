@@ -1,6 +1,6 @@
 /* Language-level data type conversion for GNU C.
    Copyright (C) 1987, 1988, 1991, 1998, 2002, 2003, 2004, 2005, 2007, 2008,
-   2009 Free Software Foundation, Inc.
+   2009, 2010 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -34,7 +34,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "c-family/c-common.h"
 #include "c-tree.h"
 #include "langhooks.h"
-#include "toplev.h"
 #include "target.h"
 
 /* Change of width--truncation and extension of integers or reals--
@@ -131,6 +130,32 @@ convert (tree type, tree expr)
       goto maybe_fold;
 
     case COMPLEX_TYPE:
+      /* If converting from COMPLEX_TYPE to a different COMPLEX_TYPE
+	 and e is not COMPLEX_EXPR, convert_to_complex uses save_expr,
+	 but for the C FE c_save_expr needs to be called instead.  */
+      if (TREE_CODE (TREE_TYPE (e)) == COMPLEX_TYPE)
+	{
+	  tree subtype = TREE_TYPE (type);
+	  tree elt_type = TREE_TYPE (TREE_TYPE (e));
+
+	  if (TYPE_MAIN_VARIANT (elt_type) != TYPE_MAIN_VARIANT (subtype)
+	      && TREE_CODE (e) != COMPLEX_EXPR)
+	    {
+	      if (in_late_binary_op)
+		e = save_expr (e);
+	      else
+		e = c_save_expr (e);
+	      ret
+		= fold_build2 (COMPLEX_EXPR, type,
+			       convert (subtype,
+					fold_build1 (REALPART_EXPR,
+						     elt_type, e)),
+			       convert (subtype,
+					fold_build1 (IMAGPART_EXPR,
+						     elt_type, e)));
+	      goto maybe_fold;
+	    }
+	}
       ret = convert_to_complex (type, e);
       goto maybe_fold;
 

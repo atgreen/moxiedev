@@ -1,6 +1,6 @@
 /* Prints out trees in human readable form.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2010
    Free Software Foundation, Inc.
    Hacked by Michael Tiemann (tiemann@cygnus.com)
 
@@ -99,6 +99,11 @@ cxx_print_type (FILE *file, tree node, int indent)
       print_node (file, "expr", DECLTYPE_TYPE_EXPR (node), indent + 4);
       return;
 
+    case TYPENAME_TYPE:
+      print_node (file, "fullname", TYPENAME_TYPE_FULLNAME (node),
+		  indent + 4);
+      return;
+
     default:
       return;
     }
@@ -175,12 +180,12 @@ cxx_print_identifier (FILE *file, tree node, int indent)
   if (indent == 0)
     fprintf (file, " ");
   else
-    indent_to (file, indent);
+    indent_to (file, indent + 4);
   cxx_print_binding (file, IDENTIFIER_NAMESPACE_BINDINGS (node), "bindings");
   if (indent == 0)
     fprintf (file, " ");
   else
-    indent_to (file, indent);
+    indent_to (file, indent + 4);
   cxx_print_binding (file, IDENTIFIER_BINDING (node), "local bindings");
   print_node (file, "label", IDENTIFIER_LABEL_VALUE (node), indent + 4);
   print_node (file, "template", IDENTIFIER_TEMPLATE (node), indent + 4);
@@ -215,6 +220,12 @@ cxx_print_xnode (FILE *file, tree node, int indent)
 	  indent_to (file, indent + 3);
 	  fprintf (file, "pending_template");
 	}
+      break;
+    case ARGUMENT_PACK_SELECT:
+      print_node (file, "pack", ARGUMENT_PACK_SELECT_FROM_PACK (node),
+		  indent+4);
+      indent_to (file, indent + 3);
+      fprintf (file, "index %d", ARGUMENT_PACK_SELECT_INDEX (node));
       break;
     default:
       break;

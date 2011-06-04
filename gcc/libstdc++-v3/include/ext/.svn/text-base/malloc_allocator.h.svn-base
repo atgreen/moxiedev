@@ -35,7 +35,9 @@
 #include <bits/functexcept.h>
 #include <bits/move.h>
 
-_GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
+namespace __gnu_cxx _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   using std::size_t;
   using std::ptrdiff_t;
@@ -102,21 +104,25 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
       max_size() const throw() 
       { return size_t(-1) / sizeof(_Tp); }
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+      template<typename _Up, typename... _Args>
+        void
+        construct(_Up* __p, _Args&&... __args)
+	{ ::new((void *)__p) _Up(std::forward<_Args>(__args)...); }
+
+      template<typename _Up>
+        void 
+        destroy(_Up* __p) { __p->~_Up(); }
+#else
       // _GLIBCXX_RESOLVE_LIB_DEFECTS
       // 402. wrong new expression in [some_] allocator::construct
       void 
       construct(pointer __p, const _Tp& __val) 
       { ::new((void *)__p) value_type(__val); }
 
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
-      template<typename... _Args>
-        void
-        construct(pointer __p, _Args&&... __args) 
-	{ ::new((void *)__p) _Tp(std::forward<_Args>(__args)...); }
-#endif
-
       void 
       destroy(pointer __p) { __p->~_Tp(); }
+#endif
     };
 
   template<typename _Tp>
@@ -129,6 +135,7 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
     operator!=(const malloc_allocator<_Tp>&, const malloc_allocator<_Tp>&)
     { return false; }
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #endif

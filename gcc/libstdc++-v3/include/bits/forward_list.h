@@ -1,6 +1,6 @@
 // <forward_list.h> -*- C++ -*-
 
-// Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -22,8 +22,9 @@
 // see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 // <http://www.gnu.org/licenses/>.
 
-/** @file forward_list.h
- *  This is a Standard C++ Library header.
+/** @file bits/forward_list.h
+ *  This is an internal header file, included by other library headers.
+ *  Do not attempt to use it directly. @headername{forward_list}
  */
 
 #ifndef _FORWARD_LIST_H
@@ -34,7 +35,9 @@
 #include <memory>
 #include <initializer_list>
 
-_GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   /**
    *  @brief  A helper basic node class for %forward_list.
@@ -73,7 +76,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
     }
 
     void
-    _M_reverse_after()
+    _M_reverse_after() noexcept
     {
       _Fwd_list_node_base* __tail = _M_next;
       if (!__tail)
@@ -287,6 +290,10 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
         _Fwd_list_impl(const _Node_alloc_type& __a)
         : _Node_alloc_type(__a), _M_head()
         { }
+
+        _Fwd_list_impl(_Node_alloc_type&& __a)
+	: _Node_alloc_type(std::move(__a)), _M_head()
+        { }
       };
 
       _Fwd_list_impl _M_impl;
@@ -297,11 +304,11 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       typedef _Fwd_list_node<_Tp>                     _Node;
 
       _Node_alloc_type&
-      _M_get_Node_allocator()
+      _M_get_Node_allocator() noexcept
       { return *static_cast<_Node_alloc_type*>(&this->_M_impl); }
 
       const _Node_alloc_type&
-      _M_get_Node_allocator() const
+      _M_get_Node_allocator() const noexcept
       { return *static_cast<const _Node_alloc_type*>(&this->_M_impl); }
 
       _Fwd_list_base()
@@ -320,7 +327,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       }
 
       _Fwd_list_base(_Fwd_list_base&& __lst)
-      : _M_impl(__lst._M_get_Node_allocator())
+      : _M_impl(std::move(__lst._M_get_Node_allocator()))
       {
 	this->_M_impl._M_head._M_next = __lst._M_impl._M_head._M_next;
 	__lst._M_impl._M_head._M_next = 0;
@@ -520,7 +527,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  forward_list. The contents of @a list are a valid, but unspecified
        *  %forward_list.
        */
-      forward_list(forward_list&& __list)
+      forward_list(forward_list&& __list) noexcept
       : _Base(std::move(__list)) { }
 
       /**
@@ -539,7 +546,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       /**
        *  @brief  The forward_list dtor.
        */
-      ~forward_list()
+      ~forward_list() noexcept
       { }
 
       /**
@@ -641,7 +648,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 
       /// Get a copy of the memory allocation object.
       allocator_type
-      get_allocator() const
+      get_allocator() const noexcept
       { return this->_M_get_Node_allocator(); }
 
       // 23.2.3.2 iterators:
@@ -651,7 +658,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  in the %forward_list.  Iteration is done in ordinary element order.
        */
       iterator
-      before_begin()
+      before_begin() noexcept
       { return iterator(&this->_M_impl._M_head); }
 
       /**
@@ -660,7 +667,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       const_iterator
-      before_begin() const
+      before_begin() const noexcept
       { return const_iterator(&this->_M_impl._M_head); }
 
       /**
@@ -668,7 +675,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  in the %forward_list.  Iteration is done in ordinary element order.
        */
       iterator
-      begin()
+      begin() noexcept
       { return iterator(this->_M_impl._M_head._M_next); }
 
       /**
@@ -677,7 +684,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       const_iterator
-      begin() const
+      begin() const noexcept
       { return const_iterator(this->_M_impl._M_head._M_next); }
 
       /**
@@ -686,7 +693,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       iterator
-      end()
+      end() noexcept
       { return iterator(0); }
 
       /**
@@ -695,7 +702,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       const_iterator
-      end() const
+      end() const noexcept
       { return const_iterator(0); }
 
       /**
@@ -704,7 +711,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       const_iterator
-      cbegin() const
+      cbegin() const noexcept
       { return const_iterator(this->_M_impl._M_head._M_next); }
 
       /**
@@ -713,7 +720,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       const_iterator
-      cbefore_begin() const
+      cbefore_begin() const noexcept
       { return const_iterator(&this->_M_impl._M_head); }
 
       /**
@@ -722,7 +729,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  ordinary element order.
        */
       const_iterator
-      cend() const
+      cend() const noexcept
       { return const_iterator(0); }
 
       /**
@@ -730,14 +737,14 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  equal end().)
        */
       bool
-      empty() const
+      empty() const noexcept
       { return this->_M_impl._M_head._M_next == 0; }
 
       /**
        *  Returns the largest possible size of %forward_list.
        */
       size_type
-      max_size() const
+      max_size() const noexcept
       { return this->_M_get_Node_allocator().max_size(); }
 
       // 23.2.3.3 element access:
@@ -1018,7 +1025,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  Managing the pointer is the user's responsibility.
        */
       void
-      clear()
+      clear() noexcept
       { this->_M_erase_after(&this->_M_impl._M_head, 0); }
 
       // 23.2.3.5 forward_list operations:
@@ -1193,7 +1200,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  Reverse the order of elements in the list in linear time.
        */
       void
-      reverse()
+      reverse() noexcept
       { this->_M_impl._M_head._M_reverse_after(); }
 
     private:
@@ -1294,6 +1301,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	 forward_list<_Tp, _Alloc>& __ly)
     { __lx.swap(__ly); }
 
-_GLIBCXX_END_NESTED_NAMESPACE // namespace std
+_GLIBCXX_END_NAMESPACE_CONTAINER
+} // namespace std
 
 #endif // _FORWARD_LIST_H

@@ -1,6 +1,6 @@
 /* Separate lexical analyzer for GNU C++.
    Copyright (C) 1987, 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2010
    Free Software Foundation, Inc.
    Hacked by Michael Tiemann (tiemann@cygnus.com)
 
@@ -33,7 +33,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "cpplib.h"
 #include "flags.h"
 #include "c-family/c-pragma.h"
-#include "toplev.h"
+#include "c-family/c-objc.h"
 #include "output.h"
 #include "tm_p.h"
 #include "timevar.h"
@@ -280,10 +280,10 @@ interface_strcmp (const char* s)
       const char *t1 = ifiles->filename;
       s1 = s;
 
-      if (*s1 != *t1 || *s1 == 0)
+      if (*s1 == 0 || filename_ncmp (s1, t1, 1) != 0)
 	continue;
 
-      while (*s1 == *t1 && *s1 != 0)
+      while (*s1 != 0 && filename_ncmp (s1, t1, 1) == 0)
 	s1++, t1++;
 
       /* A match.  */
@@ -412,7 +412,7 @@ handle_pragma_implementation (cpp_reader* dfile ATTRIBUTE_UNUSED )
 
   for (; ifiles; ifiles = ifiles->next)
     {
-      if (! strcmp (ifiles->filename, filename))
+      if (! filename_cmp (ifiles->filename, filename))
 	break;
     }
   if (ifiles == 0)
@@ -450,7 +450,10 @@ unqualified_name_lookup_error (tree name)
   else
     {
       if (!objc_diagnose_private_ivar (name))
-        error ("%qD was not declared in this scope", name);
+	{
+	  error ("%qD was not declared in this scope", name);
+	  suggest_alternatives_for (location_of (name), name);
+	}
       /* Prevent repeated error messages by creating a VAR_DECL with
 	 this NAME in the innermost block scope.  */
       if (current_function_decl)
@@ -703,8 +706,8 @@ in_main_input_context (void)
   struct tinst_level *tl = outermost_tinst_level();
 
   if (tl)
-    return strcmp (main_input_filename,
-                  LOCATION_FILE (tl->locus)) == 0;
+    return filename_cmp (main_input_filename,
+			 LOCATION_FILE (tl->locus)) == 0;
   else
-    return strcmp (main_input_filename, input_filename) == 0;
+    return filename_cmp (main_input_filename, input_filename) == 0;
 }

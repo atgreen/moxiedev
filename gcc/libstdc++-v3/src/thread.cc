@@ -1,6 +1,6 @@
 // thread -*- C++ -*-
 
-// Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -26,10 +26,20 @@
 #include <thread>
 #include <cerrno>
 
+#if defined(_GLIBCXX_USE_GET_NPROCS)
+# include <sys/sysinfo.h>
+# define _GLIBCXX_NPROCS get_nprocs()
+#elif defined(_GLIBCXX_USE_SC_NPROCESSORS_ONLN)
+# include <unistd.h>
+# define _GLIBCXX_NPROCS sysconf(_SC_NPROCESSORS_ONLN)
+#else
+# define _GLIBCXX_NPROCS 0
+#endif
+
 #if defined(_GLIBCXX_HAS_GTHREADS) && defined(_GLIBCXX_USE_C99_STDINT_TR1)
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
-
+namespace std _GLIBCXX_VISIBILITY(default)
+{
   namespace
   {
     extern "C" void*
@@ -51,6 +61,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       return 0;
     }
   }
+
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   void
   thread::join()
@@ -96,6 +108,16 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     }
   }
 
-_GLIBCXX_END_NAMESPACE
+  unsigned int
+  thread::hardware_concurrency() noexcept
+  {
+    int __n = _GLIBCXX_NPROCS;
+    if (__n < 0)
+      __n = 0;
+    return __n;
+  }
+
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #endif // _GLIBCXX_HAS_GTHREADS && _GLIBCXX_USE_C99_STDINT_TR1

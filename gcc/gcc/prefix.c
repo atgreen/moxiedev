@@ -103,8 +103,7 @@ get_key_value (char *key)
   if (prefix == 0)
     prefix = std_prefix;
 
-  if (temp)
-    free (temp);
+  free (temp);
 
   return prefix;
 }
@@ -251,7 +250,7 @@ update_path (const char *path, const char *key)
   char *result, *p;
   const int len = strlen (std_prefix);
 
-  if (! strncmp (path, std_prefix, len)
+  if (! filename_ncmp (path, std_prefix, len)
       && (IS_DIR_SEPARATOR(path[len])
           || path[len] == '\0')
       && key != 0)

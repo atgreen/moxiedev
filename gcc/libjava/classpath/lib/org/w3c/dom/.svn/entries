@@ -1,7 +1,7 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/org/w3c/dom
 svn://gcc.gnu.org/svn/gcc
 
@@ -474,9 +474,6 @@ has-props
 bootstrap
 dir
 
-ls
-dir
-
 Attr.class
 file
 
@@ -511,42 +508,11 @@ has-props
 
 432
 
-ranges
+ls
 dir
 
-ProcessingInstruction.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-9361944d7fc2a1901153d97fede4eb89
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-315
+ranges
+dir
 
 Document.class
 file
@@ -582,17 +548,14 @@ has-props
 
 2096
 
-xpath
-dir
-
-NodeList.class
+ProcessingInstruction.class
 file
 
 
 
 
 2009-04-24T17:48:31.000000Z
-3385b217a3ad3ee0e6faa683bdd08689
+9361944d7fc2a1901153d97fede4eb89
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -617,7 +580,10 @@ has-props
 
 
 
-174
+315
+
+xpath
+dir
 
 DOMImplementationList.class
 file
@@ -653,20 +619,14 @@ has-props
 
 213
 
-html2
-dir
-
-css
-dir
-
-Node.class
+NodeList.class
 file
 
 
 
 
 2009-04-24T17:48:31.000000Z
-0ab89bf9e0e5894201ccfcd9dcc36c4e
+3385b217a3ad3ee0e6faa683bdd08689
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -691,7 +651,13 @@ has-props
 
 
 
-2560
+174
+
+html2
+dir
+
+css
+dir
 
 DOMImplementation.class
 file
@@ -726,6 +692,40 @@ has-props
 
 
 561
+
+Node.class
+file
+
+
+
+
+2009-04-24T17:48:31.000000Z
+0ab89bf9e0e5894201ccfcd9dcc36c4e
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2560
 
 CharacterData.class
 file

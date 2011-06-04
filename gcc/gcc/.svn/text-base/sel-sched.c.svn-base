@@ -1,5 +1,6 @@
 /* Instruction scheduling pass.  Selective scheduler and pipeliner.
-   Copyright (C) 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -1262,17 +1263,12 @@ mark_unavailable_hard_regs (def_t def, struct reg_rename *reg_rename_p,
      FIXME: it is enough to do this once per all original defs.  */
   if (frame_pointer_needed)
     {
-      int i;
+      add_to_hard_reg_set (&reg_rename_p->unavailable_hard_regs,
+			   Pmode, FRAME_POINTER_REGNUM);
 
-      for (i = hard_regno_nregs[FRAME_POINTER_REGNUM][Pmode]; i--;)
-	SET_HARD_REG_BIT (reg_rename_p->unavailable_hard_regs,
-                          FRAME_POINTER_REGNUM + i);
-
-#if !HARD_FRAME_POINTER_IS_FRAME_POINTER
-      for (i = hard_regno_nregs[HARD_FRAME_POINTER_REGNUM][Pmode]; i--;)
-	SET_HARD_REG_BIT (reg_rename_p->unavailable_hard_regs,
-                          HARD_FRAME_POINTER_REGNUM + i);
-#endif
+      if (!HARD_FRAME_POINTER_IS_FRAME_POINTER)
+        add_to_hard_reg_set (&reg_rename_p->unavailable_hard_regs, 
+			     Pmode, HARD_FRAME_POINTER_IS_FRAME_POINTER);
     }
 
 #ifdef STACK_REGS
@@ -2141,6 +2137,15 @@ moveup_expr (expr_t expr, insn_t through_insn, bool inside_insn_group,
   ds_t *has_dep_p;
   ds_t full_ds;
 
+  /* ??? We use dependencies of non-debug insns on debug insns to
+     indicate that the debug insns need to be reset if the non-debug
+     insn is pulled ahead of it.  It's hard to figure out how to
+     introduce such a notion in sel-sched, but it already fails to
+     support debug insns in other ways, so we just go ahead and
+     let the deug insns go corrupt for now.  */
+  if (DEBUG_INSN_P (through_insn) && !DEBUG_INSN_P (insn))
+    return MOVEUP_EXPR_SAME;
+
   /* When inside_insn_group, delegate to the helper.  */
   if (inside_insn_group)
     return moveup_expr_inside_insn_group (expr, through_insn);
@@ -2171,10 +2176,8 @@ moveup_expr (expr_t expr, insn_t through_insn, bool inside_insn_group,
               || ! in_current_region_p (fallthru_bb))
             return MOVEUP_EXPR_NULL;
 
-          /* And it should be mutually exclusive with through_insn, or
-             be an unconditional jump.  */
-          if (! any_uncondjump_p (insn)
-              && ! sched_insns_conditions_mutex_p (insn, through_insn)
+          /* And it should be mutually exclusive with through_insn.  */
+          if (! sched_insns_conditions_mutex_p (insn, through_insn)
 	      && ! DEBUG_INSN_P (through_insn))
             return MOVEUP_EXPR_NULL;
         }
@@ -2738,7 +2741,7 @@ compute_av_set_at_bb_end (insn_t insn, ilist_t p, int ws)
         sel_print ("real successors num: %d\n", sinfo->all_succs_n);
     }
 
-  /* Add insn to to the tail of current path.  */
+  /* Add insn to the tail of current path.  */
   ilist_add (&p, insn);
 
   FOR_EACH_VEC_ELT (rtx, sinfo->succs_ok, is, succ)
@@ -5514,7 +5517,7 @@ fill_insns (fence_t fence, int seqno, ilist_t **scheduled_insns_tailpp)
     {
       blist_t *bnds_tailp1, *bndsp;
       expr_t expr_vliw;
-      int need_stall;
+      int need_stall = false;
       int was_stall = 0, scheduled_insns = 0;
       int max_insns = pipelining_p ? issue_rate : 2 * issue_rate;
       int max_stall = pipelining_p ? 1 : 3;
@@ -6361,7 +6364,10 @@ code_motion_process_successors (insn_t insn, av_set_t orig_ops,
          the iterator becomes invalid.  We need to try again.  */
       if (BLOCK_FOR_INSN (insn)->index != old_index
           || EDGE_COUNT (bb->succs) != old_succs)
-        goto rescan;
+        {
+          insn = sel_bb_end (BLOCK_FOR_INSN (insn));
+          goto rescan;
+        }
     }
 
 #ifdef ENABLE_CHECKING
@@ -6473,7 +6479,7 @@ code_motion_path_driver (insn_t insn, av_set_t orig_ops, ilist_t path,
 
   /* Filter the orig_ops set.  */
   if (AV_SET_VALID_P (insn))
-    av_set_intersect (&orig_ops, AV_SET (insn));
+    av_set_code_motion_filter (&orig_ops, AV_SET (insn));
 
   /* If no more original ops, return immediately.  */
   if (!orig_ops)
@@ -6579,21 +6585,37 @@ code_motion_path_driver (insn_t insn, av_set_t orig_ops, ilist_t path,
   if (!expr)
     {
       int res;
+      rtx last_insn = PREV_INSN (insn);
+      bool added_to_path;
 
       gcc_assert (insn == sel_bb_end (bb));
 
       /* Add bb tail to PATH (but it doesn't make any sense if it's a bb_head -
 	 it's already in PATH then).  */
       if (insn != first_insn)
-	ilist_add (&path, insn);
+	{
+	  ilist_add (&path, insn);
+	  added_to_path = true;
+	}
+      else
+        added_to_path = false;
 
       /* Process_successors should be able to find at least one
 	 successor for which code_motion_path_driver returns TRUE.  */
       res = code_motion_process_successors (insn, orig_ops,
                                             path, static_params);
 
+      /* Jump in the end of basic block could have been removed or replaced
+         during code_motion_process_successors, so recompute insn as the
+         last insn in bb.  */
+      if (NEXT_INSN (last_insn) != insn)
+        {
+          insn = sel_bb_end (bb);
+          first_insn = sel_bb_head (bb);
+        }
+
       /* Remove bb tail from path.  */
-      if (insn != first_insn)
+      if (added_to_path)
 	ilist_remove (&path);
 
       if (res != 1)
@@ -6723,15 +6745,14 @@ init_seqno_1 (basic_block bb, sbitmap visited_bbs, bitmap blocks_to_reschedule)
     INSN_SEQNO (insn) = cur_seqno--;
 }
 
-/* Initialize seqnos for the current region.  NUMBER_OF_INSNS is the number
-   of instructions in the region, BLOCKS_TO_RESCHEDULE contains blocks on
-   which we're rescheduling when pipelining, FROM is the block where
+/* Initialize seqnos for the current region.  BLOCKS_TO_RESCHEDULE contains
+   blocks on which we're rescheduling when pipelining, FROM is the block where
    traversing region begins (it may not be the head of the region when
    pipelining, but the head of the loop instead).
 
    Returns the maximal seqno found.  */
 static int
-init_seqno (int number_of_insns, bitmap blocks_to_reschedule, basic_block from)
+init_seqno (bitmap blocks_to_reschedule, basic_block from)
 {
   sbitmap visited_bbs;
   bitmap_iterator bi;
@@ -6754,9 +6775,13 @@ init_seqno (int number_of_insns, bitmap blocks_to_reschedule, basic_block from)
       from = EBB_FIRST_BB (0);
     }
 
-  cur_seqno = number_of_insns > 0 ? number_of_insns : sched_max_luid - 1;
+  cur_seqno = sched_max_luid - 1;
   init_seqno_1 (from, visited_bbs, blocks_to_reschedule);
-  gcc_assert (cur_seqno == 0 || number_of_insns == 0);
+
+  /* cur_seqno may be positive if the number of instructions is less than
+     sched_max_luid - 1 (when rescheduling or if some instructions have been
+     removed by the call to purge_empty_blocks in sel_sched_region_1).  */
+  gcc_assert (cur_seqno >= 0);
 
   sbitmap_free (visited_bbs);
   return sched_max_luid - 1;
@@ -6770,7 +6795,8 @@ sel_setup_region_sched_flags (void)
   bookkeeping_p = 1;
   pipelining_p = (bookkeeping_p
                   && (flag_sel_sched_pipelining != 0)
-		  && current_loop_nest != NULL);
+		  && current_loop_nest != NULL
+		  && loop_has_exit_edges (current_loop_nest));
   max_insns_to_rename = PARAM_VALUE (PARAM_SELSCHED_INSNS_TO_RENAME);
   max_ws = MAX_WS;
 }
@@ -6789,7 +6815,7 @@ current_region_empty_p (void)
 
 /* Prepare and verify loop nest for pipelining.  */
 static void
-setup_current_loop_nest (int rgn)
+setup_current_loop_nest (int rgn, bb_vec_t *bbs)
 {
   current_loop_nest = get_loop_nest_for_rgn (rgn);
 
@@ -6798,7 +6824,7 @@ setup_current_loop_nest (int rgn)
 
   /* If this loop has any saved loop preheaders from nested loops,
      add these basic blocks to the current region.  */
-  sel_add_loop_preheaders ();
+  sel_add_loop_preheaders (bbs);
 
   /* Check that we're starting with a valid information.  */
   gcc_assert (loop_latch_edge (current_loop_nest));
@@ -6837,27 +6863,27 @@ sel_region_init (int rgn)
   if (current_region_empty_p ())
     return true;
 
-  if (flag_sel_sched_pipelining)
-    setup_current_loop_nest (rgn);
-
-  sel_setup_region_sched_flags ();
-
   bbs = VEC_alloc (basic_block, heap, current_nr_blocks);
 
   for (i = 0; i < current_nr_blocks; i++)
     VEC_quick_push (basic_block, bbs, BASIC_BLOCK (BB_TO_BLOCK (i)));
 
-  sel_init_bbs (bbs, NULL);
+  sel_init_bbs (bbs);
+
+  if (flag_sel_sched_pipelining)
+    setup_current_loop_nest (rgn, &bbs);
+
+  sel_setup_region_sched_flags ();
 
   /* Initialize luids and dependence analysis which both sel-sched and haifa
      need.  */
-  sched_init_luids (bbs, NULL, NULL, NULL);
+  sched_init_luids (bbs);
   sched_deps_init (false);
 
   /* Initialize haifa data.  */
   rgn_setup_sched_infos ();
   sel_set_sched_flags ();
-  haifa_init_h_i_d (bbs, NULL, NULL, NULL);
+  haifa_init_h_i_d (bbs);
 
   sel_compute_priorities (rgn);
   init_deps_global ();
@@ -6990,7 +7016,7 @@ reset_sched_cycles_in_current_ebb (void)
     {
       int cost, haifa_cost;
       int sort_p;
-      bool asm_p, real_insn, after_stall;
+      bool asm_p, real_insn, after_stall, all_issued;
       int clock;
 
       if (!INSN_P (insn))
@@ -7026,8 +7052,8 @@ reset_sched_cycles_in_current_ebb (void)
           haifa_cost = cost;
           after_stall = 1;
         }
-      if (haifa_cost == 0
-	  && issued_insns == issue_rate)
+      all_issued = issued_insns == issue_rate;
+      if (haifa_cost == 0 && all_issued)
 	haifa_cost = 1;
       if (haifa_cost > 0)
 	{
@@ -7053,7 +7079,18 @@ reset_sched_cycles_in_current_ebb (void)
                   && haifa_cost > 0
                   && estimate_insn_cost (insn, curr_state) == 0)
                 break;
-	    }
+
+              /* When the data dependency stall is longer than the DFA stall,
+                 and when we have issued exactly issue_rate insns and stalled,
+                 it could be that after this longer stall the insn will again
+                 become unavailable  to the DFA restrictions.  Looks strange
+                 but happens e.g. on x86-64.  So recheck DFA on the last
+                 iteration.  */
+              if ((after_stall || all_issued)
+                  && real_insn
+                  && haifa_cost == 0)
+                haifa_cost = estimate_insn_cost (insn, curr_state);
+            }
 
 	  haifa_clock += i;
           if (sched_verbose >= 2)
@@ -7178,7 +7215,7 @@ sel_region_target_finish (bool reset_sched_cycles_p)
 
 	  /* Extend luids so that insns generated by the target will
 	     get zero luid.  */
-	  sched_init_luids (NULL, NULL, NULL, NULL);
+	  sched_extend_luids ();
 	}
     }
 
@@ -7454,17 +7491,12 @@ sel_sched_region_2 (int orig_max_seqno)
 static void
 sel_sched_region_1 (void)
 {
-  int number_of_insns;
   int orig_max_seqno;
 
-  /* Remove empty blocks that might be in the region from the beginning.
-     We need to do save sched_max_luid before that, as it actually shows
-     the number of insns in the region, and purge_empty_blocks can
-     alter it.  */
-  number_of_insns = sched_max_luid - 1;
+  /* Remove empty blocks that might be in the region from the beginning.  */
   purge_empty_blocks ();
 
-  orig_max_seqno = init_seqno (number_of_insns, NULL, NULL);
+  orig_max_seqno = init_seqno (NULL, NULL);
   gcc_assert (orig_max_seqno >= 1);
 
   /* When pipelining outer loops, create fences on the loop header,
@@ -7504,21 +7536,23 @@ sel_sched_region_1 (void)
             {
               basic_block bb = EBB_FIRST_BB (i);
 
-              if (sel_bb_empty_p (bb))
-                {
-                  bitmap_clear_bit (blocks_to_reschedule, bb->index);
-                  continue;
-                }
-
               if (bitmap_bit_p (blocks_to_reschedule, bb->index))
                 {
+                  if (! bb_ends_ebb_p (bb))
+                    bitmap_set_bit (blocks_to_reschedule, bb_next_bb (bb)->index);
+                  if (sel_bb_empty_p (bb))
+                    {
+                      bitmap_clear_bit (blocks_to_reschedule, bb->index);
+                      continue;
+                    }
                   clear_outdated_rtx_info (bb);
                   if (sel_insn_is_speculation_check (BB_END (bb))
                       && JUMP_P (BB_END (bb)))
                     bitmap_set_bit (blocks_to_reschedule,
                                     BRANCH_EDGE (bb)->dest->index);
                 }
-              else if (INSN_SCHED_TIMES (sel_bb_head (bb)) <= 0)
+              else if (! sel_bb_empty_p (bb)
+                       && INSN_SCHED_TIMES (sel_bb_head (bb)) <= 0)
                 bitmap_set_bit (blocks_to_reschedule, bb->index);
             }
 
@@ -7539,7 +7573,7 @@ sel_sched_region_1 (void)
                 {
                   flist_tail_init (new_fences);
 
-                  orig_max_seqno = init_seqno (0, blocks_to_reschedule, bb);
+                  orig_max_seqno = init_seqno (blocks_to_reschedule, bb);
 
                   /* Mark BB as head of the new ebb.  */
                   bitmap_set_bit (forced_ebb_heads, bb->index);

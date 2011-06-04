@@ -1,5 +1,6 @@
 /* Timing variables for measuring compiler performance.
-   Copyright (C) 2000, 2003, 2004, 2005, 2007 Free Software Foundation, Inc.
+   Copyright (C) 2000, 2003, 2004, 2005, 2007, 2010
+   Free Software Foundation, Inc.
    Contributed by Alex Samuel <samuel@codesourcery.com>
 
 This file is part of GCC.
@@ -20,12 +21,6 @@ along with GCC; see the file COPYING3.  If not see
 
 #include "config.h"
 #include "system.h"
-#ifdef HAVE_SYS_TIMES_H
-# include <sys/times.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#include <sys/resource.h>
-#endif
 #include "timevar.h"
 
 #ifndef HAVE_CLOCK_T
@@ -366,10 +361,65 @@ timevar_stop (timevar_id_t timevar)
 
   /* TIMEVAR must have been started via timevar_start.  */
   gcc_assert (tv->standalone);
+  tv->standalone = 0; /* Enable a restart.  */
 
   get_time (&now);
   timevar_accumulate (&tv->elapsed, &tv->start_time, &now);
 }
+
+
+/* Conditionally start timing TIMEVAR independently of the timing stack.
+   If the timer is already running, leave it running and return true.
+   Otherwise, start the timer and return false.
+   Elapsed time until the corresponding timevar_cond_stop
+   is called for the same timing variable is attributed to TIMEVAR.  */
+
+bool
+timevar_cond_start (timevar_id_t timevar)
+{
+  struct timevar_def *tv = &timevars[timevar];
+
+  if (!timevar_enable)
+    return false;
+
+  /* Mark this timing variable as used.  */
+  tv->used = 1;
+
+  if (tv->standalone)
+    return true;  /* The timevar is already running.  */
+
+  /* Don't allow the same timing variable
+     to be unconditionally started more than once.  */
+  tv->standalone = 1;
+
+  get_time (&tv->start_time);
+  return false;  /* The timevar was not already running.  */
+}
+
+/* Conditionally stop timing TIMEVAR.  The RUNNING parameter must come
+   from the return value of a dynamically matching timevar_cond_start.
+   If the timer had already been RUNNING, do nothing.  Otherwise, time
+   elapsed since timevar_cond_start was called is attributed to it.  */
+
+void
+timevar_cond_stop (timevar_id_t timevar, bool running)
+{
+  struct timevar_def *tv;
+  struct timevar_time_def now;
+
+  if (!timevar_enable || running)
+    return;
+
+  tv = &timevars[timevar];
+
+  /* TIMEVAR must have been started via timevar_cond_start.  */
+  gcc_assert (tv->standalone);
+  tv->standalone = 0; /* Enable a restart.  */
+
+  get_time (&now);
+  timevar_accumulate (&tv->elapsed, &tv->start_time, &now);
+}
+
 
 /* Summarize timing variables to FP.  The timing variable TV_TOTAL has
    a special meaning -- it's considered to be the total elapsed time,

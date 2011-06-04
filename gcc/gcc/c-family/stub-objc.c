@@ -2,7 +2,7 @@
    that are called from within the C and C++ front-ends,
    respectively.
    Copyright (C) 1991, 1995, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
-   2004, 2005, 2007, 2009, 2010 Free Software Foundation, Inc.
+   2004, 2005, 2007, 2009, 2010, 2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -25,6 +25,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tree.h"
 #include "c-common.h"
+#include "c-objc.h"
 
 tree
 objc_is_class_name (tree ARG_UNUSED (arg))
@@ -67,12 +68,6 @@ objc_check_global_decl (tree ARG_UNUSED (decl))
 }
 
 tree
-objc_non_volatilized_type (tree type)
-{
-  return type;
-}
-
-tree
 objc_common_type (tree ARG_UNUSED (type1), tree ARG_UNUSED (type2))
 {
   return 0;
@@ -97,12 +92,6 @@ objc_volatilize_decl (tree ARG_UNUSED (decl))
 {
 }
 
-bool
-objc_type_quals_match (tree ARG_UNUSED (ltyp), tree ARG_UNUSED (rtyp))
-{
-  return false;
-}
-
 tree
 objc_rewrite_function_call (tree function, tree ARG_UNUSED (first_param))
 {
@@ -121,12 +110,12 @@ objc_declare_alias (tree ARG_UNUSED (alias), tree ARG_UNUSED (orig))
 }
 
 void
-objc_declare_class (tree ARG_UNUSED (list))
+objc_declare_class (tree ARG_UNUSED (identifier))
 {
 }
 
 void
-objc_declare_protocols (tree ARG_UNUSED (list), tree ARG_UNUSED (attributes))
+objc_declare_protocol (tree ARG_UNUSED (name), tree ARG_UNUSED (attributes))
 {
 }
 
@@ -215,7 +204,8 @@ objc_add_method_declaration (bool ARG_UNUSED (is_class_method),
 bool
 objc_start_method_definition (bool ARG_UNUSED (is_class_method),
 			      tree ARG_UNUSED (signature),
-			      tree ARG_UNUSED (attributes))
+			      tree ARG_UNUSED (attributes),
+			      tree ARG_UNUSED (expr))
 {
   return true;
 }
@@ -269,7 +259,7 @@ objc_build_selector_expr (location_t ARG_UNUSED (loc), tree ARG_UNUSED (expr))
 }
 
 tree
-objc_build_message_expr (tree ARG_UNUSED (expr))
+objc_build_message_expr (tree ARG_UNUSED (receiver), tree ARG_UNUSED (args))
 {
   return 0;
 }
@@ -286,10 +276,10 @@ objc_get_class_reference (tree ARG_UNUSED (name))
   return 0;
 }
 
-tree
-objc_get_interface_ivars (tree ARG_UNUSED (fieldlist))
+bool
+objc_detect_field_duplicates (bool ARG_UNUSED (check_superclasses_only))
 {
-  return 0;
+  return false;
 }
 
 tree
@@ -459,5 +449,15 @@ objc_string_ref_type_p (tree ARG_UNUSED (strp))
 void
 objc_check_format_arg (tree ARG_UNUSED (format_arg), 
 		       tree ARG_UNUSED (args_list))
+{
+}
+
+void
+objc_finish_function (void)
+{
+}
+
+void
+objc_maybe_warn_exceptions (location_t ARG_UNUSED (loc))
 {
 }

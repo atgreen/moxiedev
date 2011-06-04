@@ -674,6 +674,7 @@ GLIB_CFLAGS
 GTK_LIBS
 GTK_CFLAGS
 PKG_CONFIG
+LDLIBICONV
 LTLIBICONV
 LIBICONV
 USING_GCC_FALSE
@@ -753,6 +754,7 @@ GCJDEPMODE
 GCJFLAGS
 ac_ct_GCJ
 GCJ
+lt_host_flags
 CXXCPP
 CPP
 OTOOL64
@@ -784,6 +786,7 @@ TOOLKIT
 LIBGCJDEBUG
 BUILD_SUBLIBS_FALSE
 BUILD_SUBLIBS_TRUE
+LIBGCJ_LD_EXPORT_ALL
 LIBGCJ_LD_SYMBOLIC_FUNCTIONS
 LIBGCJ_LD_SYMBOLIC
 LIBGCJ_SUBLIB_CORE_EXTRA_DEPS
@@ -957,6 +960,7 @@ enable_rpath
 with_libiconv_prefix
 enable_tls
 with_system_libunwind
+enable_symvers
 with_python_dir
 enable_aot_compile_rpm
 enable_java_home
@@ -1646,6 +1650,7 @@ Optional Features:
   --enable-java-gc=TYPE   choose garbage collector (default is boehm)
   --disable-rpath         do not hardcode runtime library paths
   --enable-tls            Use thread-local storage [default=yes]
+  --disable-symvers       disable symbol versioning for libjava
   --enable-aot-compile-rpm
                           enable installation of aot-compile-rpm [default=no]
   --enable-java-home      create a standard JDK-style directory layout in the
@@ -5846,7 +5851,7 @@ fi
 # We need a jar that supports -@.  This is a GNU extension.
 if test "$JAR" != no; then
    rm -f config-test.jar
-   echo $srcdir/configure.ac | $JAR -cf@ config-test.jar
+   echo $srcdir/configure.ac | $JAR -cf@ config-test.jar >/dev/null 2>&1
    if test -f config-test.jar; then
      rm -f config-test.jar
    else
@@ -5953,6 +5958,16 @@ if test -z "$libgcj_ld_symbolic"; then
   libgcj_ld_symbolic=$SYMBOLIC_LDFLAGS
 fi
 
+# for windows native targets enforce export of all symbols for shared libgcj.
+libgcj_ld_export_all=
+case "$host" in
+      *mingw*)
+	libgcj_ld_export_all=-Wl,--export-all-symbols
+	;;
+      *)
+        ;;
+esac
+
 LIBGCJ_CFLAGS="${libgcj_cflags}"
 LIBGCJ_CXXFLAGS="${libgcj_cxxflags}"
 LIBGCJ_JAVAFLAGS="${libgcj_javaflags}"
@@ -5960,6 +5975,8 @@ LIBGCJ_SUBLIB_LTFLAGS="${libgcj_sublib_ltflags}"
 LIBGCJ_SUBLIB_CORE_EXTRA_DEPS="${libgcj_sublib_core_extra_deps}"
 LIBGCJ_LD_SYMBOLIC="${libgcj_ld_symbolic}"
 LIBGCJ_LD_SYMBOLIC_FUNCTIONS="${libgcj_ld_symbolic_functions}"
+LIBGCJ_LD_EXPORT_ALL="${libgcj_ld_export_all}"
+
 
 
 
@@ -6171,10 +6188,6 @@ dgux*)
   library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}$major $libname$shared_ext'
   soname_spec='${libname}${release}${shared_ext}$major'
   shlibpath_var=LD_LIBRARY_PATH
-  ;;
-
-freebsd1*)
-  dynamic_linker=no
   ;;
 
 freebsd*)
@@ -11548,10 +11561,6 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
       hardcode_shlibpath_var=no
       ;;
 
-    freebsd1*)
-      ld_shlibs=no
-      ;;
-
     # FreeBSD 2.2.[012] allows us to include c++rt0.o to get C++ constructor
     # support.  Future versions do this automatically, but an explicit c++rt0.o
     # does not break anything, and helps significantly (at the cost of a little
@@ -12473,10 +12482,6 @@ dgux*)
   shlibpath_var=LD_LIBRARY_PATH
   ;;
 
-freebsd1*)
-  dynamic_linker=no
-  ;;
-
 freebsd* | dragonfly*)
   # DragonFly does not have aout.  When/if they implement a new
   # versioning mechanism, adjust this.
@@ -13354,7 +13359,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 13357 "configure"
+#line 13362 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -13460,7 +13465,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 13463 "configure"
+#line 13468 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -16160,10 +16165,6 @@ dgux*)
   shlibpath_var=LD_LIBRARY_PATH
   ;;
 
-freebsd1*)
-  dynamic_linker=no
-  ;;
-
 freebsd* | dragonfly*)
   # DragonFly does not have aout.  When/if they implement a new
   # versioning mechanism, adjust this.
@@ -16723,6 +16724,28 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 # Only expand once:
+
+
+
+
+
+case $host in
+  *-cygwin* | *-mingw*)
+    # 'host' will be top-level target in the case of a target lib,
+    # we must compare to with_cross_host to decide if this is a native
+    # or cross-compiler and select where to install dlls appropriately.
+    if test -n "$with_cross_host" &&
+	test x"$with_cross_host" != x"no"; then
+      lt_host_flags='-no-undefined -bindir "$(toolexeclibdir)"';
+    else
+      lt_host_flags='-no-undefined -bindir "$(bindir)"';
+    fi
+    ;;
+  *)
+    lt_host_flags=
+    ;;
+esac
+
 
 
 
@@ -18498,10 +18521,6 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
       hardcode_shlibpath_var_GCJ=no
       ;;
 
-    freebsd1*)
-      ld_shlibs_GCJ=no
-      ;;
-
     # FreeBSD 2.2.[012] allows us to include c++rt0.o to get C++ constructor
     # support.  Future versions do this automatically, but an explicit c++rt0.o
     # does not break anything, and helps significantly (at the cost of a little
@@ -19439,7 +19458,7 @@ if test "${enable_sjlj_exceptions+set}" = set; then :
   enableval=$enable_sjlj_exceptions; :
 else
   cat > conftest.$ac_ext << EOF
-#line 19442 "configure"
+#line 19461 "configure"
 struct S { ~S(); };
 void bar();
 void foo()
@@ -20534,6 +20553,9 @@ arm*linux*eabi)
 *-*-cygwin)
     extra_ldflags_libjava=-liconv
     ;;
+*-*-mingw*)
+    extra_ldflags_libjava=-lws2_32
+    ;;
 esac
 
 LIBMATHSPEC=
@@ -20682,7 +20704,7 @@ $as_echo "#define LINUX_THREADS 1" >>confdefs.h
     ;;
  win32)
     ;;
- decosf1 | irix | mach | os2 | solaris | dce | vxworks)
+ dce | vxworks)
     as_fn_error "thread package $THREADS not yet supported" "$LINENO" 5
     ;;
  *)
@@ -21970,6 +21992,8 @@ $as_echo "#define HAVE_TZNAME 1" >>confdefs.h
   fi
 fi
 
+   LDLIBICONV=`echo " $LIBICONV " | sed "s/${acl_cv_wl--Wl,}/ /g; s/,/ /g"`
+
 
    for ac_func in gethostbyname_r
 do :
@@ -23118,12 +23142,11 @@ fi
    if test "$GC" = boehm; then
       case "${host}" in
           mips-sgi-irix6*)
-	    # IRIX 6 lacks a N64 libdl.so, but only the N32 (default multilib)
-	    # libgcj.spec is used, so override here
-	    SYSTEMSPEC="$SYSTEMSPEC %{!mabi=64:-ldl}"
-	  ;;
+	    # While IRIX 6 has libdl for the O32 and N32 ABIs, the N64 one is
+	    # missing.  It's unnecessary anyway since dlopen lives in libc.
+	    ;;
 	  *-*-darwin*)
-	  ;;
+	    ;;
 	  *)
             { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -ldl" >&5
 $as_echo_n "checking for main in -ldl... " >&6; }
@@ -23162,7 +23185,7 @@ if test "x$ac_cv_lib_dl_main" = x""yes; then :
   SYSTEMSPEC="$SYSTEMSPEC -ldl"
 fi
 
-	  ;;
+	    ;;
       esac
    fi
 fi
@@ -24525,12 +24548,24 @@ $as_echo_n "checking whether ld supports anonymous version scripts... " >&6; }
 if test "${libjava_cv_anon_version_script+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  save_CFLAGS="$CFLAGS"; save_LDFLAGS="$LDFLAGS"
-   libjava_cv_anon_version_script=no
-   CFLAGS="$CFLAGS -fPIC";
-   LDFLAGS="$LDFLAGS -shared -Wl,--version-script,conftest.map"
-   echo '{ global: globalsymb*; local: *; };' > conftest.map
-   if test x$gcc_no_link = xyes; then
+  # Check whether --enable-symvers was given.
+if test "${enable_symvers+set}" = set; then :
+  enableval=$enable_symvers; case "$enableval" in
+         yes) libjava_cv_anon_version_script=yes ;;
+         no)  libjava_cv_anon_version_script=no ;;
+         *)   as_fn_error "Unknown argument to enable/disable symvers" "$LINENO" 5;;
+        esac
+else
+  libjava_cv_anon_version_script=yes
+
+fi
+
+   if test x$libjava_cv_anon_version_script = xyes; then
+     save_CFLAGS="$CFLAGS"; save_LDFLAGS="$LDFLAGS"
+     CFLAGS="$CFLAGS -fPIC";
+     LDFLAGS="$LDFLAGS -shared -Wl,--version-script,conftest.map"
+     echo '{ global: globalsymb*; local: *; };' > conftest.map
+     if test x$gcc_no_link = xyes; then
   as_fn_error "Link tests are not allowed after GCC_NO_EXECUTABLES." "$LINENO" 5
 fi
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -24546,17 +24581,19 @@ main ()
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
   libjava_cv_anon_version_script=gnu
+else
+  libjava_cv_anon_version_script=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-   if test x$libjava_cv_anon_version_script = xno; then
-     case "$target_os" in
-       solaris2*)
-         LDFLAGS="$save_LDFLAGS"
-         LDFLAGS="$LDFLAGS -shared -Wl,-M,conftest.map"
-         # Sun ld doesn't understand wildcards here.
-         echo '{ global: globalsymbol; local: *; };' > conftest.map
-         if test x$gcc_no_link = xyes; then
+     if test x$libjava_cv_anon_version_script = xno; then
+       case "$target_os" in
+         solaris2*)
+           LDFLAGS="$save_LDFLAGS"
+           LDFLAGS="$LDFLAGS -shared -Wl,-M,conftest.map"
+           # Sun ld doesn't understand wildcards here.
+           echo '{ global: globalsymbol; local: *; };' > conftest.map
+           if test x$gcc_no_link = xyes; then
   as_fn_error "Link tests are not allowed after GCC_NO_EXECUTABLES." "$LINENO" 5
 fi
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -24575,10 +24612,11 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-         ;;
-     esac
+           ;;
+       esac
+     fi
+     CFLAGS="$save_CFLAGS"; LDFLAGS="$save_LDFLAGS"
    fi
-   CFLAGS="$save_CFLAGS"; LDFLAGS="$save_LDFLAGS"
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $libjava_cv_anon_version_script" >&5
@@ -24626,25 +24664,22 @@ here=`${PWDCMD-pwd}`
 # We get this from the environment.
 
 
+default_python_dir="/share/gcc-`cat ${srcdir}/../gcc/BASE-VER`/python/libjava"
 
 # Check whether --with-python-dir was given.
 if test "${with_python_dir+set}" = set; then :
   withval=$with_python_dir; with_python_dir=$withval
 else
-  with_python_dir=""
+  with_python_dir="${default_python_dir}"
 fi
 
 
-if test "x${with_python_dir}" = "x"
-then
-  # Needed for installing Python modules during make install.
-  python_mod_dir="\${prefix}/share/python"
-  # Needed for substituting into aot-compile*
-  python_mod_dir_expanded="${expanded_prefix}/share/python"
-else
-  python_mod_dir="\${prefix}${with_python_dir}"
-  python_mod_dir_expanded="${expanded_prefix}${with_python_dir}"
-fi
+# Needed for installing Python modules during make install.
+python_mod_dir="\${prefix}${with_python_dir}"
+
+# Needed for substituting into aot-compile*
+python_mod_dir_expanded="${expanded_prefix}${with_python_dir}"
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Python modules dir: ${python_mod_dir_expanded}" >&5
 $as_echo "Python modules dir: ${python_mod_dir_expanded}" >&6; };
 

@@ -281,16 +281,17 @@ start_directive (cpp_reader *pfile)
 static void
 end_directive (cpp_reader *pfile, int skip_line)
 {
-  if (pfile->state.in_deferred_pragma)
-    ;
-  else if (CPP_OPTION (pfile, traditional))
+  if (CPP_OPTION (pfile, traditional))
     {
       /* Revert change of prepare_directive_trad.  */
-      pfile->state.prevent_expansion--;
+      if (!pfile->state.in_deferred_pragma)
+	pfile->state.prevent_expansion--;
 
       if (pfile->directive != &dtable[T_DEFINE])
 	_cpp_remove_overlay (pfile);
     }
+  else if (pfile->state.in_deferred_pragma)
+    ;
   /* We don't skip for an assembler #.  */
   else if (skip_line)
     {
@@ -1818,7 +1819,12 @@ do_ifdef (cpp_reader *pfile)
 
       if (node)
 	{
-	  skip = node->type != NT_MACRO;
+	  /* Do not treat conditional macros as being defined.  This is due to
+	     the powerpc and spu ports using conditional macros for 'vector',
+	     'bool', and 'pixel' to act as conditional keywords.  This messes
+	     up tests like #ifndef bool.  */
+	  skip = (node->type != NT_MACRO
+		  || ((node->flags & NODE_CONDITIONAL) != 0));
 	  _cpp_mark_macro_used (node);
 	  if (!(node->flags & NODE_USED))
 	    {
@@ -1859,7 +1865,12 @@ do_ifndef (cpp_reader *pfile)
 
       if (node)
 	{
-	  skip = node->type == NT_MACRO;
+	  /* Do not treat conditional macros as being defined.  This is due to
+	     the powerpc and spu ports using conditional macros for 'vector',
+	     'bool', and 'pixel' to act as conditional keywords.  This messes
+	     up tests like #ifndef bool.  */
+	  skip = (node->type == NT_MACRO
+		  && ((node->flags & NODE_CONDITIONAL) == 0));
 	  _cpp_mark_macro_used (node);
 	  if (!(node->flags & NODE_USED))
 	    {

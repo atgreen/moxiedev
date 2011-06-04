@@ -1,5 +1,5 @@
 /* General-purpose hooks.
-   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify it
@@ -56,6 +56,14 @@ hook_bool_bool_false (bool a ATTRIBUTE_UNUSED)
   return false;
 }
 
+/* Generic hook that takes (bool, struct gcc_options *) and returns false.  */
+bool
+hook_bool_bool_gcc_optionsp_false (bool a ATTRIBUTE_UNUSED,
+				   struct gcc_options *opts ATTRIBUTE_UNUSED)
+{
+  return false;
+}
+
 /* Generic hook that takes const int, const int) and returns true.  */
 bool hook_bool_const_int_const_int_true (const int a ATTRIBUTE_UNUSED,
                                          const int b ATTRIBUTE_UNUSED)
@@ -77,7 +85,7 @@ hook_bool_mode_true (enum machine_mode mode ATTRIBUTE_UNUSED)
   return true;
 }
 
-/* Generic hook that takes (enum machine_mode, rtx) and returns false.  */
+/* Generic hook that takes (enum machine_mode, const_rtx) and returns false.  */
 bool
 hook_bool_mode_const_rtx_false (enum machine_mode mode ATTRIBUTE_UNUSED,
 				const_rtx value ATTRIBUTE_UNUSED)
@@ -85,12 +93,37 @@ hook_bool_mode_const_rtx_false (enum machine_mode mode ATTRIBUTE_UNUSED,
   return false;
 }
 
-/* Generic hook that takes (enum machine_mode, rtx) and returns true.  */
+/* Generic hook that takes (enum machine_mode, const_rtx) and returns true.  */
 bool
 hook_bool_mode_const_rtx_true (enum machine_mode mode ATTRIBUTE_UNUSED,
 			       const_rtx value ATTRIBUTE_UNUSED)
 {
   return true;
+}
+
+/* Generic hook that takes (enum machine_mode, rtx) and returns false.  */
+bool
+hook_bool_mode_rtx_false (enum machine_mode mode ATTRIBUTE_UNUSED,
+			  rtx value ATTRIBUTE_UNUSED)
+{
+  return false;
+}
+
+/* Generic hook that takes (enum machine_mode, rtx) and returns true.  */
+bool
+hook_bool_mode_rtx_true (enum machine_mode mode ATTRIBUTE_UNUSED,
+			 rtx value ATTRIBUTE_UNUSED)
+{
+  return true;
+}
+
+/* Generic hook that takes (enum machine_mode, unsigned HOST_WIDE_INT)
+   and returns false.  */
+bool
+hook_bool_mode_uhwi_false (enum machine_mode mode ATTRIBUTE_UNUSED,
+			   unsigned HOST_WIDE_INT value ATTRIBUTE_UNUSED)
+{
+  return false;
 }
 
 /* Generic hook that takes (FILE *, const char *) and does nothing.  */
@@ -114,14 +147,6 @@ hook_bool_const_tree_hwi_hwi_const_tree_true (const_tree a ATTRIBUTE_UNUSED,
 					      HOST_WIDE_INT b ATTRIBUTE_UNUSED,
 					      HOST_WIDE_INT c ATTRIBUTE_UNUSED,
 					      const_tree d ATTRIBUTE_UNUSED)
-{
-  return true;
-}
-
-bool
-hook_bool_size_t_constcharptr_int_true (size_t a ATTRIBUTE_UNUSED,
-					const char *b ATTRIBUTE_UNUSED,
-					int c ATTRIBUTE_UNUSED)
 {
   return true;
 }

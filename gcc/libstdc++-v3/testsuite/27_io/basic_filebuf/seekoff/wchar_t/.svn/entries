@@ -1,14 +1,14 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_filebuf/seekoff/wchar_t
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-09-22T19:40:43.170383Z
-164529
+2011-04-12T09:05:30.094369Z
+172303
 paolo
 
 
@@ -338,10 +338,10 @@ file
 
 
 
-2010-11-22T19:18:16.088033Z
-5bacc276f623b94aac19d6cee2ec966a
-2010-09-22T19:40:43.170383Z
-164529
+2011-06-04T18:06:00.628104Z
+65d9954d88acf5b8f5c635f33a901677
+2011-04-12T09:05:30.094369Z
+172303
 paolo
 
 
@@ -364,5 +364,5 @@ paolo
 
 
 
-2258
+2283
 

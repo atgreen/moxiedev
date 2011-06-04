@@ -1,3 +1,93 @@
+2011-04-19  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* configure.ac (THREADS): Remove decosf1, irix, mach, os2.
+	* configure: Regenerate
+
+2011-04-06  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR testsuite/48480
+	* testsuite/lib/boehm-gc.exp (boehm-gc-dg-prune): Allow for path
+	to ranlib.
+
+2011-03-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR boehm-gc/11412
+	* configure.ac (THREADCFLAGS): New variable.
+	Use it instead of INCLUDES, AM_CPPFLAGS.
+	<*-*-kfreebsd*-gnu> (THREADDLLIBS): Rename to THREADLIBS.
+	Remove DG/UX support.
+	(AC_CONFIG_FILES): Add testsuite/Makefile.
+	* Makefile.am (AUTOMAKE_OPTIONS): Use foreign instead of cygnus.
+	(SUBDIRS): Add testsuite.
+	(libgcjgc_la_LIBADD): Remove $(UNWINDLIBS).
+	(AM_CXXFLAGS): Add $(THREADCFLAGS).
+	(AM_CFLAGS): Likewise.
+	Remove TESTS related variables.
+	* Makefile.in: Regenerate.
+	* configure: Regenerate.
+	* testsuite/Makefile.am: New file.
+	* testsuite/Makefile.in: New file.
+	* testsuite/lib/boehm-gc.exp: New file.
+	* testsuite/config/default.exp: New file.
+	* testsuite/boehm-gc.c/c.exp: New file.
+	* testsuite/boehm-gc.lib/lib.exp: New file.
+	* tests/test.c: Move ...
+	* testsuite/boehm-gc.c/gctest.c: ... here.
+	* tests/leak_test.c, tests/middle.c, tests/thread_leak_test.c,
+	tests/trace_test.c: Move ...
+	* testsuite/boehm-gc.c: ... here.
+	* testsuite/boehm-gc.c/trace_test.c: Skip everywhere.
+	* tests/staticrootslib.c, tests/staticrootstest.c: Move ...
+	* testsuite/boehm-gc.lib: ... here.
+	* testsuite/boehm-gc.lib/staticrootstest.c: Use dg-add-shlib
+	staticrootslib.c.
+	* tests/test_cpp.cc: Move ...
+	* testsuite/boehm-gc.c++: ... here.
+
+2011-03-21  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* configure.ac (THREADS): Remove solaris.
+	* configure: Regenerate.
+
+2011-02-13  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure: Regenerate.
+
+2011-02-02  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* configure.ac: Don't use libdl on mips-sgi-irix6*.
+	* configure: Regenerate.
+
+2011-01-31  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* configure.ac (*-*-solaris2*): Add -lrt to THREADLIBS.
+	* configure: Regenerate.
+
+2010-12-10  Iain Sandoe  <iains@gcc.gnu.org>
+
+	* powerpc_darwin_mach_dep.s:  Update for m64.  Add eh frames.
+	Do not build or use the picsymbol stub for Darwin >= 9.
+	* tests/test.c (reverse_test):  Modify count for ppc64-darwin.
+	* pthread_support.c (GC_get_thread_stack_base): Correct a debug
+	statement.
+
+2010-11-29  Iain Sandoe  <iains@gcc.gnu.org>
+	    Mike Stump  <mrs@gcc.gnu.org>
+
+	PR target/26427
+	PR target/33120
+	PR testsuite/35710
+	* dyn_load.c (GC_register_dynamic_libraries/DARWIN):  Add new writable
+	data section names.
+	(GC_dyld_name_for_hdr): Adjust layout.
+	(GC_dyld_image_add): Adjust layout, add new Darwin sections, adjust
+	debug to name the sections.
+	(GC_dyld_image_remove): Adjust layout, remove new Darwin sections,
+	adjust debug to name the sections.
+	(GC_register_dynamic_libraries): Adjust layout.
+	(GC_init_dyld): Likewise.
+	(GC_register_main_static_data): Likewise.
+
 2010-10-29  Paolo Bonzini  <bonzini@gnu.org>
 
 	* configure: Regenerate.

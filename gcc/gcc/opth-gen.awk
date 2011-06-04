@@ -1,4 +1,4 @@
-#  Copyright (C) 2003,2004,2005,2006,2007,2008, 2010
+#  Copyright (C) 2003,2004,2005,2006,2007,2008, 2010, 2011
 #  Free Software Foundation, Inc.
 #  Contributed by Kelley Cook, June 2004.
 #  Original code from Neil Booth, May 2003.
@@ -21,75 +21,10 @@
 # opt-gather.awk, combines the flags of duplicate options and generates a
 # C header file.
 #
-# This program uses functions from opt-functions.awk
-# Usage: awk -f opt-functions.awk -f opth-gen.awk < inputfile > options.h
-
-BEGIN {
-	n_opts = 0
-	n_langs = 0
-	n_target_save = 0
-	n_extra_vars = 0
-	n_extra_target_vars = 0
-	n_extra_masks = 0
-	n_extra_c_includes = 0
-	n_extra_h_includes = 0
-	have_save = 0;
-	quote = "\042"
-	FS=SUBSEP
-}
-
-# Collect the text and flags of each option into an array
-	{
-		if ($1 == "Language") {
-			langs[n_langs] = $2
-			n_langs++;
-		}
-		else if ($1 == "TargetSave") {
-			# Make sure the declarations are put in source order
-			target_save_decl[n_target_save] = $2
-			n_target_save++
-		}
-		else if ($1 == "Variable") {
-			extra_vars[n_extra_vars] = $2
-			n_extra_vars++
-		}
-		else if ($1 == "TargetVariable") {
-			# Combination of TargetSave and Variable
-			extra_vars[n_extra_vars] = $2
-			n_extra_vars++
-
-			var = $2
-			sub(" *=.*", "", var)
-			orig_var = var
-			name = var
-			type = var
-			sub("^.*[ *]", "", name)
-			sub(" *" name "$", "", type)
-			target_save_decl[n_target_save] = type " x_" name
-			n_target_save++
-
-			extra_target_vars[n_extra_target_vars] = name
-			n_extra_target_vars++
-		}
-		else if ($1 == "HeaderInclude") {
-			extra_h_includes[n_extra_h_includes++] = $2;
-		}
-		else if ($1 == "SourceInclude")  {
-			extra_c_includes[n_extra_c_includes++] = $2;
-		}
-		else {
-			name = opt_args("Mask", $1)
-			if (name == "") {
-				opts[n_opts]  = $1
-				flags[n_opts] = $2
-				help[n_opts]  = $3
-				n_opts++;
-			}
-			else {
-				extra_masks[n_extra_masks++] = name
-			}
-		}
-	}
+# This program uses functions from opt-functions.awk and code from
+# opt-read.awk.
+# Usage: awk -f opt-functions.awk -f opt-read.awk -f opth-gen.awk \
+#            < inputfile > options.h
 
 # Dump out an enumeration into a .h file.
 # Combine the flags of duplicate options.
@@ -111,7 +46,7 @@ if (n_extra_h_includes > 0) {
 
 print "#if !defined(IN_LIBGCC2) && !defined(IN_TARGET_LIBS) && !defined(IN_RTS)"
 print "#ifndef GENERATOR_FILE"
-print "#if !defined(GCC_DRIVER) && !defined(IN_LIBGCC2) && !defined(IN_TARGET_LIBS)"
+print "#if !defined(IN_LIBGCC2) && !defined(IN_TARGET_LIBS)"
 print "struct GTY(()) gcc_options"
 print "#else"
 print "struct gcc_options"
@@ -168,6 +103,13 @@ for (i = 0; i < n_opts; i++) {
 		print "#endif"
 	}
 }
+for (i = 0; i < n_opts; i++) {
+	if (flag_set_p("SetByCombined", flags[i])) {
+		print "#ifndef GENERATOR_FILE"
+		print "  bool frontend_set_" var_name(flags[i]) ";"
+		print "#endif"
+	}
+}
 print "#ifndef GENERATOR_FILE"
 print "};"
 print "extern struct gcc_options global_options;"
@@ -185,7 +127,7 @@ print ""
 # Also, order the structure so that pointer fields occur first, then int
 # fields, and then char fields to provide the best packing.
 
-print "#if !defined(GCC_DRIVER) && !defined(IN_LIBGCC2) && !defined(IN_TARGET_LIBS)"
+print "#if !defined(IN_LIBGCC2) && !defined(IN_TARGET_LIBS)"
 print ""
 print "/* Structure to save/restore optimization and target specific options.  */";
 print "struct GTY(()) cl_optimization";
@@ -419,9 +361,9 @@ for (i = 0; i < n_langs; i++) {
 	macros[i] = "CL_" langs[i]
 	gsub( "[^" alnum "_]", "X", macros[i] )
 	s = substr("            ", length (macros[i]))
-	print "#define " macros[i] s " (1 << " i ")"
+	print "#define " macros[i] s " (1U << " i ")"
     }
-print "#define CL_LANG_ALL   ((1 << " n_langs ") - 1)"
+print "#define CL_LANG_ALL   ((1U << " n_langs ") - 1)"
 
 print ""
 print "enum opt_code"

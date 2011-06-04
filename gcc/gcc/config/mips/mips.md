@@ -479,7 +479,9 @@
 	  (eq_attr "move_type" "load,fpload")
 	  (symbol_ref "mips_load_store_insns (operands[1], insn) * 4")
 	  (eq_attr "move_type" "store,fpstore")
-	  (symbol_ref "mips_load_store_insns (operands[0], insn) * 4")
+	  (cond [(eq (symbol_ref "TARGET_FIX_24K") (const_int 0))
+	         (symbol_ref "mips_load_store_insns (operands[0], insn) * 4")]
+	         (symbol_ref "mips_load_store_insns (operands[0], insn) * 4 + 4"))
 
 	  ;; In the worst case, a call macro will take 8 instructions:
 	  ;;
@@ -908,6 +910,7 @@
 (include "9000.md")
 (include "10000.md")
 (include "loongson2ef.md")
+(include "loongson3a.md")
 (include "octeon.md")
 (include "sb1.md")
 (include "sr71k.md")
@@ -1324,9 +1327,9 @@
 		  (match_operand:GPR 2 "register_operand")))]
   ""
 {
-  if (TARGET_LOONGSON_2EF)
-    emit_insn (gen_mul<mode>3_mul3_ls2ef (operands[0], operands[1],
-                                          operands[2]));
+  if (TARGET_LOONGSON_2EF || TARGET_LOONGSON_3A)
+    emit_insn (gen_mul<mode>3_mul3_loongson (operands[0], operands[1],
+                                             operands[2]));
   else if (ISA_HAS_<D>MUL3)
     emit_insn (gen_mul<mode>3_mul3 (operands[0], operands[1], operands[2]));
   else if (TARGET_FIX_R4000)
@@ -1337,12 +1340,17 @@
   DONE;
 })
 
-(define_insn "mul<mode>3_mul3_ls2ef"
+(define_insn "mul<mode>3_mul3_loongson"
   [(set (match_operand:GPR 0 "register_operand" "=d")
         (mult:GPR (match_operand:GPR 1 "register_operand" "d")
                   (match_operand:GPR 2 "register_operand" "d")))]
-  "TARGET_LOONGSON_2EF"
-  "<d>multu.g\t%0,%1,%2"
+  "TARGET_LOONGSON_2EF || TARGET_LOONGSON_3A"
+{
+  if (TARGET_LOONGSON_2EF)
+    return "<d>multu.g\t%0,%1,%2";
+  else
+    return "gs<d>multu\t%0,%1,%2";
+}
   [(set_attr "type" "imul3nc")
    (set_attr "mode" "<MODE>")])
 
@@ -2957,19 +2965,25 @@
 ;; Extension insns.
 ;; Those for integer source operand are ordered widest source type first.
 
-;; When TARGET_64BIT, all SImode integer registers should already be in
-;; sign-extended form (see TRULY_NOOP_TRUNCATION and truncdisi2).  We can
-;; therefore get rid of register->register instructions if we constrain
-;; the source to be in the same register as the destination.
+;; When TARGET_64BIT, all SImode integer and accumulator registers
+;; should already be in sign-extended form (see TRULY_NOOP_TRUNCATION
+;; and truncdisi2).  We can therefore get rid of register->register
+;; instructions if we constrain the source to be in the same register as
+;; the destination.
 ;;
-;; The register alternative has type "arith" so that the pre-reload
-;; scheduler will treat it as a move.  This reflects what happens if
-;; the register alternative needs a reload.
+;; Only the pre-reload scheduler sees the type of the register alternatives;
+;; we split them into nothing before the post-reload scheduler runs.
+;; These alternatives therefore have type "move" in order to reflect
+;; what happens if the two pre-reload operands cannot be tied, and are
+;; instead allocated two separate GPRs.  We don't distinguish between
+;; the GPR and LO cases because we don't usually know during pre-reload
+;; scheduling whether an operand will be LO or not.
 (define_insn_and_split "extendsidi2"
-  [(set (match_operand:DI 0 "register_operand" "=d,d")
-        (sign_extend:DI (match_operand:SI 1 "nonimmediate_operand" "0,m")))]
+  [(set (match_operand:DI 0 "register_operand" "=d,l,d")
+        (sign_extend:DI (match_operand:SI 1 "nonimmediate_operand" "0,0,m")))]
   "TARGET_64BIT"
   "@
+   #
    #
    lw\t%0,%1"
   "&& reload_completed && register_operand (operands[1], VOIDmode)"
@@ -2978,7 +2992,7 @@
   emit_note (NOTE_INSN_DELETED);
   DONE;
 }
-  [(set_attr "move_type" "move,load")
+  [(set_attr "move_type" "move,move,load")
    (set_attr "mode" "DI")])
 
 (define_expand "extend<SHORT:mode><GPR:mode>2"
@@ -5643,7 +5657,7 @@
      restores $gp as well.  */
   mips_emit_move (hard_frame_pointer_rtx, fp);
   mips_emit_move (pv, lab);
-  emit_stack_restore (SAVE_NONLOCAL, stack, NULL_RTX);
+  emit_stack_restore (SAVE_NONLOCAL, stack);
   mips_emit_move (gp, gpv);
   emit_use (hard_frame_pointer_rtx);
   emit_use (stack_pointer_rtx);

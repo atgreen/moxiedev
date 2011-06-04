@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/javax/net/ssl
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -66,11 +66,11 @@ file
 
 
 
-2009-04-24T17:46:58.000000Z
-fe5660bd9380f1f120b3ea5585370399
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:38:13.105104Z
+fd3644397f321e9bfd1a73092b9922fc
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -92,7 +92,7 @@ tromey
 
 
 
-2620
+2611
 
 SSLCipherSuite.java
 file
@@ -100,11 +100,11 @@ file
 
 
 
-2009-04-24T17:46:58.000000Z
-2d8106d2772f21ed90b398377ee02480
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:38:13.106104Z
+87d3e285a72696bd5d570acc7fda7f94
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -126,7 +126,7 @@ tromey
 
 
 
-4490
+4464
 
 StaticTrustAnchors.java
 file
@@ -171,11 +171,11 @@ file
 
 
 
-2009-04-24T17:46:58.000000Z
-a6104c2b150a1df94bee7d78f042678b
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:38:13.106104Z
+30c946b4864fe094f58092730582d57d
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -197,7 +197,7 @@ tromey
 
 
 
-9549
+9518
 
 SessionStoreException.java
 file
@@ -205,11 +205,11 @@ file
 
 
 
-2009-04-24T17:46:58.000000Z
-502ca4ef117ff29025be2b399a117051
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:38:13.105104Z
+4c56681dd394e12f0a60720b427b319f
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -231,41 +231,7 @@ tromey
 
 
 
-2143
-
-PreSharedKeyManager.java
-file
-
-
-
-
-2009-04-24T17:46:58.000000Z
-3ea01c86452b55968595669379a97073
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2076
+2139
 
 EntropySource.java
 file
@@ -301,17 +267,17 @@ mark
 
 2277
 
-Session.java
+PreSharedKeyManager.java
 file
 
 
 
 
-2009-04-24T17:46:58.000000Z
-07a273ee13dc57c6c8bb212f4ed5f76d
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2011-06-04T18:38:13.105104Z
+053dfdcf6bad280dc1005983ff268617
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -333,7 +299,7 @@ doko
 
 
 
-9770
+2074
 
 SRPManagerParameters.java
 file
@@ -369,6 +335,40 @@ mark
 
 2862
 
+Session.java
+file
+
+
+
+
+2011-06-04T18:38:13.105104Z
+3542122bf1973eff5024ece1f634fa1f
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+9730
+
 PrivateCredentials.java
 file
 
@@ -402,40 +402,6 @@ doko
 
 
 11636
-
-SSLProtocolVersion.java
-file
-
-
-
-
-2009-04-24T17:46:58.000000Z
-24cde789b5f116bb29b87be94e1e94f9
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1989
 
 NullManagerParameters.java
 file
@@ -471,17 +437,17 @@ mark
 
 2368
 
-SSLRecordHandler.java
+SSLProtocolVersion.java
 file
 
 
 
 
 2009-04-24T17:46:58.000000Z
-c66a49bba4220ab6e55d94018b4b6911
-2008-06-28T13:29:13.958049Z
-137223
-doko
+24cde789b5f116bb29b87be94e1e94f9
+2007-01-09T19:58:05.773323Z
+120621
+tromey
 
 
 
@@ -503,5 +469,39 @@ doko
 
 
 
-3646
+1989
+
+SSLRecordHandler.java
+file
+
+
+
+
+2011-06-04T18:38:13.106104Z
+5b97a24a37143eac5a9542183fa8d589
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3647
 

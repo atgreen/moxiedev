@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.c-torture/execute/ieee
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-10-03T21:10:11.887103Z
-152434
-dnovillo
+2010-12-31T11:52:20.780706Z
+168370
+pkoning
 
 
 
@@ -1698,11 +1698,11 @@ file
 
 
 
-2009-10-08T15:18:26.000000Z
-f104080f70c3185222debb5af3282207
-2009-10-03T21:10:11.887103Z
-152434
-dnovillo
+2011-06-04T17:55:55.326104Z
+7a7668d1dc6a37519c5256adf73042cf
+2010-12-31T11:52:20.780706Z
+168370
+pkoning
 
 
 
@@ -1724,7 +1724,7 @@ dnovillo
 
 
 
-2229
+2261
 
 fp-cmp-8f.x
 file

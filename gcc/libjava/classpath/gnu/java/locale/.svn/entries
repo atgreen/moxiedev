@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/locale
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-06-28T13:29:13.958049Z
-137223
-doko
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:46:52.000000Z
-391db0d18851bf5b166c7ea065b54f06
-2008-06-28T13:29:13.958049Z
-137223
-doko
+2011-06-04T18:38:07.401104Z
+8d8c4b7cdf4efdf45588bcdd2ed48657
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -58,7 +58,7 @@ doko
 
 
 
-4890
+4909
 
 .cvsignore
 file

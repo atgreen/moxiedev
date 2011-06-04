@@ -1,7 +1,7 @@
 ## Makefile for the src subdirectory of the GNU C++ Standard library.
 ##
 ## Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-## 2006, 2007, 2008, 2009, 2010
+## 2006, 2007, 2008, 2009, 2010, 2011
 ## Free Software Foundation, Inc.
 ##
 ## This file is part of the libstdc++ version 3 distribution.
@@ -104,17 +104,21 @@ host_sources = \
 	atomicity.cc \
 	codecvt_members.cc \
 	collate_members.cc \
+	ctype_configure_char.cc \
 	ctype_members.cc \
 	messages_members.cc \
 	monetary_members.cc \
 	numeric_members.cc \
-	time_members.cc 
+	time_members.cc
 
 codecvt_members.cc: ${glibcxx_srcdir}/$(CCODECVT_CC)
 	$(LN_S) ${glibcxx_srcdir}/$(CCODECVT_CC) . || true
 
 collate_members.cc: ${glibcxx_srcdir}/$(CCOLLATE_CC)
 	$(LN_S) ${glibcxx_srcdir}/$(CCOLLATE_CC) . || true
+
+ctype_configure_char.cc: ${glibcxx_srcdir}/$(OS_INC_SRCDIR)/ctype_configure_char.cc
+	$(LN_S) ${glibcxx_srcdir}/$(OS_INC_SRCDIR)/ctype_configure_char.cc . || true
 
 ctype_members.cc: ${glibcxx_srcdir}/$(CCTYPE_CC)
 	$(LN_S) ${glibcxx_srcdir}/$(CCTYPE_CC) . || true
@@ -138,7 +142,8 @@ atomicity.cc: ${atomicity_file}
 # Source files linked in via configuration/make substitution for a
 # particular host, but with ad hoc naming rules.
 host_sources_extra = \
-	basic_file.cc c++locale.cc ${ldbl_compat_sources} ${parallel_sources}
+	basic_file.cc c++locale.cc \
+	${inst_sources} ${ldbl_compat_sources} ${parallel_sources}
 
 c++locale.cc: ${glibcxx_srcdir}/$(CLOCALE_CC)
 	$(LN_S) ${glibcxx_srcdir}/$(CLOCALE_CC) ./$@ || true
@@ -147,8 +152,9 @@ basic_file.cc: ${glibcxx_srcdir}/$(BASIC_FILE_CC)
 	$(LN_S) ${glibcxx_srcdir}/$(BASIC_FILE_CC) ./$@ || true
 
 if ENABLE_PARALLEL
-parallel_sources = parallel_list.cc parallel_settings.cc \
-	           compatibility-parallel_list.cc
+parallel_sources = parallel_settings.cc \
+		   compatibility-parallel_list.cc \
+		   compatibility-parallel_list-2.cc
 else
 parallel_sources =
 endif
@@ -159,7 +165,30 @@ else
 ldbl_compat_sources =
 endif
 
-# Sources present in the src directory.
+if ENABLE_EXTERN_TEMPLATE
+XTEMPLATE_FLAGS = -fno-implicit-templates
+inst_sources = \
+	allocator-inst.cc \
+	concept-inst.cc \
+	ext-inst.cc \
+	fstream-inst.cc \
+	ios-inst.cc \
+	iostream-inst.cc \
+	istream-inst.cc \
+	locale-inst.cc \
+	misc-inst.cc \
+	ostream-inst.cc \
+	sstream-inst.cc \
+	streambuf-inst.cc \
+	string-inst.cc \
+	wlocale-inst.cc \
+	wstring-inst.cc
+else
+XTEMPLATE_FLAGS =
+inst_sources =
+endif
+
+# Sources present in the src directory, always present.
 sources = \
 	atomic.cc \
 	bitmap_allocator.cc \
@@ -169,11 +198,14 @@ sources = \
 	compatibility.cc \
 	compatibility-c++0x.cc \
 	compatibility-debug_list.cc \
+	compatibility-debug_list-2.cc \
 	compatibility-list.cc \
+	compatibility-list-2.cc \
 	complex_io.cc \
 	ctype.cc \
 	debug.cc \
 	functexcept.cc \
+	functional.cc \
 	globals_io.cc \
 	hash_c++0x.cc \
 	hash_tr1.cc \
@@ -185,7 +217,6 @@ sources = \
 	ios_locale.cc \
 	limits.cc \
 	list.cc \
-	debug_list.cc \
 	locale.cc \
 	locale_init.cc \
 	locale_facets.cc \
@@ -196,31 +227,19 @@ sources = \
 	strstream.cc \
 	system_error.cc \
 	tree.cc \
-	allocator-inst.cc \
-	concept-inst.cc \
-	fstream-inst.cc \
-	ext-inst.cc \
-	ios-inst.cc \
-	iostream-inst.cc \
-	istream-inst.cc \
 	istream.cc \
-	locale-inst.cc \
-	misc-inst.cc \
-	ostream-inst.cc \
-	sstream-inst.cc \
-	streambuf-inst.cc \
+	placeholders.cc \
+	regex.cc \
+	shared_ptr.cc \
 	streambuf.cc \
-	string-inst.cc \
-	valarray-inst.cc \
-	wlocale-inst.cc \
-	wstring-inst.cc \
 	mutex.cc \
 	condition_variable.cc \
 	chrono.cc \
 	thread.cc \
 	future.cc \
+	valarray.cc \
 	${host_sources} \
-	${host_sources_extra} 
+	${host_sources_extra}
 
 vpath % $(top_srcdir)/src
 vpath % $(top_srcdir)
@@ -236,7 +255,7 @@ libstdc___la_DEPENDENCIES = \
 	$(top_builddir)/libsupc++/libsupc++convenience.la
 
 libstdc___la_LDFLAGS = \
-	-version-info $(libtool_VERSION) ${version_arg} -lm 
+	-version-info $(libtool_VERSION) ${version_arg} -lm
 
 libstdc___la_LINK = $(CXXLINK) $(libstdc___la_LDFLAGS)
 
@@ -258,25 +277,30 @@ concept-inst.o: concept-inst.cc
 
 # Use special rules for parallel mode compilation.
 PARALLEL_FLAGS = -fopenmp -D_GLIBCXX_PARALLEL -I$(glibcxx_builddir)/../libgomp
-parallel_list.lo: parallel_list.cc
-	$(LTCXXCOMPILE) $(PARALLEL_FLAGS) -c $<
-parallel_list.o: parallel_list.cc
-	$(CXXCOMPILE) $(PARALLEL_FLAGS) -c $<
-
 parallel_settings.lo: parallel_settings.cc
 	$(LTCXXCOMPILE) $(PARALLEL_FLAGS) -c $<
 parallel_settings.o: parallel_settings.cc
 	$(CXXCOMPILE) $(PARALLEL_FLAGS) -c $<
 
 compatibility-parallel_list.lo: compatibility-parallel_list.cc
-	$(LTCXXCOMPILE) $(PARALLEL_FLAGS) -c $<
+	$(LTCXXCOMPILE) -c $<
 compatibility-parallel_list.o: compatibility-parallel_list.cc
-	$(CXXCOMPILE) $(PARALLEL_FLAGS) -c $<
+	$(CXXCOMPILE) -c $<
+
+compatibility-parallel_list-2.lo: compatibility-parallel_list-2.cc
+	$(LTCXXCOMPILE) -c $<
+compatibility-parallel_list-2.o: compatibility-parallel_list-2.cc
+	$(CXXCOMPILE) -c $<
 
 # Use special rules for the C++0x sources so that the proper flags are passed.
 functexcept.lo: functexcept.cc
 	$(LTCXXCOMPILE) -std=gnu++0x -c $<
 functexcept.o: functexcept.cc
+	$(CXXCOMPILE) -std=gnu++0x -c $<
+
+shared_ptr.lo: shared_ptr.cc
+	$(LTCXXCOMPILE) -std=gnu++0x -c $<
+shared_ptr.o: shared_ptr.cc
 	$(CXXCOMPILE) -std=gnu++0x -c $<
 
 system_error.lo: system_error.cc
@@ -297,6 +321,11 @@ condition_variable.o: condition_variable.cc
 compatibility-c++0x.lo: compatibility-c++0x.cc
 	$(LTCXXCOMPILE) -std=gnu++0x -c $<
 compatibility-c++0x.o: compatibility-c++0x.cc
+	$(CXXCOMPILE) -std=gnu++0x -c $<
+
+functional.lo: functional.cc
+	$(LTCXXCOMPILE) -std=gnu++0x -c $<
+functional.o: functional.cc
 	$(CXXCOMPILE) -std=gnu++0x -c $<
 
 hash_c++0x.lo: hash_c++0x.cc
@@ -349,6 +378,21 @@ future.lo: future.cc
 future.o: future.cc
 	$(CXXCOMPILE) -std=gnu++0x -c $<
 
+regex.lo: regex.cc
+	$(LTCXXCOMPILE) -std=gnu++0x -c $<
+regex.o: regex.cc
+	$(CXXCOMPILE) -std=gnu++0x -c $<
+
+debug.lo: debug.cc
+	$(LTCXXCOMPILE) -std=gnu++0x -c $<
+debug.o: debug.cc
+	$(CXXCOMPILE) -std=gnu++0x -c $<
+
+placeholders.lo: placeholders.cc
+	$(LTCXXCOMPILE) -std=gnu++0x -c $<
+placeholders.o: placeholders.cc
+	$(CXXCOMPILE) -std=gnu++0x -c $<
+
 if GLIBCXX_LDBL_COMPAT
 # Use special rules for compatibility-ldbl.cc compilation, as we need to
 # pass -mlong-double-64.
@@ -364,7 +408,7 @@ endif
 # OPTIMIZE_CXXFLAGS on the compile line so that -O2 can be overridden
 # as the occasion calls for it.
 AM_CXXFLAGS = \
-	-fno-implicit-templates \
+	$(XTEMPLATE_FLAGS) \
 	$(WARN_CXXFLAGS) \
 	$(OPTIMIZE_CXXFLAGS) \
 	$(CONFIG_CXXFLAGS)
@@ -388,8 +432,10 @@ AM_CXXFLAGS = \
 # correct solution is to add `--tag CXX' to LTCXXCOMPILE and maybe
 # CXXLINK, just after $(LIBTOOL), so that libtool doesn't have to
 # attempt to infer which configuration to use
-LTCXXCOMPILE = $(LIBTOOL) --tag CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
-	       $(CXX) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
+LTCXXCOMPILE = $(LIBTOOL) --tag CXX \
+	       $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
+	       $(CXX) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	       $(AM_CXXFLAGS) $(CXXFLAGS)
 
 LTLDFLAGS = $(shell $(SHELL) $(top_srcdir)/../libtool-ldflags $(LDFLAGS))
 

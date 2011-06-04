@@ -26,29 +26,29 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #ifndef __objc_api_INCLUDE_GNU
 #define __objc_api_INCLUDE_GNU
 
-/*
-  This file declares the "traditional" GNU Objective-C Runtime API.
-  It is the API supported by older versions of the GNU Objective-C
-  Runtime.  Include this file to use it.
+/* This file declares the "traditional" GNU Objective-C Runtime API.
+   It is the API supported by older versions of the GNU Objective-C
+   Runtime.  Include this file to use it.
 
-  This API is being replaced by the "modern" GNU Objective-C Runtime
-  API, which is declared in objc/runtime.h.  The "modern" API is very
-  similar to the API used by the modern Apple/NeXT runtime.
+   This API is being replaced by the "modern" GNU Objective-C Runtime
+   API, which is declared in objc/runtime.h.  The "modern" API is very
+   similar to the API used by the modern Apple/NeXT runtime.
 
-  Because the two APIs have some conflicting definitions (in
-  particular, Method and Category are defined differently) you should
-  include either objc/objc-api.h (to use the traditional GNU
-  Objective-C Runtime API) or objc/runtime.h (to use the modern GNU
-  Objective-C Runtime API), but not both.
-*/
+   The last version of GCC supporting the traditional API is GCC 4.6.
+   This file will not exist in later versions of GCC.
+
+   Because the two APIs have some conflicting definitions (in
+   particular, Method and Category are defined differently) you should
+   include either objc/objc-api.h (to use the traditional GNU
+   Objective-C Runtime API) or objc/runtime.h (to use the modern GNU
+   Objective-C Runtime API), but not both.  */
 #ifdef __objc_runtime_INCLUDE_GNU
 # error You can not include both objc/objc-api.h and objc/runtime.h.  Include objc/objc-api.h for the traditional GNU Objective-C Runtime API and objc/runtime.h for the modern one.
 #endif
 
+/* TODO: A deprecation warning any time the file is included ? */
+
 #include "objc.h"
-#ifndef GNU_LIBOBJC_COMPILING_LIBOBJC_ITSELF
-# include "deprecated/hash.h"
-#endif
 #include "thr.h"
 #include "objc-decls.h"
 #include <stdio.h>
@@ -57,8 +57,6 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-#include "deprecated/METHOD_NULL.h"
 
 /* Method descriptor returned by introspective Object methods.
    This is really just the first part of the more complete objc_method
@@ -106,9 +104,6 @@ struct objc_method_description
    equivalent to "*".  */
 #define _C_ATOM     '%'
 
-#include "deprecated/objc_error.h"
-
-#include "deprecated/struct_objc_static_instances.h"
 #include "deprecated/struct_objc_symtab.h"
 #include "deprecated/struct_objc_module.h"
 #include "deprecated/struct_objc_ivar.h"
@@ -182,6 +177,8 @@ typedef struct objc_category Category, *Category_t;
 ** objc_get_class if the runtime is not able to find the class.
 ** This may e.g. try to load in the class using dynamic loading.
 ** The function is guaranteed to be passed a non-NULL name string.
+** In the Modern API, this is replaced by
+** objc_setGetUnknownClassHandler ().
 */
 objc_EXPORT Class (*_objc_lookup_class)(const char *name);
 
@@ -192,8 +189,6 @@ objc_EXPORT Class (*_objc_lookup_class)(const char *name);
 ** an object file is dynamically linked in.
 */
 objc_EXPORT void (*_objc_load_callback)(Class _class, Category* category);
-
-#include "deprecated/objc_object_alloc.h"
 
 /*
   Standard functions for memory allocation and disposal.  Users should
@@ -217,11 +212,6 @@ objc_calloc(size_t nelem, size_t size);
 
 objc_EXPORT void
 objc_free(void *mem);
-
-#include "deprecated/objc_valloc.h"
-#include "deprecated/objc_malloc.h"
-
-#include "deprecated/objc_unexpected_exception.h"
 
 objc_EXPORT Method_t class_get_class_method(MetaClass _class, SEL aSel);
 
@@ -393,8 +383,6 @@ object_is_meta_class (id object)
 	  &&  !object_is_instance (object)  
 	  &&  !object_is_class (object));
 }
-
-#include "deprecated/objc_get_uninstalled_dtable.h"
 
 #ifdef __cplusplus
 }

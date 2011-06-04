@@ -6,7 +6,7 @@ in
 #
 # Makefile for directory with subdirs to build.
 #   Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-#   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+#   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
 #   Free Software Foundation
 #
 # This file is free software; you can redistribute it and/or modify
@@ -102,8 +102,6 @@ TOPLEVEL_CONFIGURE_ARGUMENTS=@TOPLEVEL_CONFIGURE_ARGUMENTS@
 
 tooldir = @tooldir@
 build_tooldir = @build_tooldir@
-
-GDB_NLM_DEPS = 
 
 # This is the name of the environment variable used for the path to
 # the libraries.
@@ -325,7 +323,7 @@ HOST_LIBELFINC = @libelfinc@
 # Programs producing files for the BUILD machine
 # ----------------------------------------------
 
-SHELL = @config_shell@
+SHELL = @SHELL@
 
 # pwd command to use.  Allow user to override default by setting PWDCMD in
 # the environment to account for automounters.  The make variable must not
@@ -496,7 +494,7 @@ CXXFLAGS_FOR_TARGET = @CXXFLAGS_FOR_TARGET@
 
 LIBCFLAGS_FOR_TARGET = $(CFLAGS_FOR_TARGET)
 LIBCXXFLAGS_FOR_TARGET = $(CXXFLAGS_FOR_TARGET) -fno-implicit-templates
-LDFLAGS_FOR_TARGET = 
+LDFLAGS_FOR_TARGET = @LDFLAGS_FOR_TARGET@
 GOCFLAGS_FOR_TARGET = -O2 -g
 
 FLAGS_FOR_TARGET = @FLAGS_FOR_TARGET@
@@ -551,6 +549,26 @@ HOST_LIB_PATH_[+module+] = \
 @endif [+module+]
 [+ ENDIF lib_path +][+ ENDFOR host_modules +]
 
+CXX_FOR_TARGET_FLAG_TO_PASS = \
+	"CXX_FOR_TARGET=$(CXX_FOR_TARGET)"
+@if target-libstdc++-v3
+# CXX_FOR_TARGET is tricky to get right for target libs that require a
+# functional C++ compiler.  When we recurse, if we expand
+# CXX_FOR_TARGET before configuring libstdc++-v3, we won't get
+# libstdc++ include flags from the script.  Instead, we get an
+# -funconfigured-* word, so that we'll get errors if this invalid C++
+# command line is used for anything, but also so that we can use the
+# word to decide whether or not to pass on this CXX_FOR_TARGET.  If we
+# don't pass it on, sub-make will use the default definition, that
+# re-expands it at the time of use, so we'll get it right when we need
+# it.  One potential exception is the expansion of CXX_FOR_TARGET
+# passed down as part of CXX within TARGET_FLAGS, but this wouldn't
+# really work, for C++ host programs can't depend on the current-stage
+# C++ target library.
+CXX_FOR_TARGET_FLAG_TO_PASS = \
+	$(shell if echo "$(CXX_FOR_TARGET)" | grep " -funconfigured-" > /dev/null; then :; else echo '"CXX_FOR_TARGET=$(CXX_FOR_TARGET)"'; fi)
+@endif target-libstdc++-v3
+
 # Flags to pass down to all sub-makes.
 BASE_FLAGS_TO_PASS =[+ FOR flags_to_pass +][+ IF optional +] \
 	"`echo '[+flag+]=$([+flag+])' | sed -e s'/[^=][^=]*=$$/XFOO=/'`"[+ ELSE optional +] \
@@ -558,6 +576,7 @@ BASE_FLAGS_TO_PASS =[+ FOR flags_to_pass +][+ IF optional +] \
 	"STAGE[+id+]_CFLAGS=$(STAGE[+id+]_CFLAGS)" \
 	"STAGE[+id+]_CXXFLAGS=$(STAGE[+id+]_CXXFLAGS)" \
 	"STAGE[+id+]_TFLAGS=$(STAGE[+id+]_TFLAGS)"[+ ENDFOR bootstrap-stage +] \
+	$(CXX_FOR_TARGET_FLAG_TO_PASS) \
 	"TFLAGS=$(TFLAGS)" \
 	"CONFIG_SHELL=$(SHELL)" \
 	"MAKEINFO=$(MAKEINFO) $(MAKEINFOFLAGS)" 
@@ -586,18 +605,6 @@ EXTRA_HOST_FLAGS = \
 	'WINDMC=$(WINDMC)'
 
 FLAGS_TO_PASS = $(BASE_FLAGS_TO_PASS) $(EXTRA_HOST_FLAGS)
-
-# Flags that are concerned with the location of the X11 include files
-# and library files
-#
-# NOTE: until the top-level is getting the values via autoconf, it only
-# causes problems to have this top-level Makefile overriding the autoconf-set
-# values in child directories.  Only variables that don't conflict with
-# autoconf'ed ones should be passed by X11_FLAGS_TO_PASS for now.
-#
-X11_FLAGS_TO_PASS = \
-	'X11_EXTRA_CFLAGS=$(X11_EXTRA_CFLAGS)' \
-	'X11_EXTRA_LIBS=$(X11_EXTRA_LIBS)'
 
 # Flags to pass to stage2 and later makes.
 

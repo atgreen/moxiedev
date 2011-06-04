@@ -26,7 +26,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree.h"
 #include "cp-tree.h"
 #include "input.h"
-#include "toplev.h"
 #include "params.h"
 #include "hashtab.h"
 #include "target.h"
@@ -257,6 +256,7 @@ maybe_clone_body (tree fn)
       /* Update CLONE's source position information to match FN's.  */
       DECL_SOURCE_LOCATION (clone) = DECL_SOURCE_LOCATION (fn);
       DECL_DECLARED_INLINE_P (clone) = DECL_DECLARED_INLINE_P (fn);
+      DECL_DECLARED_CONSTEXPR_P (clone) = DECL_DECLARED_CONSTEXPR_P (fn);
       DECL_COMDAT (clone) = DECL_COMDAT (fn);
       DECL_WEAK (clone) = DECL_WEAK (fn);
 
@@ -309,7 +309,9 @@ maybe_clone_body (tree fn)
 	  && (!DECL_ONE_ONLY (fns[0])
 	      || (HAVE_COMDAT_GROUP
 		  && DECL_WEAK (fns[0])))
-	  && cgraph_same_body_alias (clone, fns[0]))
+	  && (flag_syntax_only
+	      || cgraph_same_body_alias (cgraph_get_node (fns[0]), clone,
+					 fns[0])))
 	{
 	  alias = true;
 	  if (DECL_ONE_ONLY (fns[0]))
@@ -423,8 +425,8 @@ maybe_clone_body (tree fn)
 	  /* If *[CD][12]* dtors go into the *[CD]5* comdat group and dtor is
 	     virtual, it goes into the same comdat group as well.  */
 	  DECL_COMDAT_GROUP (fns[2]) = comdat_group;
-	  base_dtor_node = cgraph_node (fns[0]);
-	  deleting_dtor_node = cgraph_node (fns[2]);
+	  base_dtor_node = cgraph_get_node (fns[0]);
+	  deleting_dtor_node = cgraph_get_node (fns[2]);
 	  gcc_assert (base_dtor_node->same_comdat_group == NULL);
 	  gcc_assert (deleting_dtor_node->same_comdat_group == NULL);
 	  base_dtor_node->same_comdat_group = deleting_dtor_node;

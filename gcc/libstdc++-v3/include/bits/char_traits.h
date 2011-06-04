@@ -1,7 +1,7 @@
 // Character Traits for use by standard string and iostream -*- C++ -*-
 
 // Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-// 2006, 2007, 2008, 2009, 2010
+// 2006, 2007, 2008, 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -24,9 +24,9 @@
 // see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 // <http://www.gnu.org/licenses/>.
 
-/** @file char_traits.h
+/** @file bits/char_traits.h
  *  This is an internal header file, included by other library headers.
- *  You should not attempt to use it directly.
+ *  Do not attempt to use it directly. @headername{string}
  */
 
 //
@@ -42,7 +42,9 @@
 #include <bits/postypes.h>      // For streampos
 #include <cwchar>               // For WEOF, wmemmove, wmemset, etc.
 
-_GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
+namespace __gnu_cxx _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
    *  @brief  Mapping from character type to associated types.
@@ -203,9 +205,12 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
       return __s;
     }
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   // 21.1
   /**
@@ -236,15 +241,15 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       typedef mbstate_t         state_type;
 
       static void
-      assign(char_type& __c1, const char_type& __c2)
+      assign(char_type& __c1, const char_type& __c2) _GLIBCXX_NOEXCEPT
       { __c1 = __c2; }
 
       static _GLIBCXX_CONSTEXPR bool
-      eq(const char_type& __c1, const char_type& __c2)
+      eq(const char_type& __c1, const char_type& __c2) _GLIBCXX_NOEXCEPT
       { return __c1 == __c2; }
 
       static _GLIBCXX_CONSTEXPR bool
-      lt(const char_type& __c1, const char_type& __c2)
+      lt(const char_type& __c1, const char_type& __c2) _GLIBCXX_NOEXCEPT
       { return __c1 < __c2; }
 
       static int
@@ -272,25 +277,25 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       { return static_cast<char_type*>(__builtin_memset(__s, __a, __n)); }
 
       static _GLIBCXX_CONSTEXPR char_type
-      to_char_type(const int_type& __c)
+      to_char_type(const int_type& __c) _GLIBCXX_NOEXCEPT
       { return static_cast<char_type>(__c); }
 
       // To keep both the byte 0xff and the eof symbol 0xffffffff
       // from ending up as 0xffffffff.
       static _GLIBCXX_CONSTEXPR int_type
-      to_int_type(const char_type& __c)
+      to_int_type(const char_type& __c) _GLIBCXX_NOEXCEPT
       { return static_cast<int_type>(static_cast<unsigned char>(__c)); }
 
       static _GLIBCXX_CONSTEXPR bool
-      eq_int_type(const int_type& __c1, const int_type& __c2)
+      eq_int_type(const int_type& __c1, const int_type& __c2) _GLIBCXX_NOEXCEPT
       { return __c1 == __c2; }
 
       static _GLIBCXX_CONSTEXPR int_type
-      eof()
+      eof() _GLIBCXX_NOEXCEPT
       { return static_cast<int_type>(_GLIBCXX_STDIO_EOF); }
 
       static _GLIBCXX_CONSTEXPR int_type
-      not_eof(const int_type& __c)
+      not_eof(const int_type& __c) _GLIBCXX_NOEXCEPT
       { return (__c == eof()) ? 0 : __c; }
   };
 
@@ -307,15 +312,15 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       typedef mbstate_t         state_type;
 
       static void
-      assign(char_type& __c1, const char_type& __c2)
+      assign(char_type& __c1, const char_type& __c2) _GLIBCXX_NOEXCEPT
       { __c1 = __c2; }
 
       static _GLIBCXX_CONSTEXPR bool
-      eq(const char_type& __c1, const char_type& __c2)
+      eq(const char_type& __c1, const char_type& __c2) _GLIBCXX_NOEXCEPT
       { return __c1 == __c2; }
 
       static _GLIBCXX_CONSTEXPR bool
-      lt(const char_type& __c1, const char_type& __c2)
+      lt(const char_type& __c1, const char_type& __c2) _GLIBCXX_NOEXCEPT
       { return __c1 < __c2; }
 
       static int
@@ -343,35 +348,38 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       { return wmemset(__s, __a, __n); }
 
       static _GLIBCXX_CONSTEXPR char_type
-      to_char_type(const int_type& __c)
+      to_char_type(const int_type& __c) _GLIBCXX_NOEXCEPT
       { return char_type(__c); }
 
       static _GLIBCXX_CONSTEXPR int_type
-      to_int_type(const char_type& __c)
+      to_int_type(const char_type& __c) _GLIBCXX_NOEXCEPT
       { return int_type(__c); }
 
       static _GLIBCXX_CONSTEXPR bool
-      eq_int_type(const int_type& __c1, const int_type& __c2)
+      eq_int_type(const int_type& __c1, const int_type& __c2) _GLIBCXX_NOEXCEPT
       { return __c1 == __c2; }
 
       static _GLIBCXX_CONSTEXPR int_type
-      eof()
+      eof() _GLIBCXX_NOEXCEPT
       { return static_cast<int_type>(WEOF); }
 
       static _GLIBCXX_CONSTEXPR int_type
-      not_eof(const int_type& __c)
+      not_eof(const int_type& __c) _GLIBCXX_NOEXCEPT
       { return eq_int_type(__c, eof()) ? 0 : __c; }
   };
 #endif //_GLIBCXX_USE_WCHAR_T
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #if (defined(__GXX_EXPERIMENTAL_CXX0X__) \
      && defined(_GLIBCXX_USE_C99_STDINT_TR1))
 
 #include <cstdint>
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   template<>
     struct char_traits<char16_t>
@@ -383,15 +391,15 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       typedef mbstate_t         state_type;
 
       static void
-      assign(char_type& __c1, const char_type& __c2)
+      assign(char_type& __c1, const char_type& __c2) noexcept
       { __c1 = __c2; }
 
-      static _GLIBCXX_CONSTEXPR bool
-      eq(const char_type& __c1, const char_type& __c2)
+      static constexpr bool
+      eq(const char_type& __c1, const char_type& __c2) noexcept
       { return __c1 == __c2; }
 
-      static _GLIBCXX_CONSTEXPR bool
-      lt(const char_type& __c1, const char_type& __c2)
+      static constexpr bool
+      lt(const char_type& __c1, const char_type& __c2) noexcept
       { return __c1 < __c2; }
 
       static int
@@ -445,24 +453,24 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	return __s;
       }
 
-      static _GLIBCXX_CONSTEXPR char_type
-      to_char_type(const int_type& __c)
+      static constexpr char_type
+      to_char_type(const int_type& __c) noexcept
       { return char_type(__c); }
 
-      static _GLIBCXX_CONSTEXPR int_type
-      to_int_type(const char_type& __c)
+      static constexpr int_type
+      to_int_type(const char_type& __c) noexcept
       { return int_type(__c); }
 
-      static _GLIBCXX_CONSTEXPR bool
-      eq_int_type(const int_type& __c1, const int_type& __c2)
+      static constexpr bool
+      eq_int_type(const int_type& __c1, const int_type& __c2) noexcept
       { return __c1 == __c2; }
 
-      static _GLIBCXX_CONSTEXPR int_type
-      eof()
+      static constexpr int_type
+      eof() noexcept
       { return static_cast<int_type>(-1); }
 
-      static _GLIBCXX_CONSTEXPR int_type
-      not_eof(const int_type& __c)
+      static constexpr int_type
+      not_eof(const int_type& __c) noexcept
       { return eq_int_type(__c, eof()) ? 0 : __c; }
     };
 
@@ -476,15 +484,15 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       typedef mbstate_t         state_type;
 
       static void
-      assign(char_type& __c1, const char_type& __c2)
+      assign(char_type& __c1, const char_type& __c2) noexcept
       { __c1 = __c2; }
 
-      static _GLIBCXX_CONSTEXPR bool
-      eq(const char_type& __c1, const char_type& __c2)
+      static constexpr bool
+      eq(const char_type& __c1, const char_type& __c2) noexcept
       { return __c1 == __c2; }
 
-      static _GLIBCXX_CONSTEXPR bool
-      lt(const char_type& __c1, const char_type& __c2)
+      static constexpr bool
+      lt(const char_type& __c1, const char_type& __c2) noexcept
       { return __c1 < __c2; }
 
       static int
@@ -538,28 +546,29 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	return __s;
       }
 
-      static _GLIBCXX_CONSTEXPR char_type
-      to_char_type(const int_type& __c)
+      static constexpr char_type
+      to_char_type(const int_type& __c) noexcept
       { return char_type(__c); }
 
-      static _GLIBCXX_CONSTEXPR int_type
-      to_int_type(const char_type& __c)
+      static constexpr int_type
+      to_int_type(const char_type& __c) noexcept
       { return int_type(__c); }
 
-      static _GLIBCXX_CONSTEXPR bool
-      eq_int_type(const int_type& __c1, const int_type& __c2)
+      static constexpr bool
+      eq_int_type(const int_type& __c1, const int_type& __c2) noexcept
       { return __c1 == __c2; }
 
-      static _GLIBCXX_CONSTEXPR int_type
-      eof()
+      static constexpr int_type
+      eof() noexcept
       { return static_cast<int_type>(-1); }
 
-      static _GLIBCXX_CONSTEXPR int_type
-      not_eof(const int_type& __c)
+      static constexpr int_type
+      not_eof(const int_type& __c) noexcept
       { return eq_int_type(__c, eof()) ? 0 : __c; }
     };
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #endif 
 

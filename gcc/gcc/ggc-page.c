@@ -25,7 +25,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree.h"
 #include "rtl.h"
 #include "tm_p.h"
-#include "toplev.h" /* exact_log2 */
 #include "diagnostic-core.h"
 #include "flags.h"
 #include "ggc.h"
@@ -40,26 +39,11 @@ along with GCC; see the file COPYING3.  If not see
    file open.  Prefer either to valloc.  */
 #ifdef HAVE_MMAP_ANON
 # undef HAVE_MMAP_DEV_ZERO
-
-# include <sys/mman.h>
-# ifndef MAP_FAILED
-#  define MAP_FAILED -1
-# endif
-# if !defined (MAP_ANONYMOUS) && defined (MAP_ANON)
-#  define MAP_ANONYMOUS MAP_ANON
-# endif
 # define USING_MMAP
-
 #endif
 
 #ifdef HAVE_MMAP_DEV_ZERO
-
-# include <sys/mman.h>
-# ifndef MAP_FAILED
-#  define MAP_FAILED -1
-# endif
 # define USING_MMAP
-
 #endif
 
 #ifndef USING_MMAP
@@ -212,7 +196,7 @@ static const size_t extra_order_size_table[] = {
   sizeof (struct tree_field_decl),
   sizeof (struct tree_parm_decl),
   sizeof (struct tree_var_decl),
-  sizeof (struct tree_type),
+  sizeof (struct tree_type_non_common),
   sizeof (struct function),
   sizeof (struct basic_block_def),
   sizeof (struct cgraph_node),

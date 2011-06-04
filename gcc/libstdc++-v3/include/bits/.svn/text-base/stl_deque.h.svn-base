@@ -1,7 +1,7 @@
 // Deque implementation -*- C++ -*-
 
-// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-// Free Software Foundation, Inc.
+// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+// 2011 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -49,9 +49,9 @@
  * purpose.  It is provided "as is" without express or implied warranty.
  */
 
-/** @file stl_deque.h
+/** @file bits/stl_deque.h
  *  This is an internal header file, included by other library headers.
- *  You should not attempt to use it directly.
+ *  Do not attempt to use it directly. @headername{deque}
  */
 
 #ifndef _STL_DEQUE_H
@@ -62,7 +62,9 @@
 #include <bits/stl_iterator_base_funcs.h>
 #include <initializer_list>
 
-_GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   /**
    *  @brief This function controls the size of memory nodes.
@@ -439,7 +441,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       typedef _Alloc                  allocator_type;
 
       allocator_type
-      get_allocator() const
+      get_allocator() const _GLIBCXX_NOEXCEPT
       { return allocator_type(_M_get_Tp_allocator()); }
 
       typedef _Deque_iterator<_Tp, _Tp&, _Tp*>             iterator;
@@ -463,7 +465,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       _Deque_base(_Deque_base&& __x)
-      : _M_impl(__x._M_get_Tp_allocator())
+      : _M_impl(std::move(__x._M_get_Tp_allocator()))
       {
 	_M_initialize_map(0);
 	if (__x._M_impl._M_map)
@@ -503,18 +505,25 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	: _Tp_alloc_type(__a), _M_map(0), _M_map_size(0),
 	  _M_start(), _M_finish()
 	{ }
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	_Deque_impl(_Tp_alloc_type&& __a)
+	: _Tp_alloc_type(std::move(__a)), _M_map(0), _M_map_size(0),
+	  _M_start(), _M_finish()
+	{ }
+#endif
       };
 
       _Tp_alloc_type&
-      _M_get_Tp_allocator()
+      _M_get_Tp_allocator() _GLIBCXX_NOEXCEPT
       { return *static_cast<_Tp_alloc_type*>(&this->_M_impl); }
 
       const _Tp_alloc_type&
-      _M_get_Tp_allocator() const
+      _M_get_Tp_allocator() const _GLIBCXX_NOEXCEPT
       { return *static_cast<const _Tp_alloc_type*>(&this->_M_impl); }
 
       _Map_alloc_type
-      _M_get_map_allocator() const
+      _M_get_map_allocator() const _GLIBCXX_NOEXCEPT
       { return _Map_alloc_type(_M_get_Tp_allocator()); }
 
       _Tp*
@@ -892,7 +901,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  themselves are pointers, the pointed-to memory is not touched in any
        *  way.  Managing the pointer is the user's responsibility.
        */
-      ~deque()
+      ~deque() _GLIBCXX_NOEXCEPT
       { _M_destroy_data(begin(), end(), _M_get_Tp_allocator()); }
 
       /**
@@ -995,7 +1004,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 
       /// Get a copy of the memory allocation object.
       allocator_type
-      get_allocator() const
+      get_allocator() const _GLIBCXX_NOEXCEPT
       { return _Base::get_allocator(); }
 
       // iterators
@@ -1004,7 +1013,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  %deque.  Iteration is done in ordinary element order.
        */
       iterator
-      begin()
+      begin() _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_start; }
 
       /**
@@ -1012,7 +1021,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element in the %deque.  Iteration is done in ordinary element order.
        */
       const_iterator
-      begin() const
+      begin() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_start; }
 
       /**
@@ -1021,7 +1030,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       iterator
-      end()
+      end() _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_finish; }
 
       /**
@@ -1030,7 +1039,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  ordinary element order.
        */
       const_iterator
-      end() const
+      end() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_finish; }
 
       /**
@@ -1039,7 +1048,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       reverse_iterator
-      rbegin()
+      rbegin() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(this->_M_impl._M_finish); }
 
       /**
@@ -1048,7 +1057,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  reverse element order.
        */
       const_reverse_iterator
-      rbegin() const
+      rbegin() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(this->_M_impl._M_finish); }
 
       /**
@@ -1057,7 +1066,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  in reverse element order.
        */
       reverse_iterator
-      rend()
+      rend() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(this->_M_impl._M_start); }
 
       /**
@@ -1066,7 +1075,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  done in reverse element order.
        */
       const_reverse_iterator
-      rend() const
+      rend() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(this->_M_impl._M_start); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -1075,7 +1084,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element in the %deque.  Iteration is done in ordinary element order.
        */
       const_iterator
-      cbegin() const
+      cbegin() const noexcept
       { return this->_M_impl._M_start; }
 
       /**
@@ -1084,7 +1093,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  ordinary element order.
        */
       const_iterator
-      cend() const
+      cend() const noexcept
       { return this->_M_impl._M_finish; }
 
       /**
@@ -1093,7 +1102,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  reverse element order.
        */
       const_reverse_iterator
-      crbegin() const
+      crbegin() const noexcept
       { return const_reverse_iterator(this->_M_impl._M_finish); }
 
       /**
@@ -1102,19 +1111,19 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  done in reverse element order.
        */
       const_reverse_iterator
-      crend() const
+      crend() const noexcept
       { return const_reverse_iterator(this->_M_impl._M_start); }
 #endif
 
       // [23.2.1.2] capacity
       /**  Returns the number of elements in the %deque.  */
       size_type
-      size() const
+      size() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_finish - this->_M_impl._M_start; }
 
       /**  Returns the size() of the largest possible %deque.  */
       size_type
-      max_size() const
+      max_size() const _GLIBCXX_NOEXCEPT
       { return _M_get_Tp_allocator().max_size(); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -1195,7 +1204,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  equal end().)
        */
       bool
-      empty() const
+      empty() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_finish == this->_M_impl._M_start; }
 
       // element access
@@ -1574,7 +1583,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  the user's responsibility.
        */
       void
-      clear()
+      clear() _GLIBCXX_NOEXCEPT
       { _M_erase_at_end(begin()); }
 
     protected:
@@ -1971,6 +1980,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 
 #undef _GLIBCXX_DEQUE_BUF_SIZE
 
-_GLIBCXX_END_NESTED_NAMESPACE
+_GLIBCXX_END_NAMESPACE_CONTAINER
+} // namespace std
 
 #endif /* _STL_DEQUE_H */

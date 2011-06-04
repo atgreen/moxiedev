@@ -1,6 +1,6 @@
 // Bitmap Allocator. -*- C++ -*-
 
-// Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -43,13 +43,14 @@
  */
 #define _BALLOC_ALIGN_BYTES 8
 
-_GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
-
+namespace __gnu_cxx _GLIBCXX_VISIBILITY(default)
+{
   using std::size_t;
   using std::ptrdiff_t;
 
   namespace __detail
   {
+  _GLIBCXX_BEGIN_NAMESPACE_VERSION
     /** @class  __mini_vector bitmap_allocator.h bitmap_allocator.h
      *
      *  @brief  __mini_vector<> is a stripped down version of the
@@ -504,7 +505,11 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
       size_t __mask = 1 << __pos;
       *__pbmap |= __mask;
     }
+
+  _GLIBCXX_END_NAMESPACE_VERSION
   } // namespace __detail
+
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /** @brief  Generic Version of the bsf instruction.
    */
@@ -1048,20 +1053,25 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
       max_size() const throw()
       { return size_type(-1) / sizeof(value_type); }
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+      template<typename _Up, typename... _Args>
+        void
+        construct(_Up* __p, _Args&&... __args)
+	{ ::new((void *)__p) _Up(std::forward<_Args>(__args)...); }
+
+      template<typename _Up>
+        void 
+        destroy(_Up* __p)
+        { __p->~_Up(); }
+#else
       void 
       construct(pointer __p, const_reference __data)
       { ::new((void *)__p) value_type(__data); }
 
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
-      template<typename... _Args>
-        void
-        construct(pointer __p, _Args&&... __args)
-	{ ::new((void *)__p) _Tp(std::forward<_Args>(__args)...); }
-#endif
-
       void 
       destroy(pointer __p)
       { __p->~value_type(); }
+#endif
     };
 
   template<typename _Tp1, typename _Tp2>
@@ -1100,7 +1110,8 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
     bitmap_allocator<_Tp>::_S_mut;
 #endif
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace __gnu_cxx
 
 #endif 
 

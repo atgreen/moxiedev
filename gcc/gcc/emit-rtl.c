@@ -1,7 +1,7 @@
 /* Emit RTL for the GCC expander.
    Copyright (C) 1987, 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
    1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010
+   2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -39,7 +39,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "rtl.h"
 #include "tree.h"
 #include "tm_p.h"
@@ -60,6 +59,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "df.h"
 #include "params.h"
 #include "target.h"
+#include "tree-flow.h"
 
 struct target_rtl default_target_rtl;
 #if SWITCHABLE_TARGET
@@ -326,7 +326,7 @@ reg_attrs_htab_hash (const void *x)
 {
   const reg_attrs *const p = (const reg_attrs *) x;
 
-  return ((p->offset * 1000) ^ (long) p->decl);
+  return ((p->offset * 1000) ^ (intptr_t) p->decl);
 }
 
 /* Returns nonzero if the value represented by X (which is really a
@@ -805,7 +805,10 @@ gen_rtvec (int n, ...)
 
   /* Don't allocate an empty rtvec...  */
   if (n == 0)
-    return NULL_RTVEC;
+    {
+      va_end (p);
+      return NULL_RTVEC;
+    }
 
   rt_val = rtvec_alloc (n);
 
@@ -1541,11 +1544,11 @@ void
 set_mem_attributes_minus_bitpos (rtx ref, tree t, int objectp,
 				 HOST_WIDE_INT bitpos)
 {
-  alias_set_type alias = MEM_ALIAS_SET (ref);
-  tree expr = MEM_EXPR (ref);
-  rtx offset = MEM_OFFSET (ref);
-  rtx size = MEM_SIZE (ref);
-  unsigned int align = MEM_ALIGN (ref);
+  alias_set_type alias;
+  tree expr = NULL;
+  rtx offset = NULL_RTX;
+  rtx size = NULL_RTX;
+  unsigned int align = BITS_PER_UNIT;
   HOST_WIDE_INT apply_bitpos = 0;
   tree type;
 
@@ -1580,6 +1583,34 @@ set_mem_attributes_minus_bitpos (rtx ref, tree t, int objectp,
       && ! AGGREGATE_TYPE_P (type)
       && TREE_CODE (type) != COMPLEX_TYPE)
     MEM_SCALAR_P (ref) = 1;
+
+  /* Default values from pre-existing memory attributes if present.  */
+  if (MEM_ATTRS (ref))
+    {
+      /* ??? Can this ever happen?  Calling this routine on a MEM that
+	 already carries memory attributes should probably be invalid.  */
+      expr = MEM_EXPR (ref);
+      offset = MEM_OFFSET (ref);
+      size = MEM_SIZE (ref);
+      align = MEM_ALIGN (ref);
+    }
+
+  /* Otherwise, default values from the mode of the MEM reference.  */
+  else if (GET_MODE (ref) != BLKmode)
+    {
+      /* Respect mode size.  */
+      size = GEN_INT (GET_MODE_SIZE (GET_MODE (ref)));
+      /* ??? Is this really necessary?  We probably should always get
+	 the size from the type below.  */
+
+      /* Respect mode alignment for STRICT_ALIGNMENT targets if T is a type;
+         if T is an object, always compute the object alignment below.  */
+      if (STRICT_ALIGNMENT && TYPE_P (t))
+	align = GET_MODE_ALIGNMENT (GET_MODE (ref));
+      /* ??? If T is a type, respecting mode alignment may *also* be wrong
+	 e.g. if the type carries an alignment attribute.  Should we be
+	 able to simply always use TYPE_ALIGN?  */
+    }
 
   /* We can set the alignment from the type if we are making an object,
      this is an INDIRECT_REF, or if TYPE_ALIGN_OK.  */
@@ -1642,36 +1673,14 @@ set_mem_attributes_minus_bitpos (rtx ref, tree t, int objectp,
 	     || TREE_CODE (t) == SAVE_EXPR)
 	t = TREE_OPERAND (t, 0);
 
-      /* We may look through structure-like accesses for the purposes of
-	 examining TREE_THIS_NOTRAP, but not array-like accesses.  */
-      base = t;
-      while (TREE_CODE (base) == COMPONENT_REF
-	     || TREE_CODE (base) == REALPART_EXPR
-	     || TREE_CODE (base) == IMAGPART_EXPR
-	     || TREE_CODE (base) == BIT_FIELD_REF)
-	base = TREE_OPERAND (base, 0);
+      /* Note whether this expression can trap.  */
+      MEM_NOTRAP_P (ref) = !tree_could_trap_p (t);
 
-      if (TREE_CODE (base) == MEM_REF
-	  && TREE_CODE (TREE_OPERAND (base, 0)) == ADDR_EXPR)
-	base = TREE_OPERAND (TREE_OPERAND (base, 0), 0);
-      if (DECL_P (base))
-	{
-	  if (CODE_CONTAINS_STRUCT (TREE_CODE (base), TS_DECL_WITH_VIS))
-	    MEM_NOTRAP_P (ref) = !DECL_WEAK (base);
-	  else
-	    MEM_NOTRAP_P (ref) = 1;
-	}
-      else if (TREE_CODE (base) == INDIRECT_REF
-	       || TREE_CODE (base) == MEM_REF
-	       || TREE_CODE (base) == TARGET_MEM_REF
-	       || TREE_CODE (base) == ARRAY_REF
-	       || TREE_CODE (base) == ARRAY_RANGE_REF)
-	MEM_NOTRAP_P (ref) = TREE_THIS_NOTRAP (base);
-
-      base = get_base_address (base);
+      base = get_base_address (t);
       if (base && DECL_P (base)
 	  && TREE_READONLY (base)
-	  && (TREE_STATIC (base) || DECL_EXTERNAL (base)))
+	  && (TREE_STATIC (base) || DECL_EXTERNAL (base))
+	  && !TREE_THIS_VOLATILE (base))
 	MEM_READONLY_P (ref) = 1;
 
       /* If this expression uses it's parent's alias set, mark it such
@@ -2441,6 +2450,7 @@ verify_rtx_sharing (rtx orig, rtx insn)
     case CODE_LABEL:
     case PC:
     case CC0:
+    case RETURN:
     case SCRATCH:
       return;
       /* SCRATCH must be shared because they represent distinct values.  */
@@ -3460,21 +3470,39 @@ try_split (rtx pat, rtx trial, int last)
     }
 
   /* If we are splitting a CALL_INSN, look for the CALL_INSN
-     in SEQ and copy our CALL_INSN_FUNCTION_USAGE to it.  */
+     in SEQ and copy any additional information across.  */
   if (CALL_P (trial))
     {
       for (insn = insn_last; insn ; insn = PREV_INSN (insn))
 	if (CALL_P (insn))
 	  {
-	    rtx *p = &CALL_INSN_FUNCTION_USAGE (insn);
+	    rtx next, *p;
+
+	    /* Add the old CALL_INSN_FUNCTION_USAGE to whatever the
+	       target may have explicitly specified.  */
+	    p = &CALL_INSN_FUNCTION_USAGE (insn);
 	    while (*p)
 	      p = &XEXP (*p, 1);
 	    *p = CALL_INSN_FUNCTION_USAGE (trial);
+
+	    /* If the old call was a sibling call, the new one must
+	       be too.  */
 	    SIBLING_CALL_P (insn) = SIBLING_CALL_P (trial);
 
-	    /* Update the debug information for the CALL_INSN.  */
-	    if (flag_enable_icf_debug)
-	      (*debug_hooks->copy_call_info) (trial, insn);
+	    /* If the new call is the last instruction in the sequence,
+	       it will effectively replace the old call in-situ.  Otherwise
+	       we must move any following NOTE_INSN_CALL_ARG_LOCATION note
+	       so that it comes immediately after the new call.  */
+	    if (NEXT_INSN (insn))
+	      for (next = NEXT_INSN (trial);
+		   next && NOTE_P (next);
+		   next = NEXT_INSN (next))
+		if (NOTE_KIND (next) == NOTE_INSN_CALL_ARG_LOCATION)
+		  {
+		    remove_insn (next);
+		    add_insn_after (next, insn, NULL);
+		    break;
+		  }
 	  }
     }
 
@@ -4020,12 +4048,10 @@ reorder_insns (rtx from, rtx to, rtx after)
    SEQUENCE rtl results in much fragmented RTL memory since the SEQUENCE
    generated would almost certainly die right after it was created.  */
 
-/* Make X be output before the instruction BEFORE.  */
-
-rtx
-emit_insn_before_noloc (rtx x, rtx before, basic_block bb)
+static rtx
+emit_pattern_before_noloc (rtx x, rtx before, rtx last, basic_block bb,
+                           rtx (*make_raw) (rtx))
 {
-  rtx last = before;
   rtx insn;
 
   gcc_assert (before);
@@ -4059,12 +4085,20 @@ emit_insn_before_noloc (rtx x, rtx before, basic_block bb)
 #endif
 
     default:
-      last = make_insn_raw (x);
+      last = (*make_raw) (x);
       add_insn_before (last, before, bb);
       break;
     }
 
   return last;
+}
+
+/* Make X be output before the instruction BEFORE.  */
+
+rtx
+emit_insn_before_noloc (rtx x, rtx before, basic_block bb)
+{
+  return emit_pattern_before_noloc (x, before, before, bb, make_insn_raw);
 }
 
 /* Make an instruction with body X and code JUMP_INSN
@@ -4073,42 +4107,8 @@ emit_insn_before_noloc (rtx x, rtx before, basic_block bb)
 rtx
 emit_jump_insn_before_noloc (rtx x, rtx before)
 {
-  rtx insn, last = NULL_RTX;
-
-  gcc_assert (before);
-
-  switch (GET_CODE (x))
-    {
-    case DEBUG_INSN:
-    case INSN:
-    case JUMP_INSN:
-    case CALL_INSN:
-    case CODE_LABEL:
-    case BARRIER:
-    case NOTE:
-      insn = x;
-      while (insn)
-	{
-	  rtx next = NEXT_INSN (insn);
-	  add_insn_before (insn, before, NULL);
-	  last = insn;
-	  insn = next;
-	}
-      break;
-
-#ifdef ENABLE_RTL_CHECKING
-    case SEQUENCE:
-      gcc_unreachable ();
-      break;
-#endif
-
-    default:
-      last = make_jump_insn_raw (x);
-      add_insn_before (last, before, NULL);
-      break;
-    }
-
-  return last;
+  return emit_pattern_before_noloc (x, before, NULL_RTX, NULL,
+				    make_jump_insn_raw);
 }
 
 /* Make an instruction with body X and code CALL_INSN
@@ -4117,42 +4117,8 @@ emit_jump_insn_before_noloc (rtx x, rtx before)
 rtx
 emit_call_insn_before_noloc (rtx x, rtx before)
 {
-  rtx last = NULL_RTX, insn;
-
-  gcc_assert (before);
-
-  switch (GET_CODE (x))
-    {
-    case DEBUG_INSN:
-    case INSN:
-    case JUMP_INSN:
-    case CALL_INSN:
-    case CODE_LABEL:
-    case BARRIER:
-    case NOTE:
-      insn = x;
-      while (insn)
-	{
-	  rtx next = NEXT_INSN (insn);
-	  add_insn_before (insn, before, NULL);
-	  last = insn;
-	  insn = next;
-	}
-      break;
-
-#ifdef ENABLE_RTL_CHECKING
-    case SEQUENCE:
-      gcc_unreachable ();
-      break;
-#endif
-
-    default:
-      last = make_call_insn_raw (x);
-      add_insn_before (last, before, NULL);
-      break;
-    }
-
-  return last;
+  return emit_pattern_before_noloc (x, before, NULL_RTX, NULL,
+				    make_call_insn_raw);
 }
 
 /* Make an instruction with body X and code DEBUG_INSN
@@ -4161,42 +4127,8 @@ emit_call_insn_before_noloc (rtx x, rtx before)
 rtx
 emit_debug_insn_before_noloc (rtx x, rtx before)
 {
-  rtx last = NULL_RTX, insn;
-
-  gcc_assert (before);
-
-  switch (GET_CODE (x))
-    {
-    case DEBUG_INSN:
-    case INSN:
-    case JUMP_INSN:
-    case CALL_INSN:
-    case CODE_LABEL:
-    case BARRIER:
-    case NOTE:
-      insn = x;
-      while (insn)
-	{
-	  rtx next = NEXT_INSN (insn);
-	  add_insn_before (insn, before, NULL);
-	  last = insn;
-	  insn = next;
-	}
-      break;
-
-#ifdef ENABLE_RTL_CHECKING
-    case SEQUENCE:
-      gcc_unreachable ();
-      break;
-#endif
-
-    default:
-      last = make_debug_insn_raw (x);
-      add_insn_before (last, before, NULL);
-      break;
-    }
-
-  return last;
+  return emit_pattern_before_noloc (x, before, NULL_RTX, NULL,
+				    make_debug_insn_raw);
 }
 
 /* Make an insn of code BARRIER
@@ -4290,11 +4222,9 @@ emit_insn_after_1 (rtx first, rtx after, basic_block bb)
   return last;
 }
 
-/* Make X be output after the insn AFTER and set the BB of insn.  If
-   BB is NULL, an attempt is made to infer the BB from AFTER.  */
-
-rtx
-emit_insn_after_noloc (rtx x, rtx after, basic_block bb)
+static rtx
+emit_pattern_after_noloc (rtx x, rtx after, basic_block bb,
+			  rtx (*make_raw)(rtx))
 {
   rtx last = after;
 
@@ -4322,12 +4252,21 @@ emit_insn_after_noloc (rtx x, rtx after, basic_block bb)
 #endif
 
     default:
-      last = make_insn_raw (x);
+      last = (*make_raw) (x);
       add_insn_after (last, after, bb);
       break;
     }
 
   return last;
+}
+
+/* Make X be output after the insn AFTER and set the BB of insn.  If
+   BB is NULL, an attempt is made to infer the BB from AFTER.  */
+
+rtx
+emit_insn_after_noloc (rtx x, rtx after, basic_block bb)
+{
+  return emit_pattern_after_noloc (x, after, bb, make_insn_raw);
 }
 
 
@@ -4337,35 +4276,7 @@ emit_insn_after_noloc (rtx x, rtx after, basic_block bb)
 rtx
 emit_jump_insn_after_noloc (rtx x, rtx after)
 {
-  rtx last;
-
-  gcc_assert (after);
-
-  switch (GET_CODE (x))
-    {
-    case DEBUG_INSN:
-    case INSN:
-    case JUMP_INSN:
-    case CALL_INSN:
-    case CODE_LABEL:
-    case BARRIER:
-    case NOTE:
-      last = emit_insn_after_1 (x, after, NULL);
-      break;
-
-#ifdef ENABLE_RTL_CHECKING
-    case SEQUENCE:
-      gcc_unreachable ();
-      break;
-#endif
-
-    default:
-      last = make_jump_insn_raw (x);
-      add_insn_after (last, after, NULL);
-      break;
-    }
-
-  return last;
+  return emit_pattern_after_noloc (x, after, NULL, make_jump_insn_raw);
 }
 
 /* Make an instruction with body X and code CALL_INSN
@@ -4374,35 +4285,7 @@ emit_jump_insn_after_noloc (rtx x, rtx after)
 rtx
 emit_call_insn_after_noloc (rtx x, rtx after)
 {
-  rtx last;
-
-  gcc_assert (after);
-
-  switch (GET_CODE (x))
-    {
-    case DEBUG_INSN:
-    case INSN:
-    case JUMP_INSN:
-    case CALL_INSN:
-    case CODE_LABEL:
-    case BARRIER:
-    case NOTE:
-      last = emit_insn_after_1 (x, after, NULL);
-      break;
-
-#ifdef ENABLE_RTL_CHECKING
-    case SEQUENCE:
-      gcc_unreachable ();
-      break;
-#endif
-
-    default:
-      last = make_call_insn_raw (x);
-      add_insn_after (last, after, NULL);
-      break;
-    }
-
-  return last;
+  return emit_pattern_after_noloc (x, after, NULL, make_call_insn_raw);
 }
 
 /* Make an instruction with body X and code CALL_INSN
@@ -4411,35 +4294,7 @@ emit_call_insn_after_noloc (rtx x, rtx after)
 rtx
 emit_debug_insn_after_noloc (rtx x, rtx after)
 {
-  rtx last;
-
-  gcc_assert (after);
-
-  switch (GET_CODE (x))
-    {
-    case DEBUG_INSN:
-    case INSN:
-    case JUMP_INSN:
-    case CALL_INSN:
-    case CODE_LABEL:
-    case BARRIER:
-    case NOTE:
-      last = emit_insn_after_1 (x, after, NULL);
-      break;
-
-#ifdef ENABLE_RTL_CHECKING
-    case SEQUENCE:
-      gcc_unreachable ();
-      break;
-#endif
-
-    default:
-      last = make_debug_insn_raw (x);
-      add_insn_after (last, after, NULL);
-      break;
-    }
-
-  return last;
+  return emit_pattern_after_noloc (x, after, NULL, make_debug_insn_raw);
 }
 
 /* Make an insn of code BARRIER
@@ -4487,11 +4342,14 @@ emit_note_after (enum insn_note subtype, rtx after)
   return note;
 }
 
-/* Like emit_insn_after_noloc, but set INSN_LOCATOR according to SCOPE.  */
-rtx
-emit_insn_after_setloc (rtx pattern, rtx after, int loc)
+/* Insert PATTERN after AFTER, setting its INSN_LOCATION to LOC.
+   MAKE_RAW indicates how to turn PATTERN into a real insn.  */
+
+static rtx
+emit_pattern_after_setloc (rtx pattern, rtx after, int loc,
+			   rtx (*make_raw) (rtx))
 {
-  rtx last = emit_insn_after_noloc (pattern, after, NULL);
+  rtx last = emit_pattern_after_noloc (pattern, after, NULL, make_raw);
 
   if (pattern == NULL_RTX || !loc)
     return last;
@@ -4506,132 +4364,98 @@ emit_insn_after_setloc (rtx pattern, rtx after, int loc)
       after = NEXT_INSN (after);
     }
   return last;
+}
+
+/* Insert PATTERN after AFTER.  MAKE_RAW indicates how to turn PATTERN
+   into a real insn.  SKIP_DEBUG_INSNS indicates whether to insert after
+   any DEBUG_INSNs.  */
+
+static rtx
+emit_pattern_after (rtx pattern, rtx after, bool skip_debug_insns,
+		    rtx (*make_raw) (rtx))
+{
+  rtx prev = after;
+
+  if (skip_debug_insns)
+    while (DEBUG_INSN_P (prev))
+      prev = PREV_INSN (prev);
+
+  if (INSN_P (prev))
+    return emit_pattern_after_setloc (pattern, after, INSN_LOCATOR (prev),
+				      make_raw);
+  else
+    return emit_pattern_after_noloc (pattern, after, NULL, make_raw);
+}
+
+/* Like emit_insn_after_noloc, but set INSN_LOCATOR according to LOC.  */
+rtx
+emit_insn_after_setloc (rtx pattern, rtx after, int loc)
+{
+  return emit_pattern_after_setloc (pattern, after, loc, make_insn_raw);
 }
 
 /* Like emit_insn_after_noloc, but set INSN_LOCATOR according to AFTER.  */
 rtx
 emit_insn_after (rtx pattern, rtx after)
 {
-  rtx prev = after;
-
-  while (DEBUG_INSN_P (prev))
-    prev = PREV_INSN (prev);
-
-  if (INSN_P (prev))
-    return emit_insn_after_setloc (pattern, after, INSN_LOCATOR (prev));
-  else
-    return emit_insn_after_noloc (pattern, after, NULL);
+  return emit_pattern_after (pattern, after, true, make_insn_raw);
 }
 
-/* Like emit_jump_insn_after_noloc, but set INSN_LOCATOR according to SCOPE.  */
+/* Like emit_jump_insn_after_noloc, but set INSN_LOCATOR according to LOC.  */
 rtx
 emit_jump_insn_after_setloc (rtx pattern, rtx after, int loc)
 {
-  rtx last = emit_jump_insn_after_noloc (pattern, after);
-
-  if (pattern == NULL_RTX || !loc)
-    return last;
-
-  after = NEXT_INSN (after);
-  while (1)
-    {
-      if (active_insn_p (after) && !INSN_LOCATOR (after))
-	INSN_LOCATOR (after) = loc;
-      if (after == last)
-	break;
-      after = NEXT_INSN (after);
-    }
-  return last;
+  return emit_pattern_after_setloc (pattern, after, loc, make_jump_insn_raw);
 }
 
 /* Like emit_jump_insn_after_noloc, but set INSN_LOCATOR according to AFTER.  */
 rtx
 emit_jump_insn_after (rtx pattern, rtx after)
 {
-  rtx prev = after;
-
-  while (DEBUG_INSN_P (prev))
-    prev = PREV_INSN (prev);
-
-  if (INSN_P (prev))
-    return emit_jump_insn_after_setloc (pattern, after, INSN_LOCATOR (prev));
-  else
-    return emit_jump_insn_after_noloc (pattern, after);
+  return emit_pattern_after (pattern, after, true, make_jump_insn_raw);
 }
 
-/* Like emit_call_insn_after_noloc, but set INSN_LOCATOR according to SCOPE.  */
+/* Like emit_call_insn_after_noloc, but set INSN_LOCATOR according to LOC.  */
 rtx
 emit_call_insn_after_setloc (rtx pattern, rtx after, int loc)
 {
-  rtx last = emit_call_insn_after_noloc (pattern, after);
-
-  if (pattern == NULL_RTX || !loc)
-    return last;
-
-  after = NEXT_INSN (after);
-  while (1)
-    {
-      if (active_insn_p (after) && !INSN_LOCATOR (after))
-	INSN_LOCATOR (after) = loc;
-      if (after == last)
-	break;
-      after = NEXT_INSN (after);
-    }
-  return last;
+  return emit_pattern_after_setloc (pattern, after, loc, make_call_insn_raw);
 }
 
 /* Like emit_call_insn_after_noloc, but set INSN_LOCATOR according to AFTER.  */
 rtx
 emit_call_insn_after (rtx pattern, rtx after)
 {
-  rtx prev = after;
-
-  while (DEBUG_INSN_P (prev))
-    prev = PREV_INSN (prev);
-
-  if (INSN_P (prev))
-    return emit_call_insn_after_setloc (pattern, after, INSN_LOCATOR (prev));
-  else
-    return emit_call_insn_after_noloc (pattern, after);
+  return emit_pattern_after (pattern, after, true, make_call_insn_raw);
 }
 
-/* Like emit_debug_insn_after_noloc, but set INSN_LOCATOR according to SCOPE.  */
+/* Like emit_debug_insn_after_noloc, but set INSN_LOCATOR according to LOC.  */
 rtx
 emit_debug_insn_after_setloc (rtx pattern, rtx after, int loc)
 {
-  rtx last = emit_debug_insn_after_noloc (pattern, after);
-
-  if (pattern == NULL_RTX || !loc)
-    return last;
-
-  after = NEXT_INSN (after);
-  while (1)
-    {
-      if (active_insn_p (after) && !INSN_LOCATOR (after))
-	INSN_LOCATOR (after) = loc;
-      if (after == last)
-	break;
-      after = NEXT_INSN (after);
-    }
-  return last;
+  return emit_pattern_after_setloc (pattern, after, loc, make_debug_insn_raw);
 }
 
 /* Like emit_debug_insn_after_noloc, but set INSN_LOCATOR according to AFTER.  */
 rtx
 emit_debug_insn_after (rtx pattern, rtx after)
 {
-  if (INSN_P (after))
-    return emit_debug_insn_after_setloc (pattern, after, INSN_LOCATOR (after));
-  else
-    return emit_debug_insn_after_noloc (pattern, after);
+  return emit_pattern_after (pattern, after, false, make_debug_insn_raw);
 }
 
-/* Like emit_insn_before_noloc, but set INSN_LOCATOR according to SCOPE.  */
-rtx
-emit_insn_before_setloc (rtx pattern, rtx before, int loc)
+/* Insert PATTERN before BEFORE, setting its INSN_LOCATION to LOC.
+   MAKE_RAW indicates how to turn PATTERN into a real insn.  INSNP
+   indicates if PATTERN is meant for an INSN as opposed to a JUMP_INSN,
+   CALL_INSN, etc.  */
+
+static rtx
+emit_pattern_before_setloc (rtx pattern, rtx before, int loc, bool insnp,
+			    rtx (*make_raw) (rtx))
 {
   rtx first = PREV_INSN (before);
-  rtx last = emit_insn_before_noloc (pattern, before, NULL);
+  rtx last = emit_pattern_before_noloc (pattern, before,
+                                        insnp ? before : NULL_RTX,
+                                        NULL, make_raw);
 
   if (pattern == NULL_RTX || !loc)
     return last;
@@ -4651,127 +4475,93 @@ emit_insn_before_setloc (rtx pattern, rtx before, int loc)
   return last;
 }
 
+/* Insert PATTERN before BEFORE.  MAKE_RAW indicates how to turn PATTERN
+   into a real insn.  SKIP_DEBUG_INSNS indicates whether to insert
+   before any DEBUG_INSNs.  INSNP indicates if PATTERN is meant for an
+   INSN as opposed to a JUMP_INSN, CALL_INSN, etc.  */
+
+static rtx
+emit_pattern_before (rtx pattern, rtx before, bool skip_debug_insns,
+		     bool insnp, rtx (*make_raw) (rtx))
+{
+  rtx next = before;
+
+  if (skip_debug_insns)
+    while (DEBUG_INSN_P (next))
+      next = PREV_INSN (next);
+
+  if (INSN_P (next))
+    return emit_pattern_before_setloc (pattern, before, INSN_LOCATOR (next),
+				       insnp, make_raw);
+  else
+    return emit_pattern_before_noloc (pattern, before,
+                                      insnp ? before : NULL_RTX,
+                                      NULL, make_raw);
+}
+
+/* Like emit_insn_before_noloc, but set INSN_LOCATOR according to LOC.  */
+rtx
+emit_insn_before_setloc (rtx pattern, rtx before, int loc)
+{
+  return emit_pattern_before_setloc (pattern, before, loc, true,
+				     make_insn_raw);
+}
+
 /* Like emit_insn_before_noloc, but set INSN_LOCATOR according to BEFORE.  */
 rtx
 emit_insn_before (rtx pattern, rtx before)
 {
-  rtx next = before;
-
-  while (DEBUG_INSN_P (next))
-    next = PREV_INSN (next);
-
-  if (INSN_P (next))
-    return emit_insn_before_setloc (pattern, before, INSN_LOCATOR (next));
-  else
-    return emit_insn_before_noloc (pattern, before, NULL);
+  return emit_pattern_before (pattern, before, true, true, make_insn_raw);
 }
 
-/* like emit_insn_before_noloc, but set insn_locator according to scope.  */
+/* like emit_insn_before_noloc, but set INSN_LOCATOR according to LOC.  */
 rtx
 emit_jump_insn_before_setloc (rtx pattern, rtx before, int loc)
 {
-  rtx first = PREV_INSN (before);
-  rtx last = emit_jump_insn_before_noloc (pattern, before);
-
-  if (pattern == NULL_RTX)
-    return last;
-
-  first = NEXT_INSN (first);
-  while (1)
-    {
-      if (active_insn_p (first) && !INSN_LOCATOR (first))
-	INSN_LOCATOR (first) = loc;
-      if (first == last)
-	break;
-      first = NEXT_INSN (first);
-    }
-  return last;
+  return emit_pattern_before_setloc (pattern, before, loc, false,
+				     make_jump_insn_raw);
 }
 
 /* Like emit_jump_insn_before_noloc, but set INSN_LOCATOR according to BEFORE.  */
 rtx
 emit_jump_insn_before (rtx pattern, rtx before)
 {
-  rtx next = before;
-
-  while (DEBUG_INSN_P (next))
-    next = PREV_INSN (next);
-
-  if (INSN_P (next))
-    return emit_jump_insn_before_setloc (pattern, before, INSN_LOCATOR (next));
-  else
-    return emit_jump_insn_before_noloc (pattern, before);
+  return emit_pattern_before (pattern, before, true, false,
+			      make_jump_insn_raw);
 }
 
-/* like emit_insn_before_noloc, but set insn_locator according to scope.  */
+/* Like emit_insn_before_noloc, but set INSN_LOCATOR according to LOC.  */
 rtx
 emit_call_insn_before_setloc (rtx pattern, rtx before, int loc)
 {
-  rtx first = PREV_INSN (before);
-  rtx last = emit_call_insn_before_noloc (pattern, before);
-
-  if (pattern == NULL_RTX)
-    return last;
-
-  first = NEXT_INSN (first);
-  while (1)
-    {
-      if (active_insn_p (first) && !INSN_LOCATOR (first))
-	INSN_LOCATOR (first) = loc;
-      if (first == last)
-	break;
-      first = NEXT_INSN (first);
-    }
-  return last;
+  return emit_pattern_before_setloc (pattern, before, loc, false,
+				     make_call_insn_raw);
 }
 
-/* like emit_call_insn_before_noloc,
-   but set insn_locator according to before.  */
+/* Like emit_call_insn_before_noloc,
+   but set insn_locator according to BEFORE.  */
 rtx
 emit_call_insn_before (rtx pattern, rtx before)
 {
-  rtx next = before;
-
-  while (DEBUG_INSN_P (next))
-    next = PREV_INSN (next);
-
-  if (INSN_P (next))
-    return emit_call_insn_before_setloc (pattern, before, INSN_LOCATOR (next));
-  else
-    return emit_call_insn_before_noloc (pattern, before);
+  return emit_pattern_before (pattern, before, true, false,
+			      make_call_insn_raw);
 }
 
-/* like emit_insn_before_noloc, but set insn_locator according to scope.  */
+/* Like emit_insn_before_noloc, but set INSN_LOCATOR according to LOC.  */
 rtx
 emit_debug_insn_before_setloc (rtx pattern, rtx before, int loc)
 {
-  rtx first = PREV_INSN (before);
-  rtx last = emit_debug_insn_before_noloc (pattern, before);
-
-  if (pattern == NULL_RTX)
-    return last;
-
-  first = NEXT_INSN (first);
-  while (1)
-    {
-      if (active_insn_p (first) && !INSN_LOCATOR (first))
-	INSN_LOCATOR (first) = loc;
-      if (first == last)
-	break;
-      first = NEXT_INSN (first);
-    }
-  return last;
+  return emit_pattern_before_setloc (pattern, before, loc, false,
+				     make_debug_insn_raw);
 }
 
-/* like emit_debug_insn_before_noloc,
-   but set insn_locator according to before.  */
+/* Like emit_debug_insn_before_noloc,
+   but set insn_locator according to BEFORE.  */
 rtx
 emit_debug_insn_before (rtx pattern, rtx before)
 {
-  if (INSN_P (before))
-    return emit_debug_insn_before_setloc (pattern, before, INSN_LOCATOR (before));
-  else
-    return emit_debug_insn_before_noloc (pattern, before);
+  return emit_pattern_before (pattern, before, false, false,
+			      make_debug_insn_raw);
 }
 
 /* Take X and emit it at the end of the doubly-linked
@@ -5649,8 +5439,9 @@ init_emit_regs (void)
   init_reg_modes_target ();
 
   /* Assign register numbers to the globally defined register rtx.  */
-  pc_rtx = gen_rtx_PC (VOIDmode);
-  cc0_rtx = gen_rtx_CC0 (VOIDmode);
+  pc_rtx = gen_rtx_fmt_ (PC, VOIDmode);
+  ret_rtx = gen_rtx_fmt_ (RETURN, VOIDmode);
+  cc0_rtx = gen_rtx_fmt_ (CC0, VOIDmode);
   stack_pointer_rtx = gen_raw_REG (Pmode, STACK_POINTER_REGNUM);
   frame_pointer_rtx = gen_raw_REG (Pmode, FRAME_POINTER_REGNUM);
   hard_frame_pointer_rtx = gen_raw_REG (Pmode, HARD_FRAME_POINTER_REGNUM);

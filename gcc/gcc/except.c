@@ -209,7 +209,7 @@ init_eh (void)
 
   /* Create the SjLj_Function_Context structure.  This should match
      the definition in unwind-sjlj.c.  */
-  if (targetm.except_unwind_info () == UI_SJLJ)
+  if (targetm.except_unwind_info (&global_options) == UI_SJLJ)
     {
       tree f_jbuf, f_per, f_lsda, f_prev, f_cs, f_data, tmp;
 
@@ -225,7 +225,7 @@ init_eh (void)
 			 integer_type_node);
       DECL_FIELD_CONTEXT (f_cs) = sjlj_fc_type_node;
 
-      tmp = build_index_type (build_int_cst (NULL_TREE, 4 - 1));
+      tmp = build_index_type (size_int (4 - 1));
       tmp = build_array_type (lang_hooks.types.type_for_mode
 				(targetm.unwind_word_mode (), 1),
 			      tmp);
@@ -245,17 +245,17 @@ init_eh (void)
 
 #ifdef DONT_USE_BUILTIN_SETJMP
 #ifdef JMP_BUF_SIZE
-      tmp = build_int_cst (NULL_TREE, JMP_BUF_SIZE - 1);
+      tmp = size_int (JMP_BUF_SIZE - 1);
 #else
       /* Should be large enough for most systems, if it is not,
 	 JMP_BUF_SIZE should be defined with the proper value.  It will
 	 also tend to be larger than necessary for most systems, a more
 	 optimal port will define JMP_BUF_SIZE.  */
-      tmp = build_int_cst (NULL_TREE, FIRST_PSEUDO_REGISTER + 2 - 1);
+      tmp = size_int (FIRST_PSEUDO_REGISTER + 2 - 1);
 #endif
 #else
       /* builtin_setjmp takes a pointer to 5 words.  */
-      tmp = build_int_cst (NULL_TREE, 5 * BITS_PER_WORD / POINTER_SIZE - 1);
+      tmp = size_int (5 * BITS_PER_WORD / POINTER_SIZE - 1);
 #endif
       tmp = build_index_type (tmp);
       tmp = build_array_type (ptr_type_node, tmp);
@@ -681,7 +681,7 @@ lookup_type_for_runtime (tree type)
 
 /* Represent an entry in @TTypes for either catch actions
    or exception filter actions.  */
-struct GTY(()) ttypes_filter {
+struct ttypes_filter {
   tree t;
   int filter;
 };
@@ -857,7 +857,7 @@ assign_filter_values (void)
 		  for ( ; tp_node; tp_node = TREE_CHAIN (tp_node))
 		    {
 		      int flt = add_ttypes_entry (ttypes, TREE_VALUE (tp_node));
-		      tree flt_node = build_int_cst (NULL_TREE, flt);
+		      tree flt_node = build_int_cst (integer_type_node, flt);
 
 		      c->filter_list
 			= tree_cons (NULL_TREE, flt_node, c->filter_list);
@@ -868,7 +868,7 @@ assign_filter_values (void)
 		  /* Get a filter value for the NULL list also since it
 		     will need an action record anyway.  */
 		  int flt = add_ttypes_entry (ttypes, NULL);
-		  tree flt_node = build_int_cst (NULL_TREE, flt);
+		  tree flt_node = build_int_cst (integer_type_node, flt);
 
 		  c->filter_list
 		    = tree_cons (NULL_TREE, flt_node, NULL);
@@ -998,8 +998,6 @@ sjlj_assign_call_site_values (void)
 
 	/* First: build the action table.  */
 	action = collect_one_action_chain (ar_hash, lp->region);
-	if (action != -1)
-	  crtl->uses_eh_lsda = 1;
 
 	/* Next: assign call-site values.  If dwarf2 terms, this would be
 	   the region number assigned by convert_to_eh_region_ranges, but
@@ -1065,6 +1063,9 @@ sjlj_mark_call_sites (void)
 	  this_call_site = 0;
 	}
 
+      if (this_call_site != -1)
+	crtl->uses_eh_lsda = 1;
+
       if (this_call_site == last_call_site)
 	continue;
 
@@ -1119,27 +1120,30 @@ sjlj_emit_function_enter (rtx dispatch_label)
   else
     emit_move_insn (mem, const0_rtx);
 
+  if (dispatch_label)
+    {
 #ifdef DONT_USE_BUILTIN_SETJMP
-  {
-    rtx x, last;
-    x = emit_library_call_value (setjmp_libfunc, NULL_RTX, LCT_RETURNS_TWICE,
-				 TYPE_MODE (integer_type_node), 1,
-				 plus_constant (XEXP (fc, 0),
-						sjlj_fc_jbuf_ofs), Pmode);
+      rtx x, last;
+      x = emit_library_call_value (setjmp_libfunc, NULL_RTX, LCT_RETURNS_TWICE,
+				   TYPE_MODE (integer_type_node), 1,
+				   plus_constant (XEXP (fc, 0),
+						  sjlj_fc_jbuf_ofs), Pmode);
 
-    emit_cmp_and_jump_insns (x, const0_rtx, NE, 0,
-			     TYPE_MODE (integer_type_node), 0, dispatch_label);
-    last = get_last_insn ();
-    if (JUMP_P (last) && any_condjump_p (last))
-      {
-        gcc_assert (!find_reg_note (last, REG_BR_PROB, 0));
-        add_reg_note (last, REG_BR_PROB, GEN_INT (REG_BR_PROB_BASE / 100));
-      }
-  }
-#else
-  expand_builtin_setjmp_setup (plus_constant (XEXP (fc, 0), sjlj_fc_jbuf_ofs),
+      emit_cmp_and_jump_insns (x, const0_rtx, NE, 0,
+			       TYPE_MODE (integer_type_node), 0,
 			       dispatch_label);
+      last = get_last_insn ();
+      if (JUMP_P (last) && any_condjump_p (last))
+	{
+	  gcc_assert (!find_reg_note (last, REG_BR_PROB, 0));
+	  add_reg_note (last, REG_BR_PROB, GEN_INT (REG_BR_PROB_BASE / 100));
+	}
+#else
+      expand_builtin_setjmp_setup (plus_constant (XEXP (fc, 0),
+						  sjlj_fc_jbuf_ofs),
+				   dispatch_label);
 #endif
+    }
 
   emit_library_call (unwind_sjlj_register_libfunc, LCT_NORMAL, VOIDmode,
 		     1, XEXP (fc, 0), Pmode);
@@ -1281,12 +1285,11 @@ sjlj_emit_dispatch_table (rtx dispatch_label, int num_dispatch)
 
 	if (num_dispatch > 1)
 	  {
-	    tree t_label, case_elt;
+	    tree t_label, case_elt, t;
 
 	    t_label = create_artificial_label (UNKNOWN_LOCATION);
-	    case_elt = build3 (CASE_LABEL_EXPR, void_type_node,
-			       build_int_cst (NULL, disp_index),
-			       NULL, t_label);
+	    t = build_int_cst (integer_type_node, disp_index);
+	    case_elt = build_case_label (t, NULL, t_label);
 	    gimple_switch_set_label (switch_stmt, disp_index, case_elt);
 
 	    label = label_rtx (t_label);
@@ -1363,6 +1366,23 @@ sjlj_build_landing_pads (void)
       sjlj_emit_function_exit ();
     }
 
+  /* If we do not have any landing pads, we may still need to register a
+     personality routine and (empty) LSDA to handle must-not-throw regions.  */
+  else if (function_needs_eh_personality (cfun) != eh_personality_none)
+    {
+      int align = STACK_SLOT_ALIGNMENT (sjlj_fc_type_node,
+					TYPE_MODE (sjlj_fc_type_node),
+					TYPE_ALIGN (sjlj_fc_type_node));
+      crtl->eh.sjlj_fc
+	= assign_stack_local (TYPE_MODE (sjlj_fc_type_node),
+			      int_size_in_bytes (sjlj_fc_type_node),
+			      align);
+
+      sjlj_mark_call_sites ();
+      sjlj_emit_function_enter (NULL_RTX);
+      sjlj_emit_function_exit ();
+    }
+
   VEC_free (int, heap, sjlj_lp_call_site_index);
 }
 
@@ -1375,13 +1395,13 @@ finish_eh_generation (void)
   basic_block bb;
 
   /* Construct the landing pads.  */
-  if (targetm.except_unwind_info () == UI_SJLJ)
+  if (targetm.except_unwind_info (&global_options) == UI_SJLJ)
     sjlj_build_landing_pads ();
   else
     dw2_build_landing_pads ();
   break_superblocks ();
 
-  if (targetm.except_unwind_info () == UI_SJLJ
+  if (targetm.except_unwind_info (&global_options) == UI_SJLJ
       /* Kludge for Alpha/Tru64 (see alpha_gp_save_rtx).  */
       || single_succ_edge (ENTRY_BLOCK_PTR)->insns.r)
     commit_edge_insertions ();
@@ -1437,7 +1457,7 @@ struct rtl_opt_pass pass_rtl_eh =
 {
  {
   RTL_PASS,
-  "rtl eh",                             /* name */
+  "rtl_eh",                             /* name */
   gate_handle_eh,                       /* gate */
   rest_of_handle_eh,			/* execute */
   NULL,                                 /* sub */
@@ -1858,11 +1878,11 @@ set_nothrow_function_flags (void)
 	  }
       }
   if (crtl->nothrow
-      && (cgraph_function_body_availability (cgraph_node
+      && (cgraph_function_body_availability (cgraph_get_node
 					     (current_function_decl))
           >= AVAIL_AVAILABLE))
     {
-      struct cgraph_node *node = cgraph_node (current_function_decl);
+      struct cgraph_node *node = cgraph_get_node (current_function_decl);
       struct cgraph_edge *e;
       for (e = node->callers; e; e = e->next_caller)
         e->can_throw_external = false;
@@ -2421,30 +2441,33 @@ convert_to_eh_region_ranges (void)
 	if (last_action != this_action
 	    || last_landing_pad != this_landing_pad)
 	  {
+	    /* If there is a queued no-action region in the other section
+	       with hot/cold partitioning, emit it now.  */
+	    if (first_no_action_insn_before_switch)
+	      {
+		gcc_assert (this_action != -1
+			    && last_action == (first_no_action_insn
+					       ? -1 : -3));
+		call_site = add_call_site (NULL_RTX, 0, 0);
+		note = emit_note_before (NOTE_INSN_EH_REGION_BEG,
+					 first_no_action_insn_before_switch);
+		NOTE_EH_HANDLER (note) = call_site;
+		note = emit_note_after (NOTE_INSN_EH_REGION_END,
+					last_no_action_insn_before_switch);
+		NOTE_EH_HANDLER (note) = call_site;
+		gcc_assert (last_action != -3
+			    || (last_action_insn
+				== last_no_action_insn_before_switch));
+		first_no_action_insn_before_switch = NULL_RTX;
+		last_no_action_insn_before_switch = NULL_RTX;
+		call_site_base++;
+	      }
 	    /* If we'd not seen a previous action (-3) or the previous
 	       action was must-not-throw (-2), then we do not need an
 	       end note.  */
 	    if (last_action >= -1)
 	      {
 		/* If we delayed the creation of the begin, do it now.  */
-		if (first_no_action_insn_before_switch)
-		  {
-		    call_site = add_call_site (NULL_RTX, 0, 0);
-		    note
-		      = emit_note_before (NOTE_INSN_EH_REGION_BEG,
-					  first_no_action_insn_before_switch);
-		    NOTE_EH_HANDLER (note) = call_site;
-		    if (first_no_action_insn)
-		      {
-			note
-			  = emit_note_after (NOTE_INSN_EH_REGION_END,
-					     last_no_action_insn_before_switch);
-			NOTE_EH_HANDLER (note) = call_site;
-		      }
-		    else
-		      gcc_assert (last_action_insn
-				  == last_no_action_insn_before_switch);
-		  }
 		if (first_no_action_insn)
 		  {
 		    call_site = add_call_site (NULL_RTX, 0, cur_sec);
@@ -2622,7 +2645,7 @@ gate_convert_to_eh_region_ranges (void)
   /* Nothing to do for SJLJ exceptions or if no regions created.  */
   if (cfun->eh->region_tree == NULL)
     return false;
-  if (targetm.except_unwind_info () == UI_SJLJ)
+  if (targetm.except_unwind_info (&global_options) == UI_SJLJ)
     return false;
   return true;
 }
@@ -2961,7 +2984,7 @@ output_one_function_exception_table (int section)
 		       eh_data_format_name (tt_format));
 
 #ifndef HAVE_AS_LEB128
-  if (targetm.except_unwind_info () == UI_SJLJ)
+  if (targetm.except_unwind_info (&global_options) == UI_SJLJ)
     call_site_len = sjlj_size_of_call_site_table ();
   else
     call_site_len = dw2_size_of_call_site_table (section);
@@ -3028,14 +3051,14 @@ output_one_function_exception_table (int section)
   dw2_asm_output_delta_uleb128 (cs_end_label, cs_after_size_label,
 				"Call-site table length");
   ASM_OUTPUT_LABEL (asm_out_file, cs_after_size_label);
-  if (targetm.except_unwind_info () == UI_SJLJ)
+  if (targetm.except_unwind_info (&global_options) == UI_SJLJ)
     sjlj_output_call_site_table ();
   else
     dw2_output_call_site_table (cs_format, section);
   ASM_OUTPUT_LABEL (asm_out_file, cs_end_label);
 #else
   dw2_asm_output_data_uleb128 (call_site_len, "Call-site table length");
-  if (targetm.except_unwind_info () == UI_SJLJ)
+  if (targetm.except_unwind_info (&global_options) == UI_SJLJ)
     sjlj_output_call_site_table ();
   else
     dw2_output_call_site_table (cs_format, section);
@@ -3194,7 +3217,7 @@ dump_eh_tree (FILE * out, struct function *fun)
 	    }
 	  else
 	    {
-	      for (lp = i->landing_pads; lp ; lp = lp->next_lp);
+	      for (lp = i->landing_pads; lp ; lp = lp->next_lp)
 		{
 		  fprintf (out, "{%i,", lp->index);
 		  if (lp->landing_pad)

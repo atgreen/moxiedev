@@ -1,6 +1,6 @@
 // <algorithm> declarations  -*- C++ -*-
 
-// Copyright (C) 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright (C) 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -24,7 +24,7 @@
 
 /** @file bits/algorithmfwd.h
  *  This is an internal header file, included by other library headers.
- *  You should not attempt to use it directly.
+ *  Do not attempt to use it directly. @headername{algorithm}
  */
 
 #ifndef _GLIBCXX_ALGORITHMFWD_H
@@ -37,7 +37,9 @@
 #include <bits/stl_iterator_base_types.h>
 #include <initializer_list>
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /*
     adjacent_find
@@ -301,6 +303,15 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     bool
     is_partitioned(_IIter, _IIter, _Predicate);
 
+  template<typename _FIter1, typename _FIter2>
+    bool
+    is_permutation(_FIter1, _FIter1, _FIter2);
+
+  template<typename _FIter1, typename _FIter2,
+	   typename _BinaryPredicate>
+    bool
+    is_permutation(_FIter1, _FIter1, _FIter2, _BinaryPredicate);
+
   template<typename _FIter>
     bool 
     is_sorted(_FIter, _FIter);
@@ -538,7 +549,12 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
   template<typename _Tp> 
     void 
-    swap(_Tp&, _Tp&);
+    swap(_Tp&, _Tp&)
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+    noexcept(__and_<is_nothrow_move_constructible<_Tp>,
+	            is_nothrow_move_assignable<_Tp>>::value)
+#endif
+    ;
 
   template<typename _Tp, size_t _Nm>
     void
@@ -568,9 +584,9 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     _FIter 
     upper_bound(_FIter, _FIter, const _Tp&, _Compare);
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
 
-_GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_P)
+_GLIBCXX_BEGIN_NAMESPACE_ALGO
 
   template<typename _FIter>
     _FIter 
@@ -793,9 +809,10 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_P)
     _OIter 
     unique_copy(_IIter, _IIter, _OIter, _BinaryPredicate);
 
-_GLIBCXX_END_NESTED_NAMESPACE
+_GLIBCXX_END_NAMESPACE_ALGO
+} // namespace std
 
-#ifdef _GLIBCXX_NAMESPACE_ASSOCIATION_PARALLEL
+#ifdef _GLIBCXX_PARALLEL
 # include <parallel/algorithmfwd.h>
 #endif
 

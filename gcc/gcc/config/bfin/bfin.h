@@ -1,5 +1,6 @@
 /* Definitions for the Blackfin port.
-   Copyright (C) 2005, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2005, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
    Contributed by Analog Devices.
 
    This file is part of GCC.
@@ -21,56 +22,14 @@
 #ifndef _BFIN_CONFIG
 #define _BFIN_CONFIG
 
+#ifndef BFIN_OPTS_H
+#include "config/bfin/bfin-opts.h"
+#endif
+
 #define OBJECT_FORMAT_ELF
 
 #define BRT 1
 #define BRF 0
-
-/* CPU type.  */
-typedef enum bfin_cpu_type
-{
-  BFIN_CPU_UNKNOWN,
-  BFIN_CPU_BF512,
-  BFIN_CPU_BF514,
-  BFIN_CPU_BF516,
-  BFIN_CPU_BF518,
-  BFIN_CPU_BF522,
-  BFIN_CPU_BF523,
-  BFIN_CPU_BF524,
-  BFIN_CPU_BF525,
-  BFIN_CPU_BF526,
-  BFIN_CPU_BF527,
-  BFIN_CPU_BF531,
-  BFIN_CPU_BF532,
-  BFIN_CPU_BF533,
-  BFIN_CPU_BF534,
-  BFIN_CPU_BF536,
-  BFIN_CPU_BF537,
-  BFIN_CPU_BF538,
-  BFIN_CPU_BF539,
-  BFIN_CPU_BF542,
-  BFIN_CPU_BF542M,
-  BFIN_CPU_BF544,
-  BFIN_CPU_BF544M,
-  BFIN_CPU_BF547,
-  BFIN_CPU_BF547M,
-  BFIN_CPU_BF548,
-  BFIN_CPU_BF548M,
-  BFIN_CPU_BF549,
-  BFIN_CPU_BF549M,
-  BFIN_CPU_BF561
-} bfin_cpu_t;
-
-/* Value of -mcpu= */
-extern bfin_cpu_t bfin_cpu_type;
-
-/* Value of -msi-revision= */
-extern int bfin_si_revision;
-
-extern unsigned int bfin_workarounds;
-
-/* Print subsidiary information on the compiler version in use.  */
-#define TARGET_VERSION fprintf (stderr, " (BlackFin bfin)")
 
 /* Predefinition in the preprocessor for this target machine */
 #ifndef TARGET_CPU_CPP_BUILTINS
@@ -181,6 +140,10 @@ extern unsigned int bfin_workarounds;
 	case BFIN_CPU_BF561:			\
 	  builtin_define ("__ADSPBF561__");	\
 	  break;				\
+	case BFIN_CPU_BF592:            \
+	  builtin_define ("__ADSPBF592__"); \
+	  builtin_define ("__ADSPBF59x__"); \
+	  break;                \
 	}					\
 						\
       if (bfin_si_revision != -1)		\
@@ -238,28 +201,16 @@ extern unsigned int bfin_workarounds;
   %{mfast-fp:-lbffastfp} %G %L %{mfast-fp:-lbffastfp} %G \
 "
 
-/* A C string constant that tells the GCC driver program options to pass to
-   the assembler.  It can also specify how to translate options you give to GNU
-   CC into options for GCC to pass to the assembler.  See the file `sun3.h'
-   for an example of this.
-
-   Do not define this macro if it does not need to do anything.
-
-   Defined in svr4.h.  */
 #undef  ASM_SPEC
 #define ASM_SPEC "\
-%{v} %{n} %{T} %{Ym,*} %{Yd,*} %{Wa,*:%*} \
     %{mno-fdpic:-mnopic} %{mfdpic}"
 
 #define LINK_SPEC "\
 %{h*} %{v:-V} \
-%{b} \
 %{mfdpic:-melf32bfinfd -z text} \
 %{static:-dn -Bstatic} \
 %{shared:-G -Bdynamic} \
 %{symbolic:-Bsymbolic} \
-%{YP,*} \
-%{Qy:} %{!Qn:-Qy} \
 -init __init -fini __fini "
 
 /* Generate DSP instructions, like DSP halfword loads */
@@ -714,19 +665,6 @@ enum reg_class
  : (REGNO) >= REG_RETS ? PROLOGUE_REGS			\
  : NO_REGS)
 
-/* The following macro defines cover classes for Integrated Register
-   Allocator.  Cover classes is a set of non-intersected register
-   classes covering all hard registers used for register allocation
-   purpose.  Any move between two registers of a cover class should be
-   cheaper than load or store of the registers.  The macro value is
-   array of register classes with LIM_REG_CLASSES used as the end
-   marker.  */
-
-#define IRA_COVER_CLASSES				\
-{							\
-    MOST_REGS, AREGS, CCREGS, LIM_REG_CLASSES		\
-}
-
 /* When this hook returns true for MODE, the compiler allows
    registers explicitly used in the rtl to be used as spill registers
    but prevents the compiler from extending the lifetime of these
@@ -849,13 +787,6 @@ typedef struct {
     gen_frame_mem (Pmode, plus_constant (frame_pointer_rtx, UNITS_PER_WORD))
 
 /* Addressing Modes */
-
-/* Nonzero if the constant value X is a legitimate general operand.
-   symbol_ref are not legitimate and will be put into constant pool.
-   See force_const_mem().
-   If -mno-pool, all constants are legitimate.
- */
-#define LEGITIMATE_CONSTANT_P(X) bfin_legitimate_constant_p (X)
 
 /*   A number, the maximum number of registers that can appear in a
      valid memory address.  Note that it is up to you to specify a
@@ -1199,18 +1130,28 @@ do { 						\
 
 #define ASM_COMMENT_START "//"
 
+#define PROFILE_BEFORE_PROLOGUE
 #define FUNCTION_PROFILER(FILE, LABELNO)	\
   do {						\
-    fprintf (FILE, "\tCALL __mcount;\n");	\
+    fprintf (FILE, "\t[--SP] = RETS;\n");	\
+    if (TARGET_LONG_CALLS)			\
+      {						\
+	fprintf (FILE, "\tP2.h = __mcount;\n");	\
+	fprintf (FILE, "\tP2.l = __mcount;\n");	\
+	fprintf (FILE, "\tCALL (P2);\n");	\
+      }						\
+    else					\
+      fprintf (FILE, "\tCALL __mcount;\n");	\
+    fprintf (FILE, "\tRETS = [SP++];\n");	\
   } while(0)
 
 #undef NO_PROFILE_COUNTERS
 #define NO_PROFILE_COUNTERS 1
 
-#define ASM_OUTPUT_REG_PUSH(FILE, REGNO) fprintf (FILE, "[SP--] = %s;\n", reg_names[REGNO])
-#define ASM_OUTPUT_REG_POP(FILE, REGNO)  fprintf (FILE, "%s = [SP++];\n", reg_names[REGNO])
+#define ASM_OUTPUT_REG_PUSH(FILE, REGNO) fprintf (FILE, "\t[--SP] = %s;\n", reg_names[REGNO])
+#define ASM_OUTPUT_REG_POP(FILE, REGNO)  fprintf (FILE, "\t%s = [SP++];\n", reg_names[REGNO])
 
-extern struct rtx_def *bfin_cc_rtx, *bfin_rets_rtx;
+extern rtx bfin_cc_rtx, bfin_rets_rtx;
 
 /* This works for GAS and some other assemblers.  */
 #define SET_ASM_OP              ".set "

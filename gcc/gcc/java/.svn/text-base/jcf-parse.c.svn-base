@@ -1,6 +1,6 @@
 /* Parser for Java(TM) .class files.
    Copyright (C) 1996, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2005, 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -35,11 +35,9 @@ The Free Software Foundation is independent of Sun Microsystems, Inc.  */
 #include "javaop.h"
 #include "java-tree.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "parse.h"
 #include "ggc.h"
 #include "debug.h"
-#include "assert.h"
 #include "cgraph.h"
 #include "vecprim.h"
 #include "bitmap.h"
@@ -178,9 +176,9 @@ java_read_sourcefilenames (const char *fsource_filename)
   if (fsource_filename 
       && filenames == 0
       && strlen (fsource_filename) > strlen (".java")
-      && strcmp ((fsource_filename 
-		  + strlen (fsource_filename)
-		  - strlen (".java")),
+      && filename_cmp ((fsource_filename
+		       + strlen (fsource_filename)
+		       - strlen (".java")),
 		 ".java") != 0)
     {
 /*       fsource_filename isn't a .java file but a list of filenames
@@ -324,7 +322,7 @@ set_source_filename (JCF *jcf, int index)
       /* Use the current input_filename (derived from the class name)
 	 if it has a directory prefix, but otherwise matches sfname. */
       if (old_len > new_len
-	  && strcmp (sfname, old_filename + old_len - new_len) == 0
+	  && filename_cmp (sfname, old_filename + old_len - new_len) == 0
 	  && (old_filename[old_len - new_len - 1] == '/'
 	      || old_filename[old_len - new_len - 1] == '\\'))
 	return;
@@ -370,7 +368,7 @@ set_source_filename (JCF *jcf, int index)
    from the input class file into the output file.  We don't decode the
    data at all, merely rewriting constant indexes whenever we come
    across them: this is necessary because the constant pool in the
-   output file isn't the same as the constant pool in in the input.
+   output file isn't the same as the constant pool in the input.
 
    The main advantage of this technique is that the resulting
    annotation data is pointer-free, so it doesn't have to be relocated
@@ -1764,7 +1762,7 @@ java_parse_file (void)
 	      next = list + count;
 	      avail = avail - count;
 	    }
-	  /* Subtract to to guarantee space for final '\0'. */
+	  /* Subtract one to guarantee space for final '\0'. */
 	  count = fread (next, 1, avail - 1, finput);
 	  if (count == 0)
 	    {
@@ -1845,8 +1843,7 @@ java_parse_file (void)
       list = next;
     }
 
-  if (file_list != NULL)
-    free (file_list);
+  free (file_list);
 
   if (filename_count == 0)
     warning (0, "no input file specified");
@@ -1856,7 +1853,7 @@ java_parse_file (void)
       const char *resource_filename;
       
       /* Only one resource file may be compiled at a time.  */
-      assert (VEC_length (tree, all_translation_units) == 1);
+      gcc_assert (VEC_length (tree, all_translation_units) == 1);
 
       resource_filename
 	= IDENTIFIER_POINTER

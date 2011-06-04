@@ -1,4 +1,5 @@
-@c Copyright (C) 2003, 2004, 2005, 2006, 2007 Free Software Foundation, Inc.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2010
+@c Free Software Foundation, Inc.
 @c This is part of the GCC manual.
 @c For copying conditions, see the file gcc.texi.
 @c Contributed by Aldy Hernandez <aldy@quesejoda.com>
@@ -501,8 +502,8 @@ The software decimal floating point library implements IEEE 754-2008
 decimal floating point arithmetic and is only activated on selected
 targets.
 
-The software decimal floating point library supports either DPD 
-(Densely Packed Decimal) or BID (Binary Integer Decimal) encoding 
+The software decimal floating point library supports either DPD
+(Densely Packed Decimal) or BID (Binary Integer Decimal) encoding
 as selected at configure time.
 
 

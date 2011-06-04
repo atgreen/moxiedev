@@ -39,7 +39,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "flags.h"
 #include "debug.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
+#include "reload.h"
 #include "tm-preds.h"
 #include "tm-constrs.h"
 #include "tm_p.h"
@@ -1130,18 +1130,16 @@ vax_output_int_move (rtx insn ATTRIBUTE_UNUSED, rtx *operands,
 	    {
 	      lval >>= n;
 
-#if HOST_BITS_PER_WIDE_INT == 32
 	      /* On 32bit platforms, if the 6bits didn't overflow into the
 		 upper 32bit value that value better be 0.  If we have
 		 overflowed, make sure it wasn't too much.  */
-	      if (hval != 0)
+	      if (HOST_BITS_PER_WIDE_INT == 32 && hval != 0)
 		{
 		  if (n <= 26 || hval >= ((unsigned)1 << (n - 26)))
 		    n = 0;	/* failure */
 		  else
 		    lval |= hval << (32 - n);
 		}
-#endif
 	      /*  If n is 0, then ashq is not the best way to emit this.  */
 	      if (n > 0)
 		{
@@ -1605,15 +1603,6 @@ legitimate_constant_address_p (rtx x)
    return true;
 }
 
-/* True if the constant value X is a legitimate general operand.
-   It is given that X satisfies CONSTANT_P or is a CONST_DOUBLE.  */
-
-bool
-legitimate_constant_p (rtx x ATTRIBUTE_UNUSED)
-{
-  return true;
-}
-
 /* The other macros defined here are used only in legitimate_address_p ().  */
 
 /* Nonzero if X is a hard reg that can be used as an index
@@ -1679,10 +1668,9 @@ nonindexed_address_p (rtx x, bool strict)
   rtx xfoo0;
   if (REG_P (x))
     {
-      extern rtx *reg_equiv_mem;
       if (! reload_in_progress
-	  || reg_equiv_mem[REGNO (x)] == 0
-	  || indirectable_address_p (reg_equiv_mem[REGNO (x)], strict, false))
+	  || reg_equiv_mem (REGNO (x)) == 0
+	  || indirectable_address_p (reg_equiv_mem (REGNO (x)), strict, false))
 	return true;
     }
   if (indirectable_constant_address_p (x, false))

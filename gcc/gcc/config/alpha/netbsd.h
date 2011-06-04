@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler,
    for Alpha NetBSD systems.
-   Copyright (C) 1998, 2002, 2003, 2004, 2005, 2007
+   Copyright (C) 1998, 2002, 2003, 2004, 2005, 2007, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -70,14 +70,10 @@ along with GCC; see the file COPYING3.  If not see
 
 #undef ENDFILE_SPEC
 #define ENDFILE_SPEC		\
-  "%{ffast-math|funsafe-math-optimizations:crtfm%O%s} \
+  "%{Ofast|ffast-math|funsafe-math-optimizations:crtfm%O%s} \
    %(netbsd_endfile_spec)"
 
 
 /* Attempt to enable execute permissions on the stack.  */
 
 #define ENABLE_EXECUTE_STACK NETBSD_ENABLE_EXECUTE_STACK
-
-
-#undef TARGET_VERSION
-#define TARGET_VERSION fprintf (stderr, " (NetBSD/alpha ELF)");

@@ -1,5 +1,5 @@
 @c Copyright (C) 1988, 1989, 1992, 1993, 1994, 1996, 1998, 1999, 2000, 2001,
-@c 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+@c 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 @c Free Software Foundation, Inc.
 
 @c This is part of the GCC manual.
@@ -37,7 +37,7 @@ extensions, accepted by GCC in C90 mode and in C++.
 * Complex::             Data types for complex numbers.
 * Floating Types::      Additional Floating Types.
 * Half-Precision::      Half-Precision Floating Point.
-* Decimal Float::       Decimal Floating Types. 
+* Decimal Float::       Decimal Floating Types.
 * Hex Floats::          Hexadecimal floating-point constants.
 * Fixed-Point::         Fixed-Point Types.
 * Named Address Spaces::Named address spaces.
@@ -455,7 +455,7 @@ does not refer to anything that has gone out of scope, you should be
 safe.
 
 GCC implements taking the address of a nested function using a technique
-called @dfn{trampolines}.  This technique was described in 
+called @dfn{trampolines}.  This technique was described in
 @cite{Lexical Closures for C++} (Thomas M. Breuel, USENIX
 C++ Conference Proceedings, October 17-21, 1988).
 
@@ -619,7 +619,7 @@ myopen (const char *path, int oflag, ...)
         @}
       return open (path, oflag, __builtin_va_arg_pack ());
     @}
-    
+
   if (__builtin_va_arg_pack_len () < 1)
     return __open_2 (path, oflag);
 
@@ -934,6 +934,7 @@ typedef _Complex float __attribute__((mode(XC))) _Complex80;
 
 Not all targets support additional floating point types.  @code{__float80}
 and @code{__float128} types are supported on i386, x86_64 and ia64 targets.
+The @code{__float128} type is supported on hppa HP-UX targets.
 
 @node Half-Precision
 @section Half-Precision Floating Point
@@ -941,7 +942,7 @@ and @code{__float128} types are supported on i386, x86_64 and ia64 targets.
 @cindex @code{__fp16} data type
 
 On ARM targets, GCC supports half-precision (16-bit) floating point via
-the @code{__fp16} type.  You must enable this type explicitly 
+the @code{__fp16} type.  You must enable this type explicitly
 with the @option{-mfp16-format} command-line option in order to use it.
 
 ARM supports two incompatible representations for half-precision
@@ -962,7 +963,7 @@ values in the range of @math{2^{-14}} to 131008.
 The @code{__fp16} type is a storage format only.  For purposes
 of arithmetic and other operations, @code{__fp16} values in C or C++
 expressions are automatically promoted to @code{float}.  In addition,
-you cannot declare a function with a return value or parameters 
+you cannot declare a function with a return value or parameters
 of type @code{__fp16}.
 
 Note that conversions from @code{double} to @code{__fp16}
@@ -970,14 +971,14 @@ involve an intermediate conversion to @code{float}.  Because
 of rounding, this can sometimes produce a different result than a
 direct conversion.
 
-ARM provides hardware support for conversions between 
+ARM provides hardware support for conversions between
 @code{__fp16} and @code{float} values
 as an extension to VFP and NEON (Advanced SIMD).  GCC generates
 code using these hardware instructions if you compile with
-options to select an FPU that provides them; 
+options to select an FPU that provides them;
 for example, @option{-mfpu=neon-fp16 -mfloat-abi=softfp},
 in addition to the @option{-mfp16-format} option to select
-a half-precision format.  
+a half-precision format.
 
 Language-level support for the @code{__fp16} data type is
 independent of whether GCC generates code using hardware floating-point
@@ -1994,7 +1995,7 @@ The @code{aligned} attribute can also be used for variables and fields
 @cindex @code{alloc_size} attribute
 The @code{alloc_size} attribute is used to tell the compiler that the
 function return value points to memory, where the size is given by
-one or two of the functions parameters.  GCC uses this 
+one or two of the functions parameters.  GCC uses this
 information to improve the correctness of @code{__builtin_object_size}.
 
 The function parameter(s) denoting the allocated size are specified by
@@ -2003,7 +2004,7 @@ is either the value of the single function argument specified or the product
 of the two function arguments specified.  Argument numbering starts at
 one.
 
-For instance, 
+For instance,
 
 @smallexample
 void* my_calloc(size_t, size_t) __attribute__((alloc_size(1,2)))
@@ -2212,9 +2213,14 @@ On systems that support the @code{visibility} attribute, this
 attribute also implies ``default'' visibility.  It is an error to
 explicitly specify any other visibility.
 
-Currently, the @code{dllexport} attribute is ignored for inlined
-functions, unless the @option{-fkeep-inline-functions} flag has been
-used.  The attribute is also ignored for undefined symbols.
+In previous versions of GCC, the @code{dllexport} attribute was ignored
+for inlined functions, unless the @option{-fkeep-inline-functions} flag
+had been used.  The default behaviour now is to emit all dllexported
+inline functions; however, this can cause object file-size bloat, in
+which case the old behaviour can be restored by using
+@option{-fno-keep-inline-dllexport}.
+
+The attribute is also ignored for undefined symbols.
 
 When applied to C++ classes, the attribute marks defined non-inlined
 member functions and static data members as exports.  Static consts
@@ -2418,10 +2424,10 @@ standard modes, the X/Open function @code{strfmon} is also checked as
 are @code{printf_unlocked} and @code{fprintf_unlocked}.
 @xref{C Dialect Options,,Options Controlling C Dialect}.
 
-For Objective-C dialects, @code{NSString} (or @code{__NSString__}) is 
+For Objective-C dialects, @code{NSString} (or @code{__NSString__}) is
 recognized in the same context.  Declarations including these format attributes
 will be parsed for correct syntax, however the result of checking of such format
-strings is not yet defined, and will not be carried out by this version of the 
+strings is not yet defined, and will not be carried out by this version of the
 compiler.
 
 The target may also provide additional types of format checks.
@@ -2545,7 +2551,7 @@ This attribute is ignored for R8C target.
 
 @item interrupt
 @cindex interrupt handler functions
-Use this attribute on the ARM, AVR, CRX, M32C, M32R/D, m68k, MeP, MIPS,
+Use this attribute on the ARM, AVR, M32C, M32R/D, m68k, MeP, MIPS,
 RX and Xstormy16 ports to indicate that the specified function is an
 interrupt handler.  The compiler will generate function entry and exit
 sequences suitable for use in an interrupt handler when this attribute
@@ -2692,24 +2698,24 @@ an inlined PLT.
 @item leaf
 @cindex @code{leaf} function attribute
 Calls to external functions with this attribute must return to the current
-compilation unit only by return or by exception handling. In particular, leaf
-functions are not allowed to call callback function passed to it from current
+compilation unit only by return or by exception handling.  In particular, leaf
+functions are not allowed to call callback function passed to it from the current
 compilation unit or directly call functions exported by the unit or longjmp
-into the unit.  Still leaf function might call functions from other complation
-units and thus they are not neccesarily leaf in the sense that they contains no
+into the unit.  Leaf function might still call functions from other compilation
+units and thus they are not necessarily leaf in the sense that they contain no
 function calls at all.
 
 The attribute is intended for library functions to improve dataflow analysis.
-Compiler takes the hint that any data not escaping current compilation unit can
-not be used or modified by the leaf function.  For example, function @code{sin}
-is leaf, function @code{qsort} is not.
+The compiler takes the hint that any data not escaping the current compilation unit can
+not be used or modified by the leaf function.  For example, the @code{sin} function
+is a leaf function, but @code{qsort} is not.
 
-Note that the leaf functions might invoke signals and signal handlers might be
-defined in the current compilation unit and use static variables. Only
+Note that leaf functions might invoke signals and signal handlers might be
+defined in the current compilation unit and use static variables.  The only
 compliant way to write such a signal handler is to declare such variables
 @code{volatile}.
 
-The attribute has no effect on functions defined within current compilation
+The attribute has no effect on functions defined within the current compilation
 unit.  This is to allow easy merging of multiple compilation units into one,
 for example, by using the link time optimization.  For this reason the
 attribute is not allowed on types to annotate indirect calls.
@@ -2746,7 +2752,7 @@ command-line switch.  The @code{long_call} and @code{far} attributes are
 synonyms, and cause the compiler to always call
 the function by first loading its address into a register, and then using
 the contents of that register.  The @code{near} attribute has the opposite
-effect; it specifies that non-PIC calls should be made using the more 
+effect; it specifies that non-PIC calls should be made using the more
 efficient @code{jal} instruction.
 
 @item malloc
@@ -2767,11 +2773,11 @@ value.
 
 On MIPS targets, you can use the @code{mips16} and @code{nomips16}
 function attributes to locally select or turn off MIPS16 code generation.
-A function with the @code{mips16} attribute is emitted as MIPS16 code, 
-while MIPS16 code generation is disabled for functions with the 
-@code{nomips16} attribute.  These attributes override the 
+A function with the @code{mips16} attribute is emitted as MIPS16 code,
+while MIPS16 code generation is disabled for functions with the
+@code{nomips16} attribute.  These attributes override the
 @option{-mips16} and @option{-mno-mips16} options on the command line
-(@pxref{MIPS Options}).  
+(@pxref{MIPS Options}).
 
 When compiling files containing mixed MIPS16 and non-MIPS16 code, the
 preprocessor symbol @code{__mips16} reflects the setting on the command line,
@@ -2823,6 +2829,19 @@ when targeting Windows.  On all other systems, the default is the AMD ABI.
 Note, the @code{ms_abi} attribute for Windows targets currently requires
 the @option{-maccumulate-outgoing-args} option.
 
+@item callee_pop_aggregate_return (@var{number})
+@cindex @code{callee_pop_aggregate_return} attribute
+
+On 32-bit i?86-*-* targets, you can control by those attribute for
+aggregate return in memory, if the caller is responsible to pop the hidden
+pointer together with the rest of the arguments - @var{number} equal to
+zero -, or if the callee is responsible to pop hidden pointer - @var{number}
+equal to one.
+
+For i?86-netware, the caller pops the stack for the hidden arguments pointing
+to aggregate return value.  This differs from the default i386 ABI which assumes
+that the callee pops the stack for hidden pointer.
+
 @item ms_hook_prologue
 @cindex @code{ms_hook_prologue} attribute
 
@@ -2835,11 +2854,11 @@ and newer.
 @cindex function without a prologue/epilogue code
 Use this attribute on the ARM, AVR, MCORE, RX and SPU ports to indicate that
 the specified function does not need prologue/epilogue sequences generated by
-the compiler.  It is up to the programmer to provide these sequences. The 
-only statements that can be safely included in naked functions are 
+the compiler.  It is up to the programmer to provide these sequences. The
+only statements that can be safely included in naked functions are
 @code{asm} statements that do not have operands.  All other statements,
-including declarations of local variables, @code{if} statements, and so 
-forth, should be avoided.  Naked functions should be used to implement the 
+including declarations of local variables, @code{if} statements, and so
+forth, should be avoided.  Naked functions should be used to implement the
 body of an assembly function, while allowing the compiler to construct
 the requisite function declaration for the assembler.
 
@@ -3154,10 +3173,10 @@ regardless of whether they are used or not.
 @item save_volatiles
 @cindex save volatile registers on the MicroBlaze
 Use this attribute on the MicroBlaze to indicate that the function is
-an interrupt handler.  All volatile registers (in addition to non-volatile 
-registers) will be saved in the function prologue.  If the function is a leaf 
-function, only volatiles used by the function are saved.  A normal function 
-return is generated instead of a return from interrupt.  
+an interrupt handler.  All volatile registers (in addition to non-volatile
+registers) will be saved in the function prologue.  If the function is a leaf
+function, only volatiles used by the function are saved.  A normal function
+return is generated instead of a return from interrupt.
 
 @item section ("@var{section-name}")
 @cindex @code{section} function attribute
@@ -3272,8 +3291,6 @@ int core2_func (void) __attribute__ ((__target__ ("arch=core2")));
 int sse3_func (void) __attribute__ ((__target__ ("sse3")));
 @end smallexample
 
-@table @samp
-@item i386 target attributes
 On the 386, the following options are allowed:
 
 @table @samp
@@ -3416,8 +3433,8 @@ Specify which floating point unit to use.  The
 @code{target("fpmath=sse,387")} option must be specified as
 @code{target("fpmath=sse+387")} because the comma would separate
 different options.
+@end table
 
-@item PowerPC target attributes
 On the PowerPC, the following options are allowed:
 
 @table @samp
@@ -3576,20 +3593,18 @@ away so that a longer more expensive calling sequence is required.
 
 @item cpu=@var{CPU}
 @cindex @code{target("cpu=@var{CPU}")} attribute
-Specify the architecture to generate code for in compiling the
-function.  If you select @code{"target("cpu=power7)"} attribute when
+Specify the architecture to generate code for when compiling the
+function.  If you select the @code{"target("cpu=power7)"} attribute when
 generating 32-bit code, VSX and Altivec instructions are not generated
 unless you use the @option{-mabi=altivec} option on the command line.
 
 @item tune=@var{TUNE}
 @cindex @code{target("tune=@var{TUNE}")} attribute
-Specify the architecture to tune for in compiling the function.  If
+Specify the architecture to tune for when compiling the function.  If
 you do not specify the @code{target("tune=@var{TUNE}")} attribute and
-you do specifiy the @code{target("cpu=@var{CPU}")} attribute,
+you do specify the @code{target("cpu=@var{CPU}")} attribute,
 compilation will tune for the @var{CPU} architecture, and not the
 default tuning specified on the command line.
-@end table
-@end table
 @end table
 
 On the 386/x86_64 and PowerPC backends, you can use either multiple
@@ -4036,7 +4051,7 @@ If @code{D1} has the form @code{*
 declaration @code{T D} specifies the type
 ``@var{derived-declarator-type-list} @var{Type}'' for @var{ident}, then
 @code{T D1} specifies the type ``@var{derived-declarator-type-list}
-@var{type-qualifier-and-attribute-specifier-list} @var{Type}'' for
+@var{type-qualifier-and-attribute-specifier-list} pointer to @var{Type}'' for
 @var{ident}.
 
 For example,
@@ -4165,42 +4180,6 @@ machines, typically because the target assembler does not allow them.
 You can use the sequence @samp{\e} in a string or character constant to
 stand for the ASCII character @key{ESC}.
 
-@node Alignment
-@section Inquiring on Alignment of Types or Variables
-@cindex alignment
-@cindex type alignment
-@cindex variable alignment
-
-The keyword @code{__alignof__} allows you to inquire about how an object
-is aligned, or the minimum alignment usually required by a type.  Its
-syntax is just like @code{sizeof}.
-
-For example, if the target machine requires a @code{double} value to be
-aligned on an 8-byte boundary, then @code{__alignof__ (double)} is 8.
-This is true on many RISC machines.  On more traditional machine
-designs, @code{__alignof__ (double)} is 4 or even 2.
-
-Some machines never actually require alignment; they allow reference to any
-data type even at an odd address.  For these machines, @code{__alignof__}
-reports the smallest alignment that GCC will give the data type, usually as
-mandated by the target ABI.
-
-If the operand of @code{__alignof__} is an lvalue rather than a type,
-its value is the required alignment for its type, taking into account
-any minimum alignment specified with GCC's @code{__attribute__}
-extension (@pxref{Variable Attributes}).  For example, after this
-declaration:
-
-@smallexample
-struct foo @{ int x; char y; @} foo1;
-@end smallexample
-
-@noindent
-the value of @code{__alignof__ (foo1.y)} is 1, even though its actual
-alignment is probably 2 or 4, the same as @code{__alignof__ (int)}.
-
-It is an error to ask for the alignment of an incomplete type.
-
 @node Variable Attributes
 @section Specifying Attributes of Variables
 @cindex attribute of variables
@@ -4291,7 +4270,7 @@ up to a maximum of 8 byte alignment, then specifying @code{aligned(16)}
 in an @code{__attribute__} will still only provide you with 8 byte
 alignment.  See your linker documentation for further information.
 
-The @code{aligned} attribute can also be used for functions 
+The @code{aligned} attribute can also be used for functions
 (@pxref{Function Attributes}.)
 
 @item cleanup (@var{cleanup_function})
@@ -5183,7 +5162,7 @@ packed))}.
 Three attributes currently are defined for PowerPC configurations:
 @code{altivec}, @code{ms_struct} and @code{gcc_struct}.
 
-For full documentation of the @code{ms_struct} and @code{gcc_struct} 
+For full documentation of the @code{ms_struct} and @code{gcc_struct}
 attributes please see the documentation in @ref{i386 Type Attributes}.
 
 The @code{altivec} attribute allows one to declare AltiVec vector data
@@ -5208,6 +5187,42 @@ The SPU supports the @code{spu_vector} attribute for types.  This attribute
 allows one to declare vector data types supported by the Sony/Toshiba/IBM SPU
 Language Extensions Specification.  It is intended to support the
 @code{__vector} keyword.
+
+@node Alignment
+@section Inquiring on Alignment of Types or Variables
+@cindex alignment
+@cindex type alignment
+@cindex variable alignment
+
+The keyword @code{__alignof__} allows you to inquire about how an object
+is aligned, or the minimum alignment usually required by a type.  Its
+syntax is just like @code{sizeof}.
+
+For example, if the target machine requires a @code{double} value to be
+aligned on an 8-byte boundary, then @code{__alignof__ (double)} is 8.
+This is true on many RISC machines.  On more traditional machine
+designs, @code{__alignof__ (double)} is 4 or even 2.
+
+Some machines never actually require alignment; they allow reference to any
+data type even at an odd address.  For these machines, @code{__alignof__}
+reports the smallest alignment that GCC will give the data type, usually as
+mandated by the target ABI.
+
+If the operand of @code{__alignof__} is an lvalue rather than a type,
+its value is the required alignment for its type, taking into account
+any minimum alignment specified with GCC's @code{__attribute__}
+extension (@pxref{Variable Attributes}).  For example, after this
+declaration:
+
+@smallexample
+struct foo @{ int x; char y; @} foo1;
+@end smallexample
+
+@noindent
+the value of @code{__alignof__ (foo1.y)} is 1, even though its actual
+alignment is probably 2 or 4, the same as @code{__alignof__ (int)}.
+
+It is an error to ask for the alignment of an incomplete type.
 
 
 @node Inline
@@ -5345,14 +5360,14 @@ the single copy in the library.
 
 C has the concept of volatile objects.  These are normally accessed by
 pointers and used for accessing hardware or inter-thread
-communication.  The standard encourage compilers to refrain from
+communication.  The standard encourages compilers to refrain from
 optimizations concerning accesses to volatile objects, but leaves it
 implementation defined as to what constitutes a volatile access.  The
 minimum requirement is that at a sequence point all previous accesses
 to volatile objects have stabilized and no subsequent accesses have
 occurred.  Thus an implementation is free to reorder and combine
 volatile accesses which occur between sequence points, but cannot do
-so for accesses across a sequence point.  The use of volatiles does
+so for accesses across a sequence point.  The use of volatile does
 not allow you to violate the restriction on updating objects multiple
 times between two sequence points.
 
@@ -5381,7 +5396,7 @@ asm volatile ("" : : : "memory");
 vobj = 1;
 @end smallexample
 
-A scalar volatile object is read, when it is accessed in a void context:
+A scalar volatile object is read when it is accessed in a void context:
 
 @smallexample
 volatile int *src = @var{somevalue};
@@ -5817,7 +5832,7 @@ int frob(int x)
 
 In this (inefficient) example, the @code{frob} instruction sets the
 carry bit to indicate an error.  The @code{jc} instruction detects
-this and branches to the @code{error} label.  Finally, the output 
+this and branches to the @code{error} label.  Finally, the output
 of the @code{frob} instruction (@code{%r5}) is stored into the memory
 for variable @code{y}, which is later read by the @code{return} statement.
 
@@ -5873,7 +5888,7 @@ occasions we'd like to keep the overhead to the absolute minimum.
 The normal code path consists of a single @code{nop} instruction.
 However, we record the address of this @code{nop} together with the
 address of a label that calls the @code{trace} function.  This allows
-the @code{nop} instruction to be patched at runtime to be an 
+the @code{nop} instruction to be patched at runtime to be an
 unconditional branch to the stored label.  It is assumed that an
 optimizing compiler will move the labeled block out of line, to
 optimize the fall through path from the @code{asm}.
@@ -7909,6 +7924,7 @@ instructions, but allow the compiler to schedule those calls.
 * Alpha Built-in Functions::
 * ARM iWMMXt Built-in Functions::
 * ARM NEON Intrinsics::
+* AVR Built-in Functions::
 * Blackfin Built-in Functions::
 * FR-V Built-in Functions::
 * X86 Built-in Functions::
@@ -8159,6 +8175,44 @@ These built-in intrinsics for the ARM Advanced SIMD extension are available
 when the @option{-mfpu=neon} switch is used:
 
 @include arm-neon-intrinsics.texi
+
+@node AVR Built-in Functions
+@subsection AVR Built-in Functions
+
+For each built-in function for AVR, there is an equally named,
+uppercase built-in macro defined. That way users can easily query if
+or if not a specific built-in is implemented or not. For example, if
+@code{__builtin_avr_nop} is available the macro
+@code{__BUILTIN_AVR_NOP} is defined to @code{1} and undefined otherwise.
+
+The following built-in functions map to the respective machine
+instruction, i.e. @code{nop}, @code{sei}, @code{cli}, @code{sleep},
+@code{wdr}, @code{swap}, @code{fmul}, @code{fmuls}
+resp. @code{fmulsu}. The latter three are only available if the AVR
+device actually supports multiplication.
+
+@smallexample
+void __builtin_avr_nop (void)
+void __builtin_avr_sei (void)
+void __builtin_avr_cli (void)
+void __builtin_avr_sleep (void)
+void __builtin_avr_wdr (void)
+unsigned char __builtin_avr_swap (unsigned char)
+unsigned int __builtin_avr_fmul (unsigned char, unsigned char)
+int __builtin_avr_fmuls (char, char)
+int __builtin_avr_fmulsu (char, unsigned char)
+@end smallexample
+
+In order to delay execution for a specific number of cycles, GCC
+implements
+@smallexample
+void __builtin_avr_delay_cycles (unsigned long ticks)
+@end smallexample
+
+@code{ticks} is the number of ticks to delay execution. Note that this
+built-in does not take into account the effect of interrupts which
+might increase delay time. @code{ticks} must be a compile time
+integer constant; delays with a variable number of cycles are not supported.
 
 @node Blackfin Built-in Functions
 @subsection Blackfin Built-in Functions
@@ -8640,6 +8694,14 @@ mode.  All of them implement the function that is part of the name.
 __float128 __builtin_fabsq (__float128)
 __float128 __builtin_copysignq (__float128, __float128)
 @end smallexample
+
+The following built-in function is always available.
+
+@table @code
+@item void __builtin_ia32_pause (void)
+Generates the @code{pause} machine instruction with a compiler memory
+barrier.
+@end table
 
 The following floating point built-in functions are made available in the
 64-bit mode.
@@ -9368,9 +9430,9 @@ used.  All of them generate the machine instruction that is part of the
 name.
 
 @smallexample
-unsigned short __builtin_ia32_rdrand16 (void)
-unsigned int __builtin_ia32_rdrand32 (void)
-unsigned long long __builtin_ia32_rdrand64 (void)
+unsigned int __builtin_ia32_rdrand16_step (unsigned short *)
+unsigned int __builtin_ia32_rdrand32_step (unsigned int *)
+unsigned int __builtin_ia32_rdrand64_step (unsigned long long *)
 @end smallexample
 
 The following built-in functions are available when @option{-msse4a} is used.
@@ -12340,6 +12402,12 @@ vector bool long vec_cmplt (vector double, vector double);
 vector float vec_div (vector float, vector float);
 vector double vec_div (vector double, vector double);
 vector double vec_floor (vector double);
+vector double vec_ld (int, const vector double *);
+vector double vec_ld (int, const double *);
+vector double vec_ldl (int, const vector double *);
+vector double vec_ldl (int, const double *);
+vector unsigned char vec_lvsl (int, const volatile double *);
+vector unsigned char vec_lvsr (int, const volatile double *);
 vector double vec_madd (vector double, vector double, vector double);
 vector double vec_max (vector double, vector double);
 vector double vec_min (vector double, vector double);
@@ -12368,6 +12436,8 @@ vector double vec_sel (vector double, vector double, vector unsigned long);
 vector double vec_sub (vector double, vector double);
 vector float vec_sqrt (vector float);
 vector double vec_sqrt (vector double);
+void vec_st (vector double, int, vector double *);
+void vec_st (vector double, int, double *);
 vector double vec_trunc (vector double);
 vector double vec_xor (vector double, vector double);
 vector double vec_xor (vector double, vector bool long);
@@ -12396,7 +12466,65 @@ int vec_any_ngt (vector double, vector double);
 int vec_any_nle (vector double, vector double);
 int vec_any_nlt (vector double, vector double);
 int vec_any_numeric (vector double);
+
+vector double vec_vsx_ld (int, const vector double *);
+vector double vec_vsx_ld (int, const double *);
+vector float vec_vsx_ld (int, const vector float *);
+vector float vec_vsx_ld (int, const float *);
+vector bool int vec_vsx_ld (int, const vector bool int *);
+vector signed int vec_vsx_ld (int, const vector signed int *);
+vector signed int vec_vsx_ld (int, const int *);
+vector signed int vec_vsx_ld (int, const long *);
+vector unsigned int vec_vsx_ld (int, const vector unsigned int *);
+vector unsigned int vec_vsx_ld (int, const unsigned int *);
+vector unsigned int vec_vsx_ld (int, const unsigned long *);
+vector bool short vec_vsx_ld (int, const vector bool short *);
+vector pixel vec_vsx_ld (int, const vector pixel *);
+vector signed short vec_vsx_ld (int, const vector signed short *);
+vector signed short vec_vsx_ld (int, const short *);
+vector unsigned short vec_vsx_ld (int, const vector unsigned short *);
+vector unsigned short vec_vsx_ld (int, const unsigned short *);
+vector bool char vec_vsx_ld (int, const vector bool char *);
+vector signed char vec_vsx_ld (int, const vector signed char *);
+vector signed char vec_vsx_ld (int, const signed char *);
+vector unsigned char vec_vsx_ld (int, const vector unsigned char *);
+vector unsigned char vec_vsx_ld (int, const unsigned char *);
+
+void vec_vsx_st (vector double, int, vector double *);
+void vec_vsx_st (vector double, int, double *);
+void vec_vsx_st (vector float, int, vector float *);
+void vec_vsx_st (vector float, int, float *);
+void vec_vsx_st (vector signed int, int, vector signed int *);
+void vec_vsx_st (vector signed int, int, int *);
+void vec_vsx_st (vector unsigned int, int, vector unsigned int *);
+void vec_vsx_st (vector unsigned int, int, unsigned int *);
+void vec_vsx_st (vector bool int, int, vector bool int *);
+void vec_vsx_st (vector bool int, int, unsigned int *);
+void vec_vsx_st (vector bool int, int, int *);
+void vec_vsx_st (vector signed short, int, vector signed short *);
+void vec_vsx_st (vector signed short, int, short *);
+void vec_vsx_st (vector unsigned short, int, vector unsigned short *);
+void vec_vsx_st (vector unsigned short, int, unsigned short *);
+void vec_vsx_st (vector bool short, int, vector bool short *);
+void vec_vsx_st (vector bool short, int, unsigned short *);
+void vec_vsx_st (vector pixel, int, vector pixel *);
+void vec_vsx_st (vector pixel, int, unsigned short *);
+void vec_vsx_st (vector pixel, int, short *);
+void vec_vsx_st (vector bool short, int, short *);
+void vec_vsx_st (vector signed char, int, vector signed char *);
+void vec_vsx_st (vector signed char, int, signed char *);
+void vec_vsx_st (vector unsigned char, int, vector unsigned char *);
+void vec_vsx_st (vector unsigned char, int, unsigned char *);
+void vec_vsx_st (vector bool char, int, vector bool char *);
+void vec_vsx_st (vector bool char, int, unsigned char *);
+void vec_vsx_st (vector bool char, int, signed char *);
 @end smallexample
+
+Note that the @samp{vec_ld} and @samp{vec_st} builtins will always
+generate the Altivec @samp{LVX} and @samp{STVX} instructions even
+if the VSX instruction set is available.  The @samp{vec_vsx_ld} and
+@samp{vec_vsx_st} builtins will always generate the VSX @samp{LXVD2X},
+@samp{LXVW4X}, @samp{STXVD2X}, and @samp{STXVW4X} instructions.
 
 GCC provides a few other builtins on Powerpc to access certain instructions:
 @smallexample
@@ -12650,10 +12778,10 @@ bit-fields.  See the Solaris man page for @code{cmn_err} for more information.
 @node Darwin Format Checks
 @subsection Darwin Format Checks
 
-Darwin targets support the @code{CFString} (or @code{__CFString__}) in the format 
+Darwin targets support the @code{CFString} (or @code{__CFString__}) in the format
 attribute context.  Declarations made with such attribution will be parsed for correct syntax
 and format argument types.  However, parsing of the format string itself is currently undefined
-and will not be carried out by this version of the compiler.  
+and will not be carried out by this version of the compiler.
 
 Additionally, @code{CFStringRefs} (defined by the @code{CoreFoundation} headers) may
 also be used as format arguments.  Note that the relevant headers are only likely to be
@@ -12907,8 +13035,8 @@ adding a call to the @code{.init} section.
 
 For compatibility with the Solaris and Tru64 UNIX system headers, GCC
 supports two @code{#pragma} directives which change the name used in
-assembly for a given declaration.  @code{#pragma extern_prefix} is only 
-available on platforms whose system headers need it. To get this effect 
+assembly for a given declaration.  @code{#pragma extern_prefix} is only
+available on platforms whose system headers need it. To get this effect
 on all platforms supported by GCC, use the asm labels extension (@pxref{Asm
 Labels}).
 
@@ -12976,7 +13104,7 @@ to be a small power of two and specifies the new alignment in bytes.
 @item @code{#pragma pack(@var{n})} simply sets the new alignment.
 @item @code{#pragma pack()} sets the alignment to the one that was in
 effect when compilation started (see also command-line option
-@option{-fpack-struct[=<n>]} @pxref{Code Gen Options}).
+@option{-fpack-struct[=@var{n}]} @pxref{Code Gen Options}).
 @item @code{#pragma pack(push[,@var{n}])} pushes the current alignment
 setting on an internal stack and then optionally sets the new alignment.
 @item @code{#pragma pack(pop)} restores the alignment setting to the one
@@ -13010,8 +13138,7 @@ aliases.
 @cindex pragma, weak
 This pragma declares @var{symbol} to be weak, as if the declaration
 had the attribute of the same name.  The pragma may appear before
-or after the declaration of @var{symbol}, but must appear before
-either its first use or its definition.  It is not an error for
+or after the declaration of @var{symbol}.  It is not an error for
 @var{symbol} to never be defined at all.
 
 @item #pragma weak @var{symbol1} = @var{symbol2}
@@ -13158,7 +13285,7 @@ For example:
 #undef X
 #define X -1
 #pragma pop_macro("X")
-int x [X]; 
+int x [X];
 @end smallexample
 
 In this example, the definition of X as 1 is saved by @code{#pragma
@@ -13272,12 +13399,11 @@ The compiler gives errors for such constructs.
 @opindex fms-extensions
 Unless @option{-fms-extensions} is used, the unnamed field must be a
 structure or union definition without a tag (for example, @samp{struct
-@{ int a; @};}), or a @code{typedef} name for such a structure or
-union.  If @option{-fms-extensions} is used, the field may
+@{ int a; @};}).  If @option{-fms-extensions} is used, the field may
 also be a definition with a tag such as @samp{struct foo @{ int a;
 @};}, a reference to a previously defined structure or union such as
 @samp{struct foo;}, or a reference to a @code{typedef} name for a
-previously defined structure or union type with a tag.
+previously defined structure or union type.
 
 @opindex fplan9-extensions
 The option @option{-fplan9-extensions} enables
@@ -13352,7 +13478,7 @@ In C++, if an initializer is present for a thread-local variable, it must
 be a @var{constant-expression}, as defined in 5.19.2 of the ANSI/ISO C++
 standard.
 
-See @uref{http://people.redhat.com/drepper/tls.pdf,
+See @uref{http://www.akkadia.org/drepper/tls.pdf,
 ELF Handling For Thread-Local Storage} for a detailed explanation of
 the four thread-local storage addressing models, and how the run-time
 is expected to function.
@@ -13631,9 +13757,9 @@ The C++ standard differs from the C standard in its treatment of
 volatile objects.  It fails to specify what constitutes a volatile
 access, except to say that C++ should behave in a similar manner to C
 with respect to volatiles, where possible.  However, the different
-lvalueness of expressions between C and C++ complicate the behaviour.
+lvalueness of expressions between C and C++ complicate the behavior.
 G++ behaves the same as GCC for volatile access, @xref{C
-Extensions,,Volatiles}, for a description of GCC's behaviour.
+Extensions,,Volatiles}, for a description of GCC's behavior.
 
 The C and C++ language specifications differ when an object is
 accessed in a void context:
@@ -13663,7 +13789,7 @@ possible to ignore the return value from functions returning volatile
 references.  Again, if you wish to force a read, cast the reference to
 an rvalue.
 
-G++ implements the same behaviour as GCC does when assigning to a
+G++ implements the same behavior as GCC does when assigning to a
 volatile object -- there is no reread of the assigned-to object, the
 assigned rvalue is reused.  Note that in C++ assignment expressions
 are lvalues, and if used as an lvalue, the volatile object will be
@@ -14187,63 +14313,63 @@ If @code{type} is const qualified or is a reference type then the trait is
 false.  Otherwise if @code{__has_trivial_assign (type)} is true then the trait
 is true, else if @code{type} is a cv class or union type with copy assignment
 operators that are known not to throw an exception then the trait is true,
-else it is false.  Requires: @code{type} shall be a complete type, an array
-type of unknown bound, or is a @code{void} type.
+else it is false.  Requires: @code{type} shall be a complete type,
+(possibly cv-qualified) @code{void}, or an array of unknown bound.
 
 @item __has_nothrow_copy (type)
 If @code{__has_trivial_copy (type)} is true then the trait is true, else if
 @code{type} is a cv class or union type with copy constructors that
 are known not to throw an exception then the trait is true, else it is false.
-Requires: @code{type} shall be a complete type, an array type of
-unknown bound, or is a @code{void} type.
+Requires: @code{type} shall be a complete type, (possibly cv-qualified)
+@code{void}, or an array of unknown bound.
 
 @item __has_nothrow_constructor (type)
 If @code{__has_trivial_constructor (type)} is true then the trait is
 true, else if @code{type} is a cv class or union type (or array
 thereof) with a default constructor that is known not to throw an
 exception then the trait is true, else it is false.  Requires:
-@code{type} shall be a complete type, an array type of unknown bound,
-or is a @code{void} type.
+@code{type} shall be a complete type, (possibly cv-qualified)
+@code{void}, or an array of unknown bound.
 
 @item __has_trivial_assign (type)
 If @code{type} is const qualified or is a reference type then the trait is
 false.  Otherwise if @code{__is_pod (type)} is true then the trait is
 true, else if @code{type} is a cv class or union type with a trivial
 copy assignment ([class.copy]) then the trait is true, else it is
-false.  Requires: @code{type} shall be a complete type, an array type
-of unknown bound, or is a @code{void} type.
+false.  Requires: @code{type} shall be a complete type, (possibly
+cv-qualified) @code{void}, or an array of unknown bound.
 
 @item __has_trivial_copy (type)
-If @code{__is_pod (type)} is true or @code{type} is a reference type 
+If @code{__is_pod (type)} is true or @code{type} is a reference type
 then the trait is true, else if @code{type} is a cv class or union type
 with a trivial copy constructor ([class.copy]) then the trait
 is true, else it is false.  Requires: @code{type} shall be a complete
-type, an array type of unknown bound, or is a @code{void} type.
+type, (possibly cv-qualified) @code{void}, or an array of unknown bound.
 
 @item __has_trivial_constructor (type)
 If @code{__is_pod (type)} is true then the trait is true, else if
 @code{type} is a cv class or union type (or array thereof) with a
 trivial default constructor ([class.ctor]) then the trait is true,
-else it is false.  Requires: @code{type} shall be a complete type, an
-array type of unknown bound, or is a @code{void} type.
+else it is false.  Requires: @code{type} shall be a complete
+type, (possibly cv-qualified) @code{void}, or an array of unknown bound.
 
 @item __has_trivial_destructor (type)
 If @code{__is_pod (type)} is true or @code{type} is a reference type then
 the trait is true, else if @code{type} is a cv class or union type (or
 array thereof) with a trivial destructor ([class.dtor]) then the trait
 is true, else it is false.  Requires: @code{type} shall be a complete
-type, an array type of unknown bound, or is a @code{void} type.
+type, (possibly cv-qualified) @code{void}, or an array of unknown bound.
 
 @item __has_virtual_destructor (type)
 If @code{type} is a class type with a virtual destructor
 ([class.dtor]) then the trait is true, else it is false.  Requires:
-@code{type}  shall be a complete type, an array type of unknown bound,
-or is a @code{void} type.
+@code{type} shall be a complete type, (possibly cv-qualified)
+@code{void}, or an array of unknown bound.
 
 @item __is_abstract (type)
 If @code{type} is an abstract class ([class.abstract]) then the trait
 is true, else it is false.  Requires: @code{type} shall be a complete
-type, an array type of unknown bound, or is a @code{void} type.
+type, (possibly cv-qualified) @code{void}, or an array of unknown bound.
 
 @item __is_base_of (base_type, derived_type)
 If @code{base_type} is a base class of @code{derived_type}
@@ -14266,28 +14392,47 @@ Otherwise @code{type} is considered empty if and only if: @code{type}
 has no non-static data members, or all non-static data members, if
 any, are bit-fields of length 0, and @code{type} has no virtual
 members, and @code{type} has no virtual base classes, and @code{type}
-has no base classes @code{base_type} for which 
+has no base classes @code{base_type} for which
 @code{__is_empty (base_type)} is false.  Requires: @code{type} shall
-be a complete type, an array type of unknown bound, or is a
-@code{void} type.
+be a complete type, (possibly cv-qualified) @code{void}, or an array
+of unknown bound.
 
 @item __is_enum (type)
 If @code{type} is a cv enumeration type ([basic.compound]) the trait is
 true, else it is false.
 
+@item __is_literal_type (type)
+If @code{type} is a literal type ([basic.types]) the trait is
+true, else it is false.  Requires: @code{type} shall be a complete type,
+(possibly cv-qualified) @code{void}, or an array of unknown bound.
+
 @item __is_pod (type)
 If @code{type} is a cv POD type ([basic.types]) then the trait is true,
-else it is false.  Requires: @code{type} shall be a complete type, 
-an array type of unknown bound, or is a @code{void} type.
+else it is false.  Requires: @code{type} shall be a complete type,
+(possibly cv-qualified) @code{void}, or an array of unknown bound.
 
 @item __is_polymorphic (type)
 If @code{type} is a polymorphic class ([class.virtual]) then the trait
 is true, else it is false.  Requires: @code{type} shall be a complete
-type, an array type of unknown bound, or is a @code{void} type.
+type, (possibly cv-qualified) @code{void}, or an array of unknown bound.
+
+@item __is_standard_layout (type)
+If @code{type} is a standard-layout type ([basic.types]) the trait is
+true, else it is false.  Requires: @code{type} shall be a complete
+type, (possibly cv-qualified) @code{void}, or an array of unknown bound.
+
+@item __is_trivial (type)
+If @code{type} is a trivial type ([basic.types]) the trait is
+true, else it is false.  Requires: @code{type} shall be a complete
+type, (possibly cv-qualified) @code{void}, or an array of unknown bound.
 
 @item __is_union (type)
 If @code{type} is a cv union type ([basic.compound]) the trait is
 true, else it is false.
+
+@item __underlying_type (type)
+The underlying type of @code{type}.  Requires: @code{type} shall be
+an enumeration type ([dcl.enum]).
 
 @end table
 

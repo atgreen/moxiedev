@@ -1,7 +1,7 @@
 // Vector implementation -*- C++ -*-
 
-// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-// Free Software Foundation, Inc.
+// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+// 2011 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -49,9 +49,9 @@
  * purpose.  It is provided "as is" without express or implied warranty.
  */
 
-/** @file stl_vector.h
+/** @file bits/stl_vector.h
  *  This is an internal header file, included by other library headers.
- *  You should not attempt to use it directly.
+ *  Do not attempt to use it directly. @headername{vector}
  */
 
 #ifndef _STL_VECTOR_H
@@ -62,7 +62,9 @@
 #include <bits/concept_check.h>
 #include <initializer_list>
 
-_GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   /// See bits/stl_deque.h's _Deque_base for an explanation.
   template<typename _Tp, typename _Alloc>
@@ -84,21 +86,28 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	_Vector_impl(_Tp_alloc_type const& __a)
 	: _Tp_alloc_type(__a), _M_start(0), _M_finish(0), _M_end_of_storage(0)
 	{ }
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	_Vector_impl(_Tp_alloc_type&& __a)
+	: _Tp_alloc_type(std::move(__a)),
+	  _M_start(0), _M_finish(0), _M_end_of_storage(0)
+	{ }
+#endif
       };
       
     public:
       typedef _Alloc allocator_type;
 
       _Tp_alloc_type&
-      _M_get_Tp_allocator()
+      _M_get_Tp_allocator() _GLIBCXX_NOEXCEPT
       { return *static_cast<_Tp_alloc_type*>(&this->_M_impl); }
 
       const _Tp_alloc_type&
-      _M_get_Tp_allocator() const
+      _M_get_Tp_allocator() const _GLIBCXX_NOEXCEPT
       { return *static_cast<const _Tp_alloc_type*>(&this->_M_impl); }
 
       allocator_type
-      get_allocator() const
+      get_allocator() const _GLIBCXX_NOEXCEPT
       { return allocator_type(_M_get_Tp_allocator()); }
 
       _Vector_base()
@@ -125,7 +134,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       _Vector_base(_Vector_base&& __x)
-      : _M_impl(__x._M_get_Tp_allocator())
+      : _M_impl(std::move(__x._M_get_Tp_allocator()))
       {
 	this->_M_impl._M_start = __x._M_impl._M_start;
 	this->_M_impl._M_finish = __x._M_impl._M_finish;
@@ -289,7 +298,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  The newly-created %vector contains the exact contents of @a x.
        *  The contents of @a x are a valid, but unspecified %vector.
        */
-      vector(vector&& __x)
+      vector(vector&& __x) noexcept
       : _Base(std::move(__x)) { }
 
       /**
@@ -344,7 +353,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  not touched in any way.  Managing the pointer is the user's
        *  responsibility.
        */
-      ~vector()
+      ~vector() _GLIBCXX_NOEXCEPT
       { std::_Destroy(this->_M_impl._M_start, this->_M_impl._M_finish,
 		      _M_get_Tp_allocator()); }
 
@@ -458,7 +467,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       iterator
-      begin()
+      begin() _GLIBCXX_NOEXCEPT
       { return iterator(this->_M_impl._M_start); }
 
       /**
@@ -467,7 +476,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       const_iterator
-      begin() const
+      begin() const _GLIBCXX_NOEXCEPT
       { return const_iterator(this->_M_impl._M_start); }
 
       /**
@@ -476,7 +485,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       iterator
-      end()
+      end() _GLIBCXX_NOEXCEPT
       { return iterator(this->_M_impl._M_finish); }
 
       /**
@@ -485,7 +494,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  ordinary element order.
        */
       const_iterator
-      end() const
+      end() const _GLIBCXX_NOEXCEPT
       { return const_iterator(this->_M_impl._M_finish); }
 
       /**
@@ -494,7 +503,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       reverse_iterator
-      rbegin()
+      rbegin() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(end()); }
 
       /**
@@ -503,7 +512,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  reverse element order.
        */
       const_reverse_iterator
-      rbegin() const
+      rbegin() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(end()); }
 
       /**
@@ -512,7 +521,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  in reverse element order.
        */
       reverse_iterator
-      rend()
+      rend() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(begin()); }
 
       /**
@@ -521,7 +530,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  is done in reverse element order.
        */
       const_reverse_iterator
-      rend() const
+      rend() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(begin()); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -531,7 +540,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  element order.
        */
       const_iterator
-      cbegin() const
+      cbegin() const noexcept
       { return const_iterator(this->_M_impl._M_start); }
 
       /**
@@ -540,7 +549,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  ordinary element order.
        */
       const_iterator
-      cend() const
+      cend() const noexcept
       { return const_iterator(this->_M_impl._M_finish); }
 
       /**
@@ -549,7 +558,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  reverse element order.
        */
       const_reverse_iterator
-      crbegin() const
+      crbegin() const noexcept
       { return const_reverse_iterator(end()); }
 
       /**
@@ -558,19 +567,19 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  is done in reverse element order.
        */
       const_reverse_iterator
-      crend() const
+      crend() const noexcept
       { return const_reverse_iterator(begin()); }
 #endif
 
       // [23.2.4.2] capacity
       /**  Returns the number of elements in the %vector.  */
       size_type
-      size() const
+      size() const _GLIBCXX_NOEXCEPT
       { return size_type(this->_M_impl._M_finish - this->_M_impl._M_start); }
 
       /**  Returns the size() of the largest possible %vector.  */
       size_type
-      max_size() const
+      max_size() const _GLIBCXX_NOEXCEPT
       { return _M_get_Tp_allocator().max_size(); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -645,7 +654,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  hold before needing to allocate more memory.
        */
       size_type
-      capacity() const
+      capacity() const _GLIBCXX_NOEXCEPT
       { return size_type(this->_M_impl._M_end_of_storage
 			 - this->_M_impl._M_start); }
 
@@ -654,7 +663,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  equal end().)
        */
       bool
-      empty() const
+      empty() const _GLIBCXX_NOEXCEPT
       { return begin() == end(); }
 
       /**
@@ -798,7 +807,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 #else
       pointer
 #endif
-      data()
+      data() _GLIBCXX_NOEXCEPT
       { return std::__addressof(front()); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -806,7 +815,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 #else
       const_pointer
 #endif
-      data() const
+      data() const _GLIBCXX_NOEXCEPT
       { return std::__addressof(front()); }
 
       // [23.2.4.3] modifiers
@@ -1034,7 +1043,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
        *  the user's responsibility.
        */
       void
-      clear()
+      clear() _GLIBCXX_NOEXCEPT
       { _M_erase_at_end(this->_M_impl._M_start); }
 
     protected:
@@ -1319,6 +1328,7 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
     swap(vector<_Tp, _Alloc>& __x, vector<_Tp, _Alloc>& __y)
     { __x.swap(__y); }
 
-_GLIBCXX_END_NESTED_NAMESPACE
+_GLIBCXX_END_NAMESPACE_CONTAINER
+} // namespace std
 
 #endif /* _STL_VECTOR_H */

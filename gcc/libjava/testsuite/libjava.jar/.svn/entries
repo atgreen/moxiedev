@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/testsuite/libjava.jar
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2007-03-07T07:27:25.150115Z
-122652
-aoliva
+2011-04-12T09:04:05.611301Z
+172302
+ro
 
 
 
@@ -168,11 +168,11 @@ file
 
 
 
-2009-04-24T17:49:43.000000Z
-864ca283cb0c81106a6f7b450886ec4d
-2004-12-21T01:01:08.000000Z
-92446
-tromey
+2011-06-04T18:38:19.069104Z
+0077a28c99dc94f4fc6e4c1454377e5d
+2011-04-12T09:04:05.611301Z
+172302
+ro
 
 
 
@@ -194,7 +194,7 @@ tromey
 
 
 
-1657
+1706
 
 TestClosureGC.xfail
 file

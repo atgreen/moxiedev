@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler,
    for SPARC targeting the VxWorks run time environment.
-   Copyright (C) 2007, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2007, 2010, 2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -33,6 +33,9 @@ along with GCC; see the file COPYING3.  If not see
 #undef CPP_SUBTARGET_SPEC
 #define CPP_SUBTARGET_SPEC VXWORKS_ADDITIONAL_CPP_SPEC
 
+#undef ASM_SPEC
+#define ASM_SPEC "%{fpic|fPIC|fpie|fPIE:-K PIC} %(asm_cpu)"
+
 #undef LIB_SPEC
 #define LIB_SPEC VXWORKS_LIB_SPEC
 #undef LINK_SPEC
@@ -41,9 +44,6 @@ along with GCC; see the file COPYING3.  If not see
 #define STARTFILE_SPEC VXWORKS_STARTFILE_SPEC
 #undef ENDFILE_SPEC
 #define ENDFILE_SPEC VXWORKS_ENDFILE_SPEC
-
-#undef TARGET_VERSION
-#define TARGET_VERSION fputs (" (SPARC/VxWorks)", stderr);
 
 #undef FUNCTION_PROFILER
 #define FUNCTION_PROFILER VXWORKS_FUNCTION_PROFILER

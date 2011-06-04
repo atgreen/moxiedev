@@ -1,6 +1,6 @@
 /* Maintain binary trees of symbols.
    Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010
+   2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Andy Vaught
 
@@ -390,6 +390,14 @@ check_conflict (symbol_attribute *attr, const char *name, locus *where)
       goto conflict_std;
     }
 
+  if (attr->in_namelist && (attr->allocatable || attr->pointer))
+    {
+      a1 = in_namelist;
+      a2 = attr->allocatable ? allocatable : pointer;
+      standard = GFC_STD_F2003;
+      goto conflict_std;
+    }
+
   /* Check for attributes not allowed in a BLOCK DATA.  */
   if (gfc_current_state () == COMP_BLOCK_DATA)
     {
@@ -494,9 +502,6 @@ check_conflict (symbol_attribute *attr, const char *name, locus *where)
   conf (in_equivalence, entry);
   conf (in_equivalence, allocatable);
   conf (in_equivalence, threadprivate);
-
-  conf (in_namelist, pointer);
-  conf (in_namelist, allocatable);
 
   conf (entry, result);
 
@@ -1109,6 +1114,9 @@ gfc_add_save (symbol_attribute *attr, save_state s, const char *name,
 	 where);
       return FAILURE;
     }
+
+  if (s == SAVE_EXPLICIT && gfc_implicit_pure (NULL))
+    gfc_current_ns->proc_name->attr.implicit_pure = 0;
 
   if (s == SAVE_EXPLICIT && attr->save == SAVE_EXPLICIT)
     {
@@ -1988,7 +1996,7 @@ gfc_find_component (gfc_symbol *sym, const char *name,
 {
   gfc_component *p;
 
-  if (name == NULL)
+  if (name == NULL || sym == NULL)
     return NULL;
 
   sym = gfc_use_derived (sym);
@@ -2052,7 +2060,7 @@ free_components (gfc_component *p)
       gfc_free_formal_arglist (p->formal);
       gfc_free_namespace (p->formal_ns);
 
-      gfc_free (p);
+      free (p);
     }
 }
 
@@ -2088,7 +2096,7 @@ gfc_free_st_label (gfc_st_label *label)
   if (label->format != NULL)
     gfc_free_expr (label->format);
 
-  gfc_free (label);
+  free (label);
 }
 
 
@@ -2106,7 +2114,7 @@ free_st_labels (gfc_st_label *label)
   
   if (label->format != NULL)
     gfc_free_expr (label->format);
-  gfc_free (label);
+  free (label);
 }
 
 
@@ -2245,35 +2253,6 @@ done:
 }
 
 
-/*******A helper function for creating new expressions*************/
-
-
-gfc_expr *
-gfc_lval_expr_from_sym (gfc_symbol *sym)
-{
-  gfc_expr *lval;
-  lval = gfc_get_expr ();
-  lval->expr_type = EXPR_VARIABLE;
-  lval->where = sym->declared_at;
-  lval->ts = sym->ts;
-  lval->symtree = gfc_find_symtree (sym->ns->sym_root, sym->name);
-
-  /* It will always be a full array.  */
-  lval->rank = sym->as ? sym->as->rank : 0;
-  if (lval->rank)
-    {
-      lval->ref = gfc_get_ref ();
-      lval->ref->type = REF_ARRAY;
-      lval->ref->u.ar.type = AR_FULL;
-      lval->ref->u.ar.dimen = lval->rank;
-      lval->ref->u.ar.where = sym->declared_at;
-      lval->ref->u.ar.as = sym->as;
-    }
-
-  return lval;
-}
-
-
 /************** Symbol table management subroutines ****************/
 
 /* Basic details: Fortran 95 requires a potentially unlimited number
@@ -2396,7 +2375,7 @@ gfc_delete_symtree (gfc_symtree **root, const char *name)
   st.name = gfc_get_string (name);
   gfc_delete_bbt (root, &st, compare_symtree);
 
-  gfc_free (st0);
+  free (st0);
 }
 
 
@@ -2502,7 +2481,7 @@ gfc_free_symbol (gfc_symbol *sym)
 
   gfc_free_namespace (sym->f2k_derived);
 
-  gfc_free (sym);
+  free (sym);
 }
 
 
@@ -2842,41 +2821,6 @@ gfc_get_ha_symbol (const char *name, gfc_symbol **result)
   return i;
 }
 
-/* Return true if both symbols could refer to the same data object.  Does
-   not take account of aliasing due to equivalence statements.  */
-
-int
-gfc_symbols_could_alias (gfc_symbol *lsym, gfc_symbol *rsym)
-{
-  /* Aliasing isn't possible if the symbols have different base types.  */
-  if (gfc_compare_types (&lsym->ts, &rsym->ts) == 0)
-    return 0;
-
-  /* Pointers can point to other pointers, target objects and allocatable
-     objects.  Two allocatable objects cannot share the same storage.  */
-  if (lsym->attr.pointer
-      && (rsym->attr.pointer || rsym->attr.allocatable || rsym->attr.target))
-    return 1;
-  if (lsym->attr.target && rsym->attr.pointer)
-    return 1;
-  if (lsym->attr.allocatable && rsym->attr.pointer)
-    return 1;
-
-  /* Special case: Argument association, cf. F90 12.4.1.6, F2003 12.4.1.7
-     and F2008 12.5.2.13 items 3b and 4b. The pointer case (a) is already
-     checked above.  */
-  if (lsym->attr.target && rsym->attr.target
-      && ((lsym->attr.dummy && !lsym->attr.contiguous
-	   && (!lsym->attr.dimension || lsym->as->type == AS_ASSUMED_SHAPE))
-	  || (rsym->attr.dummy && !rsym->attr.contiguous
-	      && (!rsym->attr.dimension
-		  || rsym->as->type == AS_ASSUMED_SHAPE))))
-    return 1;
-
-  return 0;
-}
-
-
 /* Undoes all the changes made to symbols in the current statement.
    This subroutine is made simpler due to the fact that attributes are
    never removed once added.  */
@@ -2974,7 +2918,7 @@ gfc_undo_symbols (void)
 	  p->formal = old->formal;
 	}
 
-      gfc_free (p->old_symbol);
+      free (p->old_symbol);
       p->old_symbol = NULL;
       p->tlink = NULL;
     }
@@ -2985,7 +2929,7 @@ gfc_undo_symbols (void)
     {
       tbq = tbp->next;
       /* Procedure is already marked `error' by default.  */
-      gfc_free (tbp);
+      free (tbp);
     }
   tentative_tbp_list = NULL;
 }
@@ -3013,7 +2957,7 @@ free_old_symbol (gfc_symbol *sym)
   if (sym->old_symbol->formal != sym->formal)
     gfc_free_formal_arglist (sym->old_symbol->formal);
 
-  gfc_free (sym->old_symbol);
+  free (sym->old_symbol);
   sym->old_symbol = NULL;
 }
 
@@ -3041,7 +2985,7 @@ gfc_commit_symbols (void)
     {
       tbq = tbp->next;
       tbp->proc->error = 0;
-      gfc_free (tbp);
+      free (tbp);
     }
   tentative_tbp_list = NULL;
 }
@@ -3089,7 +3033,7 @@ free_tb_tree (gfc_symtree *t)
   /* TODO: Free type-bound procedure structs themselves; probably needs some
      sort of ref-counting mechanism.  */
 
-  gfc_free (t);
+  free (t);
 }
 
 
@@ -3105,7 +3049,7 @@ free_common_tree (gfc_symtree * common_tree)
   free_common_tree (common_tree->left);
   free_common_tree (common_tree->right);
 
-  gfc_free (common_tree);
+  free (common_tree);
 }  
 
 
@@ -3122,8 +3066,8 @@ free_uop_tree (gfc_symtree *uop_tree)
   free_uop_tree (uop_tree->right);
 
   gfc_free_interface (uop_tree->n.uop->op);
-  gfc_free (uop_tree->n.uop);
-  gfc_free (uop_tree);
+  free (uop_tree->n.uop);
+  free (uop_tree);
 }
 
 
@@ -3140,7 +3084,7 @@ free_sym_tree (gfc_symtree *sym_tree)
   free_sym_tree (sym_tree->right);
 
   gfc_release_symbol (sym_tree->n.sym);
-  gfc_free (sym_tree);
+  free (sym_tree);
 }
 
 
@@ -3154,7 +3098,7 @@ gfc_free_dt_list (void)
   for (dt = gfc_derived_types; dt; dt = n)
     {
       n = dt->next;
-      gfc_free (dt);
+      free (dt);
     }
 
   gfc_derived_types = NULL;
@@ -3169,7 +3113,7 @@ gfc_free_equiv_infos (gfc_equiv_info *s)
   if (s == NULL)
     return;
   gfc_free_equiv_infos (s->next);
-  gfc_free (s);
+  free (s);
 }
 
 
@@ -3182,7 +3126,7 @@ gfc_free_equiv_lists (gfc_equiv_list *l)
     return;
   gfc_free_equiv_lists (l->next);
   gfc_free_equiv_infos (l->equiv);
-  gfc_free (l);
+  free (l);
 }
 
 
@@ -3194,7 +3138,7 @@ gfc_free_finalizer (gfc_finalizer* el)
   if (el)
     {
       gfc_release_symbol (el->proc_sym);
-      gfc_free (el);
+      free (el);
     }
 }
 
@@ -3219,18 +3163,28 @@ gfc_new_charlen (gfc_namespace *ns, gfc_charlen *old_cl)
   gfc_charlen *cl;
   cl = gfc_get_charlen ();
 
-  /* Put into namespace.  */
-  cl->next = ns->cl_list;
-  ns->cl_list = cl;
-
   /* Copy old_cl.  */
   if (old_cl)
     {
+      /* Put into namespace, but don't allow reject_statement
+	 to free it if old_cl is given.  */
+      gfc_charlen **prev = &ns->cl_list;
+      cl->next = ns->old_cl_list;
+      while (*prev != ns->old_cl_list)
+	prev = &(*prev)->next;
+      *prev = cl;
+      ns->old_cl_list = cl;
       cl->length = gfc_copy_expr (old_cl->length);
       cl->length_from_typespec = old_cl->length_from_typespec;
       cl->backend_decl = old_cl->backend_decl;
       cl->passed_length = old_cl->passed_length;
       cl->resolved = old_cl->resolved;
+    }
+  else
+    {
+      /* Put into namespace.  */
+      cl->next = ns->cl_list;
+      ns->cl_list = cl;
     }
 
   return cl;
@@ -3250,7 +3204,7 @@ void gfc_free_charlen (gfc_charlen *cl, gfc_charlen *end)
 
       cl2 = cl->next;
       gfc_free_expr (cl->length);
-      gfc_free (cl);
+      free (cl);
     }
 }
 
@@ -3266,7 +3220,7 @@ free_entry_list (gfc_entry_list *el)
     return;
 
   next = el->next;
-  gfc_free (el);
+  free (el);
   free_entry_list (next);
 }
 
@@ -3310,7 +3264,7 @@ gfc_free_namespace (gfc_namespace *ns)
 
   gfc_free_data (ns->data);
   p = ns->contained;
-  gfc_free (ns);
+  free (ns);
 
   /* Recursively free any contained namespaces.  */
   while (p != NULL)

@@ -1,7 +1,7 @@
 /* Data structures and declarations used for reading and writing
    GIMPLE to a file stream.
 
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Doug Kwan <dougkwan@google.com>
 
 This file is part of GCC.
@@ -31,6 +31,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "vec.h"
 #include "vecprim.h"
 #include "alloc-pool.h"
+#include "gcov-io.h"
 
 /* Define when debugging the LTO streamer.  This causes the writer
    to output the numeric value for the memory address of the tree node
@@ -139,7 +140,7 @@ along with GCC; see the file COPYING3.  If not see
    sections a '.' and the section type are appended.  */
 #define LTO_SECTION_NAME_PREFIX         ".gnu.lto_"
 
-#define LTO_major_version 1
+#define LTO_major_version 2
 #define LTO_minor_version 0
 
 typedef unsigned char	lto_decl_flags_t;
@@ -185,7 +186,7 @@ enum LTO_tags
 
      Conversely, to map between LTO tags and tree/gimple codes, the
      reverse operation must be applied.  */
-  LTO_bb0 = 1 + NUM_TREE_CODES + LAST_AND_UNUSED_GIMPLE_CODE,
+  LTO_bb0 = 1 + MAX_TREE_CODES + LAST_AND_UNUSED_GIMPLE_CODE,
   LTO_bb1,
 
   /* EH region holding the previous statement.  */
@@ -263,6 +264,7 @@ enum lto_section_type
   LTO_section_symtab,
   LTO_section_opts,
   LTO_section_cgraph_opt_sum,
+  LTO_section_inline_summary,
   LTO_N_SECTION_TYPES		/* Must be last.  */
 };
 
@@ -344,19 +346,10 @@ typedef void (lto_free_section_data_f) (struct lto_file_decl_data *,
 struct lto_streamer_cache_d
 {
   /* The mapping between tree nodes and slots into the nodes array.  */
-  htab_t node_map;
-
-  /* Node map to store entries into.  */
-  alloc_pool node_map_entries;
-
-  /* Next available slot in the nodes and offsets arrays.  */
-  unsigned next_slot;
+  struct pointer_map_t *node_map;
 
   /* The nodes pickled so far.  */
   VEC(tree,heap) *nodes;
-
-  /* Offset into the stream where the nodes have been written.  */
-  VEC(unsigned,heap) *offsets;
 };
 
 
@@ -610,6 +603,8 @@ struct GTY(()) lto_file_decl_data
 
   /* Symbol resolutions for this file */
   VEC(ld_plugin_symbol_resolution_t,heap) * GTY((skip)) resolutions;
+
+  struct gcov_ctr_summary GTY((skip)) profile_info;
 };
 
 typedef struct lto_file_decl_data *lto_file_decl_data_ptr;
@@ -705,6 +700,10 @@ struct output_block
 
   /* Cache of nodes written in this section.  */
   struct lto_streamer_cache_d *writer_cache;
+
+  /* All data persistent across whole duration of output block
+     can go here.  */
+  struct obstack obstack;
 };
 
 
@@ -760,7 +759,6 @@ extern const char *lto_get_section_data (struct lto_file_decl_data *,
 extern void lto_free_section_data (struct lto_file_decl_data *,
 				   enum lto_section_type,
 				   const char *, const char *, size_t);
-extern unsigned char lto_input_1_unsigned (struct lto_input_block *);
 extern unsigned HOST_WIDE_INT lto_input_uleb128 (struct lto_input_block *);
 extern unsigned HOST_WIDEST_INT lto_input_widest_uint_uleb128 (
 						struct lto_input_block *);
@@ -776,6 +774,14 @@ extern hashval_t lto_hash_in_decl_state (const void *);
 extern int lto_eq_in_decl_state (const void *, const void *);
 extern struct lto_in_decl_state *lto_get_function_in_decl_state (
 				      struct lto_file_decl_data *, tree);
+extern void lto_section_overrun (struct lto_input_block *) ATTRIBUTE_NORETURN;
+extern void lto_value_range_error (const char *,
+				   HOST_WIDE_INT, HOST_WIDE_INT,
+				   HOST_WIDE_INT) ATTRIBUTE_NORETURN;
+extern void bp_pack_var_len_unsigned (struct bitpack_d *, unsigned HOST_WIDE_INT);
+extern void bp_pack_var_len_int (struct bitpack_d *, HOST_WIDE_INT);
+extern unsigned HOST_WIDE_INT bp_unpack_var_len_unsigned (struct bitpack_d *);
+extern HOST_WIDE_INT bp_unpack_var_len_int (struct bitpack_d *);
 
 /* In lto-section-out.c  */
 extern hashval_t lto_hash_decl_slot_node (const void *);
@@ -785,7 +791,6 @@ extern int lto_eq_type_slot_node (const void *, const void *);
 extern void lto_begin_section (const char *, bool);
 extern void lto_end_section (void);
 extern void lto_write_stream (struct lto_output_stream *);
-extern void lto_output_1_stream (struct lto_output_stream *, char);
 extern void lto_output_data_stream (struct lto_output_stream *, const void *,
 				    size_t);
 extern void lto_output_uleb128_stream (struct lto_output_stream *,
@@ -819,6 +824,7 @@ extern void lto_push_out_decl_state (struct lto_out_decl_state *);
 extern struct lto_out_decl_state *lto_pop_out_decl_state (void);
 extern void lto_record_function_out_decl_state (tree,
 						struct lto_out_decl_state *);
+extern void lto_append_block (struct lto_output_stream *);
 
 
 /* In lto-streamer.c.  */
@@ -828,12 +834,13 @@ extern void lto_bitmap_free (bitmap);
 extern char *lto_get_section_name (int, const char *, struct lto_file_decl_data *);
 extern void print_lto_report (void);
 extern bool lto_streamer_cache_insert (struct lto_streamer_cache_d *, tree,
-				       int *, unsigned *);
+				       unsigned *);
 extern bool lto_streamer_cache_insert_at (struct lto_streamer_cache_d *, tree,
-					  int);
+					  unsigned);
+extern void lto_streamer_cache_append (struct lto_streamer_cache_d *, tree);
 extern bool lto_streamer_cache_lookup (struct lto_streamer_cache_d *, tree,
-				       int *);
-extern tree lto_streamer_cache_get (struct lto_streamer_cache_d *, int);
+				       unsigned *);
+extern tree lto_streamer_cache_get (struct lto_streamer_cache_d *, unsigned);
 extern struct lto_streamer_cache_d *lto_streamer_cache_create (void);
 extern void lto_streamer_cache_delete (struct lto_streamer_cache_d *);
 extern void lto_streamer_init (void);
@@ -859,6 +866,9 @@ extern struct data_in *lto_data_in_create (struct lto_file_decl_data *,
 				    const char *, unsigned,
 				    VEC(ld_plugin_symbol_resolution_t,heap) *);
 extern void lto_data_in_delete (struct data_in *);
+extern const char *lto_input_string (struct data_in *,
+				     struct lto_input_block *);
+extern void lto_input_data_block (struct lto_input_block *, void *, size_t);
 
 
 /* In lto-streamer-out.c  */
@@ -867,6 +877,11 @@ extern struct output_block *create_output_block (enum lto_section_type);
 extern void destroy_output_block (struct output_block *);
 extern void lto_output_tree (struct output_block *, tree, bool);
 extern void produce_asm (struct output_block *ob, tree fn);
+void lto_output_decl_state_streams (struct output_block *,
+				    struct lto_out_decl_state *);
+void lto_output_decl_state_refs (struct output_block *,
+			         struct lto_output_stream *,
+			         struct lto_out_decl_state *);
 
 
 /* In lto-cgraph.c  */
@@ -911,10 +926,11 @@ extern void lto_symtab_merge_cgraph_nodes (void);
 extern tree lto_symtab_prevailing_decl (tree decl);
 extern enum ld_plugin_symbol_resolution lto_symtab_get_resolution (tree decl);
 extern void lto_symtab_free (void);
+extern GTY(()) VEC(tree,gc) *lto_global_var_decls;
 
 
 /* In lto-opts.c.  */
-extern void lto_register_user_option (size_t, const char *, int, int);
+extern void lto_register_user_option (size_t, const char *, int, unsigned int);
 extern void lto_read_file_options (struct lto_file_decl_data *);
 extern void lto_write_options (void);
 extern void lto_reissue_options (void);
@@ -941,7 +957,7 @@ extern VEC(lto_out_decl_state_ptr, heap) *lto_function_decl_states;
 static inline bool
 lto_tag_is_tree_code_p (enum LTO_tags tag)
 {
-  return tag > LTO_null && (unsigned) tag <= NUM_TREE_CODES;
+  return tag > LTO_null && (unsigned) tag <= MAX_TREE_CODES;
 }
 
 
@@ -1065,6 +1081,8 @@ lto_is_streamable (tree expr)
 	 && code != BIND_EXPR
 	 && code != WITH_CLEANUP_EXPR
 	 && code != STATEMENT_LIST
+	 && code != OMP_CLAUSE
+	 && code != OPTIMIZATION_NODE
 	 && (code == CASE_LABEL_EXPR
 	     || code == DECL_EXPR
 	     || TREE_CODE_CLASS (code) != tcc_statement);
@@ -1095,6 +1113,11 @@ bp_pack_value (struct bitpack_d *bp, bitpack_word_t val, unsigned nbits)
 {
   bitpack_word_t word = bp->word;
   int pos = bp->pos;
+
+  /* Verify that VAL fits in the NBITS.  */
+  gcc_checking_assert (nbits == BITS_PER_BITPACK_WORD
+		       || !(val & ~(((bitpack_word_t)1<<nbits)-1)));
+
   /* If val does not fit into the current bitpack word switch to the
      next one.  */
   if (pos + nbits > BITS_PER_BITPACK_WORD)
@@ -1158,5 +1181,147 @@ bp_unpack_value (struct bitpack_d *bp, unsigned nbits)
 
   return val & mask;
 }
+
+
+/* Write a character to the output block.  */
+
+static inline void
+lto_output_1_stream (struct lto_output_stream *obs, char c)
+{
+  /* No space left.  */
+  if (obs->left_in_block == 0)
+    lto_append_block (obs);
+
+  /* Write the actual character.  */
+  *obs->current_pointer = c;
+  obs->current_pointer++;
+  obs->total_size++;
+  obs->left_in_block--;
+}
+
+
+/* Read byte from the input block.  */
+
+static inline unsigned char
+lto_input_1_unsigned (struct lto_input_block *ib)
+{
+  if (ib->p >= ib->len)
+    lto_section_overrun (ib);
+  return (ib->data[ib->p++]);
+}
+
+/* Output VAL into OBS and verify it is in range MIN...MAX that is supposed
+   to be compile time constant.
+   Be host independent, limit range to 31bits.  */
+
+static inline void
+lto_output_int_in_range (struct lto_output_stream *obs,
+			 HOST_WIDE_INT min,
+			 HOST_WIDE_INT max,
+			 HOST_WIDE_INT val)
+{
+  HOST_WIDE_INT range = max - min;
+
+  gcc_checking_assert (val >= min && val <= max && range > 0
+		       && range < 0x7fffffff);
+
+  val -= min;
+  lto_output_1_stream (obs, val & 255);
+  if (range >= 0xff)
+    lto_output_1_stream (obs, (val >> 8) & 255);
+  if (range >= 0xffff)
+    lto_output_1_stream (obs, (val >> 16) & 255);
+  if (range >= 0xffffff)
+    lto_output_1_stream (obs, (val >> 24) & 255);
+}
+
+/* Input VAL into OBS and verify it is in range MIN...MAX that is supposed
+   to be compile time constant.  PURPOSE is used for error reporting.  */
+
+static inline HOST_WIDE_INT
+lto_input_int_in_range (struct lto_input_block *ib,
+			const char *purpose,
+			HOST_WIDE_INT min,
+			HOST_WIDE_INT max)
+{
+  HOST_WIDE_INT range = max - min;
+  HOST_WIDE_INT val = lto_input_1_unsigned (ib);
+
+  gcc_checking_assert (range > 0 && range < 0x7fffffff);
+
+  if (range >= 0xff)
+    val |= ((HOST_WIDE_INT)lto_input_1_unsigned (ib)) << 8;
+  if (range >= 0xffff)
+    val |= ((HOST_WIDE_INT)lto_input_1_unsigned (ib)) << 16;
+  if (range >= 0xffffff)
+    val |= ((HOST_WIDE_INT)lto_input_1_unsigned (ib)) << 24;
+  val += min;
+  if (val < min || val > max)
+    lto_value_range_error (purpose, val, min, max);
+  return val;
+}
+
+
+/* Output VAL into BP and verify it is in range MIN...MAX that is supposed
+   to be compile time constant.
+   Be host independent, limit range to 31bits.  */
+
+static inline void
+bp_pack_int_in_range (struct bitpack_d *bp,
+		      HOST_WIDE_INT min,
+		      HOST_WIDE_INT max,
+		      HOST_WIDE_INT val)
+{
+  HOST_WIDE_INT range = max - min;
+  int nbits = floor_log2 (range) + 1;
+
+  gcc_checking_assert (val >= min && val <= max && range > 0
+		       && range < 0x7fffffff);
+
+  val -= min;
+  bp_pack_value (bp, val, nbits);
+}
+
+/* Input VAL into BP and verify it is in range MIN...MAX that is supposed
+   to be compile time constant.  PURPOSE is used for error reporting.  */
+
+static inline HOST_WIDE_INT
+bp_unpack_int_in_range (struct bitpack_d *bp,
+		        const char *purpose,
+		        HOST_WIDE_INT min,
+		        HOST_WIDE_INT max)
+{
+  HOST_WIDE_INT range = max - min;
+  int nbits = floor_log2 (range) + 1;
+  HOST_WIDE_INT val = bp_unpack_value (bp, nbits);
+
+  gcc_checking_assert (range > 0 && range < 0x7fffffff);
+
+  if (val < min || val > max)
+    lto_value_range_error (purpose, val, min, max);
+  return val;
+}
+
+/* Output VAL of type "enum enum_name" into OBS.
+   Assume range 0...ENUM_LAST - 1.  */
+#define lto_output_enum(obs,enum_name,enum_last,val) \
+  lto_output_int_in_range ((obs), 0, (int)(enum_last) - 1, (int)(val))
+
+/* Input enum of type "enum enum_name" from IB.
+   Assume range 0...ENUM_LAST - 1.  */
+#define lto_input_enum(ib,enum_name,enum_last) \
+  (enum enum_name)lto_input_int_in_range ((ib), #enum_name, 0, \
+					  (int)(enum_last) - 1)
+
+/* Output VAL of type "enum enum_name" into BP.
+   Assume range 0...ENUM_LAST - 1.  */
+#define bp_pack_enum(bp,enum_name,enum_last,val) \
+  bp_pack_int_in_range ((bp), 0, (int)(enum_last) - 1, (int)(val))
+
+/* Input enum of type "enum enum_name" from BP.
+   Assume range 0...ENUM_LAST - 1.  */
+#define bp_unpack_enum(bp,enum_name,enum_last) \
+  (enum enum_name)bp_unpack_int_in_range ((bp), #enum_name, 0, \
+					(int)(enum_last) - 1)
 
 #endif /* GCC_LTO_STREAMER_H  */

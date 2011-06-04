@@ -1,6 +1,6 @@
 /* GIMPLE lowering pass.  Converts High GIMPLE into Low GIMPLE.
 
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -31,7 +31,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "flags.h"
 #include "function.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "tree-pass.h"
 
 /* The differences between High GIMPLE and Low GIMPLE are the
@@ -149,11 +148,6 @@ lower_function_body (void)
 
       x = gimple_build_label (t.label);
       gsi_insert_after (&i, x, GSI_CONTINUE_LINKING);
-
-      /* Remove the line number from the representative return statement.
-	 It now fills in for many such returns.  Failure to remove this
-	 will result in incorrect results for coverage analysis.  */
-      gimple_set_location (t.stmt, UNKNOWN_LOCATION);
       gsi_insert_after (&i, t.stmt, GSI_CONTINUE_LINKING);
     }
 
@@ -214,25 +208,28 @@ struct gimple_opt_pass pass_lower_cf =
 };
 
 
+
 /* Verify if the type of the argument matches that of the function
    declaration.  If we cannot verify this or there is a mismatch,
    return false.  */
 
-bool
-gimple_check_call_args (gimple stmt)
+static bool
+gimple_check_call_args (gimple stmt, tree fndecl)
 {
-  tree fndecl, parms, p;
+  tree parms, p;
   unsigned int i, nargs;
+
+  /* Calls to internal functions always match their signature.  */
+  if (gimple_call_internal_p (stmt))
+    return true;
 
   nargs = gimple_call_num_args (stmt);
 
   /* Get argument types for verification.  */
-  fndecl = gimple_call_fndecl (stmt);
-  parms = NULL_TREE;
   if (fndecl)
     parms = TYPE_ARG_TYPES (TREE_TYPE (fndecl));
-  else if (POINTER_TYPE_P (TREE_TYPE (gimple_call_fn (stmt))))
-    parms = TYPE_ARG_TYPES (TREE_TYPE (TREE_TYPE (gimple_call_fn (stmt))));
+  else
+    parms = TYPE_ARG_TYPES (gimple_call_fntype (stmt));
 
   /* Verify if the type of the argument matches that of the function
      declaration.  If we cannot verify this or there is a mismatch,
@@ -279,6 +276,25 @@ gimple_check_call_args (gimple stmt)
   return true;
 }
 
+/* Verify if the type of the argument and lhs of CALL_STMT matches
+   that of the function declaration CALLEE.
+   If we cannot verify this or there is a mismatch, return false.  */
+
+bool
+gimple_check_call_matching_types (gimple call_stmt, tree callee)
+{
+  tree lhs;
+
+  if ((DECL_RESULT (callee)
+       && !DECL_BY_REFERENCE (DECL_RESULT (callee))
+       && (lhs = gimple_call_lhs (call_stmt)) != NULL_TREE
+       && !useless_type_conversion_p (TREE_TYPE (DECL_RESULT (callee)),
+                                      TREE_TYPE (lhs))
+       && !fold_convertible_p (TREE_TYPE (DECL_RESULT (callee)), lhs))
+      || !gimple_check_call_args (call_stmt, callee))
+    return false;
+  return true;
+}
 
 /* Lower sequence SEQ.  Unlike gimplification the statements are not relowered
    when they are changed -- if this has to be done, the lowering routine must
@@ -747,7 +763,14 @@ lower_gimple_return (gimple_stmt_iterator *gsi, struct lower_data *data)
       tmp_rs = *VEC_index (return_statements_t, data->return_statements, i);
 
       if (gimple_return_retval (stmt) == gimple_return_retval (tmp_rs.stmt))
-	goto found;
+	{
+	  /* Remove the line number from the representative return statement.
+	     It now fills in for many such returns.  Failure to remove this
+	     will result in incorrect results for coverage analysis.  */
+	  gimple_set_location (tmp_rs.stmt, UNKNOWN_LOCATION);
+
+	  goto found;
+	}
     }
 
   /* Not found.  Create a new label and record the return statement.  */
@@ -757,6 +780,9 @@ lower_gimple_return (gimple_stmt_iterator *gsi, struct lower_data *data)
 
   /* Generate a goto statement and remove the return statement.  */
  found:
+  /* When not optimizing, make sure user returns are preserved.  */
+  if (!optimize && gimple_has_location (stmt))
+    DECL_ARTIFICIAL (tmp_rs.label) = 0;
   t = gimple_build_goto (tmp_rs.label);
   gimple_set_location (t, gimple_location (stmt));
   gimple_set_block (t, gimple_block (stmt));
@@ -908,6 +934,8 @@ record_vars_into (tree vars, tree fn)
 
       /* Record the variable.  */
       add_local_decl (cfun, var);
+      if (gimple_referenced_vars (cfun))
+	add_referenced_var (var);
     }
 
   if (fn != current_function_decl)

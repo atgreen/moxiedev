@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler. NEC V850 series
    Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+   2007, 2008, 2009, 2010, 2011  Free Software Foundation, Inc.
    Contributed by Jeff Law (law@cygnus.com).
 
    This file is part of GCC.
@@ -25,7 +25,6 @@
 extern GTY(()) rtx v850_compare_op0;
 extern GTY(()) rtx v850_compare_op1;
 
-/* These are defined in svr4.h but we want to override them.  */
 #undef LIB_SPEC
 #define LIB_SPEC "%{!shared:%{!symbolic:--start-group -lc -lgcc --end-group}}"
 
@@ -48,7 +47,6 @@ extern GTY(()) rtx v850_compare_op1;
 #define MASK_DEFAULT            MASK_V850
 #define SUBTARGET_ASM_SPEC 	"%{!mv*:-mv850}"
 #define SUBTARGET_CPP_SPEC 	"%{!mv*:-D__v850__}"
-#define TARGET_VERSION 		fprintf (stderr, " (NEC V850)");
 
 /* Choose which processor will be the default.
    We must pass a -mv850xx option to the assembler if no explicit -mv* option
@@ -60,8 +58,6 @@ extern GTY(()) rtx v850_compare_op1;
 #define SUBTARGET_ASM_SPEC 	"%{!mv*:-mv850e}"
 #undef  SUBTARGET_CPP_SPEC
 #define SUBTARGET_CPP_SPEC 	"%{!mv*:-D__v850e__}"
-#undef  TARGET_VERSION
-#define TARGET_VERSION 		fprintf (stderr, " (NEC V850E)");
 #endif
 
 #if TARGET_CPU_DEFAULT == TARGET_CPU_v850e1
@@ -71,8 +67,6 @@ extern GTY(()) rtx v850_compare_op1;
 #define SUBTARGET_ASM_SPEC	"%{!mv*:-mv850e1}"
 #undef  SUBTARGET_CPP_SPEC
 #define SUBTARGET_CPP_SPEC	"%{!mv*:-D__v850e1__} %{mv850e1:-D__v850e1__}"
-#undef  TARGET_VERSION
-#define TARGET_VERSION		fprintf (stderr, " (NEC V850E1)");
 #endif
 
 #if TARGET_CPU_DEFAULT == TARGET_CPU_v850e2
@@ -82,8 +76,6 @@ extern GTY(()) rtx v850_compare_op1;
 #define SUBTARGET_ASM_SPEC 	"%{!mv*:-mv850e2}"
 #undef  SUBTARGET_CPP_SPEC
 #define SUBTARGET_CPP_SPEC 	"%{!mv*:-D__v850e2__} %{mv850e2:-D__v850e2__}"
-#undef  TARGET_VERSION
-#define TARGET_VERSION 		fprintf (stderr, " (NEC V850E2)");
 #endif
 
 #if TARGET_CPU_DEFAULT == TARGET_CPU_v850e2v3
@@ -93,15 +85,19 @@ extern GTY(()) rtx v850_compare_op1;
 #define SUBTARGET_ASM_SPEC	"%{!mv*:-mv850e2v3}"
 #undef  SUBTARGET_CPP_SPEC
 #define SUBTARGET_CPP_SPEC	"%{!mv*:-D__v850e2v3__} %{mv850e2v3:-D__v850e2v3__}"
-#undef  TARGET_VERSION
-#define TARGET_VERSION		fprintf (stderr, " (NEC V850E2V3)");
 #endif
 
 #define TARGET_V850E2_ALL      (TARGET_V850E2 || TARGET_V850E2V3) 
 
-#define ASM_SPEC "%{mv*:-mv%*}"
-#define CPP_SPEC               "%{mv850e2v3:-D__v850e2v3__} %{mv850e2:-D__v850e2__} %{mv850e:-D__v850e__} %{mv850:-D__v850__} %(subtarget_cpp_spec)" \
-                               " %{mep:-D__EP__}"
+#define ASM_SPEC "%{mv850es:-mv850e1}%{!mv850es:%{mv*:-mv%*}}"
+#define CPP_SPEC "\
+  %{mv850e2v3:-D__v850e2v3__} \
+  %{mv850e2:-D__v850e2__} \
+  %{mv850es:-D__v850e1__} \
+  %{mv850e1:-D__v850e1__} \
+  %{mv850:-D__v850__} \
+  %(subtarget_cpp_spec)" \
+  " %{mep:-D__EP__}"
 
 #define EXTRA_SPECS \
  { "subtarget_asm_spec", SUBTARGET_ASM_SPEC }, \
@@ -118,25 +114,6 @@ extern GTY(()) rtx v850_compare_op1;
 } while(0)
 
 #define MASK_CPU (MASK_V850 | MASK_V850E)
-
-/* Information about the various small memory areas.  */
-struct small_memory_info {
-  const char *name;
-  long max;
-  long physical_max;
-};
-
-enum small_memory_type {
-  /* tiny data area, using EP as base register */
-  SMALL_MEMORY_TDA = 0,
-  /* small data area using dp as base register */
-  SMALL_MEMORY_SDA,
-  /* zero data area using r0 as base register */
-  SMALL_MEMORY_ZDA,
-  SMALL_MEMORY_max
-};
-
-extern struct small_memory_info small_memory[(int)SMALL_MEMORY_max];
 
 /* Target machine storage layout */
 
@@ -198,6 +175,18 @@ extern struct small_memory_info small_memory[(int)SMALL_MEMORY_max];
 
    On the NEC V850, loads do sign extension, so make this default.  */
 #define DEFAULT_SIGNED_CHAR 1
+
+#undef  SIZE_TYPE
+#define SIZE_TYPE "unsigned int"
+
+#undef  PTRDIFF_TYPE
+#define PTRDIFF_TYPE "int"
+
+#undef  WCHAR_TYPE
+#define WCHAR_TYPE "long int"
+
+#undef  WCHAR_TYPE_SIZE
+#define WCHAR_TYPE_SIZE BITS_PER_WORD
 
 /* Standard register usage.  */
 
@@ -306,11 +295,6 @@ enum reg_class
 
 #define N_REG_CLASSES (int) LIM_REG_CLASSES
 
-#define IRA_COVER_CLASSES		\
-{					\
-  GENERAL_REGS, LIM_REG_CLASSES		\
-}
-
 /* Give names of register classes as strings for dump file.  */
 
 #define REG_CLASS_NAMES \
@@ -340,11 +324,6 @@ enum reg_class
 #define INDEX_REG_CLASS NO_REGS
 #define BASE_REG_CLASS  GENERAL_REGS
 
-/* Get reg_class from a letter such as appears in the machine description.  */
-
-#define REG_CLASS_FROM_LETTER(C) \
-       (C == 'e' ? EVEN_REGS : (NO_REGS))
-
 /* Macros to check register numbers against specific register classes.  */
 
 /* These assume that REGNO is a hard or pseudo reg number.
@@ -367,62 +346,22 @@ enum reg_class
 #define CLASS_MAX_NREGS(CLASS, MODE)	\
   ((GET_MODE_SIZE (MODE) + UNITS_PER_WORD - 1) / UNITS_PER_WORD)
 
-/* The letters I, J, K, L, M, N, O, P in a register constraint string
-   can be used to stand for particular ranges of immediate operands.
-   This macro defines what the ranges are.
-   C is the letter, and VALUE is a constant value.
-   Return 1 if VALUE is in the range specified by C.  */
+/* Convenience wrappers around insn_const_int_ok_for_constraint.  */
 
-#define INT_7_BITS(VALUE) ((unsigned) (VALUE) + 0x40 < 0x80)
-#define INT_8_BITS(VALUE) ((unsigned) (VALUE) + 0x80 < 0x100)
-/* zero */
-#define CONST_OK_FOR_I(VALUE) ((VALUE) == 0)
-/* 5-bit signed immediate */
-#define CONST_OK_FOR_J(VALUE) ((unsigned) (VALUE) + 0x10 < 0x20)
-/* 16-bit signed immediate */
-#define CONST_OK_FOR_K(VALUE) ((unsigned) (VALUE) + 0x8000 < 0x10000)
-/* valid constant for movhi instruction.  */
+#define CONST_OK_FOR_I(VALUE) \
+  insn_const_int_ok_for_constraint (VALUE, CONSTRAINT_I)
+#define CONST_OK_FOR_J(VALUE) \
+  insn_const_int_ok_for_constraint (VALUE, CONSTRAINT_J)
+#define CONST_OK_FOR_K(VALUE) \
+  insn_const_int_ok_for_constraint (VALUE, CONSTRAINT_K)
 #define CONST_OK_FOR_L(VALUE) \
-  (((unsigned) ((int) (VALUE) >> 16) + 0x8000 < 0x10000) \
-   && CONST_OK_FOR_I ((VALUE & 0xffff)))
-/* 16-bit unsigned immediate */
-#define CONST_OK_FOR_M(VALUE) ((unsigned)(VALUE) < 0x10000)
-/* 5-bit unsigned immediate in shift instructions */
-#define CONST_OK_FOR_N(VALUE) ((unsigned) (VALUE) <= 31)
-/* 9-bit signed immediate for word multiply instruction.  */
-#define CONST_OK_FOR_O(VALUE) ((unsigned) (VALUE) + 0x100 < 0x200)
-
-#define CONST_OK_FOR_P(VALUE) 0
-
-#define CONST_OK_FOR_LETTER_P(VALUE, C)  \
-  ((C) == 'I' ? CONST_OK_FOR_I (VALUE) : \
-   (C) == 'J' ? CONST_OK_FOR_J (VALUE) : \
-   (C) == 'K' ? CONST_OK_FOR_K (VALUE) : \
-   (C) == 'L' ? CONST_OK_FOR_L (VALUE) : \
-   (C) == 'M' ? CONST_OK_FOR_M (VALUE) : \
-   (C) == 'N' ? CONST_OK_FOR_N (VALUE) : \
-   (C) == 'O' ? CONST_OK_FOR_O (VALUE) : \
-   (C) == 'P' ? CONST_OK_FOR_P (VALUE) : \
-   0)
-
-/* Similar, but for floating constants, and defining letters G and H.
-   Here VALUE is the CONST_DOUBLE rtx itself. 
-     
-  `G' is a zero of some form.  */
-
-#define CONST_DOUBLE_OK_FOR_G(VALUE)					\
-  ((GET_MODE_CLASS (GET_MODE (VALUE)) == MODE_FLOAT			\
-    && (VALUE) == CONST0_RTX (GET_MODE (VALUE)))			\
-   || (GET_MODE_CLASS (GET_MODE (VALUE)) == MODE_INT			\
-       && CONST_DOUBLE_LOW (VALUE) == 0					\
-       && CONST_DOUBLE_HIGH (VALUE) == 0))
-
-#define CONST_DOUBLE_OK_FOR_H(VALUE) 0
-
-#define CONST_DOUBLE_OK_FOR_LETTER_P(VALUE, C)				\
-  ((C) == 'G'   ? CONST_DOUBLE_OK_FOR_G (VALUE)				\
-   : (C) == 'H' ? CONST_DOUBLE_OK_FOR_H (VALUE)				\
-   : 0)
+  insn_const_int_ok_for_constraint (VALUE, CONSTRAINT_L)
+#define CONST_OK_FOR_M(VALUE) \
+  insn_const_int_ok_for_constraint (VALUE, CONSTRAINT_M)
+#define CONST_OK_FOR_N(VALUE) \
+  insn_const_int_ok_for_constraint (VALUE, CONSTRAINT_N)
+#define CONST_OK_FOR_O(VALUE) \
+  insn_const_int_ok_for_constraint (VALUE, CONSTRAINT_O)
 
 
 /* Stack layout; function entry, exit and calling.  */
@@ -606,9 +545,7 @@ struct cum_arg { int nbytes; int anonymous_args; };
 /* ??? This seems too exclusive.  May get better code by accepting more
    possibilities here, in particular, should accept ZDA_NAME SYMBOL_REFs.  */
 
-#define CONSTANT_ADDRESS_P(X)   \
-  (GET_CODE (X) == CONST_INT				\
-   && CONST_OK_FOR_K (INTVAL (X)))
+#define CONSTANT_ADDRESS_P(X) constraint_satisfied_p (X, CONSTRAINT_K)
 
 /* Maximum number of registers that can appear in a valid memory address.  */
 
@@ -649,39 +586,6 @@ struct cum_arg { int nbytes; int anonymous_args; };
 
 #endif
 
-/* A C expression that defines the optional machine-dependent
-   constraint letters that can be used to segregate specific types of
-   operands, usually memory references, for the target machine.
-   Normally this macro will not be defined.  If it is required for a
-   particular target machine, it should return 1 if VALUE corresponds
-   to the operand type represented by the constraint letter C.  If C
-   is not defined as an extra constraint, the value returned should
-   be 0 regardless of VALUE.
-
-   For example, on the ROMP, load instructions cannot have their
-   output in r0 if the memory reference contains a symbolic address.
-   Constraint letter `Q' is defined as representing a memory address
-   that does *not* contain a symbolic address.  An alternative is
-   specified with a `Q' constraint on the input and `r' on the
-   output.  The next alternative specifies `m' on the input and a
-   register class that does not include r0 on the output.  */
-
-#define EXTRA_CONSTRAINT(OP, C)						\
- ((C) == 'Q'   ? ep_memory_operand (OP, GET_MODE (OP), FALSE)		\
-  : (C) == 'R' ? special_symbolref_operand (OP, VOIDmode)		\
-  : (C) == 'S' ? (GET_CODE (OP) == SYMBOL_REF				\
-		  && !SYMBOL_REF_ZDA_P (OP))				\
-  : (C) == 'T' ? ep_memory_operand (OP, GET_MODE (OP), TRUE)		\
-  : (C) == 'U' ? ((GET_CODE (OP) == SYMBOL_REF				\
-		   && SYMBOL_REF_ZDA_P (OP))				\
-		  || (GET_CODE (OP) == CONST				\
-		      && GET_CODE (XEXP (OP, 0)) == PLUS		\
-		      && GET_CODE (XEXP (XEXP (OP, 0), 0)) == SYMBOL_REF\
-		      && SYMBOL_REF_ZDA_P (XEXP (XEXP (OP, 0), 0))))	\
-  : (C) == 'W' ? (GET_CODE (OP) == CONST_INT                            \
-		  && ((unsigned)(INTVAL (OP)) >= 0x8000)               \
-		  && ((unsigned)(INTVAL (OP)) < 0x400000))              \
-  : 0)
 
 /* GO_IF_LEGITIMATE_ADDRESS recognizes an RTL expression
    that is a valid memory address for an instruction.
@@ -721,7 +625,7 @@ do {									\
      goto ADDR;								\
   if (GET_CODE (X) == PLUS						\
       && RTX_OK_FOR_BASE_P (XEXP (X, 0)) 				\
-      && (GET_CODE (XEXP (X,1)) == CONST_INT && CONST_OK_FOR_K (INTVAL(XEXP (X,1)) + GET_MODE_NUNITS(MODE) * UNITS_PER_WORD)) \
+      && constraint_satisfied_p (XEXP (X,1), CONSTRAINT_K)		\
       && ((MODE == QImode || INTVAL (XEXP (X, 1)) % 2 == 0)		\
 	   && CONST_OK_FOR_K (INTVAL (XEXP (X, 1)) 			\
                               + (GET_MODE_NUNITS (MODE) * UNITS_PER_WORD)))) \
@@ -729,17 +633,6 @@ do {									\
 } while (0)
 
 
-/* Nonzero if the constant value X is a legitimate general operand.
-   It is given that X satisfies CONSTANT_P or is a CONST_DOUBLE.  */
-
-#define LEGITIMATE_CONSTANT_P(X)					\
-  (GET_CODE (X) == CONST_DOUBLE						\
-   || !(GET_CODE (X) == CONST						\
-	&& GET_CODE (XEXP (X, 0)) == PLUS				\
-	&& GET_CODE (XEXP (XEXP (X, 0), 0)) == SYMBOL_REF		\
-	&& GET_CODE (XEXP (XEXP (X, 0), 1)) == CONST_INT		\
-	&& ! CONST_OK_FOR_K (INTVAL (XEXP (XEXP (X, 0), 1)))))
-
 /* Given a comparison code (EQ, NE, etc.) and the first operand of a COMPARE,
    return the mode to be used for the comparison.
 
@@ -810,10 +703,6 @@ typedef enum
 
 #undef  USER_LABEL_PREFIX
 #define USER_LABEL_PREFIX "_"
-
-#define OUTPUT_ADDR_CONST_EXTRA(FILE, X, FAIL)  \
-  if (! v850_output_addr_const_extra (FILE, X)) \
-     goto FAIL
 
 /* This says how to output the assembler to define a global
    uninitialized but not common symbol.  */
@@ -919,7 +808,6 @@ typedef enum
    it.  */
 #define JUMP_TABLES_IN_TEXT_SECTION (!TARGET_JUMP_TABLES_IN_DATA_SECTION)
 
-/* svr4.h defines this assuming that 4 byte alignment is required.  */
 #undef ASM_OUTPUT_BEFORE_CASE_LABEL
 #define ASM_OUTPUT_BEFORE_CASE_LABEL(FILE,PREFIX,NUM,TABLE) \
   ASM_OUTPUT_ALIGN ((FILE), (TARGET_BIG_SWITCH ? 2 : 1));
@@ -1018,8 +906,8 @@ typedef struct data_area_stack_element
 extern data_area_stack_element * data_area_stack;
 
 /* Names of the various data areas used on the v850.  */
-extern union tree_node * GHS_default_section_names [(int) COUNT_OF_GHS_SECTION_KINDS];
-extern union tree_node * GHS_current_section_names [(int) COUNT_OF_GHS_SECTION_KINDS];
+extern tree GHS_default_section_names [(int) COUNT_OF_GHS_SECTION_KINDS];
+extern tree GHS_current_section_names [(int) COUNT_OF_GHS_SECTION_KINDS];
 
 /* The assembler op to start the file.  */
 

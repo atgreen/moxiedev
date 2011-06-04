@@ -35,7 +35,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "cp-tree.h"
 #include "intl.h"
 #include "convert.h"
-#include "toplev.h"
 #include "decl.h"
 #include "target.h"
 
@@ -513,6 +512,7 @@ convert_from_reference (tree val)
       tree t = TREE_TYPE (TREE_TYPE (val));
       tree ref = build1 (INDIRECT_REF, t, val);
 
+      mark_exp_read (val);
        /* We *must* set TREE_READONLY when dereferencing a pointer to const,
 	  so that we get the proper error message if the result is used
 	  to assign to.  Also, &* is supposed to be a no-op.  */
@@ -520,7 +520,6 @@ convert_from_reference (tree val)
       TREE_THIS_VOLATILE (ref) = CP_TYPE_VOLATILE_P (t);
       TREE_SIDE_EFFECTS (ref)
 	= (TREE_THIS_VOLATILE (ref) || TREE_SIDE_EFFECTS (val));
-      REFERENCE_REF_P (ref) = 1;
       val = ref;
     }
 
@@ -531,11 +530,17 @@ convert_from_reference (tree val)
    argument of class type into a temporary.  */
 
 tree
-force_rvalue (tree expr)
+force_rvalue (tree expr, tsubst_flags_t complain)
 {
-  if (MAYBE_CLASS_TYPE_P (TREE_TYPE (expr)) && TREE_CODE (expr) != TARGET_EXPR)
-    expr = ocp_convert (TREE_TYPE (expr), expr,
-			CONV_IMPLICIT|CONV_FORCE_TEMP, LOOKUP_NORMAL);
+  tree type = TREE_TYPE (expr);
+  if (MAYBE_CLASS_TYPE_P (type) && TREE_CODE (expr) != TARGET_EXPR)
+    {
+      VEC(tree,gc) *args = make_tree_vector_single (expr);
+      expr = build_special_member_call (NULL_TREE, complete_ctor_identifier,
+					&args, type, LOOKUP_NORMAL, complain);
+      release_tree_vector (args);
+      expr = build_cplus_new (type, expr, complain);
+    }
   else
     expr = decay_conversion (expr);
 
@@ -727,7 +732,13 @@ ocp_convert (tree type, tree expr, int convtype, int flags)
 	  return error_mark_node;
 	}
       if (code == BOOLEAN_TYPE)
-	return cp_truthvalue_conversion (e);
+	{
+	  /* We can't implicitly convert a scoped enum to bool, so convert
+	     to the underlying type first.  */
+	  if (SCOPED_ENUM_P (intype) && (convtype & CONV_STATIC))
+	    e = build_nop (ENUM_UNDERLYING_TYPE (intype), e);
+	  return cp_truthvalue_conversion (e);
+	}
 
       converted = fold_if_not_in_template (convert_to_integer (type, e));
 
@@ -813,7 +824,7 @@ ocp_convert (tree type, tree expr, int convtype, int flags)
 	  release_tree_vector (ctor_vec);
 	}
       if (ctor)
-	return build_cplus_new (type, ctor);
+	return build_cplus_new (type, ctor, tf_warning_or_error);
     }
 
   if (flags & LOOKUP_COMPLAIN)
@@ -893,20 +904,24 @@ convert_to_void (tree expr, impl_conv_void implicit, tsubst_flags_t complain)
 	/* The two parts of a cond expr might be separate lvalues.  */
 	tree op1 = TREE_OPERAND (expr,1);
 	tree op2 = TREE_OPERAND (expr,2);
-	bool side_effects = TREE_SIDE_EFFECTS (op1) || TREE_SIDE_EFFECTS (op2);
+	bool side_effects = ((op1 && TREE_SIDE_EFFECTS (op1))
+			     || TREE_SIDE_EFFECTS (op2));
 	tree new_op1, new_op2;
+	new_op1 = NULL_TREE;
 	if (implicit != ICV_CAST && !side_effects)
 	  {
-	    new_op1 = convert_to_void (op1, ICV_SECOND_OF_COND, complain);
+	    if (op1)
+	      new_op1 = convert_to_void (op1, ICV_SECOND_OF_COND, complain);
 	    new_op2 = convert_to_void (op2, ICV_THIRD_OF_COND, complain);
 	  }
 	else
 	  {
-	    new_op1 = convert_to_void (op1, ICV_CAST, complain);
+	    if (op1)
+	      new_op1 = convert_to_void (op1, ICV_CAST, complain);
 	    new_op2 = convert_to_void (op2, ICV_CAST, complain);
 	  }
 
-	expr = build3 (COND_EXPR, TREE_TYPE (new_op1),
+	expr = build3 (COND_EXPR, TREE_TYPE (new_op2),
 		       TREE_OPERAND (expr, 0), new_op1, new_op2);
 	break;
       }
@@ -1503,9 +1518,7 @@ build_expr_type_conversion (int desires, tree expr, bool complain)
   if (!TYPE_HAS_CONVERSION (basetype))
     return NULL_TREE;
 
-  for (conv = lookup_conversions (basetype, /*lookup_template_convs_p=*/true);
-       conv;
-       conv = TREE_CHAIN (conv))
+  for (conv = lookup_conversions (basetype); conv; conv = TREE_CHAIN (conv))
     {
       int win = 0;
       tree candidate;
@@ -1603,6 +1616,10 @@ type_promotes_to (tree type)
   if (TREE_CODE (type) == BOOLEAN_TYPE)
     type = integer_type_node;
 
+  /* scoped enums don't promote.  */
+  else if (SCOPED_ENUM_P (type) && abi_version_at_least (6))
+    ;
+
   /* Normally convert enums to int, but convert wide enums to something
      wider.  */
   else if (TREE_CODE (type) == ENUMERAL_TYPE
@@ -1613,6 +1630,9 @@ type_promotes_to (tree type)
       int precision = MAX (TYPE_PRECISION (type),
 			   TYPE_PRECISION (integer_type_node));
       tree totype = c_common_type_for_size (precision, 0);
+      if (SCOPED_ENUM_P (type))
+	warning (OPT_Wabi, "scoped enum %qT will not promote to an integral "
+		 "type in a future version of GCC", type);
       if (TREE_CODE (type) == ENUMERAL_TYPE)
 	type = ENUM_UNDERLYING_TYPE (type);
       if (TYPE_UNSIGNED (type)

@@ -1,4 +1,3 @@
-;; -*- Mode: Scheme -*-
 ;;   Machine description for GNU compiler,
 ;;   for ATMEL AVR micro controllers.
 ;;   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008,
@@ -36,9 +35,6 @@
 ;;  ~  Output 'r' if not AVR_HAVE_JMP_CALL.
 ;;  !  Output 'e' if AVR_HAVE_EIJMP_EICALL.
 
-;; UNSPEC usage:
-;;  0  Length of a string, see "strlenhi".
-;;  1  Jump by register pair Z or by table addressed by Z, see "casesi".
 
 (define_constants
   [(REG_X	26)
@@ -51,17 +47,29 @@
    
    (SREG_ADDR   0x5F)
    (RAMPZ_ADDR  0x5B)
-   
-   (UNSPEC_STRLEN	0)
-   (UNSPEC_INDEX_JMP	1)
-   (UNSPEC_SEI		2)
-   (UNSPEC_CLI		3)
+   ])
 
-   (UNSPECV_PROLOGUE_SAVES	0)
-   (UNSPECV_EPILOGUE_RESTORES	1)
-   (UNSPECV_WRITE_SP_IRQ_ON	2)
-   (UNSPECV_WRITE_SP_IRQ_OFF	3)
-   (UNSPECV_GOTO_RECEIVER	4)])
+(define_c_enum "unspec"
+  [UNSPEC_STRLEN
+   UNSPEC_INDEX_JMP
+   UNSPEC_FMUL
+   UNSPEC_FMULS
+   UNSPEC_FMULSU
+   ])
+
+(define_c_enum "unspecv"
+  [UNSPECV_PROLOGUE_SAVES
+   UNSPECV_EPILOGUE_RESTORES
+   UNSPECV_WRITE_SP_IRQ_ON
+   UNSPECV_WRITE_SP_IRQ_OFF
+   UNSPECV_GOTO_RECEIVER
+   UNSPECV_ENABLE_IRQS
+   UNSPECV_NOP
+   UNSPECV_SLEEP
+   UNSPECV_WDR
+   UNSPECV_DELAY_CYCLES
+   ])
+    
 
 (include "predicates.md")
 (include "constraints.md")
@@ -170,7 +178,7 @@
   emit_clobber (gen_rtx_MEM (BLKmode, hard_frame_pointer_rtx));
 
   emit_move_insn (hard_frame_pointer_rtx, r_fp);
-  emit_stack_restore (SAVE_NONLOCAL, r_sp, NULL_RTX);
+  emit_stack_restore (SAVE_NONLOCAL, r_sp);
 
   emit_use (hard_frame_pointer_rtx);
   emit_use (stack_pointer_rtx);
@@ -182,7 +190,7 @@
 
 
 (define_insn "*pushqi"
-  [(set (mem:QI (post_dec (reg:HI REG_SP)))
+  [(set (mem:QI (post_dec:HI (reg:HI REG_SP)))
         (match_operand:QI 0 "reg_or_0_operand" "r,L"))]
   ""
   "@
@@ -190,9 +198,8 @@
 	push __zero_reg__"
   [(set_attr "length" "1,1")])
 
-
 (define_insn "*pushhi"
-  [(set (mem:HI (post_dec (reg:HI REG_SP)))
+  [(set (mem:HI (post_dec:HI (reg:HI REG_SP)))
         (match_operand:HI 0 "reg_or_0_operand" "r,L"))]
   ""
   "@
@@ -201,7 +208,7 @@
   [(set_attr "length" "2,2")])
 
 (define_insn "*pushsi"
-  [(set (mem:SI (post_dec (reg:HI REG_SP)))
+  [(set (mem:SI (post_dec:HI (reg:HI REG_SP)))
         (match_operand:SI 0 "reg_or_0_operand" "r,L"))]
   ""
   "@
@@ -210,7 +217,7 @@
   [(set_attr "length" "4,4")])
 
 (define_insn "*pushsf"
-  [(set (mem:SF (post_dec (reg:HI REG_SP)))
+  [(set (mem:SF (post_dec:HI (reg:HI REG_SP)))
         (match_operand:SF 0 "register_operand" "r"))]
   ""
   "push %D0
@@ -1491,7 +1498,7 @@
     FAIL;
 }")
 
-(define_insn "*rotlqi3_4"
+(define_insn "rotlqi3_4"
   [(set (match_operand:QI 0 "register_operand" "=r")
 	(rotate:QI (match_operand:QI 1 "register_operand" "0")
 		   (const_int 4)))]
@@ -1514,7 +1521,7 @@
   [(parallel [(set (match_operand:HIDI 0 "register_operand" "")
 		   (rotate:HIDI (match_operand:HIDI 1 "register_operand" "")
 				(match_operand:VOID 2 "const_int_operand" "")))
-		(clobber (match_operand 3 ""))])]
+		(clobber (match_dup 3))])]
   ""
   "
 {
@@ -2648,94 +2655,91 @@
 ;; call
 
 (define_expand "call"
-  [(call (match_operand:HI 0 "call_insn_operand" "")
-         (match_operand:HI 1 "general_operand" ""))]
+  [(parallel[(call (match_operand:HI 0 "call_insn_operand" "")
+                   (match_operand:HI 1 "general_operand" ""))
+             (use (const_int 0))])]
   ;; Operand 1 not used on the AVR.
+  ;; Operand 2 is 1 for tail-call, 0 otherwise.
+  ""
+  "")
+
+(define_expand "sibcall"
+  [(parallel[(call (match_operand:HI 0 "call_insn_operand" "")
+                   (match_operand:HI 1 "general_operand" ""))
+             (use (const_int 1))])]
+  ;; Operand 1 not used on the AVR.
+  ;; Operand 2 is 1 for tail-call, 0 otherwise.
   ""
   "")
 
 ;; call value
 
 (define_expand "call_value"
-  [(set (match_operand 0 "register_operand" "")
-        (call (match_operand:HI 1 "call_insn_operand" "")
-              (match_operand:HI 2 "general_operand" "")))]
+  [(parallel[(set (match_operand 0 "register_operand" "")
+                  (call (match_operand:HI 1 "call_insn_operand" "")
+                        (match_operand:HI 2 "general_operand" "")))
+             (use (const_int 0))])]
   ;; Operand 2 not used on the AVR.
+  ;; Operand 3 is 1 for tail-call, 0 otherwise.
   ""
   "")
 
-(define_insn "call_insn"
-  [(call (mem:HI (match_operand:HI 0 "nonmemory_operand" "!z,*r,s,n"))
-         (match_operand:HI 1 "general_operand" "X,X,X,X"))]
-;; We don't need in saving Z register because r30,r31 is a call used registers
-  ;; Operand 1 not used on the AVR.
-  "(register_operand (operands[0], HImode) || CONSTANT_P (operands[0]))"
-  "*{
-  if (which_alternative==0)
-     return \"%!icall\";
-  else if (which_alternative==1)
-    {
-      if (AVR_HAVE_MOVW)
-	return (AS2 (movw, r30, %0) CR_TAB
-               \"%!icall\");
-      else
-	return (AS2 (mov, r30, %A0) CR_TAB
-		AS2 (mov, r31, %B0) CR_TAB
-		\"%!icall\");
-    }
-  else if (which_alternative==2)
-    return AS1(%~call,%x0);
-  return (AS2 (ldi,r30,lo8(%0)) CR_TAB
-          AS2 (ldi,r31,hi8(%0)) CR_TAB
-          \"%!icall\");
-}"
-  [(set_attr "cc" "clobber,clobber,clobber,clobber")
-   (set_attr_alternative "length"
-			 [(const_int 1)
-			  (if_then_else (eq_attr "mcu_have_movw" "yes")
-					(const_int 2)
-					(const_int 3))
-			  (if_then_else (eq_attr "mcu_mega" "yes")
-					(const_int 2)
-					(const_int 1))
-			  (const_int 3)])])
-
-(define_insn "call_value_insn"
-  [(set (match_operand 0 "register_operand" "=r,r,r,r")
-        (call (mem:HI (match_operand:HI 1 "nonmemory_operand" "!z,*r,s,n"))
-;; We don't need in saving Z register because r30,r31 is a call used registers
-              (match_operand:HI 2 "general_operand" "X,X,X,X")))]
+(define_expand "sibcall_value"
+  [(parallel[(set (match_operand 0 "register_operand" "")
+                  (call (match_operand:HI 1 "call_insn_operand" "")
+                        (match_operand:HI 2 "general_operand" "")))
+             (use (const_int 1))])]
   ;; Operand 2 not used on the AVR.
-  "(register_operand (operands[0], VOIDmode) || CONSTANT_P (operands[0]))"
-  "*{
-  if (which_alternative==0)
-     return \"%!icall\";
-  else if (which_alternative==1)
-    {
-      if (AVR_HAVE_MOVW)
-	return (AS2 (movw, r30, %1) CR_TAB
-		\"%!icall\");
-      else
-	return (AS2 (mov, r30, %A1) CR_TAB
-		AS2 (mov, r31, %B1) CR_TAB
-		\"%!icall\");
-    }
-  else if (which_alternative==2)
-    return AS1(%~call,%x1);
-  return (AS2 (ldi, r30, lo8(%1)) CR_TAB
-          AS2 (ldi, r31, hi8(%1)) CR_TAB
-          \"%!icall\");
-}"
-  [(set_attr "cc" "clobber,clobber,clobber,clobber")
+  ;; Operand 3 is 1 for tail-call, 0 otherwise.
+  ""
+  "")
+
+(define_insn "*call_insn"
+  [(parallel[(call (mem:HI (match_operand:HI 0 "nonmemory_operand" "z,s,z,s"))
+                   (match_operand:HI 1 "general_operand"           "X,X,X,X"))
+             (use (match_operand:HI 2 "const_int_operand"          "L,L,P,P"))])]
+  ;; Operand 1 not used on the AVR.
+  ;; Operand 2 is 1 for tail-call, 0 otherwise.
+  ""
+  "@
+    %!icall
+    %~call %x0
+    %!ijmp
+    %~jmp %x0"
+  [(set_attr "cc" "clobber")
    (set_attr_alternative "length"
-			 [(const_int 1)
-			  (if_then_else (eq_attr "mcu_have_movw" "yes")
-					(const_int 2)
-					(const_int 3))
-			  (if_then_else (eq_attr "mcu_mega" "yes")
-					(const_int 2)
-					(const_int 1))
-			  (const_int 3)])])
+                         [(const_int 1)
+                          (if_then_else (eq_attr "mcu_mega" "yes")
+                                        (const_int 2)
+                                        (const_int 1))
+                          (const_int 1)
+                          (if_then_else (eq_attr "mcu_mega" "yes")
+                                        (const_int 2)
+                                        (const_int 1))])])
+
+(define_insn "*call_value_insn"
+  [(parallel[(set (match_operand 0 "register_operand"                   "=r,r,r,r")
+                  (call (mem:HI (match_operand:HI 1 "nonmemory_operand"  "z,s,z,s"))
+                        (match_operand:HI 2 "general_operand"            "X,X,X,X")))
+             (use (match_operand:HI 3 "const_int_operand"                "L,L,P,P"))])]
+  ;; Operand 2 not used on the AVR.
+  ;; Operand 3 is 1 for tail-call, 0 otherwise.
+  ""
+  "@
+    %!icall
+    %~call %x1
+    %!ijmp
+    %~jmp %x1"
+  [(set_attr "cc" "clobber")
+   (set_attr_alternative "length"
+                         [(const_int 1)
+                          (if_then_else (eq_attr "mcu_mega" "yes")
+                                        (const_int 2)
+                                        (const_int 1))
+                          (const_int 1)
+                          (if_then_else (eq_attr "mcu_mega" "yes")
+                                        (const_int 2)
+                                        (const_int 1))])])
 
 (define_insn "nop"
   [(const_int 0)]
@@ -3127,37 +3131,27 @@
 
 (define_insn "popqi"
   [(set (match_operand:QI 0 "register_operand" "=r")
-        (mem:QI (post_inc (reg:HI REG_SP))))]
+        (mem:QI (pre_inc:HI (reg:HI REG_SP))))]
   ""
   "pop %0"
   [(set_attr "cc" "none")
    (set_attr "length" "1")])
 
-(define_insn "pophi"
-  [(set (match_operand:HI 0 "register_operand" "=r")
-        (mem:HI (post_inc (reg:HI REG_SP))))]
-  ""
-  "pop %A0\;pop %B0"
-  [(set_attr "cc" "none")
-   (set_attr "length" "2")])
-
 ;; Enable Interrupts
 (define_insn "enable_interrupt"
-  [(unspec [(const_int 0)] UNSPEC_SEI)]
+  [(unspec_volatile [(const_int 1)] UNSPECV_ENABLE_IRQS)]
   ""
   "sei"
   [(set_attr "length" "1")
-  (set_attr "cc" "none")
-  ])
+   (set_attr "cc" "none")])
 
 ;; Disable Interrupts
 (define_insn "disable_interrupt"
-  [(unspec [(const_int 0)] UNSPEC_CLI)]
+  [(unspec_volatile [(const_int 0)] UNSPECV_ENABLE_IRQS)]
   ""
   "cli"
   [(set_attr "length" "1")
-  (set_attr "cc" "none")
-  ])
+   (set_attr "cc" "none")])
 
 ;;  Library prologue saves
 (define_insn "call_prologue_saves"
@@ -3247,8 +3241,189 @@
 (define_expand "epilogue"
   [(const_int 0)]
   ""
-  "
   {
-    expand_epilogue (); 
+    expand_epilogue (false /* sibcall_p */);
     DONE;
-  }")
+  })
+
+(define_expand "sibcall_epilogue"
+  [(const_int 0)]
+  ""
+  {
+    expand_epilogue (true /* sibcall_p */);
+    DONE;
+  })
+
+;; Some instructions resp. instruction sequences available
+;; via builtins.
+
+(define_insn "delay_cycles_1"
+  [(unspec_volatile [(match_operand:QI 0 "const_int_operand" "n")
+                     (const_int 1)]
+                    UNSPECV_DELAY_CYCLES)
+   (clobber (match_scratch:QI 1 "=&d"))]
+  ""
+  "ldi %1,lo8(%0)
+	1: dec %1
+	brne 1b"
+  [(set_attr "length" "3")
+   (set_attr "cc" "clobber")])
+
+(define_insn "delay_cycles_2"
+  [(unspec_volatile [(match_operand:HI 0 "const_int_operand" "n")
+                     (const_int 2)]
+                    UNSPECV_DELAY_CYCLES)
+   (clobber (match_scratch:HI 1 "=&w"))]
+  ""
+  "ldi %A1,lo8(%0)
+	ldi %B1,hi8(%0)
+	1: sbiw %A1,1
+	brne 1b"
+  [(set_attr "length" "4")
+   (set_attr "cc" "clobber")])
+
+(define_insn "delay_cycles_3"
+  [(unspec_volatile [(match_operand:SI 0 "const_int_operand" "n")
+                     (const_int 3)]
+                    UNSPECV_DELAY_CYCLES)
+   (clobber (match_scratch:QI 1 "=&d"))
+   (clobber (match_scratch:QI 2 "=&d"))
+   (clobber (match_scratch:QI 3 "=&d"))]
+  ""
+  "ldi %1,lo8(%0)
+	ldi %2,hi8(%0)
+	ldi %3,hlo8(%0)
+	1: subi %1,1
+	sbci %2,0
+	sbci %3,0
+	brne 1b"
+  [(set_attr "length" "7")
+   (set_attr "cc" "clobber")])
+
+(define_insn "delay_cycles_4"
+  [(unspec_volatile [(match_operand:SI 0 "const_int_operand" "n")
+                     (const_int 4)]
+                    UNSPECV_DELAY_CYCLES)
+   (clobber (match_scratch:QI 1 "=&d"))
+   (clobber (match_scratch:QI 2 "=&d"))
+   (clobber (match_scratch:QI 3 "=&d"))
+   (clobber (match_scratch:QI 4 "=&d"))]
+  ""
+  "ldi %1,lo8(%0)
+	ldi %2,hi8(%0)
+	ldi %3,hlo8(%0)
+	ldi %4,hhi8(%0)
+	1: subi %1,1
+	sbci %2,0
+	sbci %3,0
+	sbci %4,0
+	brne 1b"
+  [(set_attr "length" "9")
+   (set_attr "cc" "clobber")])
+
+;; CPU instructions
+
+;; NOP taking 1 or 2 Ticks 
+(define_insn "nopv"
+  [(unspec_volatile [(match_operand:SI 0 "const_int_operand" "P,K")] 
+                    UNSPECV_NOP)]
+  ""
+  "@
+	nop
+	rjmp ."
+  [(set_attr "length" "1")
+   (set_attr "cc" "none")])
+
+;; SLEEP
+(define_insn "sleep"
+  [(unspec_volatile [(const_int 0)] UNSPECV_SLEEP)]
+  ""
+  "sleep"
+  [(set_attr "length" "1")
+   (set_attr "cc" "none")])
+ 
+;; WDR
+(define_insn "wdr"
+  [(unspec_volatile [(const_int 0)] UNSPECV_WDR)]
+  ""
+  "wdr"
+  [(set_attr "length" "1")
+   (set_attr "cc" "none")])
+  
+;; FMUL
+(define_insn "fmul"
+  [(set (match_operand:HI 0 "register_operand" "=r")
+        (unspec:HI [(match_operand:QI 1 "register_operand" "a")
+                    (match_operand:QI 2 "register_operand" "a")]
+                   UNSPEC_FMUL))]
+  "AVR_HAVE_MUL"
+  "fmul %1,%2
+	movw %0,r0
+	clr __zero_reg__"
+  [(set_attr "length" "3")
+   (set_attr "cc" "clobber")])
+
+;; FMULS
+(define_insn "fmuls"
+  [(set (match_operand:HI 0 "register_operand" "=r")
+        (unspec:HI [(match_operand:QI 1 "register_operand" "a")
+                    (match_operand:QI 2 "register_operand" "a")]
+                   UNSPEC_FMULS))]
+  "AVR_HAVE_MUL"
+  "fmuls %1,%2
+	movw %0,r0
+	clr __zero_reg__"
+  [(set_attr "length" "3")
+   (set_attr "cc" "clobber")])
+
+;; FMULSU
+(define_insn "fmulsu"
+  [(set (match_operand:HI 0 "register_operand" "=r")
+        (unspec:HI [(match_operand:QI 1 "register_operand" "a")
+                    (match_operand:QI 2 "register_operand" "a")]
+                   UNSPEC_FMULSU))]
+  "AVR_HAVE_MUL"
+  "fmulsu %1,%2
+	movw %0,r0
+	clr __zero_reg__"
+  [(set_attr "length" "3")
+   (set_attr "cc" "clobber")])
+
+
+;; Some combine patterns that try to fix bad code when a value is composed
+;; from byte parts like in PR27663.
+;; The patterns give some release but the code still is not optimal,
+;; in particular when subreg lowering (-fsplit-wide-types) is turned on.
+;; That switch obfuscates things here and in many other places.
+
+(define_insn_and_split "*ior<mode>qi.byte0"
+  [(set (match_operand:HISI 0 "register_operand"                 "=r")
+        (ior:HISI
+         (zero_extend:HISI (match_operand:QI 1 "register_operand" "r"))
+         (match_operand:HISI 2 "register_operand"                 "0")))]
+  ""
+  "#"
+  "reload_completed"
+  [(set (match_dup 3)
+        (ior:QI (match_dup 3)
+                (match_dup 1)))]
+  {
+    operands[3] = simplify_gen_subreg (QImode, operands[0], <MODE>mode, 0);
+  })
+
+(define_insn_and_split "*ior<mode>qi.byte1-3"
+  [(set (match_operand:HISI 0 "register_operand"                              "=r")
+        (ior:HISI
+         (ashift:HISI (zero_extend:HISI (match_operand:QI 1 "register_operand" "r"))
+                      (match_operand:QI 2 "const_8_16_24_operand"              "n"))
+         (match_operand:HISI 3 "register_operand"                              "0")))]
+  "INTVAL(operands[2]) < GET_MODE_BITSIZE (<MODE>mode)"
+  "#"
+  "&& reload_completed"
+  [(set (match_dup 4)
+        (ior:QI (match_dup 4)
+                (match_dup 1)))]
+  {
+    int byteno = INTVAL(operands[2]) / BITS_PER_UNIT;
+    operands[4] = simplify_gen_subreg (QImode, operands[0], <MODE>mode, byteno);
+  })

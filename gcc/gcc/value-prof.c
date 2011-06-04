@@ -1,5 +1,5 @@
 /* Transformations based on profile information for values.
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -45,10 +45,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "cgraph.h"
 #include "timevar.h"
 #include "tree-pass.h"
-#include "toplev.h"
 #include "pointer-set.h"
-
-static struct value_prof_hooks *value_prof_hooks;
+#include "profile.h"
 
 /* In this file value profile based optimizations are placed.  Currently the
    following optimizations are implemented (for more detailed descriptions
@@ -477,8 +475,12 @@ check_counter (gimple stmt, const char * name,
       else
 	{
 	  error_at (locus, "corrupted value profile: %s "
-		    "profiler overall count (%d) does not match BB count (%d)",
-		    name, (int)*all, (int)bb_count);
+		    "profile counter (%d out of %d) inconsistent with "
+		    "basic-block count (%d)",
+		    name,
+		    (int) *count,
+		    (int) *all,
+		    (int) bb_count);
 	  return true;
 	}
     }
@@ -489,7 +491,7 @@ check_counter (gimple stmt, const char * name,
 
 /* GIMPLE based transformations. */
 
-static bool
+bool
 gimple_value_profile_transformations (void)
 {
   basic_block bb;
@@ -1058,35 +1060,75 @@ gimple_mod_subtract_transform (gimple_stmt_iterator *si)
   return true;
 }
 
-static struct cgraph_node** pid_map = NULL;
+static VEC(cgraph_node_ptr, heap) *cgraph_node_map = NULL;
 
-/* Initialize map of pids (pid -> cgraph node) */
+/* Initialize map from FUNCDEF_NO to CGRAPH_NODE.  */
 
-static void
-init_pid_map (void)
+void
+init_node_map (void)
 {
   struct cgraph_node *n;
 
-  if (pid_map != NULL)
-    return;
-
-  pid_map = XCNEWVEC (struct cgraph_node*, cgraph_max_pid);
+  if (get_last_funcdef_no ())
+    VEC_safe_grow_cleared (cgraph_node_ptr, heap,
+                           cgraph_node_map, get_last_funcdef_no ());
 
   for (n = cgraph_nodes; n; n = n->next)
     {
-      if (n->pid != -1)
-	pid_map [n->pid] = n;
+      if (DECL_STRUCT_FUNCTION (n->decl))
+        VEC_replace (cgraph_node_ptr, cgraph_node_map,
+                     DECL_STRUCT_FUNCTION (n->decl)->funcdef_no, n);
     }
+}
+
+/* Delete the CGRAPH_NODE_MAP.  */
+
+void
+del_node_map (void)
+{
+   VEC_free (cgraph_node_ptr, heap, cgraph_node_map);
+   cgraph_node_map = NULL;
 }
 
 /* Return cgraph node for function with pid */
 
 static inline struct cgraph_node*
-find_func_by_pid (int	pid)
+find_func_by_funcdef_no (int func_id)
 {
-  init_pid_map ();
+  int max_id = get_last_funcdef_no ();
+  if (func_id >= max_id || VEC_index (cgraph_node_ptr,
+                                      cgraph_node_map,
+                                      func_id) == NULL)
+    {
+      if (flag_profile_correction)
+        inform (DECL_SOURCE_LOCATION (current_function_decl),
+                "Inconsistent profile: indirect call target (%d) does not exist", func_id);
+      else
+        error ("Inconsistent profile: indirect call target (%d) does not exist", func_id);
 
-  return pid_map [pid];
+      return NULL;
+    }
+
+  return VEC_index (cgraph_node_ptr, cgraph_node_map, func_id);
+}
+
+/* Perform sanity check on the indirect call target. Due to race conditions,
+   false function target may be attributed to an indirect call site. If the
+   call expression type mismatches with the target function's type, expand_call
+   may ICE. Here we only do very minimal sanity check just to make compiler happy.
+   Returns true if TARGET is considered ok for call CALL_STMT.  */
+
+static bool
+check_ic_target (gimple call_stmt, struct cgraph_node *target)
+{
+   location_t locus;
+   if (gimple_check_call_matching_types (call_stmt, target->decl))
+     return true;
+
+   locus =  gimple_location (call_stmt);
+   inform (locus, "Skipping target %s with mismatching types for icall ",
+           cgraph_node_name (target));
+   return false;
 }
 
 /* Do transformation
@@ -1146,7 +1188,16 @@ gimple_ic (gimple icall_stmt, struct cgraph_node *direct_call,
   icall_bb = e_di->dest;
   icall_bb->count = all - count;
 
-  e_ij = split_block (icall_bb, icall_stmt);
+  /* Do not disturb existing EH edges from the indirect call.  */
+  if (!stmt_ends_bb_p (icall_stmt))
+    e_ij = split_block (icall_bb, icall_stmt);
+  else
+    {
+      e_ij = find_fallthru_edge (icall_bb->succs);
+      e_ij->probability = REG_BR_PROB_BASE;
+      e_ij->count = all - count;
+      e_ij = single_pred_edge (split_edge (e_ij));
+    }
   join_bb = e_ij->dest;
   join_bb->count = all;
 
@@ -1182,21 +1233,27 @@ gimple_ic (gimple icall_stmt, struct cgraph_node *direct_call,
       add_phi_arg (phi, gimple_call_lhs (dcall_stmt), e_dj, UNKNOWN_LOCATION);
     }
 
-  /* Fix eh edges */
+  /* Build an EH edge for the direct call if necessary.  */
   lp_nr = lookup_stmt_eh_lp (icall_stmt);
-  if (lp_nr != 0)
+  if (lp_nr != 0
+      && stmt_could_throw_p (dcall_stmt))
     {
-      if (stmt_could_throw_p (dcall_stmt))
+      edge e_eh, e;
+      edge_iterator ei;
+      gimple_stmt_iterator psi;
+
+      add_stmt_to_eh_lp (dcall_stmt, lp_nr);
+      FOR_EACH_EDGE (e_eh, ei, icall_bb->succs)
+	if (e_eh->flags & EDGE_EH)
+	  break;
+      e = make_edge (dcall_bb, e_eh->dest, EDGE_EH);
+      for (psi = gsi_start_phis (e_eh->dest);
+	   !gsi_end_p (psi); gsi_next (&psi))
 	{
-	  add_stmt_to_eh_lp (dcall_stmt, lp_nr);
-	  make_eh_edges (dcall_stmt);
+	  gimple phi = gsi_stmt (psi);
+	  SET_USE (PHI_ARG_DEF_PTR_FROM_EDGE (phi, e),
+		   PHI_ARG_DEF_FROM_EDGE (phi, e_eh));
 	}
-
-      gcc_assert (stmt_could_throw_p (icall_stmt));
-      make_eh_edges (icall_stmt);
-
-      /* The old EH edges are sill on the join BB, purge them.  */
-      gimple_purge_dead_eh_edges (join_bb);
     }
 
   return dcall_stmt;
@@ -1214,16 +1271,16 @@ gimple_ic_transform (gimple stmt)
   histogram_value histogram;
   gcov_type val, count, all, bb_all;
   gcov_type prob;
-  tree callee;
   gimple modify;
   struct cgraph_node *direct_call;
 
   if (gimple_code (stmt) != GIMPLE_CALL)
     return false;
 
-  callee = gimple_call_fn (stmt);
+  if (gimple_call_fndecl (stmt) != NULL_TREE)
+    return false;
 
-  if (TREE_CODE (callee) == FUNCTION_DECL)
+  if (gimple_call_internal_p (stmt))
     return false;
 
   histogram = gimple_histogram_value_of_type (cfun, stmt, HIST_TYPE_INDIR_CALL);
@@ -1250,9 +1307,12 @@ gimple_ic_transform (gimple stmt)
     prob = (count * REG_BR_PROB_BASE + all / 2) / all;
   else
     prob = 0;
-  direct_call = find_func_by_pid ((int)val);
+  direct_call = find_func_by_funcdef_no ((int)val);
 
   if (direct_call == NULL)
+    return false;
+
+  if (!check_ic_target (stmt, direct_call))
     return false;
 
   modify = gimple_ic (stmt, direct_call, prob, count, all);
@@ -1388,6 +1448,21 @@ gimple_stringop_fixed_value (gimple vcall_stmt, tree icall_size, int prob,
 
   e_vj->probability = REG_BR_PROB_BASE;
   e_vj->count = all - count;
+
+  /* Insert PHI node for the call result if necessary.  */
+  if (gimple_call_lhs (vcall_stmt)
+      && TREE_CODE (gimple_call_lhs (vcall_stmt)) == SSA_NAME)
+    {
+      tree result = gimple_call_lhs (vcall_stmt);
+      gimple phi = create_phi_node (result, join_bb);
+      SSA_NAME_DEF_STMT (result) = phi;
+      gimple_call_set_lhs (vcall_stmt,
+			   make_ssa_name (SSA_NAME_VAR (result), vcall_stmt));
+      add_phi_arg (phi, gimple_call_lhs (vcall_stmt), e_vj, UNKNOWN_LOCATION);
+      gimple_call_set_lhs (icall_stmt,
+			   make_ssa_name (SSA_NAME_VAR (result), icall_stmt));
+      add_phi_arg (phi, gimple_call_lhs (icall_stmt), e_ij, UNKNOWN_LOCATION);
+    }
 
   /* Because these are all string op builtins, they're all nothrow.  */
   gcc_assert (!stmt_could_throw_p (vcall_stmt));
@@ -1531,14 +1606,6 @@ stringop_block_profile (gimple stmt, unsigned int *expected_align,
     }
 }
 
-struct value_prof_hooks {
-  /* Find list of values for which we want to measure histograms.  */
-  void (*find_values_to_profile) (histogram_values *);
-
-  /* Identify and exploit properties of values that are hard to analyze
-     statically.  See value-prof.c for more detail.  */
-  bool (*value_profile_transformations) (void);
-};
 
 /* Find values inside STMT for that we want to measure histograms for
    division/modulo optimization.  */
@@ -1607,6 +1674,7 @@ gimple_indirect_call_to_profile (gimple stmt, histogram_values *values)
   tree callee;
 
   if (gimple_code (stmt) != GIMPLE_CALL
+      || gimple_call_internal_p (stmt)
       || gimple_call_fndecl (stmt) != NULL_TREE)
     return;
 
@@ -1672,7 +1740,7 @@ gimple_values_to_profile (gimple stmt, histogram_values *values)
     }
 }
 
-static void
+void
 gimple_find_values_to_profile (histogram_values *values)
 {
   basic_block bb;
@@ -1728,29 +1796,3 @@ gimple_find_values_to_profile (histogram_values *values)
         }
     }
 }
-
-static struct value_prof_hooks gimple_value_prof_hooks = {
-  gimple_find_values_to_profile,
-  gimple_value_profile_transformations
-};
-
-void
-gimple_register_value_prof_hooks (void)
-{
-  gcc_assert (current_ir_type () == IR_GIMPLE);
-  value_prof_hooks = &gimple_value_prof_hooks;
-}
-
-/* IR-independent entry points.  */
-void
-find_values_to_profile (histogram_values *values)
-{
-  (value_prof_hooks->find_values_to_profile) (values);
-}
-
-bool
-value_profile_transformations (void)
-{
-  return (value_prof_hooks->value_profile_transformations) ();
-}
-

@@ -1,6 +1,6 @@
 /* Register Transfer Language (RTL) definitions for GCC
    Copyright (C) 1987, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -833,6 +833,10 @@ extern void rtl_check_failed_flag (const char *, const_rtx, const char *,
    but a value from enum reg_note.  */
 #define REG_NOTES(INSN)	XEXP(INSN, 7)
 
+/* In an ENTRY_VALUE this is the DECL_INCOMING_RTL of the argument in
+   question.  */
+#define ENTRY_VALUE_EXP(RTX) (RTL_CHECKC1 (RTX, 0, ENTRY_VALUE).rt_rtx)
+
 enum reg_note
 {
 #define DEF_REG_NOTE(NAME) NAME,
@@ -1279,24 +1283,6 @@ do {									\
 #define MEM_NOTRAP_P(RTX) \
   (RTL_FLAG_CHECK1("MEM_NOTRAP_P", (RTX), MEM)->call)
 
-/* If VAL is nonzero, set MEM_IN_STRUCT_P and clear MEM_SCALAR_P in
-   RTX.  Otherwise, vice versa.  Use this macro only when you are
-   *sure* that you know that the MEM is in a structure, or is a
-   scalar.  VAL is evaluated only once.  */
-#define MEM_SET_IN_STRUCT_P(RTX, VAL)		\
-do {						\
-  if (VAL)					\
-    {						\
-      MEM_IN_STRUCT_P (RTX) = 1;		\
-      MEM_SCALAR_P (RTX) = 0;			\
-    }						\
-  else						\
-    {						\
-      MEM_IN_STRUCT_P (RTX) = 0;		\
-      MEM_SCALAR_P (RTX) = 1;			\
-    }						\
-} while (0)
-
 /* The memory attribute block.  We provide access macros for each value
    in the block and provide defaults if none specified.  */
 #define MEM_ATTRS(RTX) X0MEMATTR (RTX, 1)
@@ -1682,10 +1668,13 @@ extern rtx get_pool_constant (rtx);
 extern rtx get_pool_constant_mark (rtx, bool *);
 extern enum machine_mode get_pool_mode (const_rtx);
 extern rtx simplify_subtraction (rtx);
+extern void decide_function_section (tree);
 
 /* In function.c  */
 extern rtx assign_stack_local (enum machine_mode, HOST_WIDE_INT, int);
-extern rtx assign_stack_local_1 (enum machine_mode, HOST_WIDE_INT, int, bool);
+#define ASLK_REDUCE_ALIGN 1
+#define ASLK_RECORD_PAD 2
+extern rtx assign_stack_local_1 (enum machine_mode, HOST_WIDE_INT, int, int);
 extern rtx assign_stack_temp (enum machine_mode, HOST_WIDE_INT, int);
 extern rtx assign_stack_temp_for_type (enum machine_mode,
 				       HOST_WIDE_INT, int, tree);
@@ -1916,6 +1905,17 @@ extern int computed_jump_p (const_rtx);
 typedef int (*rtx_function) (rtx *, void *);
 extern int for_each_rtx (rtx *, rtx_function, void *);
 
+/* Callback for for_each_inc_dec, to process the autoinc operation OP
+   within MEM that sets DEST to SRC + SRCOFF, or SRC if SRCOFF is
+   NULL.  The callback is passed the same opaque ARG passed to
+   for_each_inc_dec.  Return zero to continue looking for other
+   autoinc operations, -1 to skip OP's operands, and any other value
+   to interrupt the traversal and return that value to the caller of
+   for_each_inc_dec.  */
+typedef int (*for_each_inc_dec_fn) (rtx mem, rtx op, rtx dest, rtx src,
+				    rtx srcoff, void *arg);
+extern int for_each_inc_dec (rtx *, for_each_inc_dec_fn, void *arg);
+
 typedef int (*rtx_equal_p_callback_function) (const_rtx *, const_rtx *,
                                               rtx *, rtx *);
 extern int rtx_equal_p_cb (const_rtx, const_rtx,
@@ -1993,7 +1993,7 @@ extern const char *decode_asm_operands (rtx, rtx *, rtx **, const char **,
 
 extern enum reg_class reg_preferred_class (int);
 extern enum reg_class reg_alternate_class (int);
-extern enum reg_class reg_cover_class (int);
+extern enum reg_class reg_allocno_class (int);
 extern void setup_reg_classes (int, enum reg_class, enum reg_class,
 			       enum reg_class);
 
@@ -2046,6 +2046,7 @@ enum global_rtl_index
 {
   GR_PC,
   GR_CC0,
+  GR_RETURN,
   GR_STACK_POINTER,
   GR_FRAME_POINTER,
 /* For register elimination to work properly these hard_frame_pointer_rtx,
@@ -2135,6 +2136,7 @@ extern struct target_rtl *this_target_rtl;
 
 /* Standard pieces of rtx, to be substituted directly into things.  */
 #define pc_rtx                  (global_rtl[GR_PC])
+#define ret_rtx                 (global_rtl[GR_RETURN])
 #define cc0_rtx                 (global_rtl[GR_CC0])
 
 /* All references to certain hard regs, except those created
@@ -2291,6 +2293,9 @@ extern int cse_main (rtx, int);
 extern int exp_equiv_p (const_rtx, const_rtx, int, bool);
 extern unsigned hash_rtx (const_rtx x, enum machine_mode, int *, int *, bool);
 
+/* In dse.c */
+extern void check_for_inc_dec (rtx insn);
+
 /* In jump.c */
 extern int comparison_dominates_p (enum rtx_code, enum rtx_code);
 extern int condjump_p (const_rtx);
@@ -2313,6 +2318,7 @@ extern int redirect_jump_1 (rtx, rtx);
 extern void redirect_jump_2 (rtx, rtx, rtx, int, int);
 extern int redirect_jump (rtx, rtx, int);
 extern void rebuild_jump_labels (rtx);
+extern void rebuild_jump_labels_chain (rtx);
 extern rtx reversed_comparison (const_rtx, enum machine_mode);
 extern enum rtx_code reversed_comparison_code (const_rtx, const_rtx);
 extern enum rtx_code reversed_comparison_code_parts (enum rtx_code, const_rtx,
@@ -2387,9 +2393,6 @@ extern void schedule_insns (void);
 /* In sched-ebb.c.  */
 extern void schedule_ebbs (void);
 
-/* In haifa-sched.c.  */
-extern void fix_sched_param (const char *, const char *);
-
 /* In sel-sched-dump.c.  */
 extern void sel_sched_fix_param (const char *param, const char *val);
 
@@ -2458,8 +2461,7 @@ extern void init_reg_sets (void);
 extern void regclass (rtx, int);
 extern void reg_scan (rtx, unsigned int);
 extern void fix_register (const char *, int, int);
-extern bool invalid_mode_change_p (unsigned int, enum reg_class,
-				   enum machine_mode);
+extern bool invalid_mode_change_p (unsigned int, enum reg_class);
 
 /* In reorg.c */
 extern void dbr_schedule (rtx);

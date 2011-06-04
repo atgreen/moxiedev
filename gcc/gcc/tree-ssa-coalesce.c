@@ -32,7 +32,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-dump.h"
 #include "tree-ssa-live.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 
 
 /* This set of routines implements a coalesce_list.  This is an object which
@@ -243,8 +242,7 @@ delete_coalesce_list (coalesce_list_p cl)
 {
   gcc_assert (cl->cost_one_list == NULL);
   htab_delete (cl->list);
-  if (cl->sorted)
-    free (cl->sorted);
+  free (cl->sorted);
   gcc_assert (cl->num_sorted == 0);
   free (cl);
 }

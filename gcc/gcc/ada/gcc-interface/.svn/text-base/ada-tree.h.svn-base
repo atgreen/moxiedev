@@ -6,7 +6,7 @@
  *                                                                          *
  *                              C Header File                               *
  *                                                                          *
- *          Copyright (C) 1992-2010, Free Software Foundation, Inc.         *
+ *          Copyright (C) 1992-2011, Free Software Foundation, Inc.         *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -25,7 +25,7 @@
 
 /* The resulting tree type.  */
 union GTY((desc ("0"),
-	   chain_next ("(union lang_tree_node *)TREE_CHAIN (&%h.generic)")))
+	   chain_next ("CODE_CONTAINS_STRUCT (TREE_CODE (&%h.generic), TS_COMMON) ? ((union lang_tree_node *) TREE_CHAIN (&%h.generic)) : NULL")))
   lang_tree_node
 {
   union tree_node GTY((tag ("0"),
@@ -174,21 +174,21 @@ do {							 \
    this is a conflict on the minval field, but there doesn't seem to be
    simple fix, so we'll live with this kludge for now.  */
 #define TYPE_OBJECT_RECORD_TYPE(NODE) \
-  (TREE_CHECK2 ((NODE), UNCONSTRAINED_ARRAY_TYPE, ENUMERAL_TYPE)->type.minval)
+  (TYPE_MINVAL (TREE_CHECK2 ((NODE), UNCONSTRAINED_ARRAY_TYPE, ENUMERAL_TYPE)))
 
 /* For numerical types, this is the GCC lower bound of the type.  The GCC
    type system is based on the invariant that an object X of a given type
    cannot hold at run time a value smaller than its lower bound; otherwise
    the behavior is undefined.  The optimizer takes advantage of this and
    considers that the assertion X >= LB is always true.  */
-#define TYPE_GCC_MIN_VALUE(NODE) (NUMERICAL_TYPE_CHECK (NODE)->type.minval)
+#define TYPE_GCC_MIN_VALUE(NODE) (TYPE_MINVAL (NUMERICAL_TYPE_CHECK (NODE)))
 
 /* For numerical types, this is the GCC upper bound of the type.  The GCC
    type system is based on the invariant that an object X of a given type
    cannot hold at run time a value larger than its upper bound; otherwise
    the behavior is undefined.  The optimizer takes advantage of this and
    considers that the assertion X <= UB is always true.  */
-#define TYPE_GCC_MAX_VALUE(NODE) (NUMERICAL_TYPE_CHECK (NODE)->type.maxval)
+#define TYPE_GCC_MAX_VALUE(NODE) (TYPE_MAXVAL (NUMERICAL_TYPE_CHECK (NODE)))
 
 /* For a FUNCTION_TYPE, if the subprogram has parameters passed by copy in/
    copy out, this is the list of nodes used to specify the return values of
@@ -335,6 +335,10 @@ do {						   \
 /* Nonzero in a PARM_DECL if it is always used by double reference, i.e. a
    pair of INDIRECT_REFs is needed to access the object.  */
 #define DECL_BY_DOUBLE_REF_P(NODE) DECL_LANG_FLAG_0 (PARM_DECL_CHECK (NODE))
+
+/* Nonzero in a TYPE_DECL if this is the declaration of a Taft amendment type
+   in the main unit, i.e. the full declaration is available.  */
+#define DECL_TAFT_TYPE_P(NODE) DECL_LANG_FLAG_0 (TYPE_DECL_CHECK (NODE))
 
 /* Nonzero in a DECL if it is always used by reference, i.e. an INDIRECT_REF
    is needed to access the object.  */

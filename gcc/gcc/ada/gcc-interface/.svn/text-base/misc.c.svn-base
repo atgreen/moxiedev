@@ -6,7 +6,7 @@
  *                                                                          *
  *                           C Implementation File                          *
  *                                                                          *
- *          Copyright (C) 1992-2010, Free Software Foundation, Inc.         *
+ *          Copyright (C) 1992-2011, Free Software Foundation, Inc.         *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -112,6 +112,7 @@ gnat_handle_option (size_t scode, const char *arg ATTRIBUTE_UNUSED, int value,
     case OPT_Wall:
       warn_unused = value;
       warn_uninitialized = value;
+      warn_maybe_uninitialized = value;
       break;
 
     case OPT_Wmissing_prototypes:
@@ -123,14 +124,6 @@ gnat_handle_option (size_t scode, const char *arg ATTRIBUTE_UNUSED, int value,
     case OPT_Wmissing_format_attribute:
     case OPT_Woverlength_strings:
       /* These are used in the GCC Makefile.  */
-      break;
-
-    case OPT_feliminate_unused_debug_types:
-      /* We arrange for post_option to be able to only set the corresponding
-	 flag to 1 when explicitly requested by the user.  We expect the
-	 default flag value to be either 0 or positive, and expose a positive
-	 -f as a negative value to post_option.  */
-      flag_eliminate_unused_debug_types = -value;
       break;
 
     case OPT_gant:
@@ -195,13 +188,12 @@ gnat_init_options (unsigned int decoded_options_count,
 	  || num_elements == 0)
 	continue;
 
-      if (decoded_options[i].opt_index == OPT_I)
-	{
-	  gcc_assert (num_elements == 2);
-	  save_argv[save_argc++]
-	    = concat (decoded_options[i].canonical_option[0],
-		      decoded_options[i].canonical_option[1], NULL);
-	}
+      /* Deal with -I- specially since it must be a single switch.  */
+      if (decoded_options[i].opt_index == OPT_I
+	  && num_elements == 2
+	  && decoded_options[i].canonical_option[1][0] == '-'
+	  && decoded_options[i].canonical_option[1][1] == '\0')
+	save_argv[save_argc++] = "-I-";
       else
 	{
 	  gcc_assert (num_elements >= 1 && num_elements <= 2);
@@ -221,16 +213,19 @@ gnat_init_options (unsigned int decoded_options_count,
    of the global_options structure.  */
 #undef optimize
 #undef optimize_size
+#undef flag_compare_debug
+#undef flag_stack_check
 int optimize;
 int optimize_size;
+int flag_compare_debug;
+enum stack_check_type flag_stack_check = NO_STACK_CHECK;
 
 /* Post-switch processing.  */
 
 static bool
 gnat_post_options (const char **pfilename ATTRIBUTE_UNUSED)
 {
-  /* Excess precision other than "fast" requires front-end
-     support.  */
+  /* Excess precision other than "fast" requires front-end support.  */
   if (flag_excess_precision_cmdline == EXCESS_PRECISION_STANDARD
       && TARGET_FLT_EVAL_METHOD_NON_DEFAULT)
     sorry ("-fexcess-precision=standard for Ada");
@@ -242,16 +237,10 @@ gnat_post_options (const char **pfilename ATTRIBUTE_UNUSED)
   /* No psABI change warnings for Ada.  */
   warn_psabi = 0;
 
-  /* Force eliminate_unused_debug_types to 0 unless an explicit positive
-     -f has been passed.  This forces the default to 0 for Ada, which might
-     differ from the common default.  */
-  if (flag_eliminate_unused_debug_types < 0)
-    flag_eliminate_unused_debug_types = 1;
-  else
-    flag_eliminate_unused_debug_types = 0;
-
   optimize = global_options.x_optimize;
   optimize_size = global_options.x_optimize_size;
+  flag_compare_debug = global_options.x_flag_compare_debug;
+  flag_stack_check = global_options.x_flag_stack_check;
 
   return false;
 }
@@ -516,6 +505,17 @@ gnat_dwarf_name (tree decl, int verbosity ATTRIBUTE_UNUSED)
   return (const char *) IDENTIFIER_POINTER (DECL_NAME (decl));
 }
 
+/* Return the descriptive type associated with TYPE, if any.  */
+
+static tree
+gnat_descriptive_type (const_tree type)
+{
+  if (TYPE_STUB_DECL (type))
+    return DECL_PARALLEL_TYPE (TYPE_STUB_DECL (type));
+  else
+    return NULL_TREE;
+}
+
 /* Return true if types T1 and T2 are identical for type hashing purposes.
    Called only after doing all language independent checks.  At present,
    this function is only called when both types are FUNCTION_TYPE.  */
@@ -691,6 +691,23 @@ gnat_eh_personality (void)
   return gnat_eh_personality_decl;
 }
 
+/* Initialize language-specific bits of tree_contains_struct.  */
+
+static void
+gnat_init_ts (void)
+{
+  MARK_TS_COMMON (UNCONSTRAINED_ARRAY_TYPE);
+
+  MARK_TS_TYPED (UNCONSTRAINED_ARRAY_REF);
+  MARK_TS_TYPED (NULL_EXPR);
+  MARK_TS_TYPED (PLUS_NOMOD_EXPR);
+  MARK_TS_TYPED (MINUS_NOMOD_EXPR);
+  MARK_TS_TYPED (ATTR_ADDR_EXPR);
+  MARK_TS_TYPED (STMT_STMT);
+  MARK_TS_TYPED (LOOP_STMT);
+  MARK_TS_TYPED (EXIT_STMT);
+}
+
 /* Definitions for our language-specific hooks.  */
 
 #undef  LANG_HOOKS_NAME
@@ -741,6 +758,8 @@ gnat_eh_personality (void)
 #define LANG_HOOKS_TYPES_COMPATIBLE_P	gnat_types_compatible_p
 #undef  LANG_HOOKS_GET_SUBRANGE_BOUNDS
 #define LANG_HOOKS_GET_SUBRANGE_BOUNDS  gnat_get_subrange_bounds
+#undef  LANG_HOOKS_DESCRIPTIVE_TYPE
+#define LANG_HOOKS_DESCRIPTIVE_TYPE	gnat_descriptive_type
 #undef  LANG_HOOKS_ATTRIBUTE_TABLE
 #define LANG_HOOKS_ATTRIBUTE_TABLE	gnat_internal_attribute_table
 #undef  LANG_HOOKS_BUILTIN_FUNCTION
@@ -749,6 +768,8 @@ gnat_eh_personality (void)
 #define LANG_HOOKS_EH_PERSONALITY	gnat_eh_personality
 #undef  LANG_HOOKS_DEEP_UNSHARING
 #define LANG_HOOKS_DEEP_UNSHARING	true
+#undef  LANG_HOOKS_INIT_TS
+#define LANG_HOOKS_INIT_TS		gnat_init_ts
 
 struct lang_hooks lang_hooks = LANG_HOOKS_INITIALIZER;
 

@@ -1,4 +1,4 @@
-#  Copyright (C) 2003, 2004, 2007, 2008, 2009, 2010
+#  Copyright (C) 2003, 2004, 2007, 2008, 2009, 2010, 2011
 #  Free Software Foundation, Inc.
 #  Contributed by Kelley Cook, June 2004.
 #  Original code from Neil Booth, May 2003.
@@ -40,6 +40,16 @@ function test_flag(regex, flags, string)
 	if (flag_set_p(regex, flags))
 		return string
 	return ""
+}
+
+# Return a field initializer, with trailing comma, for a field that is
+# 1 if FLAGS contains a flag matching REGEX and 0 otherwise.
+function flag_init(regex, flags)
+{
+	if (flag_set_p(regex, flags))
+		return "1 /* " regex " */, "
+	else
+		return "0, "
 }
 
 # If FLAGS contains a "NAME(...argument...)" flag, return the value
@@ -87,26 +97,39 @@ function switch_flags (flags)
 	  test_flag("Common", flags, " | CL_COMMON") \
 	  test_flag("Target", flags, " | CL_TARGET") \
 	  test_flag("Driver", flags, " | CL_DRIVER") \
-	  test_flag("RejectDriver", flags, " | CL_REJECT_DRIVER") \
-	  test_flag("NoDriverArg", flags, " | CL_NO_DRIVER_ARG") \
-	  test_flag("SeparateAlias", flags, " | CL_SEPARATE_ALIAS") \
-	  test_flag("Save", flags, " | CL_SAVE") \
 	  test_flag("Joined", flags, " | CL_JOINED") \
-	  test_flag("JoinedOrMissing", flags, " | CL_JOINED | CL_MISSING_OK") \
+	  test_flag("JoinedOrMissing", flags, " | CL_JOINED") \
 	  test_flag("Separate", flags, " | CL_SEPARATE") \
-	  test_flag("RejectNegative", flags, " | CL_REJECT_NEGATIVE") \
-	  test_flag("UInteger", flags, " | CL_UINTEGER") \
 	  test_flag("Undocumented", flags,  " | CL_UNDOCUMENTED") \
 	  test_flag("Warning", flags,  " | CL_WARNING") \
-	  test_flag("Optimization", flags,  " | CL_OPTIMIZATION") \
-	  test_flag("Report", flags, " | CL_REPORT")
-	sep_args = opt_args("Args", flags)
-	if (sep_args != "") {
-		sep_args--
-		result = result " | (" sep_args \
-		    " << CL_SEPARATE_NARGS_SHIFT)"
-	}
+	  test_flag("Optimization", flags,  " | CL_OPTIMIZATION")
 	sub( "^0 \\| ", "", result )
+	return result
+}
+
+# Return bit-field initializers for option flags FLAGS.
+function switch_bit_fields (flags)
+{
+	result = ""
+	sep_args = opt_args("Args", flags)
+	if (sep_args == "")
+		sep_args = 0
+	else
+		sep_args--
+	result = result sep_args ", "
+
+	result = result \
+	  flag_init("SeparateAlias", flags) \
+	  flag_init("NegativeAlias", flags) \
+	  flag_init("NoDriverArg", flags) \
+	  flag_init("RejectDriver", flags) \
+	  flag_init("RejectNegative", flags) \
+	  flag_init("JoinedOrMissing", flags) \
+	  flag_init("UInteger", flags) \
+	  flag_init("ToLower", flags) \
+	  flag_init("Report", flags)
+
+	sub(", $", "", result)
 	return result
 }
 
@@ -150,6 +173,10 @@ function var_type(flags)
 {
 	if (flag_set_p("Defer", flags))
 		return "void *"
+	else if (flag_set_p("Enum.*", flags)) {
+		en = opt_args("Enum", flags);
+		return enum_type[en] " "
+	}
 	else if (!flag_set_p("Joined.*", flags) && !flag_set_p("Separate", flags))
 		return "int "
 	else if (flag_set_p("UInteger", flags))
@@ -165,6 +192,10 @@ function var_type_struct(flags)
 {
 	if (flag_set_p("UInteger", flags))
 		return "int "
+	else if (flag_set_p("Enum.*", flags)) {
+		en = opt_args("Enum", flags);
+		return enum_type[en] " "
+	}
 	else if (!flag_set_p("Joined.*", flags) && !flag_set_p("Separate", flags)) {
 		if (flag_set_p(".*Mask.*", flags))
 			return "int "
@@ -176,33 +207,37 @@ function var_type_struct(flags)
 }
 
 # Given that an option has flags FLAGS, return an initializer for the
-# "var_cond" and "var_value" fields of its cl_options[] entry.
+# "var_enum", "var_type" and "var_value" fields of its cl_options[] entry.
 function var_set(flags)
 {
 	if (flag_set_p("Defer", flags))
-		return "CLVC_DEFER, 0"
+		return "0, CLVC_DEFER, 0"
 	s = nth_arg(1, opt_args("Var", flags))
 	if (s != "")
-		return "CLVC_EQUAL, " s
+		return "0, CLVC_EQUAL, " s
 	s = opt_args("Mask", flags);
 	if (s != "") {
 		vn = var_name(flags);
 		if (vn)
-			return "CLVC_BIT_SET, OPTION_MASK_" s
+			return "0, CLVC_BIT_SET, OPTION_MASK_" s
 		else
-			return "CLVC_BIT_SET, MASK_" s
+			return "0, CLVC_BIT_SET, MASK_" s
 	}
 	s = nth_arg(0, opt_args("InverseMask", flags));
 	if (s != "") {
 		vn = var_name(flags);
 		if (vn)
-			return "CLVC_BIT_CLEAR, OPTION_MASK_" s
+			return "0, CLVC_BIT_CLEAR, OPTION_MASK_" s
 		else
-			return "CLVC_BIT_CLEAR, MASK_" s
+			return "0, CLVC_BIT_CLEAR, MASK_" s
+	}
+	if (flag_set_p("Enum.*", flags)) {
+		en = opt_args("Enum", flags);
+		return enum_index[en] ", CLVC_ENUM, 0"
 	}
 	if (var_type(flags) == "const char *")
-		return "CLVC_STRING, 0"
-	return "CLVC_BOOLEAN, 0"
+		return "0, CLVC_STRING, 0"
+	return "0, CLVC_BOOLEAN, 0"
 }
 
 # Given that an option called NAME has flags FLAGS, return an initializer

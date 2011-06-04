@@ -1,5 +1,5 @@
 /* FPU-related code for x86 and x86_64 processors.
-   Copyright 2005, 2007, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2005, 2007, 2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Francois-Xavier Coudert <coudert@clipper.ens.fr>
 
 This file is part of the GNU Fortran 95 runtime library (libgfortran).
@@ -40,9 +40,9 @@ sigill_hdlr (int sig __attribute((unused)),
 {
   sigill_caught = 1;
   /* Set PC to the instruction after the faulting one to skip over it,
-     otherwise we enter an infinite loop.  4 is the size of the stmxcsr
+     otherwise we enter an infinite loop.  3 is the size of the movaps
      instruction.  */
-  ucp->uc_mcontext.gregs[EIP] += 4;
+  ucp->uc_mcontext.gregs[EIP] += 3;
   setcontext (ucp);
 }
 #endif
@@ -73,7 +73,7 @@ has_sse (void)
 
       /* We need a single SSE instruction here so the handler can safely skip
 	 over it.  */
-      __asm__ volatile ("movss %xmm2,%xmm1");
+      __asm__ volatile ("movaps %xmm0,%xmm0");
 
       sigaction (SIGILL, &oact, NULL);
 
@@ -110,7 +110,7 @@ void set_fpu (void)
   if (options.fpe & GFC_FPE_ZERO) cw &= ~_FPU_MASK_ZM;
   if (options.fpe & GFC_FPE_OVERFLOW) cw &= ~_FPU_MASK_OM;
   if (options.fpe & GFC_FPE_UNDERFLOW) cw &= ~_FPU_MASK_UM;
-  if (options.fpe & GFC_FPE_PRECISION) cw &= ~_FPU_MASK_PM;
+  if (options.fpe & GFC_FPE_INEXACT) cw &= ~_FPU_MASK_PM;
 
   asm volatile ("fldcw %0" : : "m" (cw));
 
@@ -129,7 +129,7 @@ void set_fpu (void)
       if (options.fpe & GFC_FPE_ZERO) cw_sse &= ~(_FPU_MASK_ZM << 7);
       if (options.fpe & GFC_FPE_OVERFLOW) cw_sse &= ~(_FPU_MASK_OM << 7);
       if (options.fpe & GFC_FPE_UNDERFLOW) cw_sse &= ~(_FPU_MASK_UM << 7);
-      if (options.fpe & GFC_FPE_PRECISION) cw_sse &= ~(_FPU_MASK_PM << 7);
+      if (options.fpe & GFC_FPE_INEXACT) cw_sse &= ~(_FPU_MASK_PM << 7);
 
       asm volatile ("ldmxcsr %0" : : "m" (cw_sse));
     }

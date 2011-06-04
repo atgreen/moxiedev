@@ -1,5 +1,5 @@
 /* GCC backend definitions for the Renesas RX processor.
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Red Hat.
 
    This file is part of GCC.
@@ -52,15 +52,6 @@
     }                                           \
   while (0)
 
-enum rx_cpu_types
-{
-  RX600,
-  RX610,
-  RX200
-};
-
-extern enum rx_cpu_types  rx_cpu_type;
-
 #undef  CC1_SPEC
 #define CC1_SPEC "\
   %{mas100-syntax:%{gdwarf*:%e-mas100-syntax is incompatible with -gdwarf}} \
@@ -85,10 +76,10 @@ extern enum rx_cpu_types  rx_cpu_type;
 #define LIB_SPEC "					\
 --start-group						\
 -lc							\
-%{msim*:-lsim}%{!msim*:-lnosys}				\
+%{msim:-lsim}%{!msim:-lnosys}				\
 %{fprofile-arcs|fprofile-generate|coverage:-lgcov} 	\
 --end-group					   	\
-%{!T*: %{msim*:%Trx-sim.ld}%{!msim*:%Trx.ld}}		\
+%{!T*: %{msim:%Trx-sim.ld}%{!msim:%Trx.ld}}		\
 "
 
 #undef  LINK_SPEC
@@ -137,6 +128,10 @@ extern enum rx_cpu_types  rx_cpu_type;
 #define SIZE_TYPE			"long unsigned int"
 #undef  PTRDIFF_TYPE
 #define PTRDIFF_TYPE			"long int"
+#undef  WCHAR_TYPE
+#define WCHAR_TYPE			"long int"
+#undef  WCHAR_TYPE_SIZE
+#define WCHAR_TYPE_SIZE			BITS_PER_WORD
 #define POINTERS_EXTEND_UNSIGNED	1
 #define FUNCTION_MODE 			QImode
 #define CASE_VECTOR_MODE		Pmode
@@ -149,9 +144,7 @@ extern enum rx_cpu_types  rx_cpu_type;
 
 #define TRULY_NOOP_TRUNCATION(OUTPREC, INPREC)   1
 
-#define LEGITIMATE_CONSTANT_P(X) 	rx_is_legitimate_constant (X)
-
-#define HAVE_PRE_DECCREMENT		1
+#define HAVE_PRE_DECREMENT		1
 #define HAVE_POST_INCREMENT		1
 
 #define MOVE_RATIO(SPEED) 		((SPEED) ? 4 : 2)
@@ -182,11 +175,6 @@ enum reg_class
   { 0x0000ffff },	/* Integer registers.  */	\
   { 0x0000ffff }	/* All registers.  */		\
 }
-
-#define IRA_COVER_CLASSES				\
-  {							\
-    GR_REGS, LIM_REG_CLASSES				\
-  }
 
 #define SMALL_REGISTER_CLASSES 		0
 #define N_REG_CLASSES			(int) LIM_REG_CLASSES
@@ -247,6 +235,7 @@ enum reg_class
 
 #define LIBCALL_VALUE(MODE)				\
   gen_rtx_REG (((GET_MODE_CLASS (MODE) != MODE_INT	\
+                 || COMPLEX_MODE_P (MODE)		\
 		 || GET_MODE_SIZE (MODE) >= 4)		\
 		? (MODE)				\
 		: SImode),				\
@@ -283,14 +272,6 @@ enum reg_class
     ( (REG_P (X)						\
        || (GET_CODE (X) == SUBREG				\
 	   && REG_P (SUBREG_REG (X))))))
-
-#define GO_IF_MODE_DEPENDENT_ADDRESS(ADDR, LABEL)	\
-  do							\
-    {							\
-      if (rx_is_mode_dependent_addr (ADDR))		\
-        goto LABEL;					\
-    }							\
-  while (0)
 
 
 #define RETURN_ADDR_RTX(COUNT, FRAMEADDR)				\
@@ -415,6 +396,31 @@ typedef unsigned int CUMULATIVE_ARGS;
 #define LOCAL_LABEL_PREFIX	"L"
 #undef  USER_LABEL_PREFIX
 #define USER_LABEL_PREFIX	"_"
+
+/* Compute the alignment needed for label X in various situations.
+   If the user has specified an alignment then honour that, otherwise
+   use rx_align_for_label.  */
+#define JUMP_ALIGN(x)				(align_jumps ? align_jumps : rx_align_for_label (x, 0))
+#define LABEL_ALIGN(x)				(align_labels ? align_labels : rx_align_for_label (x, 3))
+#define LOOP_ALIGN(x)				(align_loops ? align_loops : rx_align_for_label (x, 2))
+#define LABEL_ALIGN_AFTER_BARRIER(x)		rx_align_for_label (x, 0)
+
+#define ASM_OUTPUT_MAX_SKIP_ALIGN(STREAM, LOG, MAX_SKIP)	\
+  do						\
+    {						\
+      if ((LOG) == 0 || (MAX_SKIP) == 0)	\
+        break;					\
+      if (TARGET_AS100_SYNTAX)			\
+	{					\
+	  if ((LOG) >= 2)			\
+	    fprintf (STREAM, "\t.ALIGN 4\t; %d alignment actually requested\n", 1 << (LOG)); \
+	  else					\
+	    fprintf (STREAM, "\t.ALIGN 2\n");	\
+	}					\
+      else					\
+	fprintf (STREAM, "\t.balign %d,3,%d\n", 1 << (LOG), (MAX_SKIP));	\
+    }						\
+  while (0)
 
 #define ASM_OUTPUT_ALIGN(STREAM, LOG)		\
   do						\
@@ -591,8 +597,6 @@ typedef unsigned int CUMULATIVE_ARGS;
    they contain are always computed between two same-section symbols.  */
 #define JUMP_TABLES_IN_TEXT_SECTION	(flag_pic)
 
-extern int rx_float_compare_mode;
-
 /* This is a version of REG_P that also returns TRUE for SUBREGs.  */
 #define RX_REG_P(rtl) (REG_P (rtl) || GET_CODE (rtl) == SUBREG)
 
@@ -620,12 +624,11 @@ extern int rx_float_compare_mode;
 #define BRANCH_COST(SPEED,PREDICT)       1
 #define REGISTER_MOVE_COST(MODE,FROM,TO) 2
 
-#define SELECT_CC_MODE(OP,X,Y)						\
-  (GET_MODE_CLASS (GET_MODE (X)) == MODE_FLOAT ? CC_ZSmode :		\
-    (GET_CODE (X) == PLUS || GET_CODE (X) == MINUS ? CC_ZSCmode :	\
-    (GET_CODE (X) == ABS ? CC_ZSOmode :					\
-    (GET_CODE (X) == AND || GET_CODE (X) == NOT || GET_CODE (X) == IOR	\
-     || GET_CODE (X) == XOR || GET_CODE (X) == ROTATE			\
-     || GET_CODE (X) == ROTATERT || GET_CODE (X) == ASHIFTRT		\
-     || GET_CODE (X) == LSHIFTRT || GET_CODE (X) == ASHIFT ? CC_ZSmode : \
-     CCmode))))
+#define SELECT_CC_MODE(OP,X,Y)  rx_select_cc_mode(OP, X, Y)
+
+#define ADJUST_INSN_LENGTH(INSN,LENGTH)				\
+  do								\
+    {								\
+      (LENGTH) = rx_adjust_insn_length ((INSN), (LENGTH));	\
+    }								\
+  while (0)

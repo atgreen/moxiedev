@@ -1,7 +1,7 @@
 /* Operating system specific defines to be used when targeting GCC for
    hosting on Windows32, using GNU tools and the Windows32 API Library.
    Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2007, 2008,
-   2009, 2010 Free Software Foundation, Inc.
+   2009, 2010, 2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -19,12 +19,19 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
-#undef TARGET_VERSION
-#if TARGET_64BIT_DEFAULT
-#define TARGET_VERSION fprintf (stderr,"(x86_64 MinGW");
-#else
-#define TARGET_VERSION fprintf (stderr," (x86 MinGW)");
-#endif
+#undef DEFAULT_ABI
+#define DEFAULT_ABI MS_ABI
+
+/* By default, target has a 80387, uses IEEE compatible arithmetic,
+   returns float values in the 387 and needs stack probes.
+   We also align doubles to 64-bits for MSVC default compatibility.
+   Additionally we enable MS_BITFIELD_LAYOUT by default.  */
+
+#undef TARGET_SUBTARGET_DEFAULT
+#define TARGET_SUBTARGET_DEFAULT \
+	(MASK_80387 | MASK_IEEE_FP | MASK_FLOAT_RETURNS \
+	 | MASK_STACK_PROBE | MASK_ALIGN_DOUBLE \
+	 | MASK_MS_BITFIELD_LAYOUT)
 
 /* See i386/crtdll.h for an alternative definition. _INTEGRAL_MAX_BITS
    is for compatibility with native compiler.  */
@@ -46,6 +53,14 @@ along with GCC; see the file COPYING3.  If not see
 	}							\
     }								\
   while (0)
+
+#ifndef TARGET_USE_PTHREAD_BY_DEFAULT
+#define SPEC_PTHREAD1 "pthread"
+#define SPEC_PTHREAD2 "!no-pthread"
+#else
+#define SPEC_PTHREAD1 "!no-pthread"
+#define SPEC_PTHREAD2 "pthread"
+#endif
 
 #undef SUB_LINK_ENTRY32
 #undef SUB_LINK_ENTRY64
@@ -71,13 +86,17 @@ along with GCC; see the file COPYING3.  If not see
 #define STANDARD_INCLUDE_COMPONENT "MINGW"
 
 #undef CPP_SPEC
-#define CPP_SPEC "%{posix:-D_POSIX_SOURCE} %{mthreads:-D_MT}"
+#define CPP_SPEC "%{posix:-D_POSIX_SOURCE} %{mthreads:-D_MT} " \
+		 "%{" SPEC_PTHREAD1 ":-D_REENTRANCE} " \
+		 "%{" SPEC_PTHREAD2 ": } "
 
 /* For Windows applications, include more libraries, but always include
    kernel32.  */
 #undef LIB_SPEC
-#define LIB_SPEC "%{pg:-lgmon} %{mwindows:-lgdi32 -lcomdlg32} \
-                  -ladvapi32 -lshell32 -luser32 -lkernel32"
+#define LIB_SPEC "%{pg:-lgmon} %{" SPEC_PTHREAD1 ":-lpthread} " \
+		 "%{" SPEC_PTHREAD2 ": } " \
+		 "%{mwindows:-lgdi32 -lcomdlg32} " \
+                 "-ladvapi32 -lshell32 -luser32 -lkernel32"
 
 /* Weak symbols do not get resolved if using a Windows dll import lib.
    Make the unwind registration references strong undefs.  */
@@ -124,7 +143,7 @@ along with GCC; see the file COPYING3.  If not see
 
 #undef ENDFILE_SPEC
 #define ENDFILE_SPEC \
-  "%{ffast-math|funsafe-math-optimizations:crtfastmath.o%s} \
+  "%{Ofast|ffast-math|funsafe-math-optimizations:crtfastmath.o%s} \
   crtend.o%s"
 
 /* Override startfile prefix defaults.  */
@@ -141,11 +160,12 @@ along with GCC; see the file COPYING3.  If not see
 #undef OUTPUT_QUOTED_STRING
 #define OUTPUT_QUOTED_STRING(FILE, STRING)               \
 do {						         \
+  const char *_string = (const char *) (STRING);	 \
   char c;					         \
 						         \
-  putc ('\"', asm_file);			         \
+  putc ('\"', (FILE));				         \
 						         \
-  while ((c = *string++) != 0)			         \
+  while ((c = *_string++) != 0)			         \
     {						         \
       if (c == '\\')				         \
 	c = '/';				         \
@@ -153,14 +173,14 @@ do {						         \
       if (ISPRINT (c))                                   \
         {                                                \
           if (c == '\"')			         \
-	    putc ('\\', asm_file);		         \
-          putc (c, asm_file);			         \
+	    putc ('\\', (FILE));		         \
+          putc (c, (FILE));			         \
         }                                                \
       else                                               \
-        fprintf (asm_file, "\\%03o", (unsigned char) c); \
+        fprintf ((FILE), "\\%03o", (unsigned char) c);	 \
     }						         \
 						         \
-  putc ('\"', asm_file);			         \
+  putc ('\"', (FILE));					 \
 } while (0)
 
 /* Define as short unsigned for compatibility with MS runtime.  */
@@ -219,12 +239,6 @@ __enable_execute_stack (void *addr)					\
 
 #ifdef IN_LIBGCC2
 #include <windows.h>
-#endif
-
-/* For 64-bit Windows we can't use DW2 unwind info. Also for multilib
-   builds we can't use it, too.  */
-#if !TARGET_64BIT_DEFAULT && !defined (TARGET_BI_ARCH)
-#define MD_UNWIND_SUPPORT "config/i386/w32-unwind.h"
 #endif
 
 /* This matches SHLIB_SONAME and SHLIB_SOVERSION in t-cygming. */

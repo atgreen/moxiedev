@@ -47,7 +47,15 @@ along with this program; see the file COPYING3.  If not see
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
+#endif
+#ifndef WIFEXITED
+#define WIFEXITED(S) (((S) & 0xff) == 0)
+#endif
+#ifndef WEXITSTATUS
+#define WEXITSTATUS(S) (((S) & 0xff00) >> 8)
+#endif
 #include <libiberty.h>
 #include <hashtab.h>
 #include "../gcc/lto/common.h"
@@ -144,10 +152,14 @@ static char debug;
 static char nop;
 static char *resolution_file = NULL;
 
-/* Set by default from configure.ac, but can be overridden at runtime
+/* The version of gold being used, or -1 if not gold.  The number is
+   MAJOR * 100 + MINOR.  */
+static int gold_version = -1;
+
+/* Not used by default, but can be overridden at runtime
    by using -plugin-opt=-sym-style={none,win32,underscore|uscore}
    (in fact, only first letter of style arg is checked.)  */
-static enum symbol_style sym_style = SYM_STYLE;
+static enum symbol_style sym_style = ss_none;
 
 static void
 check_1 (int gate, enum ld_plugin_level level, const char *text)
@@ -241,10 +253,10 @@ parse_table_entry (char *p, struct ld_plugin_symbol *entry,
   entry->visibility = translate_visibility[t];
   p++;
 
-  entry->size = *(uint64_t *) p;
+  memcpy (&entry->size, p, sizeof (uint64_t));
   p += 8;
 
-  aux->slot = *(uint32_t *) p;
+  memcpy (&aux->slot, p, sizeof (uint32_t));
   p += 4;
 
   entry->resolution = LDPR_UNKNOWN;
@@ -300,8 +312,7 @@ free_1 (void)
 	{
 	  struct ld_plugin_symbol *s = &symtab->syms[j];
 	  free (s->name);
-	  if (s->comdat_key)
-	    free (s->comdat_key);
+	  free (s->comdat_key);
 	}
       free (symtab->syms);
       symtab->syms = NULL;
@@ -330,8 +341,7 @@ free_2 (void)
   claimed_files = NULL;
   num_claimed_files = 0;
 
-  if (arguments_file_name)
-    free (arguments_file_name);
+  free (arguments_file_name);
   arguments_file_name = NULL;
 }
 
@@ -614,7 +624,8 @@ all_symbols_read_handler (void)
 
   free (lto_argv);
 
-  if (pass_through_items)
+  /* --pass-through is not needed when using gold 1.11 or later.  */
+  if (pass_through_items && gold_version < 111)
     {
       unsigned int i;
       for (i = 0; i < num_pass_through_items; i++)
@@ -838,11 +849,11 @@ claim_file_handler (const struct ld_plugin_input_file *file, int *claimed)
       /* We pass the offset of the actual file, not the archive header.
          Can't use PRIx64, because that's C99, so we have to print the
 	 64-bit hex int as two 32-bit ones. */
-      int lo, hi;
+      int lo, hi, t;
       lo = file->offset & 0xffffffff;
       hi = ((int64_t)file->offset >> 32) & 0xffffffff;
-      int t = hi ? asprintf (&objname, "%s@0x%x%08x", file->name, lo, hi)
-		: asprintf (&objname, "%s@0x%x", file->name, lo);
+      t = hi ? asprintf (&objname, "%s@0x%x%08x", file->name, lo, hi)
+	     : asprintf (&objname, "%s@0x%x", file->name, lo);
       check (t >= 0, LDPL_FATAL, "asprintf failed");
       lto_file.name = objname;
     }
@@ -989,6 +1000,9 @@ onload (struct ld_plugin_tv *tv)
 	  break;
 	case LDPT_OPTION:
 	  process_option (p->tv_u.tv_string);
+	  break;
+	case LDPT_GOLD_VERSION:
+	  gold_version = p->tv_u.tv_val;
 	  break;
 	default:
 	  break;

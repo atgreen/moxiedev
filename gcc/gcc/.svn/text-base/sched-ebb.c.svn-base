@@ -1,6 +1,6 @@
 /* Instruction scheduling pass.
-   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
+   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Michael Tiemann (tiemann@cygnus.com) Enhanced by,
    and currently maintained by, Jim Wilson (wilson@cygnus.com)
@@ -26,7 +26,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "rtl.h"
 #include "tm_p.h"
 #include "hard-reg-set.h"
@@ -36,7 +35,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "insn-config.h"
 #include "insn-attr.h"
 #include "except.h"
-#include "toplev.h"
 #include "recog.h"
 #include "cfglayout.h"
 #include "params.h"
@@ -61,7 +59,7 @@ static basic_block last_bb;
 
 /* Implementations of the sched_info functions for region scheduling.  */
 static void init_ready_list (void);
-static void begin_schedule_ready (rtx, rtx);
+static void begin_schedule_ready (rtx);
 static int schedule_more_p (void);
 static const char *ebb_print_insn (const_rtx, int);
 static int rank (rtx, rtx);
@@ -127,10 +125,15 @@ init_ready_list (void)
 
 /* INSN is being scheduled after LAST.  Update counters.  */
 static void
-begin_schedule_ready (rtx insn, rtx last)
+begin_schedule_ready (rtx insn ATTRIBUTE_UNUSED)
 {
   sched_rgn_n_insns++;
+}
 
+/* INSN is being moved to its place in the schedule, after LAST.  */
+static void
+begin_move_insn (rtx insn, rtx last)
+{
   if (BLOCK_FOR_INSN (insn) == last_bb
       /* INSN is a jump in the last block, ...  */
       && control_flow_insn_p (insn)
@@ -290,6 +293,7 @@ static struct haifa_sched_info ebb_sched_info =
 
   ebb_add_remove_insn,
   begin_schedule_ready,
+  begin_move_insn,
   advance_target_bb,
   SCHED_EBB
   /* We can create new blocks in begin_schedule_ready ().  */
@@ -581,6 +585,9 @@ schedule_ebbs (void)
     {
       rtx head = BB_HEAD (bb);
 
+      if (bb->flags & BB_DISABLE_SCHEDULE)
+	continue;
+
       for (;;)
 	{
 	  edge e;
@@ -593,6 +600,8 @@ schedule_ebbs (void)
 	    break;
 	  if (e->probability <= probability_cutoff)
 	    break;
+	  if (e->dest->flags & BB_DISABLE_SCHEDULE)
+ 	    break;
 	  bb = bb->next_bb;
 	}
 
@@ -600,9 +609,9 @@ schedule_ebbs (void)
 	 a note or two.  */
       while (head != tail)
 	{
-	  if (NOTE_P (head) || BOUNDARY_DEBUG_INSN_P (head))
+	  if (NOTE_P (head) || DEBUG_INSN_P (head))
 	    head = NEXT_INSN (head);
-	  else if (NOTE_P (tail) || BOUNDARY_DEBUG_INSN_P (tail))
+	  else if (NOTE_P (tail) || DEBUG_INSN_P (tail))
 	    tail = PREV_INSN (tail);
 	  else if (LABEL_P (head))
 	    head = NEXT_INSN (head);

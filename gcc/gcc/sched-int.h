@@ -39,42 +39,18 @@ enum sched_pass_id_t { SCHED_PASS_UNKNOWN, SCHED_RGN_PASS, SCHED_EBB_PASS,
 
 typedef VEC (basic_block, heap) *bb_vec_t;
 typedef VEC (rtx, heap) *insn_vec_t;
-typedef VEC(rtx, heap) *rtx_vec_t;
-
-struct sched_scan_info_def
-{
-  /* This hook notifies scheduler frontend to extend its internal per basic
-     block data structures.  This hook should be called once before a series of
-     calls to bb_init ().  */
-  void (*extend_bb) (void);
-
-  /* This hook makes scheduler frontend to initialize its internal data
-     structures for the passed basic block.  */
-  void (*init_bb) (basic_block);
-
-  /* This hook notifies scheduler frontend to extend its internal per insn data
-     structures.  This hook should be called once before a series of calls to
-     insn_init ().  */
-  void (*extend_insn) (void);
-
-  /* This hook makes scheduler frontend to initialize its internal data
-     structures for the passed insn.  */
-  void (*init_insn) (rtx);
-};
-
-extern const struct sched_scan_info_def *sched_scan_info;
-
-extern void sched_scan (const struct sched_scan_info_def *,
-			bb_vec_t, basic_block, insn_vec_t, rtx);
+typedef VEC (rtx, heap) *rtx_vec_t;
 
 extern void sched_init_bbs (void);
 
-extern void sched_init_luids (bb_vec_t, basic_block, insn_vec_t, rtx);
+extern void sched_extend_luids (void);
+extern void sched_init_insn_luid (rtx);
+extern void sched_init_luids (bb_vec_t);
 extern void sched_finish_luids (void);
 
 extern void sched_extend_target (void);
 
-extern void haifa_init_h_i_d (bb_vec_t, basic_block, insn_vec_t, rtx);
+extern void haifa_init_h_i_d (bb_vec_t);
 extern void haifa_finish_h_i_d (void);
 
 /* Hooks that are common to all the schedulers.  */
@@ -605,10 +581,15 @@ struct haifa_sched_info
      parameter == 0) or removed (second parameter == 1).  */
   void (*add_remove_insn) (rtx, int);
 
-  /* Called to notify frontend that instruction is being scheduled.
-     The first parameter - instruction to scheduled, the second parameter -
-     last scheduled instruction.  */
-  void (*begin_schedule_ready) (rtx, rtx);
+  /* Called to notify the frontend that instruction INSN is being
+     scheduled.  */
+  void (*begin_schedule_ready) (rtx insn);
+
+  /* Called to notify the frontend that an instruction INSN is about to be
+     moved to its correct place in the final schedule.  This is done for all
+     insns in order of the schedule.  LAST indicates the last scheduled
+     instruction.  */
+  void (*begin_move_insn) (rtx insn, rtx last);
 
   /* If the second parameter is not NULL, return nonnull value, if the
      basic block should be advanced.
@@ -653,9 +634,9 @@ extern struct haifa_sched_info *current_sched_info;
    up.  */
 extern bool sched_pressure_p;
 
-/* Map regno -> its cover class.  The map defined only when
+/* Map regno -> its pressure class.  The map defined only when
    SCHED_PRESSURE_P is true.  */
-extern enum reg_class *sched_regno_cover_class;
+extern enum reg_class *sched_regno_pressure_class;
 
 /* Indexed by INSN_UID, the collection of all data associated with
    a single instruction.  */
@@ -698,6 +679,17 @@ struct _haifa_deps_insn_data
      search in 'forw_deps'.  */
   deps_list_t resolved_forw_deps;
 
+  /* If the insn is conditional (either through COND_EXEC, or because
+     it is a conditional branch), this records the condition.  NULL
+     for insns that haven't been seen yet or don't have a condition;
+     const_true_rtx to mark an insn without a condition, or with a
+     condition that has been clobbered by a subsequent insn.  */
+  rtx cond;
+
+  /* True if the condition in 'cond' should be reversed to get the actual
+     condition.  */
+  unsigned int reverse_cond : 1;
+
   /* Some insns (e.g. call) are not allowed to move across blocks.  */
   unsigned int cant_move : 1;
 };
@@ -707,7 +699,7 @@ struct _haifa_deps_insn_data
 #define INCREASE_BITS 8
 
 /* The structure describes how the corresponding insn increases the
-   register pressure for each cover class.  */
+   register pressure for each pressure class.  */
 struct reg_pressure_data
 {
   /* Pressure increase for given class because of clobber.  */
@@ -736,7 +728,7 @@ struct reg_use_data
 };
 
 /* The following structure describes used sets of registers by insns.
-   Registers are pseudos whose cover class is not NO_REGS or hard
+   Registers are pseudos whose pressure class is not NO_REGS or hard
    registers available for allocations.  */
 struct reg_set_data
 {
@@ -804,7 +796,7 @@ struct _haifa_insn_data
   struct reg_pressure_data *reg_pressure;
   /* The following array contains maximal reg pressure between last
      scheduled insn and given insn.  There is an element for each
-     cover class of pseudos referenced in insns.  This info updated
+     pressure class of pseudos referenced in insns.  This info updated
      after scheduling each insn for each insn between the two
      mentioned insns.  */
   int *max_reg_pressure;
@@ -857,6 +849,8 @@ extern VEC(haifa_deps_insn_data_def, heap) *h_d_i_d;
 #define INSN_RESOLVED_FORW_DEPS(INSN) (HDID (INSN)->resolved_forw_deps)
 #define INSN_HARD_BACK_DEPS(INSN) (HDID (INSN)->hard_back_deps)
 #define INSN_SPEC_BACK_DEPS(INSN) (HDID (INSN)->spec_back_deps)
+#define INSN_COND(INSN)	(HDID (INSN)->cond)
+#define INSN_REVERSE_COND(INSN) (HDID (INSN)->reverse_cond)
 #define CANT_MOVE(INSN)	(HDID (INSN)->cant_move)
 #define CANT_MOVE_BY_LUID(LUID)	(VEC_index (haifa_deps_insn_data_def, h_d_i_d, \
                                             LUID)->cant_move)
@@ -886,23 +880,6 @@ extern VEC(haifa_deps_insn_data_def, heap) *h_d_i_d;
    semantics of the program.  */
 #define IS_SPECULATION_BRANCHY_CHECK_P(INSN) \
   (RECOVERY_BLOCK (INSN) != NULL && RECOVERY_BLOCK (INSN) != EXIT_BLOCK_PTR)
-
-/* The unchanging bit tracks whether a debug insn is to be handled
-   like an insn (i.e., schedule it) or like a note (e.g., it is next
-   to a basic block boundary.  */
-#define DEBUG_INSN_SCHED_P(insn) \
-  (RTL_FLAG_CHECK1("DEBUG_INSN_SCHED_P", (insn), DEBUG_INSN)->unchanging)
-
-/* True if INSN is a debug insn that is next to a basic block
-   boundary, i.e., it is to be handled by the scheduler like a
-   note.  */
-#define BOUNDARY_DEBUG_INSN_P(insn) \
-  (DEBUG_INSN_P (insn) && !DEBUG_INSN_SCHED_P (insn))
-/* True if INSN is a debug insn that is not next to a basic block
-   boundary, i.e., it is to be handled by the scheduler like an
-   insn.  */
-#define SCHEDULE_DEBUG_INSN_P(insn) \
-  (DEBUG_INSN_P (insn) && DEBUG_INSN_SCHED_P (insn))
 
 /* Dep status (aka ds_t) of the link encapsulates information, that is needed
    for speculative scheduling.  Namely, it is 4 integers in the range
@@ -1206,6 +1183,7 @@ extern void init_deps_global (void);
 extern void finish_deps_global (void);
 extern void deps_analyze_insn (struct deps_desc *, rtx);
 extern void remove_from_deps (struct deps_desc *, rtx);
+extern void init_insn_reg_pressure_info (rtx);
 
 extern dw_t get_dep_weak_1 (ds_t, ds_t);
 extern dw_t get_dep_weak (ds_t, ds_t);

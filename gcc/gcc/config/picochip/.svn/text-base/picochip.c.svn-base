@@ -42,7 +42,6 @@ along with GCC; see the file COPYING3.  If not, see
 #include "basic-block.h"
 #include "integrate.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "ggc.h"
 #include "hashtab.h"
 #include "tm_p.h"
@@ -114,7 +113,7 @@ int picochip_legitimize_reload_address (rtx *x, enum machine_mode mode,
 rtx picochip_struct_value_rtx(tree fntype ATTRIBUTE_UNUSED, int incoming ATTRIBUTE_UNUSED);
 rtx picochip_function_value (const_tree valtype, const_tree func ATTRIBUTE_UNUSED,
                          bool outgoing ATTRIBUTE_UNUSED);
-reg_class_t
+static reg_class_t
 picochip_secondary_reload (bool in_p,
 			   rtx x ATTRIBUTE_UNUSED,
 			   reg_class_t cla ATTRIBUTE_UNUSED,
@@ -149,13 +148,6 @@ const char *picochip_regnames[] = REGISTER_NAMES;
 
 
 /* Target scheduling information. */
-
-/* Determine whether we run our final scheduling pass or not.  We always
-   avoid the normal second scheduling pass.  */
-int picochip_flag_schedule_insns2;
-
-/* Check if variable tracking needs to be run. */
-int picochip_flag_var_tracking;
 
 /* This flag indicates whether the next instruction to be output is a
    VLIW continuation instruction.  It is used to communicate between
@@ -344,6 +336,17 @@ static const struct default_options picochip_option_optimization_table[] =
 #undef TARGET_EXCEPT_UNWIND_INFO
 #define TARGET_EXCEPT_UNWIND_INFO sjlj_except_unwind_info
 
+/* The 2nd scheduling pass option is switched off, and a machine
+   dependent reorganisation ensures that it is run later on, after the
+   second jump optimisation.  */
+#undef TARGET_DELAY_SCHED2
+#define TARGET_DELAY_SCHED2 true
+
+/* Variable tracking should be run after all optimizations which
+   change order of insns.  It also needs a valid CFG.  */
+#undef TARGET_DELAY_VARTRACK
+#define TARGET_DELAY_VARTRACK true
+
 struct gcc_target targetm = TARGET_INITIALIZER;
 
 
@@ -357,10 +360,7 @@ picochip_return_in_memory(const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
   return ((unsigned HOST_WIDE_INT) int_size_in_bytes (type) > 4);
 }
 
-/* Allow some options to be overriden.  In particular, the 2nd
-   scheduling pass option is switched off, and a machine dependent
-   reorganisation ensures that it is run later on, after the second
-   jump optimisation. */
+/* Allow some options to be overriden. */
 
 static void
 picochip_option_override (void)
@@ -397,18 +397,16 @@ picochip_option_override (void)
   if (optimize >= 1)
     flag_section_anchors = 1;
 
-  /* Turn off the second scheduling pass, and move it to
-     picochip_reorg, to avoid having the second jump optimisation
-     trash the instruction modes (e.g., instructions are changed to
-     TImode to mark the beginning of cycles). Two types of DFA
-     scheduling are possible: space and speed. In both cases,
-     instructions are reordered to avoid stalls (e.g., memory loads
-     stall for one cycle). Speed scheduling will also enable VLIW
-     instruction packing. VLIW instructions use more code space, so
-     VLIW scheduling is disabled when scheduling for size. */
-  picochip_flag_schedule_insns2 = flag_schedule_insns_after_reload;
-  flag_schedule_insns_after_reload = 0;
-  if (picochip_flag_schedule_insns2)
+  /* The second scheduling pass runs within picochip_reorg, to avoid
+     having the second jump optimisation trash the instruction modes
+     (e.g., instructions are changed to TImode to mark the beginning
+     of cycles).  Two types of DFA scheduling are possible: space and
+     speed.  In both cases, instructions are reordered to avoid stalls
+     (e.g., memory loads stall for one cycle).  Speed scheduling will
+     also enable VLIW instruction packing.  VLIW instructions use more
+     code space, so VLIW scheduling is disabled when scheduling for
+     size.  */
+  if (flag_schedule_insns_after_reload)
     {
       if (optimize_size)
 	picochip_schedule_type = DFA_TYPE_SPACE;
@@ -462,7 +460,6 @@ picochip_option_override (void)
 	error ("invalid mul type specified (%s) - expected mac, mul or none",
 	       picochip_mul_type_string);
     }
-
 }
 
 
@@ -1814,13 +1811,6 @@ picochip_asm_file_start (void)
     fprintf (asm_out_file, "// Has multiply: Yes (Mac unit)\n");
   else
     fprintf (asm_out_file, "// Has multiply: No\n");
-
-  /* Variable tracking should be run after all optimizations which change order
-     of insns.  It also needs a valid CFG.  This can't be done in
-     picochip_option_override, because flag_var_tracking is finalized after
-     that.  */
-  picochip_flag_var_tracking = flag_var_tracking;
-  flag_var_tracking = 0;
 }
 
 /* Output the end of an ASM file. */
@@ -2274,7 +2264,7 @@ picochip_expand_epilogue (int is_sibling_call ATTRIBUTE_UNUSED)
     rtvec p;
     p = rtvec_alloc (2);
 
-    RTVEC_ELT (p, 0) = gen_rtx_RETURN (VOIDmode);
+    RTVEC_ELT (p, 0) = ret_rtx;
     RTVEC_ELT (p, 1) = gen_rtx_USE (VOIDmode,
 				    gen_rtx_REG (Pmode, LINK_REGNUM));
     emit_jump_insn (gen_rtx_PARALLEL (VOIDmode, p));
@@ -3244,13 +3234,20 @@ reorder_var_tracking_notes (void)
                     }
                 }
             }
-          else if (NOTE_P (insn) && NOTE_KIND (insn) == NOTE_INSN_VAR_LOCATION)
+          else if (NOTE_P (insn))
             {
                rtx prev = PREV_INSN (insn);
                PREV_INSN (next) = prev;
                NEXT_INSN (prev) = next;
-               PREV_INSN (insn) = queue;
-               queue = insn;
+               /* Ignore call_arg notes. They are expected to be just after the
+                  call insn. If the call is start of a long VLIW, labels are
+                  emitted in the middle of a VLIW, which our assembler can not
+                  handle. */
+               if (NOTE_KIND (insn) != NOTE_INSN_CALL_ARG_LOCATION)
+                 {
+                   PREV_INSN (insn) = queue;
+                   queue = insn;
+                 }
             }
         }
         /* Make sure we are not dropping debug instructions.*/
@@ -3370,15 +3367,16 @@ picochip_reorg (void)
 	  delete_insn (prologue_end_note);
 	}
     }
-  if (picochip_flag_var_tracking)
-  {
-    timevar_push (TV_VAR_TRACKING);
-    variable_tracking_main ();
-    /* We also have to deal with variable tracking notes in the middle 
-       of VLIW packets. */
-    reorder_var_tracking_notes();
-    timevar_pop (TV_VAR_TRACKING);
-  }
+
+  if (flag_var_tracking)
+    {
+      timevar_push (TV_VAR_TRACKING);
+      variable_tracking_main ();
+      /* We also have to deal with variable tracking notes in the
+	 middle of VLIW packets. */
+      reorder_var_tracking_notes();
+      timevar_pop (TV_VAR_TRACKING);
+    }
 }
 
 /* Return the ALU character identifier for the current
@@ -4217,18 +4215,6 @@ void
 picochip_init_builtins (void)
 {
   tree noreturn;
-  tree endlink = void_list_node;
-  tree int_endlink = tree_cons (NULL_TREE, integer_type_node, endlink);
-  tree unsigned_endlink = tree_cons (NULL_TREE, unsigned_type_node, endlink);
-  tree long_endlink = tree_cons (NULL_TREE, long_integer_type_node, endlink);
-  tree int_int_endlink =
-    tree_cons (NULL_TREE, integer_type_node, int_endlink);
-  tree int_int_int_endlink =
-    tree_cons (NULL_TREE, integer_type_node, int_int_endlink);
-  tree int_long_endlink =
-    tree_cons (NULL_TREE, integer_type_node, long_endlink);
-  tree long_int_int_int_endlink =
-    tree_cons (NULL_TREE, long_integer_type_node, int_int_int_endlink);
 
   tree int_ftype_int, int_ftype_int_int;
   tree long_ftype_int, long_ftype_int_int_int;
@@ -4237,36 +4223,51 @@ picochip_init_builtins (void)
   tree void_ftype_void, unsigned_ftype_unsigned;
 
   /* void func (void) */
-  void_ftype_void = build_function_type (void_type_node, endlink);
+  void_ftype_void = build_function_type_list (void_type_node, NULL_TREE);
 
   /* int func (int) */
-  int_ftype_int = build_function_type (integer_type_node, int_endlink);
+  int_ftype_int = build_function_type_list (integer_type_node,
+					    integer_type_node, NULL_TREE);
 
   /* unsigned int func (unsigned int) */
-  unsigned_ftype_unsigned = build_function_type (unsigned_type_node, unsigned_endlink);
+  unsigned_ftype_unsigned
+    = build_function_type_list (unsigned_type_node,
+				unsigned_type_node, NULL_TREE);
 
   /* int func(int, int) */
   int_ftype_int_int
-    = build_function_type (integer_type_node, int_int_endlink);
+    = build_function_type_list (integer_type_node,
+				integer_type_node, integer_type_node,
+				NULL_TREE);
 
   /* long func(int) */
-  long_ftype_int = build_function_type (long_integer_type_node, int_endlink);
+  long_ftype_int = build_function_type_list (long_integer_type_node,
+					     integer_type_node, NULL_TREE);
 
   /* long func(int, int, int) */
   long_ftype_int_int_int
-    = build_function_type (long_integer_type_node, int_int_int_endlink);
+    = build_function_type_list (long_integer_type_node,
+				integer_type_node, integer_type_node,
+				integer_type_node, NULL_TREE);
 
   /* int func(int, int, int) */
   int_ftype_int_int_int
-    = build_function_type (integer_type_node, int_int_int_endlink);
+    = build_function_type_list (integer_type_node,
+				integer_type_node, integer_type_node,
+				integer_type_node, NULL_TREE);
 
   /* void func(int, long) */
   void_ftype_int_long
-    = build_function_type (void_type_node, int_long_endlink);
+    = build_function_type_list (void_type_node,
+				integer_type_node, long_integer_type_node,
+				NULL_TREE);
 
   /* void func(long, int, int, int) */
   void_ftype_long_int_int_int
-    = build_function_type (void_type_node, long_int_int_int_endlink);
+    = build_function_type_list (void_type_node,
+				long_integer_type_node, integer_type_node,
+				integer_type_node, integer_type_node,
+				NULL_TREE);
 
   /* Initialise the sign-bit-count function. */
   add_builtin_function ("__builtin_sbc", int_ftype_int,
@@ -4509,7 +4510,7 @@ picochip_get_high_const (rtx value)
    choice of two registers to choose from, so that we a guaranteed to
    get at least one register which is different to the output
    register.  This trick is taken from the alpha implementation. */
-reg_class_t
+static reg_class_t
 picochip_secondary_reload (bool in_p,
 			   rtx x ATTRIBUTE_UNUSED,
 			   reg_class_t cla ATTRIBUTE_UNUSED,

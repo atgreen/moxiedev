@@ -1,6 +1,6 @@
 // -*- C++ -*-
 
-// Copyright (C) 2005, 2006, 2009 Free Software Foundation, Inc.
+// Copyright (C) 2005, 2006, 2009, 2010 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the terms
@@ -51,7 +51,7 @@ public:
   typedef std::forward_iterator_tag iterator_category;
 
   // Difference type.
-  typedef typename Allocator::difference_type difference_type;
+  typedef typename _Alloc::difference_type difference_type;
 
   // Iterator's value type.
   typedef value_type_ value_type;

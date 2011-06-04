@@ -460,6 +460,7 @@ pp_c_specifier_qualifier_list (c_pretty_printer *pp, tree t)
 	  {
 	    pp_c_whitespace (pp);
 	    pp_c_left_paren (pp);
+	    pp_c_attributes_display (pp, TYPE_ATTRIBUTES (pointee));
 	  }
 	else if (!c_dialect_cxx ())
 	  pp_c_whitespace (pp);
@@ -788,6 +789,47 @@ pp_c_attributes (c_pretty_printer *pp, tree attributes)
     }
   pp_c_right_paren (pp);
   pp_c_right_paren (pp);
+}
+
+/* Pretty-print ATTRIBUTES using GNU C extension syntax for attributes
+   marked to be displayed on disgnostic.  */
+
+void
+pp_c_attributes_display (c_pretty_printer *pp, tree a)
+{
+  bool is_first = true;
+
+  if (a == NULL_TREE)
+    return;
+
+  for (; a != NULL_TREE; a = TREE_CHAIN (a))
+    {
+      const struct attribute_spec *as;
+      as = lookup_attribute_spec (TREE_PURPOSE (a));
+      if (!as || as->affects_type_identity == false)
+        continue;
+      if (is_first)
+       {
+         pp_c_ws_string (pp, "__attribute__");
+         pp_c_left_paren (pp);
+         pp_c_left_paren (pp);
+         is_first = false;
+       }
+      else
+       {
+         pp_separate_with (pp, ',');
+       }
+      pp_tree_identifier (pp, TREE_PURPOSE (a));
+      if (TREE_VALUE (a))
+       pp_c_call_argument_list (pp, TREE_VALUE (a));
+    }
+
+  if (!is_first)
+    {
+      pp_c_right_paren (pp);
+      pp_c_right_paren (pp);
+      pp_c_whitespace (pp);
+    }
 }
 
 /* function-definition:
@@ -1531,6 +1573,10 @@ pp_c_postfix_expression (c_pretty_printer *pp, tree e)
       }
       break;
 
+    case MEM_REF:
+      pp_c_expression (pp, e);
+      break;
+
     case COMPLEX_CST:
     case VECTOR_CST:
       pp_c_compound_literal (pp, e);
@@ -1659,6 +1705,32 @@ pp_c_unary_expression (c_pretty_printer *pp, tree e)
       else if (code == TRUTH_NOT_EXPR)
 	pp_exclamation (pp);
       pp_c_cast_expression (pp, TREE_OPERAND (e, 0));
+      break;
+
+    case MEM_REF:
+      if (TREE_CODE (TREE_OPERAND (e, 0)) == ADDR_EXPR
+	  && integer_zerop (TREE_OPERAND (e, 1)))
+	pp_c_expression (pp, TREE_OPERAND (TREE_OPERAND (e, 0), 0));
+      else
+	{
+	  pp_c_star (pp);
+	  if (!integer_zerop (TREE_OPERAND (e, 1)))
+	    {
+	      pp_c_left_paren (pp);
+	      if (!integer_onep (TYPE_SIZE_UNIT
+				 (TREE_TYPE (TREE_TYPE (TREE_OPERAND (e, 0))))))
+		pp_c_type_cast (pp, ptr_type_node);
+	    }
+	  pp_c_cast_expression (pp, TREE_OPERAND (e, 0));
+	  if (!integer_zerop (TREE_OPERAND (e, 1)))
+	    {
+	      pp_plus (pp);
+	      pp_c_integer_constant (pp,
+				     fold_convert (ssizetype,
+						   TREE_OPERAND (e, 1)));
+	      pp_c_right_paren (pp);
+	    }
+	}
       break;
 
     case REALPART_EXPR:
@@ -2065,6 +2137,7 @@ pp_c_expression (c_pretty_printer *pp, tree e)
     case CONJ_EXPR:
     case ADDR_EXPR:
     case INDIRECT_REF:
+    case MEM_REF:
     case NEGATE_EXPR:
     case BIT_NOT_EXPR:
     case TRUTH_NOT_EXPR:

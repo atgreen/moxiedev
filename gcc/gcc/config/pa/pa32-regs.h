@@ -209,6 +209,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    registers.  */
 #define HARD_REGNO_MODE_OK(REGNO, MODE) \
   ((REGNO) == 0 ? (MODE) == CCmode || (MODE) == CCFPmode		\
+   : (REGNO) == 88 ? SCALAR_INT_MODE_P (MODE)				\
    : !TARGET_PA_11 && FP_REGNO_P (REGNO)				\
      ? (VALID_FP_MODE_P (MODE)						\
 	&& (GET_MODE_SIZE (MODE) <= 8					\
@@ -293,19 +294,6 @@ enum reg_class { NO_REGS, R1_REGS, GENERAL_REGS, FPUPPER_REGS, FP_REGS,
   {0xfffffffe, 0xffffffff, 0x02ffffff},	/* GENERAL_OR_FP_REGS */	\
   {0x00000000, 0x00000000, 0x01000000},	/* SHIFT_REGS */		\
   {0xfffffffe, 0xffffffff, 0x03ffffff}}	/* ALL_REGS */
-
-/* The following macro defines cover classes for Integrated Register
-   Allocator.  Cover classes is a set of non-intersected register
-   classes covering all hard registers used for register allocation
-   purpose.  Any move between two registers of a cover class should be
-   cheaper than load or store of the registers.  The macro value is
-   array of register classes with LIM_REG_CLASSES used as the end
-   marker.  */
-
-#define IRA_COVER_CLASSES						\
-{									\
-  GENERAL_REGS, FP_REGS, SHIFT_REGS, LIM_REG_CLASSES			\
-}
 
 /* Defines invalid mode changes.  */
 

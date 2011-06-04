@@ -580,8 +580,7 @@ phi_trans_add (pre_expr e, pre_expr v, basic_block pred)
 
   slot = htab_find_slot_with_hash (phi_translate_table, new_pair,
 				   new_pair->hashcode, INSERT);
-  if (*slot)
-    free (*slot);
+  free (*slot);
   *slot = (void *) new_pair;
 }
 
@@ -1681,7 +1680,7 @@ phi_translate_1 (pre_expr expr, bitmap_set_t set1, bitmap_set_t set2,
 	    tree result = vn_reference_lookup_pieces (newvuse, ref->set,
 						      ref->type,
 						      newoperands,
-						      &newref, true);
+						      &newref, VN_WALK);
 	    if (result)
 	      VEC_free (vn_reference_op_s, heap, newoperands);
 
@@ -1690,6 +1689,12 @@ phi_translate_1 (pre_expr expr, bitmap_set_t set1, bitmap_set_t set2,
 	      {
 		result = fold_build1 (VIEW_CONVERT_EXPR, ref->type, result);
 		converted = true;
+	      }
+	    else if (!result && newref
+		     && !useless_type_conversion_p (ref->type, newref->type))
+	      {
+		VEC_free (vn_reference_op_s, heap, newoperands);
+		return NULL;
 	      }
 
 	    if (result && is_gimple_min_invariant (result))
@@ -2594,6 +2599,10 @@ compute_antic (void)
     {
       if (dump_file && (dump_flags & TDF_DETAILS))
 	fprintf (dump_file, "Starting iteration %d\n", num_iterations);
+      /* ???  We need to clear our PHI translation cache here as the
+         ANTIC sets shrink and we restrict valid translations to
+	 those having operands with leaders in ANTIC.  Same below
+	 for PA ANTIC computation.  */
       num_iterations++;
       changed = false;
       for (i = n_basic_blocks - NUM_FIXED_BLOCKS - 1; i >= 0; i--)
@@ -2647,11 +2656,13 @@ compute_antic (void)
 }
 
 /* Return true if we can value number the call in STMT.  This is true
-   if we have a pure or constant call.  */
+   if we have a pure or constant call to a real function.  */
 
 static bool
 can_value_number_call (gimple stmt)
 {
+  if (gimple_call_internal_p (stmt))
+    return false;
   if (gimple_call_flags (stmt) & (ECF_PURE | ECF_CONST))
     return true;
   return false;
@@ -2760,7 +2771,7 @@ create_component_ref_by_pieces_1 (basic_block block, vn_reference_t ref,
 	    gcc_assert (base);
 	    offset = int_const_binop (PLUS_EXPR, offset,
 				      build_int_cst (TREE_TYPE (offset),
-						     off), 0);
+						     off));
 	    baseop = build_fold_addr_expr (base);
 	  }
 	return fold_build2 (MEM_REF, currop->type, baseop, offset);
@@ -2864,8 +2875,11 @@ create_component_ref_by_pieces_1 (basic_block block, vn_reference_t ref,
 	  return NULL_TREE;
 	if (genop2)
 	  {
-	    /* Drop zero minimum index.  */
-	    if (tree_int_cst_equal (genop2, integer_zero_node))
+	    tree domain_type = TYPE_DOMAIN (TREE_TYPE (genop0));
+	    /* Drop zero minimum index if redundant.  */
+	    if (integer_zerop (genop2)
+		&& (!domain_type
+		    || integer_zerop (TYPE_MIN_VALUE (domain_type))))
 	      genop2 = NULL_TREE;
 	    else
 	      {
@@ -3607,11 +3621,23 @@ do_regular_insertion (basic_block block, basic_block dom)
 	     already existing along every predecessor, and
 	     it's defined by some predecessor, it is
 	     partially redundant.  */
-	  if (!cant_insert && !all_same && by_some && do_insertion
-	      && dbg_cnt (treepre_insert))
+	  if (!cant_insert && !all_same && by_some)
 	    {
-	      if (insert_into_preds_of_block (block, get_expression_id (expr),
-					      avail))
+	      if (!do_insertion)
+		{
+		  if (dump_file && (dump_flags & TDF_DETAILS))
+		    {
+		      fprintf (dump_file, "Skipping partial redundancy for "
+			       "expression ");
+		      print_pre_expr (dump_file, expr);
+		      fprintf (dump_file, " (%04d), no redundancy on to be "
+			       "optimized for speed edge\n", val);
+		    }
+		}
+	      else if (dbg_cnt (treepre_insert)
+		       && insert_into_preds_of_block (block,
+						      get_expression_id (expr),
+						      avail))
 		new_stuff = true;
 	    }
 	  /* If all edges produce the same value and that value is
@@ -3999,7 +4025,7 @@ compute_avail (void)
 		copy_reference_ops_from_call (stmt, &ops);
 		vn_reference_lookup_pieces (gimple_vuse (stmt), 0,
 					    gimple_expr_type (stmt),
-					    ops, &ref, false);
+					    ops, &ref, VN_NOWALK);
 		VEC_free (vn_reference_op_s, heap, ops);
 		if (!ref)
 		  continue;
@@ -4069,7 +4095,7 @@ compute_avail (void)
 
 		      vn_reference_lookup (gimple_assign_rhs1 (stmt),
 					   gimple_vuse (stmt),
-					   true, &ref);
+					   VN_WALK, &ref);
 		      if (!ref)
 			continue;
 
@@ -4160,6 +4186,7 @@ static unsigned int
 eliminate (void)
 {
   VEC (gimple, heap) *to_remove = NULL;
+  VEC (gimple, heap) *to_update = NULL;
   basic_block b;
   unsigned int todo = 0;
   gimple_stmt_iterator gsi;
@@ -4313,7 +4340,7 @@ eliminate (void)
 	      tree rhs = gimple_assign_rhs1 (stmt);
 	      tree val;
 	      val = vn_reference_lookup (gimple_assign_lhs (stmt),
-					 gimple_vuse (stmt), true, NULL);
+					 gimple_vuse (stmt), VN_WALK, NULL);
 	      if (TREE_CODE (rhs) == SSA_NAME)
 		rhs = VN_INFO (rhs)->valnum;
 	      if (val
@@ -4355,12 +4382,22 @@ eliminate (void)
 	    }
 	  /* Visit indirect calls and turn them into direct calls if
 	     possible.  */
-	  if (is_gimple_call (stmt)
-	      && TREE_CODE (gimple_call_fn (stmt)) == SSA_NAME)
+	  if (is_gimple_call (stmt))
 	    {
-	      tree fn = VN_INFO (gimple_call_fn (stmt))->valnum;
-	      if (TREE_CODE (fn) == ADDR_EXPR
-		  && TREE_CODE (TREE_OPERAND (fn, 0)) == FUNCTION_DECL)
+	      tree orig_fn = gimple_call_fn (stmt);
+	      tree fn;
+	      if (!orig_fn)
+		continue;
+	      if (TREE_CODE (orig_fn) == SSA_NAME)
+		fn = VN_INFO (orig_fn)->valnum;
+	      else if (TREE_CODE (orig_fn) == OBJ_TYPE_REF
+		       && TREE_CODE (OBJ_TYPE_REF_EXPR (orig_fn)) == SSA_NAME)
+		fn = VN_INFO (OBJ_TYPE_REF_EXPR (orig_fn))->valnum;
+	      else
+		continue;
+	      if (gimple_call_addr_fndecl (fn) != NULL_TREE
+		  && useless_type_conversion_p (TREE_TYPE (orig_fn),
+						TREE_TYPE (fn)))
 		{
 		  bool can_make_abnormal_goto
 		    = stmt_can_make_abnormal_goto (stmt);
@@ -4375,7 +4412,7 @@ eliminate (void)
 		    }
 
 		  gimple_call_set_fn (stmt, fn);
-		  update_stmt (stmt);
+		  VEC_safe_push (gimple, heap, to_update, stmt);
 
 		  /* When changing a call into a noreturn call, cfg cleanup
 		     is needed to fix up the noreturn call.  */
@@ -4526,6 +4563,13 @@ eliminate (void)
 	}
     }
   VEC_free (gimple, heap, to_remove);
+
+  /* We cannot update call statements with virtual operands during
+     SSA walk.  This might remove them which in turn makes our
+     VN lattice invalid.  */
+  FOR_EACH_VEC_ELT (gimple, to_update, i, stmt)
+    update_stmt (stmt);
+  VEC_free (gimple, heap, to_update);
 
   return todo;
 }
@@ -4837,7 +4881,7 @@ execute_pre (bool do_fre)
   if (!do_fre)
     loop_optimizer_init (LOOPS_NORMAL);
 
-  if (!run_scc_vn ())
+  if (!run_scc_vn (do_fre ? VN_WALKREWRITE : VN_WALK))
     {
       if (!do_fre)
 	loop_optimizer_finalize ();
@@ -4893,7 +4937,10 @@ execute_pre (bool do_fre)
   clear_expression_ids ();
   free_scc_vn ();
   if (!do_fre)
-    remove_dead_inserted_code ();
+    {
+      remove_dead_inserted_code ();
+      todo |= TODO_verify_flow;
+    }
 
   scev_finalize ();
   fini_pre (do_fre);

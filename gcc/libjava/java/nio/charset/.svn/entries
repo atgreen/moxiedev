@@ -1,7 +1,7 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/java/nio/charset
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-CharsetEncoder.h
-file
-
-
-
-
-2009-04-24T17:49:18.000000Z
-8118dfe8ebb12b5e5134f21666686336
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3139
 
 Charset.h
 file
@@ -93,6 +59,40 @@ tromey
 
 
 2636
+
+CharsetEncoder.h
+file
+
+
+
+
+2009-04-24T17:49:18.000000Z
+8118dfe8ebb12b5e5134f21666686336
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3139
 
 CoderResult.h
 file
@@ -196,9 +196,6 @@ tromey
 
 922
 
-spi
-dir
-
 MalformedInputException.h
 file
 
@@ -232,6 +229,9 @@ tromey
 
 
 915
+
+spi
+dir
 
 CoderMalfunctionError.h
 file
@@ -335,6 +335,40 @@ tromey
 
 3101
 
+CoderResult$1.h
+file
+
+
+
+
+2010-07-08T15:19:46.617093Z
+5c75c0f8fd62e6ab157f6a5c010041d4
+2010-03-13T14:27:27.469970Z
+157422
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+722
+
 UnmappableCharacterException.h
 file
 
@@ -369,14 +403,14 @@ tromey
 
 945
 
-CoderResult$1.h
+CoderResult$2.h
 file
 
 
 
 
-2010-07-08T15:19:46.617093Z
-5c75c0f8fd62e6ab157f6a5c010041d4
+2010-07-08T15:19:46.618093Z
+c7ffacde03f55f8309cf64e2928eeeb6
 2010-03-13T14:27:27.469970Z
 157422
 doko
@@ -436,40 +470,6 @@ tromey
 
 
 958
-
-CoderResult$2.h
-file
-
-
-
-
-2010-07-08T15:19:46.618093Z
-c7ffacde03f55f8309cf64e2928eeeb6
-2010-03-13T14:27:27.469970Z
-157422
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-722
 
 CoderResult$Cache.h
 file

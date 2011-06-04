@@ -1,14 +1,14 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/sparc
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-11-20T22:01:48.504857Z
-166986
+2011-06-02T13:04:43.225466Z
+174566
 ebotcazou
 
 
@@ -25,6 +25,40 @@ ebotcazou
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+ultrasp13.c
+file
+
+
+
+
+2011-06-04T17:55:31.423104Z
+28beb1bcb4558c89bb57730411074637
+2011-06-02T13:04:43.225466Z
+174566
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+74303
 
 fxors.c
 file
@@ -1385,6 +1419,40 @@ ebotcazou
 
 
 233
+
+ultrasp12.c
+file
+
+
+
+
+2011-06-04T17:55:31.423104Z
+6398cc1e135919eb7c3f9a9eca76ca60
+2011-06-01T19:47:19.688638Z
+174540
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+35426
 
 sparc-constant-1.c
 file

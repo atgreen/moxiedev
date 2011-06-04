@@ -45,6 +45,12 @@
 #endif
 
 
+/* Define if building with C++. */
+#ifndef USED_FOR_TARGET
+#undef ENABLE_BUILD_WITH_CXX
+#endif
+
+
 /* Define if you want more run-time sanity checks. This one gets a grab bag of
    miscellaneous but relatively cheap checks. */
 #ifndef USED_FOR_TARGET
@@ -110,6 +116,12 @@
 /* Define if gcc should always pass --build-id to linker. */
 #ifndef USED_FOR_TARGET
 #undef ENABLE_LD_BUILDID
+#endif
+
+
+/* Define to 1 to enable libquadmath support */
+#ifndef USED_FOR_TARGET
+#undef ENABLE_LIBQUADMATH_SUPPORT
 #endif
 
 
@@ -336,6 +348,18 @@
 /* Define if your assembler supports the swap suffix. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_AS_IX86_SWAP
+#endif
+
+
+/* Define if your assembler supports @tlsgdplt. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_AS_IX86_TLSGDPLT
+#endif
+
+
+/* Define if your assembler supports @tlsldmplt. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_AS_IX86_TLSLDMPLT
 #endif
 
 
@@ -832,6 +856,12 @@
 #endif
 
 
+/* Define to 1 if you have the <ext/hash_map> header file. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_EXT_HASH_MAP
+#endif
+
+
 /* Define to 1 if you have the <fcntl.h> header file. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_FCNTL_H
@@ -1143,13 +1173,20 @@
 #endif
 
 
-/* Define if your linker supports --eh-frame-hdr option. */
+/* Define if your linker supports .eh_frame_hdr. */
 #undef HAVE_LD_EH_FRAME_HDR
 
 /* Define if your linker supports garbage collection of sections in presence
    of EH frames. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_LD_EH_GC_SECTIONS
+#endif
+
+
+/* Define if your linker has buggy garbage collection of sections support when
+   .text.startup.foo like sections are used. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_LD_EH_GC_SECTIONS_BUG
 #endif
 
 
@@ -1191,7 +1228,7 @@
 #endif
 
 
-/* Define if your linker supports -Bstatic/-Bdynamic option. */
+/* Define if your linker supports -Bstatic/-Bdynamic or equivalent options. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_LD_STATIC_DYNAMIC
 #endif
@@ -1227,6 +1264,12 @@
 #endif
 
 
+/* Define to the level of your linker's plugin support. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_LTO_PLUGIN
+#endif
+
+
 /* Define to 1 if you have the <malloc.h> header file. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_MALLOC_H
@@ -1248,12 +1291,6 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_MEMORY_H
-#endif
-
-
-/* Define to 1 if you have the `mincore' function. */
-#ifndef USED_FOR_TARGET
-#undef HAVE_MINCORE
 #endif
 
 
@@ -1383,6 +1420,9 @@
 #endif
 
 
+/* Define if your target C library provides sys/sdt.h */
+#undef HAVE_SYS_SDT_H
+
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_SYS_STAT_H
@@ -1425,6 +1465,12 @@
 #endif
 
 
+/* Define to 1 if you have the <tr1/unordered_map> header file. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_TR1_UNORDERED_MAP
+#endif
+
+
 /* Define to 1 if the system has the type `uintmax_t'. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_UINTMAX_T
@@ -1440,6 +1486,12 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_UNISTD_H
+#endif
+
+
+/* Define to 1 if you have the <unordered_map> header file. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_UNORDERED_MAP
 #endif
 
 
@@ -1516,6 +1568,18 @@
 #endif
 
 
+/* Define to the linker option to enable use of shared objects. */
+#ifndef USED_FOR_TARGET
+#undef LD_DYNAMIC_OPTION
+#endif
+
+
+/* Define to the linker option to disable use of shared objects. */
+#ifndef USED_FOR_TARGET
+#undef LD_STATIC_OPTION
+#endif
+
+
 /* Define to the linker flags to use for -pthread. */
 #ifndef USED_FOR_TARGET
 #undef LIB_THREAD_LDFLAGS_SPEC
@@ -1525,6 +1589,12 @@
 /* Define to the library containing __tls_get_addr/___tls_get_addr. */
 #ifndef USED_FOR_TARGET
 #undef LIB_TLS_SPEC
+#endif
+
+
+/* The linker hash style */
+#ifndef USED_FOR_TARGET
+#undef LINKER_HASH_STYLE
 #endif
 
 
@@ -1661,6 +1731,9 @@
 #undef TARGET_DEFAULT_LONG_DOUBLE_128
 #endif
 
+
+/* Define if your target C library provides the `dl_iterate_phdr' function. */
+#undef TARGET_DL_ITERATE_PHDR
 
 /* Define if your target C library provides stack protector support */
 #ifndef USED_FOR_TARGET

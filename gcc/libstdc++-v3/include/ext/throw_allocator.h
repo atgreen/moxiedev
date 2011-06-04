@@ -64,7 +64,9 @@
 # include <tr1/random>
 #endif
 
-_GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
+namespace __gnu_cxx _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
    *  @brief Thown by exception safety machinery.
@@ -637,20 +639,25 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
 	return a;
       }
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+      template<typename _Up, typename... _Args>
+        void
+        construct(_Up* __p, _Args&&... __args)
+	{ return _M_allocator.construct(__p, std::forward<_Args>(__args)...); }
+
+      template<typename _Up>
+        void 
+        destroy(_Up* __p)
+        { _M_allocator.destroy(__p); }
+#else
       void
       construct(pointer __p, const value_type& val)
       { return _M_allocator.construct(__p, val); }
 
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
-      template<typename... _Args>
-	void
-	construct(pointer __p, _Args&&... __args)
-	{ return _M_allocator.construct(__p, std::forward<_Args>(__args)...); }
-#endif
-
       void
       destroy(pointer __p)
       { _M_allocator.destroy(__p); }
+#endif
 
       void
       deallocate(pointer __p, size_type __n)
@@ -721,13 +728,14 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
       ~throw_allocator_random() throw() { }
     };
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
 # include <bits/functional_hash.h>
 
-namespace std
+namespace std _GLIBCXX_VISIBILITY(default)
 {
   /// Explicit specialization of std::hash for __gnu_cxx::throw_value_limit.
   template<>

@@ -33,7 +33,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "insn-config.h"
 #include "recog.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "params.h"
 #include "df.h"
 #include "sparseset.h"
@@ -98,7 +97,7 @@ build_conflict_bit_table (void)
 {
   int i;
   unsigned int j;
-  enum reg_class cover_class;
+  enum reg_class aclass;
   int object_set_words, allocated_words_num, conflict_bit_vec_words_num;
   live_range_t r;
   ira_allocno_t allocno;
@@ -171,15 +170,15 @@ build_conflict_bit_table (void)
 
 	  gcc_assert (id < ira_objects_num);
 
-	  cover_class = ALLOCNO_COVER_CLASS (allocno);
+	  aclass = ALLOCNO_CLASS (allocno);
 	  sparseset_set_bit (objects_live, id);
 	  EXECUTE_IF_SET_IN_SPARSESET (objects_live, j)
 	    {
 	      ira_object_t live_obj = ira_object_id_map[j];
 	      ira_allocno_t live_a = OBJECT_ALLOCNO (live_obj);
-	      enum reg_class live_cover_class = ALLOCNO_COVER_CLASS (live_a);
+	      enum reg_class live_aclass = ALLOCNO_CLASS (live_a);
 
-	      if (ira_reg_classes_intersect_p[cover_class][live_cover_class]
+	      if (ira_reg_classes_intersect_p[aclass][live_aclass]
 		  /* Don't set up conflict for the allocno with itself.  */
 		  && live_a != allocno)
 		{
@@ -206,6 +205,7 @@ allocnos_conflict_for_copy_p (ira_allocno_t a1, ira_allocno_t a2)
      the lowest order words.  */
   ira_object_t obj1 = ALLOCNO_OBJECT (a1, 0);
   ira_object_t obj2 = ALLOCNO_OBJECT (a2, 0);
+
   return OBJECTS_CONFLICT_P (obj1, obj2);
 }
 
@@ -213,19 +213,22 @@ allocnos_conflict_for_copy_p (ira_allocno_t a1, ira_allocno_t a2)
 static bool
 commutative_constraint_p (const char *str)
 {
+  int curr_alt, c;
   bool ignore_p;
-  int c;
 
-  for (ignore_p = false;;)
+  for (ignore_p = false, curr_alt = 0;;)
     {
       c = *str;
       if (c == '\0')
 	break;
       str += CONSTRAINT_LEN (c, str);
-      if (c == '#')
+      if (c == '#' || !recog_data.alternative_enabled_p[curr_alt])
 	ignore_p = true;
       else if (c == ',')
-	ignore_p = false;
+	{
+	  curr_alt++;
+	  ignore_p = false;
+	}
       else if (! ignore_p)
 	{
 	  /* Usually `%' is the first constraint character but the
@@ -270,7 +273,7 @@ get_dup_num (int op_num, bool use_commut_op_p)
       c = *str;
       if (c == '\0')
 	break;
-      if (c == '#')
+      if (c == '#' || !recog_data.alternative_enabled_p[curr_alt])
 	ignore_p = true;
       else if (c == ',')
 	{
@@ -390,7 +393,7 @@ process_regs_for_copy (rtx reg1, rtx reg2, bool constraint_p,
   int allocno_preferenced_hard_regno, cost, index, offset1, offset2;
   bool only_regs_p;
   ira_allocno_t a;
-  enum reg_class rclass, cover_class;
+  enum reg_class rclass, aclass;
   enum machine_mode mode;
   ira_copy_t cp;
 
@@ -427,35 +430,37 @@ process_regs_for_copy (rtx reg1, rtx reg2, bool constraint_p,
 	return false;
     }
 
-  if (! IN_RANGE (allocno_preferenced_hard_regno, 0, FIRST_PSEUDO_REGISTER - 1))
+  if (! IN_RANGE (allocno_preferenced_hard_regno,
+		  0, FIRST_PSEUDO_REGISTER - 1))
     /* Can not be tied.  */
     return false;
   rclass = REGNO_REG_CLASS (allocno_preferenced_hard_regno);
   mode = ALLOCNO_MODE (a);
-  cover_class = ALLOCNO_COVER_CLASS (a);
+  aclass = ALLOCNO_CLASS (a);
   if (only_regs_p && insn != NULL_RTX
       && reg_class_size[rclass] <= (unsigned) CLASS_MAX_NREGS (rclass, mode))
     /* It is already taken into account in ira-costs.c.  */
     return false;
-  index = ira_class_hard_reg_index[cover_class][allocno_preferenced_hard_regno];
+  index = ira_class_hard_reg_index[aclass][allocno_preferenced_hard_regno];
   if (index < 0)
-    /* Can not be tied.  It is not in the cover class.  */
+    /* Can not be tied.  It is not in the allocno class.  */
     return false;
+  ira_init_register_move_cost_if_necessary (mode);
   if (HARD_REGISTER_P (reg1))
-    cost = ira_get_register_move_cost (mode, cover_class, rclass) * freq;
+    cost = ira_register_move_cost[mode][aclass][rclass] * freq;
   else
-    cost = ira_get_register_move_cost (mode, rclass, cover_class) * freq;
+    cost = ira_register_move_cost[mode][rclass][aclass] * freq;
   do
     {
       ira_allocate_and_set_costs
-	(&ALLOCNO_HARD_REG_COSTS (a), cover_class,
-	 ALLOCNO_COVER_CLASS_COST (a));
+	(&ALLOCNO_HARD_REG_COSTS (a), aclass,
+	 ALLOCNO_CLASS_COST (a));
       ira_allocate_and_set_costs
-	(&ALLOCNO_CONFLICT_HARD_REG_COSTS (a), cover_class, 0);
+	(&ALLOCNO_CONFLICT_HARD_REG_COSTS (a), aclass, 0);
       ALLOCNO_HARD_REG_COSTS (a)[index] -= cost;
       ALLOCNO_CONFLICT_HARD_REG_COSTS (a)[index] -= cost;
-      if (ALLOCNO_HARD_REG_COSTS (a)[index] < ALLOCNO_COVER_CLASS_COST (a))
-	ALLOCNO_COVER_CLASS_COST (a) = ALLOCNO_HARD_REG_COSTS (a)[index];
+      if (ALLOCNO_HARD_REG_COSTS (a)[index] < ALLOCNO_CLASS_COST (a))
+	ALLOCNO_CLASS_COST (a) = ALLOCNO_HARD_REG_COSTS (a)[index];
       a = ira_parent_or_cap_allocno (a);
     }
   while (a != NULL);
@@ -508,7 +513,8 @@ add_insn_allocno_copies (rtx insn)
 			? SET_SRC (set)
 			: SUBREG_REG (SET_SRC (set))) != NULL_RTX)
     {
-      process_regs_for_copy (SET_DEST (set), SET_SRC (set), false, insn, freq);
+      process_regs_for_copy (SET_DEST (set), SET_SRC (set),
+			     false, insn, freq);
       return;
     }
   /* Fast check of possibility of constraint or shuffle copies.  If
@@ -609,6 +615,7 @@ build_object_conflicts (ira_object_t obj)
   ira_allocno_t a = OBJECT_ALLOCNO (obj);
   IRA_INT_TYPE *object_conflicts;
   minmax_set_iterator asi;
+  int parent_min, parent_max ATTRIBUTE_UNUSED;
 
   object_conflicts = conflicts[OBJECT_CONFLICT_ID (obj)];
   px = 0;
@@ -617,8 +624,9 @@ build_object_conflicts (ira_object_t obj)
     {
       ira_object_t another_obj = ira_object_id_map[i];
       ira_allocno_t another_a = OBJECT_ALLOCNO (obj);
+
       ira_assert (ira_reg_classes_intersect_p
-		  [ALLOCNO_COVER_CLASS (a)][ALLOCNO_COVER_CLASS (another_a)]);
+		  [ALLOCNO_CLASS (a)][ALLOCNO_CLASS (another_a)]);
       collected_conflict_objects[px++] = another_obj;
     }
   if (ira_conflict_vector_profitable_p (obj, px))
@@ -633,6 +641,7 @@ build_object_conflicts (ira_object_t obj)
   else
     {
       int conflict_bit_vec_words_num;
+
       OBJECT_CONFLICT_ARRAY (obj) = object_conflicts;
       if (OBJECT_MAX (obj) < OBJECT_MIN (obj))
 	conflict_bit_vec_words_num = 0;
@@ -647,10 +656,12 @@ build_object_conflicts (ira_object_t obj)
   parent_a = ira_parent_or_cap_allocno (a);
   if (parent_a == NULL)
     return;
-  ira_assert (ALLOCNO_COVER_CLASS (a) == ALLOCNO_COVER_CLASS (parent_a));
+  ira_assert (ALLOCNO_CLASS (a) == ALLOCNO_CLASS (parent_a));
   ira_assert (ALLOCNO_NUM_OBJECTS (a) == ALLOCNO_NUM_OBJECTS (parent_a));
   parent_obj = ALLOCNO_OBJECT (parent_a, OBJECT_SUBWORD (obj));
   parent_num = OBJECT_CONFLICT_ID (parent_obj);
+  parent_min = OBJECT_MIN (parent_obj);
+  parent_max = OBJECT_MAX (parent_obj);
   FOR_EACH_BIT_IN_MINMAX_SET (object_conflicts,
 			      OBJECT_MIN (obj), OBJECT_MAX (obj), i, asi)
     {
@@ -659,21 +670,20 @@ build_object_conflicts (ira_object_t obj)
       int another_word = OBJECT_SUBWORD (another_obj);
 
       ira_assert (ira_reg_classes_intersect_p
-		  [ALLOCNO_COVER_CLASS (a)][ALLOCNO_COVER_CLASS (another_a)]);
+		  [ALLOCNO_CLASS (a)][ALLOCNO_CLASS (another_a)]);
 
       another_parent_a = ira_parent_or_cap_allocno (another_a);
       if (another_parent_a == NULL)
 	continue;
       ira_assert (ALLOCNO_NUM (another_parent_a) >= 0);
-      ira_assert (ALLOCNO_COVER_CLASS (another_a)
-		  == ALLOCNO_COVER_CLASS (another_parent_a));
+      ira_assert (ALLOCNO_CLASS (another_a)
+		  == ALLOCNO_CLASS (another_parent_a));
       ira_assert (ALLOCNO_NUM_OBJECTS (another_a)
 		  == ALLOCNO_NUM_OBJECTS (another_parent_a));
       SET_MINMAX_SET_BIT (conflicts[parent_num],
 			  OBJECT_CONFLICT_ID (ALLOCNO_OBJECT (another_parent_a,
-						     another_word)),
-			  OBJECT_MIN (parent_obj),
-			  OBJECT_MAX (parent_obj));
+							      another_word)),
+			  parent_min, parent_max);
     }
 }
 
@@ -793,14 +803,14 @@ print_allocno_conflicts (FILE * file, bool reg_p, ira_allocno_t a)
       COPY_HARD_REG_SET (conflicting_hard_regs, OBJECT_TOTAL_CONFLICT_HARD_REGS (obj));
       AND_COMPL_HARD_REG_SET (conflicting_hard_regs, ira_no_alloc_regs);
       AND_HARD_REG_SET (conflicting_hard_regs,
-			reg_class_contents[ALLOCNO_COVER_CLASS (a)]);
+			reg_class_contents[ALLOCNO_CLASS (a)]);
       print_hard_reg_set (file, "\n;;     total conflict hard regs:",
 			  conflicting_hard_regs);
 
       COPY_HARD_REG_SET (conflicting_hard_regs, OBJECT_CONFLICT_HARD_REGS (obj));
       AND_COMPL_HARD_REG_SET (conflicting_hard_regs, ira_no_alloc_regs);
       AND_HARD_REG_SET (conflicting_hard_regs,
-			reg_class_contents[ALLOCNO_COVER_CLASS (a)]);
+			reg_class_contents[ALLOCNO_CLASS (a)]);
       print_hard_reg_set (file, ";;     conflict hard regs:",
 			  conflicting_hard_regs);
       putc ('\n', file);
@@ -877,6 +887,7 @@ ira_build_conflicts (void)
   FOR_EACH_ALLOCNO (a, ai)
     {
       int i, n = ALLOCNO_NUM_OBJECTS (a);
+
       for (i = 0; i < n; i++)
 	{
 	  ira_object_t obj = ALLOCNO_OBJECT (a, i);

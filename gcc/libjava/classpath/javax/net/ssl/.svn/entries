@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/net/ssl
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-06-28T13:29:13.958049Z
-137223
-doko
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -134,11 +134,11 @@ file
 
 
 
-2009-04-24T17:47:18.000000Z
-d8c55222e1b9beffdc3aedccc1b191a9
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:37:56.482104Z
+2355abd8aa914616bd609d0894373bf1
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -160,7 +160,7 @@ tromey
 
 
 
-9493
+9490
 
 X509KeyManager.java
 file
@@ -338,11 +338,11 @@ file
 
 
 
-2009-04-24T17:47:18.000000Z
-44db30c6562d04c3586d38b458dc9a83
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:37:56.482104Z
+1591af9ecab72a301c9b023153503af2
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -364,7 +364,7 @@ tromey
 
 
 
-9922
+9919
 
 TrustManager.java
 file
@@ -502,40 +502,6 @@ tromey
 
 2095
 
-SSLServerSocketFactory.java
-file
-
-
-
-
-2009-04-24T17:47:18.000000Z
-ed2759de88393f2ab5145ebdeaeb8cb1
-2007-06-03T23:18:43.019099Z
-125302
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7156
-
 HandshakeCompletedListener.java
 file
 
@@ -570,17 +536,17 @@ tromey
 
 2333
 
-X509ExtendedKeyManager.java
+SSLServerSocketFactory.java
 file
 
 
 
 
 2009-04-24T17:47:18.000000Z
-331c9c9c273a7ee1c9d85c6dcef3f167
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+ed2759de88393f2ab5145ebdeaeb8cb1
+2007-06-03T23:18:43.019099Z
+125302
+doko
 
 
 
@@ -602,7 +568,41 @@ tromey
 
 
 
-3462
+7156
+
+X509ExtendedKeyManager.java
+file
+
+
+
+
+2011-06-04T18:37:56.482104Z
+85abb8efc6e53dc62fa4691de1a7421f
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3461
 
 CertPathTrustManagerParameters.java
 file
@@ -610,11 +610,11 @@ file
 
 
 
-2009-04-24T17:47:18.000000Z
-bedf63634390f5c79c8fff6b332cd18f
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:37:56.483104Z
+dc1dfef479012c7b171e6cd084f6d1c0
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -636,7 +636,7 @@ tromey
 
 
 
-2620
+2619
 
 KeyStoreBuilderParameters.java
 file
@@ -644,11 +644,11 @@ file
 
 
 
-2009-04-24T17:47:18.000000Z
-138951999222f7015f872b3a4af77542
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:37:56.483104Z
+7c6a6ed9fad1d2996b53129997b46fd6
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -670,7 +670,7 @@ tromey
 
 
 
-2007
+2006
 
 SSLServerSocket.java
 file
@@ -706,40 +706,6 @@ tromey
 
 5976
 
-SSLSocketFactory.java
-file
-
-
-
-
-2009-04-24T17:47:18.000000Z
-e25ae245bbfcc2b71daff223bf7400da
-2007-06-03T23:18:43.019099Z
-125302
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7953
-
 SSLProtocolException.java
 file
 
@@ -774,17 +740,51 @@ tromey
 
 2108
 
+SSLSocketFactory.java
+file
+
+
+
+
+2009-04-24T17:47:18.000000Z
+e25ae245bbfcc2b71daff223bf7400da
+2007-06-03T23:18:43.019099Z
+125302
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7953
+
 TrustManagerFactory.java
 file
 
 
 
 
-2009-04-24T17:47:18.000000Z
-7042b7035aca717141534be257712427
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:37:56.483104Z
+bc5c759e585ca913af6468ca149b3cfd
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -806,19 +806,19 @@ tromey
 
 
 
-9584
+9581
 
-TrivialHostnameVerifier.java
+HttpsURLConnection.java
 file
 
 
 
 
 2009-04-24T17:47:18.000000Z
-421e86a9f3e3363d8307427fa921a44c
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+67b64974c81eb23e5e66167f47693d2a
+2008-06-28T13:29:13.958049Z
+137223
+doko
 
 
 
@@ -840,7 +840,7 @@ tromey
 
 
 
-2016
+10058
 
 SSLSession.java
 file
@@ -876,17 +876,17 @@ tromey
 
 6639
 
-HttpsURLConnection.java
+TrivialHostnameVerifier.java
 file
 
 
 
 
 2009-04-24T17:47:18.000000Z
-67b64974c81eb23e5e66167f47693d2a
-2008-06-28T13:29:13.958049Z
-137223
-doko
+421e86a9f3e3363d8307427fa921a44c
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -908,7 +908,7 @@ doko
 
 
 
-10058
+2016
 
 SSLPeerUnverifiedException.java
 file
@@ -978,6 +978,40 @@ tromey
 
 1929
 
+SSLException.java
+file
+
+
+
+
+2011-06-04T18:37:56.483104Z
+5de39e0576883e15f97e71143b969716
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2928
+
 TrustManagerFactorySpi.java
 file
 
@@ -1011,40 +1045,6 @@ tromey
 
 
 3232
-
-SSLException.java
-file
-
-
-
-
-2009-04-24T17:47:18.000000Z
-6227067f560a303748396a6cfa2eaa69
-2006-03-10T21:46:48.115162Z
-111942
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2933
 
 HandshakeCompletedEvent.java
 file
@@ -1086,11 +1086,11 @@ file
 
 
 
-2009-04-24T17:47:18.000000Z
-d621ba05e21c3c40df5c953d13f5e2e7
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:37:56.484104Z
+e40ddd0d0755e1f35a44db75bfdd902e
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -1112,7 +1112,7 @@ tromey
 
 
 
-5242
+5274
 
 KeyManagerFactorySpi.java
 file
@@ -1154,11 +1154,11 @@ file
 
 
 
-2009-04-24T17:47:18.000000Z
-ce4c09106a3f8079c47b4e4f058ea35a
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2011-06-04T18:37:56.484104Z
+34bd065807b053e86a4df248c474ffb6
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -1180,7 +1180,7 @@ tromey
 
 
 
-14947
+15051
 
 SSLHandshakeException.java
 file

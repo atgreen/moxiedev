@@ -25,7 +25,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "rtl.h"
 #include "hard-reg-set.h"
 #include "insn-config.h"
@@ -2887,7 +2886,124 @@ for_each_rtx (rtx *x, rtx_function f, void *data)
   return for_each_rtx_1 (*x, i, f, data);
 }
 
+
 
+/* Data structure that holds the internal state communicated between
+   for_each_inc_dec, for_each_inc_dec_find_mem and
+   for_each_inc_dec_find_inc_dec.  */
+
+struct for_each_inc_dec_ops {
+  /* The function to be called for each autoinc operation found.  */
+  for_each_inc_dec_fn fn;
+  /* The opaque argument to be passed to it.  */
+  void *arg;
+  /* The MEM we're visiting, if any.  */
+  rtx mem;
+};
+
+static int for_each_inc_dec_find_mem (rtx *r, void *d);
+
+/* Find PRE/POST-INC/DEC/MODIFY operations within *R, extract the
+   operands of the equivalent add insn and pass the result to the
+   operator specified by *D.  */
+
+static int
+for_each_inc_dec_find_inc_dec (rtx *r, void *d)
+{
+  rtx x = *r;
+  struct for_each_inc_dec_ops *data = (struct for_each_inc_dec_ops *)d;
+
+  switch (GET_CODE (x))
+    {
+    case PRE_INC:
+    case POST_INC:
+      {
+	int size = GET_MODE_SIZE (GET_MODE (data->mem));
+	rtx r1 = XEXP (x, 0);
+	rtx c = gen_int_mode (size, GET_MODE (r1));
+	return data->fn (data->mem, x, r1, r1, c, data->arg);
+      }
+
+    case PRE_DEC:
+    case POST_DEC:
+      {
+	int size = GET_MODE_SIZE (GET_MODE (data->mem));
+	rtx r1 = XEXP (x, 0);
+	rtx c = gen_int_mode (-size, GET_MODE (r1));
+	return data->fn (data->mem, x, r1, r1, c, data->arg);
+      }
+
+    case PRE_MODIFY:
+    case POST_MODIFY:
+      {
+	rtx r1 = XEXP (x, 0);
+	rtx add = XEXP (x, 1);
+	return data->fn (data->mem, x, r1, add, NULL, data->arg);
+      }
+
+    case MEM:
+      {
+	rtx save = data->mem;
+	int ret = for_each_inc_dec_find_mem (r, d);
+	data->mem = save;
+	return ret;
+      }
+
+    default:
+      return 0;
+    }
+}
+
+/* If *R is a MEM, find PRE/POST-INC/DEC/MODIFY operations within its
+   address, extract the operands of the equivalent add insn and pass
+   the result to the operator specified by *D.  */
+
+static int
+for_each_inc_dec_find_mem (rtx *r, void *d)
+{
+  rtx x = *r;
+  if (x != NULL_RTX && MEM_P (x))
+    {
+      struct for_each_inc_dec_ops *data = (struct for_each_inc_dec_ops *) d;
+      int result;
+
+      data->mem = x;
+
+      result = for_each_rtx (&XEXP (x, 0), for_each_inc_dec_find_inc_dec,
+			     data);
+      if (result)
+	return result;
+
+      return -1;
+    }
+  return 0;
+}
+
+/* Traverse *X looking for MEMs, and for autoinc operations within
+   them.  For each such autoinc operation found, call FN, passing it
+   the innermost enclosing MEM, the operation itself, the RTX modified
+   by the operation, two RTXs (the second may be NULL) that, once
+   added, represent the value to be held by the modified RTX
+   afterwards, and ARG.  FN is to return -1 to skip looking for other
+   autoinc operations within the visited operation, 0 to continue the
+   traversal, or any other value to have it returned to the caller of
+   for_each_inc_dec.  */
+
+int
+for_each_inc_dec (rtx *x,
+		  for_each_inc_dec_fn fn,
+		  void *arg)
+{
+  struct for_each_inc_dec_ops data;
+
+  data.fn = fn;
+  data.arg = arg;
+  data.mem = NULL;
+
+  return for_each_rtx (x, for_each_inc_dec_find_mem, &data);
+}
+
+
 /* Searches X for any reference to REGNO, returning the rtx of the
    reference found if any.  Otherwise, returns NULL_RTX.  */
 
@@ -3336,8 +3452,8 @@ simplify_subreg_regno (unsigned int xregno, enum machine_mode xmode,
   /* See whether (reg:YMODE YREGNO) is valid.
 
      ??? We allow invalid registers if (reg:XMODE XREGNO) is also invalid.
-     This is a kludge to work around how float/complex arguments are passed
-     on 32-bit SPARC and should be fixed.  */
+     This is a kludge to work around how complex FP arguments are passed
+     on IA-64 and should be fixed.  See PR target/49226.  */
   if (!HARD_REGNO_MODE_OK (yregno, ymode)
       && HARD_REGNO_MODE_OK (xregno, xmode))
     return -1;

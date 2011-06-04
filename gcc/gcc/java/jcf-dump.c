@@ -2,7 +2,7 @@
    Functionally similar to Sun's javap.
 
    Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -52,6 +52,7 @@ The Free Software Foundation is independent of Sun Microsystems, Inc.  */
 #include "system.h"
 #include "coretypes.h"
 #include "intl.h"
+#include "diagnostic.h"
 
 #include "jcf.h"
 #include "tree.h"
@@ -1161,7 +1162,7 @@ static void
 version (void)
 {
   printf ("jcf-dump %s%s\n\n", pkgversion_string, version_string);
-  printf ("Copyright %s 2010 Free Software Foundation, Inc.\n", _("(C)"));
+  printf ("Copyright %s 2011 Free Software Foundation, Inc.\n", _("(C)"));
   printf (_("This is free software; see the source for copying conditions.  There is NO\n"
 	    "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"));
   exit (0);
@@ -1172,11 +1173,21 @@ main (int argc, char** argv)
 {
   JCF jcf[1];
   int argi, opt;
+  const char *p;
+
+  p = argv[0] + strlen (argv[0]);
+  while (p != argv[0] && !IS_DIR_SEPARATOR (p[-1]))
+    --p;
+  progname = p;
+
+  xmalloc_set_program_name (progname);
 
   /* Unlock the stdio streams.  */
   unlock_std_streams ();
 
   gcc_init_libintl ();
+
+  diagnostic_initialize (global_dc, 0);
 
   if (argc <= 1)
     {

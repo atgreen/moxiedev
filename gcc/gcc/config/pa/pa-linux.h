@@ -1,5 +1,6 @@
 /* Definitions for PA_RISC with ELF format
-   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2009
+   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2009, 2010,
+   2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -23,7 +24,7 @@ along with GCC; see the file COPYING3.  If not see
 #define TARGET_OS_CPP_BUILTINS()		\
   do						\
     {						\
-	LINUX_TARGET_OS_CPP_BUILTINS();		\
+	GNU_USER_TARGET_OS_CPP_BUILTINS();	\
 	builtin_assert ("machine=bigendian");	\
     }						\
   while (0)
@@ -33,7 +34,7 @@ along with GCC; see the file COPYING3.  If not see
 
 #undef ASM_SPEC
 #define ASM_SPEC \
-  "%{v:-V} %{n} %{T} %{Ym,*} %{Yd,*} %{Wa,*:%*}"
+  ""
 
 /* Define this for shared library support because it isn't in the main
    linux.h file.  */
@@ -46,7 +47,7 @@ along with GCC; see the file COPYING3.  If not see
   %{!shared: \
     %{!static: \
       %{rdynamic:-export-dynamic} \
-      %{!dynamic-linker:-dynamic-linker " LINUX_DYNAMIC_LINKER "}} \
+      -dynamic-linker " GNU_USER_DYNAMIC_LINKER "} \
       %{static:-static}}"
 
 /* glibc's profiling functions don't need gcc to allocate counters.  */

@@ -1,6 +1,6 @@
 /* Allocation for dataflow support routines.
    Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009, 2010 Free Software Foundation, Inc.
+   2008, 2009, 2010, 2011 Free Software Foundation, Inc.
    Originally contributed by Michael P. Hayes
              (m.hayes@elec.canterbury.ac.nz, mhayes@redhat.com)
    Major rewrite contributed by Danny Berlin (dberlin@dberlin.org)
@@ -811,10 +811,8 @@ rest_of_handle_df_finish (void)
       dflow->problem->free_fun ();
     }
 
-  if (df->postorder)
-    free (df->postorder);
-  if (df->postorder_inverted)
-    free (df->postorder_inverted);
+  free (df->postorder);
+  free (df->postorder_inverted);
   free (df->hard_regs_live_count);
   free (df);
   df = NULL;
@@ -1183,10 +1181,8 @@ df_analyze (void)
   bool everything;
   int i;
 
-  if (df->postorder)
-    free (df->postorder);
-  if (df->postorder_inverted)
-    free (df->postorder_inverted);
+  free (df->postorder);
+  free (df->postorder_inverted);
   df->postorder = XNEWVEC (int, last_basic_block);
   df->postorder_inverted = XNEWVEC (int, last_basic_block);
   df->n_blocks = post_order_compute (df->postorder, true, true);
@@ -1400,10 +1396,9 @@ df_mark_solutions_dirty (void)
 bool
 df_get_bb_dirty (basic_block bb)
 {
-  if (df && df_live)
-    return bitmap_bit_p (df_live->out_of_date_transfer_functions, bb->index);
-  else
-    return false;
+  return bitmap_bit_p ((df_live
+			? df_live : df_lr)->out_of_date_transfer_functions,
+		       bb->index);
 }
 
 
@@ -1413,6 +1408,7 @@ df_get_bb_dirty (basic_block bb)
 void
 df_set_bb_dirty (basic_block bb)
 {
+  bb->flags |= BB_MODIFIED;
   if (df)
     {
       int p;
@@ -1725,8 +1721,7 @@ df_check_cfg_clean (void)
 static void
 df_set_clean_cfg (void)
 {
-  if (saved_cfg)
-    free (saved_cfg);
+  free (saved_cfg);
   saved_cfg = df_compute_cfg_image ();
 }
 

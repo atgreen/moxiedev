@@ -1,6 +1,6 @@
 /* Register to Stack convert for GNU compiler.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2010
    Free Software Foundation, Inc.
 
    This file is part of GCC.
@@ -3150,11 +3150,14 @@ convert_regs (void)
 	cfg_altered |= convert_regs_2 (b);
     }
 
+  /* We must fix up abnormal edges before inserting compensation code
+     because both mechanisms insert insns on edges.  */
+  inserted |= fixup_abnormal_edges ();
+
   inserted |= compensate_edges ();
 
   clear_aux_for_blocks ();
 
-  fixup_abnormal_edges ();
   if (inserted)
     commit_edge_insertions ();
 

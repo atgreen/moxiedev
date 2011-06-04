@@ -1,4 +1,4 @@
-# Copyright (C) 2003, 2005, 2008, 2009 Free Software Foundation, Inc.
+# Copyright (C) 2003, 2005, 2008, 2009, 2010 Free Software Foundation, Inc.
 #
 # This file is part of GCC.
 #
@@ -30,26 +30,26 @@ LIBGCC2_INCLUDES = -I$(srcdir)/../winsup/w32api/include
 
 winnt.o: $(srcdir)/config/i386/winnt.c $(CONFIG_H) $(SYSTEM_H) coretypes.h \
   $(TM_H) $(RTL_H) $(REGS_H) hard-reg-set.h output.h $(TREE_H) flags.h \
-  $(TM_P_H) toplev.h $(HASHTAB_H) $(GGC_H) $(LTO_STREAMER_H)
+  $(TM_P_H) $(HASHTAB_H) $(GGC_H) $(LTO_STREAMER_H)
 	$(COMPILER) -c $(ALL_COMPILERFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
 	$(srcdir)/config/i386/winnt.c
 
 winnt-cxx.o: $(srcdir)/config/i386/winnt-cxx.c $(CONFIG_H) $(SYSTEM_H) coretypes.h \
   $(TM_H) $(TREE_H) flags.h \
-  $(TM_P_H) toplev.h $(HASHTAB_H) $(GGC_H)
+  $(TM_P_H) $(HASHTAB_H) $(GGC_H)
 	$(COMPILER) -c $(ALL_COMPILERFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
 	$(srcdir)/config/i386/winnt-cxx.c
 
 
 winnt-stubs.o: $(srcdir)/config/i386/winnt-stubs.c $(CONFIG_H) $(SYSTEM_H) coretypes.h \
   $(TM_H) $(RTL_H) $(REGS_H) hard-reg-set.h output.h $(TREE_H) flags.h \
-  $(TM_P_H) toplev.h $(HASHTAB_H) $(GGC_H)
+  $(TM_P_H) $(HASHTAB_H) $(GGC_H)
 	$(COMPILER) -c $(ALL_COMPILERFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
 	$(srcdir)/config/i386/winnt-stubs.c
 
 msformat-c.o: $(srcdir)/config/i386/msformat-c.c $(CONFIG_H) $(SYSTEM_H) coretypes.h \
   $(TM_H) $(RTL_H) $(REGS_H) hard-reg-set.h output.h $(TREE_H) flags.h \
-  $(TM_P_H) toplev.h $(HASHTAB_H) $(GGC_H)
+  $(TM_P_H) $(HASHTAB_H) $(GGC_H)
 	$(COMPILER) -c $(ALL_COMPILERFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
 	$(srcdir)/config/i386/msformat-c.c
 
@@ -72,16 +72,28 @@ SHLIB_MAP = @shlib_map_file@
 SHLIB_OBJS = @shlib_objs@
 SHLIB_DIR = @multilib_dir@/shlib
 SHLIB_SLIBDIR_QUAL = @shlib_slibdir_qual@
+# SHLIB_DLLDIR is defined by including one of either t-dlldir or t-dlldir-x
+# (native/cross build respectively) in the tmake_file list in gcc/config.gcc.
+ifndef SHLIB_DLLDIR
+$(error SHLIB_DLLDIR must be defined)
+endif
+ifndef SHLIB_PTHREAD_CFLAG
+SHLIB_PTHREAD_CFLAG =
+endif
+ifndef SHLIB_PTHREAD_LDFLAG
+SHLIB_PTHREAD_LDFLAG =
+endif
 
 SHLIB_LINK = $(LN_S) -f $(SHLIB_MAP) $(SHLIB_MAP).def && \
 	if [ ! -d $(SHLIB_DIR) ]; then \
 		mkdir $(SHLIB_DIR); \
 	else true; fi && \
-	$(GCC_FOR_TARGET) $(LIBGCC2_CFLAGS) -shared -nodefaultlibs \
+	$(GCC_FOR_TARGET) $(LIBGCC2_CFLAGS) $(SHLIB_PTHREAD_CFLAG) \
+	-shared -nodefaultlibs \
 	$(SHLIB_MAP).def \
 	-Wl,--out-implib,$(SHLIB_DIR)/$(SHLIB_IMPLIB).tmp \
 	-o $(SHLIB_DIR)/$(SHLIB_SONAME).tmp @multilib_flags@ \
-	$(SHLIB_OBJS) $(SHLIB_LC) && \
+	$(SHLIB_OBJS) ${SHLIB_PTHREAD_LDFLAG} $(SHLIB_LC) && \
 	if [ -f $(SHLIB_DIR)/$(SHLIB_SONAME) ]; then \
 	  mv -f $(SHLIB_DIR)/$(SHLIB_SONAME) \
 		$(SHLIB_DIR)/$(SHLIB_SONAME).backup; \
@@ -91,13 +103,14 @@ SHLIB_LINK = $(LN_S) -f $(SHLIB_MAP) $(SHLIB_MAP).def && \
 # $(slibdir) double quoted to protect it from expansion while building
 # libgcc.mk.  We want this delayed until actual install time.
 SHLIB_INSTALL = \
-	$$(mkinstalldirs) $$(DESTDIR)$$(slibdir)$(SHLIB_SLIBDIR_QUAL); \
+	$$(mkinstalldirs) $$(DESTDIR)$$(SHLIB_DLLDIR) \
+	  $$(DESTDIR)$$(slibdir)$(SHLIB_SLIBDIR_QUAL); \
 	$(INSTALL) $(SHLIB_DIR)/$(SHLIB_SONAME) \
-	  $$(DESTDIR)$$(bindir)/$(SHLIB_SONAME); \
+	  $$(DESTDIR)$$(SHLIB_DLLDIR)/$(SHLIB_SONAME); \
 	$(INSTALL_DATA) $(SHLIB_DIR)/$(SHLIB_IMPLIB) \
 	  $$(DESTDIR)$$(slibdir)$(SHLIB_SLIBDIR_QUAL)/$(SHLIB_IMPLIB)
 SHLIB_MKMAP = $(srcdir)/mkmap-flat.awk
 # We'd like to use SHLIB_SONAME here too, but shlib_base_name
 # does not get substituted before mkmap-flat.awk is run.
 SHLIB_MKMAP_OPTS = -v pe_dll=libgcc_s_$(EH_MODEL)-$(SHLIB_SOVERSION)$(SHLIB_EXT)
-SHLIB_MAPFILES = $(srcdir)/libgcc-std.ver
+SHLIB_MAPFILES = $$(libgcc_objdir)/libgcc-std.ver

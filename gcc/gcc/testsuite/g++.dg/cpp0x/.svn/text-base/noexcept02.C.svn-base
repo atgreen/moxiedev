@@ -10,9 +10,9 @@ void f();
 
 SA(!noexcept(f()));
 
-void g() throw (int);
-void g() noexcept(false);	// { dg-error "previous declaration" }
-void g();			// { dg-error "different exception" }
+void g() throw (int);		// { dg-error "previous declaration" }
+void g() noexcept(false);	// { dg-error "different exception" }
+void g();
 
 void h() throw();
 void h() noexcept;
@@ -46,7 +46,9 @@ SA(!noexcept(f3(A())));
 template <class T1, class T2>
 void f (T1, T2) noexcept(noexcept(T1(), T2()));
 
-SA(noexcept(f3(1,1)));
+struct B { };
+
+SA(noexcept(f3(1,B())));
 SA(!noexcept(f3(1,A())));
 SA(!noexcept(f3(A(),1)));
 SA(!noexcept(f3(A(),A())));

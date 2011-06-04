@@ -31,7 +31,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "cp-tree.h"
 #include "flags.h"
 #include "output.h"
-#include "toplev.h"
 #include "tree-inline.h"
 #include "tree-iterator.h"
 #include "target.h"
@@ -1126,6 +1125,9 @@ finish_noexcept_expr (tree expr, tsubst_flags_t complain)
 {
   tree fn;
 
+  if (expr == error_mark_node)
+    return error_mark_node;
+
   if (processing_template_decl)
     return build_min (NOEXCEPT_EXPR, boolean_type_node, expr);
 
@@ -1204,15 +1206,17 @@ build_noexcept_spec (tree expr, int complain)
      it until instantiation.  */
   if (!processing_template_decl)
     {
-      expr = cxx_constant_value (expr);
       expr = perform_implicit_conversion_flags (boolean_type_node, expr,
 						complain,
 						LOOKUP_NORMAL);
+      expr = cxx_constant_value (expr);
     }
   if (expr == boolean_true_node)
     return noexcept_true_spec;
   else if (expr == boolean_false_node)
     return noexcept_false_spec;
+  else if (expr == error_mark_node)
+    return error_mark_node;
   else
     {
       gcc_assert (processing_template_decl || expr == error_mark_node);

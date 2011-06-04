@@ -1,6 +1,6 @@
 /* Definitions for GCC.  Part of the machine description for CRIS.
    Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009, 2010  Free Software Foundation, Inc.
+   2008, 2009, 2010, 2011  Free Software Foundation, Inc.
    Contributed by Axis Communications.  Written by Hans-Peter Nilsson.
 
 This file is part of GCC.
@@ -35,7 +35,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "except.h"
 #include "function.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "recog.h"
 #include "reload.h"
 #include "tm_p.h"
@@ -46,6 +45,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "ggc.h"
 #include "optabs.h"
 #include "df.h"
+#include "opts.h"
 
 /* Usable when we have an amount to add or subtract, and want the
    optimal size of the insn.  */
@@ -137,7 +137,8 @@ static void cris_function_arg_advance (CUMULATIVE_ARGS *, enum machine_mode,
 				       const_tree, bool);
 static tree cris_md_asm_clobbers (tree, tree, tree);
 
-static bool cris_handle_option (size_t, const char *, int);
+static bool cris_handle_option (struct gcc_options *, struct gcc_options *,
+				const struct cl_decoded_option *, location_t);
 static void cris_option_override (void);
 
 static bool cris_frame_pointer_required (void);
@@ -1789,7 +1790,7 @@ cris_expand_return (bool on_stack)
      we do that until they're fixed.  Currently, all return insns in a
      function must be the same (not really a limiting factor) so we need
      to check that it doesn't change half-way through.  */
-  emit_jump_insn (gen_rtx_RETURN (VOIDmode));
+  emit_jump_insn (ret_rtx);
 
   CRIS_ASSERT (cfun->machine->return_type != CRIS_RETINSN_RET || !on_stack);
   CRIS_ASSERT (cfun->machine->return_type != CRIS_RETINSN_JUMP || on_stack);
@@ -2339,20 +2340,24 @@ cris_asm_output_case_end (FILE *stream, int num, rtx table)
    cris_option_override.  */
 
 static bool
-cris_handle_option (size_t code, const char *arg ATTRIBUTE_UNUSED,
-		    int value ATTRIBUTE_UNUSED)
+cris_handle_option (struct gcc_options *opts,
+		    struct gcc_options *opts_set ATTRIBUTE_UNUSED,
+		    const struct cl_decoded_option *decoded,
+		    location_t loc ATTRIBUTE_UNUSED)
 {
+  size_t code = decoded->opt_index;
+
   switch (code)
     {
     case OPT_metrax100:
-      target_flags
+      opts->x_target_flags
 	|= (MASK_SVINTO
 	    + MASK_ETRAX4_ADD
 	    + MASK_ALIGN_BY_32);
       break;
 
     case OPT_mno_etrax100:
-      target_flags
+      opts->x_target_flags
 	&= ~(MASK_SVINTO
 	     + MASK_ETRAX4_ADD
 	     + MASK_ALIGN_BY_32);
@@ -2360,7 +2365,7 @@ cris_handle_option (size_t code, const char *arg ATTRIBUTE_UNUSED,
 
     case OPT_m32_bit:
     case OPT_m32bit:
-      target_flags
+      opts->x_target_flags
 	|= (MASK_STACK_ALIGN
 	    + MASK_CONST_ALIGN
 	    + MASK_DATA_ALIGN
@@ -2369,7 +2374,7 @@ cris_handle_option (size_t code, const char *arg ATTRIBUTE_UNUSED,
 
     case OPT_m16_bit:
     case OPT_m16bit:
-      target_flags
+      opts->x_target_flags
 	|= (MASK_STACK_ALIGN
 	    + MASK_CONST_ALIGN
 	    + MASK_DATA_ALIGN);
@@ -2377,7 +2382,7 @@ cris_handle_option (size_t code, const char *arg ATTRIBUTE_UNUSED,
 
     case OPT_m8_bit:
     case OPT_m8bit:
-      target_flags
+      opts->x_target_flags
 	&= ~(MASK_STACK_ALIGN
 	     + MASK_CONST_ALIGN
 	     + MASK_DATA_ALIGN);
@@ -2386,8 +2391,6 @@ cris_handle_option (size_t code, const char *arg ATTRIBUTE_UNUSED,
     default:
       break;
     }
-
-  CRIS_SUBTARGET_HANDLE_OPTION(code, arg, value);
 
   return true;
 }

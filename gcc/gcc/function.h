@@ -1,6 +1,6 @@
 /* Structure for saving state for a nested function.
    Copyright (C) 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   1999, 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -226,11 +226,6 @@ struct GTY(()) function_subsections {
   const char *cold_section_label;
   const char *hot_section_end_label;
   const char *cold_section_end_label;
-
-  /* String to be used for name of cold text sections, via
-     targetm.asm_out.named_section.  */
-
-  const char *unlikely_text_section_name;
 };
 
 /* Describe an empty area of space in the stack frame.  These can be chained
@@ -481,9 +476,6 @@ struct GTY(()) stack_usage
      !ACCUMULATE_OUTGOING_ARGS, it contains the outgoing arguments.  */
   int pushed_stack_size;
 
-  /* # of dynamic allocations in the function.  */
-  unsigned int dynamic_alloc_count : 31;
-
   /* Nonzero if the amount of stack space allocated dynamically cannot
      be bounded at compile-time.  */
   unsigned int has_unbounded_dynamic_stack_size : 1;
@@ -492,7 +484,6 @@ struct GTY(()) stack_usage
 #define current_function_static_stack_size (cfun->su->static_stack_size)
 #define current_function_dynamic_stack_size (cfun->su->dynamic_stack_size)
 #define current_function_pushed_stack_size (cfun->su->pushed_stack_size)
-#define current_function_dynamic_alloc_count (cfun->su->dynamic_alloc_count)
 #define current_function_has_unbounded_dynamic_stack_size \
   (cfun->su->has_unbounded_dynamic_stack_size)
 #define current_function_allocates_dynamic_stack_space    \
@@ -602,15 +593,6 @@ struct GTY(()) function {
   /* Nonzero if current function uses stdarg.h or equivalent.  */
   unsigned int stdarg : 1;
 
-  /* Nonzero if the back-end should not keep track of expressions that
-     determine the size of variable-sized objects.  Normally, such
-     expressions are saved away, and then expanded when the next
-     function is started.  For example, if a parameter has a
-     variable-sized type, then the size of the parameter is computed
-     when the function body is entered.  However, some front-ends do
-     not desire this behavior.  */
-  unsigned int dont_save_pending_sizes_p : 1;
-
   unsigned int after_inlining : 1;
   unsigned int always_inline_functions_inlined : 1;
 
@@ -718,6 +700,7 @@ extern void number_blocks (tree);
 
 extern void clear_block_marks (tree);
 extern tree blocks_nreverse (tree);
+extern tree block_chainon (tree, tree);
 
 /* Return size needed for stack frame based on slots so far allocated.
    This size counts from zero.  It is not rounded to STACK_BOUNDARY;
@@ -759,6 +742,7 @@ extern bool reference_callee_copied (CUMULATIVE_ARGS *, enum machine_mode,
 extern void used_types_insert (tree);
 
 extern int get_next_funcdef_no (void);
+extern int get_last_funcdef_no (void);
 
 /* In predict.c */
 extern bool optimize_function_for_size_p (struct function *);

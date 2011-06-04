@@ -1,5 +1,5 @@
 /* Copyright (C) 1997, 1998, 1999, 2000, 2001, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009, 2010  Free Software Foundation, Inc.
+   2008, 2009, 2010, 2011  Free Software Foundation, Inc.
    Contributed by Red Hat, Inc.
 
 This file is part of GCC.
@@ -40,11 +40,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "function.h"
 #include "optabs.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "basic-block.h"
 #include "tm_p.h"
 #include "ggc.h"
-#include <ctype.h>
 #include "target.h"
 #include "target-def.h"
 #include "targhooks.h"
@@ -254,18 +252,11 @@ static /* GTY(()) */ frv_ifcvt_t frv_ifcvt;
 /* Map register number to smallest register class.  */
 enum reg_class regno_reg_class[FIRST_PSEUDO_REGISTER];
 
-/* Map class letter into register class.  */
-enum reg_class reg_class_from_letter[256];
-
 /* Cached value of frv_stack_info.  */
 static frv_stack_t *frv_stack_cache = (frv_stack_t *)0;
 
-/* -mcpu= support */
-frv_cpu_t frv_cpu_type = CPU_TYPE;	/* value of -mcpu= */
-
 /* Forward references */
 
-static bool frv_handle_option			(size_t, const char *, int);
 static void frv_option_override			(void);
 static bool frv_legitimate_address_p		(enum machine_mode, rtx, bool);
 static int frv_default_flags_for_cpu		(void);
@@ -381,7 +372,8 @@ static int frv_memory_move_cost			(enum machine_mode,
 static void frv_asm_out_constructor		(rtx, int);
 static void frv_asm_out_destructor		(rtx, int);
 static bool frv_function_symbol_referenced_p	(rtx);
-static bool frv_cannot_force_const_mem		(rtx);
+static bool frv_legitimate_constant_p		(enum machine_mode, rtx);
+static bool frv_cannot_force_const_mem		(enum machine_mode, rtx);
 static const char *unspec_got_name		(int);
 static void frv_output_const_unspec		(FILE *,
 						 const struct frv_unspec *);
@@ -445,8 +437,6 @@ static const struct default_options frv_option_optimization_table[] =
    | MASK_VLIW_BRANCH				\
    | MASK_MULTI_CE				\
    | MASK_NESTED_CE)
-#undef TARGET_HANDLE_OPTION
-#define TARGET_HANDLE_OPTION frv_handle_option
 #undef TARGET_OPTION_OVERRIDE
 #define TARGET_OPTION_OVERRIDE frv_option_override
 #undef TARGET_OPTION_OPTIMIZATION_TABLE
@@ -483,6 +473,8 @@ static const struct default_options frv_option_optimization_table[] =
 
 #undef TARGET_FUNCTION_OK_FOR_SIBCALL
 #define TARGET_FUNCTION_OK_FOR_SIBCALL frv_function_ok_for_sibcall
+#undef TARGET_LEGITIMATE_CONSTANT_P
+#define TARGET_LEGITIMATE_CONSTANT_P frv_legitimate_constant_p
 #undef TARGET_CANNOT_FORCE_CONST_MEM
 #define TARGET_CANNOT_FORCE_CONST_MEM frv_cannot_force_const_mem
 
@@ -614,7 +606,7 @@ frv_const_unspec_p (rtx x, struct frv_unspec *unspec)
    We never allow constants to be forced into memory for TARGET_FDPIC.
    This is necessary for several reasons:
 
-   1. Since LEGITIMATE_CONSTANT_P rejects constant pool addresses, the
+   1. Since frv_legitimate_constant_p rejects constant pool addresses, the
       target-independent code will try to force them into the constant
       pool, thus leading to infinite recursion.
 
@@ -627,46 +619,12 @@ frv_const_unspec_p (rtx x, struct frv_unspec *unspec)
    4. In many cases, it's more efficient to calculate the constant in-line.  */
 
 static bool
-frv_cannot_force_const_mem (rtx x ATTRIBUTE_UNUSED)
+frv_cannot_force_const_mem (enum machine_mode mode ATTRIBUTE_UNUSED,
+			    rtx x ATTRIBUTE_UNUSED)
 {
   return TARGET_FDPIC;
 }
 
-/* Implement TARGET_HANDLE_OPTION.  */
-
-static bool
-frv_handle_option (size_t code, const char *arg, int value ATTRIBUTE_UNUSED)
-{
-  switch (code)
-    {
-    case OPT_mcpu_:
-      if (strcmp (arg, "simple") == 0)
-	frv_cpu_type = FRV_CPU_SIMPLE;
-      else if (strcmp (arg, "tomcat") == 0)
-	frv_cpu_type = FRV_CPU_TOMCAT;
-      else if (strcmp (arg, "fr550") == 0)
-	frv_cpu_type = FRV_CPU_FR550;
-      else if (strcmp (arg, "fr500") == 0)
-	frv_cpu_type = FRV_CPU_FR500;
-      else if (strcmp (arg, "fr450") == 0)
-	frv_cpu_type = FRV_CPU_FR450;
-      else if (strcmp (arg, "fr405") == 0)
-	frv_cpu_type = FRV_CPU_FR405;
-      else if (strcmp (arg, "fr400") == 0)
-	frv_cpu_type = FRV_CPU_FR400;
-      else if (strcmp (arg, "fr300") == 0)
-	frv_cpu_type = FRV_CPU_FR300;
-      else if (strcmp (arg, "frv") == 0)
-	frv_cpu_type = FRV_CPU_GENERIC;
-      else
-	return false;
-      return true;
-
-    default:
-      return true;
-    }
-}
-
 static int
 frv_default_flags_for_cpu (void)
 {
@@ -810,48 +768,6 @@ frv_option_override (void)
   /* Check for small data option */
   if (!global_options_set.x_g_switch_value && !TARGET_LIBPIC)
     g_switch_value = SDATA_DEFAULT_SIZE;
-
-  /* A C expression which defines the machine-dependent operand
-     constraint letters for register classes.  If CHAR is such a
-     letter, the value should be the register class corresponding to
-     it.  Otherwise, the value should be `NO_REGS'.  The register
-     letter `r', corresponding to class `GENERAL_REGS', will not be
-     passed to this macro; you do not need to handle it.
-
-     The following letters are unavailable, due to being used as
-     constraints:
-	'0'..'9'
-	'<', '>'
-	'E', 'F', 'G', 'H'
-	'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'
-	'Q', 'R', 'S', 'T', 'U'
-	'V', 'X'
-	'g', 'i', 'm', 'n', 'o', 'p', 'r', 's' */
-
-  for (i = 0; i < 256; i++)
-    reg_class_from_letter[i] = NO_REGS;
-
-  reg_class_from_letter['a'] = ACC_REGS;
-  reg_class_from_letter['b'] = EVEN_ACC_REGS;
-  reg_class_from_letter['c'] = CC_REGS;
-  reg_class_from_letter['d'] = GPR_REGS;
-  reg_class_from_letter['e'] = EVEN_REGS;
-  reg_class_from_letter['f'] = FPR_REGS;
-  reg_class_from_letter['h'] = FEVEN_REGS;
-  reg_class_from_letter['l'] = LR_REG;
-  reg_class_from_letter['q'] = QUAD_REGS;
-  reg_class_from_letter['t'] = ICC_REGS;
-  reg_class_from_letter['u'] = FCC_REGS;
-  reg_class_from_letter['v'] = ICR_REGS;
-  reg_class_from_letter['w'] = FCR_REGS;
-  reg_class_from_letter['x'] = QUAD_FPR_REGS;
-  reg_class_from_letter['y'] = LCR_REG;
-  reg_class_from_letter['z'] = SPR_REGS;
-  reg_class_from_letter['A'] = QUAD_ACC_REGS;
-  reg_class_from_letter['B'] = ACCG_REGS;
-  reg_class_from_letter['C'] = CR_REGS;
-  reg_class_from_letter['W'] = FDPIC_CALL_REGS; /* gp14+15 */
-  reg_class_from_letter['Z'] = FDPIC_REGS; /* gp15 */
 
   /* There is no single unaligned SI op for PIC code.  Sometimes we
      need to use ".4byte" and sometimes we need to use ".picptr".
@@ -1626,12 +1542,12 @@ static rtx
 frv_frame_offset_rtx (int offset)
 {
   rtx offset_rtx = GEN_INT (offset);
-  if (IN_RANGE_P (offset, -2048, 2047))
+  if (IN_RANGE (offset, -2048, 2047))
     return offset_rtx;
   else
     {
       rtx reg_rtx = gen_rtx_REG (SImode, OFFSET_REGNO);
-      if (IN_RANGE_P (offset, -32768, 32767))
+      if (IN_RANGE (offset, -32768, 32767))
 	emit_insn (gen_movsi (reg_rtx, offset_rtx));
       else
 	{
@@ -2059,7 +1975,7 @@ frv_asm_output_mi_thunk (FILE *file,
   const char *parallel = (frv_issue_rate () > 1 ? ".p" : "");
 
   /* Do the add using an addi if possible.  */
-  if (IN_RANGE_P (delta, -2048, 2047))
+  if (IN_RANGE (delta, -2048, 2047))
     fprintf (file, "\taddi %s,#%d,%s\n", name_arg0, (int) delta, name_arg0);
   else
     {
@@ -3461,13 +3377,13 @@ frv_legitimate_address_p_1 (enum machine_mode mode,
 	ret = FALSE;
       else
 	{
-	  ret = IN_RANGE_P (INTVAL (x), -2048, 2047);
+	  ret = IN_RANGE (INTVAL (x), -2048, 2047);
 
 	  /* If we can't use load/store double operations, make sure we can
 	     address the second word.  */
 	  if (ret && GET_MODE_SIZE (mode) > UNITS_PER_WORD)
-	    ret = IN_RANGE_P (INTVAL (x) + GET_MODE_SIZE (mode) - 1,
-			      -2048, 2047);
+	    ret = IN_RANGE (INTVAL (x) + GET_MODE_SIZE (mode) - 1,
+			    -2048, 2047);
 	}
       break;
 
@@ -3513,12 +3429,12 @@ frv_legitimate_address_p_1 (enum machine_mode mode,
 	  else
 	    {
 	      value = INTVAL (x1);
-	      ret = IN_RANGE_P (value, -2048, 2047);
+	      ret = IN_RANGE (value, -2048, 2047);
 
 	      /* If we can't use load/store double operations, make sure we can
 		 address the second word.  */
 	      if (ret && GET_MODE_SIZE (mode) > UNITS_PER_WORD)
-		ret = IN_RANGE_P (value + GET_MODE_SIZE (mode) - 1, -2048, 2047);
+		ret = IN_RANGE (value + GET_MODE_SIZE (mode) - 1, -2048, 2047);
 	    }
 	  break;
 
@@ -4078,9 +3994,9 @@ frv_emit_movsi (rtx dest, rtx src)
 		add instruction, so expose this to CSE by copying to
 		an intermediate register.  */
 	  || (GET_CODE (src) == REG
-	      && IN_RANGE_P (REGNO (src),
-			     FIRST_VIRTUAL_REGISTER,
-			     LAST_VIRTUAL_POINTER_REGISTER))))
+	      && IN_RANGE (REGNO (src),
+			   FIRST_VIRTUAL_REGISTER,
+			   LAST_VIRTUAL_POINTER_REGISTER))))
     {
       emit_insn (gen_rtx_SET (VOIDmode, dest, copy_to_mode_reg (SImode, src)));
       return TRUE;
@@ -4382,7 +4298,7 @@ output_move_single (rtx operands[], rtx insn)
 	      else
 		value = CONST_DOUBLE_LOW (src);
 
-	      if (IN_RANGE_P (value, -32768, 32767))
+	      if (IN_RANGE (value, -32768, 32767))
 		return "setlos %1, %0";
 
 	      return "#";
@@ -4953,8 +4869,8 @@ frv_emit_cond_move (rtx dest, rtx test_rtx, rtx src1, rtx src2)
          between the two fits in an addi's range, load up the difference, then
          conditionally move in 0, and then unconditionally add the first
 	 value.  */
-      else if (IN_RANGE_P (value1, -2048, 2047)
-	       && IN_RANGE_P (value2 - value1, -2048, 2047))
+      else if (IN_RANGE (value1, -2048, 2047)
+	       && IN_RANGE (value2 - value1, -2048, 2047))
 	;
 
       /* If neither condition holds, just force the constant into a
@@ -5048,8 +4964,8 @@ frv_split_cond_move (rtx operands[])
          between the two fits in an addi's range, load up the difference, then
          conditionally move in 0, and then unconditionally add the first
 	 value.  */
-      else if (IN_RANGE_P (value1, -2048, 2047)
-	       && IN_RANGE_P (value2 - value1, -2048, 2047))
+      else if (IN_RANGE (value1, -2048, 2047)
+	       && IN_RANGE (value2 - value1, -2048, 2047))
 	{
 	  rtx dest_si = ((GET_MODE (dest) == SImode)
 			 ? dest
@@ -6455,7 +6371,6 @@ frv_secondary_reload_class (enum reg_class rclass,
       /* Accumulators/Accumulator guard registers need to go through floating
          point registers.  */
     case QUAD_REGS:
-    case EVEN_REGS:
     case GPR_REGS:
       ret = NO_REGS;
       if (x && GET_CODE (x) == REG)
@@ -6469,8 +6384,6 @@ frv_secondary_reload_class (enum reg_class rclass,
 
       /* Nonzero constants should be loaded into an FPR through a GPR.  */
     case QUAD_FPR_REGS:
-    case FEVEN_REGS:
-    case FPR_REGS:
       if (x && CONSTANT_P (x) && !ZERO_P (x))
 	ret = GPR_REGS;
       else
@@ -6490,8 +6403,6 @@ frv_secondary_reload_class (enum reg_class rclass,
       break;
 
       /* The accumulators need fpr registers.  */
-    case ACC_REGS:
-    case EVEN_ACC_REGS:
     case QUAD_ACC_REGS:
     case ACCG_REGS:
       ret = FPR_REGS;
@@ -6565,8 +6476,6 @@ frv_class_likely_spilled_p (reg_class_t rclass)
     case LR_REG:
     case SPR_REGS:
     case QUAD_ACC_REGS:
-    case EVEN_ACC_REGS:
-    case ACC_REGS:
     case ACCG_REGS:
       return true;
     }
@@ -6836,16 +6745,14 @@ frv_class_max_nregs (enum reg_class rclass, enum machine_mode mode)
    `CONSTANT_P', so you need not check this.  In fact, `1' is a suitable
    definition for this macro on machines where anything `CONSTANT_P' is valid.  */
 
-int
-frv_legitimate_constant_p (rtx x)
+static bool
+frv_legitimate_constant_p (enum machine_mode mode, rtx x)
 {
-  enum machine_mode mode = GET_MODE (x);
-
   /* frv_cannot_force_const_mem always returns true for FDPIC.  This
      means that the move expanders will be expected to deal with most
      kinds of constant, regardless of what we return here.
 
-     However, among its other duties, LEGITIMATE_CONSTANT_P decides whether
+     However, among its other duties, frv_legitimate_constant_p decides whether
      a constant can be entered into reg_equiv_constant[].  If we return true,
      reload can create new instances of the constant whenever it likes.
 
@@ -6862,7 +6769,7 @@ frv_legitimate_constant_p (rtx x)
     return TRUE;
 
   /* double integer constants are ok.  */
-  if (mode == VOIDmode || mode == DImode)
+  if (GET_MODE (x) == VOIDmode || mode == DImode)
     return TRUE;
 
   /* 0 is always ok.  */
@@ -6928,19 +6835,16 @@ frv_register_move_cost (enum machine_mode mode ATTRIBUTE_UNUSED,
       break;
 
     case QUAD_REGS:
-    case EVEN_REGS:
     case GPR_REGS:
       switch (to)
 	{
 	default:
 	  break;
 
-	case QUAD_REGS:
-	case EVEN_REGS:
+	case QUAD_REGS:	
 	case GPR_REGS:
 	  return LOW_COST;
 
-	case FEVEN_REGS:
 	case FPR_REGS:
 	  return LOW_COST;
 
@@ -6950,24 +6854,19 @@ frv_register_move_cost (enum machine_mode mode ATTRIBUTE_UNUSED,
 	  return LOW_COST;
 	}
 
-    case FEVEN_REGS:
-    case FPR_REGS:
+    case QUAD_FPR_REGS:
       switch (to)
 	{
 	default:
 	  break;
 
 	case QUAD_REGS:
-	case EVEN_REGS:
 	case GPR_REGS:
-	case ACC_REGS:
-	case EVEN_ACC_REGS:
 	case QUAD_ACC_REGS:
 	case ACCG_REGS:
 	  return MEDIUM_COST;
 
-	case FEVEN_REGS:
-	case FPR_REGS:
+	case QUAD_FPR_REGS:
 	  return LOW_COST;
 	}
 
@@ -6980,13 +6879,10 @@ frv_register_move_cost (enum machine_mode mode ATTRIBUTE_UNUSED,
 	  break;
 
 	case QUAD_REGS:
-	case EVEN_REGS:
 	case GPR_REGS:
 	  return MEDIUM_COST;
 	}
 
-    case ACC_REGS:
-    case EVEN_ACC_REGS:
     case QUAD_ACC_REGS:
     case ACCG_REGS:
       switch (to)
@@ -6994,8 +6890,7 @@ frv_register_move_cost (enum machine_mode mode ATTRIBUTE_UNUSED,
 	default:
 	  break;
 
-	case FEVEN_REGS:
-	case FPR_REGS:
+	case QUAD_FPR_REGS:
 	  return MEDIUM_COST;
 
 	}
@@ -8478,7 +8373,6 @@ static struct builtin_description bdesc_stores[] =
 static void
 frv_init_builtins (void)
 {
-  tree endlink = void_list_node;
   tree accumulator = integer_type_node;
   tree integer = integer_type_node;
   tree voidt = void_type_node;
@@ -8493,24 +8387,18 @@ frv_init_builtins (void)
   tree iacc   = integer_type_node;
 
 #define UNARY(RET, T1) \
-  build_function_type (RET, tree_cons (NULL_TREE, T1, endlink))
+  build_function_type_list (RET, T1, NULL_TREE)
 
 #define BINARY(RET, T1, T2) \
-  build_function_type (RET, tree_cons (NULL_TREE, T1, \
-			    tree_cons (NULL_TREE, T2, endlink)))
+  build_function_type_list (RET, T1, T2, NULL_TREE)
 
 #define TRINARY(RET, T1, T2, T3) \
-  build_function_type (RET, tree_cons (NULL_TREE, T1, \
-			    tree_cons (NULL_TREE, T2, \
-			    tree_cons (NULL_TREE, T3, endlink))))
+  build_function_type_list (RET, T1, T2, T3, NULL_TREE)
 
 #define QUAD(RET, T1, T2, T3, T4) \
-  build_function_type (RET, tree_cons (NULL_TREE, T1, \
-			    tree_cons (NULL_TREE, T2, \
-			    tree_cons (NULL_TREE, T3, \
-			    tree_cons (NULL_TREE, T4, endlink)))))
+  build_function_type_list (RET, T1, T2, T3, NULL_TREE)
 
-  tree void_ftype_void = build_function_type (voidt, endlink);
+  tree void_ftype_void = build_function_type_list (voidt, NULL_TREE);
 
   tree void_ftype_acc = UNARY (voidt, accumulator);
   tree void_ftype_uw4_uw1 = BINARY (voidt, uword4, uword1);
@@ -9613,7 +9501,7 @@ frv_rtx_costs (rtx x,
     {
     case CONST_INT:
       /* Make 12-bit integers really cheap.  */
-      if (IN_RANGE_P (INTVAL (x), -2048, 2047))
+      if (IN_RANGE (INTVAL (x), -2048, 2047))
 	{
 	  *total = 0;
 	  return true;

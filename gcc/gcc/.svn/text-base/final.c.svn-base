@@ -1,6 +1,7 @@
 /* Convert RTL to assembler code and output it, for GNU compiler.
    Copyright (C) 1987, 1988, 1989, 1992, 1993, 1994, 1995, 1996, 1997,
-   1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
+   2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -82,6 +83,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "ggc.h"
 #include "cfgloop.h"
 #include "params.h"
+#include "tree-pretty-print.h"
 
 #ifdef XCOFF_DEBUGGING_INFO
 #include "xcoffout.h"		/* Needed for external data
@@ -253,6 +255,13 @@ init_final (const char *filename ATTRIBUTE_UNUSED)
 void
 default_function_pro_epilogue (FILE *file ATTRIBUTE_UNUSED,
 			       HOST_WIDE_INT size ATTRIBUTE_UNUSED)
+{
+}
+
+void
+default_function_switched_text_sections (FILE *file ATTRIBUTE_UNUSED,
+					 tree decl ATTRIBUTE_UNUSED,
+					 bool new_is_cold ATTRIBUTE_UNUSED)
 {
 }
 
@@ -1485,7 +1494,7 @@ remap_debug_filename (const char *filename)
   size_t name_len;
 
   for (map = debug_prefix_maps; map; map = map->next)
-    if (strncmp (filename, map->old_prefix, map->old_len) == 0)
+    if (filename_ncmp (filename, map->old_prefix, map->old_len) == 0)
       break;
   if (!map)
     return filename;
@@ -1553,7 +1562,7 @@ final_start_function (rtx first ATTRIBUTE_UNUSED, FILE *file,
 
 #if defined (HAVE_prologue)
   if (dwarf2out_do_frame ())
-    dwarf2out_frame_debug (NULL_RTX, false);
+    dwarf2out_frame_debug_init ();
 #endif
 
   /* If debugging, assign block numbers to all of the blocks in this
@@ -1664,6 +1673,54 @@ final_end_function (void)
     dwarf2out_end_epilogue (last_linenum, last_filename);
 }
 
+
+/* Dumper helper for basic block information. FILE is the assembly
+   output file, and INSN is the instruction being emitted.  */
+
+static void
+dump_basic_block_info (FILE *file, rtx insn, basic_block *start_to_bb,
+                       basic_block *end_to_bb, int bb_map_size, int *bb_seqn)
+{
+  basic_block bb;
+
+  if (!flag_debug_asm)
+    return;
+
+  if (INSN_UID (insn) < bb_map_size
+      && (bb = start_to_bb[INSN_UID (insn)]) != NULL)
+    {
+      edge e;
+      edge_iterator ei;
+
+      fprintf (file, "%s BLOCK %d", ASM_COMMENT_START, bb->index);
+      if (bb->frequency)
+        fprintf (file, " freq:%d", bb->frequency);
+      if (bb->count)
+        fprintf (file, " count:" HOST_WIDEST_INT_PRINT_DEC,
+                 bb->count);
+      fprintf (file, " seq:%d", (*bb_seqn)++);
+      fprintf (file, "\n%s PRED:", ASM_COMMENT_START);
+      FOR_EACH_EDGE (e, ei, bb->preds)
+        {
+          dump_edge_info (file, e, 0);
+        }
+      fprintf (file, "\n");
+    }
+  if (INSN_UID (insn) < bb_map_size
+      && (bb = end_to_bb[INSN_UID (insn)]) != NULL)
+    {
+      edge e;
+      edge_iterator ei;
+
+      fprintf (asm_out_file, "%s SUCC:", ASM_COMMENT_START);
+      FOR_EACH_EDGE (e, ei, bb->succs)
+       {
+         dump_edge_info (asm_out_file, e, 1);
+       }
+      fprintf (file, "\n");
+    }
+}
+
 /* Output assembler code for some insns: all or part of a function.
    For description of args, see `final_start_function', above.  */
 
@@ -1673,6 +1730,12 @@ final (rtx first, FILE *file, int optimize_p)
   rtx insn;
   int max_uid = 0;
   int seen = 0;
+
+  /* Used for -dA dump.  */
+  basic_block *start_to_bb = NULL;
+  basic_block *end_to_bb = NULL;
+  int bb_map_size = 0;
+  int bb_seqn = 0;
 
   last_ignored_compare = 0;
 
@@ -1698,6 +1761,21 @@ final (rtx first, FILE *file, int optimize_p)
 
   CC_STATUS_INIT;
 
+  if (flag_debug_asm)
+    {
+      basic_block bb;
+
+      bb_map_size = get_max_uid () + 1;
+      start_to_bb = XCNEWVEC (basic_block, bb_map_size);
+      end_to_bb = XCNEWVEC (basic_block, bb_map_size);
+
+      FOR_EACH_BB_REVERSE (bb)
+	{
+	  start_to_bb[INSN_UID (BB_HEAD (bb))] = bb;
+	  end_to_bb[INSN_UID (BB_END (bb))] = bb;
+	}
+    }
+
   /* Output the insns.  */
   for (insn = first; insn;)
     {
@@ -1713,7 +1791,15 @@ final (rtx first, FILE *file, int optimize_p)
 	insn_current_address = INSN_ADDRESSES (INSN_UID (insn));
 #endif /* HAVE_ATTR_length */
 
+      dump_basic_block_info (file, insn, start_to_bb, end_to_bb,
+                             bb_map_size, &bb_seqn);
       insn = final_scan_insn (insn, file, optimize_p, 0, &seen);
+    }
+
+  if (flag_debug_asm)
+    {
+      free (start_to_bb);
+      free (end_to_bb);
     }
 }
 
@@ -1841,15 +1927,14 @@ final_scan_insn (rtx insn, FILE *file, int optimize_p ATTRIBUTE_UNUSED,
 	    debug_hooks->switch_text_section ();
 
 	  switch_to_section (current_function_section ());
+	  targetm.asm_out.function_switched_text_sections (asm_out_file,
+							   current_function_decl,
+							   in_cold_section_p);
 	  break;
 
 	case NOTE_INSN_BASIC_BLOCK:
 	  if (targetm.asm_out.unwind_emit)
 	    targetm.asm_out.unwind_emit (asm_out_file, insn);
-
-	  if (flag_debug_asm)
-	    fprintf (asm_out_file, "\t%s basic block %d\n",
-		     ASM_COMMENT_START, NOTE_BASIC_BLOCK (insn)->index);
 
 	  if ((*seen & (SEEN_EMITTED | SEEN_BB)) == SEEN_BB)
 	    {
@@ -1995,6 +2080,7 @@ final_scan_insn (rtx insn, FILE *file, int optimize_p ATTRIBUTE_UNUSED,
 	  break;
 
 	case NOTE_INSN_VAR_LOCATION:
+	case NOTE_INSN_CALL_ARG_LOCATION:
 	  if (!DECL_IGNORED_P (current_function_decl))
 	    debug_hooks->var_location (insn);
 	  break;
@@ -2227,6 +2313,11 @@ final_scan_insn (rtx insn, FILE *file, int optimize_p ATTRIBUTE_UNUSED,
 	    const char *string;
 	    location_t loc;
 	    expanded_location expanded;
+
+	    /* Make sure we flush any queued register saves in case this
+	       clobbers affected registers.  */
+	    if (dwarf2out_do_frame ())
+	      dwarf2out_frame_debug (insn, false);
 
 	    /* There's no telling what that did to the condition codes.  */
 	    CC_STATUS_INIT;
@@ -2661,30 +2752,12 @@ final_scan_insn (rtx insn, FILE *file, int optimize_p ATTRIBUTE_UNUSED,
 		if (t)
 		  assemble_external (t);
 	      }
+	    if (!DECL_IGNORED_P (current_function_decl))
+	      debug_hooks->var_location (insn);
 	  }
 
 	/* Output assembler code from the template.  */
 	output_asm_insn (templ, recog_data.operand);
-
-	/* Record point-of-call information for ICF debugging.  */
-	if (flag_enable_icf_debug && CALL_P (insn))
-	  {
-	    rtx x = call_from_call_insn (insn);
-	    x = XEXP (x, 0);
-	    if (x && MEM_P (x))
-	      {
-	        if (GET_CODE (XEXP (x, 0)) == SYMBOL_REF)
-	          {
-		    tree t;
-		    x = XEXP (x, 0);
-		    t = SYMBOL_REF_DECL (x);
-		    if (t)
-		      (*debug_hooks->direct_call) (t);
-	          }
-	        else
-	          (*debug_hooks->virtual_call) (INSN_UID (insn));
-	      }
-	  }
 
 	/* Some target machines need to postscan each insn after
 	   it is output.  */
@@ -3620,6 +3693,32 @@ output_addr_const (FILE *file, rtx x)
     }
 }
 
+/* Output a quoted string.  */
+
+void
+output_quoted_string (FILE *asm_file, const char *string)
+{
+#ifdef OUTPUT_QUOTED_STRING
+  OUTPUT_QUOTED_STRING (asm_file, string);
+#else
+  char c;
+
+  putc ('\"', asm_file);
+  while ((c = *string++) != 0)
+    {
+      if (ISPRINT (c))
+	{
+	  if (c == '\"' || c == '\\')
+	    putc ('\\', asm_file);
+	  putc (c, asm_file);
+	}
+      else
+	fprintf (asm_file, "\\%03o", (unsigned char) c);
+    }
+  putc ('\"', asm_file);
+#endif
+}
+
 /* A poor man's fprintf, with the added features of %I, %R, %L, and %U.
    %R prints the value of REGISTER_PREFIX.
    %L prints the value of LOCAL_LABEL_PREFIX.
@@ -4126,87 +4225,6 @@ leaf_renumber_regs_insn (rtx in_rtx)
       }
 }
 #endif
-
-
-/* When -gused is used, emit debug info for only used symbols. But in
-   addition to the standard intercepted debug_hooks there are some direct
-   calls into this file, i.e., dbxout_symbol, dbxout_parms, and dbxout_reg_params.
-   Those routines may also be called from a higher level intercepted routine. So
-   to prevent recording data for an inner call to one of these for an intercept,
-   we maintain an intercept nesting counter (debug_nesting). We only save the
-   intercepted arguments if the nesting is 1.  */
-int debug_nesting = 0;
-
-static tree *symbol_queue;
-int symbol_queue_index = 0;
-static int symbol_queue_size = 0;
-
-/* Generate the symbols for any queued up type symbols we encountered
-   while generating the type info for some originally used symbol.
-   This might generate additional entries in the queue.  Only when
-   the nesting depth goes to 0 is this routine called.  */
-
-void
-debug_flush_symbol_queue (void)
-{
-  int i;
-
-  /* Make sure that additionally queued items are not flushed
-     prematurely.  */
-
-  ++debug_nesting;
-
-  for (i = 0; i < symbol_queue_index; ++i)
-    {
-      /* If we pushed queued symbols then such symbols must be
-         output no matter what anyone else says.  Specifically,
-         we need to make sure dbxout_symbol() thinks the symbol was
-         used and also we need to override TYPE_DECL_SUPPRESS_DEBUG
-         which may be set for outside reasons.  */
-      int saved_tree_used = TREE_USED (symbol_queue[i]);
-      int saved_suppress_debug = TYPE_DECL_SUPPRESS_DEBUG (symbol_queue[i]);
-      TREE_USED (symbol_queue[i]) = 1;
-      TYPE_DECL_SUPPRESS_DEBUG (symbol_queue[i]) = 0;
-
-#ifdef DBX_DEBUGGING_INFO
-      dbxout_symbol (symbol_queue[i], 0);
-#endif
-
-      TREE_USED (symbol_queue[i]) = saved_tree_used;
-      TYPE_DECL_SUPPRESS_DEBUG (symbol_queue[i]) = saved_suppress_debug;
-    }
-
-  symbol_queue_index = 0;
-  --debug_nesting;
-}
-
-/* Queue a type symbol needed as part of the definition of a decl
-   symbol.  These symbols are generated when debug_flush_symbol_queue()
-   is called.  */
-
-void
-debug_queue_symbol (tree decl)
-{
-  if (symbol_queue_index >= symbol_queue_size)
-    {
-      symbol_queue_size += 10;
-      symbol_queue = XRESIZEVEC (tree, symbol_queue, symbol_queue_size);
-    }
-
-  symbol_queue[symbol_queue_index++] = decl;
-}
-
-/* Free symbol queue.  */
-void
-debug_free_queue (void)
-{
-  if (symbol_queue)
-    {
-      free (symbol_queue);
-      symbol_queue = NULL;
-      symbol_queue_size = 0;
-    }
-}
 
 /* Turn the RTL into assembly.  */
 static unsigned int
@@ -4343,20 +4361,7 @@ rest_of_clean_state (void)
 	}
       else
 	{
-	  const char *aname;
-	  struct cgraph_node *node = cgraph_node (current_function_decl);
-
-	  aname = (IDENTIFIER_POINTER
-		   (DECL_ASSEMBLER_NAME (current_function_decl)));
-	  fprintf (final_output, "\n;; Function (%s) %s\n\n", aname,
-	     node->frequency == NODE_FREQUENCY_HOT
-	     ? " (hot)"
-	     : node->frequency == NODE_FREQUENCY_UNLIKELY_EXECUTED
-	     ? " (unlikely executed)"
-	     : node->frequency == NODE_FREQUENCY_EXECUTED_ONCE
-	     ? " (executed once)"
-	     : "");
-
+	  dump_function_header (final_output, current_function_decl);
 	  flag_dump_noaddr = flag_dump_unnumbered = 1;
 	  if (flag_compare_debug_opt || flag_compare_debug)
 	    dump_flags |= TDF_NOUID;
@@ -4366,7 +4371,11 @@ rest_of_clean_state (void)
 	    if (LABEL_P (insn))
 	      INSN_UID (insn) = CODE_LABEL_NUMBER (insn);
 	    else
-	      INSN_UID (insn) = 0;
+	      {
+		if (NOTE_P (insn))
+		  set_block_for_insn (insn, NULL);
+		INSN_UID (insn) = 0;
+	      }
 	}
     }
 
@@ -4383,11 +4392,11 @@ rest_of_clean_state (void)
       if (final_output
 	  && (!NOTE_P (insn) ||
 	      (NOTE_KIND (insn) != NOTE_INSN_VAR_LOCATION
+	       && NOTE_KIND (insn) != NOTE_INSN_CALL_ARG_LOCATION
 	       && NOTE_KIND (insn) != NOTE_INSN_BLOCK_BEG
 	       && NOTE_KIND (insn) != NOTE_INSN_BLOCK_END
 	       && NOTE_KIND (insn) != NOTE_INSN_CFA_RESTORE_STATE)))
 	print_rtl_single (final_output, insn);
-
     }
 
   if (final_output)

@@ -19,7 +19,7 @@
 
 ;;; Unused letters:
 ;;;     B     H           T  W
-;;;           h jk          vw  z
+;;;           h jk          vw
 
 ;; Integer register constraints.
 ;; It is not necessary to define 'r' here.
@@ -90,12 +90,20 @@
 ;;  2	SSE2 enabled
 ;;  i	SSE2 inter-unit moves enabled
 ;;  m	MMX inter-unit moves enabled
+;;  d	Integer register when integer DFmode moves are enabled
+;;  x	Integer register when integer XFmode moves are enabled
 
 (define_register_constraint "Yz" "TARGET_SSE ? SSE_FIRST_REG : NO_REGS"
  "First SSE register (@code{%xmm0}).")
 
 (define_register_constraint "Y2" "TARGET_SSE2 ? SSE_REGS : NO_REGS"
  "@internal Any SSE register, when SSE2 is enabled.")
+
+(define_register_constraint "Y3" "TARGET_SSE3 ? SSE_REGS : NO_REGS"
+ "@internal Any SSE register, when SSE3 is enabled.")
+
+(define_register_constraint "Y4" "TARGET_SSE4_1 ? SSE_REGS : NO_REGS"
+ "@internal Any SSE register, when SSE4_1 is enabled.")
 
 (define_register_constraint "Yi"
  "TARGET_SSE2 && TARGET_INTER_UNIT_MOVES ? SSE_REGS : NO_REGS"
@@ -104,6 +112,20 @@
 (define_register_constraint "Ym"
  "TARGET_MMX && TARGET_INTER_UNIT_MOVES ? MMX_REGS : NO_REGS"
  "@internal Any MMX register, when inter-unit moves are enabled.")
+
+(define_register_constraint "Yd"
+ "(TARGET_64BIT
+   || (TARGET_INTEGER_DFMODE_MOVES && optimize_function_for_speed_p (cfun)))
+  ? GENERAL_REGS : NO_REGS"
+ "@internal Any integer register when integer DFmode moves are enabled.")
+
+(define_register_constraint "Yx"
+ "optimize_function_for_speed_p (cfun) ? GENERAL_REGS : NO_REGS"
+ "@internal Any integer register when integer XFmode moves are enabled.")
+
+(define_constraint "z"
+  "@internal Constant call address operand."
+  (match_operand 0 "constant_call_address_operand"))
 
 ;; Integer constant constraints.
 (define_constraint "I"
@@ -149,7 +171,7 @@
 (define_constraint "G"
   "Standard 80387 floating point constant."
   (and (match_code "const_double")
-       (match_test "standard_80387_constant_p (op)")))
+       (match_test "standard_80387_constant_p (op) > 0")))
 
 ;; This can theoretically be any mode's CONST0_RTX.
 (define_constraint "C"

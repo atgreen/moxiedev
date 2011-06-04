@@ -6,7 +6,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *          Copyright (C) 1992-2010, Free Software Foundation, Inc.         *
+ *          Copyright (C) 1992-2011, Free Software Foundation, Inc.         *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -186,22 +186,28 @@ known_alignment (tree exp)
 static tree
 find_common_type (tree t1, tree t2)
 {
-  /* ??? As of today, various constructs lead here with types of different
+  /* ??? As of today, various constructs lead to here with types of different
      sizes even when both constants (e.g. tagged types, packable vs regular
      component types, padded vs unpadded types, ...).  While some of these
      would better be handled upstream (types should be made consistent before
      calling into build_binary_op), some others are really expected and we
      have to be careful.  */
 
-  /* We must prevent writing more than what the target may hold if this is for
+  /* We must avoid writing more than what the target can hold if this is for
      an assignment and the case of tagged types is handled in build_binary_op
-     so use the lhs type if it is known to be smaller, or of constant size and
-     the rhs type is not, whatever the modes.  We also force t1 in case of
+     so we use the lhs type if it is known to be smaller or of constant size
+     and the rhs type is not, whatever the modes.  We also force t1 in case of
      constant size equality to minimize occurrences of view conversions on the
-     lhs of assignments.  */
+     lhs of an assignment, except for the case of record types with a variant
+     part on the lhs but not on the rhs to make the conversion simpler.  */
   if (TREE_CONSTANT (TYPE_SIZE (t1))
       && (!TREE_CONSTANT (TYPE_SIZE (t2))
-          || !tree_int_cst_lt (TYPE_SIZE (t2), TYPE_SIZE (t1))))
+	  || tree_int_cst_lt (TYPE_SIZE (t1), TYPE_SIZE (t2))
+	  || (TYPE_SIZE (t1) == TYPE_SIZE (t2)
+	      && !(TREE_CODE (t1) == RECORD_TYPE
+		   && TREE_CODE (t2) == RECORD_TYPE
+		   && get_variant_part (t1) != NULL_TREE
+		   && get_variant_part (t2) == NULL_TREE))))
     return t1;
 
   /* Otherwise, if the lhs type is non-BLKmode, use it.  Note that we know
@@ -608,6 +614,15 @@ build_binary_op (enum tree_code op_code, tree result_type,
 			   (DECL_SIZE (TYPE_FIELDS (left_type)))))
 	       && !integer_zerop (TYPE_SIZE (right_type)))
 	operation_type = left_type;
+
+      /* If we have a call to a function that returns an unconstrained type
+	 with default discriminant on the RHS, use the RHS type (which is
+	 padded) as we cannot compute the size of the actual assignment.  */
+      else if (TREE_CODE (right_operand) == CALL_EXPR
+	       && TYPE_IS_PADDING_P (right_type)
+	       && CONTAINS_PLACEHOLDER_P
+		  (TYPE_SIZE (TREE_TYPE (TYPE_FIELDS (right_type)))))
+	operation_type = right_type;
 
       /* Find the best type to use for copying between aggregate types.  */
       else if (((TREE_CODE (left_type) == ARRAY_TYPE
@@ -1654,8 +1669,8 @@ build_call_raise_column (int msg, Node_Id gnat_node)
 static int
 compare_elmt_bitpos (const PTR rt1, const PTR rt2)
 {
-  const constructor_elt * const elmt1 = (const constructor_elt const *) rt1;
-  const constructor_elt * const elmt2 = (const constructor_elt const *) rt2;
+  const constructor_elt * const elmt1 = (const constructor_elt * const) rt1;
+  const constructor_elt * const elmt2 = (const constructor_elt * const) rt2;
   const_tree const field1 = elmt1->index;
   const_tree const field2 = elmt2->index;
   const int ret
@@ -2126,17 +2141,9 @@ build_allocator (tree type, tree init, tree result_type, Entity_Id gnat_proc,
 					  gnat_proc, gnat_pool, gnat_node);
       storage = convert (storage_ptr_type, gnat_protect_expr (storage));
 
-      if (TYPE_IS_PADDING_P (type))
-	{
-	  type = TREE_TYPE (TYPE_FIELDS (type));
-	  if (init)
-	    init = convert (type, init);
-	}
-
-      /* If there is an initializing expression, make a constructor for
-	 the entire object including the bounds and copy it into the
-	 object.  If there is no initializing expression, just set the
-	 bounds.  */
+      /* If there is an initializing expression, then make a constructor for
+	 the entire object including the bounds and copy it into the object.
+	 If there is no initializing expression, just set the bounds.  */
       if (init)
 	{
 	  VEC(constructor_elt,gc) *v = VEC_alloc (constructor_elt, gc, 2);
@@ -2145,7 +2152,6 @@ build_allocator (tree type, tree init, tree result_type, Entity_Id gnat_proc,
 				  build_template (template_type, type, init));
 	  CONSTRUCTOR_APPEND_ELT (v, DECL_CHAIN (TYPE_FIELDS (storage_type)),
 				  init);
-
 	  return convert
 	    (result_type,
 	     build2 (COMPOUND_EXPR, storage_ptr_type,
@@ -2216,58 +2222,6 @@ build_allocator (tree type, tree init, tree result_type, Entity_Id gnat_proc,
   return convert (result_type, result);
 }
 
-/* Fill in a VMS descriptor for EXPR and return a constructor for it.
-   GNAT_FORMAL is how we find the descriptor record.  GNAT_ACTUAL is
-   how we derive the source location to raise C_E on an out of range
-   pointer. */
-
-tree
-fill_vms_descriptor (tree expr, Entity_Id gnat_formal, Node_Id gnat_actual)
-{
-  tree parm_decl = get_gnu_tree (gnat_formal);
-  tree record_type = TREE_TYPE (TREE_TYPE (parm_decl));
-  tree field;
-  const bool do_range_check
-    = strcmp ("MBO",
-	      IDENTIFIER_POINTER (DECL_NAME (TYPE_FIELDS (record_type))));
-  VEC(constructor_elt,gc) *v = NULL;
-
-  expr = maybe_unconstrained_array (expr);
-  gnat_mark_addressable (expr);
-
-  for (field = TYPE_FIELDS (record_type); field; field = DECL_CHAIN (field))
-    {
-      tree conexpr = convert (TREE_TYPE (field),
-			      SUBSTITUTE_PLACEHOLDER_IN_EXPR
-			      (DECL_INITIAL (field), expr));
-
-      /* Check to ensure that only 32-bit pointers are passed in
-	 32-bit descriptors */
-      if (do_range_check
-          && strcmp (IDENTIFIER_POINTER (DECL_NAME (field)), "POINTER") == 0)
-        {
-	  tree pointer64type
-	    = build_pointer_type_for_mode (void_type_node, DImode, false);
-	  tree addr64expr = build_unary_op (ADDR_EXPR, pointer64type, expr);
-	  tree malloc64low
-	    = build_int_cstu (long_integer_type_node, 0x80000000);
-
-	  add_stmt (build3 (COND_EXPR, void_type_node,
-			    build_binary_op (GE_EXPR, boolean_type_node,
-					     convert (long_integer_type_node,
-						      addr64expr),
-					     malloc64low),
-			    build_call_raise (CE_Range_Check_Failed,
-					      gnat_actual,
-					      N_Raise_Constraint_Error),
-			    NULL_TREE));
-        }
-      CONSTRUCTOR_APPEND_ELT (v, field, conexpr);
-    }
-
-  return gnat_build_constructor (record_type, v);
-}
-
 /* Indicate that we need to take the address of T and that it therefore
    should not be allocated in a register.  Returns true if successful.  */
 
@@ -2359,7 +2313,7 @@ gnat_protect_expr (tree exp)
   if (TREE_CONSTANT (exp) || code == SAVE_EXPR || code == NULL_EXPR)
     return exp;
 
-  /* If EXP has no side effects, we theoritically don't need to do anything.
+  /* If EXP has no side effects, we theoretically don't need to do anything.
      However, we may be recursively passed more and more complex expressions
      involving checks which will be reused multiple times and eventually be
      unshared for gimplification; in order to avoid a complexity explosion

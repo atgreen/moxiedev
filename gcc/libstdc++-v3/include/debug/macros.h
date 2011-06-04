@@ -1,6 +1,6 @@
 // Debugging support implementation -*- C++ -*-
 
-// Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -39,13 +39,16 @@
  * the user error and where the error is reported.
  *
  */
-#define _GLIBCXX_DEBUG_VERIFY(_Condition,_ErrorMessage)		        \
-  do 									\
+#define _GLIBCXX_DEBUG_VERIFY_AT(_Condition,_ErrorMessage,_File,_Line)	\
+  do									\
   {									\
     if (! (_Condition))							\
-      __gnu_debug::_Error_formatter::_M_at(__FILE__, __LINE__)	        \
+      __gnu_debug::_Error_formatter::_M_at(_File, _Line)		\
 	  ._ErrorMessage._M_error();					\
   } while (false)
+
+#define _GLIBCXX_DEBUG_VERIFY(_Condition,_ErrorMessage)			\
+  _GLIBCXX_DEBUG_VERIFY_AT(_Condition,_ErrorMessage,__FILE__,__LINE__)
 
 // Verify that [_First, _Last) forms a valid iterator range.
 #define __glibcxx_check_valid_range(_First,_Last)			\
@@ -286,7 +289,6 @@ _GLIBCXX_DEBUG_VERIFY(__gnu_debug::__check_partitioned_upper(_First, _Last, \
 
 // Verify that the iterator range [_First, _Last) is a heap
 #define __glibcxx_check_heap(_First,_Last)				\
-__glibcxx_check_valid_range(_First,_Last);				\
 _GLIBCXX_DEBUG_VERIFY(std::__is_heap(_First, _Last),		        \
 		      _M_message(__gnu_debug::__msg_not_heap)	        \
 		      ._M_iterator(_First, #_First)			\
@@ -295,7 +297,6 @@ _GLIBCXX_DEBUG_VERIFY(std::__is_heap(_First, _Last),		        \
 /** Verify that the iterator range [_First, _Last) is a heap
     w.r.t. the predicate _Pred. */
 #define __glibcxx_check_heap_pred(_First,_Last,_Pred)			\
-__glibcxx_check_valid_range(_First,_Last);				\
 _GLIBCXX_DEBUG_VERIFY(std::__is_heap(_First, _Last, _Pred),		\
 		      _M_message(__gnu_debug::__msg_not_heap_pred)      \
                       ._M_iterator(_First, #_First)			\

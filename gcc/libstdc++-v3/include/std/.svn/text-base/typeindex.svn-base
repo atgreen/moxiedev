@@ -1,6 +1,6 @@
 // C++0x typeindex -*- C++ -*-
 
-// Copyright (C) 2010 Free Software Foundation, Inc.
+// Copyright (C) 2010, 2011 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -37,7 +37,9 @@
 
 #include <typeinfo>
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
      @brief The class type_index provides a simple wrapper for type_info
@@ -46,31 +48,31 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
    */
   struct type_index
   {
-    type_index(const type_info& __rhs)
+    type_index(const type_info& __rhs) noexcept
     : _M_target(&__rhs) { }
 
     bool
-    operator==(const type_index& __rhs) const
+    operator==(const type_index& __rhs) const noexcept
     { return *_M_target == *__rhs._M_target; }
 
     bool
-    operator!=(const type_index& __rhs) const
+    operator!=(const type_index& __rhs) const noexcept
     { return *_M_target != *__rhs._M_target; }
 
     bool
-    operator<(const type_index& __rhs) const
+    operator<(const type_index& __rhs) const noexcept
     { return _M_target->before(*__rhs._M_target); }
 
     bool
-    operator<=(const type_index& __rhs) const
+    operator<=(const type_index& __rhs) const noexcept
     { return !__rhs._M_target->before(*_M_target); }
 
     bool
-    operator>(const type_index& __rhs) const
+    operator>(const type_index& __rhs) const noexcept
     { return __rhs._M_target->before(*_M_target); }
 
     bool
-    operator>=(const type_index& __rhs) const
+    operator>=(const type_index& __rhs) const noexcept
     { return !_M_target->before(*__rhs._M_target); }
 
     size_t
@@ -99,7 +101,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       { return __ti.hash_code(); }
     };
 
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #endif  // __GXX_EXPERIMENTAL_CXX0X__
 

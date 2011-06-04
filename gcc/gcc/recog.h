@@ -18,6 +18,9 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
+#ifndef GCC_RECOG_H
+#define GCC_RECOG_H
+
 /* Random number that should be large enough for all purposes.  */
 #define MAX_RECOG_ALTERNATIVES 30
 
@@ -269,6 +272,8 @@ struct insn_operand_data
   const char is_operator;
 
   const char eliminable;
+
+  const char allows_mem;
 };
 
 /* Legal values for insn_data.output_format.  Indicate what type of data
@@ -297,6 +302,7 @@ struct insn_data_d
   const insn_gen_fn genfun;
   const struct insn_operand_data *const operand;
 
+  const char n_generator_args;
   const char n_operands;
   const char n_dups;
   const char n_alternatives;
@@ -305,3 +311,5 @@ struct insn_data_d
 
 extern const struct insn_data_d insn_data[];
 extern int peep2_current_count;
+
+#endif /* GCC_RECOG_H */

@@ -1,5 +1,5 @@
 /* Dump a gcov file, for debugging use.
-   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Nathan Sidwell <nathan@codesourcery.com>
 
@@ -22,6 +22,8 @@ along with Gcov; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "version.h"
+#include "intl.h"
+#include "diagnostic.h"
 #include <getopt.h>
 #define IN_GCOV (-1)
 #include "gcov-io.h"
@@ -76,9 +78,21 @@ int
 main (int argc ATTRIBUTE_UNUSED, char **argv)
 {
   int opt;
+  const char *p;
+
+  p = argv[0] + strlen (argv[0]);
+  while (p != argv[0] && !IS_DIR_SEPARATOR (p[-1]))
+    --p;
+  progname = p;
+
+  xmalloc_set_program_name (progname);
 
   /* Unlock the stdio streams.  */
   unlock_std_streams ();
+
+  gcc_init_libintl ();
+
+  diagnostic_initialize (global_dc, 0);
 
   while ((opt = getopt_long (argc, argv, "hlpv", options, NULL)) != -1)
     {
@@ -121,7 +135,7 @@ static void
 print_version (void)
 {
   printf ("gcov-dump %s%s\n", pkgversion_string, version_string);
-  printf ("Copyright (C) 2010 Free Software Foundation, Inc.\n");
+  printf ("Copyright (C) 2011 Free Software Foundation, Inc.\n");
   printf ("This is free software; see the source for copying conditions.\n"
   	  "There is NO warranty; not even for MERCHANTABILITY or \n"
 	  "FITNESS FOR A PARTICULAR PURPOSE.\n\n");
@@ -267,7 +281,8 @@ tag_function (const char *filename ATTRIBUTE_UNUSED,
   unsigned long pos = gcov_position ();
 
   printf (" ident=%u", gcov_read_unsigned ());
-  printf (", checksum=0x%08x", gcov_read_unsigned ());
+  printf (", lineno_checksum=0x%08x", gcov_read_unsigned ());
+  printf (", cfg_checksum_checksum=0x%08x", gcov_read_unsigned ());
 
   if (gcov_position () - pos < length)
     {

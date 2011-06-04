@@ -1,14 +1,14 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string/cons/wchar_t
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-06-03T19:15:56.538099Z
-160231
+2011-06-01T14:16:19.338740Z
+174525
 paolo
 
 
@@ -25,6 +25,40 @@ paolo
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+moveable2.cc
+file
+
+
+
+
+2011-06-04T18:06:03.446104Z
+b8fb345849c854f9b88af12f26e5c930
+2011-03-24T15:57:57.207703Z
+171401
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1580
 
 42261.cc
 file
@@ -59,6 +93,40 @@ paolo
 
 
 1048
+
+noexcept_move_construct.cc
+file
+
+
+
+
+2011-06-04T18:06:03.446104Z
+eda71424fce78214dbef18a022d2e482
+2011-06-01T14:16:19.338740Z
+174525
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1002
 
 1.cc
 file

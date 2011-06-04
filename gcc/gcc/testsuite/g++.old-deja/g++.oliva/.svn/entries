@@ -1,14 +1,14 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja/g++.oliva
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-09-27T20:05:34.006410Z
-164666
+2011-04-27T15:56:56.403918Z
+173037
 jason
 
 
@@ -406,11 +406,11 @@ file
 
 
 
-2009-04-24T17:44:36.000000Z
-01da80918c34d148b37c9d4ff4ebd679
-2008-09-18T22:29:39.508493Z
-140476
-janis
+2011-06-04T17:55:36.553104Z
+3760618b418dc1ab4dd84d9b4eb404ba
+2011-04-27T15:56:56.403918Z
+173037
+jason
 
 
 
@@ -432,7 +432,7 @@ janis
 
 
 
-725
+724
 
 template2.C
 file

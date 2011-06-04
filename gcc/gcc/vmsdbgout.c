@@ -1,6 +1,6 @@
 /* Output VMS debug format symbol table information from GCC.
    Copyright (C) 1987, 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Douglas B. Rupp (rupp@gnat.com).
    Updated by Bernard W. Giroud (bgiroud@users.sourceforge.net).
@@ -71,7 +71,6 @@ typedef struct dst_file_info_struct
   long ebk;
   short ffb;
   char rfo;
-  char flen;
 }
 dst_file_info_entry;
 
@@ -205,10 +204,6 @@ const struct gcc_debug_hooks vmsdbg_debug_hooks
    debug_nothing_int,		  /* handle_pch */
    debug_nothing_rtx,		  /* var_location */
    debug_nothing_void,            /* switch_text_section */
-   debug_nothing_tree,		  /* direct_call */
-   debug_nothing_tree_int,	  /* virtual_call_token */
-   debug_nothing_rtx_rtx,	  /* copy_call_info */
-   debug_nothing_uid,		  /* virtual_call */
    debug_nothing_tree_tree,	  /* set_name */
    0,                             /* start_end_main_source_file */
    TYPE_SYMTAB_IS_ADDRESS         /* tree_type_symtab_field */
@@ -936,7 +931,7 @@ write_srccorr (int fileid, dst_file_info_entry file_info_entry,
   int src_command_size;
   int linesleft = file_info_entry.max_line;
   int linestart = file_info_entry.listing_line_start;
-  int flen = file_info_entry.flen;
+  int flen = strlen (file_info_entry.file_name);
   int linestodo = 0;
   DST_SOURCE_CORR src_header;
   DST_SRC_COMMAND src_command;
@@ -981,7 +976,7 @@ write_srccorr (int fileid, dst_file_info_entry file_info_entry,
   src_command.dst_a_src_cmd_fields.dst_a_src_decl_src.dst_b_src_df_rms_rfo
     = file_info_entry.rfo;
   src_command.dst_a_src_cmd_fields.dst_a_src_decl_src.dst_b_src_df_filename
-    = file_info_entry.flen;
+    = flen;
 
   src_header.dst_a_source_corr_header.dst__header_length.dst_w_length
     = DST_K_SOURCE_CORR_HEADER_SIZE + src_command_size - 1;
@@ -1336,7 +1331,6 @@ lookup_filename (const char *file_name)
   register char *fn;
   register unsigned i;
   const char *fnam;
-  char flen;
   long long cdt = 0;
   long ebk = 0;
   short ffb = 0;
@@ -1345,7 +1339,6 @@ lookup_filename (const char *file_name)
   int ver = 0;
 
   fnam = full_name (file_name);
-  flen = strlen (fnam);
 
   /* Check to see if the file name that was searched on the previous call
      matches this file name. If so, return the index.  */
@@ -1390,7 +1383,6 @@ lookup_filename (const char *file_name)
   file_info_table[file_info_table_in_use].ebk = ebk;
   file_info_table[file_info_table_in_use].ffb = ffb;
   file_info_table[file_info_table_in_use].rfo = rfo;
-  file_info_table[file_info_table_in_use].flen = flen;
 
   last_file_lookup_index = file_info_table_in_use++;
   return last_file_lookup_index;
@@ -1454,18 +1446,18 @@ vmsdbgout_end_source_file (unsigned int lineno ATTRIBUTE_UNUSED)
 /* Set up for Debug output at the start of compilation.  */
 
 static void
-vmsdbgout_init (const char *main_input_filename)
+vmsdbgout_init (const char *filename)
 {
   const char *language_string = lang_hooks.name;
 
   if (write_symbols == VMS_AND_DWARF2_DEBUG)
-    (*dwarf2_debug_hooks.init) (main_input_filename);
+    (*dwarf2_debug_hooks.init) (filename);
 
   if (debug_info_level == DINFO_LEVEL_NONE)
     return;
 
   /* Remember the name of the primary input file.  */
-  primary_filename = main_input_filename;
+  primary_filename = filename;
 
   /* Allocate the initial hunk of the file_info_table.  */
   file_info_table = XCNEWVEC (dst_file_info_entry, FILE_TABLE_INCREMENT);
@@ -1568,13 +1560,13 @@ vmsdbgout_abstract_function (tree decl)
    VMS Debug debugging info.  */
 
 static void
-vmsdbgout_finish (const char *main_input_filename ATTRIBUTE_UNUSED)
+vmsdbgout_finish (const char *filename ATTRIBUTE_UNUSED)
 {
   unsigned int i, ifunc;
   int totsize;
 
   if (write_symbols == VMS_AND_DWARF2_DEBUG)
-    (*dwarf2_debug_hooks.finish) (main_input_filename);
+    (*dwarf2_debug_hooks.finish) (filename);
 
   if (debug_info_level == DINFO_LEVEL_NONE)
     return;
@@ -1625,9 +1617,7 @@ vmsdbgout_finish (const char *main_input_filename ATTRIBUTE_UNUSED)
 #include <vms/stsdef.h>
 #include <vms/iodef.h>
 #include <vms/fatdef.h>
-#include <errno.h>
 #include <vms/descrip.h>
-#include <string.h>
 #include <unixlib.h>
 
 #define MAXPATH 256

@@ -1,15 +1,15 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/net/protocol/https
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:46:53.000000Z
-8c552cf01574064643d88d234f310984
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+2011-06-04T18:38:08.184104Z
+1f8c20d8eae8c28ae33461c6381dae70
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -58,5 +58,5 @@ tromey
 
 
 
-2449
+2447
 

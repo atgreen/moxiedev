@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler, for the pdp-11
    Copyright (C) 1994, 1995, 1996, 1998, 1999, 2000, 2001, 2002, 2004, 2005,
-   2006, 2007, 2008, 2010 Free Software Foundation, Inc.
+   2006, 2007, 2008, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Michael K. Gschwind (mike@vlsivie.tuwien.ac.at).
 
 This file is part of GCC.
@@ -35,9 +35,6 @@ along with GCC; see the file COPYING3.  If not see
       builtin_define_std ("pdp11");		\
     }						\
   while (0)
-
-/* Print subsidiary information on the compiler version in use.  */
-#define TARGET_VERSION fprintf (stderr, " (pdp11)");
 
 
 /* Generate DBX debugging information.  */
@@ -274,16 +271,6 @@ enum reg_class { NO_REGS, MUL_REGS, GENERAL_REGS, LOAD_FPU_REGS, NO_LOAD_FPU_REG
 #define INDEX_REG_CLASS GENERAL_REGS
 #define BASE_REG_CLASS GENERAL_REGS
 
-/* The following macro defines cover classes for Integrated Register
-   Allocator.  Cover classes is a set of non-intersected register
-   classes covering all hard registers used for register allocation
-   purpose.  Any move between two registers of a cover class should be
-   cheaper than load or store of the registers.  The macro value is
-   array of register classes with LIM_REG_CLASSES used as the end
-   marker.  */
-
-#define IRA_COVER_CLASSES { GENERAL_REGS, FPU_REGS, LIM_REG_CLASSES }
-
 /* Hook for testing if memory is needed for moving between registers.  */
 #define SECONDARY_MEMORY_NEEDED(class1, class2, m) \
   pdp11_secondary_memory_needed (class1, class2, m)
@@ -431,12 +418,6 @@ extern int may_call_alloca;
 
 #define MAX_REGS_PER_ADDRESS 1
 
-/* Nonzero if the constant value X is a legitimate general operand.
-   It is given that X satisfies CONSTANT_P or is a CONST_DOUBLE.  */
-
-#define LEGITIMATE_CONSTANT_P(X)                                        \
-  (GET_CODE (X) != CONST_DOUBLE || legitimate_const_double_p (X))
-
 /* The macros REG_OK_FOR..._P assume that the arg is a REG rtx
    and check its validity for a certain class.
    We have two alternate definitions for each of them.
@@ -521,7 +502,7 @@ extern int may_call_alloca;
 
 
 /* Tell emit-rtl.c how to initialize special values on a per-function base.  */
-extern struct rtx_def *cc0_reg_rtx;
+extern rtx cc0_reg_rtx;
 
 #define CC_STATUS_MDEP rtx
 
@@ -648,42 +629,16 @@ extern struct rtx_def *cc0_reg_rtx;
 /* This says how to output an assembler line
    to define a global common symbol.  */
 
-#define ASM_OUTPUT_COMMON(FILE, NAME, SIZE, ROUNDED)  \
-( fprintf ((FILE), ".globl "),			\
-  assemble_name ((FILE), (NAME)),		\
-  fprintf ((FILE), "\n"),			\
-  assemble_name ((FILE), (NAME)),		\
-  fprintf ((FILE), ": .=.+ %#ho\n", (unsigned short)(ROUNDED))		\
-)
+#define ASM_OUTPUT_ALIGNED_COMMON(FILE, NAME, SIZE, ALIGN)  \
+    pdp11_asm_output_var (FILE, NAME, SIZE, ALIGN, true)
+
 
 /* This says how to output an assembler line
    to define a local common symbol.  */
 
-#define ASM_OUTPUT_LOCAL(FILE, NAME, SIZE, ROUNDED)  \
-( assemble_name ((FILE), (NAME)),				\
-  fprintf ((FILE), ":\t.=.+ %#ho\n", (unsigned short)(ROUNDED)))
+#define ASM_OUTPUT_ALIGNED_LOCAL(FILE, NAME, SIZE, ALIGN) \
+    pdp11_asm_output_var (FILE, NAME, SIZE, ALIGN, false)
 
-/* Print operand X (an rtx) in assembler syntax to file FILE.
-   CODE is a letter or dot (`z' in `%z0') or 0 if no letter was specified.
-   For `%' followed by punctuation, CODE is the punctuation and X is null.
-
-*/
-
-
-#define PRINT_OPERAND(FILE, X, CODE)  \
-{ if (CODE == '#') fprintf (FILE, "#");					\
-  else if (GET_CODE (X) == REG)						\
-    fprintf (FILE, "%s", reg_names[REGNO (X)]);				\
-  else if (GET_CODE (X) == MEM)						\
-    output_address (XEXP (X, 0));					\
-  else if (GET_CODE (X) == CONST_DOUBLE && GET_MODE (X) != SImode)	\
-    { REAL_VALUE_TYPE r;						\
-      long sval[2];							\
-      REAL_VALUE_FROM_CONST_DOUBLE (r, X);				\
-      REAL_VALUE_TO_TARGET_DOUBLE (r, sval);				\
-      fprintf (FILE, "$%#lo", sval[0] >> 16); }				\
-  else { putc ('$', FILE); output_addr_const_pdp11 (FILE, X); }}
-
 /* Print a memory address as an operand to reference that memory location.  */
 
 #define PRINT_OPERAND_ADDRESS(FILE, ADDR)  \

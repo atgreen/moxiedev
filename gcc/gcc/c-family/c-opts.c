@@ -1,5 +1,5 @@
 /* C/ObjC/C++ command line option handling.
-   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Neil Booth.
 
@@ -36,7 +36,12 @@ along with GCC; see the file COPYING3.  If not see
 #include "opts.h"
 #include "options.h"
 #include "mkdeps.h"
-#include "target.h"		/* For gcc_targetcm.  */
+#include "c-target.h"
+#include "tm.h"			/* For BYTES_BIG_ENDIAN,
+				   DOLLARS_IN_IDENTIFIERS,
+				   STDC_0_IN_SYSTEM_HEADERS,
+				   TARGET_FLT_EVAL_METHOD_NON_DEFAULT and
+				   TARGET_OPTF.  */
 #include "tm_p.h"		/* For C_COMMON_OVERRIDE_OPTIONS.  */
 
 #ifndef DOLLARS_IN_IDENTIFIERS
@@ -116,7 +121,7 @@ static void add_prefixed_path (const char *, size_t);
 static void push_command_line_include (void);
 static void cb_file_change (cpp_reader *, const struct line_map *);
 static void cb_dir_change (cpp_reader *, const char *);
-static void finish_options (void);
+static void c_finish_options (void);
 
 #ifndef STDC_0_IN_SYSTEM_HEADERS
 #define STDC_0_IN_SYSTEM_HEADERS 0
@@ -379,6 +384,7 @@ c_common_handle_option (size_t scode, const char *arg, int value,
       warn_unknown_pragmas = value;
 
       warn_uninitialized = value;
+      warn_maybe_uninitialized = value;
 
       if (!c_dialect_cxx ())
 	{
@@ -654,16 +660,16 @@ c_common_handle_option (size_t scode, const char *arg, int value,
       break;
 
     case OPT_femit_struct_debug_baseonly:
-      set_struct_debug_option (&global_options, "base");
+      set_struct_debug_option (&global_options, loc, "base");
       break;
 
     case OPT_femit_struct_debug_reduced:
-      set_struct_debug_option (&global_options,
+      set_struct_debug_option (&global_options, loc,
 			       "dir:ord:sys,dir:gen:any,ind:base");
       break;
 
     case OPT_femit_struct_debug_detailed_:
-      set_struct_debug_option (&global_options, arg);
+      set_struct_debug_option (&global_options, loc, arg);
       break;
 
     case OPT_idirafter:
@@ -807,6 +813,16 @@ c_common_handle_option (size_t scode, const char *arg, int value,
     }
 
   return result;
+}
+
+/* Default implementation of TARGET_HANDLE_C_OPTION.  */
+
+bool
+default_handle_c_option (size_t code ATTRIBUTE_UNUSED,
+			 const char *arg ATTRIBUTE_UNUSED,
+			 int value ATTRIBUTE_UNUSED)
+{
+  return false;
 }
 
 /* Post-switch processing.  */
@@ -995,6 +1011,12 @@ c_common_post_options (const char **pfilename)
     {
       init_c_lex ();
 
+      /* When writing a PCH file, avoid reading some other PCH file,
+	 because the default address space slot then can't be used
+	 for the output PCH file.  */
+      if (pch_file)
+	c_common_no_more_pch ();
+
       /* Yuk.  WTF is this?  I do know ObjC relies on it somewhere.  */
       input_location = UNKNOWN_LOCATION;
     }
@@ -1047,7 +1069,7 @@ c_common_init (void)
 
   if (flag_preprocess_only)
     {
-      finish_options ();
+      c_finish_options ();
       preprocess_file (parse_in);
       return false;
     }
@@ -1065,7 +1087,7 @@ c_common_parse_file (void)
   i = 0;
   for (;;)
     {
-      finish_options ();
+      c_finish_options ();
       pch_init ();
       push_file_scope ();
       c_parse_file ();
@@ -1131,12 +1153,12 @@ check_deps_environment_vars (void)
 {
   char *spec;
 
-  GET_ENVIRONMENT (spec, "DEPENDENCIES_OUTPUT");
+  spec = getenv ("DEPENDENCIES_OUTPUT");
   if (spec)
     cpp_opts->deps.style = DEPS_USER;
   else
     {
-      GET_ENVIRONMENT (spec, "SUNPRO_DEPENDENCIES");
+      spec = getenv ("SUNPRO_DEPENDENCIES");
       if (spec)
 	{
 	  cpp_opts->deps.style = DEPS_SYSTEM;
@@ -1277,7 +1299,7 @@ add_prefixed_path (const char *suffix, size_t chain)
 
 /* Handle -D, -U, -A, -imacros, and the first -include.  */
 static void
-finish_options (void)
+c_finish_options (void)
 {
   if (!cpp_opts->preprocessed)
     {

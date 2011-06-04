@@ -1,6 +1,6 @@
 /* Intrinsic function resolution.
    Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010
+   2009, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Andy Vaught & Katherine Holcomb
 
@@ -35,6 +35,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "gfortran.h"
 #include "intrinsic.h"
 #include "constructor.h"
+#include "arith.h"
 
 /* Given printf-like arguments, return a stable version of the result string. 
 
@@ -2044,11 +2045,31 @@ gfc_resolve_rename (gfc_expr *f, gfc_expr *p1 ATTRIBUTE_UNUSED,
 
 void
 gfc_resolve_repeat (gfc_expr *f, gfc_expr *string,
-		    gfc_expr *ncopies ATTRIBUTE_UNUSED)
+		    gfc_expr *ncopies)
 {
+  int len;
+  gfc_expr *tmp;
   f->ts.type = BT_CHARACTER;
   f->ts.kind = string->ts.kind;
   f->value.function.name = gfc_get_string ("__repeat_%d", string->ts.kind);
+
+  /* If possible, generate a character length.  */
+  if (f->ts.u.cl == NULL)
+    f->ts.u.cl = gfc_new_charlen (gfc_current_ns, NULL);
+
+  tmp = NULL;
+  if (string->expr_type == EXPR_CONSTANT)
+    {
+      len = string->value.character.length;
+      tmp = gfc_get_int_expr (gfc_default_integer_kind, NULL , len);
+    }
+  else if (string->ts.u.cl && string->ts.u.cl->length)
+    {
+      tmp = gfc_copy_expr (string->ts.u.cl->length);
+    }
+
+  if (tmp)
+    f->ts.u.cl->length = gfc_multiply (tmp, gfc_copy_expr (ncopies));
 }
 
 
@@ -2185,10 +2206,15 @@ gfc_resolve_set_exponent (gfc_expr *f, gfc_expr *x,
 
 
 void
-gfc_resolve_shape (gfc_expr *f, gfc_expr *array)
+gfc_resolve_shape (gfc_expr *f, gfc_expr *array, gfc_expr *kind)
 {
   f->ts.type = BT_INTEGER;
-  f->ts.kind = gfc_default_integer_kind;
+
+  if (kind)
+    f->ts.kind = mpz_get_si (kind->value.integer);
+  else
+    f->ts.kind = gfc_default_integer_kind;
+
   f->rank = 1;
   f->shape = gfc_get_shape (1);
   mpz_init_set_ui (f->shape[0], array->rank);
@@ -2521,16 +2547,25 @@ void
 gfc_resolve_image_index (gfc_expr *f, gfc_expr *array ATTRIBUTE_UNUSED,
 			 gfc_expr *sub ATTRIBUTE_UNUSED)
 {
-  static char this_image[] = "__image_index";
+  static char image_index[] = "__image_index";
+  f->ts.type = BT_INTEGER;
   f->ts.kind = gfc_default_integer_kind;
-  f->value.function.name = this_image;
+  f->value.function.name = image_index;
 }
 
 
 void
 gfc_resolve_this_image (gfc_expr *f, gfc_expr *array, gfc_expr *dim)
 {
-  resolve_bound (f, array, dim, NULL, "__this_image", true);
+  static char this_image[] = "__this_image";
+  if (array)
+    resolve_bound (f, array, dim, NULL, "__this_image", true);
+  else
+    {
+      f->ts.type = BT_INTEGER;
+      f->ts.kind = gfc_default_integer_kind;
+      f->value.function.name = this_image;
+    }
 }
 
 
@@ -2856,6 +2891,22 @@ create_formal_for_intents (gfc_actual_arglist* actual, const sym_intent* ints)
     }
 
   return head;
+}
+
+
+void
+gfc_resolve_atomic_def (gfc_code *c)
+{
+  const char *name = "atomic_define";
+  c->resolved_sym = gfc_get_intrinsic_sub_symbol (name);
+}
+
+
+void
+gfc_resolve_atomic_ref (gfc_code *c)
+{
+  const char *name = "atomic_ref";
+  c->resolved_sym = gfc_get_intrinsic_sub_symbol (name);
 }
 
 

@@ -1,5 +1,5 @@
 /* Language-dependent hooks for Objective-C.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2007, 2008
+   Copyright 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2010, 2011
    Free Software Foundation, Inc.
    Contributed by Ziemowit Laski  <zlaski@apple.com>
 
@@ -27,14 +27,15 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree.h"
 #include "c-tree.h"
 #include "c-family/c-common.h"
+#include "c-family/c-objc.h"
 #include "ggc.h"
 #include "objc-act.h"
 #include "langhooks.h"
 #include "langhooks-def.h"
 #include "c-objc-common.h"
+#include "c-lang.h"
 
 enum c_language_kind c_language = clk_objc;
-static void objc_init_ts (void);
 
 /* Lang hooks common to C and ObjC are declared in c-objc-common.h;
    consequently, there should be very few hooks below.  */
@@ -45,51 +46,15 @@ static void objc_init_ts (void);
 #define LANG_HOOKS_INIT objc_init
 #undef LANG_HOOKS_DECL_PRINTABLE_NAME
 #define LANG_HOOKS_DECL_PRINTABLE_NAME objc_printable_name
-#undef LANG_HOOKS_GIMPLIFY_EXPR 
+#undef LANG_HOOKS_GIMPLIFY_EXPR
 #define LANG_HOOKS_GIMPLIFY_EXPR objc_gimplify_expr
 #undef LANG_HOOKS_INIT_TS
-#define LANG_HOOKS_INIT_TS objc_init_ts
-
-#ifndef OBJCPLUS
-#undef LANG_HOOKS_EH_PERSONALITY
-#define LANG_HOOKS_EH_PERSONALITY objc_eh_personality
-#undef LANG_HOOKS_EH_RUNTIME_TYPE
-#define LANG_HOOKS_EH_RUNTIME_TYPE objc_eh_runtime_type
-#endif
+#define LANG_HOOKS_INIT_TS objc_common_init_ts
 
 /* Each front end provides its own lang hook initializer.  */
 struct lang_hooks lang_hooks = LANG_HOOKS_INITIALIZER;
 
 /* Lang hook routines common to C and ObjC appear in c-objc-common.c;
    there should be very few (if any) routines below.  */
-
-static void
-objc_init_ts (void)
-{
-  tree_contains_struct[CLASS_METHOD_DECL][TS_DECL_NON_COMMON] = 1;
-  tree_contains_struct[INSTANCE_METHOD_DECL][TS_DECL_NON_COMMON] = 1;
-  tree_contains_struct[KEYWORD_DECL][TS_DECL_NON_COMMON] = 1;
-  tree_contains_struct[PROPERTY_DECL][TS_DECL_NON_COMMON] = 1;
-  
-  tree_contains_struct[CLASS_METHOD_DECL][TS_DECL_WITH_VIS] = 1;
-  tree_contains_struct[INSTANCE_METHOD_DECL][TS_DECL_WITH_VIS] = 1;
-  tree_contains_struct[KEYWORD_DECL][TS_DECL_WITH_VIS] = 1;
-  tree_contains_struct[PROPERTY_DECL][TS_DECL_WITH_VIS] = 1;
-
-  tree_contains_struct[CLASS_METHOD_DECL][TS_DECL_WRTL] = 1;
-  tree_contains_struct[INSTANCE_METHOD_DECL][TS_DECL_WRTL] = 1;
-  tree_contains_struct[KEYWORD_DECL][TS_DECL_WRTL] = 1;
-  tree_contains_struct[PROPERTY_DECL][TS_DECL_WRTL] = 1;
-  
-  tree_contains_struct[CLASS_METHOD_DECL][TS_DECL_MINIMAL] = 1;
-  tree_contains_struct[INSTANCE_METHOD_DECL][TS_DECL_MINIMAL] = 1;
-  tree_contains_struct[KEYWORD_DECL][TS_DECL_MINIMAL] = 1;
-  tree_contains_struct[PROPERTY_DECL][TS_DECL_MINIMAL] = 1;
-  
-  tree_contains_struct[CLASS_METHOD_DECL][TS_DECL_COMMON] = 1;
-  tree_contains_struct[INSTANCE_METHOD_DECL][TS_DECL_COMMON] = 1;
-  tree_contains_struct[KEYWORD_DECL][TS_DECL_COMMON] = 1;
-  tree_contains_struct[PROPERTY_DECL][TS_DECL_COMMON] = 1;
-}
 
 #include "gtype-objc.h"

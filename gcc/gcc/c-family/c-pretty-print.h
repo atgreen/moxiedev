@@ -1,5 +1,6 @@
 /* Various declarations for the C and C++ pretty-printers.
-   Copyright (C) 2002, 2003, 2004, 2007, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2002, 2003, 2004, 2007, 2009, 2010
+   Free Software Foundation, Inc.
    Contributed by Gabriel Dos Reis <gdr@integrable-solutions.net>
 
 This file is part of GCC.
@@ -176,6 +177,7 @@ void pp_c_space_for_pointer_operator (c_pretty_printer *, tree);
 void pp_c_tree_decl_identifier (c_pretty_printer *, tree);
 void pp_c_function_definition (c_pretty_printer *, tree);
 void pp_c_attributes (c_pretty_printer *, tree);
+void pp_c_attributes_display (c_pretty_printer *, tree);
 void pp_c_cv_qualifiers (c_pretty_printer *pp, int qualifiers, bool func_type);
 void pp_c_type_qualifier_list (c_pretty_printer *, tree);
 void pp_c_parameter_type_list (c_pretty_printer *, tree);

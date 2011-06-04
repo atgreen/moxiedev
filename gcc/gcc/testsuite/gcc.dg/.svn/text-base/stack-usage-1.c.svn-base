@@ -2,7 +2,7 @@
 /* { dg-options "-fstack-usage" } */
 
 /* This is aimed at testing basic support for -fstack-usage in the back-ends.
-   See the SPARC back-end for an example (grep flag_stack_usage in sparc.c).
+   See the SPARC back-end for example (grep flag_stack_usage_info in sparc.c).
    Once it is implemented, adjust SIZE below so that the stack usage for the
    function FOO is reported as 256 or 264 in the stack usage (.su) file.
    Then check that this is the actual stack usage in the assembly file.  */
@@ -30,15 +30,28 @@
 #  else
 #    define SIZE 248
 #  endif
+#elif defined (__powerpc64__) || defined (__ppc64__) || defined (__POWERPC64__) \
+      || defined (__PPC64__)
+#  define SIZE 180
 #elif defined (__powerpc__) || defined (__PPC__) || defined (__ppc__) \
       || defined (__POWERPC__) || defined (PPC) || defined (_IBMR2)
-#  define SIZE 240
+#  if defined (__ALTIVEC__)
+#    if defined (__APPLE__)
+#      define SIZE 204
+#    else
+#      define SIZE 220
+#    endif
+#  else
+#    define SIZE 240
+#  endif
 #elif defined (__AVR__)
 #  define SIZE 254
 #elif defined (__s390x__)
 #  define SIZE 96  /* 256 - 160 bytes for register save area */
 #elif defined (__s390__)
 #  define SIZE 160 /* 256 -  96 bytes for register save area */
+#elif defined (__SPU__)
+#  define SIZE 224
 #else
 #  define SIZE 256
 #endif

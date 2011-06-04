@@ -1,5 +1,6 @@
 /* Instruction scheduling pass.  Selective scheduler and pipeliner.
-   Copyright (C) 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -22,7 +23,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "rtl.h"
 #include "tm_p.h"
 #include "hard-reg-set.h"
@@ -32,7 +32,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "insn-config.h"
 #include "insn-attr.h"
 #include "except.h"
-#include "toplev.h"
 #include "recog.h"
 #include "params.h"
 #include "target.h"
@@ -156,6 +155,7 @@ static void move_bb_info (basic_block, basic_block);
 static void remove_empty_bb (basic_block, bool);
 static void sel_merge_blocks (basic_block, basic_block);
 static void sel_remove_loop_preheader (void);
+static bool bb_has_removable_jump_to_p (basic_block, basic_block);
 
 static bool insn_is_the_only_one_in_bb_p (insn_t);
 static void create_initial_data_sets (basic_block);
@@ -581,8 +581,7 @@ fence_clear (fence_t f)
   gcc_assert ((s != NULL && dc != NULL && tc != NULL)
 	      || (s == NULL && dc == NULL && tc == NULL));
 
-  if (s != NULL)
-    free (s);
+  free (s);
 
   if (dc != NULL)
     delete_deps_context (dc);
@@ -942,6 +941,7 @@ get_clear_regset_from_pool (void)
 void
 return_regset_to_pool (regset rs)
 {
+  gcc_assert (rs);
   regset_pool.diff--;
 
   if (regset_pool.n == regset_pool.s)
@@ -1175,6 +1175,9 @@ vinsn_init (vinsn_t vi, insn_t insn, bool force_unique_p)
   VINSN_COUNT (vi) = 0;
   vi->cost = -1;
 
+  if (INSN_NOP_P (insn))
+    return;
+
   if (DF_INSN_UID_SAFE_GET (INSN_UID (insn)) != NULL)
     init_id_from_df (VINSN_ID (vi), insn, force_unique_p);
   else
@@ -1256,9 +1259,12 @@ vinsn_delete (vinsn_t vi)
 {
   gcc_assert (VINSN_COUNT (vi) == 0);
 
-  return_regset_to_pool (VINSN_REG_SETS (vi));
-  return_regset_to_pool (VINSN_REG_USES (vi));
-  return_regset_to_pool (VINSN_REG_CLOBBERS (vi));
+  if (!INSN_NOP_P (VINSN_INSN_RTX (vi)))
+    {
+      return_regset_to_pool (VINSN_REG_SETS (vi));
+      return_regset_to_pool (VINSN_REG_USES (vi));
+      return_regset_to_pool (VINSN_REG_CLOBBERS (vi));
+    }
 
   free (vi);
 }
@@ -1558,6 +1564,20 @@ free_history_vect (VEC (expr_history_def, heap) **pvect)
   *pvect = NULL;
 }
 
+/* Merge vector FROM to PVECT.  */
+static void
+merge_history_vect (VEC (expr_history_def, heap) **pvect,
+		    VEC (expr_history_def, heap) *from)
+{
+  expr_history_def *phist;
+  int i;
+
+  /* We keep this vector sorted.  */
+  for (i = 0; VEC_iterate (expr_history_def, from, i, phist); i++)
+    insert_in_history_vect (pvect, phist->uid, phist->type,
+                            phist->old_expr_vinsn, phist->new_expr_vinsn,
+                            phist->spec_ds);
+}
 
 /* Compare two vinsns as rhses if possible and as vinsns otherwise.  */
 bool
@@ -1790,9 +1810,6 @@ update_speculative_bits (expr_t to, expr_t from, insn_t split_point)
 void
 merge_expr_data (expr_t to, expr_t from, insn_t split_point)
 {
-  int i;
-  expr_history_def *phist;
-
   /* For now, we just set the spec of resulting expr to be minimum of the specs
      of merged exprs.  */
   if (EXPR_SPEC (to) > EXPR_SPEC (from))
@@ -1816,20 +1833,12 @@ merge_expr_data (expr_t to, expr_t from, insn_t split_point)
   EXPR_ORIG_SCHED_CYCLE (to) = MIN (EXPR_ORIG_SCHED_CYCLE (to),
                                     EXPR_ORIG_SCHED_CYCLE (from));
 
-  /* We keep this vector sorted.  */
-  for (i = 0;
-       VEC_iterate (expr_history_def, EXPR_HISTORY_OF_CHANGES (from),
-                    i, phist);
-       i++)
-    insert_in_history_vect (&EXPR_HISTORY_OF_CHANGES (to),
-                            phist->uid, phist->type,
-                            phist->old_expr_vinsn, phist->new_expr_vinsn,
-                            phist->spec_ds);
-
   EXPR_WAS_SUBSTITUTED (to) |= EXPR_WAS_SUBSTITUTED (from);
   EXPR_WAS_RENAMED (to) |= EXPR_WAS_RENAMED (from);
   EXPR_CANT_MOVE (to) |= EXPR_CANT_MOVE (from);
 
+  merge_history_vect (&EXPR_HISTORY_OF_CHANGES (to),
+		      EXPR_HISTORY_OF_CHANGES (from));
   update_target_availability (to, from, split_point);
   update_speculative_bits (to, from, split_point);
 }
@@ -2322,16 +2331,24 @@ av_set_split_usefulness (av_set_t av, int prob, int all_prob)
 }
 
 /* Leave in AVP only those expressions, which are present in AV,
-   and return it.  */
+   and return it, merging history expressions.  */
 void
-av_set_intersect (av_set_t *avp, av_set_t av)
+av_set_code_motion_filter (av_set_t *avp, av_set_t av)
 {
   av_set_iterator i;
-  expr_t expr;
+  expr_t expr, expr2;
 
   FOR_EACH_EXPR_1 (expr, i, avp)
-    if (av_set_lookup (av, EXPR_VINSN (expr)) == NULL)
+    if ((expr2 = av_set_lookup (av, EXPR_VINSN (expr))) == NULL)
       av_set_iter_remove (&i);
+    else
+      /* When updating av sets in bookkeeping blocks, we can add more insns
+	 there which will be transformed but the upper av sets will not
+	 reflect those transformations.  We then fail to undo those
+	 when searching for such insns.  So merge the history saved
+	 in the av set of the block we are processing.  */
+      merge_history_vect (&EXPR_HISTORY_OF_CHANGES (expr),
+			  EXPR_HISTORY_OF_CHANGES (expr2));
 }
 
 
@@ -2703,6 +2720,54 @@ deps_init_id (idata_t id, insn_t insn, bool force_unique_p)
 }
 
 
+struct sched_scan_info_def
+{
+  /* This hook notifies scheduler frontend to extend its internal per basic
+     block data structures.  This hook should be called once before a series of
+     calls to bb_init ().  */
+  void (*extend_bb) (void);
+
+  /* This hook makes scheduler frontend to initialize its internal data
+     structures for the passed basic block.  */
+  void (*init_bb) (basic_block);
+
+  /* This hook notifies scheduler frontend to extend its internal per insn data
+     structures.  This hook should be called once before a series of calls to
+     insn_init ().  */
+  void (*extend_insn) (void);
+
+  /* This hook makes scheduler frontend to initialize its internal data
+     structures for the passed insn.  */
+  void (*init_insn) (rtx);
+};
+
+/* A driver function to add a set of basic blocks (BBS) to the
+   scheduling region.  */
+static void
+sched_scan (const struct sched_scan_info_def *ssi, bb_vec_t bbs)
+{
+  unsigned i;
+  basic_block bb;
+
+  if (ssi->extend_bb)
+    ssi->extend_bb ();
+
+  if (ssi->init_bb)
+    FOR_EACH_VEC_ELT (basic_block, bbs, i, bb)
+      ssi->init_bb (bb);
+
+  if (ssi->extend_insn)
+    ssi->extend_insn ();
+
+  if (ssi->init_insn)
+    FOR_EACH_VEC_ELT (basic_block, bbs, i, bb)
+      {
+	rtx insn;
+
+	FOR_BB_INSNS (bb, insn)
+	  ssi->init_insn (insn);
+      }
+}
 
 /* Implement hooks for collecting fundamental insn properties like if insn is
    an ASM or is within a SCHED_GROUP.  */
@@ -2887,6 +2952,7 @@ init_global_and_expr_for_insn (insn_t insn)
       if (CANT_MOVE (insn)
           || INSN_ASM_P (insn)
           || SCHED_GROUP_P (insn)
+	  || CALL_P (insn)
           /* Exception handling insns are always unique.  */
           || (cfun->can_throw_non_call_exceptions && can_throw_internal (insn))
           /* TRAP_IF though have an INSN code is control_flow_insn_p ().  */
@@ -2926,7 +2992,7 @@ sel_init_global_and_expr (bb_vec_t bbs)
       init_global_and_expr_for_insn /* init_insn */
     };
 
-  sched_scan (&ssi, bbs, NULL, NULL, NULL);
+  sched_scan (&ssi, bbs);
 }
 
 /* Finalize region-scope data structures for basic blocks.  */
@@ -2983,7 +3049,7 @@ sel_finish_global_and_expr (void)
 	  finish_global_and_expr_insn /* init_insn */
 	};
 
-      sched_scan (&ssi, bbs, NULL, NULL, NULL);
+      sched_scan (&ssi, bbs);
     }
 
     VEC_free (basic_block, heap, bbs);
@@ -3565,6 +3631,7 @@ static bool
 maybe_tidy_empty_bb (basic_block bb)
 {
   basic_block succ_bb, pred_bb;
+  VEC (basic_block, heap) *dom_bbs;
   edge e;
   edge_iterator ei;
   bool rescan_p;
@@ -3600,6 +3667,7 @@ maybe_tidy_empty_bb (basic_block bb)
   succ_bb = single_succ (bb);
   rescan_p = true;
   pred_bb = NULL;
+  dom_bbs = NULL;
 
   /* Redirect all non-fallthru edges to the next bb.  */
   while (rescan_p)
@@ -3613,7 +3681,14 @@ maybe_tidy_empty_bb (basic_block bb)
           if (!(e->flags & EDGE_FALLTHRU))
             {
 	      /* We can not invalidate computed topological order by moving
-	         the edge destination block (E->SUCC) along a fallthru edge.  */
+	         the edge destination block (E->SUCC) along a fallthru edge.
+
+		 We will update dominators here only when we'll get
+		 an unreachable block when redirecting, otherwise
+		 sel_redirect_edge_and_branch will take care of it.  */
+	      if (e->dest != bb
+		  && single_pred_p (e->dest))
+		VEC_safe_push (basic_block, heap, dom_bbs, e->dest);
               sel_redirect_edge_and_branch (e, succ_bb);
               rescan_p = true;
               break;
@@ -3650,9 +3725,12 @@ maybe_tidy_empty_bb (basic_block bb)
       remove_empty_bb (bb, true);
     }
 
-#ifdef ENABLE_CHECKING
-  verify_backedges ();
-#endif
+  if (!VEC_empty (basic_block, dom_bbs))
+    {
+      VEC_safe_push (basic_block, heap, dom_bbs, succ_bb);
+      iterate_fix_dominators (CDI_DOMINATORS, dom_bbs, false);
+      VEC_free (basic_block, heap, dom_bbs);
+    }
 
   return true;
 }
@@ -3672,7 +3750,7 @@ tidy_control_flow (basic_block xbb, bool full_tidying)
     return changed;
 
   /* Check if there is a unnecessary jump after insn left.  */
-  if (jump_leads_only_to_bb_p (BB_END (xbb), xbb->next_bb)
+  if (bb_has_removable_jump_to_p (xbb, xbb->next_bb)
       && INSN_SCHED_TIMES (BB_END (xbb)) == 0
       && !IN_CURRENT_FENCE_P (BB_END (xbb)))
     {
@@ -3713,7 +3791,7 @@ tidy_control_flow (basic_block xbb, bool full_tidying)
       /* And unconditional jump in previous basic block leads to
          next basic block of XBB and this jump can be safely removed.  */
       && in_current_region_p (xbb->prev_bb)
-      && jump_leads_only_to_bb_p (BB_END (xbb->prev_bb), xbb->next_bb)
+      && bb_has_removable_jump_to_p (xbb->prev_bb, xbb->next_bb)
       && INSN_SCHED_TIMES (BB_END (xbb->prev_bb)) == 0
       /* Also this jump is not at the scheduling boundary.  */
       && !IN_CURRENT_FENCE_P (BB_END (xbb->prev_bb)))
@@ -3735,6 +3813,12 @@ tidy_control_flow (basic_block xbb, bool full_tidying)
       if (recompute_toporder_p)
 	sel_recompute_toporder ();
     }
+
+#ifdef ENABLE_CHECKING
+  verify_backedges ();
+  verify_dominators (CDI_DOMINATORS);
+#endif
+
   return changed;
 }
 
@@ -3742,10 +3826,10 @@ tidy_control_flow (basic_block xbb, bool full_tidying)
 void
 purge_empty_blocks (void)
 {
-  /* Do not attempt to delete preheader.  */
-  int i = sel_is_loop_preheader_p (BASIC_BLOCK (BB_TO_BLOCK (0))) ? 1 : 0;
+  int i;
 
-  while (i < current_nr_blocks)
+  /* Do not attempt to delete the first basic block in the region.  */
+  for (i = 1; i < current_nr_blocks; )
     {
       basic_block b = BASIC_BLOCK (BB_TO_BLOCK (i));
 
@@ -3954,9 +4038,6 @@ finish_region_bb_info (void)
 /* Data for each insn in current region.  */
 VEC (sel_insn_data_def, heap) *s_i_d = NULL;
 
-/* A vector for the insns we've emitted.  */
-static insn_vec_t new_insns = NULL;
-
 /* Extend data structures for insns from current region.  */
 static void
 extend_insn_data (void)
@@ -4095,7 +4176,10 @@ sel_init_new_insn (insn_t insn, int flags)
     }
 
   if (flags & INSN_INIT_TODO_LUID)
-    sched_init_luids (NULL, NULL, NULL, insn);
+    {
+      sched_extend_luids ();
+      sched_init_insn_luid (insn);
+    }
 
   if (flags & INSN_INIT_TODO_SSID)
     {
@@ -4417,9 +4501,6 @@ fallthru_bb_of_jump (rtx jump)
   if (!JUMP_P (jump))
     return NULL;
 
-  if (any_uncondjump_p (jump))
-    return single_succ (BLOCK_FOR_INSN (jump));
-
   if (!any_condjump_p (jump))
     return NULL;
 
@@ -4440,7 +4521,7 @@ init_bb (basic_block bb)
 }
 
 void
-sel_init_bbs (bb_vec_t bbs, basic_block bb)
+sel_init_bbs (bb_vec_t bbs)
 {
   const struct sched_scan_info_def ssi =
     {
@@ -4450,7 +4531,7 @@ sel_init_bbs (bb_vec_t bbs, basic_block bb)
       NULL /* init_insn */
     };
 
-  sched_scan (&ssi, bbs, bb, new_insns, NULL);
+  sched_scan (&ssi, bbs);
 }
 
 /* Restore notes for the whole region.  */
@@ -5007,9 +5088,9 @@ static void
 sel_add_bb (basic_block bb)
 {
   /* Extend luids so that new notes will receive zero luids.  */
-  sched_init_luids (NULL, NULL, NULL, NULL);
+  sched_extend_luids ();
   sched_init_bbs ();
-  sel_init_bbs (last_added_blocks, NULL);
+  sel_init_bbs (last_added_blocks);
 
   /* When bb is passed explicitly, the vector should contain
      the only element that equals to bb; otherwise, the vector
@@ -5068,7 +5149,12 @@ sel_remove_bb (basic_block bb, bool remove_from_cfg_p)
   bitmap_clear_bit (blocks_to_reschedule, idx);
 
   if (remove_from_cfg_p)
-    delete_and_free_basic_block (bb);
+    {
+      basic_block succ = single_succ (bb);
+      delete_and_free_basic_block (bb);
+      set_immediate_dominator (CDI_DOMINATORS, succ,
+                               recompute_dominator (CDI_DOMINATORS, succ));
+    }
 
   rgn_setup_region (CONTAINING_RGN (idx));
 }
@@ -5403,12 +5489,15 @@ sel_merge_blocks (basic_block a, basic_block b)
 void
 sel_redirect_edge_and_branch_force (edge e, basic_block to)
 {
-  basic_block jump_bb, src;
+  basic_block jump_bb, src, orig_dest = e->dest;
   int prev_max_uid;
   rtx jump;
 
-  gcc_assert (!sel_bb_empty_p (e->src));
-
+  /* This function is now used only for bookkeeping code creation, where
+     we'll never get the single pred of orig_dest block and thus will not
+     hit unreachable blocks when updating dominator info.  */
+  gcc_assert (!sel_bb_empty_p (e->src)
+              && !single_pred_p (orig_dest));
   src = e->src;
   prev_max_uid = get_max_uid ();
   jump_bb = redirect_edge_and_branch_force (e, to);
@@ -5425,6 +5514,10 @@ sel_redirect_edge_and_branch_force (edge e, basic_block to)
   jump = find_new_jump (src, jump_bb, prev_max_uid);
   if (jump)
     sel_init_new_insn (jump, INSN_INIT_TODO_LUID | INSN_INIT_TODO_SIMPLEJUMP);
+  set_immediate_dominator (CDI_DOMINATORS, to,
+			   recompute_dominator (CDI_DOMINATORS, to));
+  set_immediate_dominator (CDI_DOMINATORS, orig_dest,
+			   recompute_dominator (CDI_DOMINATORS, orig_dest));
 }
 
 /* A wrapper for redirect_edge_and_branch.  Return TRUE if blocks connected by
@@ -5433,11 +5526,12 @@ bool
 sel_redirect_edge_and_branch (edge e, basic_block to)
 {
   bool latch_edge_p;
-  basic_block src;
+  basic_block src, orig_dest = e->dest;
   int prev_max_uid;
   rtx jump;
   edge redirected;
   bool recompute_toporder_p = false;
+  bool maybe_unreachable = single_pred_p (orig_dest);
 
   latch_edge_p = (pipelining_p
                   && current_loop_nest
@@ -5468,6 +5562,15 @@ sel_redirect_edge_and_branch (edge e, basic_block to)
   if (jump)
     sel_init_new_insn (jump, INSN_INIT_TODO_LUID | INSN_INIT_TODO_SIMPLEJUMP);
 
+  /* Only update dominator info when we don't have unreachable blocks.
+     Otherwise we'll update in maybe_tidy_empty_bb.  */
+  if (!maybe_unreachable)
+    {
+      set_immediate_dominator (CDI_DOMINATORS, to,
+                               recompute_dominator (CDI_DOMINATORS, to));
+      set_immediate_dominator (CDI_DOMINATORS, orig_dest,
+                               recompute_dominator (CDI_DOMINATORS, orig_dest));
+    }
   return recompute_toporder_p;
 }
 
@@ -5528,7 +5631,7 @@ create_insn_rtx_from_pattern (rtx pattern, rtx label)
 
   end_sequence ();
 
-  sched_init_luids (NULL, NULL, NULL, NULL);
+  sched_extend_luids ();
   sched_extend_target ();
   sched_deps_init (false);
 
@@ -5595,6 +5698,7 @@ static struct haifa_sched_info sched_sel_haifa_sched_info =
 
   NULL, /* add_remove_insn */
   NULL, /* begin_schedule_ready */
+  NULL, /* begin_move_insn */
   NULL, /* advance_target_bb */
   SEL_SCHED | NEW_BBS
 };
@@ -5606,7 +5710,7 @@ setup_nop_and_exit_insns (void)
   gcc_assert (nop_pattern == NULL_RTX
 	      && exit_insn == NULL_RTX);
 
-  nop_pattern = gen_nop ();
+  nop_pattern = constm1_rtx;
 
   start_sequence ();
   emit_insn (nop_pattern);
@@ -6037,11 +6141,11 @@ sel_find_rgns (void)
   bbs_in_loop_rgns = NULL;
 }
 
-/* Adds the preheader blocks from previous loop to current region taking
-   it from LOOP_PREHEADER_BLOCKS (current_loop_nest).
+/* Add the preheader blocks from previous loop to current region taking
+   it from LOOP_PREHEADER_BLOCKS (current_loop_nest) and record them in *BBS.
    This function is only used with -fsel-sched-pipelining-outer-loops.  */
 void
-sel_add_loop_preheaders (void)
+sel_add_loop_preheaders (bb_vec_t *bbs)
 {
   int i;
   basic_block bb;
@@ -6052,6 +6156,7 @@ sel_add_loop_preheaders (void)
        VEC_iterate (basic_block, preheader_blocks, i, bb);
        i++)
     {
+      VEC_safe_push (basic_block, heap, *bbs, bb);
       VEC_safe_push (basic_block, heap, last_added_blocks, bb);
       sel_add_bb (bb);
     }
@@ -6096,22 +6201,20 @@ sel_is_loop_preheader_p (basic_block bb)
   return false;
 }
 
-/* Checks whether JUMP leads to basic block DEST_BB and no other blocks.  */
-bool
-jump_leads_only_to_bb_p (insn_t jump, basic_block dest_bb)
+/* Check whether JUMP_BB ends with a jump insn that leads only to DEST_BB and
+   can be removed, making the corresponding edge fallthrough (assuming that
+   all basic blocks between JUMP_BB and DEST_BB are empty).  */
+static bool
+bb_has_removable_jump_to_p (basic_block jump_bb, basic_block dest_bb)
 {
-  basic_block jump_bb = BLOCK_FOR_INSN (jump);
-
-  /* It is not jump, jump with side-effects or jump can lead to several
-     basic blocks.  */
-  if (!onlyjump_p (jump)
-      || !any_uncondjump_p (jump))
+  if (!onlyjump_p (BB_END (jump_bb))
+      || tablejump_p (BB_END (jump_bb), NULL, NULL))
     return false;
 
   /* Several outgoing edges, abnormal edge or destination of jump is
      not DEST_BB.  */
   if (EDGE_COUNT (jump_bb->succs) != 1
-      || EDGE_SUCC (jump_bb, 0)->flags & EDGE_ABNORMAL
+      || EDGE_SUCC (jump_bb, 0)->flags & (EDGE_ABNORMAL | EDGE_CROSSING)
       || EDGE_SUCC (jump_bb, 0)->dest != dest_bb)
     return false;
 
@@ -6191,12 +6294,16 @@ sel_remove_loop_preheader (void)
                  basic block if it becomes empty.  */
 	      if (next_bb->prev_bb == prev_bb
                   && prev_bb != ENTRY_BLOCK_PTR
-                  && jump_leads_only_to_bb_p (BB_END (prev_bb), next_bb))
+                  && bb_has_removable_jump_to_p (prev_bb, next_bb))
                 {
                   redirect_edge_and_branch (EDGE_SUCC (prev_bb, 0), next_bb);
                   if (BB_END (prev_bb) == bb_note (prev_bb))
                     free_data_sets (prev_bb);
                 }
+
+              set_immediate_dominator (CDI_DOMINATORS, next_bb,
+                                       recompute_dominator (CDI_DOMINATORS,
+                                                            next_bb));
             }
         }
       VEC_free (basic_block, heap, preheader_blocks);

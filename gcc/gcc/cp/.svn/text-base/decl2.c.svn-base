@@ -1,7 +1,7 @@
 /* Process declarations and variables for C++ compiler.
    Copyright (C) 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
-   Free Software Foundation, Inc.
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010,
+   2011 Free Software Foundation, Inc.
    Hacked by Michael Tiemann (tiemann@cygnus.com)
 
 This file is part of GCC.
@@ -42,6 +42,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "cpplib.h"
 #include "target.h"
 #include "c-family/c-common.h"
+#include "c-family/c-objc.h"
 #include "tree-mudflap.h"
 #include "cgraph.h"
 #include "tree-inline.h"
@@ -160,8 +161,7 @@ change_return_type (tree new_ret, tree fntype)
     }
   else
     newtype = build_method_type_directly
-      (TREE_TYPE (TREE_VALUE (TYPE_ARG_TYPES (fntype))),
-       new_ret, TREE_CHAIN (args));
+      (class_of_this_parm (fntype), new_ret, TREE_CHAIN (args));
   if (raises)
     newtype = build_exception_variant (newtype, raises);
   if (attrs)
@@ -418,7 +418,8 @@ grok_array_decl (tree array_expr, tree index_exp)
    Implements ARM $5.3.4.  This is called from the parser.  */
 
 tree
-delete_sanity (tree exp, tree size, bool doing_vec, int use_global_delete)
+delete_sanity (tree exp, tree size, bool doing_vec, int use_global_delete,
+	       tsubst_flags_t complain)
 {
   tree t, type;
 
@@ -474,10 +475,11 @@ delete_sanity (tree exp, tree size, bool doing_vec, int use_global_delete)
   if (doing_vec)
     return build_vec_delete (t, /*maxindex=*/NULL_TREE,
 			     sfk_deleting_destructor,
-			     use_global_delete);
+			     use_global_delete, complain);
   else
     return build_delete (type, t, sfk_deleting_destructor,
-			 LOOKUP_NORMAL, use_global_delete);
+			 LOOKUP_NORMAL, use_global_delete,
+			 complain);
 }
 
 /* Report an error if the indicated template declaration is not the
@@ -922,7 +924,7 @@ grokfield (const cp_declarator *declarator,
       else if (!processing_template_decl)
 	{
 	  if (TREE_CODE (init) == CONSTRUCTOR)
-	    init = digest_init (TREE_TYPE (value), init);
+	    init = digest_init (TREE_TYPE (value), init, tf_warning_or_error);
 	  init = maybe_constant_init (init);
 
 	  if (init != error_mark_node && !TREE_CONSTANT (init))
@@ -1051,7 +1053,8 @@ grokbitfield (const cp_declarator *declarator,
   if (width != error_mark_node)
     {
       /* The width must be an integer type.  */
-      if (!INTEGRAL_OR_UNSCOPED_ENUMERATION_TYPE_P (TREE_TYPE (width)))
+      if (!type_dependent_expression_p (width)
+	  && !INTEGRAL_OR_UNSCOPED_ENUMERATION_TYPE_P (TREE_TYPE (width)))
 	error ("width of bit-field %qD has non-integral type %qT", value,
 	       TREE_TYPE (width));
       DECL_INITIAL (value) = width;
@@ -1245,8 +1248,7 @@ cp_reconstruct_complex_type (tree type, tree bottom)
 	 so we must compensate by getting rid of it.  */
       outer
 	= build_method_type_directly
-	    (TREE_TYPE (TREE_VALUE (TYPE_ARG_TYPES (type))),
-	     inner,
+	    (class_of_this_parm (type), inner,
 	     TREE_CHAIN (TYPE_ARG_TYPES (type)));
     }
   else if (TREE_CODE (type) == OFFSET_TYPE)
@@ -1260,6 +1262,25 @@ cp_reconstruct_complex_type (tree type, tree bottom)
   if (TYPE_ATTRIBUTES (type))
     outer = cp_build_type_attribute_variant (outer, TYPE_ATTRIBUTES (type));
   return cp_build_qualified_type (outer, cp_type_quals (type));
+}
+
+/* Replaces any constexpr expression that may be into the attributes
+   arguments with their reduced value.  */
+
+static void
+cp_check_const_attributes (tree attributes)
+{
+  tree attr;
+  for (attr = attributes; attr; attr = TREE_CHAIN (attr))
+    {
+      tree arg;
+      for (arg = TREE_VALUE (attr); arg; arg = TREE_CHAIN (arg))
+	{
+	  tree expr = TREE_VALUE (arg);
+	  if (EXPR_P (expr))
+	    TREE_VALUE (arg) = maybe_constant_value (expr);
+	}
+    }
 }
 
 /* Like decl_attributes, but handle C++ complexity.  */
@@ -1281,6 +1302,8 @@ cplus_decl_attributes (tree *decl, tree attributes, int flags)
       if (attributes == NULL_TREE)
 	return;
     }
+
+  cp_check_const_attributes (attributes);
 
   if (TREE_CODE (*decl) == TEMPLATE_DECL)
     decl = &DECL_TEMPLATE_RESULT (*decl);
@@ -1408,12 +1431,13 @@ finish_anon_union (tree anon_union_decl)
       /* Use main_decl to set the mangled name.  */
       DECL_NAME (anon_union_decl) = DECL_NAME (main_decl);
       maybe_commonize_var (anon_union_decl);
-      mangle_decl (anon_union_decl);
+      if (TREE_STATIC (anon_union_decl) || DECL_EXTERNAL (anon_union_decl))
+	mangle_decl (anon_union_decl);
       DECL_NAME (anon_union_decl) = NULL_TREE;
     }
 
   pushdecl (anon_union_decl);
-  if (building_stmt_tree ()
+  if (building_stmt_list_p ()
       && at_function_scope_p ())
     add_decl_expr (anon_union_decl);
   else if (!processing_template_decl)
@@ -1779,7 +1803,8 @@ decl_needed_p (tree decl)
       return true;
   /* Functions marked "dllexport" must be emitted so that they are
      visible to other DLLs.  */
-  if (lookup_attribute ("dllexport", DECL_ATTRIBUTES (decl)))
+  if (flag_keep_inline_dllexport
+      && lookup_attribute ("dllexport", DECL_ATTRIBUTES (decl)))
     return true;
   /* Otherwise, DECL does not need to be emitted -- yet.  A subsequent
      reference to DECL might cause it to be emitted later.  */
@@ -2072,7 +2097,8 @@ determine_visibility (tree decl)
 	  tree underlying_type = TREE_TYPE (DECL_NAME (decl));
 	  int underlying_vis = type_visibility (underlying_type);
 	  if (underlying_vis == VISIBILITY_ANON
-	      || CLASSTYPE_VISIBILITY_SPECIFIED (underlying_type))
+	      || (CLASS_TYPE_P (underlying_type)
+		  && CLASSTYPE_VISIBILITY_SPECIFIED (underlying_type)))
 	    constrain_visibility (decl, underlying_vis);
 	  else
 	    DECL_VISIBILITY (decl) = VISIBILITY_DEFAULT;
@@ -2568,7 +2594,8 @@ build_cleanup (tree decl)
     temp = build_address (decl);
   temp = build_delete (TREE_TYPE (temp), temp,
 		       sfk_complete_destructor,
-		       LOOKUP_NORMAL|LOOKUP_NONVIRTUAL|LOOKUP_DESTRUCTOR, 0);
+		       LOOKUP_NORMAL|LOOKUP_NONVIRTUAL|LOOKUP_DESTRUCTOR, 0,
+		       tf_warning_or_error);
   return temp;
 }
 
@@ -2690,7 +2717,7 @@ start_objects (int method_type, int initp)
 {
   tree body;
   tree fndecl;
-  char type[10];
+  char type[14];
 
   /* Make ctor or dtor function.  METHOD_TYPE may be 'I' or 'D'.  */
 
@@ -2704,10 +2731,10 @@ start_objects (int method_type, int initp)
       joiner = '_';
 #endif
 
-      sprintf (type, "%c%c%.5u", method_type, joiner, initp);
+      sprintf (type, "sub_%c%c%.5u", method_type, joiner, initp);
     }
   else
-    sprintf (type, "%c", method_type);
+    sprintf (type, "sub_%c", method_type);
 
   fndecl = build_lang_decl (FUNCTION_DECL,
 			    get_file_function_name (type),
@@ -3348,11 +3375,13 @@ cxx_callgraph_analyze_expr (tree *tp, int *walk_subtrees ATTRIBUTE_UNUSED)
     {
     case PTRMEM_CST:
       if (TYPE_PTRMEMFUNC_P (TREE_TYPE (t)))
-	cgraph_mark_address_taken_node (cgraph_node (PTRMEM_CST_MEMBER (t)));
+	cgraph_mark_address_taken_node (
+			      cgraph_get_create_node (PTRMEM_CST_MEMBER (t)));
       break;
     case BASELINK:
       if (TREE_CODE (BASELINK_FUNCTIONS (t)) == FUNCTION_DECL)
-	cgraph_mark_address_taken_node (cgraph_node (BASELINK_FUNCTIONS (t)));
+	cgraph_mark_address_taken_node (
+			      cgraph_get_create_node (BASELINK_FUNCTIONS (t)));
       break;
     case VAR_DECL:
       if (DECL_CONTEXT (t)
@@ -3546,20 +3575,21 @@ decl_constant_var_p (tree decl)
   tree type = TREE_TYPE (decl);
   if (TREE_CODE (decl) != VAR_DECL)
     return false;
-  if (DECL_DECLARED_CONSTEXPR_P (decl))
-    ret = true;
-  else if (CP_TYPE_CONST_NON_VOLATILE_P (type)
-	   && INTEGRAL_OR_ENUMERATION_TYPE_P (type))
+  if (DECL_DECLARED_CONSTEXPR_P (decl)
+      || (CP_TYPE_CONST_NON_VOLATILE_P (type)
+	  && INTEGRAL_OR_ENUMERATION_TYPE_P (type)))
     {
       /* We don't know if a template static data member is initialized with
-	 a constant expression until we instantiate its initializer.  */
+	 a constant expression until we instantiate its initializer.  Even
+	 in the case of a constexpr variable, we can't treat it as a
+	 constant until its initializer is complete in case it's used in
+	 its own initializer.  */
       mark_used (decl);
       ret = DECL_INITIALIZED_BY_CONSTANT_EXPRESSION_P (decl);
     }
   else
     ret = false;
 
-  gcc_assert (!ret || DECL_INITIAL (decl));
   return ret;
 }
 
@@ -3646,6 +3676,8 @@ cp_write_global_declarations (void)
 
   /* FIXME - huh?  was  input_line -= 1;*/
 
+  timevar_start (TV_PHASE_DEFERRED);
+
   /* We now have to write out all the stuff we put off writing out.
      These include:
 
@@ -3661,8 +3693,6 @@ cp_write_global_declarations (void)
      instantiating one function may cause another to be needed, and
      generating the initializer for an object may cause templates to be
      instantiated, etc., etc.  */
-
-  timevar_push (TV_VARCONST);
 
   emit_support_tinfos ();
 
@@ -3864,7 +3894,7 @@ cp_write_global_declarations (void)
 	  if (!DECL_EXTERNAL (decl)
 	      && decl_needed_p (decl)
 	      && !TREE_ASM_WRITTEN (decl)
-	      && !cgraph_node (decl)->local.finalized)
+	      && !cgraph_get_node (decl)->local.finalized)
 	    {
 	      /* We will output the function; no longer consider it in this
 		 loop.  */
@@ -3970,7 +4000,13 @@ cp_write_global_declarations (void)
   /* Collect candidates for Java hidden aliases.  */
   candidates = collect_candidates_for_java_method_aliases ();
 
+  timevar_stop (TV_PHASE_DEFERRED);
+  timevar_start (TV_PHASE_CGRAPH);
+
   cgraph_finalize_compilation_unit ();
+
+  timevar_stop (TV_PHASE_CGRAPH);
+  timevar_start (TV_PHASE_CHECK_DBGINFO);
 
   /* Now, issue warnings about static, but not defined, functions,
      etc., and emit debugging information.  */
@@ -4007,8 +4043,6 @@ cp_write_global_declarations (void)
       }
   }
 
-  timevar_pop (TV_VARCONST);
-
   if (flag_detailed_statistics)
     {
       dump_tree_statistics ();
@@ -4019,6 +4053,8 @@ cp_write_global_declarations (void)
 #ifdef ENABLE_CHECKING
   validate_conversion_obstack ();
 #endif /* ENABLE_CHECKING */
+
+  timevar_stop (TV_PHASE_CHECK_DBGINFO);
 }
 
 /* FN is an OFFSET_REF, DOTSTAR_EXPR or MEMBER_REF indicating the
@@ -4053,9 +4089,12 @@ build_offset_ref_call_from_tree (tree fn, VEC(tree,gc) **args)
 	 because we depend on the form of FN.  */
       make_args_non_dependent (*args);
       object = build_non_dependent_expr (object);
-      if (TREE_CODE (fn) == DOTSTAR_EXPR)
-	object = cp_build_addr_expr (object, tf_warning_or_error);
-      VEC_safe_insert (tree, gc, *args, 0, object);
+      if (TREE_CODE (TREE_TYPE (fn)) == METHOD_TYPE)
+	{
+	  if (TREE_CODE (fn) == DOTSTAR_EXPR)
+	    object = cp_build_addr_expr (object, tf_warning_or_error);
+	  VEC_safe_insert (tree, gc, *args, 0, object);
+	}
       /* Now that the arguments are done, transform FN.  */
       fn = build_non_dependent_expr (fn);
     }
@@ -4074,7 +4113,10 @@ build_offset_ref_call_from_tree (tree fn, VEC(tree,gc) **args)
       VEC_safe_insert (tree, gc, *args, 0, object_addr);
     }
 
-  expr = cp_build_function_call_vec (fn, args, tf_warning_or_error);
+  if (CLASS_TYPE_P (TREE_TYPE (fn)))
+    expr = build_op_call (fn, args, tf_warning_or_error);
+  else
+    expr = cp_build_function_call_vec (fn, args, tf_warning_or_error);
   if (processing_template_decl && expr != error_mark_node)
     expr = build_min_non_dep_call_vec (expr, orig_fn, orig_args);
 

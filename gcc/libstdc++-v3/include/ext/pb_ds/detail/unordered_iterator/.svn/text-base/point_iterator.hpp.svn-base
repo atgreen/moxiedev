@@ -1,6 +1,6 @@
 // -*- C++ -*-
 
-// Copyright (C) 2005, 2006, 2009 Free Software Foundation, Inc.
+// Copyright (C) 2005, 2006, 2009, 2010 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the terms
@@ -109,7 +109,7 @@ public:
 
   // Compares content to a different iterator object.
   inline bool
-  operator==(const const_point_iterator_& other) const
+  operator==(const point_const_iterator_& other) const
   {
     return (m_p_value == other.m_p_value);
   }
@@ -123,7 +123,7 @@ public:
 
   // Compares content (negatively) to a different iterator object.
   inline bool
-  operator!=(const const_point_iterator_& other) const
+  operator!=(const point_const_iterator_& other) const
   {
     return (m_p_value != other.m_p_value);
   }
@@ -133,7 +133,7 @@ public:
   { }
 
 protected:
-  friend class const_point_iterator_;
+  friend class point_const_iterator_;
 
   friend class PB_DS_CLASS_C_DEC;
 

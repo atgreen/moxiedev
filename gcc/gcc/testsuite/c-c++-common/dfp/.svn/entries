@@ -1,7 +1,7 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/c-c++-common/dfp
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ janis
 
 2576
 
-convert-dfp-fold.c
-file
-
-
-
-
-2009-09-27T03:30:17.000000Z
-aacf4e026933c0a823e92fc29b27b046
-2009-09-18T17:40:28.851914Z
-151861
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-873
-
 func-pointer.c
 file
 
@@ -127,6 +93,40 @@ janis
 
 
 5256
+
+convert-dfp-fold.c
+file
+
+
+
+
+2009-09-27T03:30:17.000000Z
+aacf4e026933c0a823e92fc29b27b046
+2009-09-18T17:40:28.851914Z
+151861
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+873
 
 inf-1.c
 file
@@ -196,40 +196,6 @@ janis
 
 3930
 
-convert-int-max-fold.c
-file
-
-
-
-
-2009-09-27T03:30:17.000000Z
-91313c291d096beb1f07eca5be877ce0
-2009-09-18T17:40:28.851914Z
-151861
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2799
-
 func-struct.c
 file
 
@@ -264,14 +230,14 @@ janis
 
 1409
 
-compare-eq-d32.c
+convert-int-max-fold.c
 file
 
 
 
 
 2009-09-27T03:30:17.000000Z
-dc0701c68a0bdc629262b6210a7dfbbc
+91313c291d096beb1f07eca5be877ce0
 2009-09-18T17:40:28.851914Z
 151861
 janis
@@ -296,7 +262,7 @@ janis
 
 
 
-217
+2799
 
 func-vararg-mixed.c
 file
@@ -331,6 +297,40 @@ janis
 
 
 1836
+
+compare-eq-d32.c
+file
+
+
+
+
+2009-09-27T03:30:17.000000Z
+dc0701c68a0bdc629262b6210a7dfbbc
+2009-09-18T17:40:28.851914Z
+151861
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+217
 
 compare-special-d128.c
 file
@@ -434,40 +434,6 @@ janis
 
 220
 
-pr31385.c
-file
-
-
-
-
-2009-09-27T03:30:17.000000Z
-0e5b39973e0aa9b36833c555986e0bd2
-2009-09-18T17:40:28.851914Z
-151861
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-395
-
 operator-comma.c
 file
 
@@ -501,6 +467,40 @@ janis
 
 
 814
+
+pr31385.c
+file
+
+
+
+
+2009-09-27T03:30:17.000000Z
+0e5b39973e0aa9b36833c555986e0bd2
+2009-09-18T17:40:28.851914Z
+151861
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+395
 
 func-vararg-alternate.h
 file
@@ -1114,40 +1114,6 @@ janis
 
 2079
 
-compare-rel-const.c
-file
-
-
-
-
-2009-09-27T03:30:17.000000Z
-f1e92e3cb3340cb23d98fcffce82a910
-2009-09-18T17:40:28.851914Z
-151861
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1251
-
 convert-int-fold.c
 file
 
@@ -1182,14 +1148,14 @@ janis
 
 2851
 
-convert-bfp-9.c
+compare-rel-const.c
 file
 
 
 
 
 2009-09-27T03:30:17.000000Z
-66db314a22f107a7bf9edc1893b9fa21
+f1e92e3cb3340cb23d98fcffce82a910
 2009-09-18T17:40:28.851914Z
 151861
 janis
@@ -1214,7 +1180,7 @@ janis
 
 
 
-6014
+1251
 
 convert-int-max.c
 file
@@ -1249,6 +1215,40 @@ janis
 
 
 2632
+
+convert-bfp-9.c
+file
+
+
+
+
+2009-09-27T03:30:17.000000Z
+66db314a22f107a7bf9edc1893b9fa21
+2009-09-18T17:40:28.851914Z
+151861
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6014
 
 compare-rel-d32.c
 file
@@ -1318,40 +1318,6 @@ janis
 
 623
 
-signbit-2.c
-file
-
-
-
-
-2009-09-27T03:30:17.000000Z
-f0267c6a557b6c138f36e1275a1c498b
-2009-09-18T17:40:28.851914Z
-151861
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-797
-
 func-scalar.c
 file
 
@@ -1385,6 +1351,40 @@ janis
 
 
 4584
+
+signbit-2.c
+file
+
+
+
+
+2009-09-27T03:30:17.000000Z
+f0267c6a557b6c138f36e1275a1c498b
+2009-09-18T17:40:28.851914Z
+151861
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+797
 
 usual-arith-conv.c
 file
@@ -1522,14 +1522,14 @@ janis
 
 1999
 
-convert-dfp-fold-2.c
+dfp-dbg.h
 file
 
 
 
 
 2009-09-27T03:30:17.000000Z
-47b2df55174449f16bd02238c219e0c0
+1af0b887011ee85c060e64568403fb9b
 2009-09-18T17:40:28.851914Z
 151861
 janis
@@ -1554,7 +1554,7 @@ janis
 
 
 
-289
+516
 
 convert-int.c
 file
@@ -1590,14 +1590,14 @@ janis
 
 2776
 
-dfp-dbg.h
+convert-dfp-fold-2.c
 file
 
 
 
 
 2009-09-27T03:30:17.000000Z
-1af0b887011ee85c060e64568403fb9b
+47b2df55174449f16bd02238c219e0c0
 2009-09-18T17:40:28.851914Z
 151861
 janis
@@ -1622,7 +1622,7 @@ janis
 
 
 
-516
+289
 
 compare-special.h
 file
@@ -1658,40 +1658,6 @@ janis
 
 9189
 
-compare-eq-const.c
-file
-
-
-
-
-2009-09-27T03:30:17.000000Z
-6de381732d2a2a650b9f507f67d47f69
-2009-09-18T17:40:28.851914Z
-151861
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-600
-
 compare-rel-dfp.c
 file
 
@@ -1726,14 +1692,14 @@ janis
 
 798
 
-func-deref.c
+compare-eq-const.c
 file
 
 
 
 
 2009-09-27T03:30:17.000000Z
-21f8c41ca7c027a780da2e882c01f019
+6de381732d2a2a650b9f507f67d47f69
 2009-09-18T17:40:28.851914Z
 151861
 janis
@@ -1758,7 +1724,41 @@ janis
 
 
 
-5659
+600
+
+func-vararg-mixed-2.c
+file
+
+
+
+
+2009-10-08T17:30:04.000000Z
+83b62bf412cbfa0badecc812c273e96b
+2009-10-02T16:38:57.669544Z
+152408
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1957
 
 func-vararg-alternate-d32.c
 file
@@ -1794,16 +1794,16 @@ janis
 
 309
 
-func-vararg-mixed-2.c
+func-deref.c
 file
 
 
 
 
-2009-10-08T17:30:04.000000Z
-83b62bf412cbfa0badecc812c273e96b
-2009-10-02T16:38:57.669544Z
-152408
+2009-09-27T03:30:17.000000Z
+21f8c41ca7c027a780da2e882c01f019
+2009-09-18T17:40:28.851914Z
+151861
 janis
 
 
@@ -1826,7 +1826,7 @@ janis
 
 
 
-1957
+5659
 
 operator-arith-fold.c
 file
@@ -1998,40 +1998,6 @@ janis
 
 829
 
-compare-eq.h
-file
-
-
-
-
-2009-09-27T03:30:17.000000Z
-805477d3b88b894e566cffe53b6a86cc
-2009-09-18T17:40:28.851914Z
-151861
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2495
-
 convert-int-saturate.c
 file
 
@@ -2065,6 +2031,40 @@ janis
 
 
 1536
+
+compare-eq.h
+file
+
+
+
+
+2009-09-27T03:30:17.000000Z
+805477d3b88b894e566cffe53b6a86cc
+2009-09-18T17:40:28.851914Z
+151861
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2495
 
 compare-rel-d64.c
 file
@@ -2100,40 +2100,6 @@ janis
 
 219
 
-convert-bfp-10.c
-file
-
-
-
-
-2009-09-27T03:30:17.000000Z
-8ebd3d3dcf5c1d0797443518d5ebcc8f
-2009-09-18T17:40:28.851914Z
-151861
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2989
-
 func-vararg-alternate-d128-2.c
 file
 
@@ -2167,6 +2133,40 @@ janis
 
 
 431
+
+convert-bfp-10.c
+file
+
+
+
+
+2009-09-27T03:30:17.000000Z
+8ebd3d3dcf5c1d0797443518d5ebcc8f
+2009-09-18T17:40:28.851914Z
+151861
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2989
 
 func-vararg-size0.c
 file

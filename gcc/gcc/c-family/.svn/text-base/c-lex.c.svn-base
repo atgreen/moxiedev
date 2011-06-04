@@ -1,7 +1,7 @@
 /* Mainly the interface between cpplib and the C front ends.
    Copyright (C) 1987, 1988, 1989, 1992, 1994, 1995, 1996, 1997
-   1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
-   Free Software Foundation, Inc.
+   1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010,
+   2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -32,7 +32,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "timevar.h"
 #include "cpplib.h"
 #include "c-pragma.h"
-#include "toplev.h"
 #include "intl.h"
 #include "splay-tree.h"
 #include "debug.h"
@@ -438,7 +437,7 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
       break;
 
     case CPP_PRAGMA:
-      *value = build_int_cst (NULL, tok->val.pragma);
+      *value = build_int_cst (integer_type_node, tok->val.pragma);
       break;
 
       /* These tokens should not be visible outside cpplib.  */
@@ -753,8 +752,15 @@ interpret_float (const cpp_token *token, unsigned int flags)
   /* Create a node with determined type and value.  */
   value = build_real (const_type, real);
   if (flags & CPP_N_IMAGINARY)
-    value = build_complex (NULL_TREE, convert (const_type, integer_zero_node),
-			   value);
+    {
+      value = build_complex (NULL_TREE, convert (const_type,
+						 integer_zero_node), value);
+      if (type != const_type)
+	{
+	  const_type = TREE_TYPE (value);
+	  type = build_complex_type (type);
+	}
+    }
 
   if (type != const_type)
     value = build1 (EXCESS_PRECISION_EXPR, type, value);
@@ -889,10 +895,12 @@ interpret_fixed (const cpp_token *token, unsigned int flags)
 
 /* Convert a series of STRING, WSTRING, STRING16, STRING32 and/or
    UTF8STRING tokens into a tree, performing string constant
-   concatenation.  TOK is the first of these.  VALP is the location
-   to write the string into. OBJC_STRING indicates whether an '@' token
-   preceded the incoming token.
-   Returns the CPP token type of the result (CPP_STRING, CPP_WSTRING,
+   concatenation.  TOK is the first of these.  VALP is the location to
+   write the string into.  OBJC_STRING indicates whether an '@' token
+   preceded the incoming token (in that case, the strings can either
+   be ObjC strings, preceded by a single '@', or normal strings, not
+   preceded by '@'.  The result will be a CPP_OBJC_STRING).  Returns
+   the CPP token type of the result (CPP_STRING, CPP_WSTRING,
    CPP_STRING32, CPP_STRING16, CPP_UTF8STRING, or CPP_OBJC_STRING).
 
    This is unfortunately more work than it should be.  If any of the
@@ -918,6 +926,12 @@ lex_string (const cpp_token *tok, tree *valp, bool objc_string, bool translate)
   cpp_string str = tok->val.str;
   cpp_string *strs = &str;
 
+  /* objc_at_sign_was_seen is only used when doing Objective-C string
+     concatenation.  It is 'true' if we have seen an '@' before the
+     current string, and 'false' if not.  We must see exactly one or
+     zero '@' before each string.  */
+  bool objc_at_sign_was_seen = false;
+
  retry:
   tok = cpp_get_token (parse_in);
   switch (tok->type)
@@ -925,9 +939,12 @@ lex_string (const cpp_token *tok, tree *valp, bool objc_string, bool translate)
     case CPP_PADDING:
       goto retry;
     case CPP_ATSIGN:
-      if (c_dialect_objc ())
+      if (objc_string)
 	{
-	  objc_string = true;
+	  if (objc_at_sign_was_seen)
+	    error ("repeated %<@%> before Objective-C string");
+
+	  objc_at_sign_was_seen = true;
 	  goto retry;
 	}
       /* FALLTHROUGH */
@@ -956,8 +973,14 @@ lex_string (const cpp_token *tok, tree *valp, bool objc_string, bool translate)
 
       concats++;
       obstack_grow (&str_ob, &tok->val.str, sizeof (cpp_string));
+      if (objc_string)
+	objc_at_sign_was_seen = false;
       goto retry;
     }
+
+  /* It is an error if we saw a '@' with no following string.  */
+  if (objc_at_sign_was_seen)
+    error ("stray %<@%> in program");
 
   /* We have read one more token than we want.  */
   _cpp_backup_tokens (parse_in, 1);

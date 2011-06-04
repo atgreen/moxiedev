@@ -1,5 +1,5 @@
 /* Command line option handling.
-   Copyright (C) 2006, 2007, 2008, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2007, 2008, 2010, 2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -52,7 +52,7 @@ static void prune_options (struct cl_decoded_option **, unsigned int *);
    front end, the longest match for a different front end is returned
    (or N_OPTS if none) and the caller emits an error message.  */
 size_t
-find_opt (const char *input, int lang_mask)
+find_opt (const char *input, unsigned int lang_mask)
 {
   size_t mn, mn_orig, mx, md, opt_len;
   size_t match_wrong_lang;
@@ -181,6 +181,86 @@ option_ok_for_language (const struct cl_option *option,
   return true;
 }
 
+/* Return whether ENUM_ARG is OK for the language given by
+   LANG_MASK.  */
+
+static bool
+enum_arg_ok_for_language (const struct cl_enum_arg *enum_arg,
+			  unsigned int lang_mask)
+{
+  return (lang_mask & CL_DRIVER) || !(enum_arg->flags & CL_ENUM_DRIVER_ONLY);
+}
+
+/* Look up ARG in ENUM_ARGS for language LANG_MASK, returning true and
+   storing the value in *VALUE if found, and returning false without
+   modifying *VALUE if not found.  */
+
+static bool
+enum_arg_to_value (const struct cl_enum_arg *enum_args,
+		   const char *arg, int *value, unsigned int lang_mask)
+{
+  unsigned int i;
+
+  for (i = 0; enum_args[i].arg != NULL; i++)
+    if (strcmp (arg, enum_args[i].arg) == 0
+	&& enum_arg_ok_for_language (&enum_args[i], lang_mask))
+      {
+	*value = enum_args[i].value;
+	return true;
+      }
+
+  return false;
+}
+
+/* Look up ARG in the enum used by option OPT_INDEX for language
+   LANG_MASK, returning true and storing the value in *VALUE if found,
+   and returning false without modifying *VALUE if not found.  */
+
+bool
+opt_enum_arg_to_value (size_t opt_index, const char *arg, int *value,
+		       unsigned int lang_mask)
+{
+  const struct cl_option *option = &cl_options[opt_index];
+
+  gcc_assert (option->var_type == CLVC_ENUM);
+
+  return enum_arg_to_value (cl_enums[option->var_enum].values, arg,
+			    value, lang_mask);
+}
+
+/* Look of VALUE in ENUM_ARGS for language LANG_MASK and store the
+   corresponding string in *ARGP, returning true if the found string
+   was marked as canonical, false otherwise.  If VALUE is not found
+   (which may be the case for uninitialized values if the relevant
+   option has not been passed), set *ARGP to NULL and return
+   false.  */
+
+bool
+enum_value_to_arg (const struct cl_enum_arg *enum_args,
+		   const char **argp, int value, unsigned int lang_mask)
+{
+  unsigned int i;
+
+  for (i = 0; enum_args[i].arg != NULL; i++)
+    if (enum_args[i].value == value
+	&& (enum_args[i].flags & CL_ENUM_CANONICAL)
+	&& enum_arg_ok_for_language (&enum_args[i], lang_mask))
+      {
+	*argp = enum_args[i].arg;
+	return true;
+      }
+
+  for (i = 0; enum_args[i].arg != NULL; i++)
+    if (enum_args[i].value == value
+	&& enum_arg_ok_for_language (&enum_args[i], lang_mask))
+      {
+	*argp = enum_args[i].arg;
+	return false;
+      }
+
+  *argp = NULL;
+  return false;
+}
 
 /* Fill in the canonical option part of *DECODED with an option
    described by OPT_INDEX, ARG and VALUE.  */
@@ -193,7 +273,7 @@ generate_canonical_option (size_t opt_index, const char *arg, int value,
   const char *opt_text = option->opt_text;
 
   if (value == 0
-      && !(option->flags & CL_REJECT_NEGATIVE)
+      && !option->cl_reject_negative
       && (opt_text[1] == 'W' || opt_text[1] == 'f' || opt_text[1] == 'm'))
     {
       char *t = XNEWVEC (char, option->opt_len + 5);
@@ -212,7 +292,7 @@ generate_canonical_option (size_t opt_index, const char *arg, int value,
   if (arg)
     {
       if ((option->flags & CL_SEPARATE)
-	  && !(option->flags & CL_SEPARATE_ALIAS))
+	  && !option->cl_separate_alias)
 	{
 	  decoded->canonical_option[0] = opt_text;
 	  decoded->canonical_option[1] = arg;
@@ -348,7 +428,7 @@ decode_cmdline_option (const char **argv, unsigned int lang_mask,
 
   /* Reject negative form of switches that don't take negatives as
      unrecognized.  */
-  if (!value && (option->flags & CL_REJECT_NEGATIVE))
+  if (!value && option->cl_reject_negative)
     {
       opt_index = OPT_SPECIAL_unknown;
       errors |= CL_ERR_NEGATIVE;
@@ -360,18 +440,17 @@ decode_cmdline_option (const char **argv, unsigned int lang_mask,
   warn_message = option->warn_message;
 
   /* Check to see if the option is disabled for this configuration.  */
-  if (option->flags & CL_DISABLED)
+  if (option->cl_disabled)
     errors |= CL_ERR_DISABLED;
 
   /* Determine whether there may be a separate argument based on
      whether this option is being processed for the driver, and, if
      so, how many such arguments.  */
   separate_arg_flag = ((option->flags & CL_SEPARATE)
-		       && !((option->flags & CL_NO_DRIVER_ARG)
+		       && !(option->cl_no_driver_arg
 			    && (lang_mask & CL_DRIVER)));
   separate_args = (separate_arg_flag
-		   ? ((option->flags & CL_SEPARATE_NARGS_MASK)
-		      >> CL_SEPARATE_NARGS_SHIFT) + 1
+		   ? option->cl_separate_nargs + 1
 		   : 0);
   joined_arg_flag = (option->flags & CL_JOINED) != 0;
 
@@ -383,7 +462,7 @@ decode_cmdline_option (const char **argv, unsigned int lang_mask,
 	 argument to be persistent until the program exits.  */
       arg = argv[extra_args] + cl_options[opt_index].opt_len + 1 + adjust_len;
 
-      if (*arg == '\0' && !(option->flags & CL_MISSING_OK))
+      if (*arg == '\0' && !option->cl_missing_ok)
 	{
 	  if (separate_arg_flag)
 	    {
@@ -419,7 +498,7 @@ decode_cmdline_option (const char **argv, unsigned int lang_mask,
   /* Is this option an alias (or an ignored option, marked as an alias
      of OPT_SPECIAL_ignore)?  */
   if (option->alias_target != N_OPTS
-      && (!(option->flags & CL_SEPARATE_ALIAS) || have_separate_arg))
+      && (!option->cl_separate_alias || have_separate_arg))
     {
       size_t new_opt_index = option->alias_target;
 
@@ -437,12 +516,13 @@ decode_cmdline_option (const char **argv, unsigned int lang_mask,
 
 	  /* The new option must not be an alias itself.  */
 	  gcc_assert (new_option->alias_target == N_OPTS
-		      || (new_option->flags & CL_SEPARATE_ALIAS));
+		      || new_option->cl_separate_alias);
 
 	  if (option->neg_alias_arg)
 	    {
 	      gcc_assert (option->alias_arg != NULL);
 	      gcc_assert (arg == NULL);
+	      gcc_assert (!option->cl_negative_alias);
 	      if (value)
 		arg = option->alias_arg;
 	      else
@@ -453,31 +533,34 @@ decode_cmdline_option (const char **argv, unsigned int lang_mask,
 	    {
 	      gcc_assert (value == 1);
 	      gcc_assert (arg == NULL);
+	      gcc_assert (!option->cl_negative_alias);
 	      arg = option->alias_arg;
 	    }
+
+	  if (option->cl_negative_alias)
+	    value = !value;
 
 	  opt_index = new_opt_index;
 	  option = new_option;
 
 	  if (value == 0)
-	    gcc_assert (!(option->flags & CL_REJECT_NEGATIVE));
+	    gcc_assert (!option->cl_reject_negative);
 
 	  /* Recompute what arguments are allowed.  */
 	  separate_arg_flag = ((option->flags & CL_SEPARATE)
-			       && !((option->flags & CL_NO_DRIVER_ARG)
+			       && !(option->cl_no_driver_arg
 				    && (lang_mask & CL_DRIVER)));
 	  joined_arg_flag = (option->flags & CL_JOINED) != 0;
 
-	  if (separate_args > 1 || (option->flags & CL_SEPARATE_NARGS_MASK))
+	  if (separate_args > 1 || option->cl_separate_nargs)
 	    gcc_assert (separate_args
-			== ((option->flags & CL_SEPARATE_NARGS_MASK)
-			    >> CL_SEPARATE_NARGS_SHIFT) + 1);
+			== (unsigned int) option->cl_separate_nargs + 1);
 
 	  if (!(errors & CL_ERR_MISSING_ARG))
 	    {
 	      if (separate_arg_flag || joined_arg_flag)
 		{
-		  if ((option->flags & CL_MISSING_OK) && arg == NULL)
+		  if (option->cl_missing_ok && arg == NULL)
 		    arg = "";
 		  gcc_assert (arg != NULL);
 		}
@@ -491,7 +574,7 @@ decode_cmdline_option (const char **argv, unsigned int lang_mask,
 	      gcc_assert (warn_message == NULL);
 	      warn_message = option->warn_message;
 	    }
-	  if (option->flags & CL_DISABLED)
+	  if (option->cl_disabled)
 	    errors |= CL_ERR_DISABLED;
 	}
     }
@@ -500,12 +583,43 @@ decode_cmdline_option (const char **argv, unsigned int lang_mask,
   if (!option_ok_for_language (option, lang_mask))
     errors |= CL_ERR_WRONG_LANG;
 
+  /* Convert the argument to lowercase if appropriate.  */
+  if (arg && option->cl_tolower)
+    {
+      size_t j;
+      size_t len = strlen (arg);
+      char *arg_lower = XNEWVEC (char, len + 1);
+
+      for (j = 0; j < len; j++)
+	arg_lower[j] = TOLOWER ((unsigned char) arg[j]);
+      arg_lower[len] = 0;
+      arg = arg_lower;
+    }
+
   /* If the switch takes an integer, convert it.  */
-  if (arg && (option->flags & CL_UINTEGER))
+  if (arg && option->cl_uinteger)
     {
       value = integral_argument (arg);
       if (value == -1)
 	errors |= CL_ERR_UINT_ARG;
+    }
+
+  /* If the switch takes an enumerated argument, convert it.  */
+  if (arg && (option->var_type == CLVC_ENUM))
+    {
+      const struct cl_enum *e = &cl_enums[option->var_enum];
+
+      gcc_assert (value == 1);
+      if (enum_arg_to_value (e->values, arg, &value, lang_mask))
+	{
+	  const char *carg = NULL;
+
+	  if (enum_value_to_arg (e->values, &carg, value, lang_mask))
+	    arg = carg;
+	  gcc_assert (carg != NULL);
+	}
+      else
+	errors |= CL_ERR_ENUM_ARG;
     }
 
  done:
@@ -525,11 +639,15 @@ decode_cmdline_option (const char **argv, unsigned int lang_mask,
     {
       if (i < result)
 	{
+	  size_t len;
 	  if (opt_index == OPT_SPECIAL_unknown)
 	    decoded->canonical_option[i] = argv[i];
 	  else
 	    decoded->canonical_option[i] = NULL;
-	  total_len += strlen (argv[i]) + 1;
+	  len = strlen (argv[i]);
+	  /* If the argument is an empty string, we will print it as "" in
+	     orig_option_with_args_text.  */
+	  total_len += (len != 0 ? len : 2) + 1;
 	}
       else
 	decoded->canonical_option[i] = NULL;
@@ -555,7 +673,14 @@ decode_cmdline_option (const char **argv, unsigned int lang_mask,
     {
       size_t len = strlen (argv[i]);
 
-      memcpy (p, argv[i], len);
+      /* Print the empty string verbally.  */
+      if (len == 0)
+	{
+	  *p++ = '"';
+	  *p++ = '"';
+	}
+      else
+	memcpy (p, argv[i], len);
       p += len;
       if (i == result - 1)
 	*p++ = 0;
@@ -584,7 +709,6 @@ decode_cmdline_options_to_array (unsigned int argc, const char **argv,
   unsigned int n, i;
   struct cl_decoded_option *opt_array;
   unsigned int num_decoded_options;
-  bool argv_copied = false;
 
   opt_array = XNEWVEC (struct cl_decoded_option, argc);
 
@@ -619,8 +743,6 @@ decode_cmdline_options_to_array (unsigned int argc, const char **argv,
       num_decoded_options++;
     }
 
-  if (argv_copied)
-    free (argv);
   *decoded_options = opt_array;
   *decoded_options_count = num_decoded_options;
   prune_options (decoded_options, decoded_options_count);
@@ -878,12 +1000,6 @@ read_cmdline_option (struct gcc_options *opts,
       return;
     }
 
-  if (decoded->errors & CL_ERR_WRONG_LANG)
-    {
-      handlers->wrong_lang_callback (decoded, lang_mask);
-      return;
-    }
-
   if (decoded->errors & CL_ERR_MISSING_ARG)
     {
       if (option->missing_argument_error)
@@ -897,6 +1013,42 @@ read_cmdline_option (struct gcc_options *opts,
     {
       error_at (loc, "argument to %qs should be a non-negative integer",
 		option->opt_text);
+      return;
+    }
+
+  if (decoded->errors & CL_ERR_ENUM_ARG)
+    {
+      const struct cl_enum *e = &cl_enums[option->var_enum];
+      unsigned int i;
+      size_t len;
+      char *s, *p;
+
+      if (e->unknown_error)
+	error_at (loc, e->unknown_error, decoded->arg);
+      else
+	error_at (loc, "unrecognized argument in option %qs", opt);
+
+      len = 0;
+      for (i = 0; e->values[i].arg != NULL; i++)
+	len += strlen (e->values[i].arg) + 1;
+
+      s = XALLOCAVEC (char, len);
+      p = s;
+      for (i = 0; e->values[i].arg != NULL; i++)
+	{
+	  size_t arglen = strlen (e->values[i].arg);
+	  memcpy (p, e->values[i].arg, arglen);
+	  p[arglen] = ' ';
+	  p += arglen + 1;
+	}
+      p[-1] = 0;
+      inform (loc, "valid arguments to %qs are: %s", option->opt_text, s);
+      return;
+    }
+
+  if (decoded->errors & CL_ERR_WRONG_LANG)
+    {
+      handlers->wrong_lang_callback (decoded, lang_mask);
       return;
     }
 
@@ -959,6 +1111,16 @@ set_option (struct gcc_options *opts, struct gcc_options *opts_set,
 	  *(const char **) set_flag_var = "";
 	break;
 
+    case CLVC_ENUM:
+      {
+	const struct cl_enum *e = &cl_enums[option->var_enum];
+
+	e->set (flag_var, value);
+	if (set_flag_var)
+	  e->set (set_flag_var, 1);
+      }
+      break;
+
     case CLVC_DEFER:
 	{
 	  VEC(cl_deferred_option,heap) *vec
@@ -992,6 +1154,84 @@ option_flag_var (int opt_index, struct gcc_options *opts)
   if (option->flag_var_offset == (unsigned short) -1)
     return NULL;
   return (void *)(((char *) opts) + option->flag_var_offset);
+}
+
+/* Return 1 if option OPT_IDX is enabled in OPTS, 0 if it is disabled,
+   or -1 if it isn't a simple on-off switch.  */
+
+int
+option_enabled (int opt_idx, void *opts)
+{
+  const struct cl_option *option = &(cl_options[opt_idx]);
+  struct gcc_options *optsg = (struct gcc_options *) opts;
+  void *flag_var = option_flag_var (opt_idx, optsg);
+
+  if (flag_var)
+    switch (option->var_type)
+      {
+      case CLVC_BOOLEAN:
+	return *(int *) flag_var != 0;
+
+      case CLVC_EQUAL:
+	return *(int *) flag_var == option->var_value;
+
+      case CLVC_BIT_CLEAR:
+	return (*(int *) flag_var & option->var_value) == 0;
+
+      case CLVC_BIT_SET:
+	return (*(int *) flag_var & option->var_value) != 0;
+
+      case CLVC_STRING:
+      case CLVC_ENUM:
+      case CLVC_DEFER:
+	break;
+      }
+  return -1;
+}
+
+/* Fill STATE with the current state of option OPTION in OPTS.  Return
+   true if there is some state to store.  */
+
+bool
+get_option_state (struct gcc_options *opts, int option,
+		  struct cl_option_state *state)
+{
+  void *flag_var = option_flag_var (option, opts);
+
+  if (flag_var == 0)
+    return false;
+
+  switch (cl_options[option].var_type)
+    {
+    case CLVC_BOOLEAN:
+    case CLVC_EQUAL:
+      state->data = flag_var;
+      state->size = sizeof (int);
+      break;
+
+    case CLVC_BIT_CLEAR:
+    case CLVC_BIT_SET:
+      state->ch = option_enabled (option, opts);
+      state->data = &state->ch;
+      state->size = 1;
+      break;
+
+    case CLVC_STRING:
+      state->data = *(const char **) flag_var;
+      if (state->data == 0)
+	state->data = "";
+      state->size = strlen ((const char *) state->data) + 1;
+      break;
+
+    case CLVC_ENUM:
+      state->data = flag_var;
+      state->size = cl_enums[cl_options[option].var_enum].var_size;
+      break;
+
+    case CLVC_DEFER:
+      return false;
+    }
+  return true;
 }
 
 /* Set a warning option OPT_INDEX (language mask LANG_MASK, option

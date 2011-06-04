@@ -1,6 +1,6 @@
 /* Definitions of target machine GNU compiler.  IA-64 version.
    Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010 Free Software Foundation, Inc.
+   2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by James E. Wilson <wilson@cygnus.com> and
    		  David Mosberger <davidm@hpl.hp.com>.
 
@@ -102,19 +102,6 @@ enum ia64_inline_type
 #ifndef TARGET_CPU_DEFAULT
 #define TARGET_CPU_DEFAULT 0
 #endif
-
-/* Which processor to schedule for. The cpu attribute defines a list
-   that mirrors this list, so changes to ia64.md must be made at the
-   same time.  */
-
-enum processor_type
-{
-  PROCESSOR_ITANIUM,			/* Original Itanium.  */
-  PROCESSOR_ITANIUM2,
-  PROCESSOR_max
-};
-
-extern enum processor_type ia64_tune;
 
 /* Driver configuration */
 
@@ -787,19 +774,6 @@ enum reg_class
     0xFFFFFFFF, 0xFFFFFFFF, 0x3FFF },			\
 }
 
-/* The following macro defines cover classes for Integrated Register
-   Allocator.  Cover classes is a set of non-intersected register
-   classes covering all hard registers used for register allocation
-   purpose.  Any move between two registers of a cover class should be
-   cheaper than load or store of the registers.  The macro value is
-   array of register classes with LIM_REG_CLASSES used as the end
-   marker.  */
-
-#define IRA_COVER_CLASSES						     \
-{									     \
-  PR_REGS, BR_REGS, AR_M_REGS, AR_I_REGS, GR_REGS, FR_REGS, LIM_REG_CLASSES  \
-}
-
 /* A C expression whose value is a register class containing hard register
    REGNO.  In general there is more than one such class; choose a class which
    is "minimal", meaning that no smaller class also contains the register.  */
@@ -1047,7 +1021,7 @@ do {									\
   (CUM).words = 0;							\
   (CUM).int_regs = 0;							\
   (CUM).fp_regs = 0;							\
-  (CUM).prototype = ((FNTYPE) && TYPE_ARG_TYPES (FNTYPE)) || (LIBNAME);	\
+  (CUM).prototype = ((FNTYPE) && prototype_p (FNTYPE)) || (LIBNAME);	\
   (CUM).atypes[0] = (CUM).atypes[1] = (CUM).atypes[2] = I64;	        \
   (CUM).atypes[3] = (CUM).atypes[4] = (CUM).atypes[5] = I64;            \
   (CUM).atypes[6] = (CUM).atypes[7] = I64;                              \
@@ -1226,11 +1200,6 @@ do {									\
    use as an index register.  This is needed for POST_MODIFY.  */
 
 #define REG_OK_FOR_INDEX_P(X) REG_OK_FOR_BASE_P (X)
-
-/* A C expression that is nonzero if X is a legitimate constant for an
-   immediate operand on the target machine.  */
-
-#define LEGITIMATE_CONSTANT_P(X) ia64_legitimate_constant_p (X)
 
 /* Condition Code Status */
 
@@ -1322,11 +1291,6 @@ do {									\
 
 #define ASM_APP_OFF (TARGET_GNU_AS ? "#NO_APP\n" : "//NO_APP\n")
 
-/* Output of Uninitialized Variables.  */
-
-/* This is all handled by svr4.h.  */
-
-
 /* Output and Generation of Labels.  */
 
 /* A C statement (sans semicolon) to output to the stdio stream STREAM the
@@ -1383,7 +1347,7 @@ do {									\
 
 /* Macros Controlling Initialization Routines.  */
 
-/* This is handled by svr4.h and sysv4.h.  */
+/* This is handled by sysv4.h.  */
 
 
 /* Output of Assembler Instructions.  */
@@ -1656,12 +1620,12 @@ do {									\
 
 /* Macros Affecting all Debug Formats.  */
 
-/* This is handled in svr4.h and sysv4.h.  */
+/* This is handled in sysv4.h.  */
 
 
 /* Specific Options for DBX Output.  */
 
-/* This is handled by dbxelf.h which is included by svr4.h.  */
+/* This is handled by dbxelf.h.  */
 
 
 /* Open ended Hooks for DBX Output.  */

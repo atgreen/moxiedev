@@ -1,7 +1,8 @@
 /* Call-backs for C++ error reporting.
    This code is non-reentrant.
    Copyright (C) 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2002, 2003,
-   2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   Free Software Foundation, Inc.
    This file is part of GCC.
 
 GCC is free software; you can redistribute it and/or modify
@@ -24,7 +25,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tm.h"
 #include "tree.h"
 #include "cp-tree.h"
-#include "toplev.h"
 #include "flags.h"
 #include "diagnostic.h"
 #include "tree-diagnostic.h"
@@ -33,6 +33,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "cxx-pretty-print.h"
 #include "tree-pretty-print.h"
 #include "pointer-set.h"
+#include "c-family/c-objc.h"
 
 #define pp_separate_with_comma(PP) pp_cxx_separate_with (PP, ',')
 
@@ -98,7 +99,6 @@ static void cp_print_error_function (diagnostic_context *, diagnostic_info *);
 
 static bool cp_printer (pretty_printer *, text_info *, const char *,
 			int, bool, bool, bool);
-static location_t location_of (tree);
 
 void
 init_error (void)
@@ -307,13 +307,20 @@ dump_template_bindings (tree parms, tree args, VEC(tree,gc)* typenames)
 
   FOR_EACH_VEC_ELT (tree, typenames, i, t)
     {
+      bool dependent = uses_template_parms (args);
       if (need_comma)
 	pp_separate_with_comma (cxx_pp);
       dump_type (t, TFF_PLAIN_IDENTIFIER);
       pp_cxx_whitespace (cxx_pp);
       pp_equal (cxx_pp);
       pp_cxx_whitespace (cxx_pp);
+      push_deferring_access_checks (dk_no_check);
+      if (dependent)
+	++processing_template_decl;
       t = tsubst (t, args, tf_none, NULL_TREE);
+      if (dependent)
+	--processing_template_decl;
+      pop_deferring_access_checks ();
       /* Strip typedefs.  We can't just use TFF_CHASE_TYPEDEF because
 	 pp_simple_type_specifier doesn't know about it.  */
       t = strip_typedefs (t);
@@ -481,6 +488,14 @@ dump_type (tree t, int flags)
       pp_cxx_whitespace (cxx_pp);
       pp_cxx_left_paren (cxx_pp);
       dump_expr (TYPEOF_TYPE_EXPR (t), flags & ~TFF_EXPR_IN_PARENS);
+      pp_cxx_right_paren (cxx_pp);
+      break;
+
+    case UNDERLYING_TYPE:
+      pp_cxx_ws_string (cxx_pp, "__underlying_type");
+      pp_cxx_whitespace (cxx_pp);
+      pp_cxx_left_paren (cxx_pp);
+      dump_expr (UNDERLYING_TYPE_TYPE (t), flags & ~TFF_EXPR_IN_PARENS);
       pp_cxx_right_paren (cxx_pp);
       break;
 
@@ -662,6 +677,8 @@ dump_type_prefix (tree t, int flags)
 	  {
 	    pp_cxx_whitespace (cxx_pp);
 	    pp_cxx_left_paren (cxx_pp);
+	    pp_c_attributes_display (pp_c_base (cxx_pp),
+				     TYPE_ATTRIBUTES (sub));
 	  }
 	if (TREE_CODE (t) == POINTER_TYPE)
 	  pp_character(cxx_pp, '*');
@@ -730,6 +747,7 @@ dump_type_prefix (tree t, int flags)
     case COMPLEX_TYPE:
     case VECTOR_TYPE:
     case TYPEOF_TYPE:
+    case UNDERLYING_TYPE:
     case DECLTYPE_TYPE:
     case TYPE_PACK_EXPANSION:
     case FIXED_POINT_TYPE:
@@ -783,8 +801,7 @@ dump_type_suffix (tree t, int flags)
 	dump_parameters (arg, flags & ~TFF_FUNCTION_DEFAULT_ARGUMENTS);
 
 	if (TREE_CODE (t) == METHOD_TYPE)
-	  pp_cxx_cv_qualifier_seq
-	    (cxx_pp, TREE_TYPE (TREE_VALUE (TYPE_ARG_TYPES (t))));
+	  pp_cxx_cv_qualifier_seq (cxx_pp, class_of_this_parm (t));
 	else
 	  pp_cxx_cv_qualifier_seq (cxx_pp, t);
 	dump_exception_spec (TYPE_RAISES_EXCEPTIONS (t), flags);
@@ -833,6 +850,7 @@ dump_type_suffix (tree t, int flags)
     case COMPLEX_TYPE:
     case VECTOR_TYPE:
     case TYPEOF_TYPE:
+    case UNDERLYING_TYPE:
     case DECLTYPE_TYPE:
     case TYPE_PACK_EXPANSION:
     case FIXED_POINT_TYPE:
@@ -1028,7 +1046,7 @@ dump_decl (tree t, int flags)
 	      dump_type (DECL_CONTEXT (t), flags);
 	      pp_cxx_colon_colon (cxx_pp);
 	    }
-	  else if (DECL_CONTEXT (t))
+	  else if (!DECL_FILE_SCOPE_P (t))
 	    {
 	      dump_decl (DECL_CONTEXT (t), flags);
 	      pp_cxx_colon_colon (cxx_pp);
@@ -1348,8 +1366,7 @@ dump_function_decl (tree t, int flags)
       if (TREE_CODE (fntype) == METHOD_TYPE)
 	{
 	  pp_base (cxx_pp)->padding = pp_before;
-	  pp_cxx_cv_qualifier_seq
-	    (cxx_pp, TREE_TYPE (TREE_VALUE (TYPE_ARG_TYPES (fntype))));
+	  pp_cxx_cv_qualifier_seq (cxx_pp, class_of_this_parm (fntype));
 	}
 
       if (flags & TFF_EXCEPTION_SPECIFICATION)
@@ -1700,6 +1717,7 @@ dump_expr (tree t, int flags)
     case NAMESPACE_DECL:
     case LABEL_DECL:
     case OVERLOAD:
+    case TYPE_DECL:
     case IDENTIFIER_NODE:
       dump_decl (t, (flags & ~TFF_DECL_SPECIFIERS) | TFF_NO_FUNCTION_ARGUMENTS);
       break;
@@ -1872,7 +1890,10 @@ dump_expr (tree t, int flags)
 		    && strcmp (IDENTIFIER_POINTER (DECL_NAME (ob)), "this")))
 	      {
 		dump_expr (ob, flags | TFF_EXPR_IN_PARENS);
-		pp_cxx_arrow (cxx_pp);
+		if (TREE_CODE (TREE_TYPE (ob)) == REFERENCE_TYPE)
+		  pp_cxx_dot (cxx_pp);
+		else
+		  pp_cxx_arrow (cxx_pp);
 	      }
 	  }
 	else
@@ -1926,6 +1947,34 @@ dump_expr (tree t, int flags)
 	    dump_expr (TREE_OPERAND (t, 0), flags);
 	  else
 	    dump_unary_op ("*", t, flags);
+	}
+      break;
+
+    case MEM_REF:
+      if (TREE_CODE (TREE_OPERAND (t, 0)) == ADDR_EXPR
+	  && integer_zerop (TREE_OPERAND (t, 1)))
+	dump_expr (TREE_OPERAND (TREE_OPERAND (t, 0), 0), flags);
+      else
+	{
+	  pp_cxx_star (cxx_pp);
+	  if (!integer_zerop (TREE_OPERAND (t, 1)))
+	    {
+	      pp_cxx_left_paren (cxx_pp);
+	      if (!integer_onep (TYPE_SIZE_UNIT
+				 (TREE_TYPE (TREE_TYPE (TREE_OPERAND (t, 0))))))
+		{
+		  pp_cxx_left_paren (cxx_pp);
+		  dump_type (ptr_type_node, flags);
+		  pp_cxx_right_paren (cxx_pp);
+		}
+	    }
+	  dump_expr (TREE_OPERAND (t, 0), flags);
+	  if (!integer_zerop (TREE_OPERAND (t, 1)))
+	    {
+	      pp_cxx_ws_string (cxx_pp, "+");
+	      dump_expr (fold_convert (ssizetype, TREE_OPERAND (t, 1)), flags);
+	      pp_cxx_right_paren (cxx_pp);
+	    }
 	}
       break;
 
@@ -2459,13 +2508,17 @@ lang_decl_name (tree decl, int v, bool translate)
 
 /* Return the location of a tree passed to %+ formats.  */
 
-static location_t
+location_t
 location_of (tree t)
 {
   if (TREE_CODE (t) == PARM_DECL && DECL_CONTEXT (t))
     t = DECL_CONTEXT (t);
   else if (TYPE_P (t))
-    t = TYPE_MAIN_DECL (t);
+    {
+      t = TYPE_MAIN_DECL (t);
+      if (t == NULL_TREE)
+	return input_location;
+    }
   else if (TREE_CODE (t) == OVERLOAD)
     t = OVL_FUNCTION (t);
 
@@ -3138,4 +3191,40 @@ pedwarn_cxx98 (location_t location, int opt, const char *gmsgid, ...)
   diagnostic.option_index = opt;
   va_end (ap);
   return report_diagnostic (&diagnostic);
+}
+
+/* Issue a diagnostic that NAME cannot be found in SCOPE.  DECL is what
+   we found when we tried to do the lookup.  LOCATION is the location of
+   the NAME identifier.  */
+
+void
+qualified_name_lookup_error (tree scope, tree name,
+			     tree decl, location_t location)
+{
+  if (scope == error_mark_node)
+    ; /* We already complained.  */
+  else if (TYPE_P (scope))
+    {
+      if (!COMPLETE_TYPE_P (scope))
+	error_at (location, "incomplete type %qT used in nested name specifier",
+		  scope);
+      else if (TREE_CODE (decl) == TREE_LIST)
+	{
+	  error_at (location, "reference to %<%T::%D%> is ambiguous",
+		    scope, name);
+	  print_candidates (decl);
+	}
+      else
+	error_at (location, "%qD is not a member of %qT", name, scope);
+    }
+  else if (scope != global_namespace)
+    {
+      error_at (location, "%qD is not a member of %qD", name, scope);
+      suggest_alternatives_for (location, name);
+    }
+  else
+    {
+      error_at (location, "%<::%D%> has not been declared", name);
+      suggest_alternatives_for (location, name);
+    }
 }

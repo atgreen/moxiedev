@@ -1,6 +1,6 @@
 /* Subroutines for insn-output.c for ATMEL AVR micro controllers
    Copyright (C) 1998, 1999, 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010 Free Software Foundation, Inc.
+   2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Denis Chertykov (chertykov@gmail.com)
 
    This file is part of GCC.
@@ -29,17 +29,19 @@
 #include "insn-config.h"
 #include "conditions.h"
 #include "insn-attr.h"
+#include "insn-codes.h"
 #include "flags.h"
 #include "reload.h"
 #include "tree.h"
 #include "output.h"
 #include "expr.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "obstack.h"
 #include "function.h"
 #include "recog.h"
+#include "optabs.h"
 #include "ggc.h"
+#include "langhooks.h"
 #include "tm_p.h"
 #include "target.h"
 #include "target-def.h"
@@ -74,7 +76,10 @@ static void avr_file_end (void);
 static bool avr_legitimate_address_p (enum machine_mode, rtx, bool);
 static void avr_asm_function_end_prologue (FILE *);
 static void avr_asm_function_begin_epilogue (FILE *);
+static bool avr_cannot_modify_jumps_p (void);
 static rtx avr_function_value (const_tree, const_tree, bool);
+static rtx avr_libcall_value (enum machine_mode, const_rtx);
+static bool avr_function_value_regno_p (const unsigned int);
 static void avr_insert_attributes (tree, tree *);
 static void avr_asm_init_sections (void);
 static unsigned int avr_section_type_flags (tree, const char *, int);
@@ -82,11 +87,15 @@ static unsigned int avr_section_type_flags (tree, const char *, int);
 static void avr_reorg (void);
 static void avr_asm_out_ctor (rtx, int);
 static void avr_asm_out_dtor (rtx, int);
+static int avr_register_move_cost (enum machine_mode, reg_class_t, reg_class_t);
+static int avr_memory_move_cost (enum machine_mode, reg_class_t, bool);
 static int avr_operand_rtx_cost (rtx, enum machine_mode, enum rtx_code, bool);
 static bool avr_rtx_costs (rtx, int, int, int *, bool);
 static int avr_address_cost (rtx, bool);
 static bool avr_return_in_memory (const_tree, const_tree);
 static struct machine_function * avr_init_machine_status (void);
+static void avr_init_builtins (void);
+static rtx avr_expand_builtin (tree, rtx, rtx, enum machine_mode, int);
 static rtx avr_builtin_setjmp_frame_value (void);
 static bool avr_hard_regno_scratch_ok (unsigned int);
 static unsigned int avr_case_values_threshold (void);
@@ -97,6 +106,9 @@ static rtx avr_function_arg (CUMULATIVE_ARGS *, enum machine_mode,
 			     const_tree, bool);
 static void avr_function_arg_advance (CUMULATIVE_ARGS *, enum machine_mode,
 				      const_tree, bool);
+static void avr_help (void);
+static bool avr_function_ok_for_sibcall (tree, tree);
+static void avr_asm_named_section (const char *name, unsigned int flags, tree decl);
 
 /* Allocate registers from r25 to r8 for parameters for function calls.  */
 #define FIRST_CUM_REG 26
@@ -121,17 +133,28 @@ const struct mcu_type_s *avr_current_device;
 
 section *progmem_section;
 
+/* To track if code will use .bss and/or .data.  */
+bool avr_need_clear_bss_p = false;
+bool avr_need_copy_data_p = false;
+
 /* AVR attributes.  */
 static const struct attribute_spec avr_attribute_table[] =
 {
-  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
-  { "progmem",   0, 0, false, false, false,  avr_handle_progmem_attribute },
-  { "signal",    0, 0, true,  false, false,  avr_handle_fndecl_attribute },
-  { "interrupt", 0, 0, true,  false, false,  avr_handle_fndecl_attribute },
-  { "naked",     0, 0, false, true,  true,   avr_handle_fntype_attribute },
-  { "OS_task",   0, 0, false, true,  true,   avr_handle_fntype_attribute },
-  { "OS_main",   0, 0, false, true,  true,   avr_handle_fntype_attribute },
-  { NULL,        0, 0, false, false, false, NULL }
+  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler,
+       affects_type_identity } */
+  { "progmem",   0, 0, false, false, false,  avr_handle_progmem_attribute,
+    false },
+  { "signal",    0, 0, true,  false, false,  avr_handle_fndecl_attribute,
+    false },
+  { "interrupt", 0, 0, true,  false, false,  avr_handle_fndecl_attribute,
+    false },
+  { "naked",     0, 0, false, true,  true,   avr_handle_fntype_attribute,
+    false },
+  { "OS_task",   0, 0, false, true,  true,   avr_handle_fntype_attribute,
+    false },
+  { "OS_main",   0, 0, false, true,  true,   avr_handle_fntype_attribute,
+    false },
+  { NULL,        0, 0, false, false, false, NULL, false }
 };
 
 /* Implement TARGET_OPTION_OPTIMIZATION_TABLE.  */
@@ -163,8 +186,14 @@ static const struct default_options avr_option_optimization_table[] =
 #define TARGET_ASM_FUNCTION_END_PROLOGUE avr_asm_function_end_prologue
 #undef TARGET_ASM_FUNCTION_BEGIN_EPILOGUE
 #define TARGET_ASM_FUNCTION_BEGIN_EPILOGUE avr_asm_function_begin_epilogue
+
 #undef TARGET_FUNCTION_VALUE
 #define TARGET_FUNCTION_VALUE avr_function_value
+#undef TARGET_LIBCALL_VALUE
+#define TARGET_LIBCALL_VALUE avr_libcall_value
+#undef TARGET_FUNCTION_VALUE_REGNO_P
+#define TARGET_FUNCTION_VALUE_REGNO_P avr_function_value_regno_p
+
 #undef TARGET_ATTRIBUTE_TABLE
 #define TARGET_ATTRIBUTE_TABLE avr_attribute_table
 #undef TARGET_ASM_FUNCTION_RODATA_SECTION
@@ -173,6 +202,16 @@ static const struct default_options avr_option_optimization_table[] =
 #define TARGET_INSERT_ATTRIBUTES avr_insert_attributes
 #undef TARGET_SECTION_TYPE_FLAGS
 #define TARGET_SECTION_TYPE_FLAGS avr_section_type_flags
+
+/* `TARGET_ASM_NAMED_SECTION' must be defined in avr.h.  */
+
+#undef TARGET_ASM_INIT_SECTIONS
+#define TARGET_ASM_INIT_SECTIONS avr_asm_init_sections
+
+#undef TARGET_REGISTER_MOVE_COST
+#define TARGET_REGISTER_MOVE_COST avr_register_move_cost
+#undef TARGET_MEMORY_MOVE_COST
+#define TARGET_MEMORY_MOVE_COST avr_memory_move_cost
 #undef TARGET_RTX_COSTS
 #define TARGET_RTX_COSTS avr_rtx_costs
 #undef TARGET_ADDRESS_COST
@@ -218,6 +257,25 @@ static const struct default_options avr_option_optimization_table[] =
 #undef TARGET_OPTION_OPTIMIZATION_TABLE
 #define TARGET_OPTION_OPTIMIZATION_TABLE avr_option_optimization_table
 
+#undef TARGET_CANNOT_MODIFY_JUMPS_P
+#define TARGET_CANNOT_MODIFY_JUMPS_P avr_cannot_modify_jumps_p
+
+#undef TARGET_HELP
+#define TARGET_HELP avr_help
+
+#undef TARGET_EXCEPT_UNWIND_INFO
+#define TARGET_EXCEPT_UNWIND_INFO sjlj_except_unwind_info
+
+#undef TARGET_FUNCTION_OK_FOR_SIBCALL
+#define TARGET_FUNCTION_OK_FOR_SIBCALL avr_function_ok_for_sibcall
+
+#undef TARGET_INIT_BUILTINS
+#define TARGET_INIT_BUILTINS avr_init_builtins
+
+#undef TARGET_EXPAND_BUILTIN
+#define TARGET_EXPAND_BUILTIN avr_expand_builtin
+
+
 struct gcc_target targetm = TARGET_INITIALIZER;
 
 static void
@@ -233,10 +291,8 @@ avr_option_override (void)
 
   if (!t->name)
     {
-      fprintf (stderr, "unknown MCU '%s' specified\nKnown MCU names:\n",
-	       avr_mcu_name);
-      for (t = avr_mcu_types; t->name; t++)
-	fprintf (stderr,"   %s\n", t->name);
+      error ("unrecognized argument to -mmcu= option: %qs", avr_mcu_name);
+      inform (input_location,  "See --target-help for supported MCUs");
     }
 
   avr_current_device = t;
@@ -247,6 +303,42 @@ avr_option_override (void)
   zero_reg_rtx = gen_rtx_REG (QImode, ZERO_REGNO);
 
   init_machine_status = avr_init_machine_status;
+}
+
+/* Implement TARGET_HELP */
+/* Report extra information for --target-help */
+
+static void
+avr_help (void)
+{
+  const struct mcu_type_s *t;
+  const char * const indent = "  ";
+  int len;
+
+  /* Give a list of MCUs that are accepted by -mmcu=* .
+     Note that MCUs supported by the compiler might differ from
+     MCUs supported by binutils. */
+
+  len = strlen (indent);
+  printf ("Known MCU names:\n%s", indent);
+
+  /* Print a blank-separated list of all supported MCUs */
+
+  for (t = avr_mcu_types; t->name; t++)
+    {
+      printf ("%s ", t->name);
+      len += 1 + strlen (t->name);
+
+      /* Break long lines */
+      
+      if (len > 66 && (t+1)->name)
+        {
+          printf ("\n%s", indent);
+          len = strlen (indent);
+        }
+    }
+
+  printf ("\n\n");
 }
 
 /*  return register class from register number.  */
@@ -283,17 +375,34 @@ avr_regno_reg_class (int r)
   return ALL_REGS;
 }
 
+/* A helper for the subsequent function attribute used to dig for
+   attribute 'name' in a FUNCTION_DECL or FUNCTION_TYPE */
+
+static inline int
+avr_lookup_function_attribute1 (const_tree func, const char *name)
+{
+  if (FUNCTION_DECL == TREE_CODE (func))
+    {
+      if (NULL_TREE != lookup_attribute (name, DECL_ATTRIBUTES (func)))
+        {
+          return true;
+        }
+      
+      func = TREE_TYPE (func);
+    }
+
+  gcc_assert (TREE_CODE (func) == FUNCTION_TYPE
+              || TREE_CODE (func) == METHOD_TYPE);
+  
+  return NULL_TREE != lookup_attribute (name, TYPE_ATTRIBUTES (func));
+}
+
 /* Return nonzero if FUNC is a naked function.  */
 
 static int
 avr_naked_function_p (tree func)
 {
-  tree a;
-
-  gcc_assert (TREE_CODE (func) == FUNCTION_DECL);
-  
-  a = lookup_attribute ("naked", TYPE_ATTRIBUTES (TREE_TYPE (func)));
-  return a != NULL_TREE;
+  return avr_lookup_function_attribute1 (func, "naked");
 }
 
 /* Return nonzero if FUNC is an interrupt function as specified
@@ -302,13 +411,7 @@ avr_naked_function_p (tree func)
 static int
 interrupt_function_p (tree func)
 {
-  tree a;
-
-  if (TREE_CODE (func) != FUNCTION_DECL)
-    return 0;
-
-  a = lookup_attribute ("interrupt", DECL_ATTRIBUTES (func));
-  return a != NULL_TREE;
+  return avr_lookup_function_attribute1 (func, "interrupt");
 }
 
 /* Return nonzero if FUNC is a signal function as specified
@@ -317,13 +420,7 @@ interrupt_function_p (tree func)
 static int
 signal_function_p (tree func)
 {
-  tree a;
-
-  if (TREE_CODE (func) != FUNCTION_DECL)
-    return 0;
-
-  a = lookup_attribute ("signal", DECL_ATTRIBUTES (func));
-  return a != NULL_TREE;
+  return avr_lookup_function_attribute1 (func, "signal");
 }
 
 /* Return nonzero if FUNC is a OS_task function.  */
@@ -331,12 +428,7 @@ signal_function_p (tree func)
 static int
 avr_OS_task_function_p (tree func)
 {
-  tree a;
-
-  gcc_assert (TREE_CODE (func) == FUNCTION_DECL);
-  
-  a = lookup_attribute ("OS_task", TYPE_ATTRIBUTES (TREE_TYPE (func)));
-  return a != NULL_TREE;
+  return avr_lookup_function_attribute1 (func, "OS_task");
 }
 
 /* Return nonzero if FUNC is a OS_main function.  */
@@ -344,12 +436,7 @@ avr_OS_task_function_p (tree func)
 static int
 avr_OS_main_function_p (tree func)
 {
-  tree a;
-
-  gcc_assert (TREE_CODE (func) == FUNCTION_DECL);
-  
-  a = lookup_attribute ("OS_main", TYPE_ATTRIBUTES (TREE_TYPE (func)));
-  return a != NULL_TREE;
+  return avr_lookup_function_attribute1 (func, "OS_main");
 }
 
 /* Return the number of hard registers to push/pop in the prologue/epilogue
@@ -535,6 +622,35 @@ get_sequence_length (rtx insns)
   return length;
 }
 
+/*  Implement INCOMING_RETURN_ADDR_RTX.  */
+
+rtx
+avr_incoming_return_addr_rtx (void)
+{
+  /* The return address is at the top of the stack.  Note that the push
+     was via post-decrement, which means the actual address is off by one.  */
+  return gen_frame_mem (HImode, plus_constant (stack_pointer_rtx, 1));
+}
+
+/*  Helper for expand_prologue.  Emit a push of a byte register.  */
+
+static void
+emit_push_byte (unsigned regno, bool frame_related_p)
+{
+  rtx mem, reg, insn;
+
+  mem = gen_rtx_POST_DEC (HImode, stack_pointer_rtx);
+  mem = gen_frame_mem (QImode, mem);
+  reg = gen_rtx_REG (QImode, regno);
+
+  insn = emit_insn (gen_rtx_SET (VOIDmode, mem, reg));
+  if (frame_related_p)
+    RTX_FRAME_RELATED_P (insn) = 1;
+
+  cfun->machine->stack_usage++;
+}
+
+
 /*  Output function prologue.  */
 
 void
@@ -544,11 +660,6 @@ expand_prologue (void)
   HARD_REG_SET set;
   int minimize;
   HOST_WIDE_INT size = get_frame_size();
-  /* Define templates for push instructions.  */
-  rtx pushbyte = gen_rtx_MEM (QImode,
-                  gen_rtx_POST_DEC (HImode, stack_pointer_rtx));
-  rtx pushword = gen_rtx_MEM (HImode,
-                  gen_rtx_POST_DEC (HImode, stack_pointer_rtx));
   rtx insn;
   
   /* Init cfun->machine.  */
@@ -576,46 +687,34 @@ expand_prologue (void)
 
   if (cfun->machine->is_interrupt || cfun->machine->is_signal)
     {
+      /* Enable interrupts.  */
       if (cfun->machine->is_interrupt)
-        {
-          /* Enable interrupts.  */
-          insn = emit_insn (gen_enable_interrupt ());
-          RTX_FRAME_RELATED_P (insn) = 1;
-        }
+	emit_insn (gen_enable_interrupt ());
 	
       /* Push zero reg.  */
-      insn = emit_move_insn (pushbyte, zero_reg_rtx);
-      RTX_FRAME_RELATED_P (insn) = 1;
-      cfun->machine->stack_usage++;
+      emit_push_byte (ZERO_REGNO, true);
 
       /* Push tmp reg.  */
-      insn = emit_move_insn (pushbyte, tmp_reg_rtx);
-      RTX_FRAME_RELATED_P (insn) = 1;
-      cfun->machine->stack_usage++;
+      emit_push_byte (TMP_REGNO, true);
 
       /* Push SREG.  */
-      insn = emit_move_insn (tmp_reg_rtx, 
-                             gen_rtx_MEM (QImode, GEN_INT (SREG_ADDR)));
-      RTX_FRAME_RELATED_P (insn) = 1;
-      insn = emit_move_insn (pushbyte, tmp_reg_rtx);
-      RTX_FRAME_RELATED_P (insn) = 1;
-      cfun->machine->stack_usage++;
+      /* ??? There's no dwarf2 column reserved for SREG.  */
+      emit_move_insn (tmp_reg_rtx, gen_rtx_MEM (QImode, GEN_INT (SREG_ADDR)));
+      emit_push_byte (TMP_REGNO, false);
 
       /* Push RAMPZ.  */
-      if(AVR_HAVE_RAMPZ 
-         && (TEST_HARD_REG_BIT (set, REG_Z) && TEST_HARD_REG_BIT (set, REG_Z + 1)))
+      /* ??? There's no dwarf2 column reserved for RAMPZ.  */
+      if (AVR_HAVE_RAMPZ 
+          && TEST_HARD_REG_BIT (set, REG_Z)
+          && TEST_HARD_REG_BIT (set, REG_Z + 1))
         {
-          insn = emit_move_insn (tmp_reg_rtx, 
-                                 gen_rtx_MEM (QImode, GEN_INT (RAMPZ_ADDR)));
-          RTX_FRAME_RELATED_P (insn) = 1;
-          insn = emit_move_insn (pushbyte, tmp_reg_rtx);
-          RTX_FRAME_RELATED_P (insn) = 1;
-          cfun->machine->stack_usage++;
+          emit_move_insn (tmp_reg_rtx,
+			  gen_rtx_MEM (QImode, GEN_INT (RAMPZ_ADDR)));
+	  emit_push_byte (TMP_REGNO, false);
         }
 	
       /* Clear zero reg.  */
-      insn = emit_move_insn (zero_reg_rtx, const0_rtx);
-      RTX_FRAME_RELATED_P (insn) = 1;
+      emit_move_insn (zero_reg_rtx, const0_rtx);
 
       /* Prevent any attempt to delete the setting of ZERO_REG!  */
       emit_use (zero_reg_rtx);
@@ -624,37 +723,63 @@ expand_prologue (void)
 		   || (AVR_2_BYTE_PC && live_seq > 6)
 		   || live_seq > 7)) 
     {
-      insn = emit_move_insn (gen_rtx_REG (HImode, REG_X), 
-                             gen_int_mode (size, HImode));
+      int first_reg, reg, offset;
+
+      emit_move_insn (gen_rtx_REG (HImode, REG_X), 
+                      gen_int_mode (size, HImode));
+
+      insn = emit_insn (gen_call_prologue_saves
+			(gen_int_mode (live_seq, HImode),
+		         gen_int_mode (size + live_seq, HImode)));
       RTX_FRAME_RELATED_P (insn) = 1;
 
-      insn = 
-        emit_insn (gen_call_prologue_saves (gen_int_mode (live_seq, HImode),
-					    gen_int_mode (size + live_seq, HImode)));
-      RTX_FRAME_RELATED_P (insn) = 1;
+      /* Describe the effect of the unspec_volatile call to prologue_saves.
+	 Note that this formulation assumes that add_reg_note pushes the
+	 notes to the front.  Thus we build them in the reverse order of
+	 how we want dwarf2out to process them.  */
+
+      /* The function does always set frame_pointer_rtx, but whether that
+	 is going to be permanent in the function is frame_pointer_needed.  */
+      add_reg_note (insn, REG_CFA_ADJUST_CFA,
+		    gen_rtx_SET (VOIDmode,
+				 (frame_pointer_needed
+				  ? frame_pointer_rtx : stack_pointer_rtx),
+				 plus_constant (stack_pointer_rtx,
+						-(size + live_seq))));
+
+      /* Note that live_seq always contains r28+r29, but the other
+	 registers to be saved are all below 18.  */
+      first_reg = 18 - (live_seq - 2);
+
+      for (reg = 29, offset = -live_seq + 1;
+	   reg >= first_reg;
+	   reg = (reg == 28 ? 17 : reg - 1), ++offset)
+	{
+	  rtx m, r;
+
+	  m = gen_rtx_MEM (QImode, plus_constant (stack_pointer_rtx, offset));
+	  r = gen_rtx_REG (QImode, reg);
+	  add_reg_note (insn, REG_CFA_OFFSET, gen_rtx_SET (VOIDmode, m, r));
+	}
+
       cfun->machine->stack_usage += size + live_seq;
     }
   else
     {
       int reg;
       for (reg = 0; reg < 32; ++reg)
-        {
-          if (TEST_HARD_REG_BIT (set, reg))
-            {
-              /* Emit push of register to save.  */
-              insn=emit_move_insn (pushbyte, gen_rtx_REG (QImode, reg));
-              RTX_FRAME_RELATED_P (insn) = 1;
-              cfun->machine->stack_usage++;
-            }
-        }
+        if (TEST_HARD_REG_BIT (set, reg))
+	  emit_push_byte (reg, true);
+
       if (frame_pointer_needed)
         {
 	  if (!(cfun->machine->is_OS_task || cfun->machine->is_OS_main))
 	    {
-              /* Push frame pointer.  */
-	      insn = emit_move_insn (pushword, frame_pointer_rtx);
-              RTX_FRAME_RELATED_P (insn) = 1;
-	      cfun->machine->stack_usage += 2;
+              /* Push frame pointer.  Always be consistent about the
+		 ordering of pushes -- epilogue_restores expects the
+		 register pair to be pushed low byte first.  */
+	      emit_push_byte (REG_Y, true);
+	      emit_push_byte (REG_Y + 1, true);
 	    }
 
           if (!size)
@@ -677,13 +802,12 @@ expand_prologue (void)
               is selected.  */
               rtx myfp;
 	      rtx fp_plus_insns; 
-	      rtx sp_plus_insns = NULL_RTX;
 
               if (AVR_HAVE_8BIT_SP)
                 {
-                  /* The high byte (r29) doesn't change - prefer 'subi' (1 cycle)
-                     over 'sbiw' (2 cycles, same size).  */
-                  myfp = gen_rtx_REG (QImode, REGNO (frame_pointer_rtx));
+                  /* The high byte (r29) doesn't change.  Prefer 'subi'
+		     (1 cycle) over 'sbiw' (2 cycles, same size).  */
+                  myfp = gen_rtx_REG (QImode, FRAME_POINTER_REGNUM);
                 }
               else 
                 {
@@ -694,41 +818,43 @@ expand_prologue (void)
 	      /* Method 1-Adjust frame pointer.  */
 	      start_sequence ();
 
-              insn = emit_move_insn (frame_pointer_rtx, stack_pointer_rtx);
-              RTX_FRAME_RELATED_P (insn) = 1;
+	      /* Normally the dwarf2out frame-related-expr interpreter does
+		 not expect to have the CFA change once the frame pointer is
+		 set up.  Thus we avoid marking the move insn below and
+		 instead indicate that the entire operation is complete after
+		 the frame pointer subtraction is done.  */
 
-              insn = 
-	        emit_move_insn (myfp,
-				gen_rtx_PLUS (GET_MODE(myfp), myfp, 
-					      gen_int_mode (-size, 
-							    GET_MODE(myfp))));
-              RTX_FRAME_RELATED_P (insn) = 1;
+              emit_move_insn (frame_pointer_rtx, stack_pointer_rtx);
 
-	      /* Copy to stack pointer.  */
+              insn = emit_move_insn (myfp, plus_constant (myfp, -size));
+              RTX_FRAME_RELATED_P (insn) = 1;
+	      add_reg_note (insn, REG_CFA_ADJUST_CFA,
+			    gen_rtx_SET (VOIDmode, frame_pointer_rtx,
+					 plus_constant (stack_pointer_rtx,
+							-size)));
+
+	      /* Copy to stack pointer.  Note that since we've already
+		 changed the CFA to the frame pointer this operation
+		 need not be annotated at all.  */
 	      if (AVR_HAVE_8BIT_SP)
 		{
-		  insn = emit_move_insn (stack_pointer_rtx, frame_pointer_rtx);
-		  RTX_FRAME_RELATED_P (insn) = 1;
+		  emit_move_insn (stack_pointer_rtx, frame_pointer_rtx);
 		}
 	      else if (TARGET_NO_INTERRUPTS 
 		       || cfun->machine->is_signal
 		       || cfun->machine->is_OS_main)
 		{
-		  insn = 
-		    emit_insn (gen_movhi_sp_r_irq_off (stack_pointer_rtx, 
-						       frame_pointer_rtx));
-		  RTX_FRAME_RELATED_P (insn) = 1;		
+		  emit_insn (gen_movhi_sp_r_irq_off (stack_pointer_rtx, 
+						     frame_pointer_rtx));
 		}
 	      else if (cfun->machine->is_interrupt)
 		{
-		  insn = emit_insn (gen_movhi_sp_r_irq_on (stack_pointer_rtx, 
-							   frame_pointer_rtx));
-		  RTX_FRAME_RELATED_P (insn) = 1;
+		  emit_insn (gen_movhi_sp_r_irq_on (stack_pointer_rtx, 
+						    frame_pointer_rtx));
 		}
 	      else
 		{
-		  insn = emit_move_insn (stack_pointer_rtx, frame_pointer_rtx);
-		  RTX_FRAME_RELATED_P (insn) = 1;
+		  emit_move_insn (stack_pointer_rtx, frame_pointer_rtx);
 		}
 
 	      fp_plus_insns = get_insns ();
@@ -737,36 +863,36 @@ expand_prologue (void)
 	      /* Method 2-Adjust Stack pointer.  */
               if (size <= 6)
                 {
+		  rtx sp_plus_insns;
+
 		  start_sequence ();
 
-		  insn = 
-		    emit_move_insn (stack_pointer_rtx,
-				    gen_rtx_PLUS (HImode, 
-						  stack_pointer_rtx, 
-						  gen_int_mode (-size, 
-								HImode)));
+	          insn = plus_constant (stack_pointer_rtx, -size);
+		  insn = emit_move_insn (stack_pointer_rtx, insn);
 		  RTX_FRAME_RELATED_P (insn) = 1;
 		  
-		  insn = 
-		    emit_move_insn (frame_pointer_rtx, stack_pointer_rtx);
+		  insn = emit_move_insn (frame_pointer_rtx, stack_pointer_rtx);
 		  RTX_FRAME_RELATED_P (insn) = 1;
 
 		  sp_plus_insns = get_insns ();
 		  end_sequence ();
-                }
 
-              /* Use shortest method.  */
-              if (size <= 6 && (get_sequence_length (sp_plus_insns) 
-				 < get_sequence_length (fp_plus_insns)))
-		emit_insn (sp_plus_insns);
-              else
+		  /* Use shortest method.  */
+		  if (get_sequence_length (sp_plus_insns) 
+		      < get_sequence_length (fp_plus_insns))
+		    emit_insn (sp_plus_insns);
+		  else
+		    emit_insn (fp_plus_insns);
+                }
+	      else
 		emit_insn (fp_plus_insns);
+
 	      cfun->machine->stack_usage += size;
             }
         }
     }
 
-  if (flag_stack_usage)
+  if (flag_stack_usage_info)
     current_function_static_stack_size = cfun->machine->stack_usage;
 }
 
@@ -814,10 +940,24 @@ avr_epilogue_uses (int regno ATTRIBUTE_UNUSED)
   return 0;
 }
 
+/*  Helper for expand_epilogue.  Emit a pop of a byte register.  */
+
+static void
+emit_pop_byte (unsigned regno)
+{
+  rtx mem, reg;
+
+  mem = gen_rtx_PRE_INC (HImode, stack_pointer_rtx);
+  mem = gen_frame_mem (QImode, mem);
+  reg = gen_rtx_REG (QImode, regno);
+
+  emit_insn (gen_rtx_SET (VOIDmode, reg, mem));
+}
+
 /*  Output RTL epilogue.  */
 
 void
-expand_epilogue (void)
+expand_epilogue (bool sibcall_p)
 {
   int reg;
   int live_seq;
@@ -828,6 +968,8 @@ expand_epilogue (void)
   /* epilogue: naked  */
   if (cfun->machine->is_naked)
     {
+      gcc_assert (!sibcall_p);
+      
       emit_jump_insn (gen_return ());
       return;
     }
@@ -866,13 +1008,12 @@ expand_epilogue (void)
               /* Try two methods to adjust stack and select shortest.  */
 	      rtx myfp;
 	      rtx fp_plus_insns;
-	      rtx sp_plus_insns = NULL_RTX;
-	      
+
 	      if (AVR_HAVE_8BIT_SP)
                 {
                   /* The high byte (r29) doesn't change - prefer 'subi' 
                      (1 cycle) over 'sbiw' (2 cycles, same size).  */
-                  myfp = gen_rtx_REG (QImode, REGNO (frame_pointer_rtx));
+                  myfp = gen_rtx_REG (QImode, FRAME_POINTER_REGNUM);
                 }
               else 
                 {
@@ -883,10 +1024,7 @@ expand_epilogue (void)
               /* Method 1-Adjust frame pointer.  */
 	      start_sequence ();
 
-	      emit_move_insn (myfp,
-			      gen_rtx_PLUS (GET_MODE (myfp), myfp,
-					    gen_int_mode (size, 
-							  GET_MODE(myfp))));
+	      emit_move_insn (myfp, plus_constant (myfp, size));
 
 	      /* Copy to stack pointer.  */
 	      if (AVR_HAVE_8BIT_SP)
@@ -915,61 +1053,67 @@ expand_epilogue (void)
               /* Method 2-Adjust Stack pointer.  */
               if (size <= 5)
                 {
+		  rtx sp_plus_insns;
+
 		  start_sequence ();
 
 		  emit_move_insn (stack_pointer_rtx,
-				  gen_rtx_PLUS (HImode, stack_pointer_rtx,
-						gen_int_mode (size, 
-							      HImode)));
+				  plus_constant (stack_pointer_rtx, size));
 
 		  sp_plus_insns = get_insns ();
 		  end_sequence ();
-                }
 
-              /* Use shortest method.  */
-              if (size <= 5 && (get_sequence_length (sp_plus_insns) 
-				 < get_sequence_length (fp_plus_insns)))
-	      	emit_insn (sp_plus_insns);
-              else
+		  /* Use shortest method.  */
+		  if (get_sequence_length (sp_plus_insns) 
+		      < get_sequence_length (fp_plus_insns))
+		    emit_insn (sp_plus_insns);
+		  else
+		    emit_insn (fp_plus_insns);
+                }
+	      else
 		emit_insn (fp_plus_insns);
             }
 	  if (!(cfun->machine->is_OS_task || cfun->machine->is_OS_main))
 	    {
-              /* Restore previous frame_pointer.  */
-	      emit_insn (gen_pophi (frame_pointer_rtx));
+              /* Restore previous frame_pointer.  See expand_prologue for
+		 rationale for not using pophi.  */
+	      emit_pop_byte (REG_Y + 1);
+	      emit_pop_byte (REG_Y);
 	    }
 	}
+
       /* Restore used registers.  */
       for (reg = 31; reg >= 0; --reg)
-        {
-          if (TEST_HARD_REG_BIT (set, reg))
-              emit_insn (gen_popqi (gen_rtx_REG (QImode, reg)));
-        }
+        if (TEST_HARD_REG_BIT (set, reg))
+          emit_pop_byte (reg);
+
       if (cfun->machine->is_interrupt || cfun->machine->is_signal)
         {
           /* Restore RAMPZ using tmp reg as scratch.  */
-	  if(AVR_HAVE_RAMPZ 
-             && (TEST_HARD_REG_BIT (set, REG_Z) && TEST_HARD_REG_BIT (set, REG_Z + 1)))
+	  if (AVR_HAVE_RAMPZ 
+              && TEST_HARD_REG_BIT (set, REG_Z)
+	      && TEST_HARD_REG_BIT (set, REG_Z + 1))
             {
-	      emit_insn (gen_popqi (tmp_reg_rtx));
-	      emit_move_insn (gen_rtx_MEM(QImode, GEN_INT(RAMPZ_ADDR)), 
+	      emit_pop_byte (TMP_REGNO);
+	      emit_move_insn (gen_rtx_MEM (QImode, GEN_INT (RAMPZ_ADDR)), 
 			      tmp_reg_rtx);
 	    }
 
           /* Restore SREG using tmp reg as scratch.  */
-          emit_insn (gen_popqi (tmp_reg_rtx));
+          emit_pop_byte (TMP_REGNO);
       
-          emit_move_insn (gen_rtx_MEM(QImode, GEN_INT(SREG_ADDR)), 
+          emit_move_insn (gen_rtx_MEM (QImode, GEN_INT (SREG_ADDR)), 
 			  tmp_reg_rtx);
 
           /* Restore tmp REG.  */
-          emit_insn (gen_popqi (tmp_reg_rtx));
+          emit_pop_byte (TMP_REGNO);
 
           /* Restore zero REG.  */
-          emit_insn (gen_popqi (zero_reg_rtx));
+          emit_pop_byte (ZERO_REGNO);
         }
 
-      emit_jump_insn (gen_return ());
+      if (!sibcall_p)
+        emit_jump_insn (gen_return ());
     }
 }
 
@@ -980,6 +1124,27 @@ avr_asm_function_begin_epilogue (FILE *file)
 {
   fprintf (file, "/* epilogue start */\n");
 }
+
+
+/* Implement TARGET_CANNOT_MODITY_JUMPS_P */
+
+static bool
+avr_cannot_modify_jumps_p (void)
+{
+
+  /* Naked Functions must not have any instructions after
+     their epilogue, see PR42240 */
+     
+  if (reload_completed
+      && cfun->machine
+      && cfun->machine->is_naked)
+    {
+      return true;
+    }
+
+  return false;
+}
+
 
 /* Return nonzero if X (an RTX) is a legitimate memory address on the target
    machine for a memory operand of mode MODE.  */
@@ -1153,7 +1318,9 @@ print_operand_address (FILE *file, rtx addr)
       if (CONSTANT_ADDRESS_P (addr)
 	  && text_segment_operand (addr, VOIDmode))
 	{
-	  rtx x = XEXP (addr,0);
+	  rtx x = addr;
+	  if (GET_CODE (x) == CONST)
+	    x = XEXP (x, 0);
 	  if (GET_CODE (x) == PLUS && GET_CODE (XEXP (x,1)) == CONST_INT)
 	    {
 	      /* Assembler gs() will implant word address. Make offset 
@@ -1561,6 +1728,10 @@ init_cumulative_args (CUMULATIVE_ARGS *cum, tree fntype, rtx libname,
   cum->regno = FIRST_CUM_REG;
   if (!libname && stdarg_p (fntype))
     cum->nregs = 0;
+
+  /* Assume the calle may be tail called */
+  
+  cfun->machine->sibcall_fails = 0;
 }
 
 /* Returns the number of registers to allocate for a function argument.  */
@@ -1608,11 +1779,101 @@ avr_function_arg_advance (CUMULATIVE_ARGS *cum, enum machine_mode mode,
   cum->nregs -= bytes;
   cum->regno -= bytes;
 
+  /* A parameter is being passed in a call-saved register. As the original
+     contents of these regs has to be restored before leaving the function,
+     a function must not pass arguments in call-saved regs in order to get
+     tail-called. */
+  
+  if (cum->regno >= 0
+      && !call_used_regs[cum->regno])
+    {
+      /* FIXME: We ship info on failing tail-call in struct machine_function.
+         This uses internals of calls.c:expand_call() and the way args_so_far
+         is used. targetm.function_ok_for_sibcall() needs to be extended to
+         pass &args_so_far, too. At present, CUMULATIVE_ARGS is target
+         dependent so that such an extension is not wanted. */
+      
+      cfun->machine->sibcall_fails = 1;
+    }
+
+  /* Test if all registers needed by the ABI are actually available.  If the
+     user has fixed a GPR needed to pass an argument, an (implicit) function
+     call would clobber that fixed register.  See PR45099 for an example.  */
+  
+  if (cum->regno >= 0)
+    {
+      int regno;
+
+      for (regno = cum->regno; regno < cum->regno + bytes; regno++)
+        if (fixed_regs[regno])
+          error ("Register %s is needed to pass a parameter but is fixed",
+                 reg_names[regno]);
+    }
+      
   if (cum->nregs <= 0)
     {
       cum->nregs = 0;
       cum->regno = FIRST_CUM_REG;
     }
+}
+
+/* Implement `TARGET_FUNCTION_OK_FOR_SIBCALL' */
+/* Decide whether we can make a sibling call to a function.  DECL is the
+   declaration of the function being targeted by the call and EXP is the
+   CALL_EXPR representing the call. */
+
+static bool
+avr_function_ok_for_sibcall (tree decl_callee, tree exp_callee)
+{
+  tree fntype_callee;
+
+  /* Tail-calling must fail if callee-saved regs are used to pass
+     function args.  We must not tail-call when `epilogue_restores'
+     is used.  Unfortunately, we cannot tell at this point if that
+     actually will happen or not, and we cannot step back from
+     tail-calling. Thus, we inhibit tail-calling with -mcall-prologues. */
+  
+  if (cfun->machine->sibcall_fails
+      || TARGET_CALL_PROLOGUES)
+    {
+      return false;
+    }
+  
+  fntype_callee = TREE_TYPE (CALL_EXPR_FN (exp_callee));
+
+  if (decl_callee)
+    {
+      decl_callee = TREE_TYPE (decl_callee);
+    }
+  else
+    {
+      decl_callee = fntype_callee;
+      
+      while (FUNCTION_TYPE != TREE_CODE (decl_callee)
+             && METHOD_TYPE != TREE_CODE (decl_callee))
+        {
+          decl_callee = TREE_TYPE (decl_callee);
+        }
+    }
+
+  /* Ensure that caller and callee have compatible epilogues */
+  
+  if (interrupt_function_p (current_function_decl)
+      || signal_function_p (current_function_decl)
+      || avr_naked_function_p (decl_callee)
+      || avr_naked_function_p (current_function_decl)
+      /* FIXME: For OS_task and OS_main, we are over-conservative.
+         This is due to missing documentation of these attributes
+         and what they actually should do and should not do. */
+      || (avr_OS_task_function_p (decl_callee)
+          != avr_OS_task_function_p (current_function_decl))
+      || (avr_OS_main_function_p (decl_callee)
+          != avr_OS_main_function_p (current_function_decl)))
+    {
+      return false;
+    }
+ 
+  return true;
 }
 
 /***********************************************************************
@@ -4927,14 +5188,20 @@ avr_insert_attributes (tree node, tree *attributes)
       && (TREE_STATIC (node) || DECL_EXTERNAL (node))
       && avr_progmem_p (node, *attributes))
     {
-      static const char dsec[] = ".progmem.data";
-      *attributes = tree_cons (get_identifier ("section"),
-		build_tree_list (NULL, build_string (strlen (dsec), dsec)),
-		*attributes);
+      if (TREE_READONLY (node)) 
+        {
+          static const char dsec[] = ".progmem.data";
 
-      /* ??? This seems sketchy.  Why can't the user declare the
-	 thing const in the first place?  */
-      TREE_READONLY (node) = 1;
+          *attributes = tree_cons (get_identifier ("section"),
+                                   build_tree_list (NULL, build_string (strlen (dsec), dsec)),
+                                   *attributes);
+        }
+      else
+        {
+          error ("variable %q+D must be const in order to be put into"
+                 " read-only section by means of %<__attribute__((progmem))%>",
+                 node);
+        }
     }
 }
 
@@ -4950,7 +5217,60 @@ avr_output_progmem_section_asm_op (const void *arg ATTRIBUTE_UNUSED)
   fprintf (asm_out_file, "\t.p2align 1\n");
 }
 
-/* Implement TARGET_ASM_INIT_SECTIONS.  */
+
+/* Implement `ASM_OUTPUT_ALIGNED_DECL_LOCAL'.  */
+/* Implement `ASM_OUTPUT_ALIGNED_DECL_COMMON'.  */
+/* Track need of __do_clear_bss.  */
+
+void
+avr_asm_output_aligned_decl_common (FILE * stream, const_tree decl ATTRIBUTE_UNUSED,
+                                    const char *name, unsigned HOST_WIDE_INT size,
+                                    unsigned int align, bool local_p)
+{
+  avr_need_clear_bss_p = true;
+
+  if (local_p)
+    {
+      fputs ("\t.local\t", stream);
+      assemble_name (stream, name);
+      fputs ("\n", stream);
+    }
+  
+  fputs ("\t.comm\t", stream);
+  assemble_name (stream, name);
+  fprintf (stream,
+           "," HOST_WIDE_INT_PRINT_UNSIGNED ",%u\n",
+           size, align / BITS_PER_UNIT);
+}
+
+
+/* Unnamed section callback for data_section
+   to track need of __do_copy_data.  */
+
+static void
+avr_output_data_section_asm_op (const void *data)
+{
+  avr_need_copy_data_p = true;
+  
+  /* Dispatch to default.  */
+  output_section_asm_op (data);
+}
+
+
+/* Unnamed section callback for bss_section
+   to track need of __do_clear_bss.  */
+
+static void
+avr_output_bss_section_asm_op (const void *data)
+{
+  avr_need_clear_bss_p = true;
+  
+  /* Dispatch to default.  */
+  output_section_asm_op (data);
+}
+
+
+/* Implement `TARGET_ASM_INIT_SECTIONS'.  */
 
 static void
 avr_asm_init_sections (void)
@@ -4959,6 +5279,27 @@ avr_asm_init_sections (void)
 					 avr_output_progmem_section_asm_op,
 					 NULL);
   readonly_data_section = data_section;
+
+  data_section->unnamed.callback = avr_output_data_section_asm_op;
+  bss_section->unnamed.callback = avr_output_bss_section_asm_op;
+}
+
+
+/* Implement `TARGET_ASM_NAMED_SECTION'.  */
+/* Track need of __do_clear_bss, __do_copy_data for named sections.  */
+
+void
+avr_asm_named_section (const char *name, unsigned int flags, tree decl)
+{
+  if (!avr_need_copy_data_p)
+    avr_need_copy_data_p = (0 == strncmp (name, ".data", 5)
+                            || 0 == strncmp (name, ".rodata", 7)
+                            || 0 == strncmp (name, ".gnu.linkonce.d", 15));
+  
+  if (!avr_need_clear_bss_p)
+    avr_need_clear_bss_p = (0 == strncmp (name, ".bss", 4));
+  
+  default_elf_asm_named_section (name, flags, decl);
 }
 
 static unsigned int
@@ -4979,6 +5320,8 @@ avr_section_type_flags (tree decl, const char *name, int reloc)
   return flags;
 }
 
+
+/* Implement `TARGET_ASM_FILE_START'.  */
 /* Outputs some appropriate text to go at the start of an assembler
    file.  */
 
@@ -4997,20 +5340,27 @@ avr_file_start (void)
   
   fputs ("__tmp_reg__ = 0\n" 
          "__zero_reg__ = 1\n", asm_out_file);
-
-  /* FIXME: output these only if there is anything in the .data / .bss
-     sections - some code size could be saved by not linking in the
-     initialization code from libgcc if one or both sections are empty.  */
-  fputs ("\t.global __do_copy_data\n", asm_out_file);
-  fputs ("\t.global __do_clear_bss\n", asm_out_file);
 }
 
+
+/* Implement `TARGET_ASM_FILE_END'.  */
 /* Outputs to the stdio stream FILE some
    appropriate text to go at the end of an assembler file.  */
 
 static void
 avr_file_end (void)
 {
+  /* Output these only if there is anything in the
+     .data* / .rodata* / .gnu.linkonce.* resp. .bss*
+     input section(s) - some code size can be saved by not
+     linking in the initialization code from libgcc if resp.
+     sections are empty.  */
+
+  if (avr_need_copy_data_p)
+    fputs (".global __do_copy_data\n", asm_out_file);
+
+  if (avr_need_clear_bss_p)
+    fputs (".global __do_clear_bss\n", asm_out_file);
 }
 
 /* Choose the order in which to allocate hard registers for
@@ -5067,6 +5417,32 @@ order_regs_for_local_alloc (void)
 		      order_0);
   for (i=0; i < ARRAY_SIZE (order_0); ++i)
       reg_alloc_order[i] = order[i];
+}
+
+
+/* Implement `TARGET_REGISTER_MOVE_COST' */
+
+static int
+avr_register_move_cost (enum machine_mode mode ATTRIBUTE_UNUSED,
+                        reg_class_t from, reg_class_t to)
+{
+  return (from == STACK_REG ? 6
+          : to == STACK_REG ? 12
+          : 2);
+}
+
+
+/* Implement `TARGET_MEMORY_MOVE_COST' */
+
+static int
+avr_memory_move_cost (enum machine_mode mode, reg_class_t rclass ATTRIBUTE_UNUSED,
+                      bool in ATTRIBUTE_UNUSED)
+{
+  return (mode == QImode ? 2
+          : mode == HImode ? 4
+          : mode == SImode ? 8
+          : mode == SFmode ? 8
+          : 16);
 }
 
 
@@ -5816,36 +6192,45 @@ avr_reorg (void)
 
 /* Returns register number for function return value.*/
 
-int
+static inline unsigned int
 avr_ret_register (void)
 {
   return 24;
 }
 
+/* Worker function for TARGET_FUNCTION_VALUE_REGNO_P.  */
+
+static bool
+avr_function_value_regno_p (const unsigned int regno)
+{
+  return (regno == avr_ret_register ());
+}
+
 /* Create an RTX representing the place where a
    library function returns a value of mode MODE.  */
 
-rtx
-avr_libcall_value (enum machine_mode mode)
+static rtx
+avr_libcall_value (enum machine_mode mode,
+		   const_rtx func ATTRIBUTE_UNUSED)
 {
   int offs = GET_MODE_SIZE (mode);
   if (offs < 2)
     offs = 2;
-  return gen_rtx_REG (mode, RET_REGISTER + 2 - offs);
+  return gen_rtx_REG (mode, avr_ret_register () + 2 - offs);
 }
 
 /* Create an RTX representing the place where a
    function returns a value of data type VALTYPE.  */
 
-rtx
-avr_function_value (const_tree type, 
-		    const_tree func ATTRIBUTE_UNUSED, 
-		    bool outgoing ATTRIBUTE_UNUSED)
+static rtx
+avr_function_value (const_tree type,
+                    const_tree fn_decl_or_type ATTRIBUTE_UNUSED,
+                    bool outgoing ATTRIBUTE_UNUSED)
 {
   unsigned int offs;
-  
+
   if (TYPE_MODE (type) != BLKmode)
-    return avr_libcall_value (TYPE_MODE (type));
+    return avr_libcall_value (TYPE_MODE (type), NULL_RTX);
   
   offs = int_size_in_bytes (type);
   if (offs < 2)
@@ -5855,7 +6240,7 @@ avr_function_value (const_tree type,
   else if (offs > GET_MODE_SIZE (SImode) && offs < GET_MODE_SIZE (DImode))
     offs = GET_MODE_SIZE (DImode);
   
-  return gen_rtx_REG (BLKmode, RET_REGISTER + 2 - offs);
+  return gen_rtx_REG (BLKmode, avr_ret_register () + 2 - offs);
 }
 
 int
@@ -6164,5 +6549,332 @@ unsigned int avr_case_values_threshold (void)
 {
   return (!AVR_HAVE_JMP_CALL || TARGET_CALL_PROLOGUES) ? 8 : 17;
 }
+
+/* Helper for __builtin_avr_delay_cycles */
+
+static void
+avr_expand_delay_cycles (rtx operands0)
+{
+  unsigned HOST_WIDE_INT cycles = UINTVAL (operands0);
+  unsigned HOST_WIDE_INT cycles_used;
+  unsigned HOST_WIDE_INT loop_count;
+  
+  if (IN_RANGE (cycles, 83886082, 0xFFFFFFFF))
+    {
+      loop_count = ((cycles - 9) / 6) + 1;
+      cycles_used = ((loop_count - 1) * 6) + 9;
+      emit_insn (gen_delay_cycles_4 (gen_int_mode (loop_count, SImode)));
+      cycles -= cycles_used;
+    }
+  
+  if (IN_RANGE (cycles, 262145, 83886081))
+    {
+      loop_count = ((cycles - 7) / 5) + 1;
+      if (loop_count > 0xFFFFFF)
+        loop_count = 0xFFFFFF;
+      cycles_used = ((loop_count - 1) * 5) + 7;
+      emit_insn (gen_delay_cycles_3 (gen_int_mode (loop_count, SImode)));
+      cycles -= cycles_used;
+    }
+  
+  if (IN_RANGE (cycles, 768, 262144))
+    {
+      loop_count = ((cycles - 5) / 4) + 1;
+      if (loop_count > 0xFFFF)
+        loop_count = 0xFFFF;
+      cycles_used = ((loop_count - 1) * 4) + 5;
+      emit_insn (gen_delay_cycles_2 (gen_int_mode (loop_count, HImode)));
+      cycles -= cycles_used;
+    }
+  
+  if (IN_RANGE (cycles, 6, 767))
+    {
+      loop_count = cycles / 3;
+      if (loop_count > 255) 
+        loop_count = 255;
+      cycles_used = loop_count * 3;
+      emit_insn (gen_delay_cycles_1 (gen_int_mode (loop_count, QImode)));
+      cycles -= cycles_used;
+      }
+  
+  while (cycles >= 2)
+    {
+      emit_insn (gen_nopv (GEN_INT(2)));
+      cycles -= 2;
+    }
+
+  if (cycles == 1)
+    {
+      emit_insn (gen_nopv (GEN_INT(1)));
+      cycles--;
+    }
+}
+
+/* IDs for all the AVR builtins.  */
+
+enum avr_builtin_id
+  {
+    AVR_BUILTIN_NOP,
+    AVR_BUILTIN_SEI,
+    AVR_BUILTIN_CLI,
+    AVR_BUILTIN_WDR,
+    AVR_BUILTIN_SLEEP,
+    AVR_BUILTIN_SWAP,
+    AVR_BUILTIN_FMUL,
+    AVR_BUILTIN_FMULS,
+    AVR_BUILTIN_FMULSU,
+    AVR_BUILTIN_DELAY_CYCLES
+  };
+
+#define DEF_BUILTIN(NAME, TYPE, CODE)                                   \
+  do                                                                    \
+    {                                                                   \
+      add_builtin_function ((NAME), (TYPE), (CODE), BUILT_IN_MD,        \
+                            NULL, NULL_TREE);                           \
+    } while (0)
+
+
+/* Implement `TARGET_INIT_BUILTINS' */
+/* Set up all builtin functions for this target.  */
+
+static void
+avr_init_builtins (void)
+{
+  tree void_ftype_void
+    = build_function_type_list (void_type_node, NULL_TREE);
+  tree uchar_ftype_uchar
+    = build_function_type_list (unsigned_char_type_node, 
+                                unsigned_char_type_node,
+                                NULL_TREE);
+  tree uint_ftype_uchar_uchar
+    = build_function_type_list (unsigned_type_node, 
+                                unsigned_char_type_node,
+                                unsigned_char_type_node, 
+                                NULL_TREE);
+  tree int_ftype_char_char
+    = build_function_type_list (integer_type_node, 
+                                char_type_node,
+                                char_type_node, 
+                                NULL_TREE);
+  tree int_ftype_char_uchar
+    = build_function_type_list (integer_type_node, 
+                                char_type_node,
+                                unsigned_char_type_node, 
+                                NULL_TREE);
+  tree void_ftype_ulong
+    = build_function_type_list (void_type_node, 
+                                long_unsigned_type_node,
+                                NULL_TREE);
+
+  DEF_BUILTIN ("__builtin_avr_nop", void_ftype_void, AVR_BUILTIN_NOP);
+  DEF_BUILTIN ("__builtin_avr_sei", void_ftype_void, AVR_BUILTIN_SEI);
+  DEF_BUILTIN ("__builtin_avr_cli", void_ftype_void, AVR_BUILTIN_CLI);
+  DEF_BUILTIN ("__builtin_avr_wdr", void_ftype_void, AVR_BUILTIN_WDR);
+  DEF_BUILTIN ("__builtin_avr_sleep", void_ftype_void, AVR_BUILTIN_SLEEP);
+  DEF_BUILTIN ("__builtin_avr_swap", uchar_ftype_uchar, AVR_BUILTIN_SWAP);
+  DEF_BUILTIN ("__builtin_avr_delay_cycles", void_ftype_ulong, 
+               AVR_BUILTIN_DELAY_CYCLES);
+
+  if (AVR_HAVE_MUL)
+    {
+      /* FIXME: If !AVR_HAVE_MUL, make respective functions available
+         in libgcc. For fmul and fmuls this is straight forward with
+         upcoming fixed point support. */
+      
+      DEF_BUILTIN ("__builtin_avr_fmul", uint_ftype_uchar_uchar, 
+                   AVR_BUILTIN_FMUL);
+      DEF_BUILTIN ("__builtin_avr_fmuls", int_ftype_char_char, 
+                   AVR_BUILTIN_FMULS);
+      DEF_BUILTIN ("__builtin_avr_fmulsu", int_ftype_char_uchar, 
+                   AVR_BUILTIN_FMULSU);
+    }
+}
+
+#undef DEF_BUILTIN
+
+struct avr_builtin_description
+{
+  const enum insn_code icode;
+  const char *const name;
+  const enum avr_builtin_id id;
+};
+
+static const struct avr_builtin_description
+bdesc_1arg[] =
+  {
+    { CODE_FOR_rotlqi3_4, "__builtin_avr_swap", AVR_BUILTIN_SWAP }
+  };
+
+static const struct avr_builtin_description
+bdesc_2arg[] =
+  {
+    { CODE_FOR_fmul, "__builtin_avr_fmul", AVR_BUILTIN_FMUL },
+    { CODE_FOR_fmuls, "__builtin_avr_fmuls", AVR_BUILTIN_FMULS },
+    { CODE_FOR_fmulsu, "__builtin_avr_fmulsu", AVR_BUILTIN_FMULSU }
+  };
+
+/* Subroutine of avr_expand_builtin to take care of unop insns.  */
+
+static rtx
+avr_expand_unop_builtin (enum insn_code icode, tree exp,
+                         rtx target)
+{
+  rtx pat;
+  tree arg0 = CALL_EXPR_ARG (exp, 0);
+  rtx op0 = expand_expr (arg0, NULL_RTX, VOIDmode, EXPAND_NORMAL);
+  enum machine_mode op0mode = GET_MODE (op0);
+  enum machine_mode tmode = insn_data[icode].operand[0].mode;
+  enum machine_mode mode0 = insn_data[icode].operand[1].mode;
+
+  if (! target
+      || GET_MODE (target) != tmode
+      || ! (*insn_data[icode].operand[0].predicate) (target, tmode))
+    {
+      target = gen_reg_rtx (tmode);
+    }
+
+  if (op0mode == SImode && mode0 == HImode)
+    {
+      op0mode = HImode;
+      op0 = gen_lowpart (HImode, op0);
+    }
+  
+  gcc_assert (op0mode == mode0 || op0mode == VOIDmode);
+
+  if (! (*insn_data[icode].operand[1].predicate) (op0, mode0))
+    op0 = copy_to_mode_reg (mode0, op0);
+
+  pat = GEN_FCN (icode) (target, op0);
+  if (! pat)
+    return 0;
+  
+  emit_insn (pat);
+  
+  return target;
+}
+
+
+/* Subroutine of avr_expand_builtin to take care of binop insns.  */
+
+static rtx
+avr_expand_binop_builtin (enum insn_code icode, tree exp, rtx target)
+{
+  rtx pat;
+  tree arg0 = CALL_EXPR_ARG (exp, 0);
+  tree arg1 = CALL_EXPR_ARG (exp, 1);
+  rtx op0 = expand_expr (arg0, NULL_RTX, VOIDmode, EXPAND_NORMAL);
+  rtx op1 = expand_expr (arg1, NULL_RTX, VOIDmode, EXPAND_NORMAL);
+  enum machine_mode op0mode = GET_MODE (op0);
+  enum machine_mode op1mode = GET_MODE (op1);
+  enum machine_mode tmode = insn_data[icode].operand[0].mode;
+  enum machine_mode mode0 = insn_data[icode].operand[1].mode;
+  enum machine_mode mode1 = insn_data[icode].operand[2].mode;
+
+  if (! target
+      || GET_MODE (target) != tmode
+      || ! (*insn_data[icode].operand[0].predicate) (target, tmode))
+    {
+      target = gen_reg_rtx (tmode);
+    }
+
+  if ((op0mode == SImode || op0mode == VOIDmode) && mode0 == HImode)
+    {
+      op0mode = HImode;
+      op0 = gen_lowpart (HImode, op0);
+    }
+  
+  if ((op1mode == SImode || op1mode == VOIDmode) && mode1 == HImode)
+    {
+      op1mode = HImode;
+      op1 = gen_lowpart (HImode, op1);
+    }
+  
+  /* In case the insn wants input operands in modes different from
+     the result, abort.  */
+  
+  gcc_assert ((op0mode == mode0 || op0mode == VOIDmode)
+              && (op1mode == mode1 || op1mode == VOIDmode));
+
+  if (! (*insn_data[icode].operand[1].predicate) (op0, mode0))
+    op0 = copy_to_mode_reg (mode0, op0);
+  
+  if (! (*insn_data[icode].operand[2].predicate) (op1, mode1))
+    op1 = copy_to_mode_reg (mode1, op1);
+
+  pat = GEN_FCN (icode) (target, op0, op1);
+  
+  if (! pat)
+    return 0;
+
+  emit_insn (pat);
+  return target;
+}
+
+
+/* Expand an expression EXP that calls a built-in function,
+   with result going to TARGET if that's convenient
+   (and in mode MODE if that's convenient).
+   SUBTARGET may be used as the target for computing one of EXP's operands.
+   IGNORE is nonzero if the value is to be ignored.  */
+
+static rtx
+avr_expand_builtin (tree exp, rtx target,
+                    rtx subtarget ATTRIBUTE_UNUSED,
+                    enum machine_mode mode ATTRIBUTE_UNUSED,
+                    int ignore ATTRIBUTE_UNUSED)
+{
+  size_t i;
+  const struct avr_builtin_description *d;
+  tree fndecl = TREE_OPERAND (CALL_EXPR_FN (exp), 0);
+  unsigned int id = DECL_FUNCTION_CODE (fndecl);
+  tree arg0;
+  rtx op0;
+
+  switch (id)
+    {
+    case AVR_BUILTIN_NOP:
+      emit_insn (gen_nopv (GEN_INT(1)));
+      return 0;
+      
+    case AVR_BUILTIN_SEI:
+      emit_insn (gen_enable_interrupt ());
+      return 0;
+      
+    case AVR_BUILTIN_CLI:
+      emit_insn (gen_disable_interrupt ());
+      return 0;
+      
+    case AVR_BUILTIN_WDR:
+      emit_insn (gen_wdr ());
+      return 0;
+      
+    case AVR_BUILTIN_SLEEP:
+      emit_insn (gen_sleep ());
+      return 0;
+      
+    case AVR_BUILTIN_DELAY_CYCLES:
+      {
+        arg0 = CALL_EXPR_ARG (exp, 0);
+        op0 = expand_expr (arg0, NULL_RTX, VOIDmode, EXPAND_NORMAL);
+
+        if (! CONST_INT_P (op0))
+          error ("__builtin_avr_delay_cycles expects a compile time integer constant.");
+
+        avr_expand_delay_cycles (op0);
+        return 0;
+      }
+    }
+
+  for (i = 0, d = bdesc_1arg; i < ARRAY_SIZE (bdesc_1arg); i++, d++)
+    if (d->id == id)
+      return avr_expand_unop_builtin (d->icode, exp, target);
+
+  for (i = 0, d = bdesc_2arg; i < ARRAY_SIZE (bdesc_2arg); i++, d++)
+    if (d->id == id)
+      return avr_expand_binop_builtin (d->icode, exp, target);
+
+  gcc_unreachable ();
+}
+
 
 #include "gt-avr.h"

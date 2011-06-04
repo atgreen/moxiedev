@@ -1,6 +1,6 @@
 # Makefile.in
 
-# Copyright (C) 2005, 2006, 2009, 2010 Free Software Foundation
+# Copyright (C) 2005, 2006, 2009, 2010, 2011 Free Software Foundation
 #
 # This file is part of GCC.
 #
@@ -35,12 +35,14 @@ shlib_slibdir = @slibdir@
 
 SHELL = @SHELL@
 
+cpu_type = @cpu_type@
 enable_shared = @enable_shared@
 decimal_float = @decimal_float@
 enable_decimal_float = @enable_decimal_float@
 fixed_point = @fixed_point@
 
 host_noncanonical = @host_noncanonical@
+target_noncanonical = @target_noncanonical@
 
 # List of extra object files that should be compiled for this target machine.
 # The rules for compiling them should be in the t-* file for the machine.
@@ -175,6 +177,9 @@ STRIP_FOR_TARGET = $(STRIP)
 libsubdir = $(libdir)/gcc/$(host_noncanonical)/$(version)
 # Used to install the shared libgcc.
 slibdir = @slibdir@
+# Maybe used for DLLs on Windows targets.
+toolexecdir = @toolexecdir@
+toolexeclibdir = @toolexeclibdir@
 
 export AR_FOR_TARGET
 export AR_CREATE_FOR_TARGET
@@ -194,6 +199,8 @@ export STRIP_FOR_TARGET
 export RANLIB_FOR_TARGET
 export libsubdir
 export slibdir
+export toolexecdir
+export toolexeclibdir
 
 version := $(shell $(CC) -dumpversion)
 
@@ -244,6 +251,10 @@ gcc_s_compile = $(gcc_compile) -DSHARED
 objects = $(filter %$(objext),$^)
 
 # Collect any host-specific information from Makefile fragments.
+
+LIBGCC_VER_GNU_PREFIX = __
+LIBGCC_VER_SYMBOLS_PREFIX =
+
 tmake_file = @tmake_file@
 include $(srcdir)/empty.mk $(tmake_file)
 
@@ -788,6 +799,9 @@ libgcc.map: $(SHLIB_MKMAP) $(SHLIB_MAPFILES) $(libgcc-s-objects)
 libgcc_s$(SHLIB_EXT): libgcc.map
 mapfile = libgcc.map
 endif
+
+libgcc-std.ver: $(srcdir)/libgcc-std.ver.in
+	sed -e 's/__PFX__/$(LIBGCC_VER_GNU_PREFIX)/g' < $< > $@
 
 libgcc_s$(SHLIB_EXT): $(libgcc-s-objects) $(extra-parts)
 	# @multilib_flags@ is still needed because this may use

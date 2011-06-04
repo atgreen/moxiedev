@@ -1,7 +1,7 @@
 // -*- C++ -*-
 // typelist for the C++ library testsuite. 
 //
-// Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010
+// Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -37,6 +37,7 @@
 #include <list>
 #include <deque>
 #include <string>
+#include <limits>
 
 #include <map>
 #include <set>
@@ -637,21 +638,51 @@ namespace __gnu_test
       }
   };
 
-  // Generator to test constexpr constructor
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
   // Generator to test default constructor.
   struct constexpr_default_constructible
   {
-    // NB: _Tp must be a literal type. 
+    template<typename _Tp, bool _IsLitp = std::is_literal_type<_Tp>::value>
+      struct _Concept;
+
+    // NB: _Tp must be a literal type.
+    // Have to have user-defined default ctor for this to work.
+    template<typename _Tp>
+      struct _Concept<_Tp, true>
+      {
+	void __constraint()
+	{ constexpr _Tp __obj; }
+      };
+
+    // Non-literal type, declare local static and verify no
+    // constructors generated for _Tp within the translation unit.
+    template<typename _Tp>
+      struct _Concept<_Tp, false>
+      {
+	void __constraint()
+	{ static _Tp __obj; }
+      };
+
     template<typename _Tp>
       void 
       operator()()
       {
+	_Concept<_Tp> c;
+	c.__constraint();
+      }
+  };
+
+  // Generator to test defaulted default constructor.
+  struct constexpr_defaulted_default_constructible
+  {
+    template<typename _Tp>
+      void
+      operator()()
+      {
 	struct _Concept
 	{
-	  // Have to have user-defined default ctor for this to work.
 	  void __constraint()
-	  { constexpr _Tp __v; }
+	  { constexpr _Tp __v __attribute__((unused)) { }; }
 	};
 
 	void (_Concept::*__x)() __attribute__((unused))
@@ -661,26 +692,41 @@ namespace __gnu_test
 
   struct constexpr_single_value_constructible
   {
-    // NB: _Tbasetype and _Ttesttype must be literal types. 
-    template<typename _Ttesttype, typename _Tbasetype>
+    template<typename _Ttesttype, typename _Tvaluetype, 
+	     bool _IsLitp = std::is_literal_type<_Ttesttype>::value>
+      struct _Concept;
+
+    // NB: _Tvaluetype and _Ttesttype must be literal types.
+    // Additional constraint on _Tvaluetype needed.  Either assume
+    // user-defined default ctor as per
+    // constexpr_default_constructible and provide no initializer,
+    // provide an initializer, or assume empty-list init-able. Choose
+    // the latter.
+    template<typename _Ttesttype, typename _Tvaluetype>
+      struct _Concept<_Ttesttype, _Tvaluetype, true>
+      {
+	void __constraint()
+	{
+	  constexpr _Tvaluetype __v { };
+	  constexpr _Ttesttype __obj(__v);
+	}
+      };
+
+    template<typename _Ttesttype, typename _Tvaluetype>
+      struct _Concept<_Ttesttype, _Tvaluetype, false>
+      {
+	void __constraint()
+	{ 
+	  const _Tvaluetype __v { };
+	  static _Ttesttype __obj(__v);
+	}
+      };
+
+    template<typename _Ttesttype, typename _Tvaluetype>
       void
       operator()()
       {
-	struct _Concept
-	{
-	  // Additional constraint on _Tbasetype needed.
-	  // Either assume user-defined default ctor as per
-	  // constexpr_default_constructible and provide no
-	  // initializer, provide an initializer, or assume empty-list
-	  // init-able. Choose the latter.
-	  void __constraint()
-	  {
-	    constexpr _Tbasetype __v { };
-	    constexpr _Ttesttype __t(__v);
-	  }
-	};
-
-	_Concept c;
+	_Concept<_Ttesttype, _Tvaluetype> c;
 	c.__constraint();
       }
   };

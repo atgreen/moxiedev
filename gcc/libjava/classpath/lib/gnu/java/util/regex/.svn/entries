@@ -1,7 +1,7 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/util/regex
 svn://gcc.gnu.org/svn/gcc
 
@@ -638,40 +638,6 @@ has-props
 
 1138
 
-RETokenRepeated$TryAnotherResult.class
-file
-
-
-
-
-2009-04-24T17:47:38.000000Z
-ae0da6d2cadf24af193a0ca511ac4a48
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-768
-
 RETokenRepeated$FindMatchControl.class
 file
 
@@ -706,14 +672,14 @@ has-props
 
 675
 
-RETokenNamedProperty$UnicodeBlockHandler.class
+RETokenRepeated$TryAnotherResult.class
 file
 
 
 
 
 2009-04-24T17:47:38.000000Z
-1c51185dea261a90e23f9d6327a44cac
+ae0da6d2cadf24af193a0ca511ac4a48
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -738,41 +704,7 @@ has-props
 
 
 
-1014
-
-CharIndexedCharSequence.class
-file
-
-
-
-
-2009-04-24T17:47:38.000000Z
-fca352c4f1282f1519077198a40423cb
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2180
+768
 
 RETokenChar.class
 file
@@ -808,6 +740,74 @@ has-props
 
 2873
 
+CharIndexedCharSequence.class
+file
+
+
+
+
+2009-04-24T17:47:38.000000Z
+fca352c4f1282f1519077198a40423cb
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2180
+
+RETokenNamedProperty$UnicodeBlockHandler.class
+file
+
+
+
+
+2009-04-24T17:47:38.000000Z
+1c51185dea261a90e23f9d6327a44cac
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1014
+
 RETokenLookBehind.class
 file
 
@@ -841,40 +841,6 @@ has-props
 
 
 2432
-
-RETokenRepeated$DoablesFinder.class
-file
-
-
-
-
-2009-04-24T17:47:38.000000Z
-e3899a0a1775e826cecf533790e3df60
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2428
 
 REToken.class
 file
@@ -910,14 +876,14 @@ has-props
 
 4242
 
-RE$CharUnit.class
+RETokenRepeated$DoablesFinder.class
 file
 
 
 
 
 2009-04-24T17:47:38.000000Z
-d8efb0de7824733a3310e188ce1adc3b
+e3899a0a1775e826cecf533790e3df60
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -942,7 +908,7 @@ has-props
 
 
 
-516
+2428
 
 RETokenEndSub.class
 file
@@ -978,6 +944,40 @@ has-props
 
 1696
 
+RE$CharUnit.class
+file
+
+
+
+
+2009-04-24T17:47:38.000000Z
+d8efb0de7824733a3310e188ce1adc3b
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+516
+
 CharIndexedInputStream.class
 file
 
@@ -1012,40 +1012,6 @@ has-props
 
 3614
 
-BacktrackStack.class
-file
-
-
-
-
-2009-04-24T17:47:38.000000Z
-eff3d3979c5baa30e33fa7da47f2e2eb
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1487
-
 CharIndexedCharArray.class
 file
 
@@ -1079,6 +1045,40 @@ has-props
 
 
 508
+
+BacktrackStack.class
+file
+
+
+
+
+2009-04-24T17:47:38.000000Z
+eff3d3979c5baa30e33fa7da47f2e2eb
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1487
 
 CharIndexed.class
 file

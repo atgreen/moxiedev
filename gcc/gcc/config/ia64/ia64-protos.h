@@ -26,8 +26,6 @@ extern int ia64_st_address_bypass_p (rtx, rtx);
 extern int ia64_ld_address_bypass_p (rtx, rtx);
 extern int ia64_produce_address_p (rtx);
 
-extern bool ia64_legitimate_constant_p (rtx);
-
 extern rtx ia64_expand_move (rtx, rtx);
 extern int ia64_move_ok (rtx, rtx);
 extern int ia64_load_pair_ok (rtx, rtx);
@@ -39,6 +37,8 @@ extern bool ia64_expand_movxf_movrf (enum machine_mode, rtx[]);
 extern void ia64_expand_compare (rtx *, rtx *, rtx *);
 extern void ia64_expand_vecint_cmov (rtx[]);
 extern bool ia64_expand_vecint_minmax (enum rtx_code, enum machine_mode, rtx[]);
+extern void ia64_unpack_assemble (rtx, rtx, rtx, bool);
+extern void ia64_expand_unpack (rtx [], bool, bool);
 extern void ia64_expand_widen_sum (rtx[], bool);
 extern void ia64_expand_dot_prod_v8qi (rtx[], bool);
 extern void ia64_expand_call (rtx, rtx, rtx, int);

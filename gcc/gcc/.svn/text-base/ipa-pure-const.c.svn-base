@@ -49,7 +49,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "output.h"
 #include "flags.h"
 #include "timevar.h"
-#include "toplev.h"
 #include "diagnostic.h"
 #include "gimple-pretty-print.h"
 #include "langhooks.h"
@@ -424,7 +423,7 @@ worse_state (enum pure_const_state_e *state, bool *looping,
   *looping = MAX (*looping, looping2);
 }
 
-/* Recognize special cases of builtins that are by themself not pure or const
+/* Recognize special cases of builtins that are by themselves not pure or const
    but function using them is.  */
 static bool
 special_builtin_state (enum pure_const_state_e *state, bool *looping,
@@ -548,7 +547,7 @@ check_call (funct_state local, gimple call, bool ipa)
         fprintf (dump_file, "    Recursive call can loop.\n");
       local->looping = true;
     }
-  /* Either calle is unknown or we are doing local analysis.
+  /* Either callee is unknown or we are doing local analysis.
      Look to see if there are any bits available for the callee (such as by
      declaration or because it is builtin) and process solely on the basis of
      those bits. */
@@ -640,7 +639,6 @@ static void
 check_stmt (gimple_stmt_iterator *gsip, funct_state local, bool ipa)
 {
   gimple stmt = gsi_stmt (*gsip);
-  unsigned int i = 0;
 
   if (is_gimple_debug (stmt))
     return;
@@ -694,16 +692,12 @@ check_stmt (gimple_stmt_iterator *gsip, funct_state local, bool ipa)
 	}
       break;
     case GIMPLE_ASM:
-      for (i = 0; i < gimple_asm_nclobbers (stmt); i++)
+      if (gimple_asm_clobbers_memory_p (stmt))
 	{
-	  tree op = gimple_asm_clobber_op (stmt, i);
-	  if (strcmp (TREE_STRING_POINTER (TREE_VALUE (op)), "memory") == 0)
-	    {
-              if (dump_file)
-                fprintf (dump_file, "    memory asm clobber is not const/pure");
-	      /* Abandon all hope, ye who enter here. */
-	      local->pure_const_state = IPA_NEITHER;
-	    }
+	  if (dump_file)
+	    fprintf (dump_file, "    memory asm clobber is not const/pure");
+	  /* Abandon all hope, ye who enter here. */
+	  local->pure_const_state = IPA_NEITHER;
 	}
       if (gimple_asm_volatile_p (stmt))
 	{
@@ -737,6 +731,16 @@ analyze_function (struct cgraph_node *fn, bool ipa)
   l->looping_previously_known = true;
   l->looping = false;
   l->can_throw = false;
+  state_from_flags (&l->state_previously_known, &l->looping_previously_known,
+		    flags_from_decl_or_type (fn->decl),
+		    cgraph_node_cannot_return (fn));
+
+  if (fn->thunk.thunk_p)
+    {
+      /* Thunk gets propagated through, so nothing interesting happens.  */
+      gcc_assert (ipa);
+      return l;
+    }
 
   if (dump_file)
     {
@@ -772,7 +776,7 @@ end:
       if (mark_dfs_back_edges ())
         {
 	  /* Preheaders are needed for SCEV to work.
-	     Simple lateches and recorded exits improve chances that loop will
+	     Simple latches and recorded exits improve chances that loop will
 	     proved to be finite in testcases such as in loop-15.c and loop-24.c  */
 	  loop_optimizer_init (LOOPS_NORMAL
 			       | LOOPS_HAVE_RECORDED_EXITS);
@@ -805,9 +809,6 @@ end:
 
   if (dump_file && (dump_flags & TDF_DETAILS))
     fprintf (dump_file, "    checking previously known:");
-  state_from_flags (&l->state_previously_known, &l->looping_previously_known,
-		    flags_from_decl_or_type (fn->decl),
-		    cgraph_node_cannot_return (fn));
 
   better_state (&l->pure_const_state, &l->looping,
 		l->state_previously_known,
@@ -917,7 +918,7 @@ generate_summary (void)
 
      We process AVAIL_OVERWRITABLE functions.  We can not use the results
      by default, but the info can be used at LTO with -fwhole-program or
-     when function got clonned and the clone is AVAILABLE.  */
+     when function got cloned and the clone is AVAILABLE.  */
 
   for (node = cgraph_nodes; node; node = node->next)
     if (cgraph_function_body_availability (node) >= AVAIL_OVERWRITABLE)
@@ -1095,11 +1096,11 @@ propagate_pure_const (void)
   int i;
   struct ipa_dfs_info * w_info;
 
-  order_pos = ipa_utils_reduced_inorder (order, true, false, NULL);
+  order_pos = ipa_reduced_postorder (order, true, false, NULL);
   if (dump_file)
     {
       dump_cgraph (dump_file);
-      ipa_utils_print_order(dump_file, "reduced", order, order_pos);
+      ipa_print_order(dump_file, "reduced", order, order_pos);
     }
 
   /* Propagate the local information thru the call graph to produce
@@ -1224,7 +1225,7 @@ propagate_pure_const (void)
 	    break;
 
 	  /* Now process the indirect call.  */
-          for (ie = node->indirect_calls; ie; ie = ie->next_callee)
+          for (ie = w->indirect_calls; ie; ie = ie->next_callee)
 	    {
 	      enum pure_const_state_e edge_state = IPA_CONST;
 	      bool edge_looping = false;
@@ -1247,7 +1248,7 @@ propagate_pure_const (void)
 	    break;
 
 	  /* And finally all loads and stores.  */
-	  for (i = 0; ipa_ref_list_reference_iterate (&node->ref_list, i, ref); i++)
+	  for (i = 0; ipa_ref_list_reference_iterate (&w->ref_list, i, ref); i++)
 	    {
 	      enum pure_const_state_e ref_state = IPA_CONST;
 	      bool ref_looping = false;
@@ -1345,18 +1346,7 @@ propagate_pure_const (void)
 	}
     }
 
-  /* Cleanup. */
-  for (node = cgraph_nodes; node; node = node->next)
-    {
-      /* Get rid of the aux information.  */
-      if (node->aux)
-	{
-	  w_info = (struct ipa_dfs_info *) node->aux;
-	  free (node->aux);
-	  node->aux = NULL;
-	}
-    }
-
+  ipa_free_postorder_info ();
   free (order);
 }
 
@@ -1374,11 +1364,11 @@ propagate_nothrow (void)
   int i;
   struct ipa_dfs_info * w_info;
 
-  order_pos = ipa_utils_reduced_inorder (order, true, false, ignore_edge);
+  order_pos = ipa_reduced_postorder (order, true, false, ignore_edge);
   if (dump_file)
     {
       dump_cgraph (dump_file);
-      ipa_utils_print_order(dump_file, "reduced for nothrow", order, order_pos);
+      ipa_print_order (dump_file, "reduced for nothrow", order, order_pos);
     }
 
   /* Propagate the local information thru the call graph to produce
@@ -1451,18 +1441,7 @@ propagate_nothrow (void)
 	}
     }
 
-  /* Cleanup. */
-  for (node = cgraph_nodes; node; node = node->next)
-    {
-      /* Get rid of the aux information.  */
-      if (node->aux)
-	{
-	  w_info = (struct ipa_dfs_info *) node->aux;
-	  free (node->aux);
-	  node->aux = NULL;
-	}
-    }
-
+  ipa_free_postorder_info ();
   free (order);
 }
 
@@ -1546,7 +1525,7 @@ skip_function_for_local_pure_const (struct cgraph_node *node)
   if (cgraph_function_body_availability (node) <= AVAIL_OVERWRITABLE)
     {
       if (dump_file)
-        fprintf (dump_file, "Function is not available or overwrittable; not analyzing.\n");
+        fprintf (dump_file, "Function is not available or overwritable; not analyzing.\n");
       return true;
     }
   return false;
@@ -1564,7 +1543,7 @@ local_pure_const (void)
   bool skip;
   struct cgraph_node *node;
 
-  node = cgraph_node (current_function_decl);
+  node = cgraph_get_node (current_function_decl);
   skip = skip_function_for_local_pure_const (node);
   if (!warn_suggest_attribute_const
       && !warn_suggest_attribute_pure
@@ -1668,8 +1647,7 @@ local_pure_const (void)
 		 lang_hooks.decl_printable_name (current_function_decl,
 						 2));
     }
-  if (l)
-    free (l);
+  free (l);
   if (changed)
     return execute_fixup_cfg ();
   else

@@ -37,7 +37,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-chrec.h"
 #include "tree-scalar-evolution.h"
 #include "diagnostic-core.h"
-#include "toplev.h"
 #include "params.h"
 #include "langhooks.h"
 #include "tree-inline.h"
@@ -1563,7 +1562,8 @@ determine_loop_nest_reuse (struct loop *loop, struct mem_ref_group *refs,
   for (gr = refs; gr; gr = gr->next)
     for (ref = gr->refs; ref; ref = ref->next)
       {
-	dr = create_data_ref (nest, ref->mem, ref->stmt, !ref->write_p);
+	dr = create_data_ref (nest, loop_containing_stmt (ref->stmt),
+			      ref->mem, ref->stmt, !ref->write_p);
 
 	if (dr)
 	  {

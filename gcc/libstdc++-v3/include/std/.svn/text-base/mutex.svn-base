@@ -1,6 +1,6 @@
 // <mutex> -*- C++ -*-
 
-// Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+// Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -23,7 +23,7 @@
 // see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 // <http://www.gnu.org/licenses/>.
 
-/** @file mutex
+/** @file include/mutex
  *  This is a Standard C++ Library header.
  */
 
@@ -48,7 +48,9 @@
 
 #if defined(_GLIBCXX_HAS_GTHREADS) && defined(_GLIBCXX_USE_C99_STDINT_TR1)
 
-_GLIBCXX_BEGIN_NAMESPACE(std)
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
    * @defgroup mutexes Mutexes
@@ -68,9 +70,9 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     typedef __native_type* 			native_handle_type;
 
 #ifdef __GTHREAD_MUTEX_INIT
-    constexpr mutex() : _M_mutex(__GTHREAD_MUTEX_INIT) { }
+    constexpr mutex() noexcept : _M_mutex(__GTHREAD_MUTEX_INIT) { }
 #else
-    mutex()
+    mutex() noexcept
     {
       // XXX EAGAIN, ENOMEM, EPERM, EBUSY(may), EINVAL(may)
       __GTHREAD_MUTEX_INIT_FUNCTION(&_M_mutex);
@@ -93,7 +95,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     }
 
     bool
-    try_lock()
+    try_lock() noexcept
     {
       // XXX EINVAL, EAGAIN, EBUSY
       return !__gthread_mutex_trylock(&_M_mutex);
@@ -186,7 +188,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     }
 
     bool
-    try_lock()
+    try_lock() noexcept
     {
       // XXX EINVAL, EAGAIN, EBUSY
       return !__gthread_recursive_mutex_trylock(&_M_mutex);
@@ -245,7 +247,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     }
 
     bool
-    try_lock()
+    try_lock() noexcept
     {
       // XXX EINVAL, EAGAIN, EBUSY
       return !__gthread_mutex_trylock(&_M_mutex);
@@ -352,7 +354,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     }
 
     bool
-    try_lock()
+    try_lock() noexcept
     {
       // XXX EINVAL, EAGAIN, EBUSY
       return !__gthread_recursive_mutex_trylock(&_M_mutex);
@@ -462,7 +464,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     public:
       typedef _Mutex mutex_type;
 
-      unique_lock()
+      unique_lock() noexcept
       : _M_device(0), _M_owns(false)
       { }
 
@@ -473,7 +475,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	_M_owns = true;
       }
 
-      unique_lock(mutex_type& __m, defer_lock_t)
+      unique_lock(mutex_type& __m, defer_lock_t) noexcept
       : _M_device(&__m), _M_owns(false)
       { }
 
@@ -508,14 +510,14 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       unique_lock(const unique_lock&) = delete;
       unique_lock& operator=(const unique_lock&) = delete;
 
-      unique_lock(unique_lock&& __u)
+      unique_lock(unique_lock&& __u) noexcept
       : _M_device(__u._M_device), _M_owns(__u._M_owns)
       {
 	__u._M_device = 0;
 	__u._M_owns = false;
       }
 
-      unique_lock& operator=(unique_lock&& __u)
+      unique_lock& operator=(unique_lock&& __u) noexcept
       {
 	if(_M_owns)
 	  unlock();
@@ -599,14 +601,14 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       }
 
       void
-      swap(unique_lock& __u)
+      swap(unique_lock& __u) noexcept
       {
 	std::swap(_M_device, __u._M_device);
 	std::swap(_M_owns, __u._M_owns);
       }
 
       mutex_type*
-      release()
+      release() noexcept
       {
 	mutex_type* __ret = _M_device;
 	_M_device = 0;
@@ -615,14 +617,14 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       }
 
       bool
-      owns_lock() const
+      owns_lock() const noexcept
       { return _M_owns; }
 
-      explicit operator bool() const
+      explicit operator bool() const noexcept
       { return owns_lock(); }
 
       mutex_type*
-      mutex() const
+      mutex() const noexcept
       { return _M_device; }
 
     private:
@@ -630,9 +632,10 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       bool		_M_owns; // XXX use atomic_bool
     };
 
+  /// Partial specialization for unique_lock objects.
   template<typename _Mutex>
     inline void
-    swap(unique_lock<_Mutex>& __x, unique_lock<_Mutex>& __y)
+    swap(unique_lock<_Mutex>& __x, unique_lock<_Mutex>& __y) noexcept
     { __x.swap(__y); }
 
   template<int _Idx>
@@ -656,23 +659,27 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	{ }
     };
 
+  template<typename _Lock>
+    unique_lock<_Lock>
+    __try_to_lock(_Lock& __l)
+    { return unique_lock<_Lock>(__l, try_to_lock); }
+
   template<int _Idx, bool _Continue = true>
     struct __try_lock_impl
     {
       template<typename... _Lock>
-	static int
-	__do_try_lock(tuple<_Lock&...>& __locks)
+	static void
+	__do_try_lock(tuple<_Lock&...>& __locks, int& __idx)
 	{
-	  if(std::get<_Idx>(__locks).try_lock())
-	    {
-	      return __try_lock_impl<_Idx + 1,
-		_Idx + 2 < sizeof...(_Lock)>::__do_try_lock(__locks);
-	    }
-	  else
-	    {
-	      __unlock_impl<_Idx>::__do_unlock(__locks);
-	      return _Idx;
-	    }
+          __idx = _Idx;
+          auto __lock = __try_to_lock(std::get<_Idx>(__locks));
+          if (__lock.owns_lock())
+            {
+              __try_lock_impl<_Idx + 1, _Idx + 2 < sizeof...(_Lock)>::
+                __do_try_lock(__locks, __idx);
+              if (__idx == -1)
+                __lock.release();
+            }
 	}
     };
 
@@ -680,16 +687,16 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     struct __try_lock_impl<_Idx, false>
     {
       template<typename... _Lock>
-	static int
-	__do_try_lock(tuple<_Lock&...>& __locks)
+	static void
+	__do_try_lock(tuple<_Lock&...>& __locks, int& __idx)
 	{
-	  if(std::get<_Idx>(__locks).try_lock())
-	    return -1;
-	  else
-	    {
-	      __unlock_impl<_Idx>::__do_unlock(__locks);
-	      return _Idx;
-	    }
+          __idx = _Idx;
+          auto __lock = __try_to_lock(std::get<_Idx>(__locks));
+          if (__lock.owns_lock())
+            {
+              __idx = -1;
+              __lock.release();
+            }
 	}
     };
 
@@ -707,14 +714,43 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     int
     try_lock(_Lock1& __l1, _Lock2& __l2, _Lock3&... __l3)
     {
-      tuple<_Lock1&, _Lock2&, _Lock3&...> __locks(__l1, __l2, __l3...);
-      return __try_lock_impl<0>::__do_try_lock(__locks);
+      int __idx;
+      auto __locks = std::tie(__l1, __l2, __l3...);
+      __try
+      { __try_lock_impl<0>::__do_try_lock(__locks, __idx); }
+      __catch(...)
+      { }
+      return __idx;
     }
 
-  /// lock
+  /** @brief Generic lock.
+   *  @param __l1 Meets Mutex requirements (try_lock() may throw).
+   *  @param __l2 Meets Mutex requirements (try_lock() may throw).
+   *  @param __l3 Meets Mutex requirements (try_lock() may throw).
+   *  @throw An exception thrown by an argument's lock() or try_lock() member.
+   *  @post All arguments are locked.
+   *
+   *  All arguments are locked via a sequence of calls to lock(), try_lock()
+   *  and unlock().  If the call exits via an exception any locks that were
+   *  obtained will be released.
+   */
   template<typename _L1, typename _L2, typename ..._L3>
     void
-    lock(_L1&, _L2&, _L3&...);
+    lock(_L1& __l1, _L2& __l2, _L3&... __l3)
+    {
+      while (true)
+        {
+          unique_lock<_L1> __first(__l1);
+          int __idx;
+          auto __locks = std::tie(__l2, __l3...);
+          __try_lock_impl<0, sizeof...(_L3)>::__do_try_lock(__locks, __idx);
+          if (__idx == -1)
+            {
+              __first.release();
+              return;
+            }
+        }
+    }
 
   /// once_flag
   struct once_flag
@@ -724,9 +760,12 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     __native_type  _M_once;
 
   public:
-    constexpr once_flag() : _M_once(__GTHREAD_ONCE_INIT) { }
+    /// Constructor
+    constexpr once_flag() noexcept : _M_once(__GTHREAD_ONCE_INIT) { }
 
+    /// Deleted copy constructor
     once_flag(const once_flag&) = delete;
+    /// Deleted assignment operator
     once_flag& operator=(const once_flag&) = delete;
 
     template<typename _Callable, typename... _Args>
@@ -785,7 +824,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
     }
 
   // @} group mutexes
-_GLIBCXX_END_NAMESPACE
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace
 
 #endif // _GLIBCXX_HAS_GTHREADS && _GLIBCXX_USE_C99_STDINT_TR1
 

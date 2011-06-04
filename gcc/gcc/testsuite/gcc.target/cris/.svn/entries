@@ -1,7 +1,7 @@
 10
 
 dir
-167046
+174639
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/cris
 svn://gcc.gnu.org/svn/gcc
 
@@ -196,40 +196,6 @@ hp
 
 530
 
-builtin_bswap_v3.c
-file
-
-
-
-
-2009-04-24T17:45:39.000000Z
-bbad42cbab80fb82cf59f6dcbddd39f2
-2007-12-15T21:31:18.044358Z
-130962
-hp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-366
-
 cris.exp
 file
 
@@ -263,6 +229,40 @@ hp
 
 
 1294
+
+builtin_bswap_v3.c
+file
+
+
+
+
+2009-04-24T17:45:39.000000Z
+bbad42cbab80fb82cf59f6dcbddd39f2
+2007-12-15T21:31:18.044358Z
+130962
+hp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+366
 
 biap.c
 file
@@ -434,6 +434,9 @@ hp
 
 757
 
+torture
+dir
+
 builtin_clz_v0.c
 file
 
@@ -467,9 +470,6 @@ hp
 
 
 364
-
-torture
-dir
 
 builtin_clz_v3.c
 file

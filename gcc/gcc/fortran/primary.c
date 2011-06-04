@@ -288,7 +288,7 @@ match_hollerith_constant (gfc_expr **result)
 
 	  for (i = 0; i < num; i++)
 	    {
-	      gfc_char_t c = gfc_next_char_literal (1);
+	      gfc_char_t c = gfc_next_char_literal (INSTRING_WARN);
 	      if (! gfc_wide_fits_in_byte (c))
 		{
 		  gfc_error ("Invalid Hollerith constant at %L contains a "
@@ -541,6 +541,17 @@ match_real_constant (gfc_expr **result, int signflag)
     goto done;
   exp_char = c;
 
+
+  if (c == 'q')
+    {
+      if (gfc_notify_std (GFC_STD_GNU, "Extension: exponent-letter 'q' in "
+			 "real-literal-constant at %C") == FAILURE)
+	return MATCH_ERROR;
+      else if (gfc_option.warn_real_q_constant)
+	gfc_warning("Extension: exponent-letter 'q' in real-literal-constant "
+		    "at %C");
+    }
+
   /* Scan exponent.  */
   c = gfc_next_ascii_char ();
   count++;
@@ -614,6 +625,30 @@ done:
 	  goto cleanup;
 	}
       kind = gfc_default_double_kind;
+      break;
+
+    case 'q':
+      if (kind != -2)
+	{
+	  gfc_error ("Real number at %C has a 'q' exponent and an explicit "
+		     "kind");
+	  goto cleanup;
+	}
+
+      /* The maximum possible real kind type parameter is 16.  First, try
+	 that for the kind, then fallback to trying kind=10 (Intel 80 bit)
+	 extended precision.  If neither value works, just given up.  */
+      kind = 16;
+      if (gfc_validate_kind (BT_REAL, kind, true) < 0)
+	{
+	  kind = 10;
+          if (gfc_validate_kind (BT_REAL, kind, true) < 0)
+	    {
+	      gfc_error ("Invalid exponent-letter 'q' in "
+			 "real-literal-constant at %C");
+	      goto cleanup;
+	    }
+	}
       break;
 
     default:
@@ -761,7 +796,7 @@ next_string_char (gfc_char_t delimiter, int *ret)
   locus old_locus;
   gfc_char_t c;
 
-  c = gfc_next_char_literal (1);
+  c = gfc_next_char_literal (INSTRING_WARN);
   *ret = 0;
 
   if (c == '\n')
@@ -785,7 +820,7 @@ next_string_char (gfc_char_t delimiter, int *ret)
     return c;
 
   old_locus = gfc_current_locus;
-  c = gfc_next_char_literal (0);
+  c = gfc_next_char_literal (NONSTRING);
 
   if (c == delimiter)
     return c;
@@ -980,9 +1015,6 @@ got_delim:
     goto no_match;
 
   e = gfc_get_character_expr (kind, &start_locus, NULL, length);
-  e->ref = NULL;
-  e->ts.is_c_interop = 0;
-  e->ts.is_iso_c = 0;
 
   gfc_current_locus = start_locus;
 
@@ -1086,8 +1118,6 @@ match_logical_constant (gfc_expr **result)
     }
 
   e = gfc_get_logical_expr (kind, &gfc_current_locus, i);
-  e->ts.is_c_interop = 0;
-  e->ts.is_iso_c = 0;
 
   *result = e;
   return MATCH_YES;
@@ -1269,10 +1299,9 @@ match_complex_constant (gfc_expr **result)
       else
 	kind = gfc_default_real_kind;
     }
+  gfc_clear_ts (&target);
   target.type = BT_REAL;
   target.kind = kind;
-  target.is_c_interop = 0;
-  target.is_iso_c = 0;
 
   if (real->ts.type != BT_REAL || kind != real->ts.kind)
     gfc_convert_type (real, &target, 2);
@@ -1770,11 +1799,12 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
 
   if ((equiv_flag && gfc_peek_ascii_char () == '(')
       || gfc_peek_ascii_char () == '[' || sym->attr.codimension
-      || (sym->attr.dimension && !sym->attr.proc_pointer
-	  && !gfc_is_proc_ptr_comp (primary, NULL)
+      || (sym->attr.dimension && sym->ts.type != BT_CLASS
+	  && !sym->attr.proc_pointer && !gfc_is_proc_ptr_comp (primary, NULL)
 	  && !(gfc_matching_procptr_assignment
 	       && sym->attr.flavor == FL_PROCEDURE))
-      || (sym->ts.type == BT_CLASS && CLASS_DATA (sym)->attr.dimension))
+      || (sym->ts.type == BT_CLASS && sym->attr.class_ok
+	  && CLASS_DATA (sym)->attr.dimension))
     {
       /* In EQUIVALENCE, we don't know yet whether we are seeing
 	 an array, character variable or array of character
@@ -1783,7 +1813,11 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
       tail->type = REF_ARRAY;
 
       m = gfc_match_array_ref (&tail->u.ar, equiv_flag ? NULL : sym->as,
-			       equiv_flag, sym->as ? sym->as->corank : 0);
+			       equiv_flag,
+			       sym->ts.type == BT_CLASS
+			       ? (CLASS_DATA (sym)->as
+				  ? CLASS_DATA (sym)->as->corank : 0)
+			       : (sym->as ? sym->as->corank : 0));
       if (m != MATCH_YES)
 	return m;
 
@@ -1838,7 +1872,10 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
 	    return MATCH_ERROR;
 
 	  gcc_assert (!tail || !tail->next);
-	  gcc_assert (primary->expr_type == EXPR_VARIABLE);
+	  gcc_assert (primary->expr_type == EXPR_VARIABLE
+		      || (primary->expr_type == EXPR_STRUCTURE
+			  && primary->symtree && primary->symtree->n.sym
+			  && primary->symtree->n.sym->attr.flavor));
 
 	  if (tbp->n.tb->is_generic)
 	    tbp_sym = NULL;
@@ -2025,7 +2062,7 @@ gfc_variable_attr (gfc_expr *expr, gfc_typespec *ts)
   sym = expr->symtree->n.sym;
   attr = sym->attr;
 
-  if (sym->ts.type == BT_CLASS)
+  if (sym->ts.type == BT_CLASS && sym->attr.class_ok)
     {
       dimension = CLASS_DATA (sym)->attr.dimension;
       pointer = CLASS_DATA (sym)->attr.class_pointer;
@@ -2177,9 +2214,9 @@ gfc_structure_ctor_component;
 static void
 gfc_free_structure_ctor_component (gfc_structure_ctor_component *comp)
 {
-  gfc_free (comp->name);
+  free (comp->name);
   gfc_free_expr (comp->val);
-  gfc_free (comp);
+  free (comp);
 }
 
 
@@ -2301,6 +2338,12 @@ gfc_match_structure_constructor (gfc_symbol *sym, gfc_expr **result,
       do
 	{
 	  gfc_component *this_comp = NULL;
+
+	  if (comp == sym->components && sym->attr.extension
+	      && comp->ts.type == BT_DERIVED
+	      && comp->ts.u.derived->attr.zero_comp)
+	    /* Skip empty parents.  */ 
+	    comp = comp->next;
 
 	  if (!comp_head)
 	    comp_tail = comp_head = gfc_get_structure_ctor_component ();

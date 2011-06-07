@@ -105,7 +105,7 @@
     </exec>
     <exec executable="make">
       <arg value="--directory=arm-build/src"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
       <arg value="all-binutils"/>
       <arg value="all-gas"/>
       <arg value="all-ld"/>
@@ -131,7 +131,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
       <arg value="--directory=arm-build/gcc"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
@@ -168,7 +168,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
       <arg value="--directory=arm-build/gcc"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
@@ -260,7 +260,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/src"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
       <arg value="all-binutils"/>
       <arg value="all-gas"/>
       <arg value="all-ld"/>
@@ -278,20 +278,20 @@
     <echo message="===================================================================="/>
     <echo message="====== Building initial gcc for newlib build ======================="/>
     <echo message="===================================================================="/>
-    <mkdir dir="build/gcc"/>
+    <mkdir dir="build/gcc-boot"/>
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --with-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
+      <arg value="(cd build/gcc-boot; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --without-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
-      <arg value="--directory=build/gcc"/>
-      <arg value="-j1"/>
+      <arg value="--directory=build/gcc-boot"/>
+      <arg value="-j4"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
-      <arg value="--directory=build/gcc"/>
+      <arg value="--directory=build/gcc-boot"/>
       <arg value="install"/>
     </exec>
 
@@ -316,6 +316,7 @@
     <echo message="===================================================================="/>
     <echo message="====== Building full gcc ==========================================="/>
     <echo message="===================================================================="/>
+    <mkdir dir="build/gcc"/>
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
@@ -324,7 +325,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/gcc"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -353,7 +354,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=qemu"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
       <arg value="install"/>
     </exec>
 
@@ -414,7 +415,7 @@
       <arg value="ARCH=moxie"/>
       <arg value="CROSS=moxie-elf-"/>
     </exec>
-    <mkdir dir="root/usr/moxie-uclinux/usr"/>
+    <mkdir dir="root/usr/moxie-uclinux/usr/lib"/>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=uClibc"/>
@@ -435,7 +436,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/src-rtems"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
       <arg value="all-binutils"/>
       <arg value="all-gas"/>
       <arg value="all-ld"/>
@@ -458,7 +459,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/src-uclinux"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
       <arg value="all-binutils"/>
       <arg value="all-gas"/>
       <arg value="all-ld"/>
@@ -519,7 +520,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/gcc-rtems"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -539,7 +540,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/gcc-uclinux"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -571,7 +572,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=initfs/uclinux/src"/>
-      <arg value="-j1"/>
+      <arg value="-j4"/>
     </exec>
 
     <echo message="===================================================================="/>

@@ -111,6 +111,8 @@ static GTY(()) VEC(tree,gc) *canonical_template_parms;
 
 static void push_access_scope (tree);
 static void pop_access_scope (tree);
+static void push_deduction_access_scope (tree);
+static void pop_deduction_access_scope (tree);
 static bool resolve_overloaded_unification (tree, tree, tree, tree,
 					    unification_kind_t, int);
 static int try_one_overload (tree, tree, tree, tree, tree,
@@ -7488,16 +7490,15 @@ push_tinst_level (tree d)
 
   if (tinst_depth >= max_tinst_depth)
     {
-      /* If the instantiation in question still has unbound template parms,
-	 we don't really care if we can't instantiate it, so just return.
-	 This happens with base instantiation for implicit `typename'.  */
-      if (uses_template_parms (d))
-	return 0;
-
       last_template_error_tick = tinst_level_tick;
-      error ("template instantiation depth exceeds maximum of %d (use "
-	     "-ftemplate-depth= to increase the maximum) instantiating %qD",
-	     max_tinst_depth, d);
+      if (TREE_CODE (d) == TREE_LIST)
+	error ("template instantiation depth exceeds maximum of %d (use "
+	       "-ftemplate-depth= to increase the maximum) substituting %qS",
+	       max_tinst_depth, d);
+      else
+	error ("template instantiation depth exceeds maximum of %d (use "
+	       "-ftemplate-depth= to increase the maximum) instantiating %qD",
+	       max_tinst_depth, d);
 
       print_instantiation_context ();
 
@@ -10341,7 +10342,8 @@ static tree
 tsubst_exception_specification (tree fntype,
 				tree args,
 				tsubst_flags_t complain,
-				tree in_decl)
+				tree in_decl,
+				bool defer_ok)
 {
   tree specs;
   tree new_specs;
@@ -10351,9 +10353,33 @@ tsubst_exception_specification (tree fntype,
   if (specs && TREE_PURPOSE (specs))
     {
       /* A noexcept-specifier.  */
-      new_specs = tsubst_copy_and_build
-	(TREE_PURPOSE (specs), args, complain, in_decl, /*function_p=*/false,
-	 /*integral_constant_expression_p=*/true);
+      tree expr = TREE_PURPOSE (specs);
+      if (expr == boolean_true_node || expr == boolean_false_node)
+	new_specs = expr;
+      else if (defer_ok)
+	{
+	  /* Defer instantiation of noexcept-specifiers to avoid
+	     excessive instantiations (c++/49107).  */
+	  new_specs = make_node (DEFERRED_NOEXCEPT);
+	  if (DEFERRED_NOEXCEPT_SPEC_P (specs))
+	    {
+	      /* We already partially instantiated this member template,
+		 so combine the new args with the old.  */
+	      DEFERRED_NOEXCEPT_PATTERN (new_specs)
+		= DEFERRED_NOEXCEPT_PATTERN (expr);
+	      DEFERRED_NOEXCEPT_ARGS (new_specs)
+		= add_to_template_args (DEFERRED_NOEXCEPT_ARGS (expr), args);
+	    }
+	  else
+	    {
+	      DEFERRED_NOEXCEPT_PATTERN (new_specs) = expr;
+	      DEFERRED_NOEXCEPT_ARGS (new_specs) = args;
+	    }
+	}
+      else
+	new_specs = tsubst_copy_and_build
+	  (expr, args, complain, in_decl, /*function_p=*/false,
+	   /*integral_constant_expression_p=*/true);
       new_specs = build_noexcept_spec (new_specs, complain);
     }
   else if (specs)
@@ -10878,7 +10904,7 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 
 	/* Substitute the exception specification.  */
 	specs = tsubst_exception_specification (t, args, complain,
-						in_decl);
+						in_decl, /*defer_ok*/true);
 	if (specs == error_mark_node)
 	  return error_mark_node;
 	if (specs)
@@ -12727,7 +12753,7 @@ tsubst_copy_and_build (tree t,
 	 (TREE_NO_WARNING (TREE_OPERAND (t, 1))
 	  ? ERROR_MARK
 	  : TREE_CODE (TREE_OPERAND (t, 1))),
-	 /*overloaded_p=*/NULL,
+	 /*overload=*/NULL,
 	 complain);
 
     case SCOPE_REF:
@@ -13592,11 +13618,6 @@ check_instantiated_args (tree tmpl, tree args, tsubst_flags_t complain)
   return result;
 }
 
-DEF_VEC_O (spec_entry);
-DEF_VEC_ALLOC_O (spec_entry,gc);
-static GTY(()) VEC(spec_entry,gc) *current_deduction_vec;
-static GTY((param_is (spec_entry))) htab_t current_deduction_htab;
-
 /* In C++0x, it's possible to have a function template whose type depends
    on itself recursively.  This is most obvious with decltype, but can also
    occur with enumeration scope (c++/48969).  So we need to catch infinite
@@ -13607,126 +13628,51 @@ static GTY((param_is (spec_entry))) htab_t current_deduction_htab;
    f<N-1> across all integers, and returns error_mark_node for all the
    substitutions back up to the initial one.
 
-   This is, of course, not reentrant.
-
-   Use of a VEC here is O(n^2) in the depth of function template argument
-   deduction substitution, but using a hash table creates a lot of constant
-   overhead for the typical case of very low depth.  So to make the typical
-   case fast we start out with a VEC and switch to a hash table only if
-   depth gets to be significant; in one metaprogramming testcase, even at
-   depth 80 the overhead of the VEC relative to a hash table was only about
-   0.5% of compile time.  */
+   This is, of course, not reentrant.  */
 
 static tree
 deduction_tsubst_fntype (tree fn, tree targs)
 {
   static bool excessive_deduction_depth;
-
-  unsigned i;
-  spec_entry **slot;
-  spec_entry *p;
-  spec_entry elt;
-  tree r;
-  hashval_t hash;
+  static int deduction_depth;
+  location_t save_loc = input_location;
+  struct pending_template *old_last_pend = last_pending_template;
 
   tree fntype = TREE_TYPE (fn);
+  tree tinst;
+  tree r;
 
-  /* We don't need to worry about this in C++98.  */
-  if (cxx_dialect < cxx0x)
-    return tsubst (fntype, targs, tf_none, NULL_TREE);
+  if (excessive_deduction_depth)
+    return error_mark_node;
 
-  /* If we're seeing a lot of recursion, switch over to a hash table.  The
-     constant 40 is fairly arbitrary.  */
-  if (!current_deduction_htab
-      && VEC_length (spec_entry, current_deduction_vec) > 40)
+  tinst = build_tree_list (fn, targs);
+  if (!push_tinst_level (tinst))
     {
-      current_deduction_htab = htab_create_ggc (40*2, hash_specialization,
-						eq_specializations, ggc_free);
-      FOR_EACH_VEC_ELT (spec_entry, current_deduction_vec, i, p)
-	{
-	  slot = (spec_entry **) htab_find_slot (current_deduction_htab,
-						 p, INSERT);
-	  *slot = ggc_alloc_spec_entry ();
-	  **slot = *p;
-	}
-      VEC_free (spec_entry, gc, current_deduction_vec);
+      excessive_deduction_depth = true;
+      ggc_free (tinst);
+      return error_mark_node;
     }
 
-  /* Now check everything in the vector, if any.  */
-  FOR_EACH_VEC_ELT (spec_entry, current_deduction_vec, i, p)
-    if (p->tmpl == fn && comp_template_args (p->args, targs))
-      {
-	p->spec = error_mark_node;
-	return error_mark_node;
-      }
-
-  elt.tmpl = fn;
-  elt.args = targs;
-  elt.spec = NULL_TREE;
-
-  /* If we've created a hash table, look there.  */
-  if (current_deduction_htab)
-    {
-      if (htab_elements (current_deduction_htab)
-	  > (unsigned) max_tinst_depth)
-	{
-	  /* Trying to recurse across all integers or some such.  */
-	  excessive_deduction_depth = true;
-	  return error_mark_node;
-	}
-
-      hash = hash_specialization (&elt);
-      slot = (spec_entry **)
-	htab_find_slot_with_hash (current_deduction_htab, &elt, hash, INSERT);
-      if (*slot)
-	{
-	  /* We already have an entry for this.  */
-	  (*slot)->spec = error_mark_node;
-	  return error_mark_node;
-	}
-      else
-	{
-	  /* Create a new entry.  */
-	  *slot = ggc_alloc_spec_entry ();
-	  **slot = elt;
-	}
-    }
-  else
-    {
-      /* No hash table, so add it to the VEC.  */
-      hash = 0;
-      VEC_safe_push (spec_entry, gc, current_deduction_vec, &elt);
-    }
-
+  input_location = DECL_SOURCE_LOCATION (fn);
+  ++deduction_depth;
+  push_deduction_access_scope (fn);
   r = tsubst (fntype, targs, tf_none, NULL_TREE);
+  pop_deduction_access_scope (fn);
+  --deduction_depth;
+  input_location = save_loc;
 
-  /* After doing the substitution, make sure we didn't hit it again.  Note
-     that we might have switched to a hash table during tsubst.  */
-  if (current_deduction_htab)
-    {
-      if (hash == 0)
-	hash = hash_specialization (&elt);
-      slot = (spec_entry **)
-	htab_find_slot_with_hash (current_deduction_htab, &elt, hash,
-				  NO_INSERT);
-      if ((*slot)->spec == error_mark_node)
-	r = error_mark_node;
-      htab_clear_slot (current_deduction_htab, (void**)slot);
-    }
-  else
-    {
-      if (VEC_last (spec_entry, current_deduction_vec)->spec
-	  == error_mark_node)
-	r = error_mark_node;
-      VEC_pop (spec_entry, current_deduction_vec);
-    }
   if (excessive_deduction_depth)
     {
       r = error_mark_node;
-      if (htab_elements (current_deduction_htab) == 0)
+      if (deduction_depth == 0)
 	/* Reset once we're all the way out.  */
 	excessive_deduction_depth = false;
     }
+
+  pop_tinst_level ();
+  /* We can't free this if a pending_template entry is pointing at it.  */
+  if (last_pending_template == old_last_pend)
+    ggc_free (tinst);
   return r;
 }
 
@@ -14017,9 +13963,7 @@ fn_type_unification (tree fn,
         incomplete = NUM_TMPL_ARGS (explicit_targs) != NUM_TMPL_ARGS (targs);
 
       processing_template_decl += incomplete;
-      push_deduction_access_scope (fn);
       fntype = deduction_tsubst_fntype (fn, converted_args);
-      pop_deduction_access_scope (fn);
       processing_template_decl -= incomplete;
 
       if (fntype == error_mark_node)
@@ -14090,10 +14034,7 @@ fn_type_unification (tree fn,
        substitution results in an invalid type, as described above,
        type deduction fails.  */
     {
-      tree substed;
-      push_deduction_access_scope (fn);
-      substed = deduction_tsubst_fntype (fn, targs);
-      pop_deduction_access_scope (fn);
+      tree substed = deduction_tsubst_fntype (fn, targs);
       if (substed == error_mark_node)
 	return 1;
 
@@ -17243,7 +17184,8 @@ regenerate_decl_from_template (tree decl, tree tmpl)
 	args = get_innermost_template_args (args, parms_depth);
 
       specs = tsubst_exception_specification (TREE_TYPE (code_pattern),
-					      args, tf_error, NULL_TREE);
+					      args, tf_error, NULL_TREE,
+					      /*defer_ok*/false);
       if (specs)
 	TREE_TYPE (decl) = build_exception_variant (TREE_TYPE (decl),
 						    specs);
@@ -17408,6 +17350,46 @@ always_instantiate_p (tree decl)
 	      && decl_maybe_constant_var_p (decl)));
 }
 
+/* If FN has a noexcept-specifier that hasn't been instantiated yet,
+   instantiate it now, modifying TREE_TYPE (fn).  */
+
+void
+maybe_instantiate_noexcept (tree fn)
+{
+  tree fntype = TREE_TYPE (fn);
+  tree spec = TYPE_RAISES_EXCEPTIONS (fntype);
+  tree noex = NULL_TREE;
+  location_t saved_loc = input_location;
+  tree clone;
+
+  if (!DEFERRED_NOEXCEPT_SPEC_P (spec))
+    return;
+  noex = TREE_PURPOSE (spec);
+
+  push_tinst_level (fn);
+  push_access_scope (fn);
+  input_location = DECL_SOURCE_LOCATION (fn);
+  noex = tsubst_copy_and_build (DEFERRED_NOEXCEPT_PATTERN (noex),
+				DEFERRED_NOEXCEPT_ARGS (noex),
+				tf_warning_or_error, fn, /*function_p=*/false,
+				/*integral_constant_expression_p=*/true);
+  input_location = saved_loc;
+  pop_access_scope (fn);
+  pop_tinst_level ();
+  spec = build_noexcept_spec (noex, tf_warning_or_error);
+  if (spec == error_mark_node)
+    spec = noexcept_false_spec;
+  TREE_TYPE (fn) = build_exception_variant (fntype, spec);
+
+  FOR_EACH_CLONE (clone, fn)
+    {
+      if (TREE_TYPE (clone) == fntype)
+	TREE_TYPE (clone) = TREE_TYPE (fn);
+      else
+	TREE_TYPE (clone) = build_exception_variant (TREE_TYPE (clone), spec);
+    }
+}
+
 /* Produce the definition of D, a _DECL generated from a template.  If
    DEFER_OK is nonzero, then we don't have to actually do the
    instantiation now; we just have to do it sometime.  Normally it is
@@ -17544,6 +17526,9 @@ instantiate_decl (tree d, int defer_ok,
       SET_DECL_IMPLICIT_INSTANTIATION (d);
     }
 
+  if (TREE_CODE (d) == FUNCTION_DECL)
+    maybe_instantiate_noexcept (d);
+
   /* Recheck the substitutions to obtain any warning messages
      about ignoring cv qualifiers.  Don't do this for artificial decls,
      as it breaks the context-sensitive substitution for lambda op(). */
@@ -17561,7 +17546,7 @@ instantiate_decl (tree d, int defer_ok,
 	{
 	  tsubst (DECL_ARGUMENTS (gen), gen_args, tf_warning_or_error, d);
           tsubst_exception_specification (type, gen_args, tf_warning_or_error,
-                                          d);
+                                          d, /*defer_ok*/true);
 	  /* Don't simply tsubst the function type, as that will give
 	     duplicate warnings about poor parameter qualifications.
 	     The function arguments are the same as the decl_arguments
@@ -19139,7 +19124,7 @@ build_non_dependent_expr (tree expr)
   /* Try to get a constant value for all non-type-dependent expressions in
       order to expose bugs in *_dependent_expression_p and constexpr.  */
   if (cxx_dialect >= cxx0x)
-    maybe_constant_value (fold_non_dependent_expr (expr));
+    maybe_constant_value (fold_non_dependent_expr_sfinae (expr, tf_none));
 #endif
 
   /* Preserve OVERLOADs; the functions must be available to resolve
@@ -19558,11 +19543,6 @@ print_template_statistics (void)
 	   "%f collisions\n", (long) htab_size (type_specializations),
 	   (long) htab_elements (type_specializations),
 	   htab_collisions (type_specializations));
-  if (current_deduction_htab)
-    fprintf (stderr, "current_deduction_htab: size %ld, %ld elements, "
-	     "%f collisions\n", (long) htab_size (current_deduction_htab),
-	     (long) htab_elements (current_deduction_htab),
-	     htab_collisions (current_deduction_htab));
 }
 
 #include "gt-cp-pt.h"

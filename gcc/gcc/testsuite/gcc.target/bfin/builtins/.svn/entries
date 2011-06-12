@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/bfin/builtins
 svn://gcc.gnu.org/svn/gcc
 
@@ -740,40 +740,6 @@ shenders
 
 472
 
-norm32-10.c
-file
-
-
-
-
-2011-06-04T17:55:32.544104Z
-852f2581e701c16261a209049e5f2926
-2011-05-03T16:11:55.288172Z
-173322
-shenders
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-227
-
 shl_fr2x16-3.c
 file
 
@@ -807,6 +773,40 @@ shenders
 
 
 415
+
+norm32-10.c
+file
+
+
+
+
+2011-06-04T17:55:32.544104Z
+852f2581e701c16261a209049e5f2926
+2011-05-03T16:11:55.288172Z
+173322
+shenders
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+227
 
 mulhisihh_fr2x16-1.c
 file
@@ -842,40 +842,6 @@ shenders
 
 370
 
-diff_hl_fr2x16-2.c
-file
-
-
-
-
-2011-06-04T17:55:32.544104Z
-f72329f22d741dd63d41ae6facc5ac65
-2011-05-03T16:11:55.288172Z
-173322
-shenders
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-316
-
 shl_fr2x16-7.c
 file
 
@@ -909,6 +875,40 @@ shenders
 
 
 478
+
+diff_hl_fr2x16-2.c
+file
+
+
+
+
+2011-06-04T17:55:32.544104Z
+f72329f22d741dd63d41ae6facc5ac65
+2011-05-03T16:11:55.288172Z
+173322
+shenders
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+316
 
 shr_fr2x16-2.c
 file
@@ -978,14 +978,14 @@ shenders
 
 370
 
-cpmlx_mul_fr2x16-2.c
+negate_fr1x32-2.c
 file
 
 
 
 
 2011-06-04T17:55:32.545104Z
-a82181a20d722963391428f1eee171c8
+da877fae0561d0f4d013378f90e66e8d
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -1010,7 +1010,7 @@ shenders
 
 
 
-475
+180
 
 lshl_fr1x16-1.c
 file
@@ -1046,14 +1046,14 @@ shenders
 
 177
 
-negate_fr1x32-2.c
+cpmlx_mul_fr2x16-2.c
 file
 
 
 
 
 2011-06-04T17:55:32.545104Z
-da877fae0561d0f4d013378f90e66e8d
+a82181a20d722963391428f1eee171c8
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -1078,7 +1078,7 @@ shenders
 
 
 
-180
+475
 
 negate_fr1x16-3.c
 file
@@ -2168,40 +2168,6 @@ shenders
 
 473
 
-mulhisihh_fr2x16-2.c
-file
-
-
-
-
-2011-06-04T17:55:32.551104Z
-f05d84596d4f141939cfd3f75444b91d
-2011-05-03T16:11:55.288172Z
-173322
-shenders
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-370
-
 diff_lh_fr2x16-1.c
 file
 
@@ -2235,6 +2201,40 @@ shenders
 
 
 321
+
+mulhisihh_fr2x16-2.c
+file
+
+
+
+
+2011-06-04T17:55:32.551104Z
+f05d84596d4f141939cfd3f75444b91d
+2011-05-03T16:11:55.288172Z
+173322
+shenders
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+370
 
 shl_fr2x16-8.c
 file
@@ -2542,40 +2542,6 @@ shenders
 
 189
 
-mult_fr1x16-2.c
-file
-
-
-
-
-2011-06-04T17:55:32.553104Z
-50327b6f4eac5bd3838598fd2d6a3362
-2011-05-03T16:11:55.288172Z
-173322
-shenders
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-179
-
 dspaddsubsat_fr2x16-1.c
 file
 
@@ -2610,14 +2576,14 @@ shenders
 
 474
 
-min_fr1x16-2.c
+mult_fr1x16-2.c
 file
 
 
 
 
-2011-06-04T17:55:32.554104Z
-f646b7b2d9e4d3762965c4ea48608c62
+2011-06-04T17:55:32.553104Z
+50327b6f4eac5bd3838598fd2d6a3362
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -2642,7 +2608,7 @@ shenders
 
 
 
-183
+179
 
 max_fr1x32-2.c
 file
@@ -2678,14 +2644,14 @@ shenders
 
 189
 
-shl_fr1x32-3.c
+min_fr1x16-2.c
 file
 
 
 
 
 2011-06-04T17:55:32.554104Z
-f5ba6a7b8de0126ac6ac4fc048545c7d
+f646b7b2d9e4d3762965c4ea48608c62
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -2710,7 +2676,7 @@ shenders
 
 
 
-180
+183
 
 shl_fr1x32.c
 file
@@ -2746,14 +2712,14 @@ shenders
 
 199
 
-sub_fr1x16-1.c
+shl_fr1x32-3.c
 file
 
 
 
 
 2011-06-04T17:55:32.554104Z
-ba2879ff9b12dd0f8c77b02559dfa9c7
+f5ba6a7b8de0126ac6ac4fc048545c7d
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -2814,14 +2780,14 @@ shenders
 
 181
 
-add_fr2x16-2.c
+sub_fr1x16-1.c
 file
 
 
 
 
-2011-06-04T17:55:32.555104Z
-9d8cdd9e02d1a76707491953ffcab689
+2011-06-04T17:55:32.554104Z
+ba2879ff9b12dd0f8c77b02559dfa9c7
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -2846,7 +2812,7 @@ shenders
 
 
 
-479
+180
 
 shl_fr1x32-7.c
 file
@@ -2881,6 +2847,40 @@ shenders
 
 
 239
+
+add_fr2x16-2.c
+file
+
+
+
+
+2011-06-04T17:55:32.555104Z
+9d8cdd9e02d1a76707491953ffcab689
+2011-05-03T16:11:55.288172Z
+173322
+shenders
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+479
 
 shr_fr1x32-2.c
 file
@@ -3052,14 +3052,14 @@ shenders
 
 536
 
-abs_fr1x32-2.c
+negate_fr2x16-1.c
 file
 
 
 
 
 2011-06-04T17:55:32.556104Z
-259bc47a425abb2dcaa670e11c88395c
+0565b6b0d8d092b8921b3b8db0ec7676
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -3084,7 +3084,7 @@ shenders
 
 
 
-177
+415
 
 multr_fr2x16-1.c
 file
@@ -3120,14 +3120,14 @@ shenders
 
 470
 
-negate_fr2x16-1.c
+abs_fr1x32-2.c
 file
 
 
 
 
 2011-06-04T17:55:32.556104Z
-0565b6b0d8d092b8921b3b8db0ec7676
+259bc47a425abb2dcaa670e11c88395c
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -3152,7 +3152,7 @@ shenders
 
 
 
-415
+177
 
 sum_fr2x16-1.c
 file
@@ -3256,40 +3256,6 @@ shenders
 
 533
 
-norm32-3.c
-file
-
-
-
-
-2011-06-04T17:55:32.557104Z
-bc52ea6078247cfb0921ba5693b31275
-2011-05-03T16:11:55.288172Z
-173322
-shenders
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-166
-
 norm_fr1x16-1.c
 file
 
@@ -3323,6 +3289,40 @@ shenders
 
 
 162
+
+norm32-3.c
+file
+
+
+
+
+2011-06-04T17:55:32.557104Z
+bc52ea6078247cfb0921ba5693b31275
+2011-05-03T16:11:55.288172Z
+173322
+shenders
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+166
 
 norm16-4.c
 file
@@ -3528,14 +3528,14 @@ shenders
 
 177
 
-sub_fr2x16-2.c
+shl_fr2x16-5.c
 file
 
 
 
 
 2011-06-04T17:55:32.559104Z
-b77a736c46489c3a686cac71c5db659a
+9e3c71fa04acdb60123eafacc1aad880
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -3560,7 +3560,7 @@ shenders
 
 
 
-473
+488
 
 norm32-12.c
 file
@@ -3596,14 +3596,14 @@ shenders
 
 231
 
-shl_fr2x16-5.c
+sub_fr2x16-2.c
 file
 
 
 
 
 2011-06-04T17:55:32.559104Z
-9e3c71fa04acdb60123eafacc1aad880
+b77a736c46489c3a686cac71c5db659a
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -3628,7 +3628,7 @@ shenders
 
 
 
-488
+473
 
 diff_lh_fr2x16-2.c
 file
@@ -3732,14 +3732,14 @@ shenders
 
 488
 
-multr_fr1x16-1.c
+negate_fr1x16-1.c
 file
 
 
 
 
 2011-06-04T17:55:32.560104Z
-906359309c469cd17590d83bdda89644
+66a3d5af1bdf69fe8e2c1077b49555bc
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -3764,7 +3764,7 @@ shenders
 
 
 
-183
+178
 
 mulhisill_fr2x16-1.c
 file
@@ -3800,14 +3800,14 @@ shenders
 
 369
 
-negate_fr1x16-1.c
+multr_fr1x16-1.c
 file
 
 
 
 
 2011-06-04T17:55:32.560104Z
-66a3d5af1bdf69fe8e2c1077b49555bc
+906359309c469cd17590d83bdda89644
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -3832,7 +3832,7 @@ shenders
 
 
 
-178
+183
 
 cpmlx_mac_fr2x16-2.c
 file
@@ -4072,40 +4072,6 @@ shenders
 
 176
 
-sub_fr1x32-1.c
-file
-
-
-
-
-2011-06-04T17:55:32.562104Z
-37a3657d1027781b24ade449d6ca272b
-2011-05-03T16:11:55.288172Z
-173322
-shenders
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-192
-
 shl_fr1x32-4.c
 file
 
@@ -4140,14 +4106,14 @@ shenders
 
 181
 
-sub_fr1x16-2.c
+sub_fr1x32-1.c
 file
 
 
 
 
 2011-06-04T17:55:32.562104Z
-805bee5d967cde0928edf4bb5434d661
+37a3657d1027781b24ade449d6ca272b
 2011-05-03T16:11:55.288172Z
 173322
 shenders
@@ -4172,7 +4138,7 @@ shenders
 
 
 
-181
+192
 
 shl_fr1x16-5.c
 file
@@ -4207,6 +4173,40 @@ shenders
 
 
 235
+
+sub_fr1x16-2.c
+file
+
+
+
+
+2011-06-04T17:55:32.562104Z
+805bee5d967cde0928edf4bb5434d661
+2011-05-03T16:11:55.288172Z
+173322
+shenders
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+181
 
 shl_fr1x32-8.c
 file

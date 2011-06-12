@@ -4053,6 +4053,12 @@ enum ptrmemfunc_vbit_where_t
 
 #define NULL_TREE (tree) NULL
 
+/* True if NODE is an erroneous expression.  */
+
+#define error_operand_p(NODE)					\
+  ((NODE) == error_mark_node					\
+   || ((NODE) && TREE_TYPE ((NODE)) == error_mark_node))
+
 extern tree decl_assembler_name (tree);
 extern bool decl_assembler_name_equal (tree decl, const_tree asmname);
 extern hashval_t decl_assembler_name_hash (const_tree asmname);
@@ -4291,7 +4297,6 @@ extern tree signed_or_unsigned_type_for (int, tree);
 extern tree signed_type_for (tree);
 extern tree unsigned_type_for (tree);
 extern void initialize_sizetypes (void);
-extern void set_sizetype (tree);
 extern void fixup_unsigned_type (tree);
 extern tree build_pointer_type_for_mode (tree, enum machine_mode, bool);
 extern tree build_pointer_type (tree);

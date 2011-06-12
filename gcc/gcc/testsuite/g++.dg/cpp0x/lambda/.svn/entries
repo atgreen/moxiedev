@@ -1,15 +1,15 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/cpp0x/lambda
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-06-03T20:19:42.435371Z
-174619
-jakub
+2011-06-07T21:54:07.714036Z
+174772
+jason
 
 
 
@@ -162,40 +162,6 @@ jason
 
 310
 
-lambda-this2.C
-file
-
-
-
-
-2010-07-08T15:18:18.145342Z
-6b4020e6c9caeff30b83c2777ea4181f
-2010-04-27T21:27:04.847324Z
-158808
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-251
-
 lambda-warn2.C
 file
 
@@ -229,6 +195,40 @@ jason
 
 
 128
+
+lambda-this2.C
+file
+
+
+
+
+2010-07-08T15:18:18.145342Z
+6b4020e6c9caeff30b83c2777ea4181f
+2010-04-27T21:27:04.847324Z
+158808
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+251
 
 lambda-conv5.C
 file
@@ -400,40 +400,6 @@ jason
 
 87
 
-lambda-conv.C
-file
-
-
-
-
-2011-06-04T18:03:55.635104Z
-4597babb4f0ac0bfbeb695817891b020
-2011-02-21T16:34:17.253513Z
-170368
-danglin
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-308
-
 lambda-nested3.C
 file
 
@@ -467,6 +433,40 @@ jason
 
 
 127
+
+lambda-conv.C
+file
+
+
+
+
+2011-06-04T18:03:55.635104Z
+4597babb4f0ac0bfbeb695817891b020
+2011-02-21T16:34:17.253513Z
+170368
+danglin
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+308
 
 lambda-this.C
 file
@@ -508,10 +508,10 @@ file
 
 
 
-2010-07-08T15:18:18.147357Z
-035ed5dbced8eb3d7fe8b180244d8231
-2010-06-30T00:51:13.110470Z
-161580
+2011-06-11T04:08:08.116913Z
+4f12cdfe781a553313a09b3bec1f9e14
+2011-06-07T21:54:07.714036Z
+174772
 jason
 
 
@@ -534,7 +534,7 @@ jason
 
 
 
-266
+262
 
 lambda-copy.C
 file
@@ -1148,40 +1148,6 @@ jason
 
 332
 
-lambda-type.C
-file
-
-
-
-
-2009-10-08T17:29:59.000000Z
-caaefd4848f06121f583c4ee5fbfe0f5
-2009-08-31T20:34:02.814178Z
-151245
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2020
-
 lambda-copy-neg.C
 file
 
@@ -1215,6 +1181,40 @@ jason
 
 
 252
+
+lambda-type.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+caaefd4848f06121f583c4ee5fbfe0f5
+2009-08-31T20:34:02.814178Z
+151245
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2020
 
 lambda-mangle2.C
 file
@@ -1250,40 +1250,6 @@ jakub
 
 214
 
-lambda-debug.C
-file
-
-
-
-
-2010-07-08T15:18:18.144362Z
-eaeb125e48b43a15357e1b53d7013cd8
-2010-03-24T16:49:06.489438Z
-157701
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-226
-
 lambda-errloc.C
 file
 
@@ -1317,6 +1283,40 @@ jason
 
 
 308
+
+lambda-debug.C
+file
+
+
+
+
+2010-07-08T15:18:18.144362Z
+eaeb125e48b43a15357e1b53d7013cd8
+2010-03-24T16:49:06.489438Z
+157701
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+226
 
 lambda-conv2.C
 file
@@ -1386,40 +1386,6 @@ jason
 
 134
 
-lambda-conv4.C
-file
-
-
-
-
-2010-07-08T15:18:18.145342Z
-58edd027a4be4906904e2331d027b5c8
-2010-04-12T19:58:49.903294Z
-158241
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-168
-
 lambda-deduce.C
 file
 
@@ -1453,6 +1419,40 @@ uros
 
 
 433
+
+lambda-conv4.C
+file
+
+
+
+
+2010-07-08T15:18:18.145342Z
+58edd027a4be4906904e2331d027b5c8
+2010-04-12T19:58:49.903294Z
+158241
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+168
 
 lambda-this3.C
 file
@@ -1624,17 +1624,17 @@ jason
 
 844
 
-lambda-pass.C
+lambda-nested4.C
 file
 
 
 
 
 2011-06-04T18:03:55.639104Z
-80c65dd7b2e3c9f25b1983ac66332449
-2011-02-23T15:24:04.095631Z
-170438
-uros
+4615122fb4f57997484285d9f0d608b6
+2011-05-27T19:32:07.154446Z
+174354
+jason
 
 
 
@@ -1656,7 +1656,7 @@ uros
 
 
 
-418
+153
 
 lambda-mixed.C
 file
@@ -1692,17 +1692,17 @@ uros
 
 204
 
-lambda-nested4.C
+lambda-pass.C
 file
 
 
 
 
 2011-06-04T18:03:55.639104Z
-4615122fb4f57997484285d9f0d608b6
-2011-05-27T19:32:07.154446Z
-174354
-jason
+80c65dd7b2e3c9f25b1983ac66332449
+2011-02-23T15:24:04.095631Z
+170438
+uros
 
 
 
@@ -1724,7 +1724,7 @@ jason
 
 
 
-153
+418
 
 lambda-capture-const-ref-neg.C
 file
@@ -1896,40 +1896,6 @@ uros
 
 446
 
-lambda-deduce-ext.C
-file
-
-
-
-
-2009-10-08T17:29:59.000000Z
-385bcf6a13e8ad52b68b6b9a7b4ef2b6
-2009-09-04T15:09:50.896793Z
-151425
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-428
-
 lambda-ns-scope.C
 file
 
@@ -1963,6 +1929,40 @@ jason
 
 
 229
+
+lambda-deduce-ext.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+385bcf6a13e8ad52b68b6b9a7b4ef2b6
+2009-09-04T15:09:50.896793Z
+151425
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+428
 
 lambda-ctors.C
 file
@@ -1998,40 +1998,6 @@ jason
 
 234
 
-lambda-nop.C
-file
-
-
-
-
-2011-06-04T18:03:55.639104Z
-836e2dcbfa500939dce851cb8f14b448
-2011-02-23T15:24:04.095631Z
-170438
-uros
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-343
-
 lambda-eh.C
 file
 
@@ -2065,6 +2031,40 @@ jason
 
 
 489
+
+lambda-nop.C
+file
+
+
+
+
+2011-06-04T18:03:55.639104Z
+836e2dcbfa500939dce851cb8f14b448
+2011-02-23T15:24:04.095631Z
+170438
+uros
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+343
 
 lambda-deduce-neg.C
 file
@@ -2100,40 +2100,6 @@ jason
 
 242
 
-lambda-copy-default-neg.C
-file
-
-
-
-
-2009-10-08T17:29:59.000000Z
-eb6ad09e63a403c2d1214b2f57e10b0f
-2009-09-22T04:08:57.415442Z
-151964
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-255
-
 lambda-init.C
 file
 
@@ -2167,6 +2133,40 @@ jason
 
 
 156
+
+lambda-copy-default-neg.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+eb6ad09e63a403c2d1214b2f57e10b0f
+2009-09-22T04:08:57.415442Z
+151964
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+255
 
 lambda-syntax1.C
 file

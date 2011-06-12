@@ -985,6 +985,17 @@
 		      (const_string "alu_shift_reg")))]
 )
 
+(define_insn "*addsi3_carryin_clobercc_<optab>"
+  [(set (match_operand:SI 0 "s_register_operand" "=r")
+	(plus:SI (plus:SI (match_operand:SI 1 "s_register_operand" "%r")
+			  (match_operand:SI 2 "arm_rhs_operand" "rI"))
+		 (LTUGEU:SI (reg:<cnb> CC_REGNUM) (const_int 0))))
+   (clobber (reg:CC CC_REGNUM))]
+   "TARGET_32BIT"
+   "adc%.\\t%0, %1, %2"
+   [(set_attr "conds" "set")]
+)
+
 (define_expand "incscc"
   [(set (match_operand:SI 0 "s_register_operand" "=r,r")
         (plus:SI (match_operator:SI 2 "arm_comparison_operator"
@@ -1815,6 +1826,36 @@
    (set_attr "predicable" "yes")]
 )
 
+;; Note: there is no maddhisi4ibt because this one is canonical form
+(define_insn "*maddhisi4tb"
+  [(set (match_operand:SI 0 "s_register_operand" "=r")
+	(plus:SI (mult:SI (ashiftrt:SI
+			   (match_operand:SI 1 "s_register_operand" "r")
+			   (const_int 16))
+			  (sign_extend:SI
+			   (match_operand:HI 2 "s_register_operand" "r")))
+		 (match_operand:SI 3 "s_register_operand" "r")))]
+  "TARGET_DSP_MULTIPLY"
+  "smlatb%?\\t%0, %1, %2, %3"
+  [(set_attr "insn" "smlaxy")
+   (set_attr "predicable" "yes")]
+)
+
+(define_insn "*maddhisi4tt"
+  [(set (match_operand:SI 0 "s_register_operand" "=r")
+	(plus:SI (mult:SI (ashiftrt:SI
+			   (match_operand:SI 1 "s_register_operand" "r")
+			   (const_int 16))
+			  (ashiftrt:SI
+			   (match_operand:SI 2 "s_register_operand" "r")
+			   (const_int 16)))
+		 (match_operand:SI 3 "s_register_operand" "r")))]
+  "TARGET_DSP_MULTIPLY"
+  "smlatt%?\\t%0, %1, %2, %3"
+  [(set_attr "insn" "smlaxy")
+   (set_attr "predicable" "yes")]
+)
+
 (define_insn "*maddhidi4"
   [(set (match_operand:DI 0 "s_register_operand" "=r")
 	(plus:DI
@@ -1825,6 +1866,39 @@
 	  (match_operand:DI 3 "s_register_operand" "0")))]
   "TARGET_DSP_MULTIPLY"
   "smlalbb%?\\t%Q0, %R0, %1, %2"
+  [(set_attr "insn" "smlalxy")
+   (set_attr "predicable" "yes")])
+
+;; Note: there is no maddhidi4ibt because this one is canonical form
+(define_insn "*maddhidi4tb"
+  [(set (match_operand:DI 0 "s_register_operand" "=r")
+	(plus:DI
+	  (mult:DI (sign_extend:DI
+		    (ashiftrt:SI
+		     (match_operand:SI 1 "s_register_operand" "r")
+		     (const_int 16)))
+		   (sign_extend:DI
+		    (match_operand:HI 2 "s_register_operand" "r")))
+	  (match_operand:DI 3 "s_register_operand" "0")))]
+  "TARGET_DSP_MULTIPLY"
+  "smlaltb%?\\t%Q0, %R0, %1, %2"
+  [(set_attr "insn" "smlalxy")
+   (set_attr "predicable" "yes")])
+
+(define_insn "*maddhidi4tt"
+  [(set (match_operand:DI 0 "s_register_operand" "=r")
+	(plus:DI
+	  (mult:DI (sign_extend:DI
+		    (ashiftrt:SI
+		     (match_operand:SI 1 "s_register_operand" "r")
+		     (const_int 16)))
+		   (sign_extend:DI
+		    (ashiftrt:SI
+		     (match_operand:SI 2 "s_register_operand" "r")
+		     (const_int 16))))
+	  (match_operand:DI 3 "s_register_operand" "0")))]
+  "TARGET_DSP_MULTIPLY"
+  "smlaltt%?\\t%Q0, %R0, %1, %2"
   [(set_attr "insn" "smlalxy")
    (set_attr "predicable" "yes")])
 
@@ -8810,14 +8884,19 @@
 	      (set (match_dup 0) (const_int 1)))
    (match_scratch:SI 3 "r")]
   "TARGET_32BIT"
-  [(set (match_dup 3) (minus:SI (match_dup 1) (match_dup 2)))
+  [(parallel
+    [(set (reg:CC CC_REGNUM)
+	  (compare:CC (match_dup 1) (match_dup 2)))
+     (set (match_dup 3) (minus:SI (match_dup 1) (match_dup 2)))])
    (parallel
     [(set (reg:CC CC_REGNUM)
 	  (compare:CC (const_int 0) (match_dup 3)))
      (set (match_dup 0) (minus:SI (const_int 0) (match_dup 3)))])
-   (set (match_dup 0)
-	(plus:SI (plus:SI (match_dup 0) (match_dup 3))
-		 (geu:SI (reg:CC CC_REGNUM) (const_int 0))))])
+   (parallel
+    [(set (match_dup 0)
+	  (plus:SI (plus:SI (match_dup 0) (match_dup 3))
+		   (geu:SI (reg:CC CC_REGNUM) (const_int 0))))
+     (clobber (reg:CC CC_REGNUM))])])
 
 (define_insn "*cond_move"
   [(set (match_operand:SI 0 "s_register_operand" "=r,r,r")

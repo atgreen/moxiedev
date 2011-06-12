@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/tls
 svn://gcc.gnu.org/svn/gcc
 
@@ -740,40 +740,6 @@ rth
 
 382
 
-opt-8.c
-file
-
-
-
-
-2009-04-24T17:45:18.000000Z
-fb27194fd3ac60b8ffc4c3e9b9e6f59e
-2007-09-19T02:35:29.039007Z
-128595
-sandra
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-230
-
 emutls-1.c
 file
 
@@ -808,14 +774,14 @@ ro
 
 409
 
-opt-9.c
+opt-8.c
 file
 
 
 
 
 2009-04-24T17:45:18.000000Z
-58fb8d61d31c049b4d52a963b0c56f94
+fb27194fd3ac60b8ffc4c3e9b9e6f59e
 2007-09-19T02:35:29.039007Z
 128595
 sandra
@@ -840,7 +806,7 @@ sandra
 
 
 
-240
+230
 
 emutls-2.c
 file
@@ -875,6 +841,40 @@ rth
 
 
 239
+
+opt-9.c
+file
+
+
+
+
+2009-04-24T17:45:18.000000Z
+58fb8d61d31c049b4d52a963b0c56f94
+2007-09-19T02:35:29.039007Z
+128595
+sandra
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+240
 
 pic-1.c
 file

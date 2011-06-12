@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libgo
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ has-props
 
 520122
 
-Makefile.in
-file
-
-
-
-
-2011-06-04T18:38:23.993104Z
-656cdea43b2601f325da9f4c6d35a42e
-2011-05-24T21:43:12.525901Z
-174144
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-246900
-
 LICENSE
 file
 
@@ -127,6 +93,40 @@ ian
 
 
 1479
+
+Makefile.in
+file
+
+
+
+
+2011-06-04T18:38:23.993104Z
+656cdea43b2601f325da9f4c6d35a42e
+2011-05-24T21:43:12.525901Z
+174144
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+246900
 
 runtime
 dir
@@ -202,6 +202,9 @@ has-props
 
 17097
 
+syscalls
+dir
+
 README
 file
 
@@ -235,9 +238,6 @@ ian
 
 
 1535
-
-syscalls
-dir
 
 MERGE
 file
@@ -341,10 +341,10 @@ ian
 
 15471
 
-go
+config
 dir
 
-config
+go
 dir
 
 merge.sh

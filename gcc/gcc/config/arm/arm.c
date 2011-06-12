@@ -2231,7 +2231,8 @@ const_ok_for_op (HOST_WIDE_INT i, enum rtx_code code)
       if (arm_arch_thumb2 && (i & 0xffff0000) == 0)
 	return 1;
       else
-	return 0;
+	/* Otherwise, try mvn.  */
+	return const_ok_for_arm (ARM_SIGN_EXTEND (~i));
 
     case PLUS:
     case COMPARE:
@@ -3345,6 +3346,28 @@ arm_libcall_uses_aapcs_base (const_rtx libcall)
 		   convert_optab_libfunc (sfix_optab, DImode, SFmode));
       add_libcall (libcall_htab,
 		   convert_optab_libfunc (ufix_optab, DImode, SFmode));
+
+      /* Values from double-precision helper functions are returned in core
+	 registers if the selected core only supports single-precision
+	 arithmetic, even if we are using the hard-float ABI.  The same is
+	 true for single-precision helpers, but we will never be using the
+	 hard-float ABI on a CPU which doesn't support single-precision
+	 operations in hardware.  */
+      add_libcall (libcall_htab, optab_libfunc (add_optab, DFmode));
+      add_libcall (libcall_htab, optab_libfunc (sdiv_optab, DFmode));
+      add_libcall (libcall_htab, optab_libfunc (smul_optab, DFmode));
+      add_libcall (libcall_htab, optab_libfunc (neg_optab, DFmode));
+      add_libcall (libcall_htab, optab_libfunc (sub_optab, DFmode));
+      add_libcall (libcall_htab, optab_libfunc (eq_optab, DFmode));
+      add_libcall (libcall_htab, optab_libfunc (lt_optab, DFmode));
+      add_libcall (libcall_htab, optab_libfunc (le_optab, DFmode));
+      add_libcall (libcall_htab, optab_libfunc (ge_optab, DFmode));
+      add_libcall (libcall_htab, optab_libfunc (gt_optab, DFmode));
+      add_libcall (libcall_htab, optab_libfunc (unord_optab, DFmode));
+      add_libcall (libcall_htab, convert_optab_libfunc (sext_optab, DFmode,
+							SFmode));
+      add_libcall (libcall_htab, convert_optab_libfunc (trunc_optab, SFmode,
+							DFmode));
     }
 
   return libcall && htab_find (libcall_htab, libcall) != NULL;
@@ -9079,7 +9102,7 @@ coproc_secondary_reload_class (enum machine_mode mode, rtx x, bool wb)
   /* The neon move patterns handle all legitimate vector and struct
      addresses.  */
   if (TARGET_NEON
-      && MEM_P (x)
+      && (MEM_P (x) || GET_CODE (x) == CONST_VECTOR)
       && (GET_MODE_CLASS (mode) == MODE_VECTOR_INT
 	  || GET_MODE_CLASS (mode) == MODE_VECTOR_FLOAT
 	  || VALID_NEON_STRUCT_MODE (mode)))

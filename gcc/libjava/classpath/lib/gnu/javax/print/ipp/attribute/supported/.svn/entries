@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/javax/print/ipp/attribute/supported
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ has-props
 
 2773
 
-SidesSupported.class
-file
-
-
-
-
-2010-11-22T19:18:53.759789Z
-45c5142d47d941b4f36aff277b9576af
-2010-10-12T15:55:12.882649Z
-165383
-gandalf
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1589
-
 PrinterResolutionSupported.class
 file
 
@@ -127,6 +93,40 @@ has-props
 
 
 2139
+
+SidesSupported.class
+file
+
+
+
+
+2010-11-22T19:18:53.759789Z
+45c5142d47d941b4f36aff277b9576af
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1589
 
 MultipleDocumentJobsSupported.class
 file
@@ -366,40 +366,6 @@ has-props
 
 2644
 
-UriSecuritySupported.class
-file
-
-
-
-
-2010-11-22T19:18:53.763793Z
-2441a80cbb15ef503dc24fc11cadc8e7
-2010-10-12T15:55:12.882649Z
-165383
-gandalf
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1450
-
 DocumentFormatSupported.class
 file
 
@@ -434,14 +400,14 @@ has-props
 
 861
 
-CharsetSupported.class
+UriSecuritySupported.class
 file
 
 
 
 
-2010-11-22T19:18:53.764794Z
-efca6ea4eeb1b431db9bd9284039ac58
+2010-11-22T19:18:53.763793Z
+2441a80cbb15ef503dc24fc11cadc8e7
 2010-10-12T15:55:12.882649Z
 165383
 gandalf
@@ -466,7 +432,7 @@ has-props
 
 
 
-784
+1450
 
 GeneratedNaturalLanguageSupported.class
 file
@@ -501,6 +467,40 @@ has-props
 
 
 862
+
+CharsetSupported.class
+file
+
+
+
+
+2010-11-22T19:18:53.764794Z
+efca6ea4eeb1b431db9bd9284039ac58
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+784
 
 JobHoldUntilSupported.class
 file

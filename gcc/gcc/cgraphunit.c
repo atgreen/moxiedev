@@ -140,6 +140,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "plugin.h"
 #include "ipa-inline.h"
 #include "ipa-utils.h"
+#include "lto-streamer.h"
 
 static void cgraph_expand_all_functions (void);
 static void cgraph_mark_functions_to_output (void);
@@ -305,24 +306,9 @@ cgraph_reset_node (struct cgraph_node *node)
   memset (&node->global, 0, sizeof (node->global));
   memset (&node->rtl, 0, sizeof (node->rtl));
   node->analyzed = false;
-  node->local.redefined_extern_inline = true;
   node->local.finalized = false;
 
   cgraph_node_remove_callees (node);
-
-  /* We may need to re-queue the node for assembling in case
-     we already proceeded it and ignored as not needed or got
-     a re-declaration in IMA mode.  */
-  if (node->reachable)
-    {
-      struct cgraph_node *n;
-
-      for (n = cgraph_nodes_queue; n; n = n->next_needed)
-	if (n == node)
-	  break;
-      if (!n)
-	node->reachable = 0;
-    }
 }
 
 static void
@@ -350,7 +336,10 @@ cgraph_finalize_function (tree decl, bool nested)
   struct cgraph_node *node = cgraph_get_create_node (decl);
 
   if (node->local.finalized)
-    cgraph_reset_node (node);
+    {
+      cgraph_reset_node (node);
+      node->local.redefined_extern_inline = true;
+    }
 
   notice_global_symbol (decl);
   node->local.finalized = true;
@@ -993,6 +982,7 @@ cgraph_analyze_functions (void)
 	  && !node->thunk.thunk_p)
 	{
 	  cgraph_reset_node (node);
+          node->local.redefined_extern_inline = true;
 	  continue;
 	}
 
@@ -1092,6 +1082,10 @@ cgraph_finalize_compilation_unit (void)
 {
   timevar_push (TV_CGRAPH);
 
+  /* If LTO is enabled, initialize the streamer hooks needed by GIMPLE.  */
+  if (flag_lto)
+    lto_streamer_hooks_init ();
+
   /* If we're here there's no current function anymore.  Some frontends
      are lazy in clearing these.  */
   current_function_decl = NULL;
@@ -1111,6 +1105,9 @@ cgraph_finalize_compilation_unit (void)
       fprintf (stderr, "\nAnalyzing compilation unit\n");
       fflush (stderr);
     }
+
+  if (flag_dump_passes)
+    dump_passes ();
 
   /* Gimplify and lower all functions, compute reachability and
      remove unreachable nodes.  */

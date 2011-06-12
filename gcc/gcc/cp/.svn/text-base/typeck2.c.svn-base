@@ -1429,13 +1429,19 @@ build_x_arrow (tree expr)
 
   if (MAYBE_CLASS_TYPE_P (type))
     {
+      struct tinst_level *actual_inst = current_instantiation ();
+      tree fn = NULL;
+
       while ((expr = build_new_op (COMPONENT_REF, LOOKUP_NORMAL, expr,
 				   NULL_TREE, NULL_TREE,
-				   /*overloaded_p=*/NULL, 
-				   tf_warning_or_error)))
+				   &fn, tf_warning_or_error)))
 	{
 	  if (expr == error_mark_node)
 	    return error_mark_node;
+
+	  if (fn && DECL_USE_TEMPLATE (fn))
+	    push_tinst_level (fn);
+	  fn = NULL;
 
 	  if (vec_member (TREE_TYPE (expr), types_memoized))
 	    {
@@ -1446,6 +1452,9 @@ build_x_arrow (tree expr)
 	  VEC_safe_push (tree, gc, types_memoized, TREE_TYPE (expr));
 	  last_rval = expr;
 	}
+
+      while (current_instantiation () != actual_inst)
+	pop_tinst_level ();
 
       if (last_rval == NULL_TREE)
 	{
@@ -1769,10 +1778,15 @@ merge_exception_specifiers (tree list, tree add)
     return list;
   else if (!add || add == noexcept_false_spec)
     return add;
+
+  /* We need to instantiate deferred noexcept before we get here.  */
+  gcc_assert (!DEFERRED_NOEXCEPT_SPEC_P (list)
+	      && !DEFERRED_NOEXCEPT_SPEC_P (add));
+
   /* For merging noexcept(true) and throw(), take the more recent one (LIST).
      Any other noexcept-spec should only be merged with an equivalent one.
      So the !TREE_VALUE code below is correct for all cases.  */
-  else if (!TREE_VALUE (add))
+  if (!TREE_VALUE (add))
     return list;
   else if (!TREE_VALUE (list))
     return add;

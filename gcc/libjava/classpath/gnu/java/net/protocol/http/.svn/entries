@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/net/protocol/http
 svn://gcc.gnu.org/svn/gcc
 
@@ -264,40 +264,6 @@ gandalf
 
 11416
 
-Handler.java
-file
-
-
-
-
-2011-06-04T18:38:08.138104Z
-a48aa298ecb67fb32561604ce4b71100
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2331
-
 ChunkedInputStream.java
 file
 
@@ -332,14 +298,14 @@ gandalf
 
 6205
 
-SimpleCookieManager.java
+Handler.java
 file
 
 
 
 
 2011-06-04T18:38:08.138104Z
-069db6498d8237774af406beb1174cf5
+a48aa298ecb67fb32561604ce4b71100
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -364,7 +330,7 @@ gandalf
 
 
 
-4371
+2331
 
 package.html
 file
@@ -399,6 +365,40 @@ tromey
 
 
 3118
+
+SimpleCookieManager.java
+file
+
+
+
+
+2011-06-04T18:38:08.138104Z
+069db6498d8237774af406beb1174cf5
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4371
 
 HTTPURLConnection.java
 file
@@ -468,40 +468,6 @@ doko
 
 5350
 
-HTTPDateFormat.java
-file
-
-
-
-
-2011-06-04T18:38:08.139104Z
-cbbe39ce827b2f5b53e7dc4724ca59e9
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-13961
-
 ByteArrayRequestBodyWriter.java
 file
 
@@ -535,6 +501,40 @@ gandalf
 
 
 3074
+
+HTTPDateFormat.java
+file
+
+
+
+
+2011-06-04T18:38:08.139104Z
+cbbe39ce827b2f5b53e7dc4724ca59e9
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+13961
 
 Request.java
 file

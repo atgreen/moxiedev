@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/forward_list/debug
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ fdumont
 
 1072
 
-erase_after6_neg.cc
-file
-
-
-
-
-2011-06-04T18:06:07.417104Z
-7e0972d613cf1f8c5ead88f26eba733b
-2011-01-16T10:35:28.805576Z
-168850
-fdumont
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1040
-
 insert_after1_neg.cc
 file
 
@@ -230,14 +196,14 @@ fdumont
 
 1091
 
-erase_after7_neg.cc
+erase_after6_neg.cc
 file
 
 
 
 
-2011-06-04T18:06:07.418104Z
-a1aad021e1da218bf8f2ed20daa5d2ee
+2011-06-04T18:06:07.417104Z
+7e0972d613cf1f8c5ead88f26eba733b
 2011-01-16T10:35:28.805576Z
 168850
 fdumont
@@ -262,41 +228,7 @@ fdumont
 
 
 
-1024
-
-insert_after2_neg.cc
-file
-
-
-
-
-2011-06-04T18:06:07.418104Z
-6ea706a32ba23162438dae595f913311
-2011-01-16T10:35:28.805576Z
-168850
-fdumont
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1087
+1040
 
 splice_after.cc
 file
@@ -332,14 +264,14 @@ fdumont
 
 1280
 
-erase_after8_neg.cc
+insert_after2_neg.cc
 file
 
 
 
 
 2011-06-04T18:06:07.418104Z
-a8f9699f24c617d3c150c6b328111c53
+6ea706a32ba23162438dae595f913311
 2011-01-16T10:35:28.805576Z
 168850
 fdumont
@@ -364,7 +296,41 @@ fdumont
 
 
 
-1033
+1087
+
+erase_after7_neg.cc
+file
+
+
+
+
+2011-06-04T18:06:07.418104Z
+a1aad021e1da218bf8f2ed20daa5d2ee
+2011-01-16T10:35:28.805576Z
+168850
+fdumont
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1024
 
 insert_after3_neg.cc
 file
@@ -400,6 +366,40 @@ fdumont
 
 1015
 
+erase_after8_neg.cc
+file
+
+
+
+
+2011-06-04T18:06:07.418104Z
+a8f9699f24c617d3c150c6b328111c53
+2011-01-16T10:35:28.805576Z
+168850
+fdumont
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1033
+
 erase_after9_neg.cc
 file
 
@@ -434,40 +434,6 @@ fdumont
 
 1050
 
-swap.cc
-file
-
-
-
-
-2011-06-04T18:06:07.419104Z
-64ea154e6bc77ee4f1f5fd89d534f459
-2011-01-05T20:52:36.368462Z
-168528
-fdumont
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2224
-
 splice_after1_neg.cc
 file
 
@@ -501,6 +467,40 @@ fdumont
 
 
 1029
+
+swap.cc
+file
+
+
+
+
+2011-06-04T18:06:07.419104Z
+64ea154e6bc77ee4f1f5fd89d534f459
+2011-01-05T20:52:36.368462Z
+168528
+fdumont
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2224
 
 splice_after2_neg.cc
 file

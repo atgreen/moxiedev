@@ -1,3 +1,51 @@
+2011-06-10  Daniel Carrera  <dcarrera@gmail.com>
+
+	* trans-decl.c (gfc_build_builtin_function_decls):
+	Updated declaration of caf_sync_all and caf_sync_images.
+	* trans-stmt.c (gfc_trans_sync): Function
+	can now handle a "stat" variable that has an integer type
+	different from integer_type_node.
+
+2011-06-09  Richard Guenther  <rguenther@suse.de>
+
+	* trans.c (gfc_allocate_array_with_status): Mark error path
+	as unlikely.
+
+2011-06-08  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/18918
+	* gfortran.h (gfc_statement): Add ST_LOCK and ST_UNLOCK.
+	(gfc_exec_op): Add EXEC_LOCK and EXEC_UNLOCK.
+	(gfc_code): Add expr4.
+	* match.h (gfc_match_lock, gfc_match_unlock): New prototypes.
+	* match.c (gfc_match_lock, gfc_match_unlock,
+	lock_unlock_statement): New functions.
+	(sync_statement): Bug fix, avoiding double freeing.
+	(gfc_match_if): Handle LOCK/UNLOCK statement.
+	* parse.c (decode_statement, next_statement,
+	gfc_ascii_statement): Ditto.
+	* st.c (gfc_free_statement): Handle LOCK and UNLOCK.
+	* resolve.c (resolve_lock_unlock): New function.
+	(resolve_code): Call it.
+	* dump-parse-tree.c (show_code_node): Handle LOCK/UNLOCK.
+
+2011-06-07  Richard Guenther  <rguenther@suse.de>
+
+	* f95-lang.c (gfc_init_decl_processing): Do not set
+	size_type_node or call set_sizetype.
+
+2011-06-05  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/49255
+	* trans-expr.c (gfc_conv_procedure_call): Fix -fcheck=pointer
+	for F2008.
+
+2011-06-05  Andreas Schmidt  <andreas.schmidt.42@gmx.net>
+	Thomas Koenig  <tkoenig@gcc.gnu.org>
+
+	* dump-parse-tree.c (show_symbol):  Don't dump namespace
+	for ENTRY to avoid infinite recursion.
+
 2011-06-02  Asher Langton  <langton2@llnl.gov>
 
 	PR fortran/49268
@@ -16,7 +64,7 @@
 	procedure statement.
 	* parse.c ( decode_statement): Deal with whitespace around :: in
 	gfc_match_modproc.
- 
+
 2011-05-31  Tobias Burnus  <burnus@net-b.de>
 
 	PR fortran/18918

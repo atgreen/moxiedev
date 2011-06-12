@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/dfp
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ froydnj
 
 1829
 
-convert-dfp-round.c
-file
-
-
-
-
-2009-09-27T03:30:01.000000Z
-21f8e4694b43159e67ea5b564ee2a89b
-2009-09-16T16:38:49.712589Z
-151764
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5223
-
 constants.c
 file
 
@@ -604,17 +570,17 @@ janis
 
 243
 
-constants-c99.c
+convert-dfp-round.c
 file
 
 
 
 
-2010-11-22T19:14:31.955928Z
-f033f97e544d92f5e13f8a9eb2a587d8
-2010-11-13T16:19:33.333671Z
-166711
-bonzini
+2009-09-27T03:30:01.000000Z
+21f8e4694b43159e67ea5b564ee2a89b
+2009-09-16T16:38:49.712589Z
+151764
+janis
 
 
 
@@ -636,7 +602,7 @@ bonzini
 
 
 
-430
+5223
 
 cast-bad.c
 file
@@ -672,6 +638,40 @@ janis
 
 1705
 
+constants-c99.c
+file
+
+
+
+
+2010-11-22T19:14:31.955928Z
+f033f97e544d92f5e13f8a9eb2a587d8
+2010-11-13T16:19:33.333671Z
+166711
+bonzini
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+430
+
 pr31344.c
 file
 
@@ -706,40 +706,6 @@ janis
 
 508
 
-pr41049.c
-file
-
-
-
-
-2009-09-27T03:30:01.000000Z
-17353eaf91a4f3959fa168324f86f6f5
-2009-09-17T17:07:24.463606Z
-151806
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-25943
-
 Wtraditional-conversion-2.c
 file
 
@@ -773,6 +739,40 @@ janis
 
 
 2616
+
+pr41049.c
+file
+
+
+
+
+2009-09-27T03:30:01.000000Z
+17353eaf91a4f3959fa168324f86f6f5
+2009-09-17T17:07:24.463606Z
+151806
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+25943
 
 usual-arith-conv-bad-2.c
 file
@@ -978,40 +978,6 @@ janis
 
 1491
 
-dfp-round.h
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-aadafbfd9e0540666c99d31e72e91f96
-2007-07-05T05:36:50.178518Z
-126353
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-647
-
 pragma-float-const-decimal64-2.c
 file
 
@@ -1045,6 +1011,40 @@ janis
 
 
 1563
+
+dfp-round.h
+file
+
+
+
+
+2009-04-24T17:45:12.000000Z
+aadafbfd9e0540666c99d31e72e91f96
+2007-07-05T05:36:50.178518Z
+126353
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+647
 
 float-constant-double.c
 file

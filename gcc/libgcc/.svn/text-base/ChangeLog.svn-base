@@ -1,3 +1,44 @@
+2011-06-10  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* config/sparc/linux-unwind.h (STACK_BIAS): Define.
+	(sparc64_fallback_frame_state): Use it.
+	(sparc64_frob_update_context): Further adjust context.
+	* config/sparc/sol2-unwind.h (sparc64_frob_update_context): Likewise.
+	* config/sparc/sol2-ci.S: Add TARGET_FLAT handling.
+	* config/sparc/sol2-cn.S: Likewise.
+
+2011-06-09  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* enable-execute-stack-empty.c: New file.
+	* enable-execute-stack-mprotect.c: New file.
+	* config/i386/enable-execute-stack-mingw32.c: New file.
+	* config.host (enable_execute_stack): New variable.
+	Select appropriate variants.
+	* configure.ac: Link enable-execute-stack.c to
+	$enable_execute_stack.
+	* configure: Regenerate.
+	* Makefile.in (LIB2ADD): Add enable-execute-stack.c.
+	(lib2funcs): Remove _enable_execute_stack.
+
+2011-06-09  David S. Miller  <davem@davemloft.net>
+	    Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* config.host (sparc-*-linux*): Correct md_unwind_header
+	filename.
+	(s390x-ibm-tpf*): Fix typo.
+
+2011-06-06  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* config.host (mips-sgi-irix6.5*): Add t-crtfm to tmake_file.
+	Add crtfastmath.o to extra_parts.
+	(mips64*-*-linux*, mips*-*-linux*): Use t-crtfm instead of
+	mips/t-crtfm.
+	* config/mips/t-crtfm: Remove.
+
+2011-06-04  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	* config.host (hppa*-*-linux*): Correct md_unwind_header name.
+
 2011-06-04  Kaz Kojima  <kkojima@gcc.gnu.org>
 
 	* config.host (sh*-*-linux*): Fix typo.

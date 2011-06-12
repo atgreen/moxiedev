@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/ext/visibility
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ uros
 
 552
 
-visibility-10.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-7f98e383bb2386437d2d7b37cf32a6b8
-2007-07-04T17:34:16.581310Z
-126330
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-734
-
 pragma-override1.C
 file
 
@@ -127,6 +93,40 @@ ro
 
 
 515
+
+visibility-10.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+7f98e383bb2386437d2d7b37cf32a6b8
+2007-07-04T17:34:16.581310Z
+126330
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+734
 
 anon1.C
 file
@@ -230,40 +230,6 @@ jason
 
 250
 
-namespace3.C
-file
-
-
-
-
-2009-12-07T15:31:18.757942Z
-add25a0c0d2bcb8abe77dc78d0e41452
-2009-11-02T13:39:46.482984Z
-153805
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-169
-
 redecl1.C
 file
 
@@ -298,17 +264,17 @@ janis
 
 352
 
-staticdatamem.C
+namespace3.C
 file
 
 
 
 
-2009-04-24T17:44:09.000000Z
-6014ef7f9e80dffce855a18d78bf2212
-2004-12-14T02:15:55.000000Z
-92120
-mmitchel
+2009-12-07T15:31:18.757942Z
+add25a0c0d2bcb8abe77dc78d0e41452
+2009-11-02T13:39:46.482984Z
+153805
+jakub
 
 
 
@@ -330,7 +296,7 @@ mmitchel
 
 
 
-396
+169
 
 anon5.C
 file
@@ -366,6 +332,40 @@ jakub
 
 155
 
+staticdatamem.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+6014ef7f9e80dffce855a18d78bf2212
+2004-12-14T02:15:55.000000Z
+92120
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+396
+
 anon7.C
 file
 
@@ -400,40 +400,6 @@ jakub
 
 404
 
-fvisibility-inlines-hidden-2.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-9f6874b06aea35e844ab40f0f69550c5
-2006-07-13T06:16:59.976710Z
-115411
-geoffk
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-369
-
 anon9.C
 file
 
@@ -467,6 +433,40 @@ jakub
 
 
 146
+
+fvisibility-inlines-hidden-2.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+9f6874b06aea35e844ab40f0f69550c5
+2006-07-13T06:16:59.976710Z
+115411
+geoffk
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+369
 
 visibility-1.C
 file
@@ -1080,40 +1080,6 @@ janis
 
 330
 
-visibility-11.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-810e1cafeb22e936dfd0834c4e0f0b42
-2009-02-19T21:15:12.092517Z
-144305
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-254
-
 pragma-override2.C
 file
 
@@ -1147,6 +1113,40 @@ ro
 
 
 515
+
+visibility-11.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+810e1cafeb22e936dfd0834c4e0f0b42
+2009-02-19T21:15:12.092517Z
+144305
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+254
 
 staticmemfuncts.C
 file
@@ -1420,40 +1420,6 @@ froydnj
 
 665
 
-fvisibility-inlines-hidden-3.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-5c8d17e33f840c89b8d56a22d680b9d1
-2006-07-21T20:39:19.835663Z
-115649
-mrs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-576
-
 fvisibility-inlines-hidden.C
 file
 
@@ -1487,6 +1453,40 @@ mmitchel
 
 
 330
+
+fvisibility-inlines-hidden-3.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+5c8d17e33f840c89b8d56a22d680b9d1
+2006-07-21T20:39:19.835663Z
+115649
+mrs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+576
 
 visibility-2.C
 file
@@ -1590,17 +1590,17 @@ mmitchel
 
 262
 
-visibility-8.C
+noPLT.C
 file
 
 
 
 
 2009-04-24T17:44:09.000000Z
-1e3d15af5ef5d1e7ce91f6fb5b2ce876
-2004-08-06T03:26:19.000000Z
-85623
-mmitchel
+f281064d572b9d936c2688733534f68b
+2007-02-27T00:10:22.395185Z
+122348
+geoffk
 
 
 
@@ -1622,41 +1622,7 @@ mmitchel
 
 
 
-1316
-
-anon10.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-a584d24c7f0c42d5d7b9adeaab7e6e35
-2007-12-11T08:22:10.394469Z
-130771
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-581
+377
 
 fvisibility-override2.C
 file
@@ -1692,17 +1658,17 @@ mrs
 
 342
 
-noPLT.C
+anon10.C
 file
 
 
 
 
 2009-04-24T17:44:09.000000Z
-f281064d572b9d936c2688733534f68b
-2007-02-27T00:10:22.395185Z
-122348
-geoffk
+a584d24c7f0c42d5d7b9adeaab7e6e35
+2007-12-11T08:22:10.394469Z
+130771
+jakub
 
 
 
@@ -1724,7 +1690,41 @@ geoffk
 
 
 
-377
+581
+
+visibility-8.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+1e3d15af5ef5d1e7ce91f6fb5b2ce876
+2004-08-06T03:26:19.000000Z
+85623
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1316
 
 template2.C
 file
@@ -1828,40 +1828,6 @@ jules
 
 749
 
-template6.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-00cfc060a9c05e18b0256ee03319fad5
-2006-07-20T16:02:57.405938Z
-115622
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-390
-
 memfuncts.C
 file
 
@@ -1895,6 +1861,40 @@ mmitchel
 
 
 279
+
+template6.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+00cfc060a9c05e18b0256ee03319fad5
+2006-07-20T16:02:57.405938Z
+115622
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+390
 
 arm3.C
 file

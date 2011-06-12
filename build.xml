@@ -282,7 +282,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc-boot; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --without-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
+      <arg value="(cd build/gcc-boot; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --disable-libquadmath --without-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -302,13 +302,8 @@
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/src"/>
       <arg value="all-target-newlib"/>
-      <arg value="install-target-newlib"/>
-      <arg value="CC_FOR_TARGET=moxie-elf-gcc"/>
-    </exec>
-    <exec executable="make">
-      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
-      <arg value="--directory=build/src"/>
       <arg value="all-target-libgloss"/>
+      <arg value="install-target-newlib"/>
       <arg value="install-target-libgloss"/>
       <arg value="CC_FOR_TARGET=moxie-elf-gcc"/>
     </exec>
@@ -320,7 +315,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-newlib --with-headers=`(cd ../../root/usr/moxie-elf/include; pwd)`  --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
+      <arg value="(cd build/gcc; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --disable-libquadmath --with-newlib --with-headers=`(cd ../../root/usr/moxie-elf/include; pwd)`  --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -411,6 +406,7 @@
     <replace file="${basedir}/uClibc/.config" token="/usr/$(TARGET_ARCH)-linux-uclibc/usr/" value="" />
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-j4"/>
       <arg value="--directory=uClibc"/>
       <arg value="ARCH=moxie"/>
       <arg value="CROSS=moxie-elf-"/>
@@ -482,6 +478,7 @@
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-j4"/>
       <arg value="--directory=build/elf2flt"/>
     </exec>
     <exec executable="make">
@@ -495,15 +492,11 @@
     <echo message="===================================================================="/>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-j4"/>
       <arg value="--directory=build/src-rtems"/>
       <arg value="all-target-newlib"/>
-      <arg value="install-target-newlib"/>
-      <arg value="CC_FOR_TARGET=${basedir}/scripts/moxie-rtems-gcc-wrapper"/>
-    </exec>
-    <exec executable="make">
-      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
-      <arg value="--directory=build/src-rtems"/>
       <arg value="all-target-libgloss"/>
+      <arg value="install-target-newlib"/>
       <arg value="install-target-libgloss"/>
       <arg value="CC_FOR_TARGET=${basedir}/scripts/moxie-rtems-gcc-wrapper"/>
     </exec>
@@ -515,7 +508,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc-rtems; ../../gcc/configure  --target=moxie-rtems --enable-threads=rtems --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-gnu-as --with-gnu-ld --with-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
+      <arg value="(cd build/gcc-rtems; ../../gcc/configure  --target=moxie-rtems --enable-threads=rtems --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --disable-libquadmath --with-gnu-as --with-gnu-ld --with-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -535,7 +528,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc-uclinux; ../../gcc/configure  --target=moxie-uclinux --enable-threads --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)` --with-build-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`  --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
+      <arg value="(cd build/gcc-uclinux; ../../gcc/configure  --target=moxie-uclinux --enable-threads --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --disable-libquadmath --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)` --with-build-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`  --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>

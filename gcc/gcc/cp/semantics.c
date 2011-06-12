@@ -2387,6 +2387,8 @@ finish_compound_literal (tree type, tree compound_literal,
 	return error_mark_node;
     }
   compound_literal = digest_init (type, compound_literal, complain);
+  if (TREE_CODE (compound_literal) == CONSTRUCTOR)
+    TREE_HAS_CONSTRUCTOR (compound_literal) = true;
   /* Put static/constant array temporaries in static variables, but always
      represent class temporaries with TARGET_EXPR so we elide copies.  */
   if ((!at_function_scope_p () || CP_TYPE_CONST_P (type))
@@ -6900,7 +6902,8 @@ non_const_var_error (tree r)
       else if (CP_TYPE_VOLATILE_P (type))
 	inform (DECL_SOURCE_LOCATION (r),
 		"%q#D is volatile", r);
-      else if (!DECL_INITIAL (r))
+      else if (!DECL_INITIAL (r)
+	       || !TREE_CONSTANT (DECL_INITIAL (r)))
 	inform (DECL_SOURCE_LOCATION (r),
 		"%qD was not initialized with a constant "
 		"expression", r);
@@ -7335,7 +7338,14 @@ maybe_constant_value (tree t)
       || type_unknown_p (t)
       || !potential_constant_expression (t)
       || value_dependent_expression_p (t))
-    return t;
+    {
+      if (TREE_OVERFLOW_P (t))
+	{
+	  t = build_nop (TREE_TYPE (t), t);
+	  TREE_CONSTANT (t) = false;
+	}
+      return t;
+    }
 
   r = cxx_eval_outermost_constant_expr (t, true);
 #ifdef ENABLE_CHECKING
@@ -7489,6 +7499,8 @@ potential_constant_expression_1 (tree t, bool want_rval, tsubst_flags_t flags)
     case TEMPLATE_PARM_INDEX:
     case TRAIT_EXPR:
     case IDENTIFIER_NODE:
+      /* We can see a FIELD_DECL in a pointer-to-member expression.  */
+    case FIELD_DECL:
       return true;
 
     case PARM_DECL:
@@ -7761,6 +7773,12 @@ potential_constant_expression_1 (tree t, bool want_rval, tsubst_flags_t flags)
       want_rval = true;
       goto binary;
 
+    case BIT_NOT_EXPR:
+      /* A destructor.  */
+      if (TYPE_P (TREE_OPERAND (t, 0)))
+	return true;
+      /* else fall through.  */
+
     case REALPART_EXPR:
     case IMAGPART_EXPR:
     case CONJ_EXPR:
@@ -7769,7 +7787,6 @@ potential_constant_expression_1 (tree t, bool want_rval, tsubst_flags_t flags)
     case FLOAT_EXPR:
     case NEGATE_EXPR:
     case ABS_EXPR:
-    case BIT_NOT_EXPR:
     case TRUTH_NOT_EXPR:
     case FIXED_CONVERT_EXPR:
     case UNARY_PLUS_EXPR:

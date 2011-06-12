@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale/num_get/get/wchar_t
 svn://gcc.gnu.org/svn/gcc
 
@@ -332,40 +332,6 @@ jakub
 
 1861
 
-9.cc
-file
-
-
-
-
-2010-11-22T19:18:26.690810Z
-488b8d51109c39d0dda4c5a893edb200
-2010-09-15T10:46:39.518825Z
-164300
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1797
-
 22131.cc
 file
 
@@ -399,6 +365,40 @@ jakub
 
 
 3312
+
+9.cc
+file
+
+
+
+
+2010-11-22T19:18:26.690810Z
+488b8d51109c39d0dda4c5a893edb200
+2010-09-15T10:46:39.518825Z
+164300
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1797
 
 wrapped_env.cc
 file
@@ -468,40 +468,6 @@ jakub
 
 2127
 
-wrapped_locale.cc
-file
-
-
-
-
-2010-11-22T19:18:26.690810Z
-06c681893cf36974aa0a3cd3d8d1d035
-2010-09-15T10:46:39.518825Z
-164300
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1639
-
 11.cc
 file
 
@@ -535,6 +501,40 @@ jakub
 
 
 2968
+
+wrapped_locale.cc
+file
+
+
+
+
+2010-11-22T19:18:26.690810Z
+06c681893cf36974aa0a3cd3d8d1d035
+2010-09-15T10:46:39.518825Z
+164300
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1639
 
 12.cc
 file

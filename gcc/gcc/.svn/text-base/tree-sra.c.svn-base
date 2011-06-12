@@ -1864,8 +1864,6 @@ expr_with_var_bounded_array_refs_p (tree expr)
   return false;
 }
 
-enum mark_rw_status { SRA_MRRW_NOTHING, SRA_MRRW_DIRECT, SRA_MRRW_ASSIGN};
-
 /* Analyze the subtree of accesses rooted in ROOT, scheduling replacements when
    both seeming beneficial and when ALLOW_REPLACEMENTS allows it.  Also set all
    sorts of access flags appropriately along the way, notably always set
@@ -1905,9 +1903,8 @@ enum mark_rw_status { SRA_MRRW_NOTHING, SRA_MRRW_DIRECT, SRA_MRRW_ASSIGN};
    1	1	1	1	Yes		Any of the above yeses  */
 
 static bool
-analyze_access_subtree (struct access *root, bool allow_replacements,
-			enum mark_rw_status mark_read,
-			enum mark_rw_status mark_write)
+analyze_access_subtree (struct access *root, struct access *parent,
+			bool allow_replacements)
 {
   struct access *child;
   HOST_WIDE_INT limit = root->offset + root->size;
@@ -1915,29 +1912,17 @@ analyze_access_subtree (struct access *root, bool allow_replacements,
   bool scalar = is_gimple_reg_type (root->type);
   bool hole = false, sth_created = false;
 
-  if (root->grp_assignment_read)
-    mark_read = SRA_MRRW_ASSIGN;
-  else if (mark_read == SRA_MRRW_ASSIGN)
+  if (parent)
     {
-      root->grp_read = 1;
-      root->grp_assignment_read = 1;
+      if (parent->grp_read)
+	root->grp_read = 1;
+      if (parent->grp_assignment_read)
+	root->grp_assignment_read = 1;
+      if (parent->grp_write)
+	root->grp_write = 1;
+      if (parent->grp_assignment_write)
+	root->grp_assignment_write = 1;
     }
-  else if (mark_read == SRA_MRRW_DIRECT)
-    root->grp_read = 1;
-  else if (root->grp_read)
-    mark_read = SRA_MRRW_DIRECT;
-
-  if (root->grp_assignment_write)
-    mark_write = SRA_MRRW_ASSIGN;
-  else if (mark_write == SRA_MRRW_ASSIGN)
-    {
-      root->grp_write = 1;
-      root->grp_assignment_write = 1;
-    }
-  else if (mark_write == SRA_MRRW_DIRECT)
-    root->grp_write = 1;
-  else if (root->grp_write)
-    mark_write = SRA_MRRW_DIRECT;
 
   if (root->grp_unscalarizable_region)
     allow_replacements = false;
@@ -1952,9 +1937,8 @@ analyze_access_subtree (struct access *root, bool allow_replacements,
       else
 	covered_to += child->size;
 
-      sth_created |= analyze_access_subtree (child,
-					     allow_replacements && !scalar,
-					     mark_read, mark_write);
+      sth_created |= analyze_access_subtree (child, root,
+					     allow_replacements && !scalar);
 
       root->grp_unscalarized_data |= child->grp_unscalarized_data;
       hole |= !child->grp_covered;
@@ -2002,8 +1986,7 @@ analyze_access_trees (struct access *access)
 
   while (access)
     {
-      if (analyze_access_subtree (access, true,
-				  SRA_MRRW_NOTHING, SRA_MRRW_NOTHING))
+      if (analyze_access_subtree (access, NULL, true))
 	ret = true;
       access = access->next_grp;
     }
@@ -4321,31 +4304,30 @@ sra_ipa_reset_debug_stmts (ipa_parm_adjustment_vec adjustments)
     }
 }
 
-/* Return true iff all callers have at least as many actual arguments as there
+/* Return false iff all callers have at least as many actual arguments as there
    are formal parameters in the current function.  */
 
 static bool
-all_callers_have_enough_arguments_p (struct cgraph_node *node)
+not_all_callers_have_enough_arguments_p (struct cgraph_node *node,
+					 void *data ATTRIBUTE_UNUSED)
 {
   struct cgraph_edge *cs;
   for (cs = node->callers; cs; cs = cs->next_caller)
     if (!callsite_has_enough_arguments_p (cs->call_stmt))
-      return false;
+      return true;
 
-  return true;
+  return false;
 }
 
+/* Convert all callers of NODE.  */
 
-/* Convert all callers of NODE to pass parameters as given in ADJUSTMENTS.  */
-
-static void
-convert_callers (struct cgraph_node *node, tree old_decl,
-		 ipa_parm_adjustment_vec adjustments)
+static bool
+convert_callers_for_node (struct cgraph_node *node,
+		          void *data)
 {
-  tree old_cur_fndecl = current_function_decl;
-  struct cgraph_edge *cs;
-  basic_block this_block;
+  ipa_parm_adjustment_vec adjustments = (ipa_parm_adjustment_vec)data;
   bitmap recomputed_callers = BITMAP_ALLOC (NULL);
+  struct cgraph_edge *cs;
 
   for (cs = node->callers; cs; cs = cs->next_caller)
     {
@@ -4368,6 +4350,21 @@ convert_callers (struct cgraph_node *node, tree old_decl,
 	&& gimple_in_ssa_p (DECL_STRUCT_FUNCTION (cs->caller->decl)))
       compute_inline_parameters (cs->caller, true);
   BITMAP_FREE (recomputed_callers);
+
+  return true;
+}
+
+/* Convert all callers of NODE to pass parameters as given in ADJUSTMENTS.  */
+
+static void
+convert_callers (struct cgraph_node *node, tree old_decl,
+		 ipa_parm_adjustment_vec adjustments)
+{
+  tree old_cur_fndecl = current_function_decl;
+  basic_block this_block;
+
+  cgraph_for_node_and_aliases (node, convert_callers_for_node,
+			       adjustments, false);
 
   current_function_decl = old_cur_fndecl;
 
@@ -4405,17 +4402,8 @@ static bool
 modify_function (struct cgraph_node *node, ipa_parm_adjustment_vec adjustments)
 {
   struct cgraph_node *new_node;
-  struct cgraph_edge *cs;
   bool cfg_changed;
-  VEC (cgraph_edge_p, heap) * redirect_callers;
-  int node_callers;
-
-  node_callers = 0;
-  for (cs = node->callers; cs != NULL; cs = cs->next_caller)
-    node_callers++;
-  redirect_callers = VEC_alloc (cgraph_edge_p, heap, node_callers);
-  for (cs = node->callers; cs != NULL; cs = cs->next_caller)
-    VEC_quick_push (cgraph_edge_p, redirect_callers, cs);
+  VEC (cgraph_edge_p, heap) * redirect_callers = collect_callers_of_node (node);
 
   rebuild_cgraph_edges ();
   pop_cfun ();
@@ -4520,7 +4508,8 @@ ipa_early_sra (void)
       goto simple_out;
     }
 
-  if (!all_callers_have_enough_arguments_p (node))
+  if (cgraph_for_node_and_aliases (node, not_all_callers_have_enough_arguments_p,
+				   NULL, true))
     {
       if (dump_file)
 	fprintf (dump_file, "There are callers with insufficient number of "

@@ -14904,6 +14904,8 @@ mem_loc_descriptor (rtx rtl, enum machine_mode mode,
       goto do_shift;
 
     do_shift:
+      if (GET_MODE_CLASS (mode) != MODE_INT)
+	break;
       op0 = mem_loc_descriptor (XEXP (rtl, 0), mode, mem_mode,
 				VAR_INIT_STATUS_INITIALIZED);
       {
@@ -18063,7 +18065,7 @@ native_encode_initializer (tree init, unsigned char *array, int size)
 		{
 		  int count = tree_low_cst (TREE_OPERAND (index, 1), 0)
 			      - tree_low_cst (TREE_OPERAND (index, 0), 0);
-		  while (count > 0)
+		  while (count-- > 0)
 		    {
 		      if (val)
 			memcpy (array + curpos, array + pos, fieldsize);

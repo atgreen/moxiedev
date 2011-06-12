@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/spu/ea
 svn://gcc.gnu.org/svn/gcc
 
@@ -128,40 +128,6 @@ uweigand
 
 1944
 
-compile2.c
-file
-
-
-
-
-2009-12-07T15:31:00.555960Z
-49e2ebe9bd0c6587817b8f16fa7e057e
-2009-10-26T22:00:52.047732Z
-153576
-uweigand
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1198
-
 test-sizes.c
 file
 
@@ -195,6 +161,40 @@ uweigand
 
 
 14979
+
+compile2.c
+file
+
+
+
+
+2009-12-07T15:31:00.555960Z
+49e2ebe9bd0c6587817b8f16fa7e057e
+2009-10-26T22:00:52.047732Z
+153576
+uweigand
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1198
 
 cast1.c
 file
@@ -230,40 +230,6 @@ uweigand
 
 1166
 
-options1.c
-file
-
-
-
-
-2009-12-07T15:31:00.555960Z
-3127a27f63303c5568f2e5b53b8ea5c2
-2009-10-26T22:00:52.047732Z
-153576
-uweigand
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-816
-
 cast2.c
 file
 
@@ -297,6 +263,40 @@ uweigand
 
 
 1484
+
+options1.c
+file
+
+
+
+
+2009-12-07T15:31:00.555960Z
+3127a27f63303c5568f2e5b53b8ea5c2
+2009-10-26T22:00:52.047732Z
+153576
+uweigand
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+816
 
 ops1.c
 file
@@ -332,40 +332,6 @@ uweigand
 
 3985
 
-ops2.c
-file
-
-
-
-
-2009-12-07T15:31:00.556960Z
-aa1cf577dd2bbd515e2785904d4ca99e
-2009-10-26T22:00:52.047732Z
-153576
-uweigand
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5460
-
 execute1.c
 file
 
@@ -400,14 +366,14 @@ uweigand
 
 981
 
-execute2.c
+ops2.c
 file
 
 
 
 
 2009-12-07T15:31:00.556960Z
-d26d8c4e2bc2b2faf63fb96e8178ecad
+aa1cf577dd2bbd515e2785904d4ca99e
 2009-10-26T22:00:52.047732Z
 153576
 uweigand
@@ -432,7 +398,7 @@ uweigand
 
 
 
-985
+5460
 
 cache1.c
 file
@@ -467,6 +433,40 @@ uweigand
 
 
 4842
+
+execute2.c
+file
+
+
+
+
+2009-12-07T15:31:00.556960Z
+d26d8c4e2bc2b2faf63fb96e8178ecad
+2009-10-26T22:00:52.047732Z
+153576
+uweigand
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+985
 
 execute3.c
 file

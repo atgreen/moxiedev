@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/compat/decimal
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,40 +502,6 @@ jason
 
 314
 
-return-5_x.C
-file
-
-
-
-
-2010-02-03T11:41:38.648595Z
-3461c975d3da10abb009d6ea307ab5ee
-2010-01-21T05:49:35.498523Z
-156106
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-312
-
 return-4_y.C
 file
 
@@ -570,14 +536,14 @@ jason
 
 165
 
-pass-2_main.C
+return-5_x.C
 file
 
 
 
 
-2010-02-03T11:41:38.650526Z
-42a5831bc77e9e99fbdab7a59a454b09
+2010-02-03T11:41:38.648595Z
+3461c975d3da10abb009d6ea307ab5ee
 2010-01-21T05:49:35.498523Z
 156106
 jason
@@ -602,7 +568,41 @@ jason
 
 
 
-174
+312
+
+return-6_x.C
+file
+
+
+
+
+2010-02-03T11:41:38.649511Z
+e56e43d0532d60c70a011e42043180b7
+2010-01-21T05:49:35.498523Z
+156106
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+317
 
 return-5_y.C
 file
@@ -638,14 +638,14 @@ jason
 
 170
 
-return-6_x.C
+pass-2_main.C
 file
 
 
 
 
-2010-02-03T11:41:38.649511Z
-e56e43d0532d60c70a011e42043180b7
+2010-02-03T11:41:38.650526Z
+42a5831bc77e9e99fbdab7a59a454b09
 2010-01-21T05:49:35.498523Z
 156106
 jason
@@ -670,7 +670,7 @@ jason
 
 
 
-317
+174
 
 return-6_y.C
 file

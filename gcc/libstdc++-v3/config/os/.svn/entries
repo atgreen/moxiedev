@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/config/os
 svn://gcc.gnu.org/svn/gcc
 
@@ -38,10 +38,10 @@ dir
 hpux
 dir
 
-gnu-linux
+mingw32
 dir
 
-mingw32
+gnu-linux
 dir
 
 tpf
@@ -65,9 +65,9 @@ dir
 irix
 dir
 
-generic
+solaris
 dir
 
-solaris
+generic
 dir
 

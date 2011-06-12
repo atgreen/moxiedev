@@ -1,15 +1,15 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-06-02T17:43:22.821631Z
-174570
-uros
+2011-06-10T18:23:11.017755Z
+174920
+janis
 
 
 
@@ -26,16 +26,16 @@ uros
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-powerpc
-dir
-
 arm
 dir
 
-m68k
+powerpc
 dir
 
 alpha
+dir
+
+m68k
 dir
 
 microblaze
@@ -44,10 +44,10 @@ dir
 avr
 dir
 
-rx
+i386
 dir
 
-i386
+rx
 dir
 
 xstormy16
@@ -56,10 +56,10 @@ dir
 frv
 dir
 
-x86_64
+s390
 dir
 
-s390
+x86_64
 dir
 
 cris

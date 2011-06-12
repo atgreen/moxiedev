@@ -1,14 +1,14 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/obj-c++.dg/torture
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-02-18T00:07:38.001264Z
-170260
+2011-06-06T22:46:58.006232Z
+174727
 nicola
 
 
@@ -35,11 +35,11 @@ file
 
 
 
-2010-07-30T08:37:26.479837Z
-a39b5e5a263582a02ac01d8caee09801
-2010-07-27T12:02:50.754510Z
-162563
-iains
+2011-06-11T04:08:12.808913Z
+94ba53b983b1168f471db7bb452a1c0f
+2011-06-06T22:46:58.006232Z
+174727
+nicola
 
 
 
@@ -61,7 +61,7 @@ iains
 
 
 
-307
+256
 
 dg-torture.exp
 file

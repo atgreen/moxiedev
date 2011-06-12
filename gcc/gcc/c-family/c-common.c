@@ -255,10 +255,13 @@ int flag_use_repository;
 enum cxx_dialect cxx_dialect = cxx98;
 
 /* Maximum template instantiation depth.  This limit exists to limit the
-   time it takes to notice excessively recursive template instantiations;
-   the default value of 1024 is likely to be in the next C++ standard.  */
+   time it takes to notice excessively recursive template instantiations.
 
-int max_tinst_depth = 1024;
+   The default is lower than the 1024 recommended by the C++0x standard
+   because G++ runs out of stack before 1024 with highly recursive template
+   argument deduction substitution (g++.dg/cpp0x/enum11.C).  */
+
+int max_tinst_depth = 900;
 
 /* The elements of `ridpointers' are identifier nodes for the reserved
    type names and storage classes.  It is indexed by a RID_... value.  */
@@ -4666,13 +4669,7 @@ c_common_nodes_and_builtins (void)
 					 TYPE_DECL, NULL_TREE,
 					 widest_unsigned_literal_type_node));
 
-  /* `unsigned long' is the standard type for sizeof.
-     Note that stddef.h uses `unsigned long',
-     and this must agree, even if long and int are the same size.  */
-  size_type_node =
-    TREE_TYPE (identifier_global_value (get_identifier (SIZE_TYPE)));
   signed_size_type_node = c_common_signed_type (size_type_node);
-  set_sizetype (size_type_node);
 
   pid_type_node =
     TREE_TYPE (identifier_global_value (get_identifier (PID_TYPE)));

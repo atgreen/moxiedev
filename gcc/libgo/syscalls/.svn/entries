@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/syscalls
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ ian
 
 563
 
-syscall_solaris.go
-file
-
-
-
-
-2011-06-04T18:38:20.836104Z
-5b63e87e6e682ea5efef4924dddc00f7
-2011-01-12T06:34:08.552691Z
-168697
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-240
-
 sysfile_stat_regfile.go
 file
 
@@ -603,6 +569,40 @@ ian
 
 
 462
+
+syscall_solaris.go
+file
+
+
+
+
+2011-06-04T18:38:20.836104Z
+5b63e87e6e682ea5efef4924dddc00f7
+2011-01-12T06:34:08.552691Z
+168697
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+240
 
 sleep_select.go
 file
@@ -638,40 +638,6 @@ ian
 
 342
 
-syscall_solaris_sparc64.go
-file
-
-
-
-
-2011-06-04T18:38:20.837104Z
-c51bd697226f56509871678637619eb8
-2011-01-14T19:10:02.997454Z
-168814
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-621
-
 errstr_decl.go
 file
 
@@ -705,6 +671,40 @@ ian
 
 
 282
+
+syscall_solaris_sparc64.go
+file
+
+
+
+
+2011-06-04T18:38:20.837104Z
+c51bd697226f56509871678637619eb8
+2011-01-14T19:10:02.997454Z
+168814
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+621
 
 syscall_unix.go
 file
@@ -808,40 +808,6 @@ ian
 
 375
 
-socket_epoll.go
-file
-
-
-
-
-2011-06-04T18:38:20.837104Z
-48d9d7044176ae3abfc00d14950863e5
-2010-06-04T15:28:20.160019Z
-160276
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1335
-
 sysfile_stat_largefile.go
 file
 
@@ -876,16 +842,16 @@ ian
 
 463
 
-syscall_linux_amd64.go
+socket_epoll.go
 file
 
 
 
 
-2011-06-04T18:38:20.838104Z
-836966fca1c65be3d9ba2f96f254e7cc
-2011-01-12T02:03:46.646641Z
-168696
+2011-06-04T18:38:20.837104Z
+48d9d7044176ae3abfc00d14950863e5
+2010-06-04T15:28:20.160019Z
+160276
 ian
 
 
@@ -908,7 +874,7 @@ ian
 
 
 
-346
+1335
 
 exec.go
 file
@@ -943,6 +909,40 @@ ian
 
 
 6249
+
+syscall_linux_amd64.go
+file
+
+
+
+
+2011-06-04T18:38:20.838104Z
+836966fca1c65be3d9ba2f96f254e7cc
+2011-01-12T02:03:46.646641Z
+168696
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+346
 
 errstr_decl_linux.go
 file

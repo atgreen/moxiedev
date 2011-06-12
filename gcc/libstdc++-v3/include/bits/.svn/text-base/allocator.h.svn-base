@@ -50,7 +50,7 @@
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 #include <bits/ptr_traits.h>
 #include <bits/uses_allocator.h>
-#include <limits>
+#include <ext/numeric_traits.h>
 #endif
 
 namespace std _GLIBCXX_VISIBILITY(default)
@@ -184,28 +184,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     };
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-  // A very basic implementation for now.  In general we have to wait for
-  // the availability of the infrastructure described in N2983:  we should
-  // try when either T has a move constructor which cannot throw or T is
-  // CopyConstructible.
-  // NB: This code doesn't properly belong here, we should find a more
-  // suited place common to std::vector and std::deque.
-  template<typename _Tp,
-	   bool = __has_trivial_copy(typename _Tp::value_type)>
-    struct __shrink_to_fit
-    { static void _S_do_it(_Tp&) { } };
-
   template<typename _Tp>
-    struct __shrink_to_fit<_Tp, true>
+    bool
+    __shrink_to_fit(_Tp& __v)
     {
-      static void
-      _S_do_it(_Tp& __v)
-      {
-	__try
-	  { _Tp(__v).swap(__v); }
-	__catch(...) { }
-      }
-    };
+      __try
+	{
+	  _Tp(__v).swap(__v);
+	  return true;
+	}
+      __catch(...)
+	{ return false; }
+    }
 
   template<typename _Alloc, typename _Tp>
     class __alloctr_rebind_helper
@@ -487,7 +477,7 @@ _GLIBCXX_ALLOC_TR_NESTED_TYPE(propagate_on_container_swap,
 	static typename
        	enable_if<!__maxsize_helper<_Alloc2>::value, size_type>::type
 	_S_max_size(_Alloc2&)
-	{ return numeric_limits<size_type>::max(); }
+	{ return __gnu_cxx::__numeric_traits<size_type>::__max; }
 
       template<typename _Alloc2>
 	struct __select_helper

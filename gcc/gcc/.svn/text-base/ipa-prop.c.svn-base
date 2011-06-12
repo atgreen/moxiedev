@@ -93,7 +93,7 @@ ipa_init_func_list (void)
 
   wl = NULL;
   for (node = cgraph_nodes; node; node = node->next)
-    if (node->analyzed)
+    if (node->analyzed && !node->alias)
       {
 	struct ipa_node_params *info = IPA_NODE_REF (node);
 	/* Unreachable nodes should have been eliminated before ipcp and
@@ -1096,6 +1096,7 @@ ipa_compute_jump_functions (struct cgraph_node *node,
 
   for (cs = node->callees; cs; cs = cs->next_callee)
     {
+      struct cgraph_node *callee = cgraph_function_or_thunk_node (cs->callee, NULL);
       /* We do not need to bother analyzing calls to unknown
 	 functions unless they may become known during lto/whopr.  */
       if (!cs->callee->analyzed && !flag_lto)
@@ -1103,11 +1104,11 @@ ipa_compute_jump_functions (struct cgraph_node *node,
       ipa_count_arguments (cs);
       /* If the descriptor of the callee is not initialized yet, we have to do
 	 it now. */
-      if (cs->callee->analyzed)
-	ipa_initialize_node_params (cs->callee);
+      if (callee->analyzed)
+	ipa_initialize_node_params (callee);
       if (ipa_get_cs_argument_count (IPA_EDGE_REF (cs))
-	  != ipa_get_param_count (IPA_NODE_REF (cs->callee)))
-	ipa_set_called_with_variable_arg (IPA_NODE_REF (cs->callee));
+	  != ipa_get_param_count (IPA_NODE_REF (callee)))
+	ipa_set_called_with_variable_arg (IPA_NODE_REF (callee));
       ipa_compute_jump_functions_for_edge (parms_info, cs);
     }
 
@@ -1771,7 +1772,7 @@ try_make_edge_direct_virtual_call (struct cgraph_edge *ie,
   type = ie->indirect_info->otr_type;
   binfo = get_binfo_at_offset (binfo, ie->indirect_info->anc_offset, type);
   if (binfo)
-    target = gimple_get_virt_method_for_binfo (token, binfo, &delta, true);
+    target = gimple_get_virt_method_for_binfo (token, binfo, &delta);
   else
     return NULL;
 
@@ -2832,7 +2833,15 @@ ipa_write_node_info (struct output_block *ob, struct cgraph_node *node)
 	ipa_write_jump_function (ob, ipa_get_ith_jump_func (args, j));
     }
   for (e = node->indirect_calls; e; e = e->next_callee)
-    ipa_write_indirect_edge_info (ob, e);
+    {
+      struct ipa_edge_args *args = IPA_EDGE_REF (e);
+
+      lto_output_uleb128_stream (ob->main_stream,
+				 ipa_get_cs_argument_count (args));
+      for (j = 0; j < ipa_get_cs_argument_count (args); j++)
+	ipa_write_jump_function (ob, ipa_get_ith_jump_func (args, j));
+      ipa_write_indirect_edge_info (ob, e);
+    }
 }
 
 /* Stream in NODE info from IB.  */
@@ -2870,7 +2879,20 @@ ipa_read_node_info (struct lto_input_block *ib, struct cgraph_node *node,
 	ipa_read_jump_function (ib, ipa_get_ith_jump_func (args, k), data_in);
     }
   for (e = node->indirect_calls; e; e = e->next_callee)
-    ipa_read_indirect_edge_info (ib, data_in, e);
+    {
+      struct ipa_edge_args *args = IPA_EDGE_REF (e);
+      int count = lto_input_uleb128 (ib);
+
+      ipa_set_cs_argument_count (args, count);
+      if (count)
+	{
+          args->jump_functions = ggc_alloc_cleared_vec_ipa_jump_func
+	    (ipa_get_cs_argument_count (args));
+          for (k = 0; k < ipa_get_cs_argument_count (args); k++)
+	    ipa_read_jump_function (ib, ipa_get_ith_jump_func (args, k), data_in);
+	}
+      ipa_read_indirect_edge_info (ib, data_in, e);
+    }
 }
 
 /* Write jump functions for nodes in SET.  */

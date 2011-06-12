@@ -1,14 +1,14 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-05-06T15:55:39.489845Z
-173494
+2011-06-07T08:50:04.047960Z
+174737
 paolo
 
 
@@ -26,16 +26,16 @@ paolo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-money_put
-dir
-
 ctype_byname
 dir
 
-facet
+money_put
 dir
 
 codecvt_byname
+dir
+
+facet
 dir
 
 collate
@@ -44,16 +44,16 @@ dir
 ctype
 dir
 
-money_get
-dir
-
 time_put
 dir
 
-codecvt
+money_get
 dir
 
 num_put
+dir
+
+codecvt
 dir
 
 moneypunct_byname

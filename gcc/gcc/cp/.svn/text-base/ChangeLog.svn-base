@@ -1,3 +1,133 @@
+2011-06-10  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR c++/41769
+	* decl.c (grokdeclarator): Reject operator names in parameters.
+
+2011-06-10  Jan Hubicka  <jh@suse.cz>
+
+	* decl2.c (clear_decl_external): New functoin.
+	(cp_write_global_declarations): Use it.
+
+2011-06-10  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* cp-tree.h (error_operand_p): Remove.
+
+2011-06-09  David Krauss  <potswa@mac.com>
+
+	PR c++/49118
+	* typeck2.c (build_x_arrow): Push fake template context
+	to produce diagnostic on acyclic endless operator-> drill-down.
+	* call.c (build_new_op): Change Boolean overload status
+	value to a pointer to the overload function.
+	* cp-tree.h: Likewise.
+	* typeck.c: Likewise.
+	* parser.c: Likewise.
+	* decl2.c: Likewise.
+	* pt.c: Likewise.
+
+2011-06-09  Jason Merrill  <jason@redhat.com>
+
+	* semantics.c (maybe_constant_value): Handle overflowed input.
+	(non_const_var_error): Handle non-constant DECL_INITIAL.
+
+	* pt.c (build_non_dependent_expr): Use fold_non_dependent_expr_sfinae.
+
+	* parser.c (cp_parser_constant_expression): Just return the
+	non-constant expression.
+
+	* semantics.c (finish_compound_literal): Set TREE_HAS_CONSTRUCTOR.
+
+2011-06-09  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR c++/29003
+	* decl.c (grokdeclarator): Reject operator names in typedefs.
+
+2011-06-08  Jason Merrill  <jason@redhat.com>
+
+	PR c++/49107
+	* cp-tree.def (DEFERRED_NOEXCEPT): New.
+	* cp-tree.h (struct tree_deferred_noexcept): New.
+	(DEFERRED_NOEXCEPT_PATTERN, DEFERRED_NOEXCEPT_ARGS): New.
+	(DEFERRED_NOEXCEPT_SPEC_P): New.
+	(enum cp_tree_node_structure_enum): Add TS_CP_DEFERRED_NOEXCEPT.
+	(union lang_tree_node): Add tree_deferred_noexcept.
+	(maybe_instantiate_noexcept): Declare.
+	* cp-objcp-common.c (cp_tree_size): Handle DEFERRED_NOEXCEPT.
+	* error.c (dump_exception_spec): Likewise.
+	* cxx-pretty-print.c (pp_cxx_exception_specification): Likewise.
+	* ptree.c (cxx_print_xnode): Likewise.
+	* tree.c (cp_tree_equal): Likewise.
+	* decl.c (cp_tree_node_structure): Likewise.
+	(duplicate_decls): Call maybe_instantiate_noexcept.
+	* except.c (build_noexcept_spec): Handle DEFERRED_NOEXCEPT.
+	(nothrow_spec_p, type_noexcept_p, type_throw_all_p): Check
+	DEFERRED_NOEXCEPT_SPEC_P.
+	* typeck2.c (merge_exception_specifiers): Likewise.
+	* decl2.c (mark_used): Call maybe_instantiate_noexcept.
+	* method.c (process_subob_fn, defaulted_late_check): Likewise.
+	* pt.c (tsubst_exception_specification): Add defer_ok parm.
+	Build DEFERRED_NOEXCEPT.
+	(maybe_instantiate_noexcept): New.
+	(tsubst, regenerate_decl_from_template, instantiate_decl): Adjust.
+	* search.c (check_final_overrider): Call maybe_instantiate_noexcept.
+
+	* semantics.c (potential_constant_expression_1): Handle destructor
+	call.
+
+2011-06-08  Jakub Jelinek  <jakub@redhat.com>
+
+	* cp-tree.h (struct tinst_level): Add chain_next GTY
+	markup.
+
+2011-06-08  Jason Merrill  <jason@redhat.com>
+
+	PR c++/49322
+	* pt.c (deduction_tsubst_fntype): Don't free the tinst entry
+	if a pending_template entry is pointing at it.
+
+2011-06-07  Jason Merrill  <jason@redhat.com>
+
+	PR c++/48969
+	PR c++/44175
+	* error.c (subst_to_string): New.
+	(cp_printer): Use it for 'S'.
+	(print_instantiation_partial_context_line): Handle subst context.
+	* pt.c (push_tinst_level): Handle subst context.
+	(deduction_tsubst_fntype): Don't track specific substitutions.
+	Use push_tinst_level.
+
+	* pt.c (deduction_tsubst_fntype): Use push_deduction_access_scope.
+	(fn_type_unification): Don't call push_deduction_access_scope here.
+
+2011-06-06  Jason Merrill  <jason@redhat.com>
+
+	PR c++/48780
+	* typeck.c (perform_integral_promotions): Don't promote scoped enums.
+	* call.c (convert_arg_to_ellipsis): Promote them here in old ABI.
+
+2011-06-06  Nicola Pero  <nicola.pero@meta-innovation.com>,
+
+	PR obj-c++/48275
+	* parser.c (cp_parser_objc_at_property_declaration): Allow setter
+	and getter names to use all the allowed method names.
+
+2011-06-06  Jason Merrill  <jason@redhat.com>
+
+	PR c++/49298
+	* semantics.c (potential_constant_expression_1): Handle FIELD_DECL.
+
+	PR objc++/49221
+	* decl.c (cp_finish_decl): Check DECL_FUNCTION_SCOPE_P rather than
+	at_function_scope_p.
+
+	PR c++/49134
+	* tree.c (build_target_expr): Deal with ARM ABI tweaks.
+
+2011-06-04  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* init.c (build_delete): Warn when deleting type with non-virtual
+	destructor.
+
 2011-06-03  Jakub Jelinek  <jakub@redhat.com>
 
 	PR c++/49276

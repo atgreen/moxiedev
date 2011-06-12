@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/25_algorithms
 svn://gcc.gnu.org/svn/gcc
 
@@ -38,37 +38,37 @@ dir
 is_permutation
 dir
 
-partition_copy
+stable_partition
 dir
 
 fill_n
 dir
 
-stable_partition
-dir
-
-move_backward
+partition_copy
 dir
 
 lexicographical_compare
 dir
 
-replace_copy
-dir
-
-mismatch
+move_backward
 dir
 
 search
 dir
 
-move
+mismatch
+dir
+
+replace_copy
+dir
+
+includes
 dir
 
 find_end
 dir
 
-includes
+move
 dir
 
 copy_backward
@@ -119,10 +119,10 @@ dir
 is_sorted_until
 dir
 
-make_heap
+swap
 dir
 
-swap
+make_heap
 dir
 
 push_heap
@@ -134,10 +134,10 @@ dir
 set_intersection
 dir
 
-search_n
+upper_bound
 dir
 
-upper_bound
+search_n
 dir
 
 none_of
@@ -146,10 +146,10 @@ dir
 sort_heap
 dir
 
-count
+copy_if
 dir
 
-copy_if
+count
 dir
 
 minmax
@@ -158,10 +158,10 @@ dir
 random_shuffle
 dir
 
-partial_sort_copy
+iter_swap
 dir
 
-iter_swap
+partial_sort_copy
 dir
 
 find_if
@@ -173,40 +173,40 @@ dir
 unique_copy
 dir
 
-nth_element
+minmax_element
 dir
 
-minmax_element
+nth_element
 dir
 
 partial_sort
 dir
 
-next_permutation
-dir
-
 reverse_copy
 dir
 
-equal
+next_permutation
 dir
 
 generate_n
 dir
 
-is_heap
+equal
 dir
 
-partition
+is_heap
 dir
 
 swap_ranges
 dir
 
-reverse
+partition
 dir
 
 transform
+dir
+
+reverse
 dir
 
 lower_bound

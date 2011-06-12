@@ -1,14 +1,14 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gfortran.dg/coarray
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-05-31T20:04:09.739006Z
-174510
+2011-06-10T10:22:24.896984Z
+174896
 burnus
 
 
@@ -297,4 +297,38 @@ burnus
 
 
 595
+
+sync_1.f90
+file
+
+
+
+
+2011-06-11T04:08:03.396913Z
+0ef2cf6e286c0e32baee364b1c6104f7
+2011-06-10T10:22:24.896984Z
+174896
+burnus
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+812
 

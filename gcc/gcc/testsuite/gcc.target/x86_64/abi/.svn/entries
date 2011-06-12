@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/x86_64/abi
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,17 +60,17 @@ hjl
 
 4679
 
-abi-x86_64.exp
+test_passing_m64m128.c
 file
 
 
 
 
 2009-04-24T17:45:51.000000Z
-a98bf7ae0b6869a087bd2400515969db
-2009-02-20T15:20:38.173956Z
-144324
-jakub
+14969537ec7e25d4df580bcf42b2def2
+2009-02-18T02:16:03.892107Z
+144257
+hjl
 
 
 
@@ -92,7 +92,7 @@ jakub
 
 
 
-1547
+9899
 
 args.h
 file
@@ -128,17 +128,17 @@ hjl
 
 5802
 
-test_passing_m64m128.c
+abi-x86_64.exp
 file
 
 
 
 
 2009-04-24T17:45:51.000000Z
-14969537ec7e25d4df580bcf42b2def2
-2009-02-18T02:16:03.892107Z
-144257
-hjl
+a98bf7ae0b6869a087bd2400515969db
+2009-02-20T15:20:38.173956Z
+144324
+jakub
 
 
 
@@ -160,41 +160,7 @@ hjl
 
 
 
-9899
-
-test_passing_integers.c
-file
-
-
-
-
-2009-04-24T17:45:51.000000Z
-5b6a5f2f84b12e957730dff2455076d9
-2005-06-22T14:51:07.000000Z
-101249
-matz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6613
+1547
 
 test_complex_returning.c
 file
@@ -230,14 +196,14 @@ matz
 
 1659
 
-test_varargs.c
+test_passing_integers.c
 file
 
 
 
 
 2009-04-24T17:45:51.000000Z
-77a2aaa1772edf65040dc6929b494d8f
+5b6a5f2f84b12e957730dff2455076d9
 2005-06-22T14:51:07.000000Z
 101249
 matz
@@ -262,41 +228,7 @@ matz
 
 
 
-2051
-
-test_basic_array_size_and_align.c
-file
-
-
-
-
-2009-04-24T17:45:51.000000Z
-21f9b335d755c74bdef8998aeac98585
-2005-06-22T14:51:07.000000Z
-101249
-matz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1568
+6613
 
 test_bitfields.c
 file
@@ -332,17 +264,14 @@ matz
 
 2871
 
-callabi
-dir
-
-test_passing_structs_and_unions.c
+test_basic_array_size_and_align.c
 file
 
 
 
 
 2009-04-24T17:45:51.000000Z
-83d81ea8d13fe674037de1aacf16063d
+21f9b335d755c74bdef8998aeac98585
 2005-06-22T14:51:07.000000Z
 101249
 matz
@@ -367,7 +296,44 @@ matz
 
 
 
-1585
+1568
+
+test_varargs.c
+file
+
+
+
+
+2009-04-24T17:45:51.000000Z
+77a2aaa1772edf65040dc6929b494d8f
+2005-06-22T14:51:07.000000Z
+101249
+matz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2051
+
+callabi
+dir
 
 README.gcc
 file
@@ -403,17 +369,17 @@ jsm28
 
 924
 
-asm-support.S
+test_passing_structs_and_unions.c
 file
 
 
 
 
-2010-07-30T08:37:10.890837Z
-3003646df75711be87357346568aa8b2
-2010-07-09T11:13:30.339443Z
-161991
-ro
+2009-04-24T17:45:51.000000Z
+83d81ea8d13fe674037de1aacf16063d
+2005-06-22T14:51:07.000000Z
+101249
+matz
 
 
 
@@ -435,7 +401,41 @@ ro
 
 
 
-1817
+1585
+
+test_m64m128_returning.c
+file
+
+
+
+
+2009-04-24T17:45:51.000000Z
+f40575a5a5ddf24aec651e35d16fccdc
+2009-02-18T02:16:03.892107Z
+144257
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1207
 
 test_basic_struct_size_and_align.c
 file
@@ -471,17 +471,17 @@ matz
 
 1760
 
-test_m64m128_returning.c
+asm-support.S
 file
 
 
 
 
-2009-04-24T17:45:51.000000Z
-f40575a5a5ddf24aec651e35d16fccdc
-2009-02-18T02:16:03.892107Z
-144257
-hjl
+2010-07-30T08:37:10.890837Z
+3003646df75711be87357346568aa8b2
+2010-07-09T11:13:30.339443Z
+161991
+ro
 
 
 
@@ -503,7 +503,7 @@ hjl
 
 
 
-1207
+1817
 
 test_passing_floats.c
 file

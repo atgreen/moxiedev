@@ -9098,8 +9098,7 @@ make_or_reuse_accum_type (unsigned size, int unsignedp, int satp)
 }
 
 /* Create nodes for all integer types (and error_mark_node) using the sizes
-   of C datatypes.  The caller should call set_sizetype soon after calling
-   this function to select one of the types as sizetype.  */
+   of C datatypes.  */
 
 void
 build_common_tree_nodes (bool signed_char)
@@ -9142,6 +9141,7 @@ build_common_tree_nodes (bool signed_char)
         int128_unsigned_type_node = make_unsigned_type (128);
       }
 #endif
+
   /* Define a boolean type.  This type only represents boolean values but
      may be larger than char depending on the value of BOOL_TYPE_SIZE.
      Front ends which want to override this size (i.e. Java) can redefine
@@ -9150,6 +9150,16 @@ build_common_tree_nodes (bool signed_char)
   TREE_SET_CODE (boolean_type_node, BOOLEAN_TYPE);
   TYPE_MAX_VALUE (boolean_type_node) = build_int_cst (boolean_type_node, 1);
   TYPE_PRECISION (boolean_type_node) = 1;
+
+  /* Define what type to use for size_t.  */
+  if (strcmp (SIZE_TYPE, "unsigned int") == 0)
+    size_type_node = unsigned_type_node;
+  else if (strcmp (SIZE_TYPE, "long unsigned int") == 0)
+    size_type_node = long_unsigned_type_node;
+  else if (strcmp (SIZE_TYPE, "long long unsigned int") == 0)
+    size_type_node = long_long_unsigned_type_node;
+  else
+    gcc_unreachable ();
 
   /* Fill in the rest of the sized types.  Reuse existing type nodes
      when possible.  */
@@ -9170,7 +9180,7 @@ build_common_tree_nodes (bool signed_char)
   access_private_node = get_identifier ("private");
 }
 
-/* Call this function after calling build_common_tree_nodes and set_sizetype.
+/* Call this function after calling build_common_tree_nodes.
    It will create several other common tree nodes.  */
 
 void

@@ -1,3 +1,12 @@
+2011-06-12    <green@moxielogic.com>
+
+	* build.xml: Build newlib and libgloss at the same time.
+
+2011-06-08  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Disable libquadmath support for all GCC builds.
+	Don't build g++ support for RTEMS GCC.
+
 2010-10-02  Anthony Green  <green@moxielogic.com>
 
 	* build.xml: Disable RTEMS test program builds, enable

@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/conversion
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,40 +502,6 @@ mmitchel
 
 234
 
-bitfield2.C
-file
-
-
-
-
-2009-04-24T17:44:04.000000Z
-4f08e43e1ee5b1ab9782df9a7152620c
-2006-04-25T03:33:38.424738Z
-113240
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-82
-
 cond1.C
 file
 
@@ -570,14 +536,14 @@ jason
 
 165
 
-bitfield3.C
+bitfield2.C
 file
 
 
 
 
 2009-04-24T17:44:04.000000Z
-be810813d630f0dd9802ec2a447ebbae
+4f08e43e1ee5b1ab9782df9a7152620c
 2006-04-25T03:33:38.424738Z
 113240
 mmitchel
@@ -602,7 +568,7 @@ mmitchel
 
 
 
-235
+82
 
 cond2.C
 file
@@ -638,16 +604,16 @@ jason
 
 152
 
-bitfield4.C
+bitfield3.C
 file
 
 
 
 
 2009-04-24T17:44:04.000000Z
-108dbe59480526dc6ba867064aa94fd0
-2006-04-28T02:40:58.774340Z
-113339
+be810813d630f0dd9802ec2a447ebbae
+2006-04-25T03:33:38.424738Z
+113240
 mmitchel
 
 
@@ -670,7 +636,7 @@ mmitchel
 
 
 
-210
+235
 
 cond3.C
 file
@@ -706,16 +672,16 @@ jason
 
 265
 
-const1.C
+bitfield4.C
 file
 
 
 
 
 2009-04-24T17:44:04.000000Z
-b0e427443037919ee45a88d886f4f4f9
-2004-06-10T14:26:23.000000Z
-82917
+108dbe59480526dc6ba867064aa94fd0
+2006-04-28T02:40:58.774340Z
+113339
 mmitchel
 
 
@@ -738,41 +704,7 @@ mmitchel
 
 
 
-97
-
-bitfield5.C
-file
-
-
-
-
-2009-04-24T17:44:04.000000Z
-5b834a111d6345f96efbf3c3d5bdaa5e
-2006-05-19T03:01:14.636861Z
-113902
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-220
+210
 
 cond4.C
 file
@@ -808,16 +740,16 @@ dodji
 
 458
 
-const2.C
+bitfield5.C
 file
 
 
 
 
 2009-04-24T17:44:04.000000Z
-cd42b5b37923de04f2f1d946dfbd433c
-2004-10-19T23:24:20.000000Z
-89300
+5b834a111d6345f96efbf3c3d5bdaa5e
+2006-05-19T03:01:14.636861Z
+113902
 mmitchel
 
 
@@ -840,7 +772,41 @@ mmitchel
 
 
 
-141
+220
+
+const1.C
+file
+
+
+
+
+2009-04-24T17:44:04.000000Z
+b0e427443037919ee45a88d886f4f4f9
+2004-06-10T14:26:23.000000Z
+82917
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+97
 
 bitfield6.C
 file
@@ -876,16 +842,16 @@ mmitchel
 
 126
 
-const3.C
+const2.C
 file
 
 
 
 
 2009-04-24T17:44:04.000000Z
-8dae0b4264c4a22a22f3c8abe5fbdf3b
-2004-11-03T02:48:44.000000Z
-90016
+cd42b5b37923de04f2f1d946dfbd433c
+2004-10-19T23:24:20.000000Z
+89300
 mmitchel
 
 
@@ -908,41 +874,7 @@ mmitchel
 
 
 
-79
-
-cond6.C
-file
-
-
-
-
-2009-04-24T17:44:04.000000Z
-7a1a3b98a22e73124c10abe63b9e58eb
-2003-08-21T22:02:27.000000Z
-70667
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-322
+141
 
 bitfield7.C
 file
@@ -978,17 +910,17 @@ aoliva
 
 202
 
-bitfield8.C
+cond6.C
 file
 
 
 
 
 2009-04-24T17:44:04.000000Z
-df929a9deae2fb3db69b7347b27518fa
-2008-02-06T20:31:43.454754Z
-132158
-aoliva
+7a1a3b98a22e73124c10abe63b9e58eb
+2003-08-21T22:02:27.000000Z
+70667
+jason
 
 
 
@@ -1010,7 +942,41 @@ aoliva
 
 
 
-487
+322
+
+const3.C
+file
+
+
+
+
+2009-04-24T17:44:04.000000Z
+8dae0b4264c4a22a22f3c8abe5fbdf3b
+2004-11-03T02:48:44.000000Z
+90016
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+79
 
 self1.C
 file
@@ -1045,6 +1011,40 @@ jason
 
 
 131
+
+bitfield8.C
+file
+
+
+
+
+2009-04-24T17:44:04.000000Z
+df929a9deae2fb3db69b7347b27518fa
+2008-02-06T20:31:43.454754Z
+132158
+aoliva
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+487
 
 bitfield9.C
 file

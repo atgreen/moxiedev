@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/java/awt
 svn://gcc.gnu.org/svn/gcc
 
@@ -165,40 +165,6 @@ tromey
 
 2340
 
-Window.java
-file
-
-
-
-
-2011-06-04T18:38:17.831104Z
-1dcb9a0badff591a2d3418088ec92156
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-37224
-
 HeadlessException.java
 file
 
@@ -232,6 +198,40 @@ tromey
 
 
 2556
+
+Window.java
+file
+
+
+
+
+2011-06-04T18:38:17.831104Z
+1dcb9a0badff591a2d3418088ec92156
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+37224
 
 LayoutManager.java
 file
@@ -270,40 +270,6 @@ tromey
 peer
 dir
 
-Cursor.java
-file
-
-
-
-
-2011-06-04T18:38:17.832104Z
-cac2646ad53af06d6dbbcb95f032429b
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6731
-
 ActiveEvent.java
 file
 
@@ -337,6 +303,40 @@ tromey
 
 
 2587
+
+Cursor.java
+file
+
+
+
+
+2011-06-04T18:38:17.832104Z
+cac2646ad53af06d6dbbcb95f032429b
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6731
 
 Event.java
 file
@@ -372,40 +372,6 @@ gandalf
 
 6217
 
-ContainerOrderFocusTraversalPolicy.java
-file
-
-
-
-
-2011-06-04T18:38:17.832104Z
-5694a63fe43021ec7bc4816579274822
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-16206
-
 ItemSelectable.java
 file
 
@@ -439,6 +405,40 @@ tromey
 
 
 2728
+
+ContainerOrderFocusTraversalPolicy.java
+file
+
+
+
+
+2011-06-04T18:38:17.832104Z
+5694a63fe43021ec7bc4816579274822
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+16206
 
 GridLayout.java
 file
@@ -922,40 +922,6 @@ gandalf
 
 27459
 
-DisplayMode.java
-file
-
-
-
-
-2011-06-04T18:38:17.836104Z
-ac46023ac036ff595b09bb6e8ec74513
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4343
-
 AWTException.java
 file
 
@@ -990,14 +956,14 @@ tromey
 
 2376
 
-Canvas.java
+DisplayMode.java
 file
 
 
 
 
-2011-06-04T18:38:17.837104Z
-a92194907b8de0c1018999d7079136a1
+2011-06-04T18:38:17.836104Z
+ac46023ac036ff595b09bb6e8ec74513
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -1022,7 +988,7 @@ gandalf
 
 
 
-10941
+4343
 
 Button.java
 file
@@ -1058,17 +1024,17 @@ gandalf
 
 12327
 
-PrintGraphics.java
+Canvas.java
 file
 
 
 
 
-2009-04-24T17:47:05.000000Z
-21ab216a0edd470ba87bdd70bce5cedb
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+2011-06-04T18:38:17.837104Z
+a92194907b8de0c1018999d7079136a1
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -1090,7 +1056,7 @@ tromey
 
 
 
-2190
+10941
 
 TextArea.java
 file
@@ -1125,6 +1091,40 @@ gandalf
 
 
 19193
+
+PrintGraphics.java
+file
+
+
+
+
+2009-04-24T17:47:05.000000Z
+21ab216a0edd470ba87bdd70bce5cedb
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2190
 
 package.html
 file
@@ -1228,40 +1228,6 @@ gandalf
 
 9390
 
-GraphicsConfigTemplate.java
-file
-
-
-
-
-2009-04-24T17:47:05.000000Z
-089c55999c8d4e138e78dbd84cc237f8
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3824
-
 Container.java
 file
 
@@ -1295,6 +1261,40 @@ gandalf
 
 
 73214
+
+GraphicsConfigTemplate.java
+file
+
+
+
+
+2009-04-24T17:47:05.000000Z
+089c55999c8d4e138e78dbd84cc237f8
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3824
 
 FocusTraversalPolicy.java
 file
@@ -1364,40 +1364,6 @@ gandalf
 
 20450
 
-GridBagConstraints.java
-file
-
-
-
-
-2011-06-04T18:38:17.839104Z
-712a6a9788d4f74ec0f787c2b84ea08a
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6360
-
 PrintJob.java
 file
 
@@ -1431,6 +1397,40 @@ tromey
 
 
 3332
+
+GridBagConstraints.java
+file
+
+
+
+
+2011-06-04T18:38:17.839104Z
+712a6a9788d4f74ec0f787c2b84ea08a
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6360
 
 TextField.java
 file
@@ -1534,40 +1534,6 @@ gandalf
 
 56829
 
-AWTKeyStroke.java
-file
-
-
-
-
-2011-06-04T18:38:17.841104Z
-c78439750e139de8d7160dcc08790caf
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-23730
-
 TexturePaint.java
 file
 
@@ -1601,6 +1567,40 @@ gandalf
 
 
 3771
+
+AWTKeyStroke.java
+file
+
+
+
+
+2011-06-04T18:38:17.841104Z
+c78439750e139de8d7160dcc08790caf
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+23730
 
 GridBagLayout.java
 file
@@ -1704,40 +1704,6 @@ gandalf
 
 6218
 
-Component.java
-file
-
-
-
-
-2011-06-04T18:38:17.843104Z
-f1f11916717ce169d68e7d97d7199e4e
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-212398
-
 ScrollPane.java
 file
 
@@ -1771,6 +1737,40 @@ gandalf
 
 
 17941
+
+Component.java
+file
+
+
+
+
+2011-06-04T18:38:17.843104Z
+f1f11916717ce169d68e7d97d7199e4e
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+212398
 
 AWTPermission.java
 file
@@ -1806,40 +1806,6 @@ tromey
 
 4682
 
-FlowLayout.java
-file
-
-
-
-
-2011-06-04T18:38:17.844104Z
-1c21c7fbc05ada0bc86ee9b04dd7d2c1
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-10891
-
 Insets.java
 file
 
@@ -1873,6 +1839,40 @@ gandalf
 
 
 4773
+
+FlowLayout.java
+file
+
+
+
+
+2011-06-04T18:38:17.844104Z
+1c21c7fbc05ada0bc86ee9b04dd7d2c1
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+10891
 
 Font.java
 file

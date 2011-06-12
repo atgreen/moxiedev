@@ -292,6 +292,9 @@ build_target_expr (tree decl, tree value, tsubst_flags_t complain)
 #ifdef ENABLE_CHECKING
   gcc_assert (VOID_TYPE_P (TREE_TYPE (value))
 	      || TREE_TYPE (decl) == TREE_TYPE (value)
+	      /* On ARM ctors return 'this'.  */
+	      || (TREE_CODE (TREE_TYPE (value)) == POINTER_TYPE
+		  && TREE_CODE (value) == CALL_EXPR)
 	      || useless_type_conversion_p (TREE_TYPE (decl),
 					    TREE_TYPE (value)));
 #endif
@@ -2335,6 +2338,13 @@ cp_tree_equal (tree t1, tree t2)
       if (!same_type_p (TREE_TYPE (t1), TREE_TYPE (t2)))
 	return false;
       /* Now compare operands as usual.  */
+      break;
+
+    case DEFERRED_NOEXCEPT:
+      return (cp_tree_equal (DEFERRED_NOEXCEPT_PATTERN (t1),
+			     DEFERRED_NOEXCEPT_PATTERN (t2))
+	      && comp_template_args (DEFERRED_NOEXCEPT_ARGS (t1),
+				     DEFERRED_NOEXCEPT_ARGS (t2)));
       break;
 
     default:

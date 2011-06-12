@@ -4791,7 +4791,7 @@ avoid_sign_compare_warnings (tree orig_arg, tree arg)
 
 static tree
 build_new_op_1 (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
-	      bool *overloaded_p, tsubst_flags_t complain)
+		tree *overload, tsubst_flags_t complain)
 {
   tree orig_arg1 = arg1;
   tree orig_arg2 = arg2;
@@ -4958,7 +4958,7 @@ build_new_op_1 (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
 	  else
 	    code = PREDECREMENT_EXPR;
 	  result = build_new_op_1 (code, flags, arg1, NULL_TREE, NULL_TREE,
-				   overloaded_p, complain);
+				   overload, complain);
 	  break;
 
 	  /* The caller will deal with these.  */
@@ -5005,8 +5005,8 @@ build_new_op_1 (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
 	}
       else if (TREE_CODE (cand->fn) == FUNCTION_DECL)
 	{
-	  if (overloaded_p)
-	    *overloaded_p = true;
+	  if (overload)
+	    *overload = cand->fn;
 
 	  if (resolve_args (arglist, complain) == NULL)
 	    result = error_mark_node;
@@ -5165,11 +5165,11 @@ build_new_op_1 (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
 
 tree
 build_new_op (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
-	      bool *overloaded_p, tsubst_flags_t complain)
+	      tree *overload, tsubst_flags_t complain)
 {
   tree ret;
   bool subtime = timevar_cond_start (TV_OVERLOAD);
-  ret = build_new_op_1 (code, flags, arg1, arg2, arg3, overloaded_p, complain);
+  ret = build_new_op_1 (code, flags, arg1, arg2, arg3, overload, complain);
   timevar_cond_stop (TV_OVERLOAD, subtime);
   return ret;
 }
@@ -5896,7 +5896,15 @@ convert_arg_to_ellipsis (tree arg)
   else if (NULLPTR_TYPE_P (arg_type))
     arg = null_pointer_node;
   else if (INTEGRAL_OR_ENUMERATION_TYPE_P (arg_type))
-    arg = perform_integral_promotions (arg);
+    {
+      if (SCOPED_ENUM_P (arg_type) && !abi_version_at_least (6))
+	{
+	  warning (OPT_Wabi, "scoped enum %qT will not promote to an "
+		   "integral type in a future version of GCC", arg_type);
+	  arg = cp_convert (ENUM_UNDERLYING_TYPE (arg_type), arg);
+	}
+      arg = perform_integral_promotions (arg);
+    }
 
   arg = require_complete_type (arg);
   arg_type = TREE_TYPE (arg);

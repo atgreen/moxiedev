@@ -478,7 +478,7 @@ passr_eq (const void *p1, const void *p2)
   return !strcmp (s1->unique_name, s2->unique_name);
 }
 
-static htab_t pass_name_tab = NULL;
+static htab_t name_to_pass_map = NULL;
 
 /* Register PASS with NAME.  */
 
@@ -488,11 +488,11 @@ register_pass_name (struct opt_pass *pass, const char *name)
   struct pass_registry **slot;
   struct pass_registry pr;
 
-  if (!pass_name_tab)
-    pass_name_tab = htab_create (256, passr_hash, passr_eq, NULL);
+  if (!name_to_pass_map)
+    name_to_pass_map = htab_create (256, passr_hash, passr_eq, NULL);
 
   pr.unique_name = name;
-  slot = (struct pass_registry **) htab_find_slot (pass_name_tab, &pr, INSERT);
+  slot = (struct pass_registry **) htab_find_slot (name_to_pass_map, &pr, INSERT);
   if (!*slot)
     {
       struct pass_registry *new_pr;
@@ -506,6 +506,124 @@ register_pass_name (struct opt_pass *pass, const char *name)
     return; /* Ignore plugin passes.  */
 }
 
+/* Map from pass id to canonicalized pass name.  */
+
+typedef const char *char_ptr;
+DEF_VEC_P(char_ptr);
+DEF_VEC_ALLOC_P(char_ptr, heap);
+static VEC(char_ptr, heap) *pass_tab = NULL;
+
+/* Callback function for traversing NAME_TO_PASS_MAP.  */
+
+static int
+pass_traverse (void **slot, void *data ATTRIBUTE_UNUSED)
+{
+  struct pass_registry **p = (struct pass_registry **)slot;
+  struct opt_pass *pass = (*p)->pass;
+
+  gcc_assert (pass->static_pass_number > 0);
+  gcc_assert (pass_tab);
+
+  VEC_replace (char_ptr, pass_tab, pass->static_pass_number,
+               (*p)->unique_name);
+
+  return 1;
+}
+
+/* The function traverses NAME_TO_PASS_MAP and creates a pass info
+   table for dumping purpose.  */
+
+static void
+create_pass_tab (void)
+{
+  if (!flag_dump_passes)
+    return;
+
+  VEC_safe_grow_cleared (char_ptr, heap,
+                         pass_tab, passes_by_id_size + 1);
+  htab_traverse (name_to_pass_map, pass_traverse, NULL);
+}
+
+static bool override_gate_status (struct opt_pass *, tree, bool);
+
+/* Dump the instantiated name for PASS. IS_ON indicates if PASS
+   is turned on or not.  */
+
+static void
+dump_one_pass (struct opt_pass *pass, int pass_indent)
+{
+  int indent = 3 * pass_indent;
+  const char *pn;
+  bool is_on, is_really_on;
+
+  is_on = (pass->gate == NULL) ? true : pass->gate();
+  is_really_on = override_gate_status (pass, current_function_decl, is_on);
+
+  if (pass->static_pass_number <= 0)
+    pn = pass->name;
+  else
+    pn = VEC_index (char_ptr, pass_tab, pass->static_pass_number);
+
+  fprintf (stderr, "%*s%-40s%*s:%s%s\n", indent, " ", pn,
+           (15 - indent < 0 ? 0 : 15 - indent), " ",
+           is_on ? "  ON" : "  OFF",
+           ((!is_on) == (!is_really_on) ? ""
+            : (is_really_on ? " (FORCED_ON)" : " (FORCED_OFF)")));
+}
+
+/* Dump pass list PASS with indentation INDENT.  */
+
+static void
+dump_pass_list (struct opt_pass *pass, int indent)
+{
+  do
+    {
+      dump_one_pass (pass, indent);
+      if (pass->sub)
+        dump_pass_list (pass->sub, indent + 1);
+      pass = pass->next;
+    }
+  while (pass);
+}
+
+/* Dump all optimization passes.  */
+
+void
+dump_passes (void)
+{
+  struct cgraph_node *n, *node = NULL;
+  tree save_fndecl = current_function_decl;
+
+  create_pass_tab();
+
+  n = cgraph_nodes;
+  while (n)
+    {
+      if (DECL_STRUCT_FUNCTION (n->decl))
+        {
+          node = n;
+          break;
+        }
+      n = n->next;
+    }
+
+  if (!node)
+    return;
+
+  push_cfun (DECL_STRUCT_FUNCTION (node->decl));
+  current_function_decl = node->decl;
+
+  dump_pass_list (all_lowering_passes, 1);
+  dump_pass_list (all_small_ipa_passes, 1);
+  dump_pass_list (all_regular_ipa_passes, 1);
+  dump_pass_list (all_lto_gen_passes, 1);
+  dump_pass_list (all_passes, 1);
+
+  pop_cfun ();
+  current_function_decl = save_fndecl;
+}
+
+
 /* Returns the pass with NAME.  */
 
 static struct opt_pass *
@@ -513,9 +631,8 @@ get_pass_by_name (const char *name)
 {
   struct pass_registry **slot, pr;
 
-  gcc_assert (pass_name_tab);
   pr.unique_name = name;
-  slot = (struct pass_registry **) htab_find_slot (pass_name_tab,
+  slot = (struct pass_registry **) htab_find_slot (name_to_pass_map,
                                                    &pr, NO_INSERT);
 
   if (!slot || !*slot)
@@ -531,6 +648,7 @@ struct uid_range
 {
   unsigned int start;
   unsigned int last;
+  const char *assem_name;
   struct uid_range *next;
 };
 
@@ -541,6 +659,7 @@ DEF_VEC_ALLOC_P(uid_range_p, heap);
 
 static VEC(uid_range_p, heap) *enabled_pass_uid_range_tab = NULL;
 static VEC(uid_range_p, heap) *disabled_pass_uid_range_tab = NULL;
+
 
 /* Parse option string for -fdisable- and -fenable-
    The syntax of the options:
@@ -628,6 +747,7 @@ enable_disable_pass (const char *arg, bool is_enable)
 	  uid_range_p new_range;
 	  char *invalid = NULL;
 	  long start;
+	  char *func_name = NULL;
 
 	  next_range = strchr (one_range, ',');
 	  if (next_range)
@@ -645,17 +765,31 @@ enable_disable_pass (const char *arg, bool is_enable)
 	  start = strtol (one_range, &invalid, 10);
 	  if (*invalid || start < 0)
 	    {
-	      error ("Invalid range %s in option %s",
-		     one_range,
-		     is_enable ? "-fenable" : "-fdisable");
-	      free (argstr);
-	      return;
+              if (end_val || (one_range[0] >= '0'
+			      && one_range[0] <= '9'))
+                {
+                  error ("Invalid range %s in option %s",
+                         one_range,
+                         is_enable ? "-fenable" : "-fdisable");
+                  free (argstr);
+                  return;
+                }
+	      func_name = one_range;
 	    }
 	  if (!end_val)
 	    {
 	      new_range = XCNEW (struct uid_range);
-	      new_range->start = (unsigned) start;
-	      new_range->last = (unsigned) start;
+              if (!func_name)
+                {
+                  new_range->start = (unsigned) start;
+                  new_range->last = (unsigned) start;
+                }
+              else
+                {
+                  new_range->start = (unsigned) -1;
+                  new_range->last = (unsigned) -1;
+                  new_range->assem_name = xstrdup (func_name);
+                }
 	    }
 	  else
 	    {
@@ -677,15 +811,28 @@ enable_disable_pass (const char *arg, bool is_enable)
           new_range->next = slot;
           VEC_replace (uid_range_p, *tab, pass->static_pass_number,
                        new_range);
-
           if (is_enable)
-            inform (UNKNOWN_LOCATION,
-                    "enable pass %s for functions in the range of [%u, %u]",
-                    phase_name, new_range->start, new_range->last);
+            {
+              if (new_range->assem_name)
+                inform (UNKNOWN_LOCATION,
+                        "enable pass %s for function %s",
+                        phase_name, new_range->assem_name);
+              else
+                inform (UNKNOWN_LOCATION,
+                        "enable pass %s for functions in the range of [%u, %u]",
+                        phase_name, new_range->start, new_range->last);
+            }
           else
-            inform (UNKNOWN_LOCATION,
-                    "disable pass %s for functions in the range of [%u, %u]",
-                    phase_name, new_range->start, new_range->last);
+            {
+              if (new_range->assem_name)
+                inform (UNKNOWN_LOCATION,
+                        "disable pass %s for function %s",
+                        phase_name, new_range->assem_name);
+              else
+                inform (UNKNOWN_LOCATION,
+                        "disable pass %s for functions in the range of [%u, %u]",
+                        phase_name, new_range->start, new_range->last);
+            }
 
 	  one_range = next_range;
 	} while (next_range);
@@ -719,6 +866,7 @@ is_pass_explicitly_enabled_or_disabled (struct opt_pass *pass,
 {
   uid_range_p slot, range;
   int cgraph_uid;
+  const char *aname = NULL;
 
   if (!tab
       || (unsigned) pass->static_pass_number >= VEC_length (uid_range_p, tab)
@@ -730,6 +878,8 @@ is_pass_explicitly_enabled_or_disabled (struct opt_pass *pass,
     return false;
 
   cgraph_uid = func ? cgraph_get_node (func)->uid : 0;
+  if (func && DECL_ASSEMBLER_NAME_SET_P (func))
+    aname = IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (func));
 
   range = slot;
   while (range)
@@ -737,6 +887,9 @@ is_pass_explicitly_enabled_or_disabled (struct opt_pass *pass,
       if ((unsigned) cgraph_uid >= range->start
 	  && (unsigned) cgraph_uid <= range->last)
 	return true;
+      if (range->assem_name && aname
+          && !strcmp (range->assem_name, aname))
+        return true;
       range = range->next;
     }
 
@@ -1638,7 +1791,7 @@ pass_init_dump_file (struct opt_pass *pass)
       dump_file_name = get_dump_file_name (pass->static_pass_number);
       dump_file = dump_begin (pass->static_pass_number, &dump_flags);
       if (dump_file && current_function_decl)
-        dump_function_header (dump_file, current_function_decl);
+        dump_function_header (dump_file, current_function_decl, dump_flags);
       return initializing_dump;
     }
   else

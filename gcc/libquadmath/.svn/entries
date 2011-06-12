@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libquadmath
 svn://gcc.gnu.org/svn/gcc
 
@@ -131,40 +131,6 @@ jakub
 
 59800
 
-libtool-version
-file
-
-
-
-
-2010-11-22T19:18:58.132785Z
-77280bb7ee423875e03d9c0d34527df6
-2010-11-16T21:23:19.835064Z
-166825
-burnus
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-252
-
 ChangeLog
 file
 
@@ -198,6 +164,40 @@ burnus
 
 
 14568
+
+libtool-version
+file
+
+
+
+
+2010-11-22T19:18:58.132785Z
+77280bb7ee423875e03d9c0d34527df6
+2010-11-16T21:23:19.835064Z
+166825
+burnus
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+252
 
 math
 dir
@@ -307,40 +307,6 @@ jakub
 printf
 dir
 
-libquadmath.texi
-file
-
-
-
-
-2011-06-04T17:54:56.018111Z
-64581f778af26271c0f869ad2ddef808
-2011-04-03T18:45:16.368690Z
-171914
-burnus
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-12946
-
 configure.ac
 file
 
@@ -374,6 +340,40 @@ ro
 
 
 12748
+
+libquadmath.texi
+file
+
+
+
+
+2011-06-04T17:54:56.018111Z
+64581f778af26271c0f869ad2ddef808
+2011-04-03T18:45:16.368690Z
+171914
+burnus
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12946
 
 acinclude.m4
 file

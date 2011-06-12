@@ -1,15 +1,15 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-06-04T14:24:20.710190Z
-174638
-hubicka
+2011-06-10T20:19:28.122900Z
+174930
+davidxl
 
 
 
@@ -223,10 +223,10 @@ dir
 gnat.dg
 dir
 
-gcc.dg
+ada
 dir
 
-ada
+gcc.dg
 dir
 
 gcc.misc-tests
@@ -238,11 +238,11 @@ file
 
 
 
-2011-06-04T18:32:45.064012Z
-333441501b90a613410c49d3757768d3
-2011-06-04T14:24:20.710190Z
-174638
-hubicka
+2011-06-11T04:08:14.306913Z
+2c83b2996cd196d045eaee64a2cd72f6
+2011-06-10T19:31:00.540776Z
+174927
+paolo
 
 
 
@@ -264,7 +264,7 @@ hubicka
 
 
 
-173320
+207195
 
 README.gcc
 file
@@ -402,19 +402,19 @@ jsm28
 
 2337
 
-go.dg
+gfortran.fortran-torture
 dir
 
-gfortran.fortran-torture
+go.dg
 dir
 
 objc-obj-c++-shared
 dir
 
-g++.dg
+config
 dir
 
-config
+g++.dg
 dir
 
 objc.dg

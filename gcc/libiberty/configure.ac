@@ -429,8 +429,10 @@ if test -n "${with_target_subdir}"; then
     # newlib doesnt provide any of the variables in $vars, so we
     # dont have to check them here.
 
-    # Of the functions in $checkfuncs, newlib only has strerror.
+    # Of the functions in $checkfuncs, newlib only has strerror
+    # and psignal.
     AC_DEFINE(HAVE_STRERROR)
+    AC_DEFINE(HAVE_PSIGNAL)
 
     setobjs=yes
 

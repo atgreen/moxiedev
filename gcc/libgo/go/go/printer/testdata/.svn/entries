@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/go/printer/testdata
 svn://gcc.gnu.org/svn/gcc
 
@@ -264,40 +264,6 @@ ian
 
 10849
 
-slow.golden
-file
-
-
-
-
-2011-06-04T18:38:23.754104Z
-875c096fbdc952394336b698e8b28faf
-2011-03-24T23:46:17.513223Z
-171427
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2070
-
 comments.x
 file
 
@@ -332,16 +298,16 @@ ian
 
 1189
 
-empty.input
+slow.golden
 file
 
 
 
 
 2011-06-04T18:38:23.754104Z
-844f4638b6f2ac8ff51fb9b08ba912e2
-2009-11-10T23:10:04.178483Z
-154084
+875c096fbdc952394336b698e8b28faf
+2011-03-24T23:46:17.513223Z
+171427
 ian
 
 
@@ -364,7 +330,7 @@ ian
 
 
 
-94
+2070
 
 comments.golden
 file
@@ -399,6 +365,40 @@ ian
 
 
 7360
+
+empty.input
+file
+
+
+
+
+2011-06-04T18:38:23.754104Z
+844f4638b6f2ac8ff51fb9b08ba912e2
+2009-11-10T23:10:04.178483Z
+154084
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+94
 
 statements.golden
 file

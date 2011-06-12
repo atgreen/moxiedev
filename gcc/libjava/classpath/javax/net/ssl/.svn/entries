@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/net/ssl
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,40 +502,6 @@ tromey
 
 2095
 
-HandshakeCompletedListener.java
-file
-
-
-
-
-2009-04-24T17:47:18.000000Z
-ffafb874164ac8ac911bc49b696a69fb
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2333
-
 SSLServerSocketFactory.java
 file
 
@@ -569,6 +535,40 @@ doko
 
 
 7156
+
+HandshakeCompletedListener.java
+file
+
+
+
+
+2009-04-24T17:47:18.000000Z
+ffafb874164ac8ac911bc49b696a69fb
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2333
 
 X509ExtendedKeyManager.java
 file
@@ -706,40 +706,6 @@ tromey
 
 5976
 
-SSLProtocolException.java
-file
-
-
-
-
-2009-04-24T17:47:18.000000Z
-7fbd7cab122bdebff8a51b0adcdf7ec1
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2108
-
 SSLSocketFactory.java
 file
 
@@ -773,6 +739,40 @@ doko
 
 
 7953
+
+SSLProtocolException.java
+file
+
+
+
+
+2009-04-24T17:47:18.000000Z
+7fbd7cab122bdebff8a51b0adcdf7ec1
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2108
 
 TrustManagerFactory.java
 file
@@ -808,17 +808,17 @@ gandalf
 
 9581
 
-HttpsURLConnection.java
+TrivialHostnameVerifier.java
 file
 
 
 
 
 2009-04-24T17:47:18.000000Z
-67b64974c81eb23e5e66167f47693d2a
-2008-06-28T13:29:13.958049Z
-137223
-doko
+421e86a9f3e3363d8307427fa921a44c
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -840,7 +840,7 @@ doko
 
 
 
-10058
+2016
 
 SSLSession.java
 file
@@ -876,17 +876,17 @@ tromey
 
 6639
 
-TrivialHostnameVerifier.java
+HttpsURLConnection.java
 file
 
 
 
 
 2009-04-24T17:47:18.000000Z
-421e86a9f3e3363d8307427fa921a44c
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+67b64974c81eb23e5e66167f47693d2a
+2008-06-28T13:29:13.958049Z
+137223
+doko
 
 
 
@@ -908,7 +908,7 @@ tromey
 
 
 
-2016
+10058
 
 SSLPeerUnverifiedException.java
 file
@@ -978,40 +978,6 @@ tromey
 
 1929
 
-SSLException.java
-file
-
-
-
-
-2011-06-04T18:37:56.483104Z
-5de39e0576883e15f97e71143b969716
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2928
-
 TrustManagerFactorySpi.java
 file
 
@@ -1045,6 +1011,40 @@ tromey
 
 
 3232
+
+SSLException.java
+file
+
+
+
+
+2011-06-04T18:37:56.483104Z
+5de39e0576883e15f97e71143b969716
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2928
 
 HandshakeCompletedEvent.java
 file

@@ -6585,7 +6585,7 @@ cp_parser_binary_expression (cp_parser* parser, bool cast_p,
   cp_token *token;
   enum tree_code tree_type, lhs_type, rhs_type;
   enum cp_parser_prec new_prec, lookahead_prec;
-  bool overloaded_p;
+  tree overload;
 
   /* Parse the first expression.  */
   lhs = cp_parser_cast_expression (parser, /*address_p=*/false, cast_p, pidk);
@@ -6688,7 +6688,7 @@ cp_parser_binary_expression (cp_parser* parser, bool cast_p,
       else if (tree_type == TRUTH_ORIF_EXPR)
 	c_inhibit_evaluation_warnings -= lhs == truthvalue_true_node;
 
-      overloaded_p = false;
+      overload = NULL;
       /* ??? Currently we pass lhs_type == ERROR_MARK and rhs_type ==
 	 ERROR_MARK for everything that is not a binary expression.
 	 This makes warn_about_parentheses miss some warnings that
@@ -6703,7 +6703,7 @@ cp_parser_binary_expression (cp_parser* parser, bool cast_p,
 	lhs = build2 (tree_type, boolean_type_node, lhs, rhs);
       else
 	lhs = build_x_binary_op (tree_type, lhs, lhs_type, rhs, rhs_type,
-				 &overloaded_p, tf_warning_or_error);
+				 &overload, tf_warning_or_error);
       lhs_type = tree_type;
 
       /* If the binary operator required the use of an overloaded operator,
@@ -6712,7 +6712,7 @@ cp_parser_binary_expression (cp_parser* parser, bool cast_p,
 	 otherwise permissible in an integral constant-expression if at
 	 least one of the operands is of enumeration type.  */
 
-      if (overloaded_p
+      if (overload
 	  && cp_parser_non_integral_constant_expression (parser,
 							 NIC_OVERLOADED))
 	return error_mark_node;
@@ -7050,8 +7050,6 @@ cp_parser_constant_expression (cp_parser* parser,
     }
   if (allow_non_constant_p)
     *non_constant_p = parser->non_integral_constant_expression_p;
-  else if (parser->non_integral_constant_expression_p)
-    expression = error_mark_node;
   parser->non_integral_constant_expression_p
     = saved_non_integral_constant_expression_p;
 
@@ -23187,7 +23185,7 @@ cp_parser_objc_at_property_declaration (cp_parser *parser)
 		  break;
 		}
 	      cp_lexer_consume_token (parser->lexer); /* eat the = */
-	      if (cp_lexer_next_token_is_not (parser->lexer, CPP_NAME))
+	      if (!cp_parser_objc_selector_p (cp_lexer_peek_token (parser->lexer)->type))
 		{
 		  cp_parser_error (parser, "expected identifier");
 		  syntax_error = true;
@@ -23196,10 +23194,12 @@ cp_parser_objc_at_property_declaration (cp_parser *parser)
 	      if (keyword == RID_SETTER)
 		{
 		  if (property_setter_ident != NULL_TREE)
-		    cp_parser_error (parser, "the %<setter%> attribute may only be specified once");
+		    {
+		      cp_parser_error (parser, "the %<setter%> attribute may only be specified once");
+		      cp_lexer_consume_token (parser->lexer);
+		    }
 		  else
-		    property_setter_ident = cp_lexer_peek_token (parser->lexer)->u.value;
-		  cp_lexer_consume_token (parser->lexer);
+		    property_setter_ident = cp_parser_objc_selector (parser);
 		  if (cp_lexer_next_token_is_not (parser->lexer, CPP_COLON))
 		    cp_parser_error (parser, "setter name must terminate with %<:%>");
 		  else
@@ -23208,10 +23208,12 @@ cp_parser_objc_at_property_declaration (cp_parser *parser)
 	      else
 		{
 		  if (property_getter_ident != NULL_TREE)
-		    cp_parser_error (parser, "the %<getter%> attribute may only be specified once");
+		    {
+		      cp_parser_error (parser, "the %<getter%> attribute may only be specified once");
+		      cp_lexer_consume_token (parser->lexer);
+		    }
 		  else
-		    property_getter_ident = cp_lexer_peek_token (parser->lexer)->u.value;
-		  cp_lexer_consume_token (parser->lexer);
+		    property_getter_ident = cp_parser_objc_selector (parser);
 		}
 	      break;
 	    default:
@@ -24243,8 +24245,6 @@ cp_parser_omp_for_cond (cp_parser *parser, tree decl)
 {
   tree cond = cp_parser_binary_expression (parser, false, true,
 					   PREC_NOT_OPERATOR, NULL);
-  bool overloaded_p;
-
   if (cond == error_mark_node
       || cp_lexer_next_token_is_not (parser->lexer, CPP_SEMICOLON))
     {
@@ -24273,7 +24273,7 @@ cp_parser_omp_for_cond (cp_parser *parser, tree decl)
   return build_x_binary_op (TREE_CODE (cond),
 			    TREE_OPERAND (cond, 0), ERROR_MARK,
 			    TREE_OPERAND (cond, 1), ERROR_MARK,
-			    &overloaded_p, tf_warning_or_error);
+			    /*overload=*/NULL, tf_warning_or_error);
 }
 
 /* Helper function, to parse omp for increment expression.  */

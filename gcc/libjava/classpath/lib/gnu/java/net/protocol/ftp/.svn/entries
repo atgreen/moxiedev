@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/net/protocol/ftp
 svn://gcc.gnu.org/svn/gcc
 
@@ -230,14 +230,14 @@ has-props
 
 1694
 
-PassiveModeDTP.class
+StreamInputStream.class
 file
 
 
 
 
 2009-04-24T17:47:34.000000Z
-5fa6a53def0344a67d5b1a2927273e91
+fdf3f104a6c99bc945fbfd385ee9fca8
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -262,41 +262,7 @@ has-props
 
 
 
-3282
-
-DTP.class
-file
-
-
-
-
-2009-04-24T17:47:34.000000Z
-1ad11c116b3ff1666603c8eef785ae70
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-382
+1089
 
 BlockOutputStream.class
 file
@@ -332,14 +298,14 @@ has-props
 
 1454
 
-StreamInputStream.class
+DTP.class
 file
 
 
 
 
 2009-04-24T17:47:34.000000Z
-fdf3f104a6c99bc945fbfd385ee9fca8
+1ad11c116b3ff1666603c8eef785ae70
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -364,16 +330,16 @@ has-props
 
 
 
-1089
+382
 
-ActiveModeDTP.class
+PassiveModeDTP.class
 file
 
 
 
 
 2009-04-24T17:47:34.000000Z
-d3817ad00cf1562628c640c86217aa0b
+5fa6a53def0344a67d5b1a2927273e91
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -398,7 +364,7 @@ has-props
 
 
 
-3794
+3282
 
 StreamOutputStream.class
 file
@@ -433,6 +399,40 @@ has-props
 
 
 1021
+
+ActiveModeDTP.class
+file
+
+
+
+
+2009-04-24T17:47:34.000000Z
+d3817ad00cf1562628c640c86217aa0b
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3794
 
 FTPURLConnection.class
 file

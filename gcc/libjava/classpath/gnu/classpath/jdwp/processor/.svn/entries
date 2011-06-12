@@ -1,7 +1,7 @@
 10
 
 dir
-174639
+174933
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/classpath/jdwp/processor
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ gandalf
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-StringReferenceCommandSet.java
-file
-
-
-
-
-2011-06-04T18:38:10.640104Z
-002e822aae83522d46dfdad619fb76c0
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3568
 
 ObjectReferenceCommandSet.java
 file
@@ -93,6 +59,40 @@ gandalf
 
 
 8859
+
+StringReferenceCommandSet.java
+file
+
+
+
+
+2011-06-04T18:38:10.640104Z
+002e822aae83522d46dfdad619fb76c0
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3568
 
 ThreadReferenceCommandSet.java
 file
@@ -366,14 +366,14 @@ gandalf
 
 7006
 
-ClassObjectReferenceCommandSet.java
+VirtualMachineCommandSet.java
 file
 
 
 
 
 2011-06-04T18:38:10.643104Z
-8b84ffc9b5bf89d07ac88464371ada0c
+98b1363b7dc803b8b32f13b160184dc7
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -398,7 +398,7 @@ gandalf
 
 
 
-3593
+16667
 
 ClassLoaderReferenceCommandSet.java
 file
@@ -434,14 +434,14 @@ gandalf
 
 4013
 
-VirtualMachineCommandSet.java
+ClassObjectReferenceCommandSet.java
 file
 
 
 
 
 2011-06-04T18:38:10.643104Z
-98b1363b7dc803b8b32f13b160184dc7
+8b84ffc9b5bf89d07ac88464371ada0c
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -466,7 +466,7 @@ gandalf
 
 
 
-16667
+3593
 
 CommandSet.java
 file

@@ -1,3 +1,26 @@
+2011-06-11  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* include/ext/extptr_allocator.h (construct, destroy): Fix for C++0x
+	mode by overloading to take allocator's pointer type.
+	* testsuite/23_containers/vector/ext_pointer/types/2.cc: New.
+	* testsuite/23_containers/vector/ext_pointer/explicit_instantiation/
+	2.cc: New.
+
+2011-06-11  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* testsuite/20_util/allocator_traits/requirements/
+	explicit_instantiation.cc: Add another instantiation.
+
+2011-06-11  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* testsuite/20_util/allocator_traits/requirements/typedefs.cc: Check
+	for allocator_type and value_type.
+
+2011-06-11  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* testsuite/30_threads/packaged_task/uses_allocator.cc: New.
+	* testsuite/30_threads/promise/uses_allocator.cc: Likewise.
+
 2011-06-10  Paolo Carlini  <paolo.carlini@oracle.com>
 
 	* include/ext/throw_allocator.h: Use noexcept.

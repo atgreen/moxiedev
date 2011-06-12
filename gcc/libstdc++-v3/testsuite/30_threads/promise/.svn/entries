@@ -1,14 +1,14 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/30_threads/promise
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-10-08T01:06:27.290745Z
-165147
+2011-06-11T11:58:18.782905Z
+174949
 redi
 
 
@@ -31,6 +31,40 @@ dir
 
 requirements
 dir
+
+uses_allocator.cc
+file
+
+
+
+
+2011-06-12T17:26:48.583389Z
+619512084289e806a5d98a1df1118a62
+2011-06-11T11:58:18.782905Z
+174949
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1150
 
 members
 dir

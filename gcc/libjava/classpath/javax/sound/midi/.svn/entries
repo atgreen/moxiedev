@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/sound/midi
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ gandalf
 
 2704
 
-MidiDevice.java
-file
-
-
-
-
-2011-06-04T18:37:59.313104Z
-0ffa6a8df53c5bbe2ffe02c6864ece9d
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5930
-
 InvalidMidiDataException.java
 file
 
@@ -128,14 +94,14 @@ gandalf
 
 2359
 
-Receiver.java
+MidiDevice.java
 file
 
 
 
 
-2011-06-04T18:37:59.314104Z
-47b42049c51e09e3ec6ed245652bb31f
+2011-06-04T18:37:59.313104Z
+0ffa6a8df53c5bbe2ffe02c6864ece9d
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -160,41 +126,7 @@ gandalf
 
 
 
-2506
-
-ShortMessage.java
-file
-
-
-
-
-2011-06-04T18:37:59.314104Z
-7bad20a6e8c5d272199da844bb400e79
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8962
+5930
 
 Track.java
 file
@@ -230,6 +162,74 @@ gandalf
 
 4426
 
+ShortMessage.java
+file
+
+
+
+
+2011-06-04T18:37:59.314104Z
+7bad20a6e8c5d272199da844bb400e79
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8962
+
+Receiver.java
+file
+
+
+
+
+2011-06-04T18:37:59.314104Z
+47b42049c51e09e3ec6ed245652bb31f
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2506
+
 MidiUnavailableException.java
 file
 
@@ -263,40 +263,6 @@ gandalf
 
 
 2360
-
-Sequence.java
-file
-
-
-
-
-2011-06-04T18:37:59.315104Z
-20d10b6fdbb4488b04393862e13f974b
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6941
 
 Instrument.java
 file
@@ -332,6 +298,40 @@ gandalf
 
 2639
 
+Sequence.java
+file
+
+
+
+
+2011-06-04T18:37:59.315104Z
+20d10b6fdbb4488b04393862e13f974b
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6941
+
 VoiceStatus.java
 file
 
@@ -366,9 +366,6 @@ gandalf
 
 2471
 
-spi
-dir
-
 MidiChannel.java
 file
 
@@ -402,6 +399,9 @@ gandalf
 
 
 6072
+
+spi
+dir
 
 Transmitter.java
 file

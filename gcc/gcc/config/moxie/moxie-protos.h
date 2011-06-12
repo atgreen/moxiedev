@@ -23,5 +23,3 @@ extern void  moxie_expand_epilogue (void);
 extern int   moxie_initial_elimination_offset (int, int);
 extern void  moxie_print_operand (FILE *, rtx, int);
 extern void  moxie_print_operand_address (FILE *, rtx);
-extern int   moxie_comparison_operator (rtx op, enum machine_mode mode);
-

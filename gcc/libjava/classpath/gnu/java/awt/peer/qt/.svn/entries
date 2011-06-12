@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/awt/peer/qt
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,14 +536,14 @@ gandalf
 
 3025
 
-QtPanelPeer.java
+QtFileDialogPeer.java
 file
 
 
 
 
 2011-06-04T18:38:09.670104Z
-a750a498373c53781dce932dc80f68f8
+3f3d644cc271187a8b713c1b16546022
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -568,7 +568,7 @@ gandalf
 
 
 
-2074
+2575
 
 QtDialogPeer.java
 file
@@ -604,14 +604,14 @@ gandalf
 
 2623
 
-QtFileDialogPeer.java
+QtPanelPeer.java
 file
 
 
 
 
 2011-06-04T18:38:09.670104Z
-3f3d644cc271187a8b713c1b16546022
+a750a498373c53781dce932dc80f68f8
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -636,7 +636,7 @@ gandalf
 
 
 
-2575
+2074
 
 QtComponentPeer.java
 file
@@ -672,40 +672,6 @@ gandalf
 
 22401
 
-QtMenuPeer.java
-file
-
-
-
-
-2011-06-04T18:38:09.671104Z
-0f1eb275f8aa36709af4f7b06b78e1d5
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4152
-
 QMatrix.java
 file
 
@@ -739,6 +705,40 @@ gandalf
 
 
 2474
+
+QtMenuPeer.java
+file
+
+
+
+
+2011-06-04T18:38:09.671104Z
+0f1eb275f8aa36709af4f7b06b78e1d5
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4152
 
 NativeWrapper.java
 file
@@ -808,40 +808,6 @@ gandalf
 
 3698
 
-QtGraphicsEnvironment.java
-file
-
-
-
-
-2011-06-04T18:38:09.672104Z
-7a6fc73e8d4dc3afd0f01c58800f49e6
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3222
-
 QtToolkit.java
 file
 
@@ -876,14 +842,14 @@ gandalf
 
 12059
 
-QtButtonPeer.java
+QtGraphicsEnvironment.java
 file
 
 
 
 
 2011-06-04T18:38:09.672104Z
-be6be414145daffea6f413701b714bd9
+7a6fc73e8d4dc3afd0f01c58800f49e6
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -908,7 +874,7 @@ gandalf
 
 
 
-2676
+3222
 
 QtCanvasPeer.java
 file
@@ -943,6 +909,40 @@ tromey
 
 
 2249
+
+QtButtonPeer.java
+file
+
+
+
+
+2011-06-04T18:38:09.672104Z
+be6be414145daffea6f413701b714bd9
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2676
 
 QtTextAreaPeer.java
 file

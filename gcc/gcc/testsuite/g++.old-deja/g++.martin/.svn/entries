@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja/g++.martin
 svn://gcc.gnu.org/svn/gcc
 
@@ -264,40 +264,6 @@ mmitchel
 
 157
 
-typedef1.C
-file
-
-
-
-
-2009-04-24T17:44:33.000000Z
-35e71a2f28b22101fdc791da5d12d0e4
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-238
-
 crash1.C
 file
 
@@ -332,14 +298,14 @@ mmitchel
 
 184
 
-typedef2.C
+typedef1.C
 file
 
 
 
 
 2009-04-24T17:44:33.000000Z
-17402530552c868122134e23cd65f7ed
+35e71a2f28b22101fdc791da5d12d0e4
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -364,7 +330,7 @@ mmitchel
 
 
 
-186
+238
 
 access1.C
 file
@@ -400,6 +366,40 @@ mmitchel
 
 157
 
+typedef2.C
+file
+
+
+
+
+2009-04-24T17:44:33.000000Z
+17402530552c868122134e23cd65f7ed
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+186
+
 sts_partial.C
 file
 
@@ -434,40 +434,6 @@ mmitchel
 
 273
 
-conv1.C
-file
-
-
-
-
-2009-04-24T17:44:33.000000Z
-6c8edde09ed94b46e6c9fdec33f669e8
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-115
-
 sts_iarr.C
 file
 
@@ -501,6 +467,40 @@ mmitchel
 
 
 823
+
+conv1.C
+file
+
+
+
+
+2009-04-24T17:44:33.000000Z
+6c8edde09ed94b46e6c9fdec33f669e8
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+115
 
 sts_vectini.C
 file

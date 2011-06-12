@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/xml/libxmlj/dom
 svn://gcc.gnu.org/svn/gcc
 
@@ -196,40 +196,6 @@ tromey
 
 1319
 
-GnomeDocument.h
-file
-
-
-
-
-2009-04-24T17:49:09.000000Z
-9a669a1e8e317719b02fbfe488ac7f17
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5919
-
 GnomeProcessingInstruction.h
 file
 
@@ -263,6 +229,40 @@ tromey
 
 
 935
+
+GnomeDocument.h
+file
+
+
+
+
+2009-04-24T17:49:09.000000Z
+9a669a1e8e317719b02fbfe488ac7f17
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5919
 
 GnomeDocumentType.h
 file
@@ -400,40 +400,6 @@ tromey
 
 1005
 
-GnomeNode.h
-file
-
-
-
-
-2009-04-24T17:49:09.000000Z
-b4ae9d385d0d112119f9387ddf46bfb0
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4321
-
 GnomeDocumentBuilder.h
 file
 
@@ -468,14 +434,14 @@ tromey
 
 2942
 
-GnomeCharacterData.h
+GnomeNode.h
 file
 
 
 
 
 2009-04-24T17:49:09.000000Z
-46f6371dd5ace5a4c609fb30fece0008
+b4ae9d385d0d112119f9387ddf46bfb0
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -500,7 +466,7 @@ tromey
 
 
 
-1140
+4321
 
 GnomeXPathNodeList.h
 file
@@ -535,6 +501,40 @@ tromey
 
 
 1100
+
+GnomeCharacterData.h
+file
+
+
+
+
+2009-04-24T17:49:09.000000Z
+46f6371dd5ace5a4c609fb30fece0008
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1140
 
 GnomeNamedNodeMap.h
 file

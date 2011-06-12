@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/net/protocol/http
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ has-props
 
 6210
 
-ChunkedInputStream.class
-file
-
-
-
-
-2009-04-24T17:47:34.000000Z
-2deeb69f075dacdf6b8f0996580aae3b
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2728
-
 Handler.class
 file
 
@@ -127,6 +93,40 @@ has-props
 
 
 677
+
+ChunkedInputStream.class
+file
+
+
+
+
+2009-04-24T17:47:34.000000Z
+2deeb69f075dacdf6b8f0996580aae3b
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2728
 
 SimpleCookieManager.class
 file
@@ -230,40 +230,6 @@ has-props
 
 2288
 
-ByteArrayRequestBodyWriter.class
-file
-
-
-
-
-2009-04-24T17:47:34.000000Z
-13004baf1334cbbe4be606ce64f3179b
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-942
-
 HTTPDateFormat.class
 file
 
@@ -297,6 +263,40 @@ has-props
 
 
 6629
+
+ByteArrayRequestBodyWriter.class
+file
+
+
+
+
+2009-04-24T17:47:34.000000Z
+13004baf1334cbbe4be606ce64f3179b
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+942
 
 Request.class
 file
@@ -332,40 +332,6 @@ has-props
 
 15842
 
-Credentials.class
-file
-
-
-
-
-2009-04-24T17:47:34.000000Z
-e4f803b9ddd2af5970ae776a9774ffc2
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-648
-
 HTTPConnection$Pool.class
 file
 
@@ -399,6 +365,40 @@ has-props
 
 
 3583
+
+Credentials.class
+file
+
+
+
+
+2009-04-24T17:47:34.000000Z
+e4f803b9ddd2af5970ae776a9774ffc2
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+648
 
 Response.class
 file

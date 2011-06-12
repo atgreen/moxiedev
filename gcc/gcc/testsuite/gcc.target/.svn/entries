@@ -1,15 +1,15 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-06-10T18:23:11.017755Z
-174920
-janis
+2011-06-11T02:28:35.236448Z
+174940
+carrot
 
 
 
@@ -26,16 +26,16 @@ janis
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-arm
-dir
-
 powerpc
 dir
 
-alpha
+arm
 dir
 
 m68k
+dir
+
+alpha
 dir
 
 microblaze
@@ -44,10 +44,10 @@ dir
 avr
 dir
 
-i386
+rx
 dir
 
-rx
+i386
 dir
 
 xstormy16
@@ -56,10 +56,10 @@ dir
 frv
 dir
 
-s390
+x86_64
 dir
 
-x86_64
+s390
 dir
 
 cris

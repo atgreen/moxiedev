@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/nio/charset
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ gandalf
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-US_ASCII.java
-file
-
-
-
-
-2011-06-04T18:38:07.805104Z
-228497423507b768056b17e19ef5e0f4
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4533
 
 Cp850.java
 file
@@ -93,6 +59,40 @@ gandalf
 
 
 4374
+
+US_ASCII.java
+file
+
+
+
+
+2011-06-04T18:38:07.805104Z
+228497423507b768056b17e19ef5e0f4
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4533
 
 Cp862.java
 file
@@ -162,6 +162,40 @@ gandalf
 
 4374
 
+UTF_16Encoder.java
+file
+
+
+
+
+2011-06-04T18:38:07.806104Z
+d5bd24687198c4654525e750c4a15c6e
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4686
+
 UnicodeLittle.java
 file
 
@@ -196,14 +230,14 @@ gandalf
 
 2628
 
-UTF_16Encoder.java
+Cp874.java
 file
 
 
 
 
-2011-06-04T18:38:07.806104Z
-d5bd24687198c4654525e750c4a15c6e
+2011-06-04T18:38:07.807104Z
+8230a9b579be8d81155b38961cc67ac0
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -228,7 +262,7 @@ gandalf
 
 
 
-4686
+4374
 
 Windows1253.java
 file
@@ -264,14 +298,14 @@ gandalf
 
 4637
 
-Cp874.java
+MacThai.java
 file
 
 
 
 
 2011-06-04T18:38:07.807104Z
-8230a9b579be8d81155b38961cc67ac0
+19aee5bfd4476701d873c70f52b4907c
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -332,40 +366,6 @@ gandalf
 
 4389
 
-MacThai.java
-file
-
-
-
-
-2011-06-04T18:38:07.807104Z
-19aee5bfd4476701d873c70f52b4907c
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4374
-
 MacRomania.java
 file
 
@@ -400,14 +400,14 @@ gandalf
 
 4404
 
-KOI_8.java
+Windows1257.java
 file
 
 
 
 
-2011-06-04T18:38:07.808104Z
-001fe18da102990361adb9ed6c41a5ef
+2011-06-04T18:38:07.809104Z
+fcb043842b5da3d1dceb53c18ae678e6
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -432,7 +432,7 @@ gandalf
 
 
 
-4510
+4639
 
 ISO_8859_3.java
 file
@@ -468,14 +468,14 @@ gandalf
 
 4790
 
-Windows1257.java
+KOI_8.java
 file
 
 
 
 
-2011-06-04T18:38:07.809104Z
-fcb043842b5da3d1dceb53c18ae678e6
+2011-06-04T18:38:07.808104Z
+001fe18da102990361adb9ed6c41a5ef
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -500,7 +500,7 @@ gandalf
 
 
 
-4639
+4510
 
 MacTurkish.java
 file
@@ -1080,40 +1080,6 @@ gandalf
 
 5019
 
-package.html
-file
-
-
-
-
-2009-04-24T17:46:53.000000Z
-804299a26aa6996958d974fc27f289de
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1943
-
 ISO_8859_8.java
 file
 
@@ -1147,6 +1113,40 @@ gandalf
 
 
 4846
+
+package.html
+file
+
+
+
+
+2009-04-24T17:46:53.000000Z
+804299a26aa6996958d974fc27f289de
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1943
 
 MS874.java
 file
@@ -1355,40 +1355,6 @@ gandalf
 
 4389
 
-Cp852.java
-file
-
-
-
-
-2011-06-04T18:38:07.826104Z
-8a76968a564b8f17d6f58350c7c63665
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4374
-
 ByteDecodeLoopHelper.java
 file
 
@@ -1422,6 +1388,40 @@ gandalf
 
 
 5000
+
+Cp852.java
+file
+
+
+
+
+2011-06-04T18:38:07.826104Z
+8a76968a564b8f17d6f58350c7c63665
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4374
 
 Windows1251.java
 file
@@ -1525,40 +1525,6 @@ gandalf
 
 4374
 
-ISO_8859_1.java
-file
-
-
-
-
-2011-06-04T18:38:07.827104Z
-73b4f5e79f9af1bcc5da1d7217ec6218
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4571
-
 Windows1255.java
 file
 
@@ -1592,6 +1558,40 @@ gandalf
 
 
 4632
+
+ISO_8859_1.java
+file
+
+
+
+
+2011-06-04T18:38:07.827104Z
+73b4f5e79f9af1bcc5da1d7217ec6218
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4571
 
 ISO_8859_5.java
 file
@@ -1729,40 +1729,6 @@ gandalf
 
 4410
 
-UTF_16Decoder.java
-file
-
-
-
-
-2011-06-04T18:38:07.829104Z
-f32f157bbc4a8edb3c7e0a02bcc58db9
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5772
-
 ISO_8859_13.java
 file
 
@@ -1796,6 +1762,40 @@ gandalf
 
 
 4628
+
+UTF_16Decoder.java
+file
+
+
+
+
+2011-06-04T18:38:07.829104Z
+f32f157bbc4a8edb3c7e0a02bcc58db9
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5772
 
 MacRoman.java
 file
@@ -2001,40 +2001,6 @@ gandalf
 
 4389
 
-Windows1256.java
-file
-
-
-
-
-2011-06-04T18:38:07.831104Z
-14f4d26eaa4a9c19f3f37878fcf12217
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4639
-
 ISO_8859_2.java
 file
 
@@ -2068,6 +2034,40 @@ gandalf
 
 
 4802
+
+Windows1256.java
+file
+
+
+
+
+2011-06-04T18:38:07.831104Z
+14f4d26eaa4a9c19f3f37878fcf12217
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4639
 
 Cp869.java
 file

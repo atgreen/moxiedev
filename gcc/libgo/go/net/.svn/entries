@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/net
 svn://gcc.gnu.org/svn/gcc
 
@@ -644,14 +644,14 @@ ian
 
 888
 
-srv_test.go
+dial.go
 file
 
 
 
 
 2011-06-04T18:38:23.523104Z
-823d29cbdb7d80a3ef74f38c76e6b9db
+62a8ef37d725b137ed60eb57bcc58811
 2011-05-20T00:18:15.633486Z
 173931
 ian
@@ -676,41 +676,7 @@ ian
 
 
 
-654
-
-sock_windows.go
-file
-
-
-
-
-2011-06-04T18:38:23.523104Z
-241857b3ccf856c27c94274d26ba38a5
-2011-05-20T00:18:15.633486Z
-173931
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-681
+3742
 
 parse_test.go
 file
@@ -746,14 +712,14 @@ ian
 
 999
 
-dial.go
+sock_windows.go
 file
 
 
 
 
 2011-06-04T18:38:23.523104Z
-62a8ef37d725b137ed60eb57bcc58811
+241857b3ccf856c27c94274d26ba38a5
 2011-05-20T00:18:15.633486Z
 173931
 ian
@@ -778,7 +744,41 @@ ian
 
 
 
-3742
+681
+
+srv_test.go
+file
+
+
+
+
+2011-06-04T18:38:23.523104Z
+823d29cbdb7d80a3ef74f38c76e6b9db
+2011-05-20T00:18:15.633486Z
+173931
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+654
 
 parse.go
 file
@@ -814,40 +814,6 @@ ian
 
 3616
 
-sock_linux.go
-file
-
-
-
-
-2011-06-04T18:38:23.523104Z
-2e4bee1c87b5b52ac57d49aafc65ba67
-2011-05-20T00:18:15.633486Z
-173931
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-669
-
 file_test.go
 file
 
@@ -881,6 +847,40 @@ ian
 
 
 3090
+
+sock_linux.go
+file
+
+
+
+
+2011-06-04T18:38:23.523104Z
+2e4bee1c87b5b52ac57d49aafc65ba67
+2011-05-20T00:18:15.633486Z
+173931
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+669
 
 newpollserver_rtems.go
 file
@@ -950,40 +950,6 @@ ian
 
 12669
 
-timeout_test.go
-file
-
-
-
-
-2011-06-04T18:38:23.524104Z
-c0acb9638b0d7e90a3b73668d1cddc19
-2011-03-30T15:33:16.816318Z
-171732
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1385
-
 net_test.go
 file
 
@@ -1017,6 +983,40 @@ ian
 
 
 3620
+
+timeout_test.go
+file
+
+
+
+
+2011-06-04T18:38:23.524104Z
+c0acb9638b0d7e90a3b73668d1cddc19
+2011-03-30T15:33:16.816318Z
+171732
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1385
 
 net.go
 file

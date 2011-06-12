@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/rtti
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ froydnj
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-tinfo1.C
-file
-
-
-
-
-2009-04-24T17:44:17.000000Z
-daac611a89b8fa8aa874e3b9f2cc9663
-2005-12-27T19:58:28.728998Z
-109083
-ghazi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-842
 
 darwin-builtin-linkage.C
 file
@@ -94,6 +60,40 @@ geoffk
 
 530
 
+tinfo1.C
+file
+
+
+
+
+2009-04-24T17:44:17.000000Z
+daac611a89b8fa8aa874e3b9f2cc9663
+2005-12-27T19:58:28.728998Z
+109083
+ghazi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+842
+
 typeid1.C
 file
 
@@ -127,40 +127,6 @@ mmitchel
 
 
 109
-
-typeid2.C
-file
-
-
-
-
-2009-04-24T17:44:17.000000Z
-f03a5377eca516c74e77fcf76b40f948
-2003-09-08T16:53:05.000000Z
-71209
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-293
 
 incomplete1.C
 file
@@ -196,17 +162,17 @@ reichelt
 
 141
 
-no-rtti-voidptr.C
+typeid2.C
 file
 
 
 
 
 2009-04-24T17:44:17.000000Z
-11ddfffc9b05013900dc0f7fcf21274e
-2006-08-23T14:04:24.625569Z
-116350
-jason
+f03a5377eca516c74e77fcf76b40f948
+2003-09-08T16:53:05.000000Z
+71209
+mmitchel
 
 
 
@@ -228,41 +194,7 @@ jason
 
 
 
-205
-
-crash1.C
-file
-
-
-
-
-2009-04-24T17:44:17.000000Z
-7345c9463c7d47c7d425463846af6b14
-2002-09-29T18:27:02.000000Z
-57630
-nathan
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-208
+293
 
 typeid3.C
 file
@@ -298,50 +230,16 @@ lerdsuwa
 
 218
 
-predefined-rtti-macro-1.C
+crash1.C
 file
 
 
 
 
 2009-04-24T17:44:17.000000Z
-352a1ba9eb698ac9c7b5ff1d691318bb
-2008-01-06T22:30:32.802863Z
-131366
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-163
-
-crash2.C
-file
-
-
-
-
-2009-04-24T17:44:17.000000Z
-34c4c8f1721c4f70c2261dcc1b0a7630
-2005-06-16T08:21:00.000000Z
-101011
+7345c9463c7d47c7d425463846af6b14
+2002-09-29T18:27:02.000000Z
+57630
 nathan
 
 
@@ -364,7 +262,41 @@ nathan
 
 
 
-303
+208
+
+no-rtti-voidptr.C
+file
+
+
+
+
+2009-04-24T17:44:17.000000Z
+11ddfffc9b05013900dc0f7fcf21274e
+2006-08-23T14:04:24.625569Z
+116350
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+205
 
 typeid4.C
 file
@@ -400,14 +332,48 @@ mmitchel
 
 430
 
-predefined-rtti-macro-2.C
+crash2.C
 file
 
 
 
 
 2009-04-24T17:44:17.000000Z
-d53958b1de4c01a672e8ec50c3bfa248
+34c4c8f1721c4f70c2261dcc1b0a7630
+2005-06-16T08:21:00.000000Z
+101011
+nathan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+303
+
+predefined-rtti-macro-1.C
+file
+
+
+
+
+2009-04-24T17:44:17.000000Z
+352a1ba9eb698ac9c7b5ff1d691318bb
 2008-01-06T22:30:32.802863Z
 131366
 paolo
@@ -432,7 +398,41 @@ paolo
 
 
 
-140
+163
+
+typeid5.C
+file
+
+
+
+
+2009-04-24T17:44:17.000000Z
+81cc751e8ba06b5401bbaef96e3aa2e4
+2007-05-14T20:21:34.794925Z
+124724
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+225
 
 crash3.C
 file
@@ -468,16 +468,16 @@ jakub
 
 142
 
-typeid5.C
+predefined-rtti-macro-2.C
 file
 
 
 
 
 2009-04-24T17:44:17.000000Z
-81cc751e8ba06b5401bbaef96e3aa2e4
-2007-05-14T20:21:34.794925Z
-124724
+d53958b1de4c01a672e8ec50c3bfa248
+2008-01-06T22:30:32.802863Z
+131366
 paolo
 
 
@@ -500,7 +500,7 @@ paolo
 
 
 
-225
+140
 
 typeid6.C
 file

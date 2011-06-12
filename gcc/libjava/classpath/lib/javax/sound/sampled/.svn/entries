@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/sound/sampled
 svn://gcc.gnu.org/svn/gcc
 
@@ -471,16 +471,16 @@ has-props
 
 2960
 
-AudioFileFormat.class
+AudioFormat.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-8e649ac08dd1f16982549ef076b1e576
-2007-06-03T23:18:43.019099Z
-125302
+4496674c575fdaea0f5f16cebd59f760
+2008-10-21T17:55:01.166395Z
+141271
 doko
 has-props
 
@@ -503,7 +503,7 @@ has-props
 
 
 
-2984
+4016
 
 AudioPermission.class
 file
@@ -539,16 +539,16 @@ has-props
 
 597
 
-AudioFormat.class
+AudioFileFormat.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-4496674c575fdaea0f5f16cebd59f760
-2008-10-21T17:55:01.166395Z
-141271
+8e649ac08dd1f16982549ef076b1e576
+2007-06-03T23:18:43.019099Z
+125302
 doko
 has-props
 
@@ -571,7 +571,7 @@ has-props
 
 
 
-4016
+2984
 
 DataLine.class
 file
@@ -641,40 +641,6 @@ has-props
 
 1038
 
-Control$Type.class
-file
-
-
-
-
-2009-04-24T17:48:13.000000Z
-b86ab8a591990d2546314fdac7c35160
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-783
-
 BooleanControl$Type.class
 file
 
@@ -709,14 +675,14 @@ has-props
 
 700
 
-Clip.class
+Control$Type.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-3f309452dc494dab5bff90264ae11d53
+b86ab8a591990d2546314fdac7c35160
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -741,41 +707,7 @@ has-props
 
 
 
-615
-
-Line.class
-file
-
-
-
-
-2009-04-24T17:48:13.000000Z
-64f2b8fc8618dd3b8b1ea2bcfab6731f
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-769
+783
 
 ReverbType.class
 file
@@ -811,6 +743,74 @@ has-props
 
 2055
 
+Line.class
+file
+
+
+
+
+2009-04-24T17:48:13.000000Z
+64f2b8fc8618dd3b8b1ea2bcfab6731f
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+769
+
+Clip.class
+file
+
+
+
+
+2009-04-24T17:48:13.000000Z
+3f309452dc494dab5bff90264ae11d53
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+615
+
 TargetDataLine.class
 file
 
@@ -845,40 +845,6 @@ has-props
 
 375
 
-UnsupportedAudioFileException.class
-file
-
-
-
-
-2009-04-24T17:48:13.000000Z
-27aa8cb8b16ca2c2bbcb58cc289f4d55
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-560
-
 LineEvent.class
 file
 
@@ -912,6 +878,40 @@ has-props
 
 
 1926
+
+UnsupportedAudioFileException.class
+file
+
+
+
+
+2009-04-24T17:48:13.000000Z
+27aa8cb8b16ca2c2bbcb58cc289f4d55
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+560
 
 AudioInputStream.class
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/javax/imageio/bmp
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,17 +60,17 @@ has-props
 
 2105
 
-DecodeRLE8.class
+BMPImageWriter.class
 file
 
 
 
 
 2009-04-24T17:47:43.000000Z
-b2a74d936c7300b79c5e8f99c48365b3
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2689d4a6ac4ff23ef54a33510895d392
+2008-10-21T17:55:01.166395Z
+141271
+doko
 has-props
 
 
@@ -92,7 +92,7 @@ has-props
 
 
 
-3245
+3350
 
 BMPEncoder.class
 file
@@ -128,50 +128,16 @@ has-props
 
 1547
 
-BMPImageWriter.class
+DecodeRLE8.class
 file
 
 
 
 
 2009-04-24T17:47:43.000000Z
-2689d4a6ac4ff23ef54a33510895d392
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3350
-
-EncodeRGB8.class
-file
-
-
-
-
-2009-04-24T17:47:43.000000Z
-bb4896d68ab1061aa646b0412864afe8
-2006-12-12T18:41:51.528840Z
-119793
+b2a74d936c7300b79c5e8f99c48365b3
+2007-07-27T21:14:19.002073Z
+126998
 tromey
 has-props
 
@@ -194,7 +160,7 @@ has-props
 
 
 
-2105
+3245
 
 BMPImageReaderSpi.class
 file
@@ -230,16 +196,16 @@ has-props
 
 3037
 
-EncodeRLE4.class
+EncodeRGB8.class
 file
 
 
 
 
 2009-04-24T17:47:43.000000Z
-ac8ce9e4ee5552839b760c5c7c0a6687
-2007-07-27T21:14:19.002073Z
-126998
+bb4896d68ab1061aa646b0412864afe8
+2006-12-12T18:41:51.528840Z
+119793
 tromey
 has-props
 
@@ -262,7 +228,7 @@ has-props
 
 
 
-4027
+2105
 
 DecodeRGB24.class
 file
@@ -297,6 +263,40 @@ has-props
 
 
 1766
+
+EncodeRLE4.class
+file
+
+
+
+
+2009-04-24T17:47:43.000000Z
+ac8ce9e4ee5552839b760c5c7c0a6687
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4027
 
 BMPFileHeader.class
 file
@@ -400,40 +400,6 @@ has-props
 
 3426
 
-EncodeRGB32.class
-file
-
-
-
-
-2009-04-24T17:47:43.000000Z
-774d63a3e52ae64f005d5e619e4e1474
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2162
-
 BMPException.class
 file
 
@@ -467,6 +433,40 @@ has-props
 
 
 379
+
+EncodeRGB32.class
+file
+
+
+
+
+2009-04-24T17:47:43.000000Z
+774d63a3e52ae64f005d5e619e4e1474
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2162
 
 EncodeRGB24.class
 file

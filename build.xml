@@ -492,7 +492,7 @@
     <echo message="===================================================================="/>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
-      <arg value="-j4"/>
+      <arg value="-j1"/>
       <arg value="--directory=build/src-rtems"/>
       <arg value="all-target-newlib"/>
       <arg value="all-target-libgloss"/>

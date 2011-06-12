@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/javax/net/ssl/provider
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ gandalf
 
 3976
 
-X509KeyManagerFactory.java
-file
-
-
-
-
-2011-06-04T18:38:13.054104Z
-31e662ef4c95107ffdcd8bfe954d15d7
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-12909
-
 DelegatedTask.java
 file
 
@@ -161,6 +127,40 @@ gandalf
 
 
 2864
+
+X509KeyManagerFactory.java
+file
+
+
+
+
+2011-06-04T18:38:13.054104Z
+31e662ef4c95107ffdcd8bfe954d15d7
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12909
 
 TLSRandom.java
 file
@@ -196,40 +196,6 @@ mark
 
 7291
 
-SessionImpl.java
-file
-
-
-
-
-2011-06-04T18:38:13.054104Z
-12402da97c397a20844ceab6c61e7cb2
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5248
-
 CertificateURL.java
 file
 
@@ -264,14 +230,14 @@ gandalf
 
 10164
 
-Alert.java
+SessionImpl.java
 file
 
 
 
 
-2011-06-04T18:38:13.055104Z
-409e6f486997125315e27c5f923bc3b4
+2011-06-04T18:38:13.054104Z
+12402da97c397a20844ceab6c61e7cb2
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -296,7 +262,7 @@ gandalf
 
 
 
-8410
+5248
 
 ProtocolVersion.java
 file
@@ -332,6 +298,40 @@ doko
 
 5087
 
+Alert.java
+file
+
+
+
+
+2011-06-04T18:38:13.055104Z
+409e6f486997125315e27c5f923bc3b4
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8410
+
 ExtensionList.java
 file
 
@@ -366,40 +366,6 @@ gandalf
 
 8019
 
-ContentType.java
-file
-
-
-
-
-2009-04-24T17:46:58.000000Z
-71212d2e64d35e8958f5429d39249ca0
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2910
-
 HelloRequest.java
 file
 
@@ -433,6 +399,40 @@ doko
 
 
 2377
+
+ContentType.java
+file
+
+
+
+
+2009-04-24T17:46:58.000000Z
+71212d2e64d35e8958f5429d39249ca0
+2008-06-28T13:29:13.958049Z
+137223
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2910
 
 ClientCertificateTypeList.java
 file
@@ -1046,40 +1046,6 @@ gandalf
 
 28633
 
-ExchangeKeys.java
-file
-
-
-
-
-2011-06-04T18:38:13.060104Z
-2e339ee081e05e7b720be226c625523d
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2083
-
 Record.java
 file
 
@@ -1113,6 +1079,40 @@ tromey
 
 
 5915
+
+ExchangeKeys.java
+file
+
+
+
+
+2011-06-04T18:38:13.060104Z
+2e339ee081e05e7b720be226c625523d
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2083
 
 ClientPSKParameters.java
 file
@@ -1216,40 +1216,6 @@ tromey
 
 2217
 
-ServerKeyExchangeParams.java
-file
-
-
-
-
-2009-04-24T17:46:59.000000Z
-c1f19a1d56ef11cce64af5ca065fb0c7
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2037
-
 ServerDHParams.java
 file
 
@@ -1283,6 +1249,40 @@ gandalf
 
 
 7186
+
+ServerKeyExchangeParams.java
+file
+
+
+
+
+2009-04-24T17:46:59.000000Z
+c1f19a1d56ef11cce64af5ca065fb0c7
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2037
 
 SSLHMac.java
 file
@@ -1386,17 +1386,17 @@ gandalf
 
 21167
 
-ClientHello.java
+SSLRandom.java
 file
 
 
 
 
-2011-06-04T18:38:13.061104Z
-3c6b916dc319ae5721fa99e96cef6a3a
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
+2009-04-24T17:46:59.000000Z
+48e56b3559479e221ad150c1e9117dcc
+2006-03-10T13:25:35.074455Z
+111932
+mark
 
 
 
@@ -1418,41 +1418,7 @@ gandalf
 
 
 
-7461
-
-CertificateRequestBuilder.java
-file
-
-
-
-
-2011-06-04T18:38:13.062104Z
-2cbf34bcf4b3e29c8e03c5f35a517192
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3729
+4813
 
 KeyExchangeAlgorithm.java
 file
@@ -1488,17 +1454,17 @@ tromey
 
 2015
 
-SSLRandom.java
+CertificateRequestBuilder.java
 file
 
 
 
 
-2009-04-24T17:46:59.000000Z
-48e56b3559479e221ad150c1e9117dcc
-2006-03-10T13:25:35.074455Z
-111932
-mark
+2011-06-04T18:38:13.062104Z
+2cbf34bcf4b3e29c8e03c5f35a517192
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -1520,7 +1486,41 @@ mark
 
 
 
-4813
+3729
+
+ClientHello.java
+file
+
+
+
+
+2011-06-04T18:38:13.061104Z
+3c6b916dc319ae5721fa99e96cef6a3a
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7461
 
 MacAlgorithm.java
 file
@@ -1624,40 +1624,6 @@ gandalf
 
 4462
 
-ClientHelloV2.java
-file
-
-
-
-
-2011-06-04T18:38:13.063104Z
-910e72b6b16b3b56694ca5b7d793e0c2
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4858
-
 AbstractHandshake.java
 file
 
@@ -1692,14 +1658,14 @@ gandalf
 
 42663
 
-InputSecurityParameters.java
+ClientHelloV2.java
 file
 
 
 
 
 2011-06-04T18:38:13.063104Z
-6b6beaabe9ace52f1874c8170c93de9f
+910e72b6b16b3b56694ca5b7d793e0c2
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -1724,7 +1690,7 @@ gandalf
 
 
 
-11921
+4858
 
 SSLServerSocketFactoryImpl.java
 file
@@ -1760,14 +1726,14 @@ gandalf
 
 3771
 
-Extension.java
+InputSecurityParameters.java
 file
 
 
 
 
-2011-06-04T18:38:13.064104Z
-51db5ca1ebd39b8c8818f4bfc945a64b
+2011-06-04T18:38:13.063104Z
+6b6beaabe9ace52f1874c8170c93de9f
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -1792,7 +1758,7 @@ gandalf
 
 
 
-7028
+11921
 
 OutputSecurityParameters.java
 file
@@ -1827,6 +1793,40 @@ gandalf
 
 
 10470
+
+Extension.java
+file
+
+
+
+
+2011-06-04T18:38:13.064104Z
+51db5ca1ebd39b8c8818f4bfc945a64b
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7028
 
 MacException.java
 file
@@ -1998,14 +1998,14 @@ gandalf
 
 4973
 
-ClientRSA_PSKParameters.java
+ClientDiffieHellmanPublic.java
 file
 
 
 
 
-2011-06-04T18:38:13.066104Z
-17fbb8ec82ec9fd47b39bcae38fcaf1e
+2011-06-04T18:38:13.067104Z
+9f8312cb7d79f532a101b58d8cac3679
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -2030,7 +2030,7 @@ gandalf
 
 
 
-4058
+3851
 
 ClientHandshake.java
 file
@@ -2066,14 +2066,14 @@ gandalf
 
 42483
 
-ClientDiffieHellmanPublic.java
+ClientRSA_PSKParameters.java
 file
 
 
 
 
-2011-06-04T18:38:13.067104Z
-9f8312cb7d79f532a101b58d8cac3679
+2011-06-04T18:38:13.066104Z
+17fbb8ec82ec9fd47b39bcae38fcaf1e
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -2098,7 +2098,7 @@ gandalf
 
 
 
-3851
+4058
 
 Debug.java
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/crypto/openpgp/packet
 svn://gcc.gnu.org/svn/gcc
 
@@ -332,40 +332,6 @@ ian
 
 1092
 
-symmetric_key_encrypted_test.go
-file
-
-
-
-
-2011-06-04T18:38:23.097104Z
-66c8ed99676d01321b0d118f2c02d2b2
-2011-03-16T23:05:44.767009Z
-171076
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1491
-
 signature_test.go
 file
 
@@ -400,16 +366,16 @@ ian
 
 1230
 
-signature.go
+symmetric_key_encrypted_test.go
 file
 
 
 
 
 2011-06-04T18:38:23.097104Z
-2ffc7f686a33daeb709aa1e901eb3dc4
-2011-03-24T23:46:17.513223Z
-171427
+66c8ed99676d01321b0d118f2c02d2b2
+2011-03-16T23:05:44.767009Z
+171076
 ian
 
 
@@ -432,7 +398,7 @@ ian
 
 
 
-14638
+1491
 
 symmetric_key_encrypted.go
 file
@@ -467,6 +433,40 @@ ian
 
 
 2753
+
+signature.go
+file
+
+
+
+
+2011-06-04T18:38:23.097104Z
+2ffc7f686a33daeb709aa1e901eb3dc4
+2011-03-24T23:46:17.513223Z
+171427
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+14638
 
 reader.go
 file

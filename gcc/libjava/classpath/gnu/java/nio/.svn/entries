@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/nio
 svn://gcc.gnu.org/svn/gcc
 
@@ -746,40 +746,6 @@ tromey
 
 1927
 
-NIOSocketImpl.java
-file
-
-
-
-
-2011-06-04T18:38:07.978104Z
-fa2aac7d0a2503c883226054d1cb2332
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3203
-
 SelectionKeyImpl.java
 file
 
@@ -813,6 +779,40 @@ gandalf
 
 
 3161
+
+NIOSocketImpl.java
+file
+
+
+
+
+2011-06-04T18:38:07.978104Z
+fa2aac7d0a2503c883226054d1cb2332
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3203
 
 SocketChannelSelectionKeyImpl.java
 file
@@ -882,40 +882,6 @@ gandalf
 
 2408
 
-FileChannelImpl.java
-file
-
-
-
-
-2011-06-04T18:38:07.979104Z
-f7e7bd9ef648d4f1ede95a2600428ace
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-14431
-
 ServerSocketChannelImpl.java
 file
 
@@ -949,6 +915,40 @@ gandalf
 
 
 3675
+
+FileChannelImpl.java
+file
+
+
+
+
+2011-06-04T18:38:07.979104Z
+f7e7bd9ef648d4f1ede95a2600428ace
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+14431
 
 ChannelReader.java
 file

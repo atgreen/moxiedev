@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/xml/validation/xmlschema
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ gandalf
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-XMLSchemaTypeInfo.java
-file
-
-
-
-
-2011-06-04T18:38:06.546104Z
-da6861848e74f6e238a6fe8b9fcd0089
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2811
 
 ElementDeclaration.java
 file
@@ -94,6 +60,40 @@ gandalf
 
 3729
 
+XMLSchemaTypeInfo.java
+file
+
+
+
+
+2011-06-04T18:38:06.546104Z
+da6861848e74f6e238a6fe8b9fcd0089
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2811
+
 Particle.java
 file
 
@@ -128,48 +128,14 @@ gandalf
 
 2127
 
-XMLSchemaElementTypeInfo.java
-file
-
-
-
-
-2011-06-04T18:38:06.548104Z
-280a87f091c2af0d902a08579c7fd420
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2961
-
-ValidationException.java
+AttributeDeclaration.java
 file
 
 
 
 
 2011-06-04T18:38:06.547104Z
-8f729ae5bd6be3f56ea94da492e538dd
+5b0dd9dc52ac8110531cd6337585d27f
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -194,7 +160,7 @@ gandalf
 
 
 
-2113
+3034
 
 ComplexType.java
 file
@@ -230,14 +196,14 @@ gandalf
 
 2921
 
-AttributeDeclaration.java
+ValidationException.java
 file
 
 
 
 
 2011-06-04T18:38:06.547104Z
-5b0dd9dc52ac8110531cd6337585d27f
+8f729ae5bd6be3f56ea94da492e538dd
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -262,7 +228,41 @@ gandalf
 
 
 
-3034
+2113
+
+XMLSchemaElementTypeInfo.java
+file
+
+
+
+
+2011-06-04T18:38:06.548104Z
+280a87f091c2af0d902a08579c7fd420
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2961
 
 XMLSchemaTypeInfoProvider.java
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go
 svn://gcc.gnu.org/svn/gcc
 
@@ -89,16 +89,16 @@ dir
 tabwriter
 dir
 
-bufio
-dir
-
 html
 dir
 
-utf16
+bufio
 dir
 
 expvar
+dir
+
+utf16
 dir
 
 gob

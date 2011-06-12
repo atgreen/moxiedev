@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/doc/xml/manual
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,40 +502,6 @@ bkoz
 
 1302
 
-status_cxx1998.xml
-file
-
-
-
-
-2010-07-30T08:37:51.705126Z
-17eb20faf63562b3e616d64670e8fc4c
-2010-07-22T22:58:15.019546Z
-162433
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-28578
-
 parallel_mode.xml
 file
 
@@ -569,6 +535,40 @@ gerald
 
 
 31939
+
+status_cxx1998.xml
+file
+
+
+
+
+2010-07-30T08:37:51.705126Z
+17eb20faf63562b3e616d64670e8fc4c
+2010-07-22T22:58:15.019546Z
+162433
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+28578
 
 profile_mode.xml
 file
@@ -774,40 +774,6 @@ bkoz
 
 4558
 
-bitmap_allocator.xml
-file
-
-
-
-
-2011-06-04T18:05:47.039104Z
-cb102a189539352cecbd942583158a97
-2011-05-18T21:55:52.315064Z
-173879
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-21676
-
 support.xml
 file
 
@@ -841,6 +807,40 @@ bkoz
 
 
 14053
+
+bitmap_allocator.xml
+file
+
+
+
+
+2011-06-04T18:05:47.039104Z
+cb102a189539352cecbd942583158a97
+2011-05-18T21:55:52.315064Z
+173879
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+21676
 
 configure.xml
 file
@@ -978,40 +978,6 @@ bkoz
 
 57270
 
-using_exceptions.xml
-file
-
-
-
-
-2011-06-04T18:05:47.041104Z
-19582340f6e551adc50b1704d999ddd4
-2011-01-30T12:25:03.288402Z
-169406
-gerald
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-17640
-
 debug.xml
 file
 
@@ -1045,6 +1011,40 @@ redi
 
 
 12687
+
+using_exceptions.xml
+file
+
+
+
+
+2011-06-04T18:05:47.041104Z
+19582340f6e551adc50b1704d999ddd4
+2011-01-30T12:25:03.288402Z
+169406
+gerald
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+17640
 
 localization.xml
 file

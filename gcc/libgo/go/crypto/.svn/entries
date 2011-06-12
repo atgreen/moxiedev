@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/crypto
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,13 +26,19 @@ ian
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-cast5
-dir
-
 ecdsa
 dir
 
+cast5
+dir
+
 twofish
+dir
+
+rand
+dir
+
+md4
 dir
 
 crypto.go
@@ -69,16 +75,10 @@ ian
 
 2037
 
-md4
-dir
-
-rand
+md5
 dir
 
 rsa
-dir
-
-md5
 dir
 
 rc4

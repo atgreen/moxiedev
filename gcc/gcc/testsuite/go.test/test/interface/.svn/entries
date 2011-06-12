@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/go.test/test/interface
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ ian
 
 957
 
-pointer.go
-file
-
-
-
-
-2011-06-04T17:55:36.106104Z
-93070134a0b180e46752ac4a25d3c461
-2010-09-11T00:47:55.335584Z
-164210
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-653
-
 convert.go
 file
 
@@ -162,14 +128,14 @@ ian
 
 1966
 
-returntype.go
+pointer.go
 file
 
 
 
 
-2011-06-04T17:55:36.107104Z
-08c5ec8f630cb0aad7a38d6c828cd1f6
+2011-06-04T17:55:36.106104Z
+93070134a0b180e46752ac4a25d3c461
 2010-09-11T00:47:55.335584Z
 164210
 ian
@@ -194,7 +160,7 @@ ian
 
 
 
-564
+653
 
 explicit.go
 file
@@ -229,6 +195,40 @@ ian
 
 
 1325
+
+returntype.go
+file
+
+
+
+
+2011-06-04T17:55:36.107104Z
+08c5ec8f630cb0aad7a38d6c828cd1f6
+2010-09-11T00:47:55.335584Z
+164210
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+564
 
 struct.go
 file

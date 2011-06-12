@@ -1,3 +1,22 @@
+2011-06-12  Tobias Burnus
+
+	PR fortran/49324
+	* gfortran.dg/alloc_comp_assign_11.f90: New.
+
+2011-05-11  Thomas Koenig  <tkoenig@gcc.gnu.org>
+
+	* gfortran.dg/trim_optimize_7.f90:  New test.
+
+2011-06-10  Wei Guozhi  <carrot@google.com>
+
+	PR target/45335
+	* gcc.target/arm/pr45335.c: New test.
+	* gcc.target/arm/pr45335-2.c: New test.
+	* gcc.target/arm/pr45335-3.c: New test.
+	* gcc.target/arm/pr40457-1.c: Add another possible output "ldrd".
+	* gcc.target/arm/pr40457-2.c: Changed to store 3 words.
+	* gcc.target/arm/pr40457-3.c: Changed to store 3 words.
+
 2011-06-10  Paolo Carlini  <paolo.carlini@oracle.com>
 
 	PR c++/41769

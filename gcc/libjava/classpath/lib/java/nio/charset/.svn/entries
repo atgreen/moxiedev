@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/java/nio/charset
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ has-props
 
 5808
 
-CoderResult$1.class
-file
-
-
-
-
-2010-02-03T11:42:14.683604Z
-3b8ade51a92995608938548933f9c200
-2010-01-06T17:46:48.717189Z
-155678
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-577
-
 UnmappableCharacterException.class
 file
 
@@ -162,14 +128,14 @@ has-props
 
 849
 
-CoderResult$2.class
+CoderResult$1.class
 file
 
 
 
 
-2010-02-03T11:42:14.684743Z
-c501790d486e0c002736a24299964c71
+2010-02-03T11:42:14.683604Z
+3b8ade51a92995608938548933f9c200
 2010-01-06T17:46:48.717189Z
 155678
 doko
@@ -230,6 +196,40 @@ has-props
 
 623
 
+CoderResult$2.class
+file
+
+
+
+
+2010-02-03T11:42:14.684743Z
+c501790d486e0c002736a24299964c71
+2010-01-06T17:46:48.717189Z
+155678
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+577
+
 CoderResult$Cache.class
 file
 
@@ -267,40 +267,6 @@ has-props
 spi
 dir
 
-Charset.class
-file
-
-
-
-
-2010-02-03T11:42:14.686491Z
-96187b017ef4c0b04a0fa7c1fbb5091f
-2010-01-06T17:46:48.717189Z
-155678
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7948
-
 CharsetEncoder.class
 file
 
@@ -334,6 +300,40 @@ has-props
 
 
 7022
+
+Charset.class
+file
+
+
+
+
+2010-02-03T11:42:14.686491Z
+96187b017ef4c0b04a0fa7c1fbb5091f
+2010-01-06T17:46:48.717189Z
+155678
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7948
 
 CoderResult.class
 file

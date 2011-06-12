@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/autopar
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ spop
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-reduc-1char.c
-file
-
-
-
-
-2009-09-08T03:18:05.000000Z
-46ec865c932a3869326994e5a68ca4bb
-2009-09-03T08:59:25.629377Z
-151372
-razya
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1407
 
 outer-3.c
 file
@@ -94,14 +60,14 @@ razya
 
 739
 
-reduc-2char.c
+reduc-1char.c
 file
 
 
 
 
 2009-09-08T03:18:05.000000Z
-f9b30583e02deffbbbaf5bde4e4e40df
+46ec865c932a3869326994e5a68ca4bb
 2009-09-03T08:59:25.629377Z
 151372
 razya
@@ -126,7 +92,7 @@ razya
 
 
 
-1367
+1407
 
 outer-4.c
 file
@@ -162,14 +128,14 @@ razya
 
 838
 
-reduc-1.c
+reduc-2char.c
 file
 
 
 
 
 2009-09-08T03:18:05.000000Z
-0cc14d5557cb126d008844b2deee3e3c
+f9b30583e02deffbbbaf5bde4e4e40df
 2009-09-03T08:59:25.629377Z
 151372
 razya
@@ -194,41 +160,7 @@ razya
 
 
 
-1428
-
-outer-5.c
-file
-
-
-
-
-2009-12-07T15:31:04.930940Z
-e893d8c0e76c32ee9db5a6dff98c16ce
-2009-10-22T18:27:43.471087Z
-153469
-razya
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1027
+1367
 
 pr46885.c
 file
@@ -264,14 +196,48 @@ jakub
 
 363
 
-reduc-2.c
+outer-5.c
+file
+
+
+
+
+2009-12-07T15:31:04.930940Z
+e893d8c0e76c32ee9db5a6dff98c16ce
+2009-10-22T18:27:43.471087Z
+153469
+razya
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1027
+
+reduc-1.c
 file
 
 
 
 
 2009-09-08T03:18:05.000000Z
-012e42a964c5e9fdda5e09b6cd0355e2
+0cc14d5557cb126d008844b2deee3e3c
 2009-09-03T08:59:25.629377Z
 151372
 razya
@@ -296,7 +262,7 @@ razya
 
 
 
-1272
+1428
 
 outer-6.c
 file
@@ -331,6 +297,40 @@ razya
 
 
 1047
+
+reduc-2.c
+file
+
+
+
+
+2009-09-08T03:18:05.000000Z
+012e42a964c5e9fdda5e09b6cd0355e2
+2009-09-03T08:59:25.629377Z
+151372
+razya
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1272
 
 reduc-3.c
 file

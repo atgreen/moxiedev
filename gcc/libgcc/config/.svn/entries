@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/libgcc/config
 svn://gcc.gnu.org/svn/gcc
 
@@ -257,6 +257,9 @@ bje
 
 581
 
+ia64
+dir
+
 t-tls
 file
 
@@ -290,9 +293,6 @@ hjl
 
 
 56
-
-ia64
-dir
 
 no-unwind.h
 file
@@ -328,10 +328,10 @@ ro
 
 88
 
-mips
+sparc
 dir
 
-sparc
+mips
 dir
 
 t-crtfm
@@ -374,9 +374,6 @@ dir
 moxie
 dir
 
-m68k
-dir
-
 t-gnu-prefix
 file
 
@@ -411,10 +408,13 @@ bernds
 
 31
 
-rx
+m68k
 dir
 
 i386
+dir
+
+rx
 dir
 
 rs6000

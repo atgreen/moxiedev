@@ -1,7 +1,7 @@
 10
 
 dir
-174933
+174966
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/vect
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ dorit
 
 282
 
-pr21734_2.cc
-file
-
-
-
-
-2009-04-24T17:44:23.000000Z
-745c5d35ba5d7ecdea2bef9d71dd24c0
-2005-06-02T14:52:18.000000Z
-100494
-dorit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-225
-
 pr45470-a.cc
 file
 
@@ -161,6 +127,40 @@ irar
 
 
 267
+
+pr21734_2.cc
+file
+
+
+
+
+2009-04-24T17:44:23.000000Z
+745c5d35ba5d7ecdea2bef9d71dd24c0
+2005-06-02T14:52:18.000000Z
+100494
+dorit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+225
 
 pr45470-b.cc
 file

@@ -537,14 +537,6 @@ moxie_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
   emit_move_insn (mem, fnaddr);
 }
 
-int moxie_comparison_operator (rtx op, enum machine_mode mode)
-{
-  return ((mode == VOIDmode ||
-	   mode == CCmode ||
-	   GET_MODE (op) == mode)
-	  && COMPARISON_P (op));
-}
-
 /* The Global `targetm' Variable.  */
 
 /* Initialize the GCC target structure.  */

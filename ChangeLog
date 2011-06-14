@@ -1,3 +1,7 @@
+2011-06-13  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Reorder clean script.
+
 2011-06-12    <green@moxielogic.com>
 
 	* build.xml: Build newlib and libgloss at the same time.

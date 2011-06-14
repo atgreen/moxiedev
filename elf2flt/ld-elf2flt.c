@@ -46,7 +46,6 @@ static const char *elf2flt = NULL;
 static const char *nm = NULL;
 static const char *objdump = NULL;
 static const char *objcopy = NULL;
-static const char *tooldir = ".";
 static const char *ldscriptpath = BINUTILS_LDSCRIPTDIR;
 
 /* A list of sed commands */
@@ -120,6 +119,8 @@ execute(const char *command, const char *output, const options_t *options, ...)
 		fprintf(stderr, "Invoking:");
 		for (ix = 0; ix != opts.num - 1; ix++)
 			fprintf(stderr, " '%s'", opts.options[ix]);
+		if (output)
+			fprintf(stderr, " > '%s'", output);
 		fprintf(stderr, "\n");
 	}
 
@@ -173,7 +174,7 @@ do_sed(const sed_commands_t *sed, const char *name_in, const char *name_out)
 			if (replacement)
 				fprintf(stderr, "\t-e 's/%s/%s/' \\\n", pattern, replacement);
 			else
-				fprintf(stderr, "\t-e 'd/%s/' \\\n", pattern);
+				fprintf(stderr, "\t-e '/%s/d' \\\n", pattern);
 		}
 		fprintf(stderr, "\t%s > %s\n", name_in, name_out);
 	}
@@ -452,7 +453,7 @@ static void parse_args(int argc, char **argv)
 		} else if (streq(arg, "-r") || streq(arg, "-Ur")) {
 			flag_final = 0;
 			append_option(&other_options, arg);
-		} else if (streq(arg, "-v") || streq(arg, "--verbose")) {
+		} else if (streq(arg, "--verbose")) {
 			flag_verbose = 1;
 			append_option(&other_options, arg);
 		} else if (streqn(arg, "-m")) {
@@ -471,47 +472,51 @@ static void parse_args(int argc, char **argv)
 
 int main(int argc, char *argv[])
 {
-	const char *ptr;
-	char *tmp;
 	const char *argv0 = argv[0];
-	size_t len;
+	const char *argv0_dir = make_relative_prefix(argv0, "/", "/");
+	char *tooldir = argv0_dir;
+	char *bindir = argv0_dir;
+	char *tmp;
 	struct stat buf;
 	const char *have_exe = NULL;
 	int status;
 
-	len = strlen(argv0);
 #ifdef __WIN32
 	/* Remove the .exe extension, if it's there.  */
+	size_t len = strlen(argv0);
 	if (len > 4 && streq(&argv0[len - 4], ".exe")) {
 		have_exe = ".exe";
 		len -= 4;
 		argv0 = tmp = xstrdup(argv0);
 		tmp[len] = 0;
+		argv[0][len] = '\0';
 	}
 #endif
-	elf2flt_progname = argv0;
-	for (ptr = elf2flt_progname + len; ptr != elf2flt_progname; ptr--)
-		if (IS_DIR_SEPARATOR(ptr[-1])) {
-			tooldir = tmp = xmalloc(len);
-			memcpy(tmp, argv0, len);
-			tmp[ptr - elf2flt_progname - 1] = 0;
-			elf2flt_progname = ptr;
-			/* The standard binutils tool layout has:
+	elf2flt_progname = lbasename(argv0);
 
-			   bin/<TARGET_ALIAS>-foo
-			   lib/
-			   <TARGET_ALIAS>/bin/foo
-			   <TARGET_ALIAS>/lib
+	/* The standard binutils tool layout has:
 
-			   It's <TARGET_ALIAS>/ that we want here: files in lib/ are for
-			   the host while those in <TARGET_ALIAS>/lib are for the target.  */
-			if (streqn(elf2flt_progname, TARGET_ALIAS)) {
-				tmp = concat(tooldir, "/../" TARGET_ALIAS "/bin", NULL);
-				if (stat(tmp, &buf) == 0 && S_ISDIR(buf.st_mode))
-					tooldir = tmp;
-			}
-			break;
+	   bin/<TARGET_ALIAS>-foo
+	   lib/
+	   <TARGET_ALIAS>/bin/foo
+	   <TARGET_ALIAS>/lib
+
+	   It's <TARGET_ALIAS>/ that we want here: files in lib/ are for
+	   the host while those in <TARGET_ALIAS>/lib are for the target.
+	   Make bindir point to the bin dir for bin/<TARGET_ALIAS>-foo.
+	   Make tooldir point to the bin dir for <TARGET_ALIAS>/bin/foo.  */
+	if (streqn(elf2flt_progname, TARGET_ALIAS)) {
+		tmp = concat(argv0_dir, "../" TARGET_ALIAS "/bin", NULL);
+		if (stat(tmp, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+			tooldir = concat(tmp, "/", NULL);
 		}
+	} else {
+		tmp = concat(argv0_dir, "../../bin", NULL);
+		if (stat(tmp, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+			bindir = concat(tmp, "/", NULL);
+		}
+	}
+
 	/* Typically ld-elf2flt is invoked as `ld` which means error
 	 * messages from it will look like "ld: " which is completely
 	 * confusing.  So append an identifier to keep things clear.
@@ -520,25 +525,20 @@ int main(int argc, char *argv[])
 
 	xmalloc_set_program_name(elf2flt_progname);
 
-	tmp = xmalloc(len + 16);
-	memcpy(tmp, argv0, len);
-	while (len && tmp[len - 1] != '-' && !IS_DIR_SEPARATOR(tmp[len - 1]))
-		len--;
-	tmp[len] = 0;
-
-	linker = concat(tmp, "ld.real", have_exe, NULL);
-	elf2flt = concat(tmp, "elf2flt", have_exe, NULL);
-	nm = concat(tmp, "nm", have_exe, NULL);
-	objdump = concat(tooldir, "/../../bin/", TARGET_ALIAS, "-objdump", have_exe, NULL);
-	objcopy = concat(tooldir, "/../../bin/", TARGET_ALIAS, "-objcopy", have_exe, NULL);
+	linker = concat(tooldir, "ld.real", have_exe, NULL);
+	elf2flt = concat(tooldir, "elf2flt", have_exe, NULL);
+	nm = concat(tooldir, "nm", have_exe, NULL);
+	objdump = concat(bindir, TARGET_ALIAS "-objdump", have_exe, NULL);
+	objcopy = concat(bindir, TARGET_ALIAS "-objcopy", have_exe, NULL);
 
 	if (stat(ldscriptpath, &buf) || !S_ISDIR(buf.st_mode))
-		ldscriptpath = concat(tooldir, "/../lib", NULL);
+		ldscriptpath = concat(tooldir, "../lib", NULL);
 
 	parse_args(argc, argv);
 
 	if (flag_verbose) {
 		fprintf(stderr, "argv[0]      = '%s'\n", argv[0]);
+		fprintf(stderr, "bindir       = '%s'\n", bindir);
 		fprintf(stderr, "tooldir      = '%s'\n", tooldir);
 		fprintf(stderr, "linker       = '%s'\n", linker);
 		fprintf(stderr, "elf2flt      = '%s'\n", elf2flt);

@@ -44,20 +44,6 @@
   <!-- Clean the tree                                                      -->
   <!-- =================================================================== -->
   <target name="clean">
-    <delete dir="dist"/>
-    <delete dir="root"/>
-    <delete dir="arm-root"/>
-    <delete dir="build"/>
-    <delete dir="arm-build"/>
-    <delete>
-      <fileset dir="." includes="**/*~"/>
-      <fileset dir="." includes="**/.#*~"/>
-      <fileset dir="." includes="*~"/>
-    </delete>
-    <exec executable="sh">
-      <arg value="-c"/>
-      <arg value="(cd benchmarks/MiBench; ./all__delete_work_dirs)"/>
-    </exec>
     <exec executable="sh">
       <arg value="-c"/>
       <arg value="(cd qemu; make distclean > /dev/null 2>&amp;1)"/>
@@ -73,6 +59,20 @@
     <exec executable="make">
       <arg value="--directory=uClibc"/>
       <arg value="clean"/>
+    </exec>
+    <delete dir="dist"/>
+    <delete dir="root"/>
+    <delete dir="arm-root"/>
+    <delete dir="build"/>
+    <delete dir="arm-build"/>
+    <delete>
+      <fileset dir="." includes="**/*~"/>
+      <fileset dir="." includes="**/.#*~"/>
+      <fileset dir="." includes="*~"/>
+    </delete>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd benchmarks/MiBench; ./all__delete_work_dirs)"/>
     </exec>
   </target>
 

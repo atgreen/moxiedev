@@ -1,3 +1,7 @@
+2011-06-14  Anthony Green  <green@moxielogic.com>
+
+	* HACKING: Add more notes about the source.
+
 2011-06-13  Anthony Green  <green@moxielogic.com>
 
 	* build.xml: Reorder clean script.

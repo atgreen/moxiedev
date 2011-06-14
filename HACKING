@@ -31,6 +31,11 @@ Directories
   ant build.xml script will initialize and pull the source
   automatically when building.
 
+  elf2flt
+
+  This contains an anonymous cvs checkout of the upstream elf2flt
+  tree.
+
   gcc
 
   This contains an anonymous svn checkout of the gcc tree from
@@ -62,6 +67,13 @@ Directories
 
   This is the install directory for when we build and install for
   local testing.
+
+  rtems
+
+  This is managed as a git submodule using the qemu-rtems repository
+  hosted at http://github.com/atgreen/rtems-moxie.  The ant build.xml
+  script will initialize and pull the source automatically when
+  building.
 
   src
 

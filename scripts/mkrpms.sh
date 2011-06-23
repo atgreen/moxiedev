@@ -1,46 +1,40 @@
 #!/bin/sh
-
+set -x
 # For this to work, the mock config file for $TARGET must point to the 
 # local yum repo at $REPO.
 
-#CPU=x86_64
-CPU=i686
+CPU=x86_64
+#CPU=i686
 
-TARGET=fedora-12-i386
+TAG=fc15
+TARGET=fedora-15-$CPU
 RESULTDIR=/var/lib/mock/$TARGET/result
-REPO=dist/MoxieLogic/$CPU
+REPO=dist/MoxieLogic/$TAG
 
 mkdir -p $REPO/RPMS/$CPU/debuginfo
 mkdir -p $REPO/RPMS/noarch
 mkdir -p $REPO/SRPMS
 createrepo $REPO
 
-mock -r $TARGET dist/moxie-elf-binutils-*src.rpm
-mv $RESULTDIR/moxie-elf-binutils-debuginfo*.rpm $REPO/RPMS/$CPU/debuginfo
-mv $RESULTDIR/moxie-elf-binutils-*src.rpm  $REPO/SRPMS
-mv $RESULTDIR/moxie-elf-binutils-*.rpm $REPO/RPMS/$CPU
-createrepo $REPO
+for i in moxie-elf-binutils moxie-elf-gcc moxie-elf-newlib moxie-elf-gdb moxie-elf-qemu moxie-rtems-binutils moxie-rtems-newlib moxie-rtems-gcc moxie-rtems; do
+  mock -r $TARGET dist/$i-[0-9]*src.rpm;
+  FILE=`ls $RESULTDIR/$i-*.rpm | head -1`
+  if test x$FILE != "x"; then
+    rm $REPO/RPMS/noarch/$i-[0-9]*.rpm
+    mv $RESULTDIR/$i-*src.rpm  $REPO/SRPMS;
+    case `ls $RESULTDIR/$i-*.rpm` in
+    *noarch*)
+      rm $REPO/RPMS/noarch/$i-[0-9]*.rpm
+      mv $RESULTDIR/$i-*.rpm $REPO/RPMS/noarch;
+      ;;
+    *)
+      rm $REPO/RPMS/$CPU/debuginfo/$i-debuginfo*.rpm
+      rm $REPO/RPMS/$CPU/$i-[0-9]*.rpm
+      mv $RESULTDIR/$i-debuginfo*.rpm $REPO/RPMS/$CPU/debuginfo;
+      mv $RESULTDIR/$i-*.rpm $REPO/RPMS/$CPU;
+      ;;
+    esac
+    createrepo $REPO;
+  fi;
+done
 
-mock -r $TARGET dist/moxie-elf-gcc-*src.rpm
-mv $RESULTDIR/moxie-elf-gcc-debuginfo*.rpm $REPO/RPMS/$CPU/debuginfo
-mv $RESULTDIR/moxie-elf-gcc-*src.rpm  $REPO/SRPMS
-mv $RESULTDIR/moxie-elf-gcc-*.rpm $REPO/RPMS/$CPU
-createrepo $REPO
-
-mock -r $TARGET dist/moxie-elf-newlib-*src.rpm
-mv $RESULTDIR/moxie-elf-newlib-debuginfo*.rpm $REPO/RPMS/$CPU/debuginfo
-mv $RESULTDIR/moxie-elf-newlib-*src.rpm  $REPO/SRPMS
-mv $RESULTDIR/moxie-elf-newlib-*.rpm $REPO/RPMS/$CPU
-createrepo $REPO
-
-mock -r $TARGET dist/moxie-elf-gdb-*src.rpm
-mv $RESULTDIR/moxie-elf-gdb-debuginfo*.rpm $REPO/RPMS/$CPU/debuginfo
-mv $RESULTDIR/moxie-elf-gdb-*src.rpm  $REPO/SRPMS
-mv $RESULTDIR/moxie-elf-gdb-*.rpm $REPO/RPMS/$CPU
-createrepo $REPO
-
-mock -r $TARGET dist/moxie-elf-qemu-*src.rpm
-mv $RESULTDIR/moxie-elf-qemu-debuginfo*.rpm $REPO/RPMS/$CPU/debuginfo
-mv $RESULTDIR/moxie-elf-qemu-*src.rpm  $REPO/SRPMS
-mv $RESULTDIR/moxie-elf-qemu-*.rpm $REPO/RPMS/$CPU
-createrepo $REPO

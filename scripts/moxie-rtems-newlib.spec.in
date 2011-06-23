@@ -1,6 +1,6 @@
 %define _binaries_in_noarch_packages_terminate_build 0
 
-Name:		moxie-elf-newlib
+Name:		moxie-rtems-newlib
 Version:	@VERSION@
 Release:	0.@BUILDNUM@
 Summary:	An embedded C runtime library
@@ -12,8 +12,7 @@ Source0:	moxie-newlib.tar.gz
 
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-Requires:       moxie-elf-gcc
-BuildRequires:  moxie-elf-gcc
+BuildRequires:  moxie-rtems-binutils moxie-elf-gcc
 
 BuildArch:	noarch
 
@@ -46,6 +45,12 @@ sed -e 's,^[ ]*/usr/lib/rpm.*/brp-strip,./brp-strip,' \
 < os_install_post~ > os_install_post
 
 %build
+cat > moxie-rtems-gcc-wrapper <<EOF
+#!/bin/sh
+
+moxie-elf-gcc "\$@" -D__rtems__ -D_rtems_ -Tsim.ld
+EOF
+chmod +x moxie-rtems-gcc-wrapper
 `pwd`/configure --prefix=%_prefix \
 		--exec-prefix=%_exec_prefix \
 		--bindir=%_bindir \
@@ -59,12 +64,14 @@ sed -e 's,^[ ]*/usr/lib/rpm.*/brp-strip,./brp-strip,' \
 		--sharedstatedir=%_sharedstatedir \
 		--mandir=%_mandir \
 		--infodir=%_infodir \
-		--target=moxie-elf
-make all-target-newlib all-target-libgloss
+		--target=moxie-rtems
+
+make all-target-newlib all-target-libgloss CC_FOR_TARGET=`pwd`/moxie-rtems-gcc-wrapper
+
 
 %install
 rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/usr/moxie-elf/lib
+mkdir -p $RPM_BUILD_ROOT/usr/moxie-rtems/lib
 make install-target-libgloss install-target-newlib DESTDIR=$RPM_BUILD_ROOT
 
 %define __os_install_post . ./os_install_post
@@ -74,7 +81,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%{_prefix}/moxie-elf
+%{_prefix}/moxie-rtems
 %doc COPYING* newlib/MAINTAINERS newlib/NEWS newlib/README
 
 %changelog

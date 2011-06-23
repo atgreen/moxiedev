@@ -596,7 +596,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/rtems; ../../rtems/configure --target=moxie-rtems --disable-tests --prefix=`(cd ../../root/usr; pwd)`)"/>
+      <arg value="(cd build/rtems; ../../rtems/configure --enable-testsuites=samples --target=moxie-rtems --prefix=`(cd ../../root/usr; pwd)`)"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>

@@ -1,27 +1,29 @@
-Name:		moxie-elf-gdb
+Name:		moxie-rtems-binutils
 Version:	@VERSION@
 Release:	0.@BUILDNUM@
-Summary:	The GNU gdb for the moxie core
+Summary:	The GNU binutils for the moxie core
 
 Group:		Development/Tools
 License:	GPL
 URL:		http://moxielogic.com/blog
-Source0:	moxie-gdb.tar.gz
+Source0:	moxie-binutils.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires:	texinfo ncurses-devel zlib-devel flex bison dtc
+BuildRequires:	texinfo bison flex
 
 %description
-The GNU Debugger, GDB, for the moxie core.
-
-%package sim
-Summary:  GNU simulator for the moxie core
-Group:    Development
-
-%description sim
-GNU simulator for the moxie core.
+binutils is a collection of binary utilities, including ar (for creating,
+modifying and extracting from archives), nm (for listing symbols from
+object files), objcopy (for copying and translating object files),
+objdump (for displaying information from object files), ranlib (for
+generating an index for the contents of an archive), size (for listing
+the section sizes of an object or archive file), strings (for listing
+printable strings from files), strip (for discarding symbols), c++filt
+(a filter for demangling encoded C++ symbols), addr2line (for converting
+addresses to file and line).
 
 %prep
 %setup -q -n src
+
 
 %build
 CFLAGS="%optflags" ./configure \
@@ -40,10 +42,8 @@ CFLAGS="%optflags" ./configure \
 		   --mandir=%_mandir \
 		   --infodir=%_infodir \
 		   --enable-shared \
-		   --disable-gdbtk \
-		   --with-gdb-datadir=%_datadir/%{name}-%{version} \
-		   --target=moxie-elf
-%__make tooldir=%_prefix all 
+		   --target=moxie-rtems
+%__make tooldir=%_prefix all info
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -51,7 +51,6 @@ make install DESTDIR=$RPM_BUILD_ROOT
 rm -rf $RPM_BUILD_ROOT%_datadir/locale
 rm -rf $RPM_BUILD_ROOT%_infodir
 rm -rf $RPM_BUILD_ROOT%_libdir/*.a
-rm -rf $RPM_BUILD_ROOT%_prefix/*-linux-gnu
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -59,19 +58,12 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%dir %_datadir/%{name}-%{version}
 %{_bindir}/*
-%exclude %{_bindir}/moxie-elf-run
+%{_prefix}/moxie-rtems
+%{_prefix}/*/moxie-rtems
 %{_mandir}/man1/*
-%_datadir/%{name}-%{version}/syscalls
-%_datadir/%{name}-%{version}/python
 %doc COPYING*
 
-%files sim
-%defattr(-,root,root,-)
-%{_bindir}/moxie-elf-run
-%_datadir/%{name}-%{version}/dtb
-%doc COPYING*
 
 %changelog
 * @DATE@ Anthony Green <green@moxielogic.com> @VERSION@-1

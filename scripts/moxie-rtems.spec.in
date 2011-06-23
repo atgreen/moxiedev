@@ -1,29 +1,27 @@
-%define _binaries_in_noarch_packages_terminate_build 0
+%define debug_package %{nil}
+%define __debug_install_post {true;}
+%define _use_internal_dependency_generator 0
 
-Name:		moxie-elf-newlib
+Name:		moxie-rtems
 Version:	@VERSION@
 Release:	0.@BUILDNUM@
-Summary:	An embedded C runtime library
+Summary:	RTEMS port for the moxie processor core
 
 Group:		Development/Tools
-License:	BSD
+License:	GPL
 URL:		http://moxielogic.org
-Source0:	moxie-newlib.tar.gz
+Source0:	rtems.tar.gz
 
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-Requires:       moxie-elf-gcc
-BuildRequires:  moxie-elf-gcc
-
-BuildArch:	noarch
+Requires:       moxie-rtems-gcc
+BuildRequires:  moxie-rtems-gcc
 
 %description
-Newlib is a C library intended for use on embedded systems. It is a
-conglomeration of several library parts, all under free software
-licenses that make them easily usable on embedded products.
+RTEMS is a real-time embedded operating system.  This is a port of RTEMS to the moxie core.
 
 %prep
-%setup -q -n src
+%setup -q -n rtems
 
 # Extract %%__os_install_post into os_install_post~
 cat << \EOF > os_install_post~
@@ -46,7 +44,9 @@ sed -e 's,^[ ]*/usr/lib/rpm.*/brp-strip,./brp-strip,' \
 < os_install_post~ > os_install_post
 
 %build
-`pwd`/configure --prefix=%_prefix \
+mkdir moxie-build
+cd moxie-build
+`pwd`/../configure --prefix=%_prefix \
 		--exec-prefix=%_exec_prefix \
 		--bindir=%_bindir \
 		--sbindir=%_sbindir \
@@ -59,13 +59,25 @@ sed -e 's,^[ ]*/usr/lib/rpm.*/brp-strip,./brp-strip,' \
 		--sharedstatedir=%_sharedstatedir \
 		--mandir=%_mandir \
 		--infodir=%_infodir \
-		--target=moxie-elf
-make all-target-newlib all-target-libgloss
+		--target=moxie-rtems \
+		--enable-testsuites=samples
+
+make RTEMS_BSP=moxiesim
+
 
 %install
 rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/usr/moxie-elf/lib
-make install-target-libgloss install-target-newlib DESTDIR=$RPM_BUILD_ROOT
+#mkdir -p $RPM_BUILD_ROOT/usr/moxie-rtems/lib
+(cd moxie-build;
+make %{?_smp_mflags} install DESTDIR=$RPM_BUILD_ROOT RTEMS_BSP=moxiesim)
+
+# Move pkgconfig file to correct directory.
+mkdir -p $RPM_BUILD_ROOT%{_libdir}
+mv $RPM_BUILD_ROOT%{_prefix}/lib/pkgconfig $RPM_BUILD_ROOT%{_libdir}
+
+# Move man pages.
+mkdir -p $RPM_BUILD_ROOT/%{_datadir}/doc/moxie-rtems
+mv $RPM_BUILD_ROOT/usr/share/man $RPM_BUILD_ROOT/%{_datadir}/doc/moxie-rtems
 
 %define __os_install_post . ./os_install_post
 
@@ -74,8 +86,14 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%{_prefix}/moxie-elf
-%doc COPYING* newlib/MAINTAINERS newlib/NEWS newlib/README
+%doc COPYING LICENSE* MAINTAINERS README* SUPPORT VERSION
+%dir %{_prefix}/make
+%{_prefix}/moxie-rtems
+%{_bindir}/*
+%{_libdir}/pkgconfig/moxie-rtems-moxiesim.pc
+%{_prefix}/make/*
+%{_datadir}/doc/moxie-rtems/*
+%{_prefix}/share/rtems4.11
 
 %changelog
 * @DATE@ Anthony Green <green@moxielogic.com> @VERSION@-1

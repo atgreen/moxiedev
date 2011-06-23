@@ -1,6 +1,6 @@
 %define	with_newlib 1
 
-Name:		moxie-elf-gcc
+Name:		moxie-rtems-gcc
 Version:	@VERSION@
 Release:	0.@BUILDNUM@
 Summary:	The GNU Compiler Collection targeting the moxie core
@@ -11,12 +11,12 @@ URL:		http://moxielogic.com/blog
 Source0:	moxie-gcc.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-BuildRequires:	moxie-elf-binutils flex bison texinfo gperf 
+BuildRequires:	moxie-rtems-binutils flex bison texinfo gperf 
 BuildRequires:  gmp-devel mpfr-devel libmpc-devel zlib-devel
-Requires:	moxie-elf-binutils
+Requires:	moxie-rtems-binutils
 %if %{with_newlib} == 1
-BuildRequires:	moxie-elf-newlib
-Requires:	moxie-elf-newlib
+BuildRequires:	moxie-rtems-newlib
+Requires:	moxie-rtems-newlib
 %endif
 
 %description
@@ -34,7 +34,7 @@ GNU C++ compiler for the moxie core.
 %package libstdc++
 Summary:  C++ runtime library for the moxie core
 Group:    Development/Libraries
-Requires: moxie-elf-gcc-c++
+Requires: moxie-rtems-gcc-c++
 
 %description libstdc++
 C++ runtime library for the moxie core.
@@ -83,7 +83,7 @@ cd build
   --mandir=%_mandir \
   --infodir=%_infodir \
   --enable-shared \
-  --target=moxie-elf \
+  --target=moxie-rtems \
 %if %{with_newlib} == 1
   --enable-languages=c,c++ \
   --with-newlib \
@@ -115,11 +115,11 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %{_bindir}/*
 %if %{with_newlib} == 1
-%exclude %{_bindir}/moxie-elf-c++
-%exclude %{_bindir}/moxie-elf-g++
+%exclude %{_bindir}/moxie-rtems-c++
+%exclude %{_bindir}/moxie-rtems-g++
 %endif
-%{_libdir}/gcc/moxie-elf
-%{_prefix}/libexec/gcc/moxie-elf
+%{_libdir}/gcc/moxie-rtems
+%{_prefix}/libexec/gcc/moxie-rtems
 %{_mandir}/man1/*
 %{_mandir}/man7/*
 %doc COPYING*
@@ -127,12 +127,12 @@ rm -rf $RPM_BUILD_ROOT
 %if %{with_newlib} == 1
 %files c++
 %defattr(-,root,root,-)
-%{_bindir}/moxie-elf-c++
-%{_bindir}/moxie-elf-g++
+%{_bindir}/moxie-rtems-c++
+%{_bindir}/moxie-rtems-g++
 
 %files libstdc++
 %defattr(-,root,root,-)
-%{_prefix}/moxie-elf
+%{_prefix}/moxie-rtems
 %{_datadir}/gcc*
 %endif
 

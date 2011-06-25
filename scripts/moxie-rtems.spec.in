@@ -4,7 +4,7 @@
 
 Name:		moxie-rtems
 Version:	@VERSION@
-Release:	0.@BUILDNUM@
+Release:	0.@BUILDNUM@%{?dist}
 Summary:	RTEMS port for the moxie processor core
 
 Group:		Development/Tools

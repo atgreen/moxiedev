@@ -1,15 +1,15 @@
-Name:		moxie-elf-qemu
+Name:		moxie-qemu
 Version:	@VERSION@
-Release:	0.@BUILDNUM@
+Release:	0.@BUILDNUM@%{?dist}
 Summary:	Qemu port to the moxie architecture
 
 Group:		Development/Tools
 License:	GPL
 URL:		http://moxielogic.com/blog
-Source0:	moxie-elf-qemu.tar.gz
+Source0:	moxie-qemu.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  zlib-devel SDL-devel
-Requires:	qemu
+Requires:	qemu qemu-img
 
 %description
 This is a port of qemu to the moxie core.
@@ -30,6 +30,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 rm -rf $RPM_BUILD_ROOT%{_datadir}/qemu
 rm -f $RPM_BUILD_ROOT%{_bindir}/qemu-img
 rm -f $RPM_BUILD_ROOT%{_bindir}/qemu-nbd
+rm -f $RPM_BUILD_ROOT%{_bindir}/qemu-io
 
 %clean
 rm -rf $RPM_BUILD_ROOT

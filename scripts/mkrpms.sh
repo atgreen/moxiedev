@@ -3,11 +3,11 @@ set -x
 # For this to work, the mock config file for $TARGET must point to the 
 # local yum repo at $REPO.
 
-CPU=x86_64
-#CPU=i686
+#CPU=x86_64
+CPU=i386
 
-TAG=fc15
-TARGET=fedora-15-$CPU
+TAG=el5
+TARGET=epel-5-$CPU
 RESULTDIR=/var/lib/mock/$TARGET/result
 REPO=dist/MoxieLogic/$TAG
 
@@ -16,7 +16,7 @@ mkdir -p $REPO/RPMS/noarch
 mkdir -p $REPO/SRPMS
 createrepo $REPO
 
-for i in moxie-elf-binutils moxie-elf-gcc moxie-elf-newlib moxie-elf-gdb moxie-elf-qemu moxie-rtems-binutils moxie-rtems-newlib moxie-rtems-gcc moxie-rtems; do
+for i in moxie-elf-binutils moxie-elf-gcc moxie-elf-newlib moxie-elf-gdb moxie-qemu moxie-rtems-binutils moxie-rtems-newlib moxie-rtems-gcc moxie-rtems; do
   mock -r $TARGET dist/$i-[0-9]*src.rpm;
   FILE=`ls $RESULTDIR/$i-*.rpm | head -1`
   if test x$FILE != "x"; then

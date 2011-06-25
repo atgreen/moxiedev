@@ -37,10 +37,10 @@ sed -i "s/@VERSION@/4.10.99.0/g" dist/moxie-rtems.spec
 sed -i "s/@DATE@/$DATE/g" dist/moxie-rtems.spec
 sed -i "s/@BUILDNUM@/$BUILDNUM/g" dist/moxie-rtems.spec
 
-cp scripts/moxie-elf-qemu.spec.in dist/moxie-elf-qemu.spec
-sed -i "s/@VERSION@/$QEMU_VERSION/g" dist/moxie-elf-qemu.spec
-sed -i "s/@DATE@/$DATE/g" dist/moxie-elf-qemu.spec
-sed -i "s/@BUILDNUM@/$BUILDNUM/g" dist/moxie-elf-qemu.spec
+cp scripts/moxie-qemu.spec.in dist/moxie-qemu.spec
+sed -i "s/@VERSION@/$QEMU_VERSION/g" dist/moxie-qemu.spec
+sed -i "s/@DATE@/$DATE/g" dist/moxie-qemu.spec
+sed -i "s/@BUILDNUM@/$BUILDNUM/g" dist/moxie-qemu.spec
 cp scripts/moxie-elf-gdb.spec.in dist/moxie-elf-gdb.spec
 sed -i "s/@VERSION@/$GDB_VERSION/g" dist/moxie-elf-gdb.spec
 sed -i "s/@DATE@/$DATE/g" dist/moxie-elf-gdb.spec
@@ -52,9 +52,9 @@ sed -i "s/@BUILDNUM@/$BUILDNUM/g" dist/moxie-elf-gdb.spec
 #sed -i "s/@BUILDNUM@/$BUILDNUM/g" dist/kernel.spec
 
 (cd qemu; make clean > /dev/null 2>&1)
-tar -czf dist/moxie-elf-qemu.tar.gz qemu
+tar -czf dist/moxie-qemu.tar.gz qemu
 
-rpmbuild --nodeps --define "VERSION $QEMU_VERSION" --define "_sourcedir dist" --define "_srcrpmdir dist" -bs dist/moxie-elf-qemu.spec
+rpmbuild --nodeps --define "_source_filedigest_algorithm 0" --define "_binary_filedigest_algorithm 0" --define "VERSION $QEMU_VERSION" --define "_sourcedir dist" --define "_srcrpmdir dist" -bs dist/moxie-qemu.spec
 
 
 tar \
@@ -94,7 +94,7 @@ tar \
 --exclude cloog-ppl \
 -czf dist/moxie-gcc.tar.gz gcc
 
-rpmbuild --nodeps --define "VERSION $GCC_VERSION" --define "_sourcedir dist" --define "_srcrpmdir dist" -bs dist/moxie-$i-gcc.spec
+rpmbuild --nodeps --define "_source_filedigest_algorithm 0" --define "_binary_filedigest_algorithm 0" --define "VERSION $GCC_VERSION" --define "_sourcedir dist" --define "_srcrpmdir dist" -bs dist/moxie-$i-gcc.spec
 
 tar \
 --exclude CVS \
@@ -141,7 +141,7 @@ tar \
 --exclude src/texinfo \
 -czf dist/moxie-newlib.tar.gz src
 
-rpmbuild --nodeps \
+rpmbuild --nodeps --define "_source_filedigest_algorithm 0" --define "_binary_filedigest_algorithm 0" \
 --define "_sourcedir dist" \
 --define "_srcrpmdir dist" \
 -bs dist/moxie-$i-newlib.spec
@@ -151,7 +151,7 @@ done;
 tar \
 -czf dist/rtems.tar.gz rtems
 
-rpmbuild --nodeps \
+rpmbuild --nodeps --define "_source_filedigest_algorithm 0" --define "_binary_filedigest_algorithm 0" \
 --define "_sourcedir dist" \
 --define "_srcrpmdir dist" \
 -bs dist/moxie-rtems.spec
@@ -159,7 +159,7 @@ rpmbuild --nodeps \
 #tar \
 #-czf dist/linux-2.6.tar.gz linux-2.6
 #
-#rpmbuild --nodeps \
+#rpmbuild --nodeps --define "_source_filedigest_algorithm 0" --define "_binary_filedigest_algorithm 0" \
 #--define "_sourcedir dist" \
 #--define "_srcrpmdir dist" \
 #-bs dist/kernel.spec

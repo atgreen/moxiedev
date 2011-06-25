@@ -12,7 +12,13 @@
 <packagereq type="default">moxie-elf-gdb</packagereq>
 <packagereq type="default">moxie-elf-gdb-sim</packagereq>
 <packagereq type="default">moxie-elf-newlib</packagereq>
-<packagereq type="default">moxie-elf-qemu</packagereq>
+<packagereq type="default">moxie-qemu</packagereq>
+<packagereq type="default">moxie-rtems-binutils</packagereq>
+<packagereq type="default">moxie-rtems-gcc</packagereq>
+<packagereq type="default">moxie-rtems-gcc-c++</packagereq>
+<packagereq type="default">moxie-rtems-gcc-libstdc++</packagereq>
+<packagereq type="default">moxie-rtems-newlib</packagereq>
+<packagereq type="default">moxie-rtems</packagereq>
 </packagelist>
 </group>
 </comps>

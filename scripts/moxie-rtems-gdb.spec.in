@@ -1,6 +1,6 @@
 Name:		moxie-rtems-gdb
 Version:	@VERSION@
-Release:	0.@BUILDNUM@
+Release:	0.@BUILDNUM@%{?dist}
 Summary:	The GNU gdb for the moxie core
 
 Group:		Development/Tools

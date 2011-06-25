@@ -1,6 +1,6 @@
 Name:		moxie-elf-binutils
 Version:	@VERSION@
-Release:	0.@BUILDNUM@
+Release:	0.@BUILDNUM@%{?dist}
 Summary:	The GNU binutils for the moxie core
 
 Group:		Development/Tools

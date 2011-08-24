@@ -1672,7 +1672,12 @@ gfc_add_type (gfc_symbol *sym, gfc_typespec *ts, locus *where)
 
   if (type != BT_UNKNOWN && !(sym->attr.function && sym->attr.implicit_type))
     {
-      gfc_error ("Symbol '%s' at %L already has basic type of %s", sym->name,
+      if (sym->attr.use_assoc)
+	gfc_error ("Symbol '%s' at %L conflicts with symbol from module '%s', "
+		   "use-associated at %L", sym->name, where, sym->module,
+		   &sym->declared_at);
+      else
+	gfc_error ("Symbol '%s' at %L already has basic type of %s", sym->name,
 		 where, gfc_basic_typename (type));
       return FAILURE;
     }
@@ -2127,11 +2132,16 @@ gfc_get_st_label (int labelno)
   gfc_st_label *lp;
   gfc_namespace *ns;
 
-  /* Find the namespace of the scoping unit:
-     If we're in a BLOCK construct, jump to the parent namespace.  */
-  ns = gfc_current_ns;
-  while (ns->proc_name && ns->proc_name->attr.flavor == FL_LABEL)
-    ns = ns->parent;
+  if (gfc_current_state () == COMP_DERIVED)
+    ns = gfc_current_block ()->f2k_derived;
+  else
+    {
+      /* Find the namespace of the scoping unit:
+	 If we're in a BLOCK construct, jump to the parent namespace.  */
+      ns = gfc_current_ns;
+      while (ns->proc_name && ns->proc_name->attr.flavor == FL_LABEL)
+	ns = ns->parent;
+    }
 
   /* First see if the label is already in this namespace.  */
   lp = ns->st_labels;

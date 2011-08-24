@@ -1085,7 +1085,7 @@ lto_init (void)
   linemap_add (line_table, LC_RENAME, 0, NULL, 0);
 
   /* Create the basic integer types.  */
-  build_common_tree_nodes (flag_signed_char);
+  build_common_tree_nodes (flag_signed_char, /*short_double=*/false);
 
   /* The global tree for the main identifier is filled in by
      language-specific front-end initialization that is not run in the
@@ -1099,11 +1099,10 @@ lto_init (void)
      distinction should only be relevant to the front-end, so we
      always use the C definition here in lto1.  */
   gcc_assert (fileptr_type_node == ptr_type_node);
+  gcc_assert (TYPE_MAIN_VARIANT (fileptr_type_node) == ptr_type_node);
 
   ptrdiff_type_node = integer_type_node;
 
-  /* Create other basic types.  */
-  build_common_tree_nodes_2 (/*short_double=*/false);
   lto_build_c_type_nodes ();
   gcc_assert (va_list_type_node);
 

@@ -1,7 +1,7 @@
 // Raw memory manipulators -*- C++ -*-
 
 // Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-// 2009, 2010
+// 2009, 2010, 2011
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -97,10 +97,10 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
    *  @brief Copies the range [first,last) into result.
-   *  @param  first  An input iterator.
-   *  @param  last   An input iterator.
-   *  @param  result An output iterator.
-   *  @return   result + (first - last)
+   *  @param  __first  An input iterator.
+   *  @param  __last   An input iterator.
+   *  @param  __result An output iterator.
+   *  @return   __result + (__first - __last)
    *
    *  Like copy(), but does not require an initialized output range.
   */
@@ -154,9 +154,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
    *  @brief Copies the value x into the range [first,last).
-   *  @param  first  An input iterator.
-   *  @param  last   An input iterator.
-   *  @param  x      The source value.
+   *  @param  __first  An input iterator.
+   *  @param  __last   An input iterator.
+   *  @param  __x      The source value.
    *  @return   Nothing.
    *
    *  Like fill(), but does not require an initialized output range.
@@ -208,9 +208,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
    *  @brief Copies the value x into the range [first,first+n).
-   *  @param  first  An input iterator.
-   *  @param  n      The number of copies to make.
-   *  @param  x      The source value.
+   *  @param  __first  An input iterator.
+   *  @param  __n      The number of copies to make.
+   *  @param  __x      The source value.
    *  @return   Nothing.
    *
    *  Like fill_n(), but does not require an initialized output range.
@@ -241,8 +241,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _ForwardIterator __cur = __result;
       __try
 	{
+	  typedef __gnu_cxx::__alloc_traits<_Allocator> __traits;
 	  for (; __first != __last; ++__first, ++__cur)
-	    __alloc.construct(std::__addressof(*__cur), *__first);
+	    __traits::construct(__alloc, std::__addressof(*__cur), *__first);
 	  return __cur;
 	}
       __catch(...)
@@ -290,8 +291,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _ForwardIterator __cur = __first;
       __try
 	{
+	  typedef __gnu_cxx::__alloc_traits<_Allocator> __traits;
 	  for (; __cur != __last; ++__cur)
-	    __alloc.construct(std::__addressof(*__cur), __x);
+	    __traits::construct(__alloc, std::__addressof(*__cur), __x);
 	}
       __catch(...)
 	{
@@ -315,8 +317,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _ForwardIterator __cur = __first;
       __try
 	{
+	  typedef __gnu_cxx::__alloc_traits<_Allocator> __traits;
 	  for (; __n > 0; --__n, ++__cur)
-	    __alloc.construct(std::__addressof(*__cur), __x);
+	    __traits::construct(__alloc, std::__addressof(*__cur), __x);
 	}
       __catch(...)
 	{
@@ -556,8 +559,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _ForwardIterator __cur = __first;
       __try
 	{
+	  typedef __gnu_cxx::__alloc_traits<_Allocator> __traits;
 	  for (; __cur != __last; ++__cur)
-	    __alloc.construct(std::__addressof(*__cur));
+	    __traits::construct(__alloc, std::__addressof(*__cur));
 	}
       __catch(...)
 	{
@@ -585,8 +589,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _ForwardIterator __cur = __first;
       __try
 	{
+	  typedef __gnu_cxx::__alloc_traits<_Allocator> __traits;
 	  for (; __n > 0; --__n, ++__cur)
-	    __alloc.construct(std::__addressof(*__cur));
+	    __traits::construct(__alloc, std::__addressof(*__cur));
 	}
       __catch(...)
 	{
@@ -632,10 +637,10 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /**
    *  @brief Copies the range [first,first+n) into result.
-   *  @param  first  An input iterator.
-   *  @param  n      The number of elements to copy.
-   *  @param  result An output iterator.
-   *  @return  result + n
+   *  @param  __first  An input iterator.
+   *  @param  __n      The number of elements to copy.
+   *  @param  __result An output iterator.
+   *  @return  __result + __n
    *
    *  Like copy_n(), but does not require an initialized output range.
   */

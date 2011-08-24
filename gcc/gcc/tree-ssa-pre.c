@@ -1150,14 +1150,6 @@ fully_constant_expression (pre_expr e)
 	vn_nary_op_t nary = PRE_EXPR_NARY (e);
 	switch (TREE_CODE_CLASS (nary->opcode))
 	  {
-	  case tcc_expression:
-	    if (nary->opcode == TRUTH_NOT_EXPR)
-	      goto do_unary;
-	    if (nary->opcode != TRUTH_AND_EXPR
-		&& nary->opcode != TRUTH_OR_EXPR
-		&& nary->opcode != TRUTH_XOR_EXPR)
-	      return e;
-	    /* Fallthrough.  */
 	  case tcc_binary:
 	  case tcc_comparison:
 	    {
@@ -1199,7 +1191,6 @@ fully_constant_expression (pre_expr e)
 	      return e;
 	    /* Fallthrough.  */
 	  case tcc_unary:
-do_unary:
 	    {
 	      /* We have to go from trees to pre exprs to value ids to
 		 constants.  */
@@ -3108,12 +3099,12 @@ create_expression_by_pieces (basic_block block, pre_expr expr,
 							 stmts, domstmt);
 	      if (!genop1 || !genop2)
 		return NULL_TREE;
-	      /* Ensure op2 is a sizetype for POINTER_PLUS_EXPR.  It
+	      /* Ensure op2 is a ptrofftype for POINTER_PLUS_EXPR.  It
 		 may be a constant with the wrong type.  */
 	      if (nary->opcode == POINTER_PLUS_EXPR)
 		{
 		  genop1 = fold_convert (nary->type, genop1);
-		  genop2 = fold_convert (sizetype, genop2);
+		  genop2 = convert_to_ptrofftype (genop2);
 		}
 	      else
 		{
@@ -4978,7 +4969,7 @@ struct gimple_opt_pass pass_pre =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   TODO_rebuild_alias,			/* todo_flags_start */
-  TODO_update_ssa_only_virtuals | TODO_dump_func | TODO_ggc_collect
+  TODO_update_ssa_only_virtuals  | TODO_ggc_collect
   | TODO_verify_ssa /* todo_flags_finish */
  }
 };
@@ -5013,6 +5004,6 @@ struct gimple_opt_pass pass_fre =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_ggc_collect | TODO_verify_ssa /* todo_flags_finish */
+  TODO_ggc_collect | TODO_verify_ssa /* todo_flags_finish */
  }
 };

@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/objc.dg/attributes
 svn://gcc.gnu.org/svn/gcc
 
@@ -264,17 +264,17 @@ iains
 
 939
 
-proto-attribute-3.m
+method-format-1.m
 file
 
 
 
 
-2011-06-04T18:04:04.094104Z
-1f58bb05d6066e0573cd93bd45d46479
-2011-02-10T11:34:09.841747Z
-170001
-iains
+2010-11-22T19:14:56.405794Z
+0ae591ac2ca509ad45e81a2ae45efb83
+2010-11-13T15:00:06.928792Z
+166707
+bonzini
 
 
 
@@ -296,7 +296,7 @@ iains
 
 
 
-1640
+2469
 
 class-attribute-1.m
 file
@@ -332,17 +332,17 @@ iains
 
 1288
 
-method-format-1.m
+proto-attribute-3.m
 file
 
 
 
 
-2010-11-22T19:14:56.405794Z
-0ae591ac2ca509ad45e81a2ae45efb83
-2010-11-13T15:00:06.928792Z
-166707
-bonzini
+2011-06-04T18:04:04.094104Z
+1f58bb05d6066e0573cd93bd45d46479
+2011-02-10T11:34:09.841747Z
+170001
+iains
 
 
 
@@ -364,41 +364,7 @@ bonzini
 
 
 
-2469
-
-class-attribute-2.m
-file
-
-
-
-
-2010-11-22T19:14:56.406804Z
-ec3e605020e98fc32329d07d9d85b7f5
-2010-11-19T22:23:22.861341Z
-166963
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-422
+1640
 
 proto-attribute-4.m
 file
@@ -433,6 +399,40 @@ nicola
 
 
 675
+
+class-attribute-2.m
+file
+
+
+
+
+2010-11-22T19:14:56.406804Z
+ec3e605020e98fc32329d07d9d85b7f5
+2010-11-19T22:23:22.861341Z
+166963
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+422
 
 class-attribute-3.m
 file

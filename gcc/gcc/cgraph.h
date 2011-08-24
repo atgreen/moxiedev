@@ -380,13 +380,12 @@ DEF_VEC_ALLOC_P(cgraph_edge_p,heap);
 
 struct GTY((chain_next ("%h.next"), chain_prev ("%h.prev"))) varpool_node {
   tree decl;
+  /* For aliases points to declaration DECL is alias of.  */
+  tree alias_of;
   /* Pointer to the next function in varpool_nodes.  */
   struct varpool_node *next, *prev;
   /* Pointer to the next function in varpool_nodes_queue.  */
   struct varpool_node *next_needed, *prev_needed;
-  /* For normal nodes a pointer to the first extra name alias.  For alias
-     nodes a pointer to the normal node.  */
-  struct varpool_node *extra_name;
   /* Circular list of nodes in the same comdat group if non-NULL.  */
   struct varpool_node *same_comdat_group;
   struct ipa_ref_list ref_list;
@@ -415,6 +414,7 @@ struct GTY((chain_next ("%h.next"), chain_prev ("%h.prev"))) varpool_node {
   /* Set for aliases once they got through assemble_alias.  Also set for
      extra name aliases in varpool_extra_name_alias.  */
   unsigned alias : 1;
+  unsigned extra_name_alias : 1;
   /* Set when variable is used from other LTRANS partition.  */
   unsigned used_from_other_partition : 1;
   /* Set when variable is available in the other LTRANS partition.
@@ -469,6 +469,7 @@ void debug_cgraph_node (struct cgraph_node *);
 void cgraph_insert_node_to_hashtable (struct cgraph_node *node);
 void cgraph_remove_edge (struct cgraph_edge *);
 void cgraph_remove_node (struct cgraph_node *);
+void cgraph_add_to_same_comdat_group (struct cgraph_node *, struct cgraph_node *);
 void cgraph_remove_node_and_inline_clones (struct cgraph_node *);
 void cgraph_release_function_body (struct cgraph_node *);
 void cgraph_node_remove_callees (struct cgraph_node *node);
@@ -479,7 +480,6 @@ struct cgraph_edge *cgraph_create_indirect_edge (struct cgraph_node *, gimple,
 						 int, gcov_type, int);
 struct cgraph_indirect_call_info *cgraph_allocate_init_indirect_info (void);
 struct cgraph_node * cgraph_get_node (const_tree);
-struct cgraph_node * cgraph_get_node_or_alias (const_tree);
 struct cgraph_node * cgraph_create_node (tree);
 struct cgraph_node * cgraph_get_create_node (tree);
 struct cgraph_node * cgraph_same_body_alias (struct cgraph_node *, tree, tree);
@@ -535,6 +535,7 @@ bool cgraph_will_be_removed_from_program_if_no_direct_calls
   (struct cgraph_node *node);
 bool cgraph_can_remove_if_no_direct_calls_and_refs_p
   (struct cgraph_node *node);
+bool cgraph_can_remove_if_no_direct_calls_p (struct cgraph_node *node);
 bool resolution_used_from_other_file_p (enum ld_plugin_symbol_resolution);
 bool cgraph_used_from_object_file_p (struct cgraph_node *);
 bool varpool_used_from_object_file_p (struct varpool_node *);
@@ -664,9 +665,13 @@ bool varpool_analyze_pending_decls (void);
 void varpool_remove_unreferenced_decls (void);
 void varpool_empty_needed_queue (void);
 struct varpool_node * varpool_extra_name_alias (tree, tree);
+struct varpool_node * varpool_create_variable_alias (tree, tree);
 const char * varpool_node_name (struct varpool_node *node);
 void varpool_reset_queue (void);
 bool const_value_known_p (tree);
+bool varpool_for_node_and_aliases (struct varpool_node *,
+		                   bool (*) (struct varpool_node *, void *),
+			           void *, bool);
 
 /* Walk all reachable static variables.  */
 #define FOR_EACH_STATIC_VARIABLE(node) \
@@ -926,20 +931,6 @@ cgraph_only_called_directly_or_aliased_p (struct cgraph_node *node)
    if all direct calls are eliminated.  */
 
 static inline bool
-cgraph_can_remove_if_no_direct_calls_p (struct cgraph_node *node)
-{
-  /* Extern inlines can always go, we will use the external definition.  */
-  if (DECL_EXTERNAL (node->decl))
-    return true;
-  return (!node->address_taken
-	  && cgraph_can_remove_if_no_direct_calls_and_refs_p (node)
-	  && !ipa_ref_has_aliases_p (&node->ref_list));
-}
-
-/* Return true when function NODE can be removed from callgraph
-   if all direct calls are eliminated.  */
-
-static inline bool
 varpool_can_remove_if_no_refs (struct varpool_node *node)
 {
   return (!node->force_output && !node->used_from_other_partition
@@ -956,7 +947,8 @@ varpool_can_remove_if_no_refs (struct varpool_node *node)
 static inline bool
 varpool_all_refs_explicit_p (struct varpool_node *vnode)
 {
-  return (!vnode->externally_visible
+  return (vnode->analyzed
+	  && !vnode->externally_visible
 	  && !vnode->used_from_other_partition
 	  && !vnode->force_output);
 }
@@ -978,6 +970,20 @@ cgraph_alias_aliased_node (struct cgraph_node *n)
   gcc_checking_assert (ref->use == IPA_REF_ALIAS);
   if (ref->refered_type == IPA_REF_CGRAPH)
     return ipa_ref_node (ref);
+  return NULL;
+}
+
+/* Return node that alias N is aliasing.  */
+
+static inline struct varpool_node *
+varpool_alias_aliased_node (struct varpool_node *n)
+{
+  struct ipa_ref *ref;
+
+  ipa_ref_list_reference_iterate (&n->ref_list, 0, ref);
+  gcc_checking_assert (ref->use == IPA_REF_ALIAS);
+  if (ref->refered_type == IPA_REF_VARPOOL)
+    return ipa_ref_varpool_node (ref);
   return NULL;
 }
 
@@ -1006,7 +1012,7 @@ cgraph_function_node (struct cgraph_node *node, enum availability *availability)
 	    *availability = a;
 	}
     }
-  if (*availability)
+  if (availability)
     *availability = AVAIL_NOT_AVAILABLE;
   return NULL;
 }
@@ -1034,7 +1040,35 @@ cgraph_function_or_thunk_node (struct cgraph_node *node, enum availability *avai
 	    *availability = a;
 	}
     }
-  if (*availability)
+  if (availability)
+    *availability = AVAIL_NOT_AVAILABLE;
+  return NULL;
+}
+
+/* Given NODE, walk the alias chain to return the function NODE is alias of.
+   Do not walk through thunks.
+   When AVAILABILITY is non-NULL, get minimal availablity in the chain.  */
+
+static inline struct varpool_node *
+varpool_variable_node (struct varpool_node *node, enum availability *availability)
+{
+  if (availability)
+    *availability = cgraph_variable_initializer_availability (node);
+  while (node)
+    {
+      if (node->alias && node->analyzed)
+	node = varpool_alias_aliased_node (node);
+      else
+	return node;
+      if (node && availability)
+	{
+	  enum availability a;
+	  a = cgraph_variable_initializer_availability (node);
+	  if (a < *availability)
+	    *availability = a;
+	}
+    }
+  if (availability)
     *availability = AVAIL_NOT_AVAILABLE;
   return NULL;
 }

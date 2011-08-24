@@ -1,6 +1,6 @@
 /* Gimple IR support functions.
 
-   Copyright 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
    Contributed by Aldy Hernandez <aldyh@redhat.com>
 
 This file is part of GCC.
@@ -856,6 +856,30 @@ gimple_build_debug_bind_stat (tree var, tree value, gimple stmt MEM_STAT_DECL)
 
   gimple_debug_bind_set_var (p, var);
   gimple_debug_bind_set_value (p, value);
+  if (stmt)
+    {
+      gimple_set_block (p, gimple_block (stmt));
+      gimple_set_location (p, gimple_location (stmt));
+    }
+
+  return p;
+}
+
+
+/* Build a new GIMPLE_DEBUG_SOURCE_BIND statement.
+
+   VAR is bound to VALUE; block and location are taken from STMT.  */
+
+gimple
+gimple_build_debug_source_bind_stat (tree var, tree value,
+				     gimple stmt MEM_STAT_DECL)
+{
+  gimple p = gimple_build_with_ops_stat (GIMPLE_DEBUG,
+					 (unsigned)GIMPLE_DEBUG_SOURCE_BIND, 2
+					 PASS_MEM_STAT);
+
+  gimple_debug_source_bind_set_var (p, var);
+  gimple_debug_source_bind_set_value (p, value);
   if (stmt)
     {
       gimple_set_block (p, gimple_block (stmt));
@@ -3136,19 +3160,13 @@ canonicalize_cond_expr_cond (tree t)
 {
   /* Strip conversions around boolean operations.  */
   if (CONVERT_EXPR_P (t)
-      && truth_value_p (TREE_CODE (TREE_OPERAND (t, 0))))
+      && (truth_value_p (TREE_CODE (TREE_OPERAND (t, 0)))
+          || TREE_CODE (TREE_TYPE (TREE_OPERAND (t, 0)))
+	     == BOOLEAN_TYPE))
     t = TREE_OPERAND (t, 0);
 
-  /* For (bool)x use x != 0.  */
-  if (CONVERT_EXPR_P (t)
-      && TREE_CODE (TREE_TYPE (t)) == BOOLEAN_TYPE)
-    {
-      tree top0 = TREE_OPERAND (t, 0);
-      t = build2 (NE_EXPR, TREE_TYPE (t),
-		  top0, build_int_cst (TREE_TYPE (top0), 0));
-    }
   /* For !x use x == 0.  */
-  else if (TREE_CODE (t) == TRUTH_NOT_EXPR)
+  if (TREE_CODE (t) == TRUTH_NOT_EXPR)
     {
       tree top0 = TREE_OPERAND (t, 0);
       t = build2 (EQ_EXPR, TREE_TYPE (t),
@@ -5241,6 +5259,20 @@ walk_stmt_load_store_addr_ops (gimple stmt, void *data,
 		   && TREE_CODE (OBJ_TYPE_REF_OBJECT (rhs)) == ADDR_EXPR)
 	    ret |= visit_addr (stmt, TREE_OPERAND (OBJ_TYPE_REF_OBJECT (rhs),
 						   0), data);
+	  else if (TREE_CODE (rhs) == CONSTRUCTOR)
+	    {
+	      unsigned int ix;
+	      tree val;
+
+	      FOR_EACH_CONSTRUCTOR_VALUE (CONSTRUCTOR_ELTS (rhs), ix, val)
+		if (TREE_CODE (val) == ADDR_EXPR)
+		  ret |= visit_addr (stmt, TREE_OPERAND (val, 0), data);
+		else if (TREE_CODE (val) == OBJ_TYPE_REF
+			 && TREE_CODE (OBJ_TYPE_REF_OBJECT (val)) == ADDR_EXPR)
+		  ret |= visit_addr (stmt,
+				     TREE_OPERAND (OBJ_TYPE_REF_OBJECT (val),
+						   0), data);
+	    }
           lhs = gimple_assign_lhs (stmt);
 	  if (TREE_CODE (lhs) == TARGET_MEM_REF
               && TREE_CODE (TMR_BASE (lhs)) == ADDR_EXPR)

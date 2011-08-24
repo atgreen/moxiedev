@@ -1,14 +1,14 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/data
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-05-24T02:38:19.991604Z
-174100
+2011-08-15T00:51:06.882233Z
+177756
 bkoz
 
 
@@ -672,40 +672,6 @@ paolo
 
 16500
 
-filebuf_virtuals-1.txt
-file
-
-
-
-
-2009-04-24T17:50:35.000000Z
-ccd8d09610bb1187b124063e4b7d62b2
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8218
-
 seekoff-1out.tst
 file
 
@@ -739,6 +705,40 @@ bkoz
 
 
 116
+
+filebuf_virtuals-1.txt
+file
+
+
+
+
+2009-04-24T17:50:35.000000Z
+ccd8d09610bb1187b124063e4b7d62b2
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8218
 
 istream_unformatted-1.tst
 file
@@ -808,40 +808,6 @@ jakub
 
 8218
 
-wostream_inserter_other-2.tst
-file
-
-
-
-
-2009-04-24T17:50:35.000000Z
-ccd8d09610bb1187b124063e4b7d62b2
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8218
-
 wostream_inserter_char-1.txt
 file
 
@@ -876,17 +842,17 @@ paolo
 
 10000
 
-seekpos.txt
+wostream_inserter_other-2.tst
 file
 
 
 
 
 2009-04-24T17:50:35.000000Z
-b764f52b36be7850b3d1f9862b1dfd53
-2003-07-01T03:04:43.000000Z
-68757
-bkoz
+ccd8d09610bb1187b124063e4b7d62b2
+2009-04-09T15:00:19.611803Z
+145841
+jakub
 
 
 
@@ -908,7 +874,7 @@ bkoz
 
 
 
-116
+8218
 
 cin_unget-1.txt
 file
@@ -943,6 +909,40 @@ ljrittle
 
 
 5
+
+seekpos.txt
+file
+
+
+
+
+2009-04-24T17:50:35.000000Z
+b764f52b36be7850b3d1f9862b1dfd53
+2003-07-01T03:04:43.000000Z
+68757
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+116
 
 ostream_inserter_char-1.tst
 file
@@ -984,10 +984,10 @@ file
 
 
 
-2011-06-04T18:06:08.217104Z
-115c03eb3a534a92ba07742454da0f2f
-2011-05-24T02:38:19.991604Z
-174100
+2011-08-24T20:08:30.673594Z
+a5299d8cd215c90a7fcfcffe76722cfe
+2011-08-15T00:51:06.882233Z
+177756
 bkoz
 
 
@@ -1010,7 +1010,7 @@ bkoz
 
 
 
-14900
+13896
 
 ifstream_members-1.tst
 file
@@ -1317,40 +1317,6 @@ jakub
 
 
 3054
-
-make_graph_htmls.xml
-file
-
-
-
-
-2009-04-24T17:50:35.000000Z
-7cd0b7af77d766864d1a5f9820950ccb
-2006-06-14T23:09:51.260169Z
-114659
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1958
 
 istream_seeks-1.tst
 file

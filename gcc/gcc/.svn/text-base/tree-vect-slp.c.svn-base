@@ -152,7 +152,9 @@ vect_get_and_check_slp_defs (loop_vec_info loop_vinfo, bb_vec_info bb_vinfo,
       if (loop && def_stmt && gimple_bb (def_stmt)
           && flow_bb_inside_loop_p (loop, gimple_bb (def_stmt))
           && vinfo_for_stmt (def_stmt)
-          && STMT_VINFO_IN_PATTERN_P (vinfo_for_stmt (def_stmt)))
+          && STMT_VINFO_IN_PATTERN_P (vinfo_for_stmt (def_stmt))
+          && !STMT_VINFO_RELEVANT (vinfo_for_stmt (def_stmt))
+          && !STMT_VINFO_LIVE_P (vinfo_for_stmt (def_stmt)))
         {
           if (!*first_stmt_dt0)
             *pattern0 = true;
@@ -2546,6 +2548,8 @@ vect_schedule_slp_instance (slp_tree node, slp_instance instance,
       && STMT_VINFO_STRIDED_ACCESS (stmt_info)
       && !REFERENCE_CLASS_P (gimple_get_lhs (stmt)))
     si = gsi_for_stmt (SLP_INSTANCE_FIRST_LOAD_STMT (instance));
+  else if (is_pattern_stmt_p (stmt_info))
+     si = gsi_for_stmt (STMT_VINFO_RELATED_STMT (stmt_info));
   else
     si = gsi_for_stmt (stmt);
 

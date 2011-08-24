@@ -122,11 +122,10 @@ proc dg-require-profiling { args } {
 # If this target does not support DLL attributes skip this test.
 
 proc dg-require-dll { args } {
-    global target_triplet
     # As a special case, the mcore-*-elf supports these attributes.
     # All Symbian OS targets also support these attributes.
-    if { [string match "mcore-*-elf" $target_triplet]
-         || [string match "*-*-symbianelf" $target_triplet]} {
+    if { [istarget mcore-*-elf]
+         || [istarget *-*-symbianelf] } {
 	return
     }
     # PE/COFF targets support dllimport/dllexport.
@@ -172,6 +171,12 @@ proc dg-require-effective-target { args } {
     if { [llength $args] < 1 || [llength $args] > 2 } {
 	error "syntax error, need a single effective-target keyword with optional selector"
     }
+
+    # Don't bother if we're already skipping the test.
+    upvar dg-do-what dg-do-what
+    if { [lindex ${dg-do-what} 1] == "N" } {
+      return
+    }
     
     # Evaluate selector if present.
     if { [llength $args] == 2 } {
@@ -182,7 +187,6 @@ proc dg-require-effective-target { args } {
     }
 
     if { ![is-effective-target [lindex $args 0]] } {
-	upvar dg-do-what dg-do-what
         set dg-do-what [list [lindex ${dg-do-what} 0] "N" "P"]
     }
 }

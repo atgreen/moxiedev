@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/java/text
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ gandalf
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-DateFormatSymbols.java
-file
-
-
-
-
-2011-06-04T18:38:14.394104Z
-201a28d9f555f48c40e450c411ed11ee
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-25823
 
 ParsePosition.java
 file
@@ -93,6 +59,40 @@ gandalf
 
 
 4695
+
+DateFormatSymbols.java
+file
+
+
+
+
+2011-06-04T18:38:14.394104Z
+201a28d9f555f48c40e450c411ed11ee
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+25823
 
 SimpleDateFormat.java
 file
@@ -196,40 +196,6 @@ gandalf
 
 16395
 
-CharacterIterator.java
-file
-
-
-
-
-2011-06-04T18:38:14.396104Z
-df916eeeb3c408d527ba30ac0f5dee26
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5194
-
 RuleBasedCollator.java
 file
 
@@ -264,14 +230,14 @@ gandalf
 
 34027
 
-DecimalFormat.java
+CharacterIterator.java
 file
 
 
 
 
-2011-06-04T18:38:14.397104Z
-aa2d00cc97bb87354242c6dca99d35c1
+2011-06-04T18:38:14.396104Z
+df916eeeb3c408d527ba30ac0f5dee26
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -296,7 +262,7 @@ gandalf
 
 
 
-70318
+5194
 
 Bidi.java
 file
@@ -332,14 +298,14 @@ gandalf
 
 35977
 
-FieldPosition.java
+DecimalFormat.java
 file
 
 
 
 
-2011-06-04T18:38:14.398104Z
-47a0484fc228fc2fd049fd0210836cbc
+2011-06-04T18:38:14.397104Z
+aa2d00cc97bb87354242c6dca99d35c1
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -364,7 +330,41 @@ gandalf
 
 
 
-6581
+70318
+
+AttributedStringIterator.java
+file
+
+
+
+
+2011-06-04T18:38:14.397104Z
+006f5277d1d101452282f395e08c65cc
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+10728
 
 CollationElementIterator.java
 file
@@ -400,14 +400,14 @@ gandalf
 
 14950
 
-AttributedStringIterator.java
+FieldPosition.java
 file
 
 
 
 
-2011-06-04T18:38:14.397104Z
-006f5277d1d101452282f395e08c65cc
+2011-06-04T18:38:14.398104Z
+47a0484fc228fc2fd049fd0210836cbc
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -432,7 +432,7 @@ gandalf
 
 
 
-10728
+6581
 
 Annotation.java
 file

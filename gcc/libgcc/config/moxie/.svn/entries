@@ -1,15 +1,15 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libgcc/config/moxie
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-04T08:29:53.914340Z
-155609
-green
+2011-08-05T15:13:48.449176Z
+177452
+ro
 
 
 
@@ -93,40 +93,6 @@ green
 
 
 1848
-
-t-moxie-softfp
-file
-
-
-
-
-2010-01-06T00:59:10.669895Z
-92cd0eaf96a6e578af783f56bc32e854
-2010-01-04T08:29:53.914340Z
-155609
-green
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-288
 
 t-moxie
 file

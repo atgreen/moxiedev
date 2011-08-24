@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/frv
 svn://gcc.gnu.org/svn/gcc
 
@@ -706,40 +706,6 @@ rsandifo
 
 186
 
-all-tls-local-exec-TLS.c
-file
-
-
-
-
-2009-04-24T17:45:39.000000Z
-6a90cfbdc4d68b6a96766f2381fe4657
-2005-01-26T20:36:07.000000Z
-94283
-aldyh
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-241
-
 all-tls-local-exec.c
 file
 
@@ -773,6 +739,40 @@ aldyh
 
 
 222
+
+all-tls-local-exec-TLS.c
+file
+
+
+
+
+2009-04-24T17:45:39.000000Z
+6a90cfbdc4d68b6a96766f2381fe4657
+2005-01-26T20:36:07.000000Z
+94283
+aldyh
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+241
 
 fr450-builtins-1.c
 file
@@ -944,40 +944,6 @@ rsandifo
 
 909
 
-fr450-builtins-6.c
-file
-
-
-
-
-2009-04-24T17:45:40.000000Z
-f3831c2d2cc94950e43c419702bd8452
-2004-09-11T06:45:44.000000Z
-87345
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-637
-
 all-tls-initial-exec-pic.c
 file
 
@@ -1011,6 +977,40 @@ aldyh
 
 
 235
+
+fr450-builtins-6.c
+file
+
+
+
+
+2009-04-24T17:45:40.000000Z
+f3831c2d2cc94950e43c419702bd8452
+2004-09-11T06:45:44.000000Z
+87345
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+637
 
 fr450-builtins-7.c
 file

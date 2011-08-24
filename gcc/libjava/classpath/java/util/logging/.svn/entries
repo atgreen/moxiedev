@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/java/util/logging
 svn://gcc.gnu.org/svn/gcc
 
@@ -230,17 +230,17 @@ gandalf
 
 31701
 
-SimpleFormatter.java
+FileHandler.java
 file
 
 
 
 
-2009-04-24T17:47:13.000000Z
-0d52bd2c434dc5913414da1096c5be35
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2011-06-04T18:38:18.257104Z
+0b5e51c33bd5604d6f0b7894ca92fb80
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -262,7 +262,7 @@ doko
 
 
 
-4373
+23470
 
 Handler.java
 file
@@ -298,17 +298,17 @@ gandalf
 
 13047
 
-FileHandler.java
+SimpleFormatter.java
 file
 
 
 
 
-2011-06-04T18:38:18.257104Z
-0b5e51c33bd5604d6f0b7894ca92fb80
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
+2009-04-24T17:47:13.000000Z
+0d52bd2c434dc5913414da1096c5be35
+2008-10-21T17:55:01.166395Z
+141271
+doko
 
 
 
@@ -330,7 +330,7 @@ gandalf
 
 
 
-23470
+4373
 
 package.html
 file
@@ -468,40 +468,6 @@ gandalf
 
 3150
 
-ErrorManager.java
-file
-
-
-
-
-2011-06-04T18:38:18.259104Z
-ae71ccf1c8048b53b230b828e9a8a080
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5616
-
 XMLFormatter.java
 file
 
@@ -535,6 +501,40 @@ gandalf
 
 
 12985
+
+ErrorManager.java
+file
+
+
+
+
+2011-06-04T18:38:18.259104Z
+ae71ccf1c8048b53b230b828e9a8a080
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5616
 
 Filter.java
 file

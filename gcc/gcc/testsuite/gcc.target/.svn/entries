@@ -1,15 +1,15 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-06-11T02:28:35.236448Z
-174940
-carrot
+2011-08-23T21:14:10.681858Z
+178017
+uros
 
 
 
@@ -26,16 +26,16 @@ carrot
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-powerpc
-dir
-
 arm
 dir
 
-m68k
+powerpc
 dir
 
 alpha
+dir
+
+m68k
 dir
 
 microblaze
@@ -44,10 +44,10 @@ dir
 avr
 dir
 
-rx
+i386
 dir
 
-i386
+rx
 dir
 
 xstormy16
@@ -56,10 +56,13 @@ dir
 frv
 dir
 
-x86_64
+tic6x
 dir
 
 s390
+dir
+
+x86_64
 dir
 
 cris

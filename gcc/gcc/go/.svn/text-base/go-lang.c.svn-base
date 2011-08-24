@@ -35,6 +35,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "langhooks-def.h"
 #include "except.h"
 #include "target.h"
+#include "common/common-target.h"
 
 #include <mpfr.h>
 
@@ -85,9 +86,7 @@ struct GTY(()) language_function
 static bool
 go_langhook_init (void)
 {
-  build_common_tree_nodes (false);
-
-  build_common_tree_nodes_2 (0);
+  build_common_tree_nodes (false, false);
 
   /* We must create the gogo IR after calling build_common_tree_nodes
      (because Gogo::define_builtin_function_trees refers indirectly
@@ -143,7 +142,7 @@ go_langhook_init_options_struct (struct gcc_options *opts)
   opts->frontend_set_flag_errno_math = true;
 
   /* We turn on stack splitting if we can.  */
-  if (targetm.supports_split_stack (false, opts))
+  if (targetm_common.supports_split_stack (false, opts))
     opts->x_flag_split_stack = 1;
 
   /* Exceptions are used to handle recovering from panics.  */
@@ -222,6 +221,10 @@ go_langhook_handle_option (
 
     case OPT_fgo_dump_:
       ret = go_enable_dump (arg) ? true : false;
+      break;
+
+    case OPT_fgo_optimize_:
+      ret = go_enable_optimize (arg) ? true : false;
       break;
 
     case OPT_fgo_prefix_:

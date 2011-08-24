@@ -250,6 +250,23 @@
     operands[1] = force_reg (QImode, operands[1]);
 }")
 
+;; (define_insn "*load_byte"
+;;  [(set (match_operand:SI 0 "general_operand" "=r")
+;;        (zero_extend:SI (match_operand:QI 1 "moxie_general_movsrc_operand" "W")))]
+;;   "register_operand (operands[0], SImode)"
+;;   "ld.b   %0, %1 # zero extended"
+;;  [(set_attr "length"	"2")])
+
+;; (define_insn "zero_extendqisi2"
+;;   [(set (match_operand:SI 0 "register_operand" "=r,r,r")
+;;         (zero_extend:SI (match_operand:QI 1 "moxie_load_source_operand" "W,A,B")))]
+;;     ""
+;;     "@
+;;     ld.b    %0, %1 # zero extended
+;;     lda.b   %0, %1 # zero extended
+;;     ldo.b   %0, %1 # zero extended"
+;;     [(set_attr "length"	"2,6,6")])
+
 (define_insn "*movqi"
   [(set (match_operand:QI 0 "general_operand" "=r,r,r,W,A,r,r,B,r")
 	(match_operand:QI 1 "moxie_general_movsrc_operand" "O,r,i,r,r,W,A,r,B"))]

@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/obj-c++.dg/attributes
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,14 +162,14 @@ nicola
 
 685
 
-unused-parameter-1.mm
+parameter-attribute-1.mm
 file
 
 
 
 
 2010-11-22T19:14:59.408784Z
-ecc894e836dbc3bef578f67919f5455a
+682998c01ca200520e38b3f4bf5288ea
 2010-10-24T02:44:03.779261Z
 165896
 nicola
@@ -194,7 +194,7 @@ nicola
 
 
 
-1104
+1233
 
 method-attribute-1.mm
 file
@@ -230,14 +230,14 @@ nicola
 
 1321
 
-parameter-attribute-1.mm
+unused-parameter-1.mm
 file
 
 
 
 
 2010-11-22T19:14:59.408784Z
-682998c01ca200520e38b3f4bf5288ea
+ecc894e836dbc3bef578f67919f5455a
 2010-10-24T02:44:03.779261Z
 165896
 nicola
@@ -262,41 +262,7 @@ nicola
 
 
 
-1233
-
-method-attribute-2.mm
-file
-
-
-
-
-2011-06-11T04:08:12.888913Z
-ba1dc97e7ebfbc93322a9b9e0ccca930
-2011-06-06T22:46:58.006232Z
-174727
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1117
+1104
 
 parameter-attribute-2.mm
 file
@@ -331,6 +297,40 @@ nicola
 
 
 684
+
+method-attribute-2.mm
+file
+
+
+
+
+2011-06-11T04:08:12.888913Z
+ba1dc97e7ebfbc93322a9b9e0ccca930
+2011-06-06T22:46:58.006232Z
+174727
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1117
 
 method-attribute-3.mm
 file

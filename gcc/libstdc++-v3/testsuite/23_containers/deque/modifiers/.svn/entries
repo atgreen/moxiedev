@@ -1,15 +1,15 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/deque/modifiers
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2011-07-25T17:08:48.094078Z
+176761
+paolo
 
 
 
@@ -27,6 +27,12 @@ jakub
 138bc75d-0d04-0410-961f-82ee72b054a4
 
 erase
+dir
+
+push_back
+dir
+
+push_front
 dir
 
 swap

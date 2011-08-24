@@ -1,15 +1,15 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/bitset
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-11-27T10:04:19.906054Z
-167196
-fdumont
+2011-07-20T15:44:18.712638Z
+176519
+bkoz
 
 
 
@@ -29,19 +29,19 @@ fdumont
 test
 dir
 
-operations
+hash
 dir
 
 requirements
 dir
 
-hash
-dir
-
-to_ulong
+operations
 dir
 
 debug
+dir
+
+to_ulong
 dir
 
 count
@@ -53,10 +53,10 @@ dir
 ext
 dir
 
-cons
+to_ullong
 dir
 
-to_ullong
+cons
 dir
 
 18604.cc
@@ -127,9 +127,9 @@ paolo
 
 910
 
-all
+to_string
 dir
 
-to_string
+all
 dir
 

@@ -1,15 +1,15 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-06-11T15:37:17.099019Z
-174957
-redi
+2011-08-03T21:05:14.540918Z
+177299
+bkoz
 
 
 
@@ -27,9 +27,6 @@ redi
 138bc75d-0d04-0410-961f-82ee72b054a4
 
 owner_less
-dir
-
-monotonic_clock
 dir
 
 duration
@@ -53,13 +50,13 @@ dir
 enable_if
 dir
 
-make_signed
+allocator_traits
 dir
 
 move
 dir
 
-allocator_traits
+make_signed
 dir
 
 is_rvalue_reference
@@ -119,10 +116,10 @@ dir
 conditional
 dir
 
-has_trivial_copy_constructor
+is_signed
 dir
 
-is_signed
+has_trivial_copy_constructor
 dir
 
 is_unsigned
@@ -134,28 +131,31 @@ dir
 addressof
 dir
 
-underlying_type
+scoped_allocator
 dir
 
 is_nothrow_move_constructible
 dir
 
-hash
+underlying_type
 dir
 
 is_nothrow_assignable
 dir
 
+hash
+dir
+
 is_destructible
 dir
 
-decay
+is_nothrow_copy_constructible
 dir
 
 function
 dir
 
-is_nothrow_copy_constructible
+decay
 dir
 
 raw_storage_iterator
@@ -195,10 +195,10 @@ jakub
 
 1160
 
-unique_ptr
+is_nothrow_constructible
 dir
 
-is_nothrow_constructible
+unique_ptr
 dir
 
 function_objects
@@ -207,10 +207,10 @@ dir
 is_integral
 dir
 
-is_lvalue_reference
+is_object
 dir
 
-is_object
+is_lvalue_reference
 dir
 
 is_trivial
@@ -219,10 +219,10 @@ dir
 default_delete
 dir
 
-is_convertible
+time_point
 dir
 
-time_point
+is_convertible
 dir
 
 remove_reference
@@ -320,6 +320,9 @@ is_assignable
 dir
 
 forward
+dir
+
+steady_clock
 dir
 
 is_copy_constructible

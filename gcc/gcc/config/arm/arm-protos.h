@@ -23,6 +23,7 @@
 #ifndef GCC_ARM_PROTOS_H
 #define GCC_ARM_PROTOS_H
 
+extern enum unwind_info_type arm_except_unwind_info (struct gcc_options *);
 extern int use_return_insn (int, rtx);
 extern enum reg_class arm_regno_class (int);
 extern void arm_load_pic_register (unsigned long);
@@ -65,8 +66,12 @@ extern int vfp3_const_double_rtx (rtx);
 extern int neon_immediate_valid_for_move (rtx, enum machine_mode, rtx *, int *);
 extern int neon_immediate_valid_for_logic (rtx, enum machine_mode, int, rtx *,
 					   int *);
+extern int neon_immediate_valid_for_shift (rtx, enum machine_mode, rtx *,
+					   int *, bool);
 extern char *neon_output_logic_immediate (const char *, rtx *,
 					  enum machine_mode, int, int);
+extern char *neon_output_shift_immediate (const char *, char, rtx *,
+					  enum machine_mode, int, bool);
 extern void neon_pairwise_reduce (rtx, rtx, enum machine_mode,
 				  rtx (*) (rtx, rtx, rtx));
 extern rtx neon_make_constant (rtx);
@@ -126,8 +131,9 @@ extern const char *output_mov_long_double_arm_from_fpa (rtx *);
 extern const char *output_mov_long_double_arm_from_arm (rtx *);
 extern const char *output_mov_double_fpa_from_arm (rtx *);
 extern const char *output_mov_double_arm_from_fpa (rtx *);
-extern const char *output_move_double (rtx *);
+extern const char *output_move_double (rtx *, bool, int *count);
 extern const char *output_move_quad (rtx *);
+extern int arm_count_output_move_double_insns (rtx *);
 extern const char *output_move_vfp (rtx *operands);
 extern const char *output_move_neon (rtx *operands);
 extern int arm_attr_length_move_neon (rtx);
@@ -153,9 +159,6 @@ extern const char *arm_output_memory_barrier (rtx *);
 extern const char *arm_output_sync_insn (rtx, rtx *);
 extern unsigned int arm_sync_loop_insns (rtx , rtx *);
 extern int arm_attr_length_push_multi(rtx, rtx);
-extern bool arm_check_ldrd_operands (rtx, rtx, rtx, rtx);
-extern bool arm_legitimate_ldrd_p (rtx, rtx, rtx, rtx, bool);
-extern int arm_output_ldrd (rtx, rtx, rtx, rtx, rtx, bool);
 
 #if defined TREE_CODE
 extern void arm_init_cumulative_args (CUMULATIVE_ARGS *, tree, rtx, tree);
@@ -174,6 +177,7 @@ extern void arm_init_expanders (void);
 extern const char *thumb_unexpanded_epilogue (void);
 extern void thumb1_expand_prologue (void);
 extern void thumb1_expand_epilogue (void);
+extern const char *thumb1_output_interwork (void);
 #ifdef TREE_CODE
 extern int is_called_in_ARM_mode (tree);
 #endif

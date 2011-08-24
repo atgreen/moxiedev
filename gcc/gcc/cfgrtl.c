@@ -1,6 +1,6 @@
 /* Control flow graph manipulation code for GNU compiler.
    Copyright (C) 1987, 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -59,6 +59,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "cfglayout.h"
 #include "expr.h"
 #include "target.h"
+#include "common/common-target.h"
 #include "cfgloop.h"
 #include "ggc.h"
 #include "tree-pass.h"
@@ -1118,7 +1119,7 @@ rtl_redirect_edge_and_branch (edge e, basic_block target)
 /* Like force_nonfallthru below, but additionally performs redirection
    Used by redirect_edge_and_branch_force.  */
 
-static basic_block
+basic_block
 force_nonfallthru_and_redirect (edge e, basic_block target)
 {
   basic_block jump_block, new_bb = NULL, src = e->src;
@@ -1224,7 +1225,7 @@ force_nonfallthru_and_redirect (edge e, basic_block target)
 
       BB_COPY_PARTITION (jump_block, e->src);
       if (flag_reorder_blocks_and_partition
-	  && targetm.have_named_sections
+	  && targetm_common.have_named_sections
 	  && JUMP_P (BB_END (jump_block))
 	  && !any_condjump_p (BB_END (jump_block))
 	  && (EDGE_SUCC (jump_block, 0)->flags & EDGE_CROSSING))
@@ -1253,6 +1254,7 @@ force_nonfallthru_and_redirect (edge e, basic_block target)
     {
 #ifdef HAVE_return
 	emit_jump_insn_after_setloc (gen_return (), BB_END (jump_block), loc);
+	JUMP_LABEL (BB_END (jump_block)) = ret_rtx;
 #else
 	gcc_unreachable ();
 #endif
@@ -1524,7 +1526,7 @@ commit_one_edge_insertion (edge e)
       after = BB_END (bb);
 
       if (flag_reorder_blocks_and_partition
-	  && targetm.have_named_sections
+	  && targetm_common.have_named_sections
 	  && e->src != ENTRY_BLOCK_PTR
 	  && BB_PARTITION (e->src) == BB_COLD_PARTITION
 	  && !(e->flags & EDGE_CROSSING)
@@ -1663,28 +1665,10 @@ print_rtl_with_bb (FILE *outf, const_rtx rtx_first)
       for (tmp_rtx = rtx_first; NULL != tmp_rtx; tmp_rtx = NEXT_INSN (tmp_rtx))
 	{
 	  int did_output;
-	  if ((bb = start[INSN_UID (tmp_rtx)]) != NULL)
-	    {
-	      edge e;
-	      edge_iterator ei;
 
-	      fprintf (outf, ";; Start of basic block (");
-	      FOR_EACH_EDGE (e, ei, bb->preds)
-		fprintf (outf, " %d", e->src->index);
-	      fprintf (outf, ") -> %d\n", bb->index);
-
-	      if (df)
-		{
-		  df_dump_top (bb, outf);
-		  putc ('\n', outf);
-		}
-	      FOR_EACH_EDGE (e, ei, bb->preds)
-		{
-		  fputs (";; Pred edge ", outf);
-		  dump_edge_info (outf, e, 0);
-		  fputc ('\n', outf);
-		}
-	    }
+	  bb = start[INSN_UID (tmp_rtx)];
+	  if (bb != NULL)
+	    dump_bb_info (bb, true, false, dump_flags, ";; ", outf);
 
 	  if (in_bb_p[INSN_UID (tmp_rtx)] == NOT_IN_BB
 	      && !NOTE_P (tmp_rtx)
@@ -1695,29 +1679,9 @@ print_rtl_with_bb (FILE *outf, const_rtx rtx_first)
 
 	  did_output = print_rtl_single (outf, tmp_rtx);
 
-	  if ((bb = end[INSN_UID (tmp_rtx)]) != NULL)
-	    {
-	      edge e;
-	      edge_iterator ei;
-
-	      fprintf (outf, ";; End of basic block %d -> (", bb->index);
-	      FOR_EACH_EDGE (e, ei, bb->succs)
-		fprintf (outf, " %d", e->dest->index);
-	      fprintf (outf, ")\n");
-
-	      if (df)
-		{
-		  df_dump_bottom (bb, outf);
-		  putc ('\n', outf);
-		}
-	      putc ('\n', outf);
-	      FOR_EACH_EDGE (e, ei, bb->succs)
-		{
-		  fputs (";; Succ edge ", outf);
-		  dump_edge_info (outf, e, 1);
-		  fputc ('\n', outf);
-		}
-	    }
+	  bb = end[INSN_UID (tmp_rtx)];
+	  if (bb != NULL)
+	    dump_bb_info (bb, false, true, dump_flags, ";; ", outf);
 	  if (did_output)
 	    putc ('\n', outf);
 	}
@@ -1857,18 +1821,38 @@ rtl_verify_flow_info_1 (void)
 	}
       FOR_EACH_EDGE (e, ei, bb->succs)
 	{
+	  bool is_crossing;
+
 	  if (e->flags & EDGE_FALLTHRU)
+	    n_fallthru++, fallthru = e;
+
+	  is_crossing = (BB_PARTITION (e->src) != BB_PARTITION (e->dest)
+			 && e->src != ENTRY_BLOCK_PTR
+			 && e->dest != EXIT_BLOCK_PTR);
+	  if (e->flags & EDGE_CROSSING)
 	    {
-	      n_fallthru++, fallthru = e;
-	      if ((e->flags & EDGE_CROSSING)
-		  || (BB_PARTITION (e->src) != BB_PARTITION (e->dest)
-		      && e->src != ENTRY_BLOCK_PTR
-		      && e->dest != EXIT_BLOCK_PTR))
-	    {
+	      if (!is_crossing)
+		{
+		  error ("EDGE_CROSSING incorrectly set across same section");
+		  err = 1;
+		}
+	      if (e->flags & EDGE_FALLTHRU)
+		{
 		  error ("fallthru edge crosses section boundary (bb %i)",
 			 e->src->index);
 		  err = 1;
 		}
+	      if (e->flags & EDGE_EH)
+		{
+		  error ("EH edge crosses section boundary (bb %i)",
+			 e->src->index);
+		  err = 1;
+		}
+	    }
+	  else if (is_crossing)
+	    {
+	      error ("EDGE_CROSSING missing across section boundary");
+	      err = 1;
 	    }
 
 	  if ((e->flags & ~(EDGE_DFS_BACK

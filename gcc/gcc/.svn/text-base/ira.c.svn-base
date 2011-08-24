@@ -383,6 +383,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "integrate.h"
 #include "ggc.h"
 #include "ira-int.h"
+#include "dce.h"
 
 
 struct target_ira default_target_ira;
@@ -1402,7 +1403,7 @@ setup_reg_class_nregs (void)
       for (cl = 0; cl < N_REG_CLASSES; cl++)
 	ira_reg_class_max_nregs[cl][m]
 	  = ira_reg_class_min_nregs[cl][m]
-	  = CLASS_MAX_NREGS ((enum reg_class) cl, (enum machine_mode) m);
+	  = targetm.class_max_nregs ((reg_class_t) cl, (enum machine_mode) m);
       for (cl = 0; cl < N_REG_CLASSES; cl++)
 	for (i = 0;
 	     (cl2 = alloc_reg_class_subclasses[cl][i]) != LIM_REG_CLASSES;
@@ -1500,6 +1501,10 @@ ira_init_register_move_cost (enum machine_mode mode)
 	  sizeof (move_table) * N_REG_CLASSES);
   for (cl1 = 0; cl1 < N_REG_CLASSES; cl1++)
     {
+      /* Some subclasses are to small to have enough registers to hold
+	 a value of MODE.  Just ignore them.  */
+      if (ira_reg_class_max_nregs[cl1][mode] > ira_available_class_regs[cl1])
+	continue;
       COPY_HARD_REG_SET (temp_hard_regset, reg_class_contents[cl1]);
       AND_COMPL_HARD_REG_SET (temp_hard_regset, no_unit_alloc_regs);
       if (hard_reg_set_empty_p (temp_hard_regset))
@@ -1952,8 +1957,8 @@ setup_reg_renumber (void)
 				      reg_class_contents[pclass]);
 	    }
 	  if (ALLOCNO_CALLS_CROSSED_NUM (a) != 0
-	      && ! ira_hard_reg_not_in_set_p (hard_regno, ALLOCNO_MODE (a),
-					      call_used_reg_set))
+	      && ira_hard_reg_set_intersection_p (hard_regno, ALLOCNO_MODE (a),
+						  call_used_reg_set))
 	    {
 	      ira_assert (!optimize || flag_caller_saves
 			  || regno >= ira_reg_equiv_len
@@ -1991,10 +1996,10 @@ setup_allocno_assignment_flags (void)
 				|| ALLOCNO_EMIT_DATA (a)->mem_optimized_dest_p
 				|| (ALLOCNO_MEMORY_COST (a)
 				    - ALLOCNO_CLASS_COST (a)) < 0);
-      ira_assert (hard_regno < 0
-		  || ! ira_hard_reg_not_in_set_p (hard_regno, ALLOCNO_MODE (a),
-						  reg_class_contents
-						  [ALLOCNO_CLASS (a)]));
+      ira_assert
+	(hard_regno < 0
+	 || ira_hard_reg_in_set_p (hard_regno, ALLOCNO_MODE (a),
+				   reg_class_contents[ALLOCNO_CLASS (a)]));
     }
 }
 
@@ -2012,9 +2017,9 @@ calculate_allocation_cost (void)
     {
       hard_regno = ALLOCNO_HARD_REGNO (a);
       ira_assert (hard_regno < 0
-		  || ! ira_hard_reg_not_in_set_p
-		       (hard_regno, ALLOCNO_MODE (a),
-			reg_class_contents[ALLOCNO_CLASS (a)]));
+		  || (ira_hard_reg_in_set_p
+		      (hard_regno, ALLOCNO_MODE (a),
+		       reg_class_contents[ALLOCNO_CLASS (a)])));
       if (hard_regno < 0)
 	{
 	  cost = ALLOCNO_MEMORY_COST (a);
@@ -3526,6 +3531,7 @@ ira (FILE *f)
   int rebuild_p;
   int saved_flag_ira_share_spill_slots;
   basic_block bb;
+  bool need_dce;
 
   timevar_push (TV_IRA);
 
@@ -3717,7 +3723,7 @@ ira (FILE *f)
   df_set_flags (DF_NO_INSN_RESCAN);
   build_insn_chain ();
 
-  reload_completed = !reload (get_insns (), ira_conflicts_p);
+  need_dce = reload (get_insns (), ira_conflicts_p);
 
   timevar_pop (TV_RELOAD);
 
@@ -3760,7 +3766,7 @@ ira (FILE *f)
 #endif
 
   /* The code after the reload has changed so much that at this point
-     we might as well just rescan everything.  Not that
+     we might as well just rescan everything.  Note that
      df_rescan_all_insns is not going to help here because it does not
      touch the artificial uses and defs.  */
   df_finish_pass (true);
@@ -3771,6 +3777,9 @@ ira (FILE *f)
 
   if (optimize)
     df_analyze ();
+
+  if (need_dce && optimize)
+    run_fast_dce ();
 
   timevar_pop (TV_IRA);
 }
@@ -3806,7 +3815,6 @@ struct rtl_opt_pass pass_ira =
   0,                                    /* properties_provided */
   0,                                    /* properties_destroyed */
   0,                                    /* todo_flags_start */
-  TODO_dump_func |
   TODO_ggc_collect                      /* todo_flags_finish */
  }
 };

@@ -40,6 +40,29 @@
   return general_operand (op, mode);
 })
 
+;; Nonzero if OP can be source of a load operation.
+
+(define_predicate "moxie_load_source_operand"
+  (match_code "mem")
+{
+  /* Any (MEM LABEL_REF) is OK.  That is a pc-relative load.  */
+  if (MEM_P (op) && GET_CODE (XEXP (op, 0)) == LABEL_REF)
+    return 1;
+
+  if (MEM_P (op)
+      && GET_CODE (XEXP (op, 0)) == PLUS
+      && GET_CODE (XEXP (XEXP (op, 0), 0)) == REG
+      && GET_CODE (XEXP (XEXP (op, 0), 1)) == CONST)
+    return 1;
+
+  if (MEM_P (op)
+      && (GET_CODE (XEXP (op, 0)) == REG
+          || GET_CODE (XEXP (op, 0)) == CONST))
+    return 1;
+
+  return 0;
+})
+
 ;; Nonzero if OP can be an operand to an add/inc/dec instruction.
 
 (define_predicate "moxie_add_operand"

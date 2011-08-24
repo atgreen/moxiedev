@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/microblaze/isa
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ eager
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-fsqrt.c
-file
-
-
-
-
-2010-11-22T19:14:23.649793Z
-65b7ac5e997d43763d364e2632b09140
-2010-09-30T18:21:57.971378Z
-164756
-eager
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-266
 
 pcmp.c
 file
@@ -94,14 +60,14 @@ eager
 
 1259
 
-fcvt.c
+fsqrt.c
 file
 
 
 
 
-2010-11-22T19:14:23.650795Z
-13116e55c6dc9d1e27361d96171e4efd
+2010-11-22T19:14:23.649793Z
+65b7ac5e997d43763d364e2632b09140
 2010-09-30T18:21:57.971378Z
 164756
 eager
@@ -126,7 +92,7 @@ eager
 
 
 
-575
+266
 
 nofloat.c
 file
@@ -162,14 +128,14 @@ eager
 
 388
 
-float.c
+fcvt.c
 file
 
 
 
 
 2010-11-22T19:14:23.650795Z
-8559aefca5d5bbcf1662fcc0b10d2684
+13116e55c6dc9d1e27361d96171e4efd
 2010-09-30T18:21:57.971378Z
 164756
 eager
@@ -194,7 +160,7 @@ eager
 
 
 
-799
+575
 
 mulh.c
 file
@@ -230,6 +196,40 @@ eager
 
 1787
 
+float.c
+file
+
+
+
+
+2010-11-22T19:14:23.650795Z
+8559aefca5d5bbcf1662fcc0b10d2684
+2010-09-30T18:21:57.971378Z
+164756
+eager
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+799
+
 fcmp1.c
 file
 
@@ -264,40 +264,6 @@ eager
 
 311
 
-fcmp2.c
-file
-
-
-
-
-2010-11-22T19:14:23.651804Z
-1511dc8689e393c4eba262c5025d283f
-2010-09-30T18:21:57.971378Z
-164756
-eager
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-310
-
 mul-bshift-pcmp.c
 file
 
@@ -331,6 +297,40 @@ eager
 
 
 2042
+
+fcmp2.c
+file
+
+
+
+
+2010-11-22T19:14:23.651804Z
+1511dc8689e393c4eba262c5025d283f
+2010-09-30T18:21:57.971378Z
+164756
+eager
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+310
 
 fcmp3.c
 file
@@ -400,40 +400,6 @@ eager
 
 1815
 
-bshift.c
-file
-
-
-
-
-2010-11-22T19:14:23.652804Z
-ff9e93d3e77e32e0ebcc4ee4d9ace05d
-2010-09-30T18:21:57.971378Z
-164756
-eager
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1603
-
 mulh-bshift-pcmp.c
 file
 
@@ -468,14 +434,14 @@ eager
 
 2364
 
-div.c
+bshift.c
 file
 
 
 
 
 2010-11-22T19:14:23.652804Z
-0527b3c3c328b62fc0ae788dc511ddf5
+ff9e93d3e77e32e0ebcc4ee4d9ace05d
 2010-09-30T18:21:57.971378Z
 164756
 eager
@@ -500,7 +466,7 @@ eager
 
 
 
-1255
+1603
 
 nofcmp.c
 file
@@ -535,6 +501,40 @@ eager
 
 
 422
+
+div.c
+file
+
+
+
+
+2010-11-22T19:14:23.652804Z
+0527b3c3c328b62fc0ae788dc511ddf5
+2010-09-30T18:21:57.971378Z
+164756
+eager
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1255
 
 vanilla.c
 file

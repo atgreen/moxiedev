@@ -149,7 +149,10 @@ vect_print_dump_info (enum vect_verbosity_levels vl)
   if (!current_function_decl || !vect_dump)
     return false;
 
-  if (vect_location == UNKNOWN_LOC)
+  if (dump_file)
+    fprintf (vect_dump, "\n");
+
+  else if (vect_location == UNKNOWN_LOC)
     fprintf (vect_dump, "\n%s:%d: note: ",
 	     DECL_SOURCE_FILE (current_function_decl),
 	     DECL_SOURCE_LINE (current_function_decl));
@@ -292,7 +295,6 @@ struct gimple_opt_pass pass_slp_vectorize =
   0,                                    /* todo_flags_start */
   TODO_ggc_collect
     | TODO_verify_ssa
-    | TODO_dump_func
     | TODO_update_ssa
     | TODO_verify_stmts                 /* todo_flags_finish */
  }

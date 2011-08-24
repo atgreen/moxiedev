@@ -261,6 +261,33 @@ gfc_get_expr_charlen (gfc_expr *e)
 }
 
 
+/* Return for an expression the backend decl of the coarray.  */
+
+static tree
+get_tree_for_caf_expr (gfc_expr *expr)
+{
+   tree caf_decl = NULL_TREE;
+   gfc_ref *ref;
+
+   gcc_assert (expr && expr->expr_type == EXPR_VARIABLE);
+   if (expr->symtree->n.sym->attr.codimension)
+     caf_decl = expr->symtree->n.sym->backend_decl;
+
+   for (ref = expr->ref; ref; ref = ref->next)
+     if (ref->type == REF_COMPONENT)
+       {
+	gfc_component *comp = ref->u.c.component;
+        if (comp->attr.pointer || comp->attr.allocatable)
+	  caf_decl = NULL_TREE;
+	if (comp->attr.codimension)
+	  caf_decl = comp->backend_decl;
+       }
+
+   gcc_assert (caf_decl != NULL_TREE);
+   return caf_decl;
+}
+
+
 /* For each character array constructor subexpression without a ts.u.cl->length,
    replace it by its first element (if there aren't any elements, the length
    should already be set to zero).  */
@@ -691,8 +718,9 @@ gfc_conv_variable (gfc_se * se, gfc_expr * expr)
 	}
       else if (!sym->attr.value)
 	{
-          /* Dereference non-character scalar dummy arguments.  */
-	  if (sym->attr.dummy && !sym->attr.dimension)
+	  /* Dereference non-character scalar dummy arguments.  */
+	  if (sym->attr.dummy && !sym->attr.dimension
+	      && !(sym->attr.codimension && sym->attr.allocatable))
 	    se->expr = build_fold_indirect_ref_loc (input_location,
 						se->expr);
 
@@ -711,7 +739,8 @@ gfc_conv_variable (gfc_se * se, gfc_expr * expr)
 	      && (sym->attr.dummy
 		  || sym->attr.function
 		  || sym->attr.result
-		  || !sym->attr.dimension))
+		  || (!sym->attr.dimension
+		      && (!sym->attr.codimension || !sym->attr.allocatable))))
 	    se->expr = build_fold_indirect_ref_loc (input_location,
 						se->expr);
 	}
@@ -2812,6 +2841,7 @@ conv_isocbinding_procedure (gfc_se * se, gfc_symbol * sym,
   return 0;
 }
 
+
 /* Generate code for a procedure call.  Note can return se->post != NULL.
    If se->direct_byref is set then se->expr contains the return parameter.
    Return nonzero, if the call has alternate specifiers.
@@ -3360,6 +3390,73 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
       if (parmse.string_length != NULL_TREE && !sym->attr.is_bind_c)
 	VEC_safe_push (tree, gc, stringargs, parmse.string_length);
 
+      /* For descriptorless coarrays, we pass the token and the offset
+	 as additional arguments.  */
+      if (fsym && fsym->attr.codimension
+	  && gfc_option.coarray == GFC_FCOARRAY_LIB
+	  && !fsym->attr.allocatable && fsym->as->type != AS_ASSUMED_SHAPE
+	  && e == NULL)
+	{
+	  /* Token and offset. */
+	  VEC_safe_push (tree, gc, stringargs, null_pointer_node);
+	  VEC_safe_push (tree, gc, stringargs,
+			 build_int_cst (gfc_array_index_type, 0));
+	  gcc_assert (fsym->attr.optional);
+	}
+      else if (fsym && fsym->attr.codimension
+	       && !fsym->attr.allocatable && fsym->as->type != AS_ASSUMED_SHAPE
+	       && gfc_option.coarray == GFC_FCOARRAY_LIB)
+	{
+	  tree caf_decl, caf_type;
+	  tree offset, tmp2;
+
+	  caf_decl = get_tree_for_caf_expr (e);
+	  caf_type = TREE_TYPE (caf_decl);
+
+	  if (GFC_DESCRIPTOR_TYPE_P (caf_type))
+	    tmp = gfc_conv_descriptor_token (caf_decl);
+	  else
+	    {
+	      gcc_assert (GFC_ARRAY_TYPE_P (caf_type)
+			  && GFC_TYPE_ARRAY_CAF_TOKEN (caf_type) != NULL_TREE);
+	      tmp = GFC_TYPE_ARRAY_CAF_TOKEN (caf_type);
+	    }
+	  
+	  VEC_safe_push (tree, gc, stringargs, tmp);
+
+	  if (GFC_DESCRIPTOR_TYPE_P (caf_type))
+	    offset = build_int_cst (gfc_array_index_type, 0);
+	  else if (GFC_TYPE_ARRAY_CAF_OFFSET (caf_type) != NULL_TREE)
+	    offset = GFC_TYPE_ARRAY_CAF_OFFSET (caf_type);
+	  else
+	    offset = build_int_cst (gfc_array_index_type, 0);
+
+	  if (GFC_DESCRIPTOR_TYPE_P (caf_type))
+	    tmp = gfc_conv_descriptor_data_get (caf_decl);
+	  else
+	    {
+	      gcc_assert (POINTER_TYPE_P (caf_type));
+	      tmp = caf_decl;
+	    }
+
+	  if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (parmse.expr)))
+	    tmp2 = gfc_conv_descriptor_data_get (parmse.expr);
+	  else
+	    {
+	      gcc_assert (POINTER_TYPE_P (TREE_TYPE (parmse.expr)));
+	      tmp2 = parmse.expr;
+	    }
+
+	  tmp = fold_build2_loc (input_location, MINUS_EXPR,
+                                 gfc_array_index_type,
+                                 fold_convert (gfc_array_index_type, tmp2),
+                                 fold_convert (gfc_array_index_type, tmp));
+	  offset = fold_build2_loc (input_location, PLUS_EXPR,
+				    gfc_array_index_type, offset, tmp);
+
+	  VEC_safe_push (tree, gc, stringargs, offset);
+	}
+
       VEC_safe_push (tree, gc, arglist, parmse.expr);
     }
   gfc_finish_interface_mapping (&mapping, &se->pre, &se->post);
@@ -3788,8 +3885,8 @@ fill_with_spaces (tree start, tree type, tree size)
 		  fold_build2_loc (input_location, MINUS_EXPR, sizetype, i,
 				   TYPE_SIZE_UNIT (type)));
   gfc_add_modify (&loop, el,
-		  fold_build2_loc (input_location, POINTER_PLUS_EXPR,
-				   TREE_TYPE (el), el, TYPE_SIZE_UNIT (type)));
+		  fold_build_pointer_plus_loc (input_location,
+					       el, TYPE_SIZE_UNIT (type)));
 
   /* Making the loop... actually loop!  */
   tmp = gfc_finish_block (&loop);
@@ -3915,8 +4012,7 @@ gfc_trans_string_copy (stmtblock_t * block, tree dlength, tree dest,
 			  built_in_decls[BUILT_IN_MEMMOVE],
 			  3, dest, src, slen);
 
-  tmp4 = fold_build2_loc (input_location, POINTER_PLUS_EXPR, TREE_TYPE (dest),
-			  dest, fold_convert (sizetype, slen));
+  tmp4 = fold_build_pointer_plus_loc (input_location, dest, slen);
   tmp4 = fill_with_spaces (tmp4, chartype,
 			   fold_build2_loc (input_location, MINUS_EXPR,
 					    TREE_TYPE(dlen), dlen, slen));
@@ -4315,10 +4411,7 @@ gfc_trans_subarray_assign (tree dest, gfc_component * cm, gfc_expr * expr)
   gfc_add_block_to_block (&block, &loop.pre);
   gfc_add_block_to_block (&block, &loop.post);
 
-  for (n = 0; n < cm->as->rank; n++)
-    mpz_clear (lss->shape[n]);
-  free (lss->shape);
-
+  gfc_free_shape (&lss->shape, cm->as->rank);
   gfc_cleanup_loop (&loop);
 
   return gfc_finish_block (&block);
@@ -6041,10 +6134,6 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
   rss = NULL;
   if (lss != gfc_ss_terminator)
     {
-      /* Allow the scalarizer to workshare array assignments.  */
-      if (ompws_flags & OMPWS_WORKSHARE_FLAG)
-	ompws_flags |= OMPWS_SCALARIZER_WS;
-
       /* The assignment needs scalarization.  */
       lss_section = lss;
 
@@ -6099,6 +6188,10 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
 	  gfc_mark_ss_chain_used (lss, 3);
 	  gfc_mark_ss_chain_used (loop.temp_ss, 3);
 	}
+
+      /* Allow the scalarizer to workshare array assignments.  */
+      if ((ompws_flags & OMPWS_WORKSHARE_FLAG) && loop.temp_ss == NULL)
+	ompws_flags |= OMPWS_SCALARIZER_WS;
 
       /* Start the scalarized loop body.  */
       gfc_start_scalarized_body (&loop, &body);
@@ -6208,6 +6301,7 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
 	    && !gfc_expr_attr (expr1).codimension
 	    && !gfc_is_coindexed (expr1))
 	{
+	  ompws_flags &= ~OMPWS_SCALARIZER_WS;
 	  tmp = gfc_alloc_allocatable_for_assignment (&loop, expr1, expr2);
 	  if (tmp != NULL_TREE)
 	    gfc_add_expr_to_block (&loop.code[expr1->rank - 1], tmp);

@@ -117,6 +117,7 @@ along with GCC; see the file COPYING3.  If not see
 #include <math.h>
 #include "hashtab.h"
 #include "vec.h"
+#include "fnmatch.h"
 
 #ifndef CHAR_BIT
 #define CHAR_BIT 8
@@ -384,8 +385,8 @@ struct unit_decl
 struct bypass_decl
 {
   int latency;
-  const char *out_insn_name;
-  const char *in_insn_name;
+  const char *out_pattern;
+  const char *in_pattern;
   const char *bypass_guard_name;
 
   /* The following fields are defined by checker.  */
@@ -1306,17 +1307,17 @@ static void
 gen_bypass (rtx def)
 {
   decl_t decl;
-  char **out_insns;
+  char **out_patterns;
   int out_length;
-  char **in_insns;
+  char **in_patterns;
   int in_length;
   int i, j;
 
-  out_insns = get_str_vect (XSTR (def, 1), &out_length, ',', FALSE);
-  if (out_insns == NULL)
+  out_patterns = get_str_vect (XSTR (def, 1), &out_length, ',', FALSE);
+  if (out_patterns == NULL)
     fatal ("invalid string `%s' in define_bypass", XSTR (def, 1));
-  in_insns = get_str_vect (XSTR (def, 2), &in_length, ',', FALSE);
-  if (in_insns == NULL)
+  in_patterns = get_str_vect (XSTR (def, 2), &in_length, ',', FALSE);
+  if (in_patterns == NULL)
     fatal ("invalid string `%s' in define_bypass", XSTR (def, 2));
   for (i = 0; i < out_length; i++)
     for (j = 0; j < in_length; j++)
@@ -1325,8 +1326,8 @@ gen_bypass (rtx def)
 	decl->mode = dm_bypass;
 	decl->pos = 0;
 	DECL_BYPASS (decl)->latency = XINT (def, 0);
-	DECL_BYPASS (decl)->out_insn_name = out_insns [i];
-	DECL_BYPASS (decl)->in_insn_name = in_insns [j];
+	DECL_BYPASS (decl)->out_pattern = out_patterns[i];
+	DECL_BYPASS (decl)->in_pattern = in_patterns[j];
 	DECL_BYPASS (decl)->bypass_guard_name = XSTR (def, 3);
 	VEC_safe_push (decl_t, heap, decls, decl);
       }
@@ -2397,19 +2398,19 @@ insert_bypass (struct bypass_decl *bypass)
 	      {
 		if (!w_flag)
 		  error ("the same bypass `%s - %s' is already defined",
-			 bypass->out_insn_name, bypass->in_insn_name);
+			 bypass->out_pattern, bypass->in_pattern);
 		else
 		  warning ("the same bypass `%s - %s' is already defined",
-			   bypass->out_insn_name, bypass->in_insn_name);
+			   bypass->out_pattern, bypass->in_pattern);
 	      }
 	    else if (!w_flag)
 	      error ("the same bypass `%s - %s' (guard %s) is already defined",
-		     bypass->out_insn_name, bypass->in_insn_name,
+		     bypass->out_pattern, bypass->in_pattern,
 		     bypass->bypass_guard_name);
 	    else
 	      warning
 		("the same bypass `%s - %s' (guard %s) is already defined",
-		 bypass->out_insn_name, bypass->in_insn_name,
+		 bypass->out_pattern, bypass->in_pattern,
 		 bypass->bypass_guard_name);
 	    return;
 	  }
@@ -2434,6 +2435,92 @@ insert_bypass (struct bypass_decl *bypass)
     }
 }
 
+/* BYPASS is a define_bypass decl that includes glob pattern PATTERN.
+   Call FN (BYPASS, INSN, DATA) for each matching instruction INSN.  */
+
+static void
+for_each_matching_insn (decl_t bypass, const char *pattern,
+			void (*fn) (decl_t, decl_t, void *), void *data)
+{
+  decl_t insn_reserv;
+  bool matched_p;
+  int i;
+
+  matched_p = false;
+  if (strpbrk (pattern, "*?["))
+    for (i = 0; i < description->decls_num; i++)
+      {
+	insn_reserv = description->decls[i];
+	if (insn_reserv->mode == dm_insn_reserv
+	    && fnmatch (pattern, DECL_INSN_RESERV (insn_reserv)->name, 0) == 0)
+	  {
+	    fn (bypass, insn_reserv, data);
+	    matched_p = true;
+	  }
+      }
+  else
+    {
+      insn_reserv = find_insn_decl (pattern);
+      if (insn_reserv)
+	{
+	  fn (bypass, insn_reserv, data);
+	  matched_p = true;
+	}
+    }
+  if (!matched_p)
+    error ("there is no insn reservation that matches `%s'", pattern);
+}
+
+/* A subroutine of process_bypass that is called for each pair
+   of matching instructions.  OUT_INSN_RESERV is the output
+   instruction and DATA is the input instruction.  */
+
+static void
+process_bypass_2 (decl_t model, decl_t out_insn_reserv, void *data)
+{
+  struct bypass_decl *bypass;
+  decl_t in_insn_reserv;
+
+  in_insn_reserv = (decl_t) data;
+  if (strcmp (DECL_INSN_RESERV (in_insn_reserv)->name,
+	      DECL_BYPASS (model)->in_pattern) == 0
+      && strcmp (DECL_INSN_RESERV (out_insn_reserv)->name,
+		 DECL_BYPASS (model)->out_pattern) == 0)
+    bypass = DECL_BYPASS (model);
+  else
+    {
+      bypass = XCNEW (struct bypass_decl);
+      bypass->latency = DECL_BYPASS (model)->latency;
+      bypass->out_pattern = DECL_INSN_RESERV (out_insn_reserv)->name;
+      bypass->in_pattern = DECL_INSN_RESERV (in_insn_reserv)->name;
+      bypass->bypass_guard_name = DECL_BYPASS (model)->bypass_guard_name;
+    }
+  bypass->out_insn_reserv = DECL_INSN_RESERV (out_insn_reserv);
+  bypass->in_insn_reserv = DECL_INSN_RESERV (in_insn_reserv);
+  insert_bypass (bypass);
+}
+
+/* A subroutine of process_bypass that is called for each input
+   instruction IN_INSN_RESERV.  */
+
+static void
+process_bypass_1 (decl_t bypass, decl_t in_insn_reserv,
+		  void *data ATTRIBUTE_UNUSED)
+{
+  for_each_matching_insn (bypass, DECL_BYPASS (bypass)->out_pattern,
+			  process_bypass_2, in_insn_reserv);
+}
+
+/* Process define_bypass decl BYPASS, inserting a bypass for each specific
+   pair of insn reservations.  */
+
+static void
+process_bypass (decl_t bypass)
+{
+  for_each_matching_insn (bypass, DECL_BYPASS (bypass)->in_pattern,
+			  process_bypass_1, NULL);
+}
+
 /* The function processes pipeline description declarations, checks
    their correctness, and forms exclusion/presence/absence sets.  */
 static void
@@ -2442,8 +2529,6 @@ process_decls (void)
   decl_t decl;
   decl_t automaton_decl;
   decl_t decl_in_table;
-  decl_t out_insn_reserv;
-  decl_t in_insn_reserv;
   int automaton_presence;
   int i;
 
@@ -2489,8 +2574,8 @@ process_decls (void)
 	{
 	  if (DECL_BYPASS (decl)->latency < 0)
 	    error ("define_bypass `%s - %s' has negative latency time",
-		   DECL_BYPASS (decl)->out_insn_name,
-		   DECL_BYPASS (decl)->in_insn_name);
+		   DECL_BYPASS (decl)->out_pattern,
+		   DECL_BYPASS (decl)->in_pattern);
 	}
       else if (decl->mode == dm_unit || decl->mode == dm_reserv)
 	{
@@ -2551,24 +2636,7 @@ process_decls (void)
     {
       decl = description->decls [i];
       if (decl->mode == dm_bypass)
-	{
-	  out_insn_reserv = find_insn_decl (DECL_BYPASS (decl)->out_insn_name);
-	  in_insn_reserv = find_insn_decl (DECL_BYPASS (decl)->in_insn_name);
-	  if (out_insn_reserv == NULL)
-	    error ("there is no insn reservation `%s'",
-		   DECL_BYPASS (decl)->out_insn_name);
-	  else if (in_insn_reserv == NULL)
-	    error ("there is no insn reservation `%s'",
-		   DECL_BYPASS (decl)->in_insn_name);
-	  else
-	    {
-	      DECL_BYPASS (decl)->out_insn_reserv
-		= DECL_INSN_RESERV (out_insn_reserv);
-	      DECL_BYPASS (decl)->in_insn_reserv
-		= DECL_INSN_RESERV (in_insn_reserv);
-	      insert_bypass (DECL_BYPASS (decl));
-	    }
-	}
+	process_bypass (decl);
     }
 
   /* Check exclusion set declarations and form exclusion sets.  */
@@ -3908,16 +3976,16 @@ find_arc (state_t from_state, state_t to_state, ainsn_t insn)
   return NULL;
 }
 
-/* The function adds arc from FROM_STATE to TO_STATE marked by AINSN.
-   The function returns added arc (or already existing arc).  */
-static arc_t
+/* The function adds arc from FROM_STATE to TO_STATE marked by AINSN,
+   unless such an arc already exists.  */
+static void
 add_arc (state_t from_state, state_t to_state, ainsn_t ainsn)
 {
   arc_t new_arc;
 
   new_arc = find_arc (from_state, to_state, ainsn);
   if (new_arc != NULL)
-    return new_arc;
+    return;
   if (first_free_arc == NULL)
     {
 #ifndef NDEBUG
@@ -3940,7 +4008,6 @@ add_arc (state_t from_state, state_t to_state, ainsn_t ainsn)
   from_state->first_out_arc = new_arc;
   from_state->num_out_arcs++;
   new_arc->next_arc_marked_by_insn = NULL;
-  return new_arc;
 }
 
 /* The function returns the first arc starting from STATE.  */
@@ -5464,7 +5531,6 @@ make_automaton (automaton_t automaton)
   state_t start_state;
   state_t state2;
   ainsn_t advance_cycle_ainsn;
-  arc_t added_arc;
   VEC(state_t, heap) *state_stack = VEC_alloc(state_t, heap, 150);
   int states_n;
   reserv_sets_t reservs_matter = form_reservs_matter (automaton);
@@ -5489,7 +5555,6 @@ make_automaton (automaton_t automaton)
               {
 		/* We process alt_states in the same order as they are
                    present in the description.  */
-		added_arc = NULL;
                 for (alt_state = ainsn->alt_states;
                      alt_state != NULL;
                      alt_state = alt_state->next_alt_state)
@@ -5507,18 +5572,11 @@ make_automaton (automaton_t automaton)
 			    if (progress_flag && states_n % 100 == 0)
 			      fprintf (stderr, ".");
                           }
-			added_arc = add_arc (state, state2, ainsn);
+			add_arc (state, state2, ainsn);
 			if (!ndfa_flag)
 			  break;
                       }
                   }
-		if (!ndfa_flag && added_arc != NULL)
-		  {
-		    for (alt_state = ainsn->alt_states;
-			 alt_state != NULL;
-			 alt_state = alt_state->next_alt_state)
-		      state2 = alt_state->state;
-		  }
               }
             else
               advance_cycle_ainsn = ainsn;
@@ -8767,8 +8825,8 @@ output_description (void)
       else if (decl->mode == dm_bypass)
 	fprintf (output_description_file, "bypass %d %s %s\n",
 		 DECL_BYPASS (decl)->latency,
-		 DECL_BYPASS (decl)->out_insn_name,
-		 DECL_BYPASS (decl)->in_insn_name);
+		 DECL_BYPASS (decl)->out_pattern,
+		 DECL_BYPASS (decl)->in_pattern);
     }
   fprintf (output_description_file, "\n\f\n");
 }

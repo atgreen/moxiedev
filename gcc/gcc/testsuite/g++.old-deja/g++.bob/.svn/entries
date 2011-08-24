@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja/g++.bob
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ mueller
 
 699
 
-array1.C
-file
-
-
-
-
-2009-04-24T17:44:25.000000Z
-0a61a52254c1e3a2b526ab1a815a4328
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-100
-
 template4.C
 file
 
@@ -127,6 +93,40 @@ mmitchel
 
 
 250
+
+array1.C
+file
+
+
+
+
+2009-04-24T17:44:25.000000Z
+0a61a52254c1e3a2b526ab1a815a4328
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+100
 
 array2.C
 file
@@ -264,14 +264,14 @@ mmitchel
 
 95
 
-static1.C
+incomplete-cast1.C
 file
 
 
 
 
 2009-04-24T17:44:25.000000Z
-8a5844fd85b143ac9bd9023567daf7b5
+779ab9435dff9dfb3a118872034a5aaa
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -296,7 +296,7 @@ mmitchel
 
 
 
-148
+370
 
 packed1.C
 file
@@ -332,14 +332,14 @@ mmitchel
 
 226
 
-incomplete-cast1.C
+static1.C
 file
 
 
 
 
 2009-04-24T17:44:25.000000Z
-779ab9435dff9dfb3a118872034a5aaa
+8a5844fd85b143ac9bd9023567daf7b5
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -364,7 +364,7 @@ mmitchel
 
 
 
-370
+148
 
 protected1.C
 file
@@ -400,40 +400,6 @@ mmitchel
 
 452
 
-inherit1.C
-file
-
-
-
-
-2009-04-24T17:44:25.000000Z
-6381324057bf382a0e9584c5fcc52260
-2008-09-17T00:06:57.961095Z
-140405
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-345
-
 delete1.C
 file
 
@@ -467,6 +433,40 @@ mmitchel
 
 
 352
+
+inherit1.C
+file
+
+
+
+
+2009-04-24T17:44:25.000000Z
+6381324057bf382a0e9584c5fcc52260
+2008-09-17T00:06:57.961095Z
+140405
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+345
 
 inherit2.C
 file

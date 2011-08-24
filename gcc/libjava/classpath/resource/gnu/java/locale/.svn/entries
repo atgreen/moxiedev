@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/resource/gnu/java/locale
 svn://gcc.gnu.org/svn/gcc
 
@@ -298,40 +298,6 @@ mark
 
 363
 
-LocaleInformation_sk_SK.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-6f42a641527772cab74ebae9cfe2d336
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-301
-
 LocaleInformation_fr_CA.properties
 file
 
@@ -366,17 +332,17 @@ doko
 
 454
 
-LocaleInformation_de_LI.properties
+LocaleInformation_sk_SK.properties
 file
 
 
 
 
-2009-04-24T17:48:40.000000Z
-74a10fc4b41ccefd6f3beb79dc055161
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2009-04-24T17:48:41.000000Z
+6f42a641527772cab74ebae9cfe2d336
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -398,7 +364,7 @@ doko
 
 
 
-350
+301
 
 LocaleInformation_uz_Latn.properties
 file
@@ -434,14 +400,14 @@ doko
 
 1663
 
-LocaleInformation_dz.properties
+LocaleInformation_de_LI.properties
 file
 
 
 
 
 2009-04-24T17:48:40.000000Z
-729139213701efc2b815aaef385114cc
+74a10fc4b41ccefd6f3beb79dc055161
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -466,7 +432,7 @@ doko
 
 
 
-12098
+350
 
 LocaleInformation_fr_BE.properties
 file
@@ -501,6 +467,40 @@ doko
 
 
 336
+
+LocaleInformation_dz.properties
+file
+
+
+
+
+2009-04-24T17:48:40.000000Z
+729139213701efc2b815aaef385114cc
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12098
 
 LocaleInformation_nr.properties
 file
@@ -1114,40 +1114,6 @@ doko
 
 31514
 
-LocaleInformation_sa.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-5bee00865bbfa33886cc38d432b8978b
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2778
-
 LocaleInformation_ar_TN.properties
 file
 
@@ -1182,17 +1148,17 @@ doko
 
 652
 
-LocaleInformation_mr_IN.properties
+LocaleInformation_sa.properties
 file
 
 
 
 
 2009-04-24T17:48:41.000000Z
-c951ef9ef689beecb41209066e759dd2
-2006-05-18T17:29:21.798468Z
-113887
-mark
+5bee00865bbfa33886cc38d432b8978b
+2008-10-21T17:55:01.166395Z
+141271
+doko
 
 
 
@@ -1214,7 +1180,7 @@ mark
 
 
 
-564
+2778
 
 LocaleInformation_af_NA.properties
 file
@@ -1249,6 +1215,40 @@ doko
 
 
 525
+
+LocaleInformation_mr_IN.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+c951ef9ef689beecb41209066e759dd2
+2006-05-18T17:29:21.798468Z
+113887
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+564
 
 LocaleInformation_hu_HU.properties
 file
@@ -1726,40 +1726,6 @@ tromey
 
 373
 
-LocaleInformation_ml.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-2595dbd9e49026717f42ee6fffb5084c
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138979
-
 LocaleInformation_id_ID.properties
 file
 
@@ -1793,6 +1759,40 @@ tromey
 
 
 458
+
+LocaleInformation_ml.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+2595dbd9e49026717f42ee6fffb5084c
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138979
 
 LocaleInformation_zh.properties
 file
@@ -1862,40 +1862,6 @@ tromey
 
 455
 
-LocaleInformation_haw_US.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-3064e8b7d591372006517bee078ce565
-2006-05-18T17:29:21.798468Z
-113887
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-516
-
 LocaleInformation_st.properties
 file
 
@@ -1930,17 +1896,17 @@ doko
 
 3350
 
-LocaleInformation_km_KH.properties
+LocaleInformation_haw_US.properties
 file
 
 
 
 
 2009-04-24T17:48:41.000000Z
-86ea466969fcd9c5b391fd8b0e0f7704
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+3064e8b7d591372006517bee078ce565
+2006-05-18T17:29:21.798468Z
+113887
+mark
 
 
 
@@ -1962,7 +1928,41 @@ tromey
 
 
 
-299
+516
+
+LocaleInformation_es_AR.properties
+file
+
+
+
+
+2009-04-24T17:48:40.000000Z
+8c0e8a8d0fbf2cdf860d614f1598e360
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+567
 
 LocaleInformation_en_PH.properties
 file
@@ -1998,17 +1998,17 @@ doko
 
 284
 
-LocaleInformation_es_AR.properties
+LocaleInformation_km_KH.properties
 file
 
 
 
 
-2009-04-24T17:48:40.000000Z
-8c0e8a8d0fbf2cdf860d614f1598e360
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2009-04-24T17:48:41.000000Z
+86ea466969fcd9c5b391fd8b0e0f7704
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -2030,7 +2030,7 @@ doko
 
 
 
-567
+299
 
 LocaleInformation_en_MT.properties
 file
@@ -4310,40 +4310,6 @@ doko
 
 418
 
-LocaleInformation_en_VI.properties
-file
-
-
-
-
-2009-04-24T17:48:40.000000Z
-d78fade2d95b37a791127e46b63e3bed
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-300
-
 LocaleInformation_so_KE.properties
 file
 
@@ -4377,6 +4343,40 @@ doko
 
 
 278
+
+LocaleInformation_en_VI.properties
+file
+
+
+
+
+2009-04-24T17:48:40.000000Z
+d78fade2d95b37a791127e46b63e3bed
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+300
 
 LocaleInformation_en_UM.properties
 file
@@ -4684,17 +4684,17 @@ doko
 
 79841
 
-LocaleInformation_nb_NO.properties
+LocaleInformation_zh_Hant.properties
 file
 
 
 
 
-2009-04-24T17:48:41.000000Z
-1aec4024dcb544fa0937c88a8a21c779
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+2009-04-24T17:48:42.000000Z
+e02dbea8f6d1b91d82a94cbe1afcad78
+2008-10-21T17:55:01.166395Z
+141271
+doko
 
 
 
@@ -4716,7 +4716,7 @@ tromey
 
 
 
-301
+57923
 
 LocaleInformation_ak.properties
 file
@@ -4752,17 +4752,17 @@ doko
 
 1297
 
-LocaleInformation_zh_Hant.properties
+LocaleInformation_nb_NO.properties
 file
 
 
 
 
-2009-04-24T17:48:42.000000Z
-e02dbea8f6d1b91d82a94cbe1afcad78
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2009-04-24T17:48:41.000000Z
+1aec4024dcb544fa0937c88a8a21c779
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -4784,7 +4784,7 @@ doko
 
 
 
-57923
+301
 
 LocaleInformation_en_MP.properties
 file
@@ -5058,40 +5058,6 @@ doko
 
 749
 
-LocaleInformation_es_SV.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-debc743dddfb04e4432d6897e2fd24c9
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-292
-
 LocaleInformation_uk.properties
 file
 
@@ -5125,6 +5091,40 @@ doko
 
 
 114190
+
+LocaleInformation_es_SV.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+debc743dddfb04e4432d6897e2fd24c9
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+292
 
 LocaleInformation_to.properties
 file
@@ -5160,40 +5160,6 @@ doko
 
 7731
 
-LocaleInformation_ja_JP.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-79c9d7379d2de5cc67ebb3b861615f3e
-2006-05-18T17:29:21.798468Z
-113887
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-299
-
 LocaleInformation_tig.properties
 file
 
@@ -5228,17 +5194,17 @@ doko
 
 14584
 
-LocaleInformation_en_AS.properties
+LocaleInformation_ja_JP.properties
 file
 
 
 
 
-2009-04-24T17:48:40.000000Z
-d4856db833a3338eafdaf4a4dd844635
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+2009-04-24T17:48:41.000000Z
+79c9d7379d2de5cc67ebb3b861615f3e
+2006-05-18T17:29:21.798468Z
+113887
+mark
 
 
 
@@ -5260,7 +5226,7 @@ tromey
 
 
 
-300
+299
 
 LocaleInformation_ss.properties
 file
@@ -5295,6 +5261,40 @@ doko
 
 
 1181
+
+LocaleInformation_en_AS.properties
+file
+
+
+
+
+2009-04-24T17:48:40.000000Z
+d4856db833a3338eafdaf4a4dd844635
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+300
 
 LocaleInformation_hi_IN.properties
 file
@@ -5398,14 +5398,14 @@ doko
 
 347
 
-LocaleInformation_en.properties
+LocaleInformation_ti_ER.properties
 file
 
 
 
 
-2009-04-24T17:48:40.000000Z
-280be8565f51911b401c165a56929230
+2009-04-24T17:48:41.000000Z
+e99a386ef59624484daf32b9894c700d
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -5430,7 +5430,7 @@ doko
 
 
 
-50762
+1193
 
 LocaleInformation_dz_BT.properties
 file
@@ -5466,14 +5466,14 @@ tromey
 
 625
 
-LocaleInformation_ti_ER.properties
+LocaleInformation_en.properties
 file
 
 
 
 
-2009-04-24T17:48:41.000000Z
-e99a386ef59624484daf32b9894c700d
+2009-04-24T17:48:40.000000Z
+280be8565f51911b401c165a56929230
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -5498,7 +5498,7 @@ doko
 
 
 
-1193
+50762
 
 LocaleInformation_az_Cyrl.properties
 file
@@ -5568,40 +5568,6 @@ tromey
 
 301
 
-LocaleInformation_pl_PL.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-4b01491c4fd3c52bd00d99dcec9946bc
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-301
-
 LocaleInformation_sv_FI.properties
 file
 
@@ -5636,17 +5602,17 @@ doko
 
 557
 
-LocaleInformation_sl_SI.properties
+LocaleInformation_pl_PL.properties
 file
 
 
 
 
 2009-04-24T17:48:41.000000Z
-9037710231950ed3cf60f7318d68aece
-2006-05-18T17:29:21.798468Z
-113887
-mark
+4b01491c4fd3c52bd00d99dcec9946bc
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -5669,40 +5635,6 @@ mark
 
 
 301
-
-LocaleInformation_hr.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-317aa19ec3da124e3029ee9b66cecad1
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-24502
 
 LocaleInformation_en_US.properties
 file
@@ -5738,14 +5670,14 @@ tromey
 
 323
 
-LocaleInformation_mn.properties
+LocaleInformation_hr.properties
 file
 
 
 
 
 2009-04-24T17:48:41.000000Z
-8e21903030a0a2e6fb1761a5aa93e382
+317aa19ec3da124e3029ee9b66cecad1
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -5770,7 +5702,41 @@ doko
 
 
 
-8302
+24502
+
+LocaleInformation_sl_SI.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+9037710231950ed3cf60f7318d68aece
+2006-05-18T17:29:21.798468Z
+113887
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+301
 
 LocaleInformation_fil.properties
 file
@@ -5805,6 +5771,40 @@ doko
 
 
 12715
+
+LocaleInformation_mn.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+8e21903030a0a2e6fb1761a5aa93e382
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8302
 
 LocaleInformation_gv.properties
 file
@@ -5942,17 +5942,17 @@ tromey
 
 519
 
-LocaleInformation_am_ET.properties
+LocaleInformation_tr.properties
 file
 
 
 
 
-2009-04-24T17:48:40.000000Z
-9093bf39b5dac2c512ddb7d87f15c571
-2006-05-18T17:29:21.798468Z
-113887
-mark
+2009-04-24T17:48:42.000000Z
+ef7b866e6c0c59a0215dd5e8aa98d9cf
+2008-10-21T17:55:01.166395Z
+141271
+doko
 
 
 
@@ -5974,7 +5974,7 @@ mark
 
 
 
-611
+53453
 
 LocaleInformation_es_CL.properties
 file
@@ -6010,14 +6010,48 @@ doko
 
 811
 
-LocaleInformation_tr.properties
+LocaleInformation_am_ET.properties
 file
 
 
 
 
-2009-04-24T17:48:42.000000Z
-ef7b866e6c0c59a0215dd5e8aa98d9cf
+2009-04-24T17:48:40.000000Z
+9093bf39b5dac2c512ddb7d87f15c571
+2006-05-18T17:29:21.798468Z
+113887
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+611
+
+LocaleInformation_sv.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+190ad22ef8849434cc5dc29ca76bc427
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -6042,41 +6076,7 @@ doko
 
 
 
-53453
-
-LocaleInformation_el_GR.properties
-file
-
-
-
-
-2009-04-24T17:48:40.000000Z
-daacf97c17fcefb55dddae8904a8cf8f
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-299
+53458
 
 LocaleInformation_de.properties
 file
@@ -6112,17 +6112,17 @@ doko
 
 38917
 
-LocaleInformation_sv.properties
+LocaleInformation_el_GR.properties
 file
 
 
 
 
-2009-04-24T17:48:41.000000Z
-190ad22ef8849434cc5dc29ca76bc427
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2009-04-24T17:48:40.000000Z
+daacf97c17fcefb55dddae8904a8cf8f
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -6144,7 +6144,7 @@ doko
 
 
 
-53458
+299
 
 LocaleInformation_ia.properties
 file
@@ -6350,40 +6350,6 @@ tromey
 
 321
 
-LocaleInformation_en_BE.properties
-file
-
-
-
-
-2009-04-24T17:48:40.000000Z
-cd5b008f67eb0616c8af42dc1c14d712
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-576
-
 LocaleInformation_te.properties
 file
 
@@ -6417,6 +6383,40 @@ doko
 
 
 7106
+
+LocaleInformation_en_BE.properties
+file
+
+
+
+
+2009-04-24T17:48:40.000000Z
+cd5b008f67eb0616c8af42dc1c14d712
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+576
 
 LocaleInformation_zh_CN_Hans.properties
 file
@@ -6452,14 +6452,14 @@ tromey
 
 594
 
-LocaleInformation_si.properties
+LocaleInformation_trv.properties
 file
 
 
 
 
-2009-04-24T17:48:41.000000Z
-1e2d902978813373a20effcab0060bba
+2009-04-24T17:48:42.000000Z
+5b1e8608231001621f6a704da1e8285a
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -6484,7 +6484,7 @@ doko
 
 
 
-2492
+3947
 
 LocaleInformation_cy.properties
 file
@@ -6520,48 +6520,14 @@ doko
 
 10786
 
-LocaleInformation_trv.properties
-file
-
-
-
-
-2009-04-24T17:48:42.000000Z
-5b1e8608231001621f6a704da1e8285a
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3947
-
-LocaleInformation_hu.properties
+LocaleInformation_si.properties
 file
 
 
 
 
 2009-04-24T17:48:41.000000Z
-13a7f57f209bdad6a360dec2fb137295
+1e2d902978813373a20effcab0060bba
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -6586,7 +6552,7 @@ doko
 
 
 
-55116
+2492
 
 LocaleInformation_ur_IN.properties
 file
@@ -6621,6 +6587,40 @@ doko
 
 
 341
+
+LocaleInformation_hu.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+13a7f57f209bdad6a360dec2fb137295
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+55116
 
 LocaleInformation_zh_HK_Hant.properties
 file
@@ -6724,40 +6724,6 @@ doko
 
 1907
 
-LocaleInformation_ro_RO.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-e1aba04163458d7fec5be81250f1bd41
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-301
-
 LocaleInformation_he_IL.properties
 file
 
@@ -6792,17 +6758,17 @@ tromey
 
 301
 
-LocaleInformation_ky.properties
+LocaleInformation_ro_RO.properties
 file
 
 
 
 
 2009-04-24T17:48:41.000000Z
-ab0283c24c25ba1233720561bee7502f
-2008-10-21T17:55:01.166395Z
-141271
-doko
+e1aba04163458d7fec5be81250f1bd41
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -6824,7 +6790,7 @@ doko
 
 
 
-5790
+301
 
 LocaleInformation_zh_SG_Hans.properties
 file
@@ -6859,6 +6825,40 @@ doko
 
 
 332
+
+LocaleInformation_ky.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+ab0283c24c25ba1233720561bee7502f
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5790
 
 LocaleInformation_se_FI.properties
 file
@@ -6996,40 +6996,6 @@ doko
 
 21663
 
-LocaleInformation_nso.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-30b55672cc2bcf8ed966fb80b2e27dcc
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1172
-
 LocaleInformation_ar_YE.properties
 file
 
@@ -7063,6 +7029,40 @@ doko
 
 
 626
+
+LocaleInformation_nso.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+30b55672cc2bcf8ed966fb80b2e27dcc
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1172
 
 LocaleInformation_eu_ES.properties
 file
@@ -7166,17 +7166,17 @@ doko
 
 1099
 
-LocaleInformation_kl.properties
+LocaleInformation_sw_TZ.properties
 file
 
 
 
 
 2009-04-24T17:48:41.000000Z
-31896399afc8b8722896caecd11981c6
-2008-10-21T17:55:01.166395Z
-141271
-doko
+50bd181324a871454eb4d935028bb37a
+2006-05-18T17:29:21.798468Z
+113887
+mark
 
 
 
@@ -7198,7 +7198,7 @@ doko
 
 
 
-1212
+320
 
 LocaleInformation_is_IS.properties
 file
@@ -7234,17 +7234,17 @@ tromey
 
 301
 
-LocaleInformation_sw_TZ.properties
+LocaleInformation_kl.properties
 file
 
 
 
 
 2009-04-24T17:48:41.000000Z
-50bd181324a871454eb4d935028bb37a
-2006-05-18T17:29:21.798468Z
-113887
-mark
+31896399afc8b8722896caecd11981c6
+2008-10-21T17:55:01.166395Z
+141271
+doko
 
 
 
@@ -7266,7 +7266,7 @@ mark
 
 
 
-320
+1212
 
 LocaleInformation_aa_ER.properties
 file
@@ -7336,40 +7336,6 @@ doko
 
 29233
 
-LocaleInformation_dv_MV.properties
-file
-
-
-
-
-2009-04-24T17:48:40.000000Z
-05d7604345886a8d4278e13f684ebc5e
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-490
-
 LocaleInformation_th.properties
 file
 
@@ -7403,6 +7369,40 @@ doko
 
 
 104335
+
+LocaleInformation_dv_MV.properties
+file
+
+
+
+
+2009-04-24T17:48:40.000000Z
+05d7604345886a8d4278e13f684ebc5e
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+490
 
 LocaleInformation_it.properties
 file
@@ -7540,40 +7540,6 @@ doko
 
 3725
 
-LocaleInformation_mt.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-a6a8157365e08604c10d823ab7117f1d
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-21443
-
 LocaleInformation_be_BY.properties
 file
 
@@ -7607,6 +7573,40 @@ mark
 
 
 299
+
+LocaleInformation_mt.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+a6a8157365e08604c10d823ab7117f1d
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+21443
 
 LocaleInformation_uz_Arab.properties
 file
@@ -7778,40 +7778,6 @@ doko
 
 281
 
-LocaleInformation_fur.properties
-file
-
-
-
-
-2009-04-24T17:48:41.000000Z
-12363d9a1337212b8bd9128728496eb8
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-15259
-
 LocaleInformation_es_HN.properties
 file
 
@@ -7846,14 +7812,14 @@ doko
 
 373
 
-LocaleInformation_ms_BN.properties
+LocaleInformation_fur.properties
 file
 
 
 
 
 2009-04-24T17:48:41.000000Z
-c1a12897ef04162a28c4ec1956834546
+12363d9a1337212b8bd9128728496eb8
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -7878,7 +7844,7 @@ doko
 
 
 
-528
+15259
 
 LocaleInformation_kn_IN.properties
 file
@@ -7913,6 +7879,40 @@ mark
 
 
 568
+
+LocaleInformation_ms_BN.properties
+file
+
+
+
+
+2009-04-24T17:48:41.000000Z
+c1a12897ef04162a28c4ec1956834546
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+528
 
 LocaleInformation_ig.properties
 file

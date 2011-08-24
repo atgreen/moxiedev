@@ -238,9 +238,20 @@ can_inline_edge_p (struct cgraph_edge *e, bool report)
 {
   bool inlinable = true;
   enum availability avail;
-  struct cgraph_node *callee = cgraph_function_or_thunk_node (e->callee, &avail);
+  struct cgraph_node *callee
+    = cgraph_function_or_thunk_node (e->callee, &avail);
   tree caller_tree = DECL_FUNCTION_SPECIFIC_OPTIMIZATION (e->caller->decl);
-  tree callee_tree = callee ? DECL_FUNCTION_SPECIFIC_OPTIMIZATION (callee->decl) : NULL;
+  tree callee_tree
+    = callee ? DECL_FUNCTION_SPECIFIC_OPTIMIZATION (callee->decl) : NULL;
+  struct function *caller_cfun = DECL_STRUCT_FUNCTION (e->caller->decl);
+  struct function *callee_cfun
+    = callee ? DECL_STRUCT_FUNCTION (callee->decl) : NULL;
+
+  if (!caller_cfun && e->caller->clone_of)
+    caller_cfun = DECL_STRUCT_FUNCTION (e->caller->clone_of->decl);
+
+  if (!callee_cfun && callee && callee->clone_of)
+    callee_cfun = DECL_STRUCT_FUNCTION (callee->clone_of->decl);
 
   gcc_assert (e->inline_failed);
 
@@ -277,12 +288,8 @@ can_inline_edge_p (struct cgraph_edge *e, bool report)
      caller cannot.
      FIXME: this is obviously wrong for LTO where STRUCT_FUNCTION is missing.
      Move the flag into cgraph node or mirror it in the inline summary.  */
-  else if (DECL_STRUCT_FUNCTION (callee->decl)
-	   && DECL_STRUCT_FUNCTION
-	        (callee->decl)->can_throw_non_call_exceptions
-	   && !(DECL_STRUCT_FUNCTION (e->caller->decl)
-	        && DECL_STRUCT_FUNCTION
-		     (e->caller->decl)->can_throw_non_call_exceptions))
+  else if (callee_cfun && callee_cfun->can_throw_non_call_exceptions
+	   && !(caller_cfun && caller_cfun->can_throw_non_call_exceptions))
     {
       e->inline_failed = CIF_NON_CALL_EXCEPTIONS;
       inlinable = false;
@@ -318,10 +325,12 @@ can_inline_edge_p (struct cgraph_edge *e, bool report)
 			     ? callee_tree
 			     : optimization_default_node);
 
-      if ((caller_opt->x_optimize > callee_opt->x_optimize)
-	  || (caller_opt->x_optimize_size != callee_opt->x_optimize_size))
+      if (((caller_opt->x_optimize > callee_opt->x_optimize)
+	   || (caller_opt->x_optimize_size != callee_opt->x_optimize_size))
+	  /* gcc.dg/pr43564.c.  Look at forced inline even in -O0.  */
+	  && !DECL_DISREGARD_INLINE_LIMITS (e->callee->decl))
 	{
-          e->inline_failed = CIF_TARGET_OPTIMIZATION_MISMATCH;
+	  e->inline_failed = CIF_OPTIMIZATION_MISMATCH;
 	  inlinable = false;
 	}
     }
@@ -643,6 +652,16 @@ want_inline_self_recursive_call_p (struct cgraph_edge *edge,
   return want_inline;
 }
 
+/* Return true when NODE has caller other than EDGE. 
+   Worker for cgraph_for_node_and_aliases.  */
+
+static bool
+check_caller_edge (struct cgraph_node *node, void *edge)
+{
+  return (node->callers
+          && node->callers != edge);
+}
+
 
 /* Decide if NODE is called once inlining it would eliminate need
    for the offline copy of function.  */
@@ -650,24 +669,26 @@ want_inline_self_recursive_call_p (struct cgraph_edge *edge,
 static bool
 want_inline_function_called_once_p (struct cgraph_node *node)
 {
-   if (node->alias)
-     return false;
+   struct cgraph_node *function = cgraph_function_or_thunk_node (node, NULL);
    /* Already inlined?  */
-   if (node->global.inlined_to)
+   if (function->global.inlined_to)
      return false;
    /* Zero or more then one callers?  */
    if (!node->callers
        || node->callers->next_caller)
      return false;
+   /* Maybe other aliases has more direct calls.  */
+   if (cgraph_for_node_and_aliases (node, check_caller_edge, node->callers, true))
+     return false;
    /* Recursive call makes no sense to inline.  */
-   if (node->callers->caller == node)
+   if (cgraph_edge_recursive_p (node->callers))
      return false;
    /* External functions are not really in the unit, so inlining
       them when called once would just increase the program size.  */
-   if (DECL_EXTERNAL (node->decl))
+   if (DECL_EXTERNAL (function->decl))
      return false;
    /* Offline body must be optimized out.  */
-   if (!cgraph_will_be_removed_from_program_if_no_direct_calls (node))
+   if (!cgraph_will_be_removed_from_program_if_no_direct_calls (function))
      return false;
    if (!can_inline_edge_p (node->callers, true))
      return false;
@@ -917,6 +938,8 @@ reset_edge_caches (struct cgraph_node *node)
   struct cgraph_edge *edge;
   struct cgraph_edge *e = node->callees;
   struct cgraph_node *where = node;
+  int i;
+  struct ipa_ref *ref;
 
   if (where->global.inlined_to)
     where = where->global.inlined_to;
@@ -927,6 +950,9 @@ reset_edge_caches (struct cgraph_node *node)
   for (edge = where->callers; edge; edge = edge->next_caller)
     if (edge->inline_failed)
       reset_edge_growth_cache (edge);
+  for (i = 0; ipa_ref_list_refering_iterate (&where->ref_list, i, ref); i++)
+    if (ref->use == IPA_REF_ALIAS)
+      reset_edge_caches (ipa_ref_refering_node (ref));
 
   if (!e)
     return;
@@ -968,7 +994,7 @@ update_caller_keys (fibheap_t heap, struct cgraph_node *node,
   int i;
   struct ipa_ref *ref;
 
-  if (!inline_summary (node)->inlinable
+  if ((!node->alias && !inline_summary (node)->inlinable)
       || cgraph_function_body_availability (node) <= AVAIL_OVERWRITABLE
       || node->global.inlined_to)
     return;
@@ -1180,8 +1206,9 @@ recursive_inlining (struct cgraph_edge *edge,
       depth = 1;
       for (cnode = curr->caller;
 	   cnode->global.inlined_to; cnode = cnode->callers->caller)
-	if (node->decl == curr->callee->decl)
-	  depth++;
+	if (node->decl
+	    == cgraph_function_or_thunk_node (curr->callee, NULL)->decl)
+          depth++;
 
       if (!want_inline_self_recursive_call_p (curr, node, false, depth))
 	continue;
@@ -1947,23 +1974,21 @@ struct gimple_opt_pass pass_early_inline =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func    			/* todo_flags_finish */
+  0                 			/* todo_flags_finish */
  }
 };
 
 
 /* When to run IPA inlining.  Inlining of always-inline functions
-   happens during early inlining.  */
+   happens during early inlining.
+
+   Enable inlining unconditoinally at -flto.  We need size estimates to
+   drive partitioning.  */
 
 static bool
 gate_ipa_inline (void)
 {
-  /* ???  We'd like to skip this if not optimizing or not inlining as
-     all always-inline functions have been processed by early
-     inlining already.  But this at least breaks EH with C++ as
-     we need to unconditionally run fixup_cfg even at -O0.
-     So leave it on unconditionally for now.  */
-  return 1;
+  return optimize || flag_lto || flag_wpa;
 }
 
 struct ipa_opt_pass_d pass_ipa_inline =
@@ -1981,7 +2006,7 @@ struct ipa_opt_pass_d pass_ipa_inline =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   TODO_remove_functions,		/* todo_flags_finish */
-  TODO_dump_cgraph | TODO_dump_func
+  TODO_dump_cgraph 
   | TODO_remove_functions | TODO_ggc_collect	/* todo_flags_finish */
  },
  inline_generate_summary,		/* generate_summary */

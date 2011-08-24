@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/javax/imageio/bmp
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ gandalf
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-DecodeRGB1.java
-file
-
-
-
-
-2011-06-04T18:38:13.731104Z
-694cab47aa59b6ea39178901629661ae
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3511
 
 EncodeRGB16.java
 file
@@ -94,6 +60,40 @@ gandalf
 
 4252
 
+DecodeRGB1.java
+file
+
+
+
+
+2011-06-04T18:38:13.731104Z
+694cab47aa59b6ea39178901629661ae
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3511
+
 DecodeBF32.java
 file
 
@@ -127,40 +127,6 @@ gandalf
 
 
 4058
-
-DecodeRGB4.java
-file
-
-
-
-
-2011-06-04T18:38:13.732104Z
-e31ae1e7d9110368ae8f18ec71f2d88e
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3476
 
 DecodeBF16.java
 file
@@ -196,6 +162,40 @@ gandalf
 
 3959
 
+DecodeRGB4.java
+file
+
+
+
+
+2011-06-04T18:38:13.732104Z
+e31ae1e7d9110368ae8f18ec71f2d88e
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3476
+
 BMPInfoHeader.java
 file
 
@@ -230,40 +230,6 @@ gandalf
 
 8516
 
-BMPImageReader.java
-file
-
-
-
-
-2011-06-04T18:38:13.733104Z
-8f3b2d032efa18d2d0e7e075d34b69da
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4946
-
 BMPDecoder.java
 file
 
@@ -297,6 +263,40 @@ gandalf
 
 
 5391
+
+BMPImageReader.java
+file
+
+
+
+
+2011-06-04T18:38:13.733104Z
+8f3b2d032efa18d2d0e7e075d34b69da
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4946
 
 DecodeRGB8.java
 file
@@ -434,14 +434,14 @@ gandalf
 
 4200
 
-BMPImageWriter.java
+DecodeRLE8.java
 file
 
 
 
 
 2011-06-04T18:38:13.735104Z
-e6534f5197fe193a96c770d729018c69
+bcf86080efd839887109d44def178581
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -466,7 +466,7 @@ gandalf
 
 
 
-7404
+5482
 
 BMPEncoder.java
 file
@@ -502,14 +502,14 @@ gandalf
 
 3675
 
-DecodeRLE8.java
+BMPImageWriter.java
 file
 
 
 
 
 2011-06-04T18:38:13.735104Z
-bcf86080efd839887109d44def178581
+e6534f5197fe193a96c770d729018c69
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -534,7 +534,7 @@ gandalf
 
 
 
-5482
+7404
 
 BMPImageReaderSpi.java
 file

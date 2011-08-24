@@ -119,7 +119,9 @@ process_references (struct ipa_ref_list *list,
 static bool
 cgraph_non_local_node_p_1 (struct cgraph_node *node, void *data ATTRIBUTE_UNUSED)
 {
+   /* FIXME: Aliases can be local, but i386 gets thunks wrong then.  */
    return !(cgraph_only_called_directly_or_aliased_p (node)
+	    && !ipa_ref_has_aliases_p (&node->ref_list)
 	    && node->analyzed
 	    && !DECL_EXTERNAL (node->decl)
 	    && !node->local.externally_visible
@@ -132,7 +134,13 @@ cgraph_non_local_node_p_1 (struct cgraph_node *node, void *data ATTRIBUTE_UNUSED
 static bool
 cgraph_local_node_p (struct cgraph_node *node)
 {
-   return !cgraph_for_node_and_aliases (cgraph_function_or_thunk_node (node, NULL),
+   struct cgraph_node *n = cgraph_function_or_thunk_node (node, NULL);
+
+   /* FIXME: thunks can be considered local, but we need prevent i386
+      from attempting to change calling convention of them.  */
+   if (n->thunk.thunk_p)
+     return false;
+   return !cgraph_for_node_and_aliases (n,
 					cgraph_non_local_node_p_1, NULL, true);
 					
 }
@@ -534,15 +542,16 @@ cgraph_address_taken_from_non_vtable_p (struct cgraph_node *node)
 {
   int i;
   struct ipa_ref *ref;
-  for (i = 0; ipa_ref_list_reference_iterate (&node->ref_list, i, ref); i++)
-    {
-      struct varpool_node *node;
-      if (ref->refered_type == IPA_REF_CGRAPH)
-	return true;
-      node = ipa_ref_varpool_node (ref);
-      if (!DECL_VIRTUAL_P (node->decl))
-	return true;
-    }
+  for (i = 0; ipa_ref_list_refering_iterate (&node->ref_list, i, ref); i++)
+    if (ref->use == IPA_REF_ADDR)
+      {
+	struct varpool_node *node;
+	if (ref->refering_type == IPA_REF_CGRAPH)
+	  return true;
+	node = ipa_ref_refering_varpool_node (ref);
+	if (!DECL_VIRTUAL_P (node->decl))
+	  return true;
+      }
   return false;
 }
 
@@ -603,14 +612,6 @@ cgraph_externally_visible_p (struct cgraph_node *node,
   if (DECL_BUILT_IN (node->decl))
     return true;
 
-  /* FIXME: We get wrong symbols with asm aliases in callgraph and LTO.
-     This is because very little of code knows that assembler name needs to
-     mangled.  Avoid touching declarations with user asm name set to mask
-     some of the problems.  */
-  if (DECL_ASSEMBLER_NAME_SET_P (node->decl)
-      && IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (node->decl))[0]=='*')
-    return true;
-
   /* If linker counts on us, we must preserve the function.  */
   if (cgraph_used_from_object_file_p (node))
     return true;
@@ -621,6 +622,8 @@ cgraph_externally_visible_p (struct cgraph_node *node,
   if (TARGET_DLLIMPORT_DECL_ATTRIBUTES
       && lookup_attribute ("dllexport", DECL_ATTRIBUTES (node->decl)))
     return true;
+  if (node->resolution == LDPR_PREVAILING_DEF_IRONLY)
+    return false;
   /* When doing LTO or whole program, we can bring COMDAT functoins static.
      This improves code quality and we know we will duplicate them at most twice
      (in the case that we are not using plugin and link with object file
@@ -652,7 +655,6 @@ cgraph_externally_visible_p (struct cgraph_node *node,
 static bool
 varpool_externally_visible_p (struct varpool_node *vnode, bool aliased)
 {
-  struct varpool_node *alias;
   if (!DECL_COMDAT (vnode->decl) && !TREE_PUBLIC (vnode->decl))
     return false;
 
@@ -663,14 +665,6 @@ varpool_externally_visible_p (struct varpool_node *vnode, bool aliased)
 
   /* If linker counts on us, we must preserve the function.  */
   if (varpool_used_from_object_file_p (vnode))
-    return true;
-
-  /* FIXME: We get wrong symbols with asm aliases in callgraph and LTO.
-     This is because very little of code knows that assembler name needs to
-     mangled.  Avoid touching declarations with user asm name set to mask
-     some of the problems.  */
-  if (DECL_ASSEMBLER_NAME_SET_P (vnode->decl)
-      && IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (vnode->decl))[0]=='*')
     return true;
 
   if (DECL_PRESERVE_P (vnode->decl))
@@ -691,11 +685,6 @@ varpool_externally_visible_p (struct varpool_node *vnode, bool aliased)
      This is needed for i.e. references from asm statements.   */
   if (varpool_used_from_object_file_p (vnode))
     return true;
-  for (alias = vnode->extra_name; alias; alias = alias->next)
-    if (alias->resolution != LDPR_PREVAILING_DEF_IRONLY)
-      break;
-  if (!alias && vnode->resolution == LDPR_PREVAILING_DEF_IRONLY)
-    return false;
 
   /* As a special case, the COMDAT virutal tables can be unshared.
      In LTO mode turn vtables into static variables.  The variable is readonly,
@@ -779,13 +768,7 @@ function_and_variable_visibility (bool whole_program)
         {
 	  if (!node->analyzed)
 	    continue;
-	  /* Weakrefs alias symbols from other compilation unit.  In the case
-	     the destination of weakref became available because of LTO, we must
-	     mark it as needed.  */
-	  if (in_lto_p
-	      && lookup_attribute ("weakref", DECL_ATTRIBUTES (p->decl))
-	      && !node->needed)
-	    cgraph_mark_needed_node (node);
+	  cgraph_mark_needed_node (node);
 	  gcc_assert (node->needed);
 	  pointer_set_insert (aliased_nodes, node);
 	  if (dump_file)
@@ -795,13 +778,7 @@ function_and_variable_visibility (bool whole_program)
       else if ((vnode = varpool_node_for_asm (p->target)) != NULL
 	       && !DECL_EXTERNAL (vnode->decl))
         {
-	  /* Weakrefs alias symbols from other compilation unit.  In the case
-	     the destination of weakref became available because of LTO, we must
-	     mark it as needed.  */
-	  if (in_lto_p
-	      && lookup_attribute ("weakref", DECL_ATTRIBUTES (p->decl))
-	      && !vnode->needed)
-	    varpool_mark_needed_node (vnode);
+	  varpool_mark_needed_node (vnode);
 	  gcc_assert (vnode->needed);
 	  pointer_set_insert (aliased_vnodes, vnode);
 	  if (dump_file)
@@ -888,31 +865,14 @@ function_and_variable_visibility (bool whole_program)
 	  decl_node = cgraph_function_node (decl_node->callees->callee, NULL);
 
 	  /* Thunks have the same visibility as function they are attached to.
-	     For some reason C++ frontend don't seem to care. I.e. in 
-	     g++.dg/torture/pr41257-2.C the thunk is not comdat while function
-	     it is attached to is.
-
-	     We also need to arrange the thunk into the same comdat group as
-	     the function it reffers to.  */
-	  if (DECL_COMDAT (decl_node->decl))
+	     Make sure the C++ front end set this up properly.  */
+	  if (DECL_ONE_ONLY (decl_node->decl))
 	    {
-	      DECL_COMDAT (node->decl) = 1;
-	      DECL_COMDAT_GROUP (node->decl) = DECL_COMDAT_GROUP (decl_node->decl);
-	      if (DECL_ONE_ONLY (decl_node->decl) && !node->same_comdat_group)
-		{
-		  node->same_comdat_group = decl_node;
-		  if (!decl_node->same_comdat_group)
-		    decl_node->same_comdat_group = node;
-		  else
-		    {
-		      struct cgraph_node *n;
-		      for (n = decl_node->same_comdat_group;
-			   n->same_comdat_group != decl_node;
-			   n = n->same_comdat_group)
-			;
-		      n->same_comdat_group = node;
-		    }
-		}
+	      gcc_checking_assert (DECL_COMDAT (node->decl)
+				   == DECL_COMDAT (decl_node->decl));
+	      gcc_checking_assert (DECL_COMDAT_GROUP (node->decl)
+				   == DECL_COMDAT_GROUP (decl_node->decl));
+	      gcc_checking_assert (node->same_comdat_group);
 	    }
 	  if (DECL_EXTERNAL (decl_node->decl))
 	    DECL_EXTERNAL (node->decl) = 1;

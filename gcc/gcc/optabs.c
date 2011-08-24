@@ -1,7 +1,7 @@
 /* Expand the basic unary and binary arithmetic operations, for GNU compiler.
    Copyright (C) 1987, 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-   Free Software Foundation, Inc.
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+   2011  Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -216,13 +216,93 @@ add_equal_note (rtx insns, rtx target, enum rtx_code code, rtx op0, rtx op1)
     }
 
   if (GET_RTX_CLASS (code) == RTX_UNARY)
-    note = gen_rtx_fmt_e (code, GET_MODE (target), copy_rtx (op0));
+    switch (code)
+      {
+      case FFS:
+      case CLZ:
+      case CTZ:
+      case CLRSB:
+      case POPCOUNT:
+      case PARITY:
+      case BSWAP:
+	if (GET_MODE (op0) != VOIDmode && GET_MODE (target) != GET_MODE (op0))
+	  {
+	    note = gen_rtx_fmt_e (code, GET_MODE (op0), copy_rtx (op0));
+	    if (GET_MODE_SIZE (GET_MODE (op0))
+		> GET_MODE_SIZE (GET_MODE (target)))
+	      note = simplify_gen_unary (TRUNCATE, GET_MODE (target),
+					 note, GET_MODE (op0));
+	    else
+	      note = simplify_gen_unary (ZERO_EXTEND, GET_MODE (target),
+					 note, GET_MODE (op0));
+	    break;
+	  }
+	/* FALLTHRU */
+      default:
+	note = gen_rtx_fmt_e (code, GET_MODE (target), copy_rtx (op0));
+	break;
+      }
   else
     note = gen_rtx_fmt_ee (code, GET_MODE (target), copy_rtx (op0), copy_rtx (op1));
 
   set_unique_reg_note (last_insn, REG_EQUAL, note);
 
   return 1;
+}
+
+/* Given two input operands, OP0 and OP1, determine what the correct from_mode
+   for a widening operation would be.  In most cases this would be OP0, but if
+   that's a constant it'll be VOIDmode, which isn't useful.  */
+
+static enum machine_mode
+widened_mode (enum machine_mode to_mode, rtx op0, rtx op1)
+{
+  enum machine_mode m0 = GET_MODE (op0);
+  enum machine_mode m1 = GET_MODE (op1);
+  enum machine_mode result;
+
+  if (m0 == VOIDmode && m1 == VOIDmode)
+    return to_mode;
+  else if (m0 == VOIDmode || GET_MODE_SIZE (m0) < GET_MODE_SIZE (m1))
+    result = m1;
+  else
+    result = m0;
+
+  if (GET_MODE_SIZE (result) > GET_MODE_SIZE (to_mode))
+    return to_mode;
+
+  return result;
+}
+
+/* Find a widening optab even if it doesn't widen as much as we want.
+   E.g. if from_mode is HImode, and to_mode is DImode, and there is no
+   direct HI->SI insn, then return SI->DI, if that exists.
+   If PERMIT_NON_WIDENING is non-zero then this can be used with
+   non-widening optabs also.  */
+
+enum insn_code
+find_widening_optab_handler_and_mode (optab op, enum machine_mode to_mode,
+				      enum machine_mode from_mode,
+				      int permit_non_widening,
+				      enum machine_mode *found_mode)
+{
+  for (; (permit_non_widening || from_mode != to_mode)
+	 && GET_MODE_SIZE (from_mode) <= GET_MODE_SIZE (to_mode)
+	 && from_mode != VOIDmode;
+       from_mode = GET_MODE_WIDER_MODE (from_mode))
+    {
+      enum insn_code handler = widening_optab_handler (op, to_mode,
+						       from_mode);
+
+      if (handler != CODE_FOR_nothing)
+	{
+	  if (found_mode)
+	    *found_mode = from_mode;
+	  return handler;
+	}
+    }
+
+  return CODE_FOR_nothing;
 }
 
 /* Widen OP to MODE and return the rtx for the widened operand.  UNSIGNEDP
@@ -515,8 +595,9 @@ expand_widen_pattern_expr (sepops ops, rtx op0, rtx op1, rtx wide_op,
     optab_for_tree_code (ops->code, TREE_TYPE (oprnd0), optab_default);
   if (ops->code == WIDEN_MULT_PLUS_EXPR
       || ops->code == WIDEN_MULT_MINUS_EXPR)
-    icode = optab_handler (widen_pattern_optab,
-			   TYPE_MODE (TREE_TYPE (ops->op2)));
+    icode = find_widening_optab_handler (widen_pattern_optab,
+					 TYPE_MODE (TREE_TYPE (ops->op2)),
+					 tmode0, 0);
   else
     icode = optab_handler (widen_pattern_optab, tmode0);
   gcc_assert (icode != CODE_FOR_nothing);
@@ -1204,21 +1285,21 @@ commutative_optab_p (optab binoptab)
 	  || binoptab == umul_highpart_optab);
 }
 
-/* X is to be used in mode MODE as an operand to BINOPTAB.  If we're
+/* X is to be used in mode MODE as operand OPN to BINOPTAB.  If we're
    optimizing, and if the operand is a constant that costs more than
    1 instruction, force the constant into a register and return that
    register.  Return X otherwise.  UNSIGNEDP says whether X is unsigned.  */
 
 static rtx
 avoid_expensive_constant (enum machine_mode mode, optab binoptab,
-			  rtx x, bool unsignedp)
+			  int opn, rtx x, bool unsignedp)
 {
   bool speed = optimize_insn_for_speed_p ();
 
   if (mode != VOIDmode
       && optimize
       && CONSTANT_P (x)
-      && rtx_cost (x, binoptab->code, speed) > rtx_cost (x, SET, speed))
+      && rtx_cost (x, binoptab->code, opn, speed) > set_src_cost (x, speed))
     {
       if (CONST_INT_P (x))
 	{
@@ -1242,7 +1323,9 @@ expand_binop_directly (enum machine_mode mode, optab binoptab,
 		       rtx target, int unsignedp, enum optab_methods methods,
 		       rtx last)
 {
-  enum insn_code icode = optab_handler (binoptab, mode);
+  enum machine_mode from_mode = widened_mode (mode, op0, op1);
+  enum insn_code icode = find_widening_optab_handler (binoptab, mode,
+						      from_mode, 1);
   enum machine_mode xmode0 = insn_data[(int) icode].operand[1].mode;
   enum machine_mode xmode1 = insn_data[(int) icode].operand[2].mode;
   enum machine_mode mode0, mode1, tmp_mode;
@@ -1265,9 +1348,9 @@ expand_binop_directly (enum machine_mode mode, optab binoptab,
     }
 
   /* If we are optimizing, force expensive constants into a register.  */
-  xop0 = avoid_expensive_constant (xmode0, binoptab, xop0, unsignedp);
+  xop0 = avoid_expensive_constant (xmode0, binoptab, 0, xop0, unsignedp);
   if (!shift_optab_p (binoptab))
-    xop1 = avoid_expensive_constant (xmode1, binoptab, xop1, unsignedp);
+    xop1 = avoid_expensive_constant (xmode1, binoptab, 1, xop1, unsignedp);
 
   /* In case the insn wants input operands in modes different from
      those of the actual operands, convert the operands.  It would
@@ -1389,7 +1472,9 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
   /* If we can do it with a three-operand insn, do so.  */
 
   if (methods != OPTAB_MUST_WIDEN
-      && optab_handler (binoptab, mode) != CODE_FOR_nothing)
+      && find_widening_optab_handler (binoptab, mode,
+				      widened_mode (mode, op0, op1), 1)
+	    != CODE_FOR_nothing)
     {
       temp = expand_binop_directly (mode, binoptab, op0, op1, target,
 				    unsignedp, methods, last);
@@ -1407,7 +1492,7 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
     {
       optab otheroptab = (binoptab == rotl_optab ? rotr_optab : rotl_optab);
       rtx newop1;
-      unsigned int bits = GET_MODE_BITSIZE (mode);
+      unsigned int bits = GET_MODE_PRECISION (mode);
 
       if (CONST_INT_P (op1))
         newop1 = GEN_INT (bits - INTVAL (op1));
@@ -1428,20 +1513,20 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
      takes operands of this mode and makes a wider mode.  */
 
   if (binoptab == smul_optab
-      && GET_MODE_WIDER_MODE (mode) != VOIDmode
-      && (optab_handler ((unsignedp ? umul_widen_optab : smul_widen_optab),
-			 GET_MODE_WIDER_MODE (mode))
+      && GET_MODE_2XWIDER_MODE (mode) != VOIDmode
+      && (widening_optab_handler ((unsignedp ? umul_widen_optab
+					     : smul_widen_optab),
+				  GET_MODE_2XWIDER_MODE (mode), mode)
 	  != CODE_FOR_nothing))
     {
-      temp = expand_binop (GET_MODE_WIDER_MODE (mode),
+      temp = expand_binop (GET_MODE_2XWIDER_MODE (mode),
 			   unsignedp ? umul_widen_optab : smul_widen_optab,
 			   op0, op1, NULL_RTX, unsignedp, OPTAB_DIRECT);
 
       if (temp != 0)
 	{
 	  if (GET_MODE_CLASS (mode) == MODE_INT
-	      && TRULY_NOOP_TRUNCATION (GET_MODE_BITSIZE (mode),
-                                        GET_MODE_BITSIZE (GET_MODE (temp))))
+	      && TRULY_NOOP_TRUNCATION_MODES_P (mode, GET_MODE (temp)))
 	    return gen_lowpart (mode, temp);
 	  else
 	    return convert_to_mode (mode, temp, unsignedp);
@@ -1461,9 +1546,11 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
 	if (optab_handler (binoptab, wider_mode) != CODE_FOR_nothing
 	    || (binoptab == smul_optab
 		&& GET_MODE_WIDER_MODE (wider_mode) != VOIDmode
-		&& (optab_handler ((unsignedp ? umul_widen_optab
-				    : smul_widen_optab),
-				   GET_MODE_WIDER_MODE (wider_mode))
+		&& (find_widening_optab_handler ((unsignedp
+						  ? umul_widen_optab
+						  : smul_widen_optab),
+						 GET_MODE_WIDER_MODE (wider_mode),
+						 mode, 0)
 		    != CODE_FOR_nothing)))
 	  {
 	    rtx xop0 = op0, xop1 = op1;
@@ -1480,10 +1567,10 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
 		&& mclass == MODE_INT)
 	      {
 		no_extend = 1;
-		xop0 = avoid_expensive_constant (mode, binoptab,
+		xop0 = avoid_expensive_constant (mode, binoptab, 0,
 						 xop0, unsignedp);
 		if (binoptab != ashl_optab)
-		  xop1 = avoid_expensive_constant (mode, binoptab,
+		  xop1 = avoid_expensive_constant (mode, binoptab, 1,
 						   xop1, unsignedp);
 	      }
 
@@ -1498,8 +1585,7 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
 	    if (temp)
 	      {
 		if (mclass != MODE_INT
-                    || !TRULY_NOOP_TRUNCATION (GET_MODE_BITSIZE (mode),
-                                               GET_MODE_BITSIZE (wider_mode)))
+                    || !TRULY_NOOP_TRUNCATION_MODES_P (mode, wider_mode))
 		  {
 		    if (target == 0)
 		      target = gen_reg_rtx (mode);
@@ -1577,6 +1663,7 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
       && mclass == MODE_INT
       && (CONST_INT_P (op1) || optimize_insn_for_speed_p ())
       && GET_MODE_SIZE (mode) == 2 * UNITS_PER_WORD
+      && GET_MODE_PRECISION (mode) == GET_MODE_BITSIZE (mode)
       && optab_handler (binoptab, word_mode) != CODE_FOR_nothing
       && optab_handler (ashl_optab, word_mode) != CODE_FOR_nothing
       && optab_handler (lshr_optab, word_mode) != CODE_FOR_nothing)
@@ -1649,7 +1736,7 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
   if ((binoptab == rotl_optab || binoptab == rotr_optab)
       && mclass == MODE_INT
       && CONST_INT_P (op1)
-      && GET_MODE_SIZE (mode) == 2 * UNITS_PER_WORD
+      && GET_MODE_PRECISION (mode) == 2 * BITS_PER_WORD
       && optab_handler (ashl_optab, word_mode) != CODE_FOR_nothing
       && optab_handler (lshr_optab, word_mode) != CODE_FOR_nothing)
     {
@@ -1896,8 +1983,8 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
       && optab_handler (add_optab, word_mode) != CODE_FOR_nothing)
     {
       rtx product = NULL_RTX;
-
-      if (optab_handler (umul_widen_optab, mode) != CODE_FOR_nothing)
+      if (widening_optab_handler (umul_widen_optab, mode, word_mode)
+	    != CODE_FOR_nothing)
 	{
 	  product = expand_doubleword_mult (mode, op0, op1, target,
 					    true, methods);
@@ -1906,7 +1993,8 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
 	}
 
       if (product == NULL_RTX
-	  && optab_handler (smul_widen_optab, mode) != CODE_FOR_nothing)
+	  && widening_optab_handler (smul_widen_optab, mode, word_mode)
+		!= CODE_FOR_nothing)
 	{
 	  product = expand_doubleword_mult (mode, op0, op1, target,
 					    false, methods);
@@ -1997,7 +2085,8 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
 	   wider_mode != VOIDmode;
 	   wider_mode = GET_MODE_WIDER_MODE (wider_mode))
 	{
-	  if (optab_handler (binoptab, wider_mode) != CODE_FOR_nothing
+	  if (find_widening_optab_handler (binoptab, wider_mode, mode, 1)
+		  != CODE_FOR_nothing
 	      || (methods == OPTAB_LIB
 		  && optab_libfunc (binoptab, wider_mode)))
 	    {
@@ -2027,8 +2116,7 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
 	      if (temp)
 		{
 		  if (mclass != MODE_INT
-		      || !TRULY_NOOP_TRUNCATION (GET_MODE_BITSIZE (mode),
-						 GET_MODE_BITSIZE (wider_mode)))
+		      || !TRULY_NOOP_TRUNCATION_MODES_P (mode, wider_mode))
 		    {
 		      if (target == 0)
 			target = gen_reg_rtx (mode);
@@ -2218,8 +2306,8 @@ expand_twoval_binop (optab binoptab, rtx op0, rtx op1, rtx targ0, rtx targ1,
       rtx xop0 = op0, xop1 = op1;
 
       /* If we are optimizing, force expensive constants into a register.  */
-      xop0 = avoid_expensive_constant (mode0, binoptab, xop0, unsignedp);
-      xop1 = avoid_expensive_constant (mode1, binoptab, xop1, unsignedp);
+      xop0 = avoid_expensive_constant (mode0, binoptab, 0, xop0, unsignedp);
+      xop1 = avoid_expensive_constant (mode1, binoptab, 1, xop1, unsignedp);
 
       create_fixed_operand (&ops[0], targ0);
       create_convert_operand_from (&ops[1], op0, mode, unsignedp);
@@ -2327,9 +2415,12 @@ expand_simple_unop (enum machine_mode mode, enum rtx_code code, rtx op0,
 /* Try calculating
 	(clz:narrow x)
    as
-	(clz:wide (zero_extend:wide x)) - ((width wide) - (width narrow)).  */
+	(clz:wide (zero_extend:wide x)) - ((width wide) - (width narrow)).
+
+   A similar operation can be used for clrsb.  UNOPTAB says which operation
+   we are trying to expand.  */
 static rtx
-widen_clz (enum machine_mode mode, rtx op0, rtx target)
+widen_leading (enum machine_mode mode, rtx op0, rtx target, optab unoptab)
 {
   enum mode_class mclass = GET_MODE_CLASS (mode);
   if (CLASS_HAS_WIDER_MODES_P (mclass))
@@ -2339,7 +2430,7 @@ widen_clz (enum machine_mode mode, rtx op0, rtx target)
 	   wider_mode != VOIDmode;
 	   wider_mode = GET_MODE_WIDER_MODE (wider_mode))
 	{
-	  if (optab_handler (clz_optab, wider_mode) != CODE_FOR_nothing)
+	  if (optab_handler (unoptab, wider_mode) != CODE_FOR_nothing)
 	    {
 	      rtx xop0, temp, last;
 
@@ -2347,12 +2438,14 @@ widen_clz (enum machine_mode mode, rtx op0, rtx target)
 
 	      if (target == 0)
 		target = gen_reg_rtx (mode);
-	      xop0 = widen_operand (op0, wider_mode, mode, true, false);
-	      temp = expand_unop (wider_mode, clz_optab, xop0, NULL_RTX, true);
+	      xop0 = widen_operand (op0, wider_mode, mode,
+				    unoptab != clrsb_optab, false);
+	      temp = expand_unop (wider_mode, unoptab, xop0, NULL_RTX,
+				  unoptab != clrsb_optab);
 	      if (temp != 0)
 		temp = expand_binop (wider_mode, sub_optab, temp,
-				     GEN_INT (GET_MODE_BITSIZE (wider_mode)
-					      - GET_MODE_BITSIZE (mode)),
+				     GEN_INT (GET_MODE_PRECISION (wider_mode)
+					      - GET_MODE_PRECISION (mode)),
 				     target, true, OPTAB_DIRECT);
 	      if (temp == 0)
 		delete_insns_since (last);
@@ -2461,6 +2554,8 @@ widen_bswap (enum machine_mode mode, rtx op0, rtx target)
   x = widen_operand (op0, wider_mode, mode, true, true);
   x = expand_unop (wider_mode, bswap_optab, x, NULL_RTX, true);
 
+  gcc_assert (GET_MODE_PRECISION (wider_mode) == GET_MODE_BITSIZE (wider_mode)
+	      && GET_MODE_PRECISION (mode) == GET_MODE_BITSIZE (mode));
   if (x != 0)
     x = expand_shift (RSHIFT_EXPR, wider_mode, x,
 		      GET_MODE_BITSIZE (wider_mode)
@@ -2538,7 +2633,7 @@ expand_parity (enum machine_mode mode, rtx op0, rtx target)
 }
 
 /* Try calculating ctz(x) as K - clz(x & -x) ,
-   where K is GET_MODE_BITSIZE(mode) - 1.
+   where K is GET_MODE_PRECISION(mode) - 1.
 
    Both __builtin_ctz and __builtin_clz are undefined at zero, so we
    don't have to worry about what the hardware does in that case.  (If
@@ -2566,7 +2661,7 @@ expand_ctz (enum machine_mode mode, rtx op0, rtx target)
   if (temp)
     temp = expand_unop_direct (mode, clz_optab, temp, NULL_RTX, true);
   if (temp)
-    temp = expand_binop (mode, sub_optab, GEN_INT (GET_MODE_BITSIZE (mode) - 1),
+    temp = expand_binop (mode, sub_optab, GEN_INT (GET_MODE_PRECISION (mode) - 1),
 			 temp, target,
 			 true, OPTAB_DIRECT);
   if (temp == 0)
@@ -2617,7 +2712,7 @@ expand_ffs (enum machine_mode mode, rtx op0, rtx target)
       if (CLZ_DEFINED_VALUE_AT_ZERO (mode, val) == 2)
 	{
 	  defined_at_zero = true;
-	  val = (GET_MODE_BITSIZE (mode) - 1) - val;
+	  val = (GET_MODE_PRECISION (mode) - 1) - val;
 	}
     }
   else
@@ -2844,7 +2939,7 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
   /* Widening (or narrowing) clz needs special treatment.  */
   if (unoptab == clz_optab)
     {
-      temp = widen_clz (mode, op0, target);
+      temp = widen_leading (mode, op0, target, unoptab);
       if (temp)
 	return temp;
 
@@ -2856,7 +2951,15 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
 	    return temp;
 	}
 
-	goto try_libcall;
+      goto try_libcall;
+    }
+
+  if (unoptab == clrsb_optab)
+    {
+      temp = widen_leading (mode, op0, target, unoptab);
+      if (temp)
+	return temp;
+      goto try_libcall;
     }
 
   /* Widening (or narrowing) bswap needs special treatment.  */
@@ -2902,8 +3005,7 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
 	    if (temp)
 	      {
 		if (mclass != MODE_INT
-		    || !TRULY_NOOP_TRUNCATION (GET_MODE_BITSIZE (mode),
-					       GET_MODE_BITSIZE (wider_mode)))
+		    || !TRULY_NOOP_TRUNCATION_MODES_P (mode, wider_mode))
 		  {
 		    if (target == 0)
 		      target = gen_reg_rtx (mode);
@@ -3011,7 +3113,8 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
       /* All of these functions return small values.  Thus we choose to
 	 have them return something that isn't a double-word.  */
       if (unoptab == ffs_optab || unoptab == clz_optab || unoptab == ctz_optab
-	  || unoptab == popcount_optab || unoptab == parity_optab)
+	  || unoptab == clrsb_optab || unoptab == popcount_optab
+	  || unoptab == parity_optab)
 	outmode
 	  = GET_MODE (hard_libcall_value (TYPE_MODE (integer_type_node),
 					  optab_libfunc (unoptab, mode)));
@@ -3063,11 +3166,12 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
 				  unsignedp);
 
 	      /* If we are generating clz using wider mode, adjust the
-		 result.  */
-	      if (unoptab == clz_optab && temp != 0)
+		 result.  Similarly for clrsb.  */
+	      if ((unoptab == clz_optab || unoptab == clrsb_optab)
+		  && temp != 0)
 		temp = expand_binop (wider_mode, sub_optab, temp,
-				     GEN_INT (GET_MODE_BITSIZE (wider_mode)
-					      - GET_MODE_BITSIZE (mode)),
+				     GEN_INT (GET_MODE_PRECISION (wider_mode)
+					      - GET_MODE_PRECISION (mode)),
 				     target, true, OPTAB_DIRECT);
 
 	      if (temp)
@@ -3162,7 +3266,7 @@ expand_abs_nojump (enum machine_mode mode, rtx op0, rtx target,
 	      	      false) >= 2)
     {
       rtx extended = expand_shift (RSHIFT_EXPR, mode, op0,
-				   GET_MODE_BITSIZE (mode) - 1,
+				   GET_MODE_PRECISION (mode) - 1,
 				   NULL_RTX, 0);
 
       temp = expand_binop (mode, xor_optab, extended, op0, target, 0,
@@ -3263,7 +3367,7 @@ expand_one_cmpl_abs_nojump (enum machine_mode mode, rtx op0, rtx target)
 	             false) >= 2)
     {
       rtx extended = expand_shift (RSHIFT_EXPR, mode, op0,
-				   GET_MODE_BITSIZE (mode) - 1,
+				   GET_MODE_PRECISION (mode) - 1,
 				   NULL_RTX, 0);
 
       temp = expand_binop (mode, xor_optab, extended, op0, target, 0,
@@ -3776,12 +3880,12 @@ prepare_cmp_insn (rtx x, rtx y, enum rtx_code comparison, rtx size,
 
   /* If we are optimizing, force expensive constants into a register.  */
   if (CONSTANT_P (x) && optimize
-      && (rtx_cost (x, COMPARE, optimize_insn_for_speed_p ())
+      && (rtx_cost (x, COMPARE, 0, optimize_insn_for_speed_p ())
           > COSTS_N_INSNS (1)))
     x = force_reg (mode, x);
 
   if (CONSTANT_P (y) && optimize
-      && (rtx_cost (y, COMPARE, optimize_insn_for_speed_p ())
+      && (rtx_cost (y, COMPARE, 1, optimize_insn_for_speed_p ())
           > COSTS_N_INSNS (1)))
     y = force_reg (mode, y);
 
@@ -3945,11 +4049,13 @@ prepare_cmp_insn (rtx x, rtx y, enum rtx_code comparison, rtx size,
 	 result against 1 in the biased case, and zero in the unbiased
 	 case. For unsigned comparisons always compare against 1 after
 	 biasing the unbiased result by adding 1. This gives us a way to
-	 represent LTU. */
+	 represent LTU.
+	 The comparisons in the fixed-point helper library are always
+	 biased.  */
       x = result;
       y = const1_rtx;
 
-      if (!TARGET_LIB_INT_CMP_BIASED)
+      if (!TARGET_LIB_INT_CMP_BIASED && !ALL_FIXED_POINT_MODE_P (mode))
 	{
 	  if (unsignedp)
 	    x = plus_constant (result, 1);
@@ -4612,7 +4718,7 @@ can_fix_p (enum machine_mode fixmode, enum machine_mode fltmode,
   return CODE_FOR_nothing;
 }
 
-static enum insn_code
+enum insn_code
 can_float_p (enum machine_mode fltmode, enum machine_mode fixmode,
 	     int unsignedp)
 {
@@ -4652,7 +4758,7 @@ expand_float (rtx to, rtx from, int unsignedp)
 	int doing_unsigned = unsignedp;
 
 	if (fmode != GET_MODE (to)
-	    && significand_size (fmode) < GET_MODE_BITSIZE (GET_MODE (from)))
+	    && significand_size (fmode) < GET_MODE_PRECISION (GET_MODE (from)))
 	  continue;
 
 	icode = can_float_p (fmode, imode, unsignedp);
@@ -4696,7 +4802,7 @@ expand_float (rtx to, rtx from, int unsignedp)
 
       for (fmode = GET_MODE (to);  fmode != VOIDmode;
 	   fmode = GET_MODE_WIDER_MODE (fmode))
-	if (GET_MODE_BITSIZE (GET_MODE (from)) < GET_MODE_BITSIZE (fmode)
+	if (GET_MODE_PRECISION (GET_MODE (from)) < GET_MODE_BITSIZE (fmode)
 	    && can_float_p (fmode, GET_MODE (from), 0) != CODE_FOR_nothing)
 	  break;
 
@@ -4707,7 +4813,7 @@ expand_float (rtx to, rtx from, int unsignedp)
 
 	  /* Avoid double-rounding when TO is narrower than FROM.  */
 	  if ((significand_size (fmode) + 1)
-	      < GET_MODE_BITSIZE (GET_MODE (from)))
+	      < GET_MODE_PRECISION (GET_MODE (from)))
 	    {
 	      rtx temp1;
 	      rtx neglabel = gen_label_rtx ();
@@ -4774,7 +4880,7 @@ expand_float (rtx to, rtx from, int unsignedp)
 			       0, label);
 
 
-      real_2expN (&offset, GET_MODE_BITSIZE (GET_MODE (from)), fmode);
+      real_2expN (&offset, GET_MODE_PRECISION (GET_MODE (from)), fmode);
       temp = expand_binop (fmode, add_optab, target,
 			   CONST_DOUBLE_FROM_REAL_VALUE (offset, fmode),
 			   target, 0, OPTAB_LIB_WIDEN);
@@ -4904,18 +5010,18 @@ expand_fix (rtx to, rtx from, int unsignedp)
      2^63.  The subtraction of 2^63 should not generate any rounding as it
      simply clears out that bit.  The rest is trivial.  */
 
-  if (unsignedp && GET_MODE_BITSIZE (GET_MODE (to)) <= HOST_BITS_PER_WIDE_INT)
+  if (unsignedp && GET_MODE_PRECISION (GET_MODE (to)) <= HOST_BITS_PER_WIDE_INT)
     for (fmode = GET_MODE (from); fmode != VOIDmode;
 	 fmode = GET_MODE_WIDER_MODE (fmode))
       if (CODE_FOR_nothing != can_fix_p (GET_MODE (to), fmode, 0, &must_trunc)
 	  && (!DECIMAL_FLOAT_MODE_P (fmode)
-	      || GET_MODE_BITSIZE (fmode) > GET_MODE_BITSIZE (GET_MODE (to))))
+	      || GET_MODE_BITSIZE (fmode) > GET_MODE_PRECISION (GET_MODE (to))))
 	{
 	  int bitsize;
 	  REAL_VALUE_TYPE offset;
 	  rtx limit, lab1, lab2, insn;
 
-	  bitsize = GET_MODE_BITSIZE (GET_MODE (to));
+	  bitsize = GET_MODE_PRECISION (GET_MODE (to));
 	  real_2expN (&offset, bitsize - 1, fmode);
 	  limit = CONST_DOUBLE_FROM_REAL_VALUE (offset, fmode);
 	  lab1 = gen_label_rtx ();
@@ -5910,6 +6016,9 @@ init_optabs (void)
   init_optab (usashl_optab, US_ASHIFT);
   init_optab (ashr_optab, ASHIFTRT);
   init_optab (lshr_optab, LSHIFTRT);
+  init_optabv (vashl_optab, ASHIFT);
+  init_optabv (vashr_optab, ASHIFTRT);
+  init_optabv (vlshr_optab, LSHIFTRT);
   init_optab (rotl_optab, ROTATE);
   init_optab (rotr_optab, ROTATERT);
   init_optab (smin_optab, SMIN);
@@ -5958,6 +6067,7 @@ init_optabs (void)
   init_optab (ffs_optab, FFS);
   init_optab (clz_optab, CLZ);
   init_optab (ctz_optab, CTZ);
+  init_optab (clrsb_optab, CLRSB);
   init_optab (popcount_optab, POPCOUNT);
   init_optab (parity_optab, PARITY);
   init_optab (sqrt_optab, SQRT);
@@ -6188,6 +6298,9 @@ init_optabs (void)
   ctz_optab->libcall_basename = "ctz";
   ctz_optab->libcall_suffix = '2';
   ctz_optab->libcall_gen = gen_int_libfunc;
+  clrsb_optab->libcall_basename = "clrsb";
+  clrsb_optab->libcall_suffix = '2';
+  clrsb_optab->libcall_gen = gen_int_libfunc;
   popcount_optab->libcall_basename = "popcount";
   popcount_optab->libcall_suffix = '2';
   popcount_optab->libcall_gen = gen_int_libfunc;

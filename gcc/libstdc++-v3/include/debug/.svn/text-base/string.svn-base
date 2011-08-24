@@ -75,12 +75,12 @@ namespace __gnu_debug
     { }
 
     // Provides conversion from a release-mode string to a debug-mode string
-    basic_string(const _Base& __base) : _Base(__base), _Safe_base() { }
+    basic_string(const _Base& __base) : _Base(__base) { }
 
     // _GLIBCXX_RESOLVE_LIB_DEFECTS
     // 42. string ctors specify wrong default allocator
     basic_string(const basic_string& __str)
-    : _Base(__str, 0, _Base::npos, __str.get_allocator()), _Safe_base()
+    : _Base(__str, 0, _Base::npos, __str.get_allocator())
     { }
 
     // _GLIBCXX_RESOLVE_LIB_DEFECTS
@@ -237,7 +237,20 @@ namespace __gnu_debug
     { this->resize(__n, _CharT()); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-    using _Base::shrink_to_fit;
+    void
+    shrink_to_fit()
+    {
+      if (capacity() > size())
+	{
+	  __try
+	    {
+	      reserve(0);
+	      this->_M_invalidate_all();
+	    }
+	  __catch(...)
+	    { }
+	}
+    }
 #endif
 
     using _Base::capacity;

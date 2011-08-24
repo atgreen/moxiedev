@@ -261,8 +261,7 @@ struct gimple_opt_pass pass_build_cfg =
   PROP_cfg,				/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_verify_stmts | TODO_cleanup_cfg
-  | TODO_dump_func			/* todo_flags_finish */
+  TODO_verify_stmts | TODO_cleanup_cfg  /* todo_flags_finish */
  }
 };
 
@@ -1422,7 +1421,7 @@ gimple_can_merge_blocks_p (basic_block a, basic_block b)
   if (!single_succ_p (a))
     return false;
 
-  if (single_succ_edge (a)->flags & (EDGE_ABNORMAL | EDGE_EH))
+  if (single_succ_edge (a)->flags & (EDGE_ABNORMAL | EDGE_EH | EDGE_PRESERVE))
     return false;
 
   if (single_succ (a) != b)
@@ -2681,7 +2680,8 @@ verify_expr (tree *tp, int *walk_subtrees, void *data ATTRIBUTE_UNUSED)
       break;
 
     case NON_LVALUE_EXPR:
-	gcc_unreachable ();
+    case TRUTH_NOT_EXPR:
+      gcc_unreachable ();
 
     CASE_CONVERT:
     case FIX_TRUNC_EXPR:
@@ -2689,7 +2689,6 @@ verify_expr (tree *tp, int *walk_subtrees, void *data ATTRIBUTE_UNUSED)
     case NEGATE_EXPR:
     case ABS_EXPR:
     case BIT_NOT_EXPR:
-    case TRUTH_NOT_EXPR:
       CHECK_OP (0, "invalid operand to unary operator");
       break;
 
@@ -2773,13 +2772,11 @@ verify_expr (tree *tp, int *walk_subtrees, void *data ATTRIBUTE_UNUSED)
 	  error ("invalid operand to pointer plus, first operand is not a pointer");
 	  return t;
 	}
-      /* Check to make sure the second operand is an integer with type of
-	 sizetype.  */
-      if (!useless_type_conversion_p (sizetype,
-				     TREE_TYPE (TREE_OPERAND (t, 1))))
+      /* Check to make sure the second operand is a ptrofftype.  */
+      if (!ptrofftype_p (TREE_TYPE (TREE_OPERAND (t, 1))))
 	{
 	  error ("invalid operand to pointer plus, second operand is not an "
-		 "integer with type of sizetype");
+		 "integer type of appropriate width");
 	  return t;
 	}
       /* FALLTHROUGH */
@@ -3204,7 +3201,9 @@ verify_gimple_comparison (tree type, tree op0, tree op1)
        && (!POINTER_TYPE_P (op0_type)
 	   || !POINTER_TYPE_P (op1_type)
 	   || TYPE_MODE (op0_type) != TYPE_MODE (op1_type)))
-      || !INTEGRAL_TYPE_P (type))
+      || !INTEGRAL_TYPE_P (type)
+      || (TREE_CODE (type) != BOOLEAN_TYPE
+	  && TYPE_PRECISION (type) != 1))
     {
       error ("type mismatch in comparison expression");
       debug_generic_expr (type);
@@ -3247,17 +3246,17 @@ verify_gimple_assign_unary (gimple stmt)
       {
 	/* Allow conversions between integral types and pointers only if
 	   there is no sign or zero extension involved.
-	   For targets were the precision of sizetype doesn't match that
+	   For targets were the precision of ptrofftype doesn't match that
 	   of pointers we need to allow arbitrary conversions from and
-	   to sizetype.  */
+	   to ptrofftype.  */
 	if ((POINTER_TYPE_P (lhs_type)
 	     && INTEGRAL_TYPE_P (rhs1_type)
 	     && (TYPE_PRECISION (lhs_type) >= TYPE_PRECISION (rhs1_type)
-		 || rhs1_type == sizetype))
+		 || ptrofftype_p (rhs1_type)))
 	    || (POINTER_TYPE_P (rhs1_type)
 		&& INTEGRAL_TYPE_P (lhs_type)
 		&& (TYPE_PRECISION (rhs1_type) >= TYPE_PRECISION (lhs_type)
-		    || lhs_type == sizetype)))
+		    || ptrofftype_p (sizetype))))
 	  return false;
 
 	/* Allow conversion from integer to offset type and vice versa.  */
@@ -3344,19 +3343,6 @@ verify_gimple_assign_unary (gimple stmt)
     case VEC_UNPACK_FLOAT_LO_EXPR:
       /* FIXME.  */
       return false;
-
-    case TRUTH_NOT_EXPR:
-      /* We require two-valued operand types.  */
-      if (!(TREE_CODE (rhs1_type) == BOOLEAN_TYPE
-	    || (INTEGRAL_TYPE_P (rhs1_type)
-		&& TYPE_PRECISION (rhs1_type) == 1)))
-        {
-	  error ("invalid types in truth not");
-	  debug_generic_expr (lhs_type);
-	  debug_generic_expr (rhs1_type);
-	  return true;
-        }
-      break;
 
     case NEGATE_EXPR:
     case ABS_EXPR:
@@ -3537,7 +3523,7 @@ verify_gimple_assign_binary (gimple stmt)
 do_pointer_plus_expr_check:
 	if (!POINTER_TYPE_P (rhs1_type)
 	    || !useless_type_conversion_p (lhs_type, rhs1_type)
-	    || !useless_type_conversion_p (sizetype, rhs2_type))
+	    || !ptrofftype_p (rhs2_type))
 	  {
 	    error ("type mismatch in pointer plus expression");
 	    debug_generic_stmt (lhs_type);
@@ -3578,7 +3564,7 @@ do_pointer_plus_expr_check:
     case WIDEN_MULT_EXPR:
       if (TREE_CODE (lhs_type) != INTEGER_TYPE)
 	return true;
-      return ((2 * TYPE_PRECISION (rhs1_type) != TYPE_PRECISION (lhs_type))
+      return ((2 * TYPE_PRECISION (rhs1_type) > TYPE_PRECISION (lhs_type))
 	      || (TYPE_PRECISION (rhs1_type) != TYPE_PRECISION (rhs2_type)));
 
     case WIDEN_SUM_EXPR:
@@ -3669,7 +3655,7 @@ verify_gimple_assign_ternary (gimple stmt)
 	   && !FIXED_POINT_TYPE_P (rhs1_type))
 	  || !useless_type_conversion_p (rhs1_type, rhs2_type)
 	  || !useless_type_conversion_p (lhs_type, rhs3_type)
-	  || 2 * TYPE_PRECISION (rhs1_type) != TYPE_PRECISION (lhs_type)
+	  || 2 * TYPE_PRECISION (rhs1_type) > TYPE_PRECISION (lhs_type)
 	  || TYPE_PRECISION (rhs1_type) != TYPE_PRECISION (rhs2_type))
 	{
 	  error ("type mismatch in widening multiply-accumulate expression");
@@ -5090,6 +5076,7 @@ gimple_duplicate_bb (basic_block bb)
     {
       def_operand_p def_p;
       ssa_op_iter op_iter;
+      tree lhs;
 
       stmt = gsi_stmt (gsi);
       if (gimple_code (stmt) == GIMPLE_LABEL)
@@ -5102,6 +5089,24 @@ gimple_duplicate_bb (basic_block bb)
 
       maybe_duplicate_eh_stmt (copy, stmt);
       gimple_duplicate_stmt_histograms (cfun, copy, cfun, stmt);
+
+      /* When copying around a stmt writing into a local non-user
+	 aggregate, make sure it won't share stack slot with other
+	 vars.  */
+      lhs = gimple_get_lhs (stmt);
+      if (lhs && TREE_CODE (lhs) != SSA_NAME)
+	{
+	  tree base = get_base_address (lhs);
+	  if (base
+	      && (TREE_CODE (base) == VAR_DECL
+		  || TREE_CODE (base) == RESULT_DECL)
+	      && DECL_IGNORED_P (base)
+	      && !TREE_STATIC (base)
+	      && !DECL_EXTERNAL (base)
+	      && (TREE_CODE (base) != VAR_DECL
+		  || !DECL_HAS_VALUE_EXPR_P (base)))
+	    DECL_NONSHAREABLE (base) = 1;
+	}
 
       /* Create new names for all the definitions created by COPY and
 	 add replacement mappings for each new name.  */
@@ -5393,12 +5398,10 @@ gimple_duplicate_sese_tail (edge entry ATTRIBUTE_UNUSED, edge exit ATTRIBUTE_UNU
   int total_freq = 0, exit_freq = 0;
   gcov_type total_count = 0, exit_count = 0;
   edge exits[2], nexits[2], e;
-  gimple_stmt_iterator gsi,gsi1;
+  gimple_stmt_iterator gsi;
   gimple cond_stmt;
   edge sorig, snew;
   basic_block exit_bb;
-  basic_block iters_bb;
-  tree new_rhs;
   gimple_stmt_iterator psi;
   gimple phi;
   tree def;
@@ -5479,35 +5482,6 @@ gimple_duplicate_sese_tail (edge entry ATTRIBUTE_UNUSED, edge exit ATTRIBUTE_UNU
   gcc_assert (gimple_code (cond_stmt) == GIMPLE_COND);
   cond_stmt = gimple_copy (cond_stmt);
 
- /* If the block consisting of the exit condition has the latch as
-    successor, then the body of the loop is executed before
-    the exit condition is tested.  In such case, moving the
-    condition to the entry, causes that the loop will iterate
-    one less iteration (which is the wanted outcome, since we
-    peel out the last iteration).  If the body is executed after
-    the condition, moving the condition to the entry requires
-    decrementing one iteration.  */
-  if (exits[1]->dest == orig_loop->latch)
-    new_rhs = gimple_cond_rhs (cond_stmt);
-  else
-  {
-    new_rhs = fold_build2 (MINUS_EXPR, TREE_TYPE (gimple_cond_rhs (cond_stmt)),
-			   gimple_cond_rhs (cond_stmt),
-			   build_int_cst (TREE_TYPE (gimple_cond_rhs (cond_stmt)), 1));
-
-    if (TREE_CODE (gimple_cond_rhs (cond_stmt)) == SSA_NAME)
-      {
-	iters_bb = gimple_bb (SSA_NAME_DEF_STMT (gimple_cond_rhs (cond_stmt)));
-	for (gsi1 = gsi_start_bb (iters_bb); !gsi_end_p (gsi1); gsi_next (&gsi1))
-	  if (gsi_stmt (gsi1) == SSA_NAME_DEF_STMT (gimple_cond_rhs (cond_stmt)))
-	    break;
-
-	new_rhs = force_gimple_operand_gsi (&gsi1, new_rhs, true,
-					    NULL_TREE,false,GSI_CONTINUE_LINKING);
-      }
-  }
-  gimple_cond_set_rhs (cond_stmt, unshare_expr (new_rhs));
-  gimple_cond_set_lhs (cond_stmt, unshare_expr (gimple_cond_lhs (cond_stmt)));
   gsi_insert_after (&gsi, cond_stmt, GSI_NEW_STMT);
 
   sorig = single_succ_edge (switch_bb);
@@ -7234,7 +7208,7 @@ struct gimple_opt_pass pass_split_crit_edges =
   PROP_no_crit_edges,            /* properties_provided */
   0,                             /* properties_destroyed */
   0,                             /* todo_flags_start */
-  TODO_dump_func | TODO_verify_flow  /* todo_flags_finish */
+  TODO_verify_flow               /* todo_flags_finish */
  }
 };
 

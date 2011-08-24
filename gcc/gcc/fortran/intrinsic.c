@@ -2594,7 +2594,7 @@ add_functions (void)
 
   add_sym_2 ("signal", GFC_ISYM_SIGNAL, CLASS_IMPURE, ACTUAL_NO, BT_INTEGER,
 	     di, GFC_STD_GNU, gfc_check_signal, NULL, gfc_resolve_signal,
-	     num, BT_INTEGER, di, REQUIRED, han, BT_UNKNOWN, 0, REQUIRED);
+	     num, BT_INTEGER, di, REQUIRED, han, BT_VOID, 0, REQUIRED);
 
   make_generic ("signal", GFC_ISYM_SIGNAL, GFC_STD_GNU);
 
@@ -3642,7 +3642,7 @@ check_arglist (gfc_actual_arglist **ap, gfc_intrinsic_sym *sym,
 				 : NULL);
 
 	  /* No pointer arguments for intrinsics.  */
-	  if (gfc_check_vardef_context (actual->expr, false, context)
+	  if (gfc_check_vardef_context (actual->expr, false, false, context)
 		== FAILURE)
 	    return FAILURE;
 	}

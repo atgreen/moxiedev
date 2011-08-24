@@ -45,6 +45,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "ipa-prop.h"
 #include "ipa-inline.h"
 #include "tree-inline.h"
+#include "tree-pass.h"
 
 int ncalls_inlined;
 int nfunctions_inlined;
@@ -82,7 +83,7 @@ update_noncloned_frequencies (struct cgraph_node *node,
    copy of function was removed.  */
 
 static bool
-can_remove_node_now_p (struct cgraph_node *node)
+can_remove_node_now_p_1 (struct cgraph_node *node)
 {
   /* FIXME: When address is taken of DECL_EXTERNAL function we still
      can remove its offline copy, but we would need to keep unanalyzed node in
@@ -97,13 +98,32 @@ can_remove_node_now_p (struct cgraph_node *node)
 	  && (!DECL_VIRTUAL_P (node->decl)
 	      || (!DECL_COMDAT (node->decl)
 		  && !DECL_EXTERNAL (node->decl)))
-	  /* Don't reuse if more than one function shares a comdat group.
-	     If the other function(s) are needed, we need to emit even
-	     this function out of line.  */
-	  && !node->same_comdat_group
 	  /* During early inlining some unanalyzed cgraph nodes might be in the
 	     callgraph and they might reffer the function in question.  */
 	  && !cgraph_new_nodes);
+}
+
+/* We are going to eliminate last direct call to NODE (or alias of it) via edge E.
+   Verify that the NODE can be removed from unit and if it is contained in comdat
+   group that the whole comdat group is removable.  */
+
+static bool
+can_remove_node_now_p (struct cgraph_node *node, struct cgraph_edge *e)
+{
+  struct cgraph_node *next;
+  if (!can_remove_node_now_p_1 (node))
+    return false;
+
+  /* When we see same comdat group, we need to be sure that all
+     items can be removed.  */
+  if (!node->same_comdat_group)
+    return true;
+  for (next = node->same_comdat_group;
+       next != node; next = next->same_comdat_group)
+    if (node->callers && node->callers != e
+	&& !can_remove_node_now_p_1 (node))
+      return false;
+  return true;
 }
 
 
@@ -127,8 +147,15 @@ clone_inlined_nodes (struct cgraph_edge *e, bool duplicate,
 	  /* Recursive inlining never wants the master clone to
 	     be overwritten.  */
 	  && update_original
-	  && can_remove_node_now_p (e->callee))
+	  && can_remove_node_now_p (e->callee, e))
 	{
+	  /* TODO: When callee is in a comdat group, we could remove all of it,
+	     including all inline clones inlined into it.  That would however
+	     need small function inlining to register edge removal hook to
+	     maintain the priority queue.
+
+	     For now we keep the ohter functions in the group in program until
+	     cgraph_remove_unreachable_functions gets rid of them.  */
 	  gcc_assert (!e->callee->global.inlined_to);
 	  if (e->callee->analyzed && !DECL_EXTERNAL (e->callee->decl))
 	    {
@@ -199,7 +226,7 @@ inline_call (struct cgraph_edge *e, bool update_original,
       while (alias && alias != callee)
 	{
 	  if (!alias->callers
-	      && can_remove_node_now_p (alias))
+	      && can_remove_node_now_p (alias, e))
 	    {
 	      next_alias = cgraph_alias_aliased_node (alias);
 	      cgraph_remove_node (alias);
@@ -321,8 +348,7 @@ inline_transform (struct cgraph_node *node)
 {
   unsigned int todo = 0;
   struct cgraph_edge *e;
-  bool inline_p = false;
-
+ 
   /* FIXME: Currently the pass manager is adding inline transform more than
      once to some clones.  This needs revisiting after WPA cleanups.  */
   if (cfun->after_inlining)
@@ -334,18 +360,17 @@ inline_transform (struct cgraph_node *node)
     save_inline_function_body (node);
 
   for (e = node->callees; e; e = e->next_callee)
-    {
-      cgraph_redirect_edge_call_stmt_to_callee (e);
-      if (!e->inline_failed || warn_inline)
-        inline_p = true;
-    }
+    cgraph_redirect_edge_call_stmt_to_callee (e);
 
-  if (inline_p)
-    {
-      timevar_push (TV_INTEGRATION);
-      todo = optimize_inline_calls (current_function_decl);
-      timevar_pop (TV_INTEGRATION);
-    }
+  timevar_push (TV_INTEGRATION);
+  if (node->callees)
+    todo = optimize_inline_calls (current_function_decl);
+  timevar_pop (TV_INTEGRATION);
+
+  if (!(todo & TODO_update_ssa_any))
+    /* Redirecting edges might lead to a need for vops to be recomputed.  */
+    todo |= TODO_update_ssa_only_virtuals;
+
   cfun->always_inline_functions_inlined = true;
   cfun->after_inlining = true;
   return todo | execute_fixup_cfg ();

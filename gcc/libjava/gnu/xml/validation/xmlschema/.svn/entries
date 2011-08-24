@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/xml/validation/xmlschema
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ tromey
 
 2067
 
-ElementDeclaration.h
-file
-
-
-
-
-2009-06-30T14:24:21.000000Z
-e896e0f0e3a024de09b2731aaab65916
-2009-06-29T17:50:59.348435Z
-149059
-aph
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1666
-
 XMLSchemaTypeInfo.h
 file
 
@@ -127,6 +93,40 @@ tromey
 
 
 1147
+
+ElementDeclaration.h
+file
+
+
+
+
+2009-06-30T14:24:21.000000Z
+e896e0f0e3a024de09b2731aaab65916
+2009-06-29T17:50:59.348435Z
+149059
+aph
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1666
 
 Particle.h
 file
@@ -162,17 +162,17 @@ tromey
 
 877
 
-AttributeDeclaration.h
+XMLSchemaElementTypeInfo.h
 file
 
 
 
 
-2009-06-30T14:24:21.000000Z
-d0c5fcfc391482e782d373d70aaea6bb
-2009-06-29T17:50:59.348435Z
-149059
-aph
+2009-04-24T17:49:11.000000Z
+a048aca595b2b88203d8a096ebc4caaf
+2006-10-13T22:10:15.089349Z
+117714
+tromey
 
 
 
@@ -194,41 +194,7 @@ aph
 
 
 
-1489
-
-ComplexType.h
-file
-
-
-
-
-2009-06-30T14:24:21.000000Z
-f1f3ef13180a67379e2a5e2ee8c170d3
-2009-06-29T17:50:59.348435Z
-149059
-aph
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1324
+1568
 
 ValidationException.h
 file
@@ -264,17 +230,17 @@ tromey
 
 897
 
-XMLSchemaElementTypeInfo.h
+ComplexType.h
 file
 
 
 
 
-2009-04-24T17:49:11.000000Z
-a048aca595b2b88203d8a096ebc4caaf
-2006-10-13T22:10:15.089349Z
-117714
-tromey
+2009-06-30T14:24:21.000000Z
+f1f3ef13180a67379e2a5e2ee8c170d3
+2009-06-29T17:50:59.348435Z
+149059
+aph
 
 
 
@@ -296,7 +262,41 @@ tromey
 
 
 
-1568
+1324
+
+AttributeDeclaration.h
+file
+
+
+
+
+2009-06-30T14:24:21.000000Z
+d0c5fcfc391482e782d373d70aaea6bb
+2009-06-29T17:50:59.348435Z
+149059
+aph
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1489
 
 XMLSchemaTypeInfoProvider.h
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/objc/execute
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ nicola
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-enumeration-1.m
-file
-
-
-
-
-2011-06-11T04:08:14.259912Z
-0dfc21e690c7625bdcd6ecd58b521009
-2011-06-06T22:46:58.006232Z
-174727
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-644
 
 class-11.m
 file
@@ -94,14 +60,14 @@ nicola
 
 1765
 
-class-13.m
+enumeration-1.m
 file
 
 
 
 
 2011-06-11T04:08:14.259912Z
-b07cea761611080e588a3e52f4e76d24
+0dfc21e690c7625bdcd6ecd58b521009
 2011-06-06T22:46:58.006232Z
 174727
 nicola
@@ -126,41 +92,7 @@ nicola
 
 
 
-1521
-
-object_is_class.m
-file
-
-
-
-
-2011-06-11T04:08:14.259912Z
-d6a86f38f1747f4665c628344e11c16e
-2011-06-06T22:46:58.006232Z
-174727
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-985
+644
 
 static-2.m
 file
@@ -196,6 +128,74 @@ nicola
 
 433
 
+object_is_class.m
+file
+
+
+
+
+2011-06-11T04:08:14.259912Z
+d6a86f38f1747f4665c628344e11c16e
+2011-06-06T22:46:58.006232Z
+174727
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+985
+
+class-13.m
+file
+
+
+
+
+2011-06-11T04:08:14.259912Z
+b07cea761611080e588a3e52f4e76d24
+2011-06-06T22:46:58.006232Z
+174727
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1521
+
 formal_protocol-2.m
 file
 
@@ -229,40 +229,6 @@ nicola
 
 
 715
-
-formal_protocol-4.m
-file
-
-
-
-
-2011-06-11T04:08:14.260912Z
-318db7e34b9185d36d34910b88753410
-2011-06-06T22:46:58.006232Z
-174727
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-627
 
 execute.exp
 file
@@ -298,14 +264,14 @@ jakub
 
 1372
 
-bycopy-1.m
+formal_protocol-4.m
 file
 
 
 
 
 2011-06-11T04:08:14.260912Z
-480d81dd41aa57fcf54c08c0e8af23e5
+318db7e34b9185d36d34910b88753410
 2011-06-06T22:46:58.006232Z
 174727
 nicola
@@ -330,7 +296,7 @@ nicola
 
 
 
-231
+627
 
 class-1.m
 file
@@ -366,6 +332,40 @@ nicola
 
 308
 
+bycopy-1.m
+file
+
+
+
+
+2011-06-11T04:08:14.260912Z
+480d81dd41aa57fcf54c08c0e8af23e5
+2011-06-06T22:46:58.006232Z
+174727
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+231
+
 formal_protocol-6.m
 file
 
@@ -400,40 +400,6 @@ nicola
 
 533
 
-class-3.m
-file
-
-
-
-
-2011-06-11T04:08:14.261913Z
-d8e9fba6080b805f3b708c413f287b30
-2011-06-06T22:46:58.006232Z
-174727
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-679
-
 bycopy-3.m
 file
 
@@ -467,6 +433,40 @@ nicola
 
 
 2749
+
+class-3.m
+file
+
+
+
+
+2011-06-11T04:08:14.261913Z
+d8e9fba6080b805f3b708c413f287b30
+2011-06-06T22:46:58.006232Z
+174727
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+679
 
 bf-11.m
 file
@@ -1185,40 +1185,6 @@ ovidiu
 
 521
 
-_cmd.m
-file
-
-
-
-
-2011-06-11T04:08:14.264913Z
-76a382629f503b5f0ca24c16f5485776
-2011-06-06T22:46:58.006232Z
-174727
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-480
-
 protocol-isEqual-3.m
 file
 
@@ -1252,6 +1218,40 @@ nicola
 
 
 331
+
+_cmd.m
+file
+
+
+
+
+2011-06-11T04:08:14.264913Z
+76a382629f503b5f0ca24c16f5485776
+2011-06-06T22:46:58.006232Z
+174727
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+480
 
 function-message-1.m
 file
@@ -1355,40 +1355,6 @@ nicola
 
 3869
 
-class_self-1.m
-file
-
-
-
-
-2011-06-11T04:08:14.265913Z
-ab26d1f21a7ef4f98c92a3146fbc5395
-2011-06-06T22:46:58.006232Z
-174727
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-848
-
 np-2.m
 file
 
@@ -1423,14 +1389,14 @@ nicola
 
 368
 
-class-10.m
+class_self-1.m
 file
 
 
 
 
 2011-06-11T04:08:14.265913Z
-21909f35edf261b2ac9af376ba5aa047
+ab26d1f21a7ef4f98c92a3146fbc5395
 2011-06-06T22:46:58.006232Z
 174727
 nicola
@@ -1455,7 +1421,7 @@ nicola
 
 
 
-1701
+848
 
 redefining_self.m
 file
@@ -1491,14 +1457,14 @@ nicola
 
 384
 
-enumeration-2.m
+class-10.m
 file
 
 
 
 
-2011-06-11T04:08:14.266913Z
-906ad68029b532a36a68c47b781f6f77
+2011-06-11T04:08:14.265913Z
+21909f35edf261b2ac9af376ba5aa047
 2011-06-06T22:46:58.006232Z
 174727
 nicola
@@ -1523,7 +1489,41 @@ nicola
 
 
 
-733
+1701
+
+static-1.m
+file
+
+
+
+
+2011-06-11T04:08:14.266913Z
+93ebcca008c53648de4fe4e6043501a7
+2011-06-06T22:46:58.006232Z
+174727
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+412
 
 class-12.m
 file
@@ -1559,14 +1559,14 @@ nicola
 
 957
 
-static-1.m
+enumeration-2.m
 file
 
 
 
 
 2011-06-11T04:08:14.266913Z
-93ebcca008c53648de4fe4e6043501a7
+906ad68029b532a36a68c47b781f6f77
 2011-06-06T22:46:58.006232Z
 174727
 nicola
@@ -1591,7 +1591,7 @@ nicola
 
 
 
-412
+733
 
 class-14.m
 file
@@ -1729,40 +1729,6 @@ nicola
 
 913
 
-formal_protocol-5.m
-file
-
-
-
-
-2011-06-11T04:08:14.268912Z
-922ede341eeb259cb74a5e2a3d08952a
-2011-06-06T22:46:58.006232Z
-174727
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-575
-
 accessing_ivars.m
 file
 
@@ -1797,14 +1763,14 @@ nicola
 
 851
 
-class-2.m
+formal_protocol-5.m
 file
 
 
 
 
 2011-06-11T04:08:14.268912Z
-caf74d31a1c62a4bc8eb3a94ceaca923
+922ede341eeb259cb74a5e2a3d08952a
 2011-06-06T22:46:58.006232Z
 174727
 nicola
@@ -1829,7 +1795,7 @@ nicola
 
 
 
-401
+575
 
 bycopy-2.m
 file
@@ -1865,14 +1831,14 @@ nicola
 
 491
 
-formal_protocol-7.m
+class-2.m
 file
 
 
 
 
-2011-06-11T04:08:14.269912Z
-2c3a0cea457dbe0268fbed2e764509ad
+2011-06-11T04:08:14.268912Z
+caf74d31a1c62a4bc8eb3a94ceaca923
 2011-06-06T22:46:58.006232Z
 174727
 nicola
@@ -1897,7 +1863,7 @@ nicola
 
 
 
-706
+401
 
 bf-10.m
 file
@@ -1933,14 +1899,14 @@ iains
 
 199
 
-class-4.m
+formal_protocol-7.m
 file
 
 
 
 
 2011-06-11T04:08:14.269912Z
-f2619195cbbaab523185f8fafff984d5
+2c3a0cea457dbe0268fbed2e764509ad
 2011-06-06T22:46:58.006232Z
 174727
 nicola
@@ -1965,7 +1931,7 @@ nicola
 
 
 
-984
+706
 
 root_methods.m
 file
@@ -2000,6 +1966,40 @@ nicola
 
 
 677
+
+class-4.m
+file
+
+
+
+
+2011-06-11T04:08:14.269912Z
+f2619195cbbaab523185f8fafff984d5
+2011-06-06T22:46:58.006232Z
+174727
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+984
 
 bf-12.m
 file
@@ -2069,40 +2069,6 @@ nicola
 
 1556
 
-nested-func-1.m
-file
-
-
-
-
-2011-06-11T04:08:14.270913Z
-fc503b85c46635520b0858acc25eacc2
-2011-06-06T22:46:58.006232Z
-174727
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-593
-
 bf-14.m
 file
 
@@ -2136,6 +2102,40 @@ iains
 
 
 247
+
+nested-func-1.m
+file
+
+
+
+
+2011-06-11T04:08:14.270913Z
+fc503b85c46635520b0858acc25eacc2
+2011-06-06T22:46:58.006232Z
+174727
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+593
 
 class-8.m
 file

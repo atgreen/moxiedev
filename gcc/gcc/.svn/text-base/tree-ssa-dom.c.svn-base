@@ -208,12 +208,11 @@ initialize_hash_element (gimple stmt, tree lhs,
     {
       enum tree_code subcode = gimple_assign_rhs_code (stmt);
 
-      expr->type = NULL_TREE;
-
       switch (get_gimple_rhs_class (subcode))
         {
         case GIMPLE_SINGLE_RHS:
 	  expr->kind = EXPR_SINGLE;
+	  expr->type = TREE_TYPE (gimple_assign_rhs1 (stmt));
 	  expr->ops.single.rhs = gimple_assign_rhs1 (stmt);
 	  break;
         case GIMPLE_UNARY_RHS:
@@ -816,8 +815,7 @@ struct gimple_opt_pass pass_dominator =
   TODO_cleanup_cfg
     | TODO_update_ssa
     | TODO_verify_ssa
-    | TODO_verify_flow
-    | TODO_dump_func			/* todo_flags_finish */
+    | TODO_verify_flow			/* todo_flags_finish */
  }
 };
 
@@ -2969,7 +2967,6 @@ struct gimple_opt_pass pass_phi_only_cprop =
   0,		                        /* properties_destroyed */
   0,                                    /* todo_flags_start */
   TODO_cleanup_cfg
-    | TODO_dump_func
     | TODO_ggc_collect
     | TODO_verify_ssa
     | TODO_verify_stmts

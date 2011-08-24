@@ -1,7 +1,7 @@
 /* C-compiler utilities for types and variables storage layout
    Copyright (C) 1987, 1988, 1992, 1993, 1994, 1995, 1996, 1996, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-   Free Software Foundation, Inc.
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+   2011 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -935,7 +935,8 @@ update_alignment_for_field (record_layout_info rli, tree field,
 	 applies if there was an immediately prior, nonzero-size
 	 bitfield.  (That's the way it is, experimentally.) */
       if ((!is_bitfield && !DECL_PACKED (field))
-	  || (!integer_zerop (DECL_SIZE (field))
+	  || ((DECL_SIZE (field) == NULL_TREE
+	       || !integer_zerop (DECL_SIZE (field)))
 	      ? !DECL_PACKED (field)
 	      : (rli->prev_field
 		 && DECL_BIT_FIELD_TYPE (rli->prev_field)
@@ -2203,6 +2204,8 @@ initialize_sizetypes (void)
     precision = LONG_TYPE_SIZE;
   else if (strcmp (SIZE_TYPE, "long long unsigned int") == 0)
     precision = LONG_LONG_TYPE_SIZE;
+  else if (strcmp (SIZE_TYPE, "short unsigned int") == 0)
+    precision = SHORT_TYPE_SIZE;
   else
     gcc_unreachable ();
 
@@ -2245,7 +2248,11 @@ initialize_sizetypes (void)
     = size_int (GET_MODE_SIZE (TYPE_MODE (bitsizetype)));
   set_min_and_max_values_for_integral_type (bitsizetype, bprecision,
 					    /*is_unsigned=*/true);
-  /* ???  TYPE_MAX_VALUE is not properly sign-extended.  */
+  /* bitsizetype is unsigned but we need to fix TYPE_MAX_VALUE so that it is
+     sign-extended in a way consistent with force_fit_type.  */
+  TYPE_MAX_VALUE (bitsizetype)
+    = double_int_to_tree (bitsizetype,
+			  tree_to_double_int (TYPE_MAX_VALUE (bitsizetype)));
 
   /* Create the signed variants of *sizetype.  */
   ssizetype = make_signed_type (TYPE_PRECISION (sizetype));
@@ -2361,6 +2368,13 @@ fixup_unsigned_type (tree type)
 /* Find the best machine mode to use when referencing a bit field of length
    BITSIZE bits starting at BITPOS.
 
+   BITREGION_START is the bit position of the first bit in this
+   sequence of bit fields.  BITREGION_END is the last bit in this
+   sequence.  If these two fields are non-zero, we should restrict the
+   memory access to a maximum sized chunk of
+   BITREGION_END - BITREGION_START + 1.  Otherwise, we are allowed to touch
+   any adjacent non bit-fields.
+
    The underlying object is known to be aligned to a boundary of ALIGN bits.
    If LARGEST_MODE is not VOIDmode, it means that we should not use a mode
    larger than LARGEST_MODE (usually SImode).
@@ -2378,18 +2392,29 @@ fixup_unsigned_type (tree type)
    decide which of the above modes should be used.  */
 
 enum machine_mode
-get_best_mode (int bitsize, int bitpos, unsigned int align,
+get_best_mode (int bitsize, int bitpos,
+	       unsigned HOST_WIDE_INT bitregion_start,
+	       unsigned HOST_WIDE_INT bitregion_end,
+	       unsigned int align,
 	       enum machine_mode largest_mode, int volatilep)
 {
   enum machine_mode mode;
   unsigned int unit = 0;
+  unsigned HOST_WIDE_INT maxbits;
+
+  /* If unset, no restriction.  */
+  if (!bitregion_end)
+    maxbits = MAX_FIXED_MODE_SIZE;
+  else
+    maxbits = (bitregion_end - bitregion_start) % align + 1;
 
   /* Find the narrowest integer mode that contains the bit field.  */
   for (mode = GET_CLASS_NARROWEST_MODE (MODE_INT); mode != VOIDmode;
        mode = GET_MODE_WIDER_MODE (mode))
     {
       unit = GET_MODE_BITSIZE (mode);
-      if ((bitpos % unit) + bitsize <= unit)
+      if (unit == GET_MODE_PRECISION (mode)
+	  && (bitpos % unit) + bitsize <= unit)
 	break;
     }
 
@@ -2414,9 +2439,11 @@ get_best_mode (int bitsize, int bitpos, unsigned int align,
 	   tmode = GET_MODE_WIDER_MODE (tmode))
 	{
 	  unit = GET_MODE_BITSIZE (tmode);
-	  if (bitpos / unit == (bitpos + bitsize - 1) / unit
+	  if (unit == GET_MODE_PRECISION (tmode)
+	      && bitpos / unit == (bitpos + bitsize - 1) / unit
 	      && unit <= BITS_PER_WORD
 	      && unit <= MIN (align, BIGGEST_ALIGNMENT)
+	      && unit <= maxbits
 	      && (largest_mode == VOIDmode
 		  || unit <= GET_MODE_BITSIZE (largest_mode)))
 	    wide_mode = tmode;

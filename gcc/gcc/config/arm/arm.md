@@ -31,6 +31,7 @@
 ;; Register numbers
 (define_constants
   [(R0_REGNUM        0)		; First CORE register
+   (R1_REGNUM	     1)		; Second CORE register
    (IP_REGNUM	    12)		; Scratch register
    (SP_REGNUM	    13)		; Stack pointer
    (LR_REGNUM       14)		; Return address register
@@ -93,8 +94,6 @@
   UNSPEC_TLS            ; A symbol that has been treated properly for TLS usage.
   UNSPEC_PIC_LABEL      ; A label used for PIC access that does not appear in the
                         ; instruction stream.
-  UNSPEC_STACK_ALIGN    ; Doubleword aligned stack pointer.  Used to
-                        ; generate correct unwind information.
   UNSPEC_PIC_OFFSET     ; A symbolic 12-bit OFFSET that has been treated
                         ; correctly for PIC usage.
   UNSPEC_GOTSYM_OFF     ; The offset of the start of the GOT from a
@@ -115,6 +114,8 @@
                         ;   instruction epilogue sequence that isn't expanded
                         ;   into normal RTL.  Used for both normal and sibcall
                         ;   epilogues.
+  VUNSPEC_THUMB1_INTERWORK ; `prologue_thumb1_interwork' insn, used to swap
+			;   modes from arm to thumb.
   VUNSPEC_ALIGN         ; `align' insn.  Used at the head of a minipool table
                         ;   for inlined constants.
   VUNSPEC_POOL_END      ; `end-of-table'.  Used to mark the end of a minipool
@@ -1856,7 +1857,7 @@
    (set_attr "predicable" "yes")]
 )
 
-(define_insn "*maddhidi4"
+(define_insn "maddhidi4"
   [(set (match_operand:DI 0 "s_register_operand" "=r")
 	(plus:DI
 	  (mult:DI (sign_extend:DI
@@ -4980,7 +4981,7 @@
     case 2:
       return \"#\";
     default:
-      return output_move_double (operands);
+      return output_move_double (operands, true, NULL);
     }
   "
   [(set_attr "length" "8,12,16,8,8")
@@ -6340,7 +6341,7 @@
     case 2:
       return \"#\";
     default:
-      return output_move_double (operands);
+      return output_move_double (operands, true, NULL);
     }
   "
   [(set_attr "length" "8,12,16,8,8")
@@ -8631,18 +8632,22 @@
 ;; Patterns to allow combination of arithmetic, cond code and shifts
 
 (define_insn "*arith_shiftsi"
-  [(set (match_operand:SI 0 "s_register_operand" "=r,r")
+  [(set (match_operand:SI 0 "s_register_operand" "=r,r,r,r")
         (match_operator:SI 1 "shiftable_operator"
           [(match_operator:SI 3 "shift_operator"
-             [(match_operand:SI 4 "s_register_operand" "r,r")
-              (match_operand:SI 5 "shift_amount_operand" "M,r")])
-           (match_operand:SI 2 "s_register_operand" "rk,rk")]))]
+             [(match_operand:SI 4 "s_register_operand" "r,r,r,r")
+              (match_operand:SI 5 "shift_amount_operand" "M,M,M,r")])
+           (match_operand:SI 2 "s_register_operand" "rk,rk,r,rk")]))]
   "TARGET_32BIT"
   "%i1%?\\t%0, %2, %4%S3"
   [(set_attr "predicable" "yes")
    (set_attr "shift" "4")
-   (set_attr "arch" "32,a")
-   ;; We have to make sure to disable the second alternative if
+   (set_attr "arch" "a,t2,t2,a")
+   ;; Thumb2 doesn't allow the stack pointer to be used for 
+   ;; operand1 for all operations other than add and sub. In this case 
+   ;; the minus operation is a candidate for an rsub and hence needs
+   ;; to be disabled.
+   ;; We have to make sure to disable the fourth alternative if
    ;; the shift_operator is MULT, since otherwise the insn will
    ;; also match a multiply_accumulate pattern and validate_change
    ;; will allow a replacement of the constant with a register
@@ -8650,9 +8655,13 @@
    (set_attr_alternative "insn_enabled"
 			 [(const_string "yes")
 			  (if_then_else
+			   (match_operand:SI 1 "add_operator" "")
+			   (const_string "yes") (const_string "no"))
+			  (const_string "yes")
+			  (if_then_else
 			   (match_operand:SI 3 "mult_operator" "")
 			   (const_string "no") (const_string "yes"))])
-   (set_attr "type" "alu_shift,alu_shift_reg")])
+   (set_attr "type" "alu_shift,alu_shift,alu_shift,alu_shift_reg")])
 
 (define_split
   [(set (match_operand:SI 0 "s_register_operand" "")
@@ -10112,6 +10121,13 @@
   "
 )
 
+(define_insn "prologue_thumb1_interwork"
+  [(unspec_volatile [(const_int 0)] VUNSPEC_THUMB1_INTERWORK)]
+  "TARGET_THUMB1"
+  "* return thumb1_output_interwork ();"
+  [(set_attr "length" "8")]
+)
+
 ;; Note - although unspec_volatile's USE all hard registers,
 ;; USEs are ignored after relaod has completed.  Thus we need
 ;; to add an unspec of the link register to ensure that flow
@@ -10356,10 +10372,10 @@
 ;; in a C function arm_attr_length_push_multi.
 (define_insn "*push_multi"
   [(match_parallel 2 "multi_register_push"
-    [(set (match_operand:BLK 0 "memory_operand" "=m")
+    [(set (match_operand:BLK 0 "push_mult_memory_operand" "")
 	  (unspec:BLK [(match_operand:SI 1 "s_register_operand" "")]
 		      UNSPEC_PUSH_MULT))])]
-  "TARGET_32BIT"
+  ""
   "*
   {
     int num_saves = XVECLEN (operands[2], 0);
@@ -10719,6 +10735,27 @@
   [(set_attr "conds" "clob")]
 )
 
+;; tls descriptor call
+(define_insn "tlscall"
+  [(set (reg:SI R0_REGNUM)
+        (unspec:SI [(reg:SI R0_REGNUM)
+                    (match_operand:SI 0 "" "X")
+	            (match_operand 1 "" "")] UNSPEC_TLS))
+   (clobber (reg:SI R1_REGNUM))
+   (clobber (reg:SI LR_REGNUM))
+   (clobber (reg:SI CC_REGNUM))]
+  "TARGET_GNU2_TLS"
+  {
+    targetm.asm_out.internal_label (asm_out_file, "LPIC",
+				    INTVAL (operands[1]));
+    return "bl\\t%c0(tlscall)";
+  }
+  [(set_attr "conds" "clob")
+   (set_attr "length" "4")]
+)
+
+;;
+
 ;; We only care about the lower 16 bits of the constant 
 ;; being inserted into the upper 16 bits of the register.
 (define_insn "*arm_movtas_ze" 
@@ -10852,3 +10889,5 @@
 (include "neon.md")
 ;; Synchronization Primitives
 (include "sync.md")
+;; Fixed-point patterns
+(include "arm-fixed.md")

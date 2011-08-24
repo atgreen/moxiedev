@@ -6276,55 +6276,16 @@
   DONE;
 })
 
-;; The "save register window" insn is modelled as follows so that the DWARF-2
-;; backend automatically emits the required call frame debugging information
-;; while it is parsing it.  Therefore, the pattern should not be modified
-;; without first studying the impact of the changes on the debug info.
-;; [(set (%fp) (%sp))
-;;  (set (%sp) (unspec_volatile [(%sp) (-frame_size)] UNSPECV_SAVEW))
-;;  (set (%i7) (%o7))]
+;; The "register window save" insn is modelled as follows.  The dwarf2
+;; information is manually added in emit_window_save.
 
-(define_insn "save_register_window<P:mode>"
-  [(set (reg:P 30) (reg:P 14))
-   (set (reg:P 14) (unspec_volatile:P [(reg:P 14)
-				       (match_operand:P 0 "arith_operand" "rI")] UNSPECV_SAVEW))
-   (set (reg:P 31) (reg:P 15))]
+(define_insn "window_save"
+  [(unspec_volatile
+	[(match_operand 0 "arith_operand" "rI")]
+	UNSPECV_SAVEW)]
   "!TARGET_FLAT"
   "save\t%%sp, %0, %%sp"
   [(set_attr "type" "savew")])
-
-;; Likewise for the "create flat frame" insns.  We need to use special insns
-;; because %fp cannot be clobbered until after the frame is established (so
-;; that it contains the live register window save area) and %i7 changed with
-;; a simple move as it is a fixed register and the move would be eliminated.
-
-(define_insn "create_flat_frame_1<P:mode>"
-  [(set (reg:P 30) (reg:P 14))
-   (set (reg:P 14) (plus:P (reg:P 14)
-			   (match_operand:P 0 "arith_operand" "rI")))
-   (set (reg:P 31) (reg:P 15))]
-  "TARGET_FLAT"
-  "add\t%%sp, %0, %%sp\n\tsub\t%%sp, %0, %%fp\n\tmov\t%%o7, %%i7"
-  [(set_attr "type" "multi")
-   (set_attr "length" "3")])
-
-(define_insn "create_flat_frame_2<P:mode>"
-  [(set (reg:P 30) (reg:P 14))
-   (set (reg:P 14) (plus:P (reg:P 14)
-		           (match_operand:P 0 "arith_operand" "rI")))]
-  "TARGET_FLAT"
-  "add\t%%sp, %0, %%sp\n\tsub\t%%sp, %0, %%fp"
-  [(set_attr "type" "multi")
-   (set_attr "length" "2")])
-
-(define_insn "create_flat_frame_3<P:mode>"
-  [(set (reg:P 14) (plus:P (reg:P 14)
-		           (match_operand:P 0 "arith_operand" "rI")))
-   (set (reg:P 31) (reg:P 15))]
-  "TARGET_FLAT"
-  "add\t%%sp, %0, %%sp\n\tmov\t%%o7, %%i7"
-  [(set_attr "type" "multi")
-   (set_attr "length" "2")])
 
 (define_expand "epilogue"
   [(return)]

@@ -34,7 +34,7 @@
    operations.
    The micro operations of one instruction are ordered so that
    pre-modifying stack adjustment < use < use with no var < call insn <
-     < set < clobber < post-modifying stack adjustment
+     < clobber < set < post-modifying stack adjustment
 
    Then, a forward dataflow analysis is performed to find out how locations
    of variables change through code and to propagate the variable locations
@@ -365,7 +365,7 @@ typedef const struct value_chain_def *const_value_chain;
 #define VTI(BB) ((variable_tracking_info) (BB)->aux)
 
 /* Macro to access MEM_OFFSET as an HOST_WIDE_INT.  Evaluates MEM twice.  */
-#define INT_MEM_OFFSET(mem) (MEM_OFFSET (mem) ? INTVAL (MEM_OFFSET (mem)) : 0)
+#define INT_MEM_OFFSET(mem) (MEM_OFFSET_KNOWN_P (mem) ? MEM_OFFSET (mem) : 0)
 
 /* Alloc pool for struct attrs_def.  */
 static alloc_pool attrs_pool;
@@ -399,6 +399,17 @@ static shared_hash empty_shared_hash;
 
 /* Scratch register bitmap used by cselib_expand_value_rtx.  */
 static bitmap scratch_regs = NULL;
+
+typedef struct GTY(()) parm_reg {
+  rtx outgoing;
+  rtx incoming;
+} parm_reg_t;
+
+DEF_VEC_O(parm_reg_t);
+DEF_VEC_ALLOC_O(parm_reg_t, gc);
+
+/* Vector of windowed parameter registers, if any.  */
+static VEC(parm_reg_t, gc) *windowed_parm_regs = NULL;
 
 /* Variable used to tell whether cselib_process_insn called our hook.  */
 static bool cselib_hook_called;
@@ -970,6 +981,33 @@ adjust_insn (basic_block bb, rtx insn)
 {
   struct adjust_mem_data amd;
   rtx set;
+
+#ifdef HAVE_window_save
+  /* If the target machine has an explicit window save instruction, the
+     transformation OUTGOING_REGNO -> INCOMING_REGNO is done there.  */
+  if (RTX_FRAME_RELATED_P (insn)
+      && find_reg_note (insn, REG_CFA_WINDOW_SAVE, NULL_RTX))
+    {
+      unsigned int i, nregs = VEC_length(parm_reg_t, windowed_parm_regs);
+      rtx rtl = gen_rtx_PARALLEL (VOIDmode, rtvec_alloc (nregs * 2));
+      parm_reg_t *p;
+
+      FOR_EACH_VEC_ELT (parm_reg_t, windowed_parm_regs, i, p)
+	{
+	  XVECEXP (rtl, 0, i * 2)
+	    = gen_rtx_SET (VOIDmode, p->incoming, p->outgoing);
+	  /* Do not clobber the attached DECL, but only the REG.  */
+	  XVECEXP (rtl, 0, i * 2 + 1)
+	    = gen_rtx_CLOBBER (GET_MODE (p->outgoing),
+			       gen_raw_REG (GET_MODE (p->outgoing),
+					    REGNO (p->outgoing)));
+	}
+
+      validate_change (NULL_RTX, &PATTERN (insn), rtl, true);
+      return;
+    }
+#endif
+
   amd.mem_mode = VOIDmode;
   amd.stack_adjust = -VTI (bb)->out.stack_adjust;
   amd.side_effects = NULL_RTX;
@@ -4636,8 +4674,8 @@ track_expr_p (tree expr, bool need_rtl)
       if (GET_MODE (decl_rtl) == BLKmode
 	  || AGGREGATE_TYPE_P (TREE_TYPE (realdecl)))
 	return 0;
-      if (MEM_SIZE (decl_rtl)
-	  && INTVAL (MEM_SIZE (decl_rtl)) > MAX_VAR_PARTS)
+      if (MEM_SIZE_KNOWN_P (decl_rtl)
+	  && MEM_SIZE (decl_rtl) > MAX_VAR_PARTS)
 	return 0;
     }
 
@@ -5589,9 +5627,11 @@ prepare_call_arguments (basic_block bb, rtx insn)
   rtx this_arg = NULL_RTX;
   tree type = NULL_TREE, t, fndecl = NULL_TREE;
   tree obj_type_ref = NULL_TREE;
-  CUMULATIVE_ARGS args_so_far;
+  CUMULATIVE_ARGS args_so_far_v;
+  cumulative_args_t args_so_far;
 
-  memset (&args_so_far, 0, sizeof (args_so_far));
+  memset (&args_so_far_v, 0, sizeof (args_so_far_v));
+  args_so_far = pack_cumulative_args (&args_so_far_v);
   if (GET_CODE (call) == PARALLEL)
     call = XVECEXP (call, 0, 0);
   if (GET_CODE (call) == SET)
@@ -5639,11 +5679,11 @@ prepare_call_arguments (basic_block bb, rtx insn)
 		  tree struct_addr = build_pointer_type (TREE_TYPE (type));
 		  enum machine_mode mode = TYPE_MODE (struct_addr);
 		  rtx reg;
-		  INIT_CUMULATIVE_ARGS (args_so_far, type, NULL_RTX, fndecl,
+		  INIT_CUMULATIVE_ARGS (args_so_far_v, type, NULL_RTX, fndecl,
 					nargs + 1);
-		  reg = targetm.calls.function_arg (&args_so_far, mode,
+		  reg = targetm.calls.function_arg (args_so_far, mode,
 						    struct_addr, true);
-		  targetm.calls.function_arg_advance (&args_so_far, mode,
+		  targetm.calls.function_arg_advance (args_so_far, mode,
 						      struct_addr, true);
 		  if (reg == NULL_RTX)
 		    {
@@ -5658,14 +5698,14 @@ prepare_call_arguments (basic_block bb, rtx insn)
 		}
 	      else
 #endif
-		INIT_CUMULATIVE_ARGS (args_so_far, type, NULL_RTX, fndecl,
+		INIT_CUMULATIVE_ARGS (args_so_far_v, type, NULL_RTX, fndecl,
 				      nargs);
 	      if (obj_type_ref && TYPE_ARG_TYPES (type) != void_list_node)
 		{
 		  enum machine_mode mode;
 		  t = TYPE_ARG_TYPES (type);
 		  mode = TYPE_MODE (TREE_VALUE (t));
-		  this_arg = targetm.calls.function_arg (&args_so_far, mode,
+		  this_arg = targetm.calls.function_arg (args_so_far, mode,
 							 TREE_VALUE (t), true);
 		  if (this_arg && !REG_P (this_arg))
 		    this_arg = NULL_RTX;
@@ -5737,6 +5777,22 @@ prepare_call_arguments (basic_block bb, rtx insn)
 	    val = cselib_lookup (mem, GET_MODE (mem), 0, VOIDmode);
 	    if (val && cselib_preserved_value_p (val))
 	      item = gen_rtx_CONCAT (GET_MODE (x), copy_rtx (x), val->val_rtx);
+	    else if (GET_MODE_CLASS (GET_MODE (mem)) != MODE_INT)
+	      {
+		/* For non-integer stack argument see also if they weren't
+		   initialized by integers.  */
+		enum machine_mode imode = int_mode_for_mode (GET_MODE (mem));
+		if (imode != GET_MODE (mem) && imode != BLKmode)
+		  {
+		    val = cselib_lookup (adjust_address_nv (mem, imode, 0),
+					 imode, 0, VOIDmode);
+		    if (val && cselib_preserved_value_p (val))
+		      item = gen_rtx_CONCAT (GET_MODE (x), copy_rtx (x),
+					     lowpart_subreg (GET_MODE (x),
+							     val->val_rtx,
+							     imode));
+		  }
+	      }
 	  }
 	if (item)
 	  call_arguments = gen_rtx_EXPR_LIST (VOIDmode, item, call_arguments);
@@ -5745,12 +5801,12 @@ prepare_call_arguments (basic_block bb, rtx insn)
 	    tree argtype = TREE_VALUE (t);
 	    enum machine_mode mode = TYPE_MODE (argtype);
 	    rtx reg;
-	    if (pass_by_reference (&args_so_far, mode, argtype, true))
+	    if (pass_by_reference (&args_so_far_v, mode, argtype, true))
 	      {
 		argtype = build_pointer_type (argtype);
 		mode = TYPE_MODE (argtype);
 	      }
-	    reg = targetm.calls.function_arg (&args_so_far, mode,
+	    reg = targetm.calls.function_arg (args_so_far, mode,
 					      argtype, true);
 	    if (TREE_CODE (argtype) == REFERENCE_TYPE
 		&& INTEGRAL_TYPE_P (TREE_TYPE (argtype))
@@ -5804,11 +5860,34 @@ prepare_call_arguments (basic_block bb, rtx insn)
 			}
 		  }
 	      }
-	    targetm.calls.function_arg_advance (&args_so_far, mode,
+	    targetm.calls.function_arg_advance (args_so_far, mode,
 						argtype, true);
 	    t = TREE_CHAIN (t);
 	  }
       }
+
+  /* Add debug arguments.  */
+  if (fndecl
+      && TREE_CODE (fndecl) == FUNCTION_DECL
+      && DECL_HAS_DEBUG_ARGS_P (fndecl))
+    {
+      VEC(tree, gc) **debug_args = decl_debug_args_lookup (fndecl);
+      if (debug_args)
+	{
+	  unsigned int ix;
+	  tree param;
+	  for (ix = 0; VEC_iterate (tree, *debug_args, ix, param); ix += 2)
+	    {
+	      rtx item;
+	      tree dtemp = VEC_index (tree, *debug_args, ix + 1);
+	      enum machine_mode mode = DECL_MODE (dtemp);
+	      item = gen_rtx_DEBUG_PARAMETER_REF (mode, param);
+	      item = gen_rtx_CONCAT (mode, item, DECL_RTL (dtemp));
+	      call_arguments = gen_rtx_EXPR_LIST (VOIDmode, item,
+						  call_arguments);
+	    }
+	}
+    }
 
   /* Reverse call_arguments chain.  */
   prev = NULL_RTX;
@@ -7977,6 +8056,23 @@ emit_notes_for_differences (rtx insn, dataflow_set *old_set,
   emit_notes_for_changes (insn, EMIT_NOTE_BEFORE_INSN, new_set->vars);
 }
 
+/* Return the next insn after INSN that is not a NOTE_INSN_VAR_LOCATION.  */
+
+static rtx
+next_non_note_insn_var_location (rtx insn)
+{
+  while (insn)
+    {
+      insn = NEXT_INSN (insn);
+      if (insn == 0
+	  || !NOTE_P (insn)
+	  || NOTE_KIND (insn) != NOTE_INSN_VAR_LOCATION)
+	break;
+    }
+
+  return insn;
+}
+
 /* Emit the notes for changes of location parts in the basic block BB.  */
 
 static void
@@ -7991,6 +8087,7 @@ emit_notes_in_bb (basic_block bb, dataflow_set *set)
   FOR_EACH_VEC_ELT (micro_operation, VTI (bb)->mos, i, mo)
     {
       rtx insn = mo->insn;
+      rtx next_insn = next_non_note_insn_var_location (insn);
 
       switch (mo->type)
 	{
@@ -8197,7 +8294,7 @@ emit_notes_in_bb (basic_block bb, dataflow_set *set)
 		val_store (set, XEXP (reverse, 0), XEXP (reverse, 1),
 			   insn, false);
 
-	      emit_notes_for_changes (NEXT_INSN (insn), EMIT_NOTE_BEFORE_INSN,
+	      emit_notes_for_changes (next_insn, EMIT_NOTE_BEFORE_INSN,
 				      set->vars);
 	    }
 	    break;
@@ -8220,7 +8317,7 @@ emit_notes_in_bb (basic_block bb, dataflow_set *set)
 		var_mem_delete_and_set (set, loc, true, VAR_INIT_STATUS_INITIALIZED,
 					set_src);
 
-	      emit_notes_for_changes (NEXT_INSN (insn), EMIT_NOTE_BEFORE_INSN,
+	      emit_notes_for_changes (next_insn, EMIT_NOTE_BEFORE_INSN,
 				      set->vars);
 	    }
 	    break;
@@ -8245,7 +8342,7 @@ emit_notes_in_bb (basic_block bb, dataflow_set *set)
 	      else
 		var_mem_delete_and_set (set, loc, false, src_status, set_src);
 
-	      emit_notes_for_changes (NEXT_INSN (insn), EMIT_NOTE_BEFORE_INSN,
+	      emit_notes_for_changes (next_insn, EMIT_NOTE_BEFORE_INSN,
 				      set->vars);
 	    }
 	    break;
@@ -8272,7 +8369,7 @@ emit_notes_in_bb (basic_block bb, dataflow_set *set)
 	      else
 		var_mem_delete (set, loc, true);
 
-	      emit_notes_for_changes (NEXT_INSN (insn), EMIT_NOTE_BEFORE_INSN,
+	      emit_notes_for_changes (next_insn, EMIT_NOTE_BEFORE_INSN,
 				      set->vars);
 	    }
 	    break;
@@ -8457,6 +8554,39 @@ vt_add_function_parameter (tree parm)
 	= replace_equiv_address_nv (incoming,
 				    plus_constant (arg_pointer_rtx, off));
     }
+
+#ifdef HAVE_window_save
+  /* DECL_INCOMING_RTL uses the INCOMING_REGNO of parameter registers.
+     If the target machine has an explicit window save instruction, the
+     actual entry value is the corresponding OUTGOING_REGNO instead.  */
+  if (REG_P (incoming)
+      && HARD_REGISTER_P (incoming)
+      && OUTGOING_REGNO (REGNO (incoming)) != REGNO (incoming))
+    {
+      parm_reg_t *p
+	= VEC_safe_push (parm_reg_t, gc, windowed_parm_regs, NULL);
+      p->incoming = incoming;
+      incoming
+	= gen_rtx_REG_offset (incoming, GET_MODE (incoming),
+			      OUTGOING_REGNO (REGNO (incoming)), 0);
+      p->outgoing = incoming;
+    }
+  else if (MEM_P (incoming)
+	   && REG_P (XEXP (incoming, 0))
+	   && HARD_REGISTER_P (XEXP (incoming, 0)))
+    {
+      rtx reg = XEXP (incoming, 0);
+      if (OUTGOING_REGNO (REGNO (reg)) != REGNO (reg))
+	{
+	  parm_reg_t *p
+	    = VEC_safe_push (parm_reg_t, gc, windowed_parm_regs, NULL);
+	  p->incoming = reg;
+	  reg = gen_raw_REG (GET_MODE (reg), OUTGOING_REGNO (REGNO (reg)));
+	  p->outgoing = reg;
+	  incoming = replace_equiv_address_nv (incoming, reg);
+	}
+    }
+#endif
 
   if (!vt_get_decl_and_offset (incoming, &decl, &offset))
     {
@@ -9023,6 +9153,8 @@ vt_finalize (void)
       scratch_regs = NULL;
     }
 
+  VEC_free (parm_reg_t, gc, windowed_parm_regs);
+
   if (vui_vec)
     XDELETEVEC (vui_vec);
   vui_vec = NULL;
@@ -9131,6 +9263,6 @@ struct rtl_opt_pass pass_variable_tracking =
   0,                                    /* properties_provided */
   0,                                    /* properties_destroyed */
   0,                                    /* todo_flags_start */
-  TODO_dump_func | TODO_verify_rtl_sharing/* todo_flags_finish */
+  TODO_verify_rtl_sharing               /* todo_flags_finish */
  }
 };

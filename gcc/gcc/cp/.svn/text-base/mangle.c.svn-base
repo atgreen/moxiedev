@@ -747,6 +747,11 @@ write_encoding (const tree decl)
 static tree
 decl_mangling_context (tree decl)
 {
+  tree tcontext = targetm.cxx.decl_mangling_context (decl);
+
+  if (tcontext != NULL_TREE)
+    return tcontext;
+
   if (TREE_CODE (decl) == TYPE_DECL
       && LAMBDA_TYPE_P (TREE_TYPE (decl)))
     {
@@ -857,7 +862,7 @@ write_name (tree decl, const int ignore_local_scope)
 static void
 write_unscoped_name (const tree decl)
 {
-  tree context = CP_DECL_CONTEXT (decl);
+  tree context = decl_mangling_context (decl);
 
   MANGLE_TRACE_TREE ("unscoped-name", decl);
 
@@ -952,6 +957,7 @@ write_nested_name (const tree decl)
 /* <prefix> ::= <prefix> <unqualified-name>
 	    ::= <template-param>
 	    ::= <template-prefix> <template-args>
+	    ::= <decltype>
 	    ::= # empty
 	    ::= <substitution>  */
 
@@ -967,6 +973,12 @@ write_prefix (const tree node)
     return;
 
   MANGLE_TRACE_TREE ("prefix", node);
+
+  if (TREE_CODE (node) == DECLTYPE_TYPE)
+    {
+      write_type (node);
+      return;
+    }
 
   if (find_substitution (node))
     return;
@@ -1941,7 +1953,7 @@ write_type (tree type)
             case DECLTYPE_TYPE:
 	      /* These shouldn't make it into mangling.  */
 	      gcc_assert (!DECLTYPE_FOR_LAMBDA_CAPTURE (type)
-			  && !DECLTYPE_FOR_LAMBDA_RETURN (type));
+			  && !DECLTYPE_FOR_LAMBDA_PROXY (type));
 
 	      /* In ABI <5, we stripped decltype of a plain decl.  */
 	      if (!abi_version_at_least (5)
@@ -2495,6 +2507,11 @@ write_expression (tree expr)
   else if (TREE_CODE_CLASS (code) == tcc_constant
 	   || (abi_version_at_least (2) && code == CONST_DECL))
     write_template_arg_literal (expr);
+  else if (code == PARM_DECL && DECL_ARTIFICIAL (expr))
+    {
+      gcc_assert (!strcmp ("this", IDENTIFIER_POINTER (DECL_NAME (expr))));
+      write_string ("fpT");
+    }
   else if (code == PARM_DECL)
     {
       /* A function parameter used in a late-specified return type.  */
@@ -3101,11 +3118,11 @@ mangle_decl_string (const tree decl)
   if (DECL_LANG_SPECIFIC (decl) && DECL_USE_TEMPLATE (decl))
     {
       struct tinst_level *tl = current_instantiation ();
-      if (!tl || tl->decl != decl)
+      if ((!tl || tl->decl != decl)
+	  && push_tinst_level (decl))
 	{
 	  template_p = true;
 	  saved_fn = current_function_decl;
-	  push_tinst_level (decl);
 	  current_function_decl = NULL_TREE;
 	}
     }

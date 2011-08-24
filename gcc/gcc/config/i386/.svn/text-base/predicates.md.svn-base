@@ -371,6 +371,7 @@
 {
   if (!flag_pic)
     return false;
+
   /* Rule out relocations that translate into 64bit constants.  */
   if (TARGET_64BIT && GET_CODE (op) == CONST)
     {
@@ -382,18 +383,14 @@
 	      || XINT (op, 1) == UNSPEC_GOT))
 	return false;
     }
+
   return symbolic_operand (op, mode);
 })
 
-
 ;; Return true if OP is nonmemory operand acceptable by movabs patterns.
 (define_predicate "x86_64_movabs_operand"
-  (if_then_else (not (and (match_test "TARGET_64BIT")
-			  (match_test "flag_pic")))
-    (match_operand 0 "nonmemory_operand")
-    (ior (match_operand 0 "register_operand")
-	 (and (match_operand 0 "const_double_operand")
-	      (match_test "GET_MODE_SIZE (mode) <= 8")))))
+  (and (match_operand 0 "nonmemory_operand")
+       (not (match_operand 0 "pic_32bit_operand"))))
 
 ;; Return true if OP is either a symbol reference or a sum of a symbol
 ;; reference and a constant.
@@ -493,11 +490,6 @@
   (and (match_code "symbol_ref")
        (match_test "op == ix86_tls_module_base ()")))
 
-(define_predicate "tp_or_register_operand"
-  (ior (match_operand 0 "register_operand")
-       (and (match_code "unspec")
-	    (match_test "XINT (op, 1) == UNSPEC_TP"))))
-
 ;; Test for a pc-relative call operand
 (define_predicate "constant_call_address_operand"
   (match_code "symbol_ref")
@@ -563,11 +555,18 @@
   (ior (match_operand 0 "register_no_elim_operand")
        (match_operand 0 "immediate_operand")))
 
+;; Test for a valid operand for indirect branch.
+(define_predicate "indirect_branch_operand"
+  (if_then_else (match_test "TARGET_X32")
+    (match_operand 0 "register_operand")
+    (match_operand 0 "nonimmediate_operand")))
+
 ;; Test for a valid operand for a call instruction.
 (define_predicate "call_insn_operand"
   (ior (match_operand 0 "constant_call_address_operand")
        (match_operand 0 "call_register_no_elim_operand")
-       (match_operand 0 "memory_operand")))
+       (and (match_test "!TARGET_X32")
+	    (match_operand 0 "memory_operand"))))
 
 ;; Similarly, but for tail calls, in which we cannot allow memory references.
 (define_predicate "sibcall_insn_operand"
@@ -598,12 +597,34 @@
   (and (match_code "const_int")
        (match_test "INTVAL (op) == 128")))
 
+;; Match exactly 0x0FFFFFFFF in anddi as a zero-extension operation
+(define_predicate "const_32bit_mask"
+  (and (match_code "const_int")
+       (match_test "trunc_int_for_mode (INTVAL (op), DImode)
+		    == (HOST_WIDE_INT) 0xffffffff")))
+
 ;; Match 2, 4, or 8.  Used for leal multiplicands.
 (define_predicate "const248_operand"
   (match_code "const_int")
 {
   HOST_WIDE_INT i = INTVAL (op);
   return i == 2 || i == 4 || i == 8;
+})
+
+;; Match 1, 2, 4, or 8
+(define_predicate "const1248_operand"
+  (match_code "const_int")
+{
+  HOST_WIDE_INT i = INTVAL (op);
+  return i == 1 || i == 2 || i == 4 || i == 8;
+})
+
+;; Match 3, 5, or 9.  Used for leal multiplicands.
+(define_predicate "const359_operand"
+  (match_code "const_int")
+{
+  HOST_WIDE_INT i = INTVAL (op);
+  return i == 3 || i == 5 || i == 9;
 })
 
 ;; Match 0 or 1.
@@ -786,13 +807,18 @@
   (ior (match_operand 0 "register_operand")
        (match_operand 0 "const0_operand")))
 
-;; Return true if op if a valid address, and does not contain
+;; Return true if op if a valid address for LEA, and does not contain
 ;; a segment override.
-(define_special_predicate "no_seg_address_operand"
+(define_predicate "lea_address_operand"
   (match_operand 0 "address_operand")
 {
   struct ix86_address parts;
   int ok;
+
+  /*  LEA handles zero-extend by itself.  */
+  if (GET_CODE (op) == ZERO_EXTEND
+      || GET_CODE (op) == AND)
+    return false;
 
   ok = ix86_decompose_address (op, &parts);
   gcc_assert (ok);
@@ -832,6 +858,11 @@
   /* Decode the address.  */
   ok = ix86_decompose_address (op, &parts);
   gcc_assert (ok);
+
+  if (parts.base && GET_CODE (parts.base) == SUBREG)
+    parts.base = SUBREG_REG (parts.base);
+  if (parts.index && GET_CODE (parts.index) == SUBREG)
+    parts.index = SUBREG_REG (parts.index);
 
   /* Look for some component that isn't known to be aligned.  */
   if (parts.index)
@@ -896,6 +927,12 @@
 
   ok = ix86_decompose_address (XEXP (op, 0), &parts);
   gcc_assert (ok);
+
+  if (parts.base && GET_CODE (parts.base) == SUBREG)
+    parts.base = SUBREG_REG (parts.base);
+  if (parts.index && GET_CODE (parts.index) == SUBREG)
+    parts.index = SUBREG_REG (parts.index);
+
   if (parts.base == NULL_RTX
       || parts.base == arg_pointer_rtx
       || parts.base == frame_pointer_rtx

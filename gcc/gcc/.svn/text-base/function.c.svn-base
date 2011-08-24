@@ -57,6 +57,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "integrate.h"
 #include "langhooks.h"
 #include "target.h"
+#include "common/common-target.h"
 #include "cfglayout.h"
 #include "gimple.h"
 #include "tree-pass.h"
@@ -1955,7 +1956,7 @@ struct rtl_opt_pass pass_instantiate_virtual_regs =
   0,                                    /* properties_provided */
   0,                                    /* properties_destroyed */
   0,                                    /* todo_flags_start */
-  TODO_dump_func                        /* todo_flags_finish */
+  0                                     /* todo_flags_finish */
  }
 };
 
@@ -2127,7 +2128,8 @@ pass_by_reference (CUMULATIVE_ARGS *ca, enum machine_mode mode,
 	}
     }
 
-  return targetm.calls.pass_by_reference (ca, mode, type, named_arg);
+  return targetm.calls.pass_by_reference (pack_cumulative_args (ca), mode,
+					  type, named_arg);
 }
 
 /* Return true if TYPE, which is passed by reference, should be callee
@@ -2139,7 +2141,8 @@ reference_callee_copied (CUMULATIVE_ARGS *ca, enum machine_mode mode,
 {
   if (type && TREE_ADDRESSABLE (type))
     return false;
-  return targetm.calls.callee_copies (ca, mode, type, named_arg);
+  return targetm.calls.callee_copies (pack_cumulative_args (ca), mode, type,
+				      named_arg);
 }
 
 /* Structures to communicate between the subroutines of assign_parms.
@@ -2148,7 +2151,10 @@ reference_callee_copied (CUMULATIVE_ARGS *ca, enum machine_mode mode,
 
 struct assign_parm_data_all
 {
-  CUMULATIVE_ARGS args_so_far;
+  /* When INIT_CUMULATIVE_ARGS gets revamped, allocating CUMULATIVE_ARGS
+     should become a job of the target or otherwise encapsulated.  */
+  CUMULATIVE_ARGS args_so_far_v;
+  cumulative_args_t args_so_far;
   struct args_size stack_args_size;
   tree function_result_decl;
   tree orig_fnargs;
@@ -2188,11 +2194,12 @@ assign_parms_initialize_all (struct assign_parm_data_all *all)
   fntype = TREE_TYPE (current_function_decl);
 
 #ifdef INIT_CUMULATIVE_INCOMING_ARGS
-  INIT_CUMULATIVE_INCOMING_ARGS (all->args_so_far, fntype, NULL_RTX);
+  INIT_CUMULATIVE_INCOMING_ARGS (all->args_so_far_v, fntype, NULL_RTX);
 #else
-  INIT_CUMULATIVE_ARGS (all->args_so_far, fntype, NULL_RTX,
+  INIT_CUMULATIVE_ARGS (all->args_so_far_v, fntype, NULL_RTX,
 			current_function_decl, -1);
 #endif
+  all->args_so_far = pack_cumulative_args (&all->args_so_far_v);
 
 #ifdef REG_PARM_STACK_SPACE
   all->reg_parm_stack_space = REG_PARM_STACK_SPACE (current_function_decl);
@@ -2313,7 +2320,7 @@ assign_parm_find_data_types (struct assign_parm_data_all *all, tree parm,
     data->named_arg = 1;  /* No variadic parms.  */
   else if (DECL_CHAIN (parm))
     data->named_arg = 1;  /* Not the last non-variadic parm. */
-  else if (targetm.calls.strict_argument_naming (&all->args_so_far))
+  else if (targetm.calls.strict_argument_naming (all->args_so_far))
     data->named_arg = 1;  /* Only variadic ones are unnamed.  */
   else
     data->named_arg = 0;  /* Treat as variadic.  */
@@ -2349,7 +2356,7 @@ assign_parm_find_data_types (struct assign_parm_data_all *all, tree parm,
     passed_type = TREE_TYPE (first_field (passed_type));
 
   /* See if this arg was passed by invisible reference.  */
-  if (pass_by_reference (&all->args_so_far, passed_mode,
+  if (pass_by_reference (&all->args_so_far_v, passed_mode,
 			 passed_type, data->named_arg))
     {
       passed_type = nominal_type = build_pointer_type (passed_type);
@@ -2378,7 +2385,7 @@ assign_parms_setup_varargs (struct assign_parm_data_all *all,
 {
   int varargs_pretend_bytes = 0;
 
-  targetm.calls.setup_incoming_varargs (&all->args_so_far,
+  targetm.calls.setup_incoming_varargs (all->args_so_far,
 					data->promoted_mode,
 					data->passed_type,
 					&varargs_pretend_bytes, no_rtl);
@@ -2407,7 +2414,7 @@ assign_parm_find_entry_rtl (struct assign_parm_data_all *all,
       return;
     }
 
-  entry_parm = targetm.calls.function_incoming_arg (&all->args_so_far,
+  entry_parm = targetm.calls.function_incoming_arg (all->args_so_far,
 						    data->promoted_mode,
 						    data->passed_type,
 						    data->named_arg);
@@ -2431,10 +2438,10 @@ assign_parm_find_entry_rtl (struct assign_parm_data_all *all,
 #endif
   if (!in_regs && !data->named_arg)
     {
-      if (targetm.calls.pretend_outgoing_varargs_named (&all->args_so_far))
+      if (targetm.calls.pretend_outgoing_varargs_named (all->args_so_far))
 	{
 	  rtx tem;
-	  tem = targetm.calls.function_incoming_arg (&all->args_so_far,
+	  tem = targetm.calls.function_incoming_arg (all->args_so_far,
 						     data->promoted_mode,
 						     data->passed_type, true);
 	  in_regs = tem != NULL;
@@ -2451,7 +2458,7 @@ assign_parm_find_entry_rtl (struct assign_parm_data_all *all,
     {
       int partial;
 
-      partial = targetm.calls.arg_partial_bytes (&all->args_so_far,
+      partial = targetm.calls.arg_partial_bytes (all->args_so_far,
 						 data->promoted_mode,
 						 data->passed_type,
 						 data->named_arg);
@@ -2569,16 +2576,13 @@ assign_parm_find_stack_rtl (tree parm, struct assign_parm_data_one *data)
       if (data->promoted_mode != BLKmode
 	  && data->promoted_mode != DECL_MODE (parm))
 	{
-	  set_mem_size (stack_parm,
-			GEN_INT (GET_MODE_SIZE (data->promoted_mode)));
-	  if (MEM_EXPR (stack_parm) && MEM_OFFSET (stack_parm))
+	  set_mem_size (stack_parm, GET_MODE_SIZE (data->promoted_mode));
+	  if (MEM_EXPR (stack_parm) && MEM_OFFSET_KNOWN_P (stack_parm))
 	    {
 	      int offset = subreg_lowpart_offset (DECL_MODE (parm),
 						  data->promoted_mode);
 	      if (offset)
-		set_mem_offset (stack_parm,
-				plus_constant (MEM_OFFSET (stack_parm),
-					       -offset));
+		set_mem_offset (stack_parm, MEM_OFFSET (stack_parm) - offset);
 	    }
 	}
     }
@@ -3192,10 +3196,9 @@ assign_parm_setup_stack (struct assign_parm_data_all *all, tree parm,
 	  /* ??? This may need a big-endian conversion on sparc64.  */
 	  data->stack_parm
 	    = adjust_address (data->stack_parm, data->nominal_mode, 0);
-	  if (offset && MEM_OFFSET (data->stack_parm))
+	  if (offset && MEM_OFFSET_KNOWN_P (data->stack_parm))
 	    set_mem_offset (data->stack_parm,
-			    plus_constant (MEM_OFFSET (data->stack_parm),
-					   offset));
+			    MEM_OFFSET (data->stack_parm) + offset);
 	}
     }
 
@@ -3387,7 +3390,7 @@ assign_parms (tree fndecl)
 	set_decl_incoming_rtl (parm, data.entry_parm, false);
 
       /* Update info on where next arg arrives in registers.  */
-      targetm.calls.function_arg_advance (&all.args_so_far, data.promoted_mode,
+      targetm.calls.function_arg_advance (all.args_so_far, data.promoted_mode,
 					  data.passed_type, data.named_arg);
 
       assign_parm_adjust_stack_rtl (&data);
@@ -3497,7 +3500,7 @@ assign_parms (tree fndecl)
   /* For stdarg.h function, save info about
      regs and stack space used by the named args.  */
 
-  crtl->args.info = all.args_so_far;
+  crtl->args.info = all.args_so_far_v;
 
   /* Set the rtx used for the function return value.  Put this in its
      own variable so any optimizers that need this information don't have
@@ -3586,7 +3589,7 @@ gimplify_parameters (void)
 	continue;
 
       /* Update info on where next arg arrives in registers.  */
-      targetm.calls.function_arg_advance (&all.args_so_far, data.promoted_mode,
+      targetm.calls.function_arg_advance (all.args_so_far, data.promoted_mode,
 					  data.passed_type, data.named_arg);
 
       /* ??? Once upon a time variable_size stuffed parameter list
@@ -3605,7 +3608,7 @@ gimplify_parameters (void)
       if (data.passed_pointer)
 	{
           tree type = TREE_TYPE (data.passed_type);
-	  if (reference_callee_copied (&all.args_so_far, TYPE_MODE (type),
+	  if (reference_callee_copied (&all.args_so_far_v, TYPE_MODE (type),
 				       type, data.named_arg))
 	    {
 	      tree local, t;
@@ -3698,7 +3701,7 @@ locate_and_pad_parm (enum machine_mode passed_mode, tree type, int in_regs,
 {
   tree sizetree;
   enum direction where_pad;
-  unsigned int boundary;
+  unsigned int boundary, round_boundary;
   int reg_parm_stack_space = 0;
   int part_size_in_regs;
 
@@ -3730,6 +3733,8 @@ locate_and_pad_parm (enum machine_mode passed_mode, tree type, int in_regs,
     = type ? size_in_bytes (type) : size_int (GET_MODE_SIZE (passed_mode));
   where_pad = FUNCTION_ARG_PADDING (passed_mode, type);
   boundary = targetm.calls.function_arg_boundary (passed_mode, type);
+  round_boundary = targetm.calls.function_arg_round_boundary (passed_mode,
+							      type);
   locate->where_pad = where_pad;
 
   /* Alignment can't exceed MAX_SUPPORTED_STACK_ALIGNMENT.  */
@@ -3776,8 +3781,8 @@ locate_and_pad_parm (enum machine_mode passed_mode, tree type, int in_regs,
     tree s2 = sizetree;
     if (where_pad != none
 	&& (!host_integerp (sizetree, 1)
-	    || (tree_low_cst (sizetree, 1) * BITS_PER_UNIT) % PARM_BOUNDARY))
-      s2 = round_up (s2, PARM_BOUNDARY / BITS_PER_UNIT);
+	    || (tree_low_cst (sizetree, 1) * BITS_PER_UNIT) % round_boundary))
+      s2 = round_up (s2, round_boundary / BITS_PER_UNIT);
     SUB_PARM_SIZE (locate->slot_offset, s2);
   }
 
@@ -3829,8 +3834,8 @@ locate_and_pad_parm (enum machine_mode passed_mode, tree type, int in_regs,
 
   if (where_pad != none
       && (!host_integerp (sizetree, 1)
-	  || (tree_low_cst (sizetree, 1) * BITS_PER_UNIT) % PARM_BOUNDARY))
-    sizetree = round_up (sizetree, PARM_BOUNDARY / BITS_PER_UNIT);
+	  || (tree_low_cst (sizetree, 1) * BITS_PER_UNIT) % round_boundary))
+    sizetree = round_up (sizetree, round_boundary / BITS_PER_UNIT);
 
   ADD_PARM_SIZE (locate->size, sizetree);
 
@@ -4775,11 +4780,12 @@ expand_function_start (tree subr)
       if (!DECL_RTL_SET_P (var))
 	expand_decl (var);
 
-      t_save = build4 (ARRAY_REF, ptr_type_node,
+      t_save = build4 (ARRAY_REF,
+		       TREE_TYPE (TREE_TYPE (cfun->nonlocal_goto_save_area)),
 		       cfun->nonlocal_goto_save_area,
 		       integer_zero_node, NULL_TREE, NULL_TREE);
       r_save = expand_expr (t_save, NULL_RTX, VOIDmode, EXPAND_WRITE);
-      r_save = convert_memory_address (Pmode, r_save);
+      gcc_assert (GET_MODE (r_save) == Pmode);
 
       emit_move_insn (r_save, targetm.builtin_setjmp_frame_value ());
       update_nonlocal_goto_save_area ();
@@ -4968,7 +4974,7 @@ expand_function_end (void)
   /* Output the label for the actual return from the function.  */
   emit_label (return_label);
 
-  if (targetm.except_unwind_info (&global_options) == UI_SJLJ)
+  if (targetm_common.except_unwind_info (&global_options) == UI_SJLJ)
     {
       /* Let except.c know where it should emit the call to unregister
 	 the function context for sjlj exceptions.  */
@@ -5127,7 +5133,7 @@ expand_function_end (void)
      may trap are not moved into the epilogue by scheduling, because
      we don't always emit unwind information for the epilogue.  */
   if (cfun->can_throw_non_call_exceptions
-      && targetm.except_unwind_info (&global_options) != UI_SJLJ)
+      && targetm_common.except_unwind_info (&global_options) != UI_SJLJ)
     emit_insn (gen_blockage ());
 
   /* If stack protection is enabled for this function, check the guard.  */
@@ -5299,7 +5305,8 @@ emit_use_return_register_into_block (basic_block bb)
 static void
 emit_return_into_block (basic_block bb)
 {
-  emit_jump_insn_after (gen_return (), BB_END (bb));
+  rtx jump = emit_jump_insn_after (gen_return (), BB_END (bb));
+  JUMP_LABEL (jump) = ret_rtx;
 }
 #endif /* HAVE_return */
 
@@ -5458,7 +5465,7 @@ thread_prologue_and_epilogue_insns (void)
 		 that with a conditional return instruction.  */
 	      else if (condjump_p (jump))
 		{
-		  if (! redirect_jump (jump, 0, 0))
+		  if (! redirect_jump (jump, ret_rtx, 0))
 		    {
 		      ei_next (&ei2);
 		      continue;
@@ -5541,6 +5548,8 @@ thread_prologue_and_epilogue_insns (void)
 #ifdef HAVE_epilogue
   if (HAVE_epilogue)
     {
+      rtx returnjump;
+
       start_sequence ();
       epilogue_end = emit_note (NOTE_INSN_EPILOGUE_BEG);
       seq = gen_epilogue ();
@@ -5551,11 +5560,25 @@ thread_prologue_and_epilogue_insns (void)
       record_insns (seq, NULL, &epilogue_insn_hash);
       set_insn_locators (seq, epilogue_locator);
 
+      returnjump = get_last_insn ();
       seq = get_insns ();
       end_sequence ();
 
       insert_insn_on_edge (seq, e);
       inserted = true;
+
+      if (JUMP_P (returnjump))
+	{
+	  rtx pat = PATTERN (returnjump);
+	  if (GET_CODE (pat) == PARALLEL)
+	    pat = XVECEXP (pat, 0, 0);
+	  if (ANY_RETURN_P (pat))
+	    JUMP_LABEL (returnjump) = pat;
+	  else
+	    JUMP_LABEL (returnjump) = ret_rtx;
+	}
+      else
+	returnjump = NULL_RTX;
     }
   else
 #endif
@@ -5949,7 +5972,6 @@ struct rtl_opt_pass pass_thread_prologue_and_epilogue =
   0,                                    /* properties_provided */
   0,                                    /* properties_destroyed */
   TODO_verify_flow,                     /* todo_flags_start */
-  TODO_dump_func |
   TODO_df_verify |
   TODO_df_finish | TODO_verify_rtl_sharing |
   TODO_ggc_collect                      /* todo_flags_finish */
@@ -6151,7 +6173,7 @@ struct rtl_opt_pass pass_match_asm_constraints =
   0,                                    /* properties_provided */
   0,                                    /* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func                       /* todo_flags_finish */
+  0                                     /* todo_flags_finish */
  }
 };
 

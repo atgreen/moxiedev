@@ -28,6 +28,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>	/* For memcpy.  */
+#include <stdarg.h>	/* For variadic arguments.  */
 #include <mpi.h>
 
 
@@ -41,6 +42,29 @@ static void error_stop (int error) __attribute__ ((noreturn));
 static int caf_mpi_initialized;
 static int caf_this_image;
 static int caf_num_images;
+static int caf_is_finalized;
+
+caf_static_t *caf_static_list = NULL;
+
+
+/* Keep in sync with single.c.  */
+static void
+caf_runtime_error (const char *message, ...)
+{
+  va_list ap;
+  fprintf (stderr, "Fortran runtime error on image %d: ", caf_this_image);
+  va_start (ap, message);
+  vfprintf (stderr, message, ap);
+  va_end (ap);
+  fprintf (stderr, "\n");
+
+  /* FIXME: Shutdown the Fortran RTL to flush the buffer.  PR 43849.  */
+  /* FIXME: Do some more effort than just MPI_ABORT.  */
+  MPI_Abort (MPI_COMM_WORLD, EXIT_FAILURE);
+
+  /* Should be unreachable, but to make sure also call exit.  */
+  exit (EXIT_FAILURE);
+}
 
 
 /* Initialize coarray program.  This routine assumes that no other
@@ -52,16 +76,23 @@ static int caf_num_images;
 void
 _gfortran_caf_init (int *argc, char ***argv, int *this_image, int *num_images)
 {
-  /* caf_mpi_initialized is only true if the main program is not written in
-     Fortran.  */
-  MPI_Initialized (&caf_mpi_initialized);
-  if (!caf_mpi_initialized)
-    MPI_Init (argc, argv);
+  if (caf_num_images == 0)
+    {
+      /* caf_mpi_initialized is only true if the main program is
+       not written in Fortran.  */
+      MPI_Initialized (&caf_mpi_initialized);
+      if (!caf_mpi_initialized)
+	MPI_Init (argc, argv);
 
-  MPI_Comm_rank (MPI_COMM_WORLD, &caf_this_image);
-  *this_image = ++caf_this_image;
-  MPI_Comm_size (MPI_COMM_WORLD, &caf_num_images);
-  *num_images = caf_num_images;
+      MPI_Comm_size (MPI_COMM_WORLD, &caf_num_images);
+      MPI_Comm_rank (MPI_COMM_WORLD, &caf_this_image);
+      caf_this_image++;
+    }
+
+  if (this_image)
+    *this_image = caf_this_image;
+  if (num_images)
+    *num_images = caf_num_images;
 }
 
 
@@ -70,18 +101,89 @@ _gfortran_caf_init (int *argc, char ***argv, int *this_image, int *num_images)
 void
 _gfortran_caf_finalize (void)
 {
+  while (caf_static_list != NULL)
+    {
+      free(caf_static_list->token[caf_this_image-1]);
+      caf_static_list = caf_static_list->prev;
+    }
+
   if (!caf_mpi_initialized)
     MPI_Finalize ();
+
+  caf_is_finalized = 1;
 }
 
 
 void *
-_gfortran_caf_register (ptrdiff_t size,
-                        caf_register_t type __attribute__ ((unused)),
-                        void **token)
+_gfortran_caf_register (ptrdiff_t size, caf_register_t type, void **token,
+			int *stat, char *errmsg, int errmsg_len)
 {
-  *token = NULL;
-  return malloc (size);
+  void *local;
+  int err;
+
+  if (unlikely (caf_is_finalized))
+    goto error;
+
+  /* Start MPI if not already started.  */
+  if (caf_num_images == 0)
+    _gfortran_caf_init (NULL, NULL, NULL, NULL);
+
+  /* Token contains only a list of pointers.  */
+  local = malloc (size);
+  token = malloc (sizeof (void*) * caf_num_images);
+
+  if (unlikely (local == NULL || token == NULL))
+    goto error;
+
+  /* token[img-1] is the address of the token in image "img".  */
+  err = MPI_Allgather (&local, sizeof (void*), MPI_BYTE, token,
+		       sizeof (void*), MPI_BYTE, MPI_COMM_WORLD);
+  if (unlikely (err))
+    {
+      free (local);
+      free (token);
+      goto error;
+    }
+
+  if (type == CAF_REGTYPE_COARRAY_STATIC)
+    {
+      caf_static_t *tmp = malloc (sizeof (caf_static_t));
+      tmp->prev  = caf_static_list;
+      tmp->token = token;
+      caf_static_list = tmp;
+    }
+
+  if (stat)
+    *stat = 0;
+
+  return local;
+
+error:
+  {
+    char *msg;
+
+    if (caf_is_finalized)
+      msg = "Failed to allocate coarray - there are stopped images";
+    else
+      msg = "Failed to allocate coarray";
+
+    if (stat)
+      {
+	*stat = caf_is_finalized ? STAT_STOPPED_IMAGE : 1;
+	if (errmsg_len > 0)
+	  {
+	    int len = ((int) strlen (msg) > errmsg_len) ? errmsg_len
+							: (int) strlen (msg);
+	    memcpy (errmsg, msg, len);
+	    if (errmsg_len > len)
+	      memset (&errmsg[len], ' ', errmsg_len-len);
+	  }
+      }
+    else
+      caf_runtime_error (msg);
+  }
+
+  return NULL;
 }
 
 
@@ -95,28 +197,34 @@ _gfortran_caf_deregister (void **token __attribute__ ((unused)))
 void
 _gfortran_caf_sync_all (int *stat, char *errmsg, int errmsg_len)
 {
-  /* TODO: Is ierr correct? When should STAT_STOPPED_IMAGE be used?  */
-  int ierr = MPI_Barrier (MPI_COMM_WORLD);
+  int ierr;
 
+  if (unlikely (caf_is_finalized))
+    ierr = STAT_STOPPED_IMAGE;
+  else
+    ierr = MPI_Barrier (MPI_COMM_WORLD);
+ 
   if (stat)
     *stat = ierr;
 
   if (ierr)
     {
-      const char msg[] = "SYNC ALL failed";
+      char *msg;
+      if (caf_is_finalized)
+	msg = "SYNC ALL failed - there are stopped images";
+      else
+	msg = "SYNC ALL failed";
+
       if (errmsg_len > 0)
 	{
-	  int len = ((int) sizeof (msg) > errmsg_len) ? errmsg_len
-						      : (int) sizeof (msg);
+	  int len = ((int) strlen (msg) > errmsg_len) ? errmsg_len
+						      : (int) strlen (msg);
 	  memcpy (errmsg, msg, len);
 	  if (errmsg_len > len)
 	    memset (&errmsg[len], ' ', errmsg_len-len);
 	}
       else
-	{
-	  fprintf (stderr, "SYNC ALL failed\n");
-	  error_stop (ierr);
-	}
+	caf_runtime_error (msg);
     }
 }
 
@@ -159,27 +267,32 @@ _gfortran_caf_sync_images (int count, int images[], int *stat, char *errmsg,
     }
 
   /* Handle SYNC IMAGES(*).  */
-  /* TODO: Is ierr correct? When should STAT_STOPPED_IMAGE be used?  */
-  ierr = MPI_Barrier (MPI_COMM_WORLD);
+  if (unlikely(caf_is_finalized))
+    ierr = STAT_STOPPED_IMAGE;
+  else
+    ierr = MPI_Barrier (MPI_COMM_WORLD);
+
   if (stat)
     *stat = ierr;
 
   if (ierr)
     {
-      const char msg[] = "SYNC IMAGES failed";
+      char *msg;
+      if (caf_is_finalized)
+	msg = "SYNC IMAGES failed - there are stopped images";
+      else
+	msg = "SYNC IMAGES failed";
+
       if (errmsg_len > 0)
 	{
-	  int len = ((int) sizeof (msg) > errmsg_len) ? errmsg_len
-						      : (int) sizeof (msg);
+	  int len = ((int) strlen (msg) > errmsg_len) ? errmsg_len
+						      : (int) strlen (msg);
 	  memcpy (errmsg, msg, len);
 	  if (errmsg_len > len)
 	    memset (&errmsg[len], ' ', errmsg_len-len);
 	}
       else
-	{
-	  fprintf (stderr, "SYNC IMAGES failed\n");
-	  error_stop (ierr);
-	}
+	caf_runtime_error (msg);
     }
 }
 

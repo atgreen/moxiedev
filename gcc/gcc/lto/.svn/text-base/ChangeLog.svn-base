@@ -1,3 +1,23 @@
+2011-08-11  Martin Jambor  <mjambor@suse.cz>
+
+	* lto.c (uniquify_nodes): Use main variant's BINFO too.
+
+2011-08-08   Diego Novillo  <dnovillo@google.com>
+
+	* Make-lang.in (lto/lto.o): Add TREE_STREAMER_H.
+	* lto.c: Include tree-streamer.h.
+
+2011-07-06  Richard Guenther  <rguenther@suse.de>
+
+	* lto-lang.c (lto_init):
+	Merge calls to build_common_tree_nodes and build_common_tree_nodes_2.
+
+2011-06-11  Jan Hubicka  <jh@suse.cz>
+
+	PR lto/48246
+	* lto.c (lto_1_to_1_map): Don't create empty partitions.
+	(lto_balanced_map): Likewise.
+
 2011-06-11  Jan Hubicka  <jh@suse.cz>
 
 	* lto.c (add_cgraph_node_to_partition_1): Break out from ...

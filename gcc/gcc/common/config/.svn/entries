@@ -1,0 +1,170 @@
+10
+
+dir
+178046
+svn://gcc.gnu.org/svn/gcc/trunk/gcc/common/config
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2011-08-23T17:02:15.601523Z
+178001
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+arm
+dir
+
+pdp11
+dir
+
+alpha
+dir
+
+microblaze
+dir
+
+avr
+dir
+
+xstormy16
+dir
+
+frv
+dir
+
+s390
+dir
+
+mn10300
+dir
+
+pa
+dir
+
+c6x
+dir
+
+xtensa
+dir
+
+ia64
+dir
+
+m32c
+dir
+
+spu
+dir
+
+sparc
+dir
+
+mips
+dir
+
+fr30
+dir
+
+lm32
+dir
+
+mep
+dir
+
+m32r
+dir
+
+m68k
+dir
+
+rx
+dir
+
+i386
+dir
+
+rs6000
+dir
+
+default-common.c
+file
+
+
+
+
+2011-08-24T20:11:51.943933Z
+cddfec91014b8500299ab21080930f24
+2011-07-07T13:22:44.444993Z
+175969
+jsm28
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1299
+
+picochip
+dir
+
+vax
+dir
+
+cris
+dir
+
+h8300
+dir
+
+v850
+dir
+
+mcore
+dir
+
+sh
+dir
+
+mmix
+dir
+
+score
+dir
+
+iq2000
+dir
+
+bfin
+dir
+

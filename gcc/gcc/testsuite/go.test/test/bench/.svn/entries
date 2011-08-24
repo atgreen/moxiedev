@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/go.test/test/bench
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,14 +536,14 @@ ian
 
 4
 
-threadring.c
+mandelbrot.c
 file
 
 
 
 
-2011-06-04T17:55:35.787104Z
-84e08d82f356a0dad6b12db0e09b68cc
+2011-06-04T17:55:35.788104Z
+f6c3fddbbb0fd4965115c2b948589b95
 2009-11-10T23:10:04.178483Z
 154084
 ian
@@ -568,7 +568,7 @@ ian
 
 
 
-2987
+2961
 
 regex-dna-parallel.go
 file
@@ -604,14 +604,14 @@ ian
 
 3378
 
-mandelbrot.c
+threadring.c
 file
 
 
 
 
-2011-06-04T17:55:35.788104Z
-f6c3fddbbb0fd4965115c2b948589b95
+2011-06-04T17:55:35.787104Z
+84e08d82f356a0dad6b12db0e09b68cc
 2009-11-10T23:10:04.178483Z
 154084
 ian
@@ -636,7 +636,7 @@ ian
 
 
 
-2961
+2987
 
 fannkuch.txt
 file
@@ -740,40 +740,6 @@ ian
 
 275
 
-regex-dna.go
-file
-
-
-
-
-2011-06-04T17:55:35.788104Z
-78d9a5a1230c052f9fb1e7cd3d524445
-2010-09-11T00:47:55.335584Z
-164210
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3089
-
 fannkuch.c
 file
 
@@ -807,6 +773,40 @@ ian
 
 
 3523
+
+regex-dna.go
+file
+
+
+
+
+2011-06-04T17:55:35.788104Z
+78d9a5a1230c052f9fb1e7cd3d524445
+2010-09-11T00:47:55.335584Z
+164210
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3089
 
 reverse-complement.go
 file
@@ -1012,40 +1012,6 @@ ian
 
 263
 
-meteor-contest.c
-file
-
-
-
-
-2011-06-04T17:55:35.790104Z
-5aebf34bf634a5dd5749f0aa9718666c
-2009-11-10T23:10:04.178483Z
-154084
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-19955
-
 nbody.txt
 file
 
@@ -1079,6 +1045,40 @@ ian
 
 
 26
+
+meteor-contest.c
+file
+
+
+
+
+2011-06-04T17:55:35.790104Z
+5aebf34bf634a5dd5749f0aa9718666c
+2009-11-10T23:10:04.178483Z
+154084
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+19955
 
 reverse-complement.txt
 file

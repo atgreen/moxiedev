@@ -57,7 +57,7 @@ static void xstormy16_asm_output_mi_thunk (FILE *, tree, HOST_WIDE_INT,
 
 static void xstormy16_init_builtins (void);
 static rtx xstormy16_expand_builtin (tree, rtx, rtx, enum machine_mode, int);
-static bool xstormy16_rtx_costs (rtx, int, int, int *, bool);
+static bool xstormy16_rtx_costs (rtx, int, int, int, int *, bool);
 static int xstormy16_address_cost (rtx, bool);
 static bool xstormy16_return_in_memory (const_tree, const_tree);
 
@@ -69,7 +69,8 @@ static GTY(()) section *bss100_section;
 
 static bool
 xstormy16_rtx_costs (rtx x, int code, int outer_code ATTRIBUTE_UNUSED,
-		     int *total, bool speed ATTRIBUTE_UNUSED)
+		     int opno ATTRIBUTE_UNUSED, int *total,
+		     bool speed ATTRIBUTE_UNUSED)
 {
   switch (code)
     {
@@ -1201,9 +1202,11 @@ xstormy16_function_profiler (void)
    the word count.  */
 
 static void
-xstormy16_function_arg_advance (CUMULATIVE_ARGS *cum, enum machine_mode mode,
+xstormy16_function_arg_advance (cumulative_args_t cum_v, enum machine_mode mode,
 				const_tree type, bool named ATTRIBUTE_UNUSED)
 {
+  CUMULATIVE_ARGS *cum = get_cumulative_args (cum_v);
+
   /* If an argument would otherwise be passed partially in registers,
      and partially on the stack, the whole of it is passed on the
      stack.  */
@@ -1215,9 +1218,11 @@ xstormy16_function_arg_advance (CUMULATIVE_ARGS *cum, enum machine_mode mode,
 }
 
 static rtx
-xstormy16_function_arg (CUMULATIVE_ARGS *cum, enum machine_mode mode,
+xstormy16_function_arg (cumulative_args_t cum_v, enum machine_mode mode,
 			const_tree type, bool named ATTRIBUTE_UNUSED)
 {
+  CUMULATIVE_ARGS *cum = get_cumulative_args (cum_v);
+
   if (mode == VOIDmode)
     return const0_rtx;
   if (targetm.calls.must_pass_in_stack (mode, type)
@@ -1288,7 +1293,7 @@ xstormy16_expand_builtin_va_start (tree valist, rtx nextarg ATTRIBUTE_UNUSED)
   t = make_tree (TREE_TYPE (base), virtual_incoming_args_rtx);
   u = build_int_cst (NULL_TREE, - INCOMING_FRAME_SP_OFFSET);
   u = fold_convert (TREE_TYPE (count), u);
-  t = build2 (POINTER_PLUS_EXPR, TREE_TYPE (base), t, u);
+  t = fold_build_pointer_plus (t, u);
   t = build2 (MODIFY_EXPR, TREE_TYPE (base), base, t);
   TREE_SIDE_EFFECTS (t) = 1;
   expand_expr (t, const0_rtx, VOIDmode, EXPAND_NORMAL);
@@ -1346,7 +1351,7 @@ xstormy16_gimplify_va_arg_expr (tree valist, tree type, gimple_seq *pre_p,
 		  NULL_TREE);
       gimplify_and_add (t, pre_p);
 
-      t = build2 (POINTER_PLUS_EXPR, ptr_type_node, base, count_tmp);
+      t = fold_build_pointer_plus (base, count_tmp);
       gimplify_assign (addr, t, pre_p);
 
       t = build1 (GOTO_EXPR, void_type_node, lab_gotaddr);
@@ -1381,7 +1386,7 @@ xstormy16_gimplify_va_arg_expr (tree valist, tree type, gimple_seq *pre_p,
 	      fold_convert (TREE_TYPE (count), size_tree));
   t = fold_convert (TREE_TYPE (t), fold (t));
   t = fold_build1 (NEGATE_EXPR, TREE_TYPE (t), t);
-  t = build2 (POINTER_PLUS_EXPR, TREE_TYPE (base), base, t);
+  t = fold_build_pointer_plus (base, t);
   gimplify_assign (addr, t, pre_p);
 
   t = build1 (LABEL_EXPR, void_type_node, lab_gotaddr);
@@ -2602,13 +2607,6 @@ xstormy16_return_in_memory (const_tree type, const_tree fntype ATTRIBUTE_UNUSED)
   return (size == -1 || size > UNITS_PER_WORD * NUM_ARGUMENT_REGISTERS);
 }
 
-/* Implement TARGET_OPTION_OPTIMIZATION_TABLE.  */
-static const struct default_options xstorym16_option_optimization_table[] =
-  {
-    { OPT_LEVELS_1_PLUS, OPT_fomit_frame_pointer, NULL, 1 },
-    { OPT_LEVELS_NONE, 0, NULL, 0 }
-  };
-
 #undef  TARGET_ASM_ALIGNED_HI_OP
 #define TARGET_ASM_ALIGNED_HI_OP "\t.hword\t"
 #undef  TARGET_ASM_ALIGNED_SI_OP
@@ -2681,9 +2679,6 @@ static const struct default_options xstorym16_option_optimization_table[] =
 
 #undef TARGET_TRAMPOLINE_INIT
 #define TARGET_TRAMPOLINE_INIT xstormy16_trampoline_init
-
-#undef TARGET_OPTION_OPTIMIZATION_TABLE
-#define TARGET_OPTION_OPTIMIZATION_TABLE xstorym16_option_optimization_table
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 

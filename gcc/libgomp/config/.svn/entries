@@ -1,15 +1,15 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libgomp/config
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-02-14T15:08:23.266652Z
-170133
-jakub
+2011-08-08T15:39:35.456178Z
+177568
+ro
 
 
 
@@ -36,6 +36,9 @@ posix
 dir
 
 mingw32
+dir
+
+osf
 dir
 
 bsd

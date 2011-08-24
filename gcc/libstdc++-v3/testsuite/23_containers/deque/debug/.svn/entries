@@ -1,14 +1,14 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/deque/debug
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-09-03T18:10:46.246406Z
-163837
+2011-06-12T15:51:36.627906Z
+174967
 paolo
 
 
@@ -436,4 +436,38 @@ paolo
 
 
 964
+
+shrink_to_fit.cc
+file
+
+
+
+
+2011-08-24T20:08:30.306596Z
+a1f3a4de8efba24c205af5b018e8dd32
+2011-06-12T15:51:36.627906Z
+174967
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1341
 

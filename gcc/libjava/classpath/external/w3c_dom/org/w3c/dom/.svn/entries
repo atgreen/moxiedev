@@ -1,7 +1,7 @@
 10
 
 dir
-174966
+178046
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/external/w3c_dom/org/w3c/dom
 svn://gcc.gnu.org/svn/gcc
 
@@ -505,6 +505,9 @@ gandalf
 
 2387
 
+bootstrap
+dir
+
 TypeInfo.java
 file
 
@@ -539,7 +542,7 @@ gandalf
 
 9726
 
-bootstrap
+ls
 dir
 
 DOMException.java
@@ -575,9 +578,6 @@ gandalf
 
 
 5249
-
-ls
-dir
 
 ranges
 dir
@@ -653,6 +653,9 @@ gandalf
 xpath
 dir
 
+html2
+dir
+
 UserDataHandler.java
 file
 
@@ -686,9 +689,6 @@ gandalf
 
 
 3048
-
-html2
-dir
 
 css
 dir
@@ -730,40 +730,6 @@ gandalf
 views
 dir
 
-ProcessingInstruction.java
-file
-
-
-
-
-2011-06-04T18:38:02.644104Z
-eab2aec24ab093d96b62ca573e600456
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2193
-
 Document.java
 file
 
@@ -797,6 +763,40 @@ gandalf
 
 
 43697
+
+ProcessingInstruction.java
+file
+
+
+
+
+2011-06-04T18:38:02.644104Z
+eab2aec24ab093d96b62ca573e600456
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2193
 
 traversal
 dir

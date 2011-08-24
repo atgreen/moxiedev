@@ -642,29 +642,6 @@ cgraph_add_thunk (struct cgraph_node *decl_node ATTRIBUTE_UNUSED,
    is assigned.  */
 
 struct cgraph_node *
-cgraph_get_node_or_alias (const_tree decl)
-{
-  struct cgraph_node key, *node = NULL, **slot;
-
-  gcc_assert (TREE_CODE (decl) == FUNCTION_DECL);
-
-  if (!cgraph_hash)
-    return NULL;
-
-  key.decl = CONST_CAST2 (tree, const_tree, decl);
-
-  slot = (struct cgraph_node **) htab_find_slot (cgraph_hash, &key,
-						 NO_INSERT);
-
-  if (slot && *slot)
-    node = *slot;
-  return node;
-}
-
-/* Returns the cgraph node assigned to DECL or NULL if no cgraph node
-   is assigned.  */
-
-struct cgraph_node *
 cgraph_get_node (const_tree decl)
 {
   struct cgraph_node key, *node = NULL, **slot;
@@ -1630,6 +1607,31 @@ cgraph_remove_node (struct cgraph_node *node)
   free_nodes = node;
 }
 
+/* Add NEW_ to the same comdat group that OLD is in.  */
+
+void
+cgraph_add_to_same_comdat_group (struct cgraph_node *new_,
+				 struct cgraph_node *old)
+{
+  gcc_assert (DECL_ONE_ONLY (old->decl));
+  gcc_assert (!new_->same_comdat_group);
+  gcc_assert (new_ != old);
+
+  DECL_COMDAT_GROUP (new_->decl) = DECL_COMDAT_GROUP (old->decl);
+  new_->same_comdat_group = old;
+  if (!old->same_comdat_group)
+    old->same_comdat_group = new_;
+  else
+    {
+      struct cgraph_node *n;
+      for (n = old->same_comdat_group;
+	   n->same_comdat_group != old;
+	   n = n->same_comdat_group)
+	;
+      n->same_comdat_group = new_;
+    }
+}
+
 /* Remove the node from cgraph.  */
 
 void
@@ -1959,7 +1961,7 @@ change_decl_assembler_name (tree decl, tree name)
 
       if (assembler_name_hash
 	  && TREE_CODE (decl) == FUNCTION_DECL
-	  && (node = cgraph_get_node_or_alias (decl)) != NULL)
+	  && (node = cgraph_get_node (decl)) != NULL)
 	{
 	  tree old_name = DECL_ASSEMBLER_NAME (decl);
 	  slot = htab_find_slot_with_hash (assembler_name_hash, old_name,
@@ -1977,7 +1979,7 @@ change_decl_assembler_name (tree decl, tree name)
     }
   if (assembler_name_hash
       && TREE_CODE (decl) == FUNCTION_DECL
-      && (node = cgraph_get_node_or_alias (decl)) != NULL)
+      && (node = cgraph_get_node (decl)) != NULL)
     {
       slot = htab_find_slot_with_hash (assembler_name_hash, name,
 				       decl_assembler_name_hash (name),
@@ -2487,7 +2489,7 @@ cgraph_make_decl_local (tree decl)
     DECL_COMMON (decl) = 0;
   else gcc_assert (TREE_CODE (decl) == FUNCTION_DECL);
 
-  if (DECL_COMDAT (decl))
+  if (DECL_ONE_ONLY (decl) || DECL_COMDAT (decl))
     {
       /* It is possible that we are linking against library defining same COMDAT
 	 function.  To avoid conflict we need to rename our local name of the
@@ -2500,7 +2502,7 @@ cgraph_make_decl_local (tree decl)
 	  old_name  = IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (decl));
 	  if (TREE_CODE (decl) == FUNCTION_DECL)
 	    {
-	      struct cgraph_node *node = cgraph_get_node_or_alias (decl);
+	      struct cgraph_node *node = cgraph_get_node (decl);
 	      change_decl_assembler_name (decl,
 					  clone_function_name (decl, "local"));
 	      if (node->local.lto_file_data)
@@ -2567,14 +2569,18 @@ cgraph_for_node_thunks_and_aliases (struct cgraph_node *node,
     if (e->caller->thunk.thunk_p
 	&& (include_overwritable
 	    || cgraph_function_body_availability (e->caller)))
-      cgraph_for_node_thunks_and_aliases (e->caller, callback, data, include_overwritable);
+      if (cgraph_for_node_thunks_and_aliases (e->caller, callback, data,
+					      include_overwritable))
+	return true;
   for (i = 0; ipa_ref_list_refering_iterate (&node->ref_list, i, ref); i++)
     if (ref->use == IPA_REF_ALIAS)
       {
 	struct cgraph_node *alias = ipa_ref_refering_node (ref);
 	if (include_overwritable
 	    || cgraph_function_body_availability (alias) > AVAIL_OVERWRITABLE)
-          cgraph_for_node_thunks_and_aliases (alias, callback, data, include_overwritable);
+	  if (cgraph_for_node_thunks_and_aliases (alias, callback, data,
+						  include_overwritable))
+	    return true;
       }
   return false;
 }
@@ -2600,7 +2606,9 @@ cgraph_for_node_and_aliases (struct cgraph_node *node,
 	struct cgraph_node *alias = ipa_ref_refering_node (ref);
 	if (include_overwritable
 	    || cgraph_function_body_availability (alias) > AVAIL_OVERWRITABLE)
-          cgraph_for_node_and_aliases (alias, callback, data, include_overwritable);
+          if (cgraph_for_node_and_aliases (alias, callback, data,
+					   include_overwritable))
+	    return true;
       }
   return false;
 }
@@ -2900,6 +2908,36 @@ cgraph_can_remove_if_no_direct_calls_and_refs_p (struct cgraph_node *node)
   return true;
 }
 
+/* Worker for cgraph_can_remove_if_no_direct_calls_p.  */
+
+static bool
+nonremovable_p (struct cgraph_node *node, void *data ATTRIBUTE_UNUSED)
+{
+  return !cgraph_can_remove_if_no_direct_calls_and_refs_p (node);
+}
+
+/* Return true when function NODE and its aliases can be removed from callgraph
+   if all direct calls are eliminated.  */
+
+bool
+cgraph_can_remove_if_no_direct_calls_p (struct cgraph_node *node)
+{
+  /* Extern inlines can always go, we will use the external definition.  */
+  if (DECL_EXTERNAL (node->decl))
+    return true;
+  if (node->address_taken)
+    return false;
+  return !cgraph_for_node_and_aliases (node, nonremovable_p, NULL, true);
+}
+
+/* Worker for cgraph_can_remove_if_no_direct_calls_p.  */
+
+static bool
+used_from_object_file_p (struct cgraph_node *node, void *data ATTRIBUTE_UNUSED)
+{
+  return cgraph_used_from_object_file_p (node);
+}
+
 /* Return true when function NODE can be expected to be removed
    from program when direct calls in this compilation unit are removed.
 
@@ -2918,7 +2956,7 @@ bool
 cgraph_will_be_removed_from_program_if_no_direct_calls (struct cgraph_node *node)
 {
   gcc_assert (!node->global.inlined_to);
-  if (cgraph_used_from_object_file_p (node))
+  if (cgraph_for_node_and_aliases (node, used_from_object_file_p, NULL, true))
     return false;
   if (!in_lto_p && !flag_whole_program)
     return cgraph_only_called_directly_p (node);

@@ -645,7 +645,7 @@ struct gimple_opt_pass pass_cse_reciprocals =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_update_ssa | TODO_verify_ssa
+  TODO_update_ssa | TODO_verify_ssa
     | TODO_verify_stmts                /* todo_flags_finish */
  }
 };
@@ -1086,6 +1086,16 @@ build_and_insert_ref (gimple_stmt_iterator *gsi, location_t loc, tree type,
   return result;
 }
 
+/* Build a gimple assignment to cast VAL to TARGET.  Insert the statement
+   prior to GSI's current position, and return the fresh SSA name.  */
+
+static tree
+build_and_insert_cast (gimple_stmt_iterator *gsi, location_t loc,
+		       tree target, tree val)
+{
+  return build_and_insert_binop (gsi, loc, target, CONVERT_EXPR, val, NULL);
+}
+
 /* ARG0 and ARG1 are the two arguments to a pow builtin call in GSI
    with location info LOC.  If possible, create an equivalent and
    less expensive sequence of statements prior to GSI, and return an
@@ -1231,9 +1241,10 @@ gimple_expand_builtin_pow (gimple_stmt_iterator *gsi, location_t loc,
       /* Attempt to fold powi(arg0, abs(n/2)) into multiplies.  If not
          possible or profitable, give up.  Skip the degenerate case when
          n is 1 or -1, where the result is always 1.  */
-      if (abs (n) != 1)
+      if (absu_hwi (n) != 1)
 	{
-	  powi_x_ndiv2 = gimple_expand_builtin_powi (gsi, loc, arg0, abs(n/2));
+	  powi_x_ndiv2 = gimple_expand_builtin_powi (gsi, loc, arg0,
+						     abs_hwi (n / 2));
 	  if (!powi_x_ndiv2)
 	    return NULL_TREE;
 	}
@@ -1242,7 +1253,7 @@ gimple_expand_builtin_pow (gimple_stmt_iterator *gsi, location_t loc,
 	 result of the optimal multiply sequence just calculated.  */
       sqrt_arg0 = build_and_insert_call (gsi, loc, &target, sqrtfn, arg0);
 
-      if (abs (n) == 1)
+      if (absu_hwi (n) == 1)
 	result = sqrt_arg0;
       else
 	result = build_and_insert_binop (gsi, loc, target, MULT_EXPR,
@@ -1284,10 +1295,10 @@ gimple_expand_builtin_pow (gimple_stmt_iterator *gsi, location_t loc,
       /* Attempt to fold powi(arg0, abs(n/3)) into multiplies.  If not
          possible or profitable, give up.  Skip the degenerate case when
          abs(n) < 3, where the result is always 1.  */
-      if (abs (n) >= 3)
+      if (absu_hwi (n) >= 3)
 	{
 	  powi_x_ndiv3 = gimple_expand_builtin_powi (gsi, loc, arg0,
-						     abs (n / 3));
+						     abs_hwi (n / 3));
 	  if (!powi_x_ndiv3)
 	    return NULL_TREE;
 	}
@@ -1297,14 +1308,14 @@ gimple_expand_builtin_pow (gimple_stmt_iterator *gsi, location_t loc,
          either cbrt(x) or cbrt(x) * cbrt(x).  */
       cbrt_x = build_and_insert_call (gsi, loc, &target, cbrtfn, arg0);
 
-      if (abs (n) % 3 == 1)
+      if (absu_hwi (n) % 3 == 1)
 	powi_cbrt_x = cbrt_x;
       else
 	powi_cbrt_x = build_and_insert_binop (gsi, loc, target, MULT_EXPR,
 					      cbrt_x, cbrt_x);
 
       /* Multiply the two subexpressions, unless powi(x,abs(n)/3) = 1.  */
-      if (abs (n) < 3)
+      if (absu_hwi (n) < 3)
 	result = powi_cbrt_x;
       else
 	result = build_and_insert_binop (gsi, loc, target, MULT_EXPR,
@@ -1491,7 +1502,7 @@ struct gimple_opt_pass pass_cse_sincos =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_update_ssa | TODO_verify_ssa
+  TODO_update_ssa | TODO_verify_ssa
     | TODO_verify_stmts                 /* todo_flags_finish */
  }
 };
@@ -1543,6 +1554,9 @@ do_shift_rotate (enum tree_code code,
     default:
       return false;
     }
+  /* Zero unused bits for size.  */
+  if (n->size < (int)sizeof (HOST_WIDEST_INT))
+    n->n &= ((unsigned HOST_WIDEST_INT)1 << (n->size * BITS_PER_UNIT)) - 1;
   return true;
 }
 
@@ -1740,15 +1754,16 @@ find_bswap (gimple stmt)
 
   struct symbolic_number n;
   tree source_expr;
+  int limit;
 
   /* The last parameter determines the depth search limit.  It usually
      correlates directly to the number of bytes to be touched.  We
-     increase that number by one here in order to also cover signed ->
-     unsigned conversions of the src operand as can be seen in
-     libgcc.  */
-  source_expr =  find_bswap_1 (stmt, &n,
-			       TREE_INT_CST_LOW (
-				 TYPE_SIZE_UNIT (gimple_expr_type (stmt))) + 1);
+     increase that number by three  here in order to also
+     cover signed -> unsigned converions of the src operand as can be seen
+     in libgcc, and for initial shift/and operation of the src operand.  */
+  limit = TREE_INT_CST_LOW (TYPE_SIZE_UNIT (gimple_expr_type (stmt)));
+  limit += 1 + (int) ceil_log2 ((unsigned HOST_WIDE_INT) limit);
+  source_expr =  find_bswap_1 (stmt, &n, limit);
 
   if (!source_expr)
     return NULL_TREE;
@@ -1817,7 +1832,11 @@ execute_optimize_bswap (void)
     {
       gimple_stmt_iterator gsi;
 
-      for (gsi = gsi_after_labels (bb); !gsi_end_p (gsi); gsi_next (&gsi))
+      /* We do a reverse scan for bswap patterns to make sure we get the
+	 widest match. As bswap pattern matching doesn't handle
+	 previously inserted smaller bswap replacements as sub-
+	 patterns, the wider variant wouldn't be detected.  */
+      for (gsi = gsi_last_bb (bb); !gsi_end_p (gsi); gsi_prev (&gsi))
         {
 	  gimple stmt = gsi_stmt (gsi);
 	  tree bswap_src, bswap_type;
@@ -1918,7 +1937,7 @@ execute_optimize_bswap (void)
   statistics_counter_event (cfun, "64-bit bswap implementations found",
 			    bswap_stats.found_64bit);
 
-  return (changed ? TODO_dump_func | TODO_update_ssa | TODO_verify_ssa
+  return (changed ? TODO_update_ssa | TODO_verify_ssa
 	  | TODO_verify_stmts : 0);
 }
 
@@ -1947,39 +1966,53 @@ struct gimple_opt_pass pass_optimize_bswap =
  }
 };
 
-/* Return true if RHS is a suitable operand for a widening multiplication.
+/* Return true if RHS is a suitable operand for a widening multiplication,
+   assuming a target type of TYPE.
    There are two cases:
 
-     - RHS makes some value twice as wide.  Store that value in *NEW_RHS_OUT
-       if so, and store its type in *TYPE_OUT.
+     - RHS makes some value at least twice as wide.  Store that value
+       in *NEW_RHS_OUT if so, and store its type in *TYPE_OUT.
 
      - RHS is an integer constant.  Store that value in *NEW_RHS_OUT if so,
        but leave *TYPE_OUT untouched.  */
 
 static bool
-is_widening_mult_rhs_p (tree rhs, tree *type_out, tree *new_rhs_out)
+is_widening_mult_rhs_p (tree type, tree rhs, tree *type_out,
+			tree *new_rhs_out)
 {
   gimple stmt;
-  tree type, type1, rhs1;
+  tree type1, rhs1;
   enum tree_code rhs_code;
 
   if (TREE_CODE (rhs) == SSA_NAME)
     {
-      type = TREE_TYPE (rhs);
       stmt = SSA_NAME_DEF_STMT (rhs);
-      if (!is_gimple_assign (stmt))
-	return false;
+      if (is_gimple_assign (stmt))
+	{
+	  rhs_code = gimple_assign_rhs_code (stmt);
+	  if (TREE_CODE (type) == INTEGER_TYPE
+	      ? !CONVERT_EXPR_CODE_P (rhs_code)
+	      : rhs_code != FIXED_CONVERT_EXPR)
+	    rhs1 = rhs;
+	  else
+	    {
+	      rhs1 = gimple_assign_rhs1 (stmt);
 
-      rhs_code = gimple_assign_rhs_code (stmt);
-      if (TREE_CODE (type) == INTEGER_TYPE
-	  ? !CONVERT_EXPR_CODE_P (rhs_code)
-	  : rhs_code != FIXED_CONVERT_EXPR)
-	return false;
+	      if (TREE_CODE (rhs1) == INTEGER_CST)
+		{
+		  *new_rhs_out = rhs1;
+		  *type_out = NULL;
+		  return true;
+		}
+	    }
+	}
+      else
+	rhs1 = rhs;
 
-      rhs1 = gimple_assign_rhs1 (stmt);
       type1 = TREE_TYPE (rhs1);
+
       if (TREE_CODE (type1) != TREE_CODE (type)
-	  || TYPE_PRECISION (type1) * 2 != TYPE_PRECISION (type))
+	  || TYPE_PRECISION (type1) * 2 > TYPE_PRECISION (type))
 	return false;
 
       *new_rhs_out = rhs1;
@@ -1997,28 +2030,27 @@ is_widening_mult_rhs_p (tree rhs, tree *type_out, tree *new_rhs_out)
   return false;
 }
 
-/* Return true if STMT performs a widening multiplication.  If so,
-   store the unwidened types of the operands in *TYPE1_OUT and *TYPE2_OUT
-   respectively.  Also fill *RHS1_OUT and *RHS2_OUT such that converting
-   those operands to types *TYPE1_OUT and *TYPE2_OUT would give the
-   operands of the multiplication.  */
+/* Return true if STMT performs a widening multiplication, assuming the
+   output type is TYPE.  If so, store the unwidened types of the operands
+   in *TYPE1_OUT and *TYPE2_OUT respectively.  Also fill *RHS1_OUT and
+   *RHS2_OUT such that converting those operands to types *TYPE1_OUT
+   and *TYPE2_OUT would give the operands of the multiplication.  */
 
 static bool
-is_widening_mult_p (gimple stmt,
+is_widening_mult_p (tree type, gimple stmt,
 		    tree *type1_out, tree *rhs1_out,
 		    tree *type2_out, tree *rhs2_out)
 {
-  tree type;
-
-  type = TREE_TYPE (gimple_assign_lhs (stmt));
   if (TREE_CODE (type) != INTEGER_TYPE
       && TREE_CODE (type) != FIXED_POINT_TYPE)
     return false;
 
-  if (!is_widening_mult_rhs_p (gimple_assign_rhs1 (stmt), type1_out, rhs1_out))
+  if (!is_widening_mult_rhs_p (type, gimple_assign_rhs1 (stmt), type1_out,
+			       rhs1_out))
     return false;
 
-  if (!is_widening_mult_rhs_p (gimple_assign_rhs2 (stmt), type2_out, rhs2_out))
+  if (!is_widening_mult_rhs_p (type, gimple_assign_rhs2 (stmt), type2_out,
+			       rhs2_out))
     return false;
 
   if (*type1_out == NULL)
@@ -2035,6 +2067,18 @@ is_widening_mult_p (gimple stmt,
       *type2_out = *type1_out;
     }
 
+  /* Ensure that the larger of the two operands comes first. */
+  if (TYPE_PRECISION (*type1_out) < TYPE_PRECISION (*type2_out))
+    {
+      tree tmp;
+      tmp = *type1_out;
+      *type1_out = *type2_out;
+      *type2_out = tmp;
+      tmp = *rhs1_out;
+      *rhs1_out = *rhs2_out;
+      *rhs2_out = tmp;
+    }
+
   return true;
 }
 
@@ -2043,31 +2087,100 @@ is_widening_mult_p (gimple stmt,
    value is true iff we converted the statement.  */
 
 static bool
-convert_mult_to_widen (gimple stmt)
+convert_mult_to_widen (gimple stmt, gimple_stmt_iterator *gsi)
 {
-  tree lhs, rhs1, rhs2, type, type1, type2;
+  tree lhs, rhs1, rhs2, type, type1, type2, tmp = NULL;
   enum insn_code handler;
+  enum machine_mode to_mode, from_mode, actual_mode;
+  optab op;
+  int actual_precision;
+  location_t loc = gimple_location (stmt);
+  bool from_unsigned1, from_unsigned2;
 
   lhs = gimple_assign_lhs (stmt);
   type = TREE_TYPE (lhs);
   if (TREE_CODE (type) != INTEGER_TYPE)
     return false;
 
-  if (!is_widening_mult_p (stmt, &type1, &rhs1, &type2, &rhs2))
+  if (!is_widening_mult_p (type, stmt, &type1, &rhs1, &type2, &rhs2))
     return false;
 
-  if (TYPE_UNSIGNED (type1) && TYPE_UNSIGNED (type2))
-    handler = optab_handler (umul_widen_optab, TYPE_MODE (type));
-  else if (!TYPE_UNSIGNED (type1) && !TYPE_UNSIGNED (type2))
-    handler = optab_handler (smul_widen_optab, TYPE_MODE (type));
+  to_mode = TYPE_MODE (type);
+  from_mode = TYPE_MODE (type1);
+  from_unsigned1 = TYPE_UNSIGNED (type1);
+  from_unsigned2 = TYPE_UNSIGNED (type2);
+
+  if (from_unsigned1 && from_unsigned2)
+    op = umul_widen_optab;
+  else if (!from_unsigned1 && !from_unsigned2)
+    op = smul_widen_optab;
   else
-    handler = optab_handler (usmul_widen_optab, TYPE_MODE (type));
+    op = usmul_widen_optab;
+
+  handler = find_widening_optab_handler_and_mode (op, to_mode, from_mode,
+						  0, &actual_mode);
 
   if (handler == CODE_FOR_nothing)
-    return false;
+    {
+      if (op != smul_widen_optab)
+	{
+	  /* We can use a signed multiply with unsigned types as long as
+	     there is a wider mode to use, or it is the smaller of the two
+	     types that is unsigned.  Note that type1 >= type2, always.  */
+	  if ((TYPE_UNSIGNED (type1)
+	       && TYPE_PRECISION (type1) == GET_MODE_PRECISION (from_mode))
+	      || (TYPE_UNSIGNED (type2)
+		  && TYPE_PRECISION (type2) == GET_MODE_PRECISION (from_mode)))
+	    {
+	      from_mode = GET_MODE_WIDER_MODE (from_mode);
+	      if (GET_MODE_SIZE (to_mode) <= GET_MODE_SIZE (from_mode))
+		return false;
+	    }
 
-  gimple_assign_set_rhs1 (stmt, fold_convert (type1, rhs1));
-  gimple_assign_set_rhs2 (stmt, fold_convert (type2, rhs2));
+	  op = smul_widen_optab;
+	  handler = find_widening_optab_handler_and_mode (op, to_mode,
+							  from_mode, 0,
+							  &actual_mode);
+
+	  if (handler == CODE_FOR_nothing)
+	    return false;
+
+	  from_unsigned1 = from_unsigned2 = false;
+	}
+      else
+	return false;
+    }
+
+  /* Ensure that the inputs to the handler are in the correct precison
+     for the opcode.  This will be the full mode size.  */
+  actual_precision = GET_MODE_PRECISION (actual_mode);
+  if (actual_precision != TYPE_PRECISION (type1)
+      || from_unsigned1 != TYPE_UNSIGNED (type1))
+    {
+      tmp = create_tmp_var (build_nonstandard_integer_type
+				(actual_precision, from_unsigned1),
+			    NULL);
+      rhs1 = build_and_insert_cast (gsi, loc, tmp, rhs1);
+    }
+  if (actual_precision != TYPE_PRECISION (type2)
+      || from_unsigned2 != TYPE_UNSIGNED (type2))
+    {
+      /* Reuse the same type info, if possible.  */
+      if (!tmp || from_unsigned1 != from_unsigned2)
+	tmp = create_tmp_var (build_nonstandard_integer_type
+				(actual_precision, from_unsigned2),
+			      NULL);
+      rhs2 = build_and_insert_cast (gsi, loc, tmp, rhs2);
+    }
+
+  /* Handle constants.  */
+  if (TREE_CODE (rhs1) == INTEGER_CST)
+    rhs1 = fold_convert (type1, rhs1);
+  if (TREE_CODE (rhs2) == INTEGER_CST)
+    rhs2 = fold_convert (type2, rhs2);
+
+  gimple_assign_set_rhs1 (stmt, rhs1);
+  gimple_assign_set_rhs2 (stmt, rhs2);
   gimple_assign_set_rhs_code (stmt, WIDEN_MULT_EXPR);
   update_stmt (stmt);
   widen_mul_stats.widen_mults_inserted++;
@@ -2085,11 +2198,17 @@ convert_plusminus_to_widen (gimple_stmt_iterator *gsi, gimple stmt,
 			    enum tree_code code)
 {
   gimple rhs1_stmt = NULL, rhs2_stmt = NULL;
-  tree type, type1, type2;
+  gimple conv1_stmt = NULL, conv2_stmt = NULL, conv_stmt;
+  tree type, type1, type2, optype, tmp = NULL;
   tree lhs, rhs1, rhs2, mult_rhs1, mult_rhs2, add_rhs;
   enum tree_code rhs1_code = ERROR_MARK, rhs2_code = ERROR_MARK;
   optab this_optab;
   enum tree_code wmult_code;
+  enum insn_code handler;
+  enum machine_mode to_mode, from_mode, actual_mode;
+  location_t loc = gimple_location (stmt);
+  int actual_precision;
+  bool from_unsigned1, from_unsigned2;
 
   lhs = gimple_assign_lhs (stmt);
   type = TREE_TYPE (lhs);
@@ -2111,8 +2230,6 @@ convert_plusminus_to_widen (gimple_stmt_iterator *gsi, gimple stmt,
       if (is_gimple_assign (rhs1_stmt))
 	rhs1_code = gimple_assign_rhs_code (rhs1_stmt);
     }
-  else
-    return false;
 
   if (TREE_CODE (rhs2) == SSA_NAME)
     {
@@ -2120,57 +2237,160 @@ convert_plusminus_to_widen (gimple_stmt_iterator *gsi, gimple stmt,
       if (is_gimple_assign (rhs2_stmt))
 	rhs2_code = gimple_assign_rhs_code (rhs2_stmt);
     }
-  else
-    return false;
 
-  if (code == PLUS_EXPR && rhs1_code == MULT_EXPR)
+  /* Allow for one conversion statement between the multiply
+     and addition/subtraction statement.  If there are more than
+     one conversions then we assume they would invalidate this
+     transformation.  If that's not the case then they should have
+     been folded before now.  */
+  if (CONVERT_EXPR_CODE_P (rhs1_code))
     {
-      if (!is_widening_mult_p (rhs1_stmt, &type1, &mult_rhs1,
+      conv1_stmt = rhs1_stmt;
+      rhs1 = gimple_assign_rhs1 (rhs1_stmt);
+      if (TREE_CODE (rhs1) == SSA_NAME)
+	{
+	  rhs1_stmt = SSA_NAME_DEF_STMT (rhs1);
+	  if (is_gimple_assign (rhs1_stmt))
+	    rhs1_code = gimple_assign_rhs_code (rhs1_stmt);
+	}
+      else
+	return false;
+    }
+  if (CONVERT_EXPR_CODE_P (rhs2_code))
+    {
+      conv2_stmt = rhs2_stmt;
+      rhs2 = gimple_assign_rhs1 (rhs2_stmt);
+      if (TREE_CODE (rhs2) == SSA_NAME)
+	{
+	  rhs2_stmt = SSA_NAME_DEF_STMT (rhs2);
+	  if (is_gimple_assign (rhs2_stmt))
+	    rhs2_code = gimple_assign_rhs_code (rhs2_stmt);
+	}
+      else
+	return false;
+    }
+
+  /* If code is WIDEN_MULT_EXPR then it would seem unnecessary to call
+     is_widening_mult_p, but we still need the rhs returns.
+
+     It might also appear that it would be sufficient to use the existing
+     operands of the widening multiply, but that would limit the choice of
+     multiply-and-accumulate instructions.  */
+  if (code == PLUS_EXPR
+      && (rhs1_code == MULT_EXPR || rhs1_code == WIDEN_MULT_EXPR))
+    {
+      if (!is_widening_mult_p (type, rhs1_stmt, &type1, &mult_rhs1,
 			       &type2, &mult_rhs2))
 	return false;
       add_rhs = rhs2;
+      conv_stmt = conv1_stmt;
     }
-  else if (rhs2_code == MULT_EXPR)
+  else if (rhs2_code == MULT_EXPR || rhs2_code == WIDEN_MULT_EXPR)
     {
-      if (!is_widening_mult_p (rhs2_stmt, &type1, &mult_rhs1,
+      if (!is_widening_mult_p (type, rhs2_stmt, &type1, &mult_rhs1,
 			       &type2, &mult_rhs2))
 	return false;
       add_rhs = rhs1;
-    }
-  else if (code == PLUS_EXPR && rhs1_code == WIDEN_MULT_EXPR)
-    {
-      mult_rhs1 = gimple_assign_rhs1 (rhs1_stmt);
-      mult_rhs2 = gimple_assign_rhs2 (rhs1_stmt);
-      type1 = TREE_TYPE (mult_rhs1);
-      type2 = TREE_TYPE (mult_rhs2);
-      add_rhs = rhs2;
-    }
-  else if (rhs2_code == WIDEN_MULT_EXPR)
-    {
-      mult_rhs1 = gimple_assign_rhs1 (rhs2_stmt);
-      mult_rhs2 = gimple_assign_rhs2 (rhs2_stmt);
-      type1 = TREE_TYPE (mult_rhs1);
-      type2 = TREE_TYPE (mult_rhs2);
-      add_rhs = rhs1;
+      conv_stmt = conv2_stmt;
     }
   else
     return false;
 
-  if (TYPE_UNSIGNED (type1) != TYPE_UNSIGNED (type2))
-    return false;
+  to_mode = TYPE_MODE (type);
+  from_mode = TYPE_MODE (type1);
+  from_unsigned1 = TYPE_UNSIGNED (type1);
+  from_unsigned2 = TYPE_UNSIGNED (type2);
+
+  /* There's no such thing as a mixed sign madd yet, so use a wider mode.  */
+  if (from_unsigned1 != from_unsigned2)
+    {
+      /* We can use a signed multiply with unsigned types as long as
+	 there is a wider mode to use, or it is the smaller of the two
+	 types that is unsigned.  Note that type1 >= type2, always.  */
+      if ((from_unsigned1
+	   && TYPE_PRECISION (type1) == GET_MODE_PRECISION (from_mode))
+	  || (from_unsigned2
+	      && TYPE_PRECISION (type2) == GET_MODE_PRECISION (from_mode)))
+	{
+	  from_mode = GET_MODE_WIDER_MODE (from_mode);
+	  if (GET_MODE_SIZE (from_mode) >= GET_MODE_SIZE (to_mode))
+	    return false;
+	}
+
+      from_unsigned1 = from_unsigned2 = false;
+    }
+
+  /* If there was a conversion between the multiply and addition
+     then we need to make sure it fits a multiply-and-accumulate.
+     The should be a single mode change which does not change the
+     value.  */
+  if (conv_stmt)
+    {
+      /* We use the original, unmodified data types for this.  */
+      tree from_type = TREE_TYPE (gimple_assign_rhs1 (conv_stmt));
+      tree to_type = TREE_TYPE (gimple_assign_lhs (conv_stmt));
+      int data_size = TYPE_PRECISION (type1) + TYPE_PRECISION (type2);
+      bool is_unsigned = TYPE_UNSIGNED (type1) && TYPE_UNSIGNED (type2);
+
+      if (TYPE_PRECISION (from_type) > TYPE_PRECISION (to_type))
+	{
+	  /* Conversion is a truncate.  */
+	  if (TYPE_PRECISION (to_type) < data_size)
+	    return false;
+	}
+      else if (TYPE_PRECISION (from_type) < TYPE_PRECISION (to_type))
+	{
+	  /* Conversion is an extend.  Check it's the right sort.  */
+	  if (TYPE_UNSIGNED (from_type) != is_unsigned
+	      && !(is_unsigned && TYPE_PRECISION (from_type) > data_size))
+	    return false;
+	}
+      /* else convert is a no-op for our purposes.  */
+    }
 
   /* Verify that the machine can perform a widening multiply
      accumulate in this mode/signedness combination, otherwise
      this transformation is likely to pessimize code.  */
-  this_optab = optab_for_tree_code (wmult_code, type1, optab_default);
-  if (optab_handler (this_optab, TYPE_MODE (type)) == CODE_FOR_nothing)
+  optype = build_nonstandard_integer_type (from_mode, from_unsigned1);
+  this_optab = optab_for_tree_code (wmult_code, optype, optab_default);
+  handler = find_widening_optab_handler_and_mode (this_optab, to_mode,
+						  from_mode, 0, &actual_mode);
+
+  if (handler == CODE_FOR_nothing)
     return false;
 
-  /* ??? May need some type verification here?  */
+  /* Ensure that the inputs to the handler are in the correct precison
+     for the opcode.  This will be the full mode size.  */
+  actual_precision = GET_MODE_PRECISION (actual_mode);
+  if (actual_precision != TYPE_PRECISION (type1)
+      || from_unsigned1 != TYPE_UNSIGNED (type1))
+    {
+      tmp = create_tmp_var (build_nonstandard_integer_type
+				(actual_precision, from_unsigned1),
+			    NULL);
+      mult_rhs1 = build_and_insert_cast (gsi, loc, tmp, mult_rhs1);
+    }
+  if (actual_precision != TYPE_PRECISION (type2)
+      || from_unsigned2 != TYPE_UNSIGNED (type2))
+    {
+      if (!tmp || from_unsigned1 != from_unsigned2)
+	tmp = create_tmp_var (build_nonstandard_integer_type
+				(actual_precision, from_unsigned2),
+			      NULL);
+      mult_rhs2 = build_and_insert_cast (gsi, loc, tmp, mult_rhs2);
+    }
 
-  gimple_assign_set_rhs_with_ops_1 (gsi, wmult_code,
-				    fold_convert (type1, mult_rhs1),
-				    fold_convert (type2, mult_rhs2),
+  if (!useless_type_conversion_p (type, TREE_TYPE (add_rhs)))
+    add_rhs = build_and_insert_cast (gsi, loc, create_tmp_var (type, NULL),
+				     add_rhs);
+
+  /* Handle constants.  */
+  if (TREE_CODE (mult_rhs1) == INTEGER_CST)
+    rhs1 = fold_convert (type1, mult_rhs1);
+  if (TREE_CODE (mult_rhs2) == INTEGER_CST)
+    rhs2 = fold_convert (type2, mult_rhs2);
+
+  gimple_assign_set_rhs_with_ops_1 (gsi, wmult_code, mult_rhs1, mult_rhs2,
 				    add_rhs);
   update_stmt (gsi_stmt (*gsi));
   widen_mul_stats.maccs_inserted++;
@@ -2382,7 +2602,7 @@ execute_optimize_widening_mul (void)
 	      switch (code)
 		{
 		case MULT_EXPR:
-		  if (!convert_mult_to_widen (stmt)
+		  if (!convert_mult_to_widen (stmt, &gsi)
 		      && convert_mult_to_fma (stmt,
 					      gimple_assign_rhs1 (stmt),
 					      gimple_assign_rhs2 (stmt)))
@@ -2471,7 +2691,6 @@ struct gimple_opt_pass pass_optimize_widening_mul =
   0,					/* todo_flags_start */
   TODO_verify_ssa
   | TODO_verify_stmts
-  | TODO_dump_func
   | TODO_update_ssa                     /* todo_flags_finish */
  }
 };

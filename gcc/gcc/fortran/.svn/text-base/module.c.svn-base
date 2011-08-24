@@ -1673,7 +1673,7 @@ typedef enum
   AB_ELEMENTAL, AB_PURE, AB_RECURSIVE, AB_GENERIC, AB_ALWAYS_EXPLICIT,
   AB_CRAY_POINTER, AB_CRAY_POINTEE, AB_THREADPRIVATE,
   AB_ALLOC_COMP, AB_POINTER_COMP, AB_PROC_POINTER_COMP, AB_PRIVATE_COMP,
-  AB_VALUE, AB_VOLATILE, AB_PROTECTED,
+  AB_VALUE, AB_VOLATILE, AB_PROTECTED, AB_LOCK_COMP,
   AB_IS_BIND_C, AB_IS_C_INTEROP, AB_IS_ISO_C, AB_ABSTRACT, AB_ZERO_COMP,
   AB_IS_CLASS, AB_PROCEDURE, AB_PROC_POINTER, AB_ASYNCHRONOUS, AB_CODIMENSION,
   AB_COARRAY_COMP, AB_VTYPE, AB_VTAB, AB_CONTIGUOUS, AB_CLASS_POINTER,
@@ -1716,6 +1716,7 @@ static const mstring attr_bits[] =
     minit ("VALUE", AB_VALUE),
     minit ("ALLOC_COMP", AB_ALLOC_COMP),
     minit ("COARRAY_COMP", AB_COARRAY_COMP),
+    minit ("LOCK_COMP", AB_LOCK_COMP),
     minit ("POINTER_COMP", AB_POINTER_COMP),
     minit ("PROC_POINTER_COMP", AB_PROC_POINTER_COMP),
     minit ("PRIVATE_COMP", AB_PRIVATE_COMP),
@@ -1889,6 +1890,8 @@ mio_symbol_attribute (symbol_attribute *attr)
 	MIO_NAME (ab_attribute) (AB_PRIVATE_COMP, attr_bits);
       if (attr->coarray_comp)
 	MIO_NAME (ab_attribute) (AB_COARRAY_COMP, attr_bits);
+      if (attr->lock_comp)
+	MIO_NAME (ab_attribute) (AB_LOCK_COMP, attr_bits);
       if (attr->zero_comp)
 	MIO_NAME (ab_attribute) (AB_ZERO_COMP, attr_bits);
       if (attr->is_class)
@@ -2027,6 +2030,9 @@ mio_symbol_attribute (symbol_attribute *attr)
 	      break;
 	    case AB_COARRAY_COMP:
 	      attr->coarray_comp = 1;
+	      break;
+	    case AB_LOCK_COMP:
+	      attr->lock_comp = 1;
 	      break;
 	    case AB_POINTER_COMP:
 	      attr->pointer_comp = 1;
@@ -2403,6 +2409,8 @@ mio_component (gfc_component *c, int vtype)
   mio_array_spec (&c->as);
 
   mio_symbol_attribute (&c->attr);
+  if (c->ts.type == BT_CLASS)
+    c->attr.class_ok = 1;
   c->attr.access = MIO_NAME (gfc_access) (c->attr.access, access_types); 
 
   if (!vtype)
@@ -4270,6 +4278,13 @@ check_for_ambiguous (gfc_symbol *st_sym, pointer_info *info)
   module_locus locus;
   symbol_attribute attr;
 
+  if (st_sym->ns->proc_name && st_sym->name == st_sym->ns->proc_name->name)
+    {
+      gfc_error ("'%s' of module '%s', imported at %C, is also the name of the "
+		 "current program unit", st_sym->name, module_name);
+      return true;
+    }
+
   rsym = info->u.rsym.sym;
   if (st_sym == rsym)
     return false;
@@ -5467,6 +5482,37 @@ create_int_parameter_array (const char *name, int size, gfc_expr *value,
 }
 
 
+/* Add an derived type for a given module.  */
+
+static void
+create_derived_type (const char *name, const char *modname,
+		      intmod_id module, int id)
+{
+  gfc_symtree *tmp_symtree;
+  gfc_symbol *sym;
+
+  tmp_symtree = gfc_find_symtree (gfc_current_ns->sym_root, name);
+  if (tmp_symtree != NULL)
+    {
+      if (strcmp (modname, tmp_symtree->n.sym->module) == 0)
+	return;
+      else
+	gfc_error ("Symbol '%s' already declared", name);
+    }
+
+  gfc_get_sym_tree (name, gfc_current_ns, &tmp_symtree, false);
+  sym = tmp_symtree->n.sym;
+
+  sym->module = gfc_get_string (modname);
+  sym->from_intmod = module;
+  sym->intmod_sym_id = id;
+  sym->attr.flavor = FL_DERIVED;
+  sym->attr.private_comp = 1;
+  sym->attr.zero_comp = 1;
+  sym->attr.use_assoc = 1;
+}
+
+
 
 /* USE the ISO_FORTRAN_ENV intrinsic module.  */
 
@@ -5487,6 +5533,9 @@ use_iso_fortran_env_module (void)
 #define NAMED_KINDARRAY(a,b,c,d) { a, b, 0, d },
 #include "iso-fortran-env.def"
 #undef NAMED_KINDARRAY
+#define NAMED_DERIVED_TYPE(a,b,c,d) { a, b, 0, d },
+#include "iso-fortran-env.def"
+#undef NAMED_DERIVED_TYPE
 #define NAMED_FUNCTION(a,b,c,d) { a, b, c, d },
 #include "iso-fortran-env.def"
 #undef NAMED_FUNCTION
@@ -5528,7 +5577,7 @@ use_iso_fortran_env_module (void)
 	      u->found = 1;
 
 	      if (gfc_notify_std (symbol[i].standard, "The symbol '%s', "
-				  "referrenced at %C, is not in the selected "
+				  "referenced at %C, is not in the selected "
 				  "standard", symbol[i].name) == FAILURE)
 	        continue;
 
@@ -5570,6 +5619,16 @@ use_iso_fortran_env_module (void)
 		  break;
 #include "iso-fortran-env.def"
 #undef NAMED_KINDARRAY
+
+#define NAMED_DERIVED_TYPE(a,b,TYPE,STD) \
+		case a:
+#include "iso-fortran-env.def"
+                  create_derived_type (u->local_name[0] ? u->local_name
+							: u->use_name,
+				       mod, INTMOD_ISO_FORTRAN_ENV,
+				       symbol[i].id);
+		  break;
+#undef NAMED_DERIVED_TYPE
 
 #define NAMED_FUNCTION(a,b,c,d) \
 		case a:
@@ -5624,6 +5683,14 @@ use_iso_fortran_env_module (void)
 #include "iso-fortran-env.def"
 #undef NAMED_KINDARRAY
 
+#define NAMED_DERIVED_TYPE(a,b,TYPE,STD) \
+	  case a:
+#include "iso-fortran-env.def"
+	    create_derived_type (symbol[i].name, mod, INTMOD_ISO_FORTRAN_ENV,
+				 symbol[i].id);
+	    break;
+#undef NAMED_DERIVED_TYPE
+
 #define NAMED_FUNCTION(a,b,c,d) \
 		case a:
 #include "iso-fortran-env.def"
@@ -5660,6 +5727,9 @@ gfc_use_module (void)
   int c, line, start;
   gfc_symtree *mod_symtree;
   gfc_use_list *use_stmt;
+  locus old_locus = gfc_current_locus;
+
+  gfc_current_locus = use_locus;
 
   filename = (char *) alloca (strlen (module_name) + strlen (MODULE_EXTENSION)
 			      + 1);
@@ -5681,6 +5751,7 @@ gfc_use_module (void)
 			     "intrinsic module at %C") != FAILURE)
        {
 	 use_iso_fortran_env_module ();
+	 gfc_current_locus = old_locus;
 	 return;
        }
 
@@ -5689,6 +5760,7 @@ gfc_use_module (void)
 			     "ISO_C_BINDING module at %C") != FAILURE)
 	{
 	  import_iso_c_binding_module();
+	  gfc_current_locus = old_locus;
 	  return;
 	}
 
@@ -5778,6 +5850,8 @@ gfc_use_module (void)
   gfc_rename_list = NULL;
   use_stmt->next = gfc_current_ns->use_stmts;
   gfc_current_ns->use_stmts = use_stmt;
+
+  gfc_current_locus = old_locus;
 }
 
 

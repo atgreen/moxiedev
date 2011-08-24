@@ -1,6 +1,6 @@
 // moxie.v - Top level Moxie Core
 //
-// Copyright (c) 2009, 2010  Anthony Green.  All Rights Reserved.
+// Copyright (c) 2009, 2010, 2011  Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -17,7 +17,7 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 // 02110-1301, USA.
 
-module muskoka (/*AUTOARG*/
+module moxie (/*AUTOARG*/
   // Outputs
   wb_dat_o, wb_ack_o,
   // Inputs

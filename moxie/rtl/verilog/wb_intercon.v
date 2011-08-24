@@ -1,6 +1,6 @@
 // wb_intercon.v - Wishbone Shared Bus Interconnect 
 //
-// Copyright (c) 2010  Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011  Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -103,7 +103,8 @@ module wb_intercon (/*AUTOARG*/
   assign slave_3_sel = ((wbm_adr_i & slave_3_mask) == slave_3_addr);
 
   // An aggregation of all master bus input wires
-  wire [32+32+2+1+1-1:0] master_bus_i
+  wire [32+32+2+1+1-1:0] master_bus_i;
+  
   assign master_bus_i = {wbm_dat_i, wbm_adr_i, wbm_sel_i, 
 			 wbm_we_i, wbm_cyc_i};
 

@@ -1,6 +1,6 @@
 // muskoka.v - Top level Muskoka SoC module.
 //
-// Copyright (c) 2009, 2010  Anthony Green.  All Rights Reserved.
+// Copyright (c) 2009, 2010, 2011  Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -36,24 +36,23 @@ module muskoka (/*AUTOARG*/
   wire 	      moxie_ack_o;
    
   wb_intercon intercon (.wbm_dat_i (moxie_dat_i),
-			.wbm_dat_o, (moxie_dat_o),
-			.wbm_adr_i, (moxie_adr_i),
-			.wbm_sel_i, (moxie_sel_i),
-			.wbm_we_i, (moxie_we_i),
-			.wbm_cyc_i, (moxie_cyc_i),
-			.wbm_stb_i, (moxie_stb_i),
-			.wbm_ack_o, (moxie_ack_o));
+			.wbm_dat_o (moxie_dat_o),
+			.wbm_adr_i (moxie_adr_i),
+			.wbm_sel_i (moxie_sel_i),
+			.wbm_we_i (moxie_we_i),
+			.wbm_cyc_i (moxie_cyc_i),
+			.wbm_stb_i (moxie_stb_i),
+			.wbm_ack_o (moxie_ack_o));
   
   moxie core (.rst_i (rst_i),
 	      .clk_i (clk_i),
 	      .wb_dat_i (moxie_dat_i),
-	      .wb_dat_o, (moxie_dat_o),
-	      .wb_adr_i, (moxie_adr_i),
-	      .wb_sel_i, (moxie_sel_i),
-	      .wb_we_i, (moxie_we_i),
-	      .wb_cyc_i, (moxie_cyc_i),
-	      .wb_stb_i, (moxie_stb_i),
-	      .wb_ack_o, (moxie_ack_o));
-)
+	      .wb_dat_o (moxie_dat_o),
+	      .wb_adr_i (moxie_adr_i),
+	      .wb_sel_i (moxie_sel_i),
+	      .wb_we_i (moxie_we_i),
+	      .wb_cyc_i (moxie_cyc_i),
+	      .wb_stb_i (moxie_stb_i),
+	      .wb_ack_o (moxie_ack_o));
   
 endmodule // muskoka

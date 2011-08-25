@@ -1,6 +1,6 @@
 // options.c -- handle command line options for gold
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -170,6 +170,15 @@ help()
     printf(" %s", *p);
   printf("\n");
 
+  printf(_("%s: supported emulations:"), gold::program_name);
+  supported_names.clear();
+  gold::supported_emulation_names(&supported_names);
+  for (std::vector<const char*>::const_iterator p = supported_names.begin();
+       p != supported_names.end();
+       ++p)
+    printf(" %s", *p);
+  printf("\n");
+
   // REPORT_BUGS_TO is defined in bfd/bfdver.h.
   const char* report = REPORT_BUGS_TO;
   if (*report != '\0')
@@ -219,6 +228,17 @@ parse_double(const char* option_name, const char* arg, double* retval)
 {
   char* endptr;
   *retval = strtod(arg, &endptr);
+  if (*endptr != '\0')
+    gold_fatal(_("%s: invalid option value "
+		 "(expected a floating point number): %s"),
+	       option_name, arg);
+}
+
+void
+parse_percent(const char* option_name, const char* arg, double* retval)
+{
+  char* endptr;
+  *retval = strtod(arg, &endptr) / 100.0;
   if (*endptr != '\0')
     gold_fatal(_("%s: invalid option value "
 		 "(expected a floating point number): %s"),
@@ -300,9 +320,18 @@ General_options::parse_V(const char*, const char*, Command_line*)
 {
   gold::print_version(true);
   this->printed_version_ = true;
+
   printf(_("  Supported targets:\n"));
   std::vector<const char*> supported_names;
   gold::supported_target_names(&supported_names);
+  for (std::vector<const char*>::const_iterator p = supported_names.begin();
+       p != supported_names.end();
+       ++p)
+    printf("   %s\n", *p);
+
+  printf(_("  Supported emulations:\n"));
+  supported_names.clear();
+  gold::supported_emulation_names(&supported_names);
   for (std::vector<const char*>::const_iterator p = supported_names.begin();
        p != supported_names.end();
        ++p)
@@ -366,6 +395,14 @@ General_options::parse_incremental_unknown(const char*, const char*,
 {
   this->implicit_incremental_ = true;
   this->incremental_disposition_ = INCREMENTAL_CHECK;
+}
+
+void
+General_options::parse_incremental_startup_unchanged(const char*, const char*,
+						     Command_line*)
+{
+  this->implicit_incremental_ = true;
+  this->incremental_startup_disposition_ = INCREMENTAL_UNCHANGED;
 }
 
 void
@@ -881,7 +918,8 @@ General_options::General_options()
     plugins_(NULL),
     dynamic_list_(),
     incremental_mode_(INCREMENTAL_OFF),
-    incremental_disposition_(INCREMENTAL_CHECK),
+    incremental_disposition_(INCREMENTAL_STARTUP),
+    incremental_startup_disposition_(INCREMENTAL_CHECK),
     implicit_incremental_(false),
     excluded_libs_(),
     symbols_to_retain_(),
@@ -1130,6 +1168,14 @@ General_options::finalize()
         }
     }
 
+  // -Bgroup implies --unresolved-symbols=report-all.
+  if (this->Bgroup() && !this->user_set_unresolved_symbols())
+    this->set_unresolved_symbols("report-all");
+
+  // -shared implies --allow-shlib-undefined.  Currently
+  // ---allow-shlib-undefined controls warnings issued based on the
+  // -symbol table.  --unresolved-symbols controls warnings issued
+  // -based on relocations.
   if (this->shared() && !this->user_set_allow_shlib_undefined())
     this->set_allow_shlib_undefined(true);
 
@@ -1147,6 +1193,14 @@ General_options::finalize()
     gold_fatal(_("-shared and -r are incompatible"));
   if (this->pie() && this->relocatable())
     gold_fatal(_("-pie and -r are incompatible"));
+
+  if (!this->shared())
+    {
+      if (this->filter() != NULL)
+	gold_fatal(_("-F/--filter may not used without -shared"));
+      if (this->any_auxiliary())
+	gold_fatal(_("-f/--auxiliary may not be used without -shared"));
+    }
 
   // TODO: implement support for -retain-symbols-file with -r, if needed.
   if (this->relocatable() && this->retain_symbols_file())

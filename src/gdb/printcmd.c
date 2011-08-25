@@ -129,7 +129,7 @@ show_print_symbol_filename (struct ui_file *file, int from_tty,
 }
 
 /* Number of auto-display expression currently being displayed.
-   So that we can disable it if we get an error or a signal within it.
+   So that we can disable it if we get a signal within it.
    -1 when not doing one.  */
 
 int current_display_number;
@@ -1663,6 +1663,7 @@ undisplay_command (char *args, int from_tty)
 static void
 do_one_display (struct display *d)
 {
+  struct cleanup *old_chain;
   int within_current_scope;
 
   if (d->enabled_p == 0)
@@ -1714,6 +1715,7 @@ do_one_display (struct display *d)
   if (!within_current_scope)
     return;
 
+  old_chain = make_cleanup_restore_integer (&current_display_number);
   current_display_number = d->number;
 
   annotate_display_begin ();
@@ -1722,8 +1724,7 @@ do_one_display (struct display *d)
   printf_filtered (": ");
   if (d->format.size)
     {
-      CORE_ADDR addr;
-      struct value *val;
+      volatile struct gdb_exception ex;
 
       annotate_display_format ();
 
@@ -1745,18 +1746,26 @@ do_one_display (struct display *d)
       else
 	printf_filtered ("  ");
 
-      val = evaluate_expression (d->exp);
-      addr = value_as_address (val);
-      if (d->format.format == 'i')
-	addr = gdbarch_addr_bits_remove (d->exp->gdbarch, addr);
-
       annotate_display_value ();
 
-      do_examine (d->format, d->exp->gdbarch, addr);
+      TRY_CATCH (ex, RETURN_MASK_ERROR)
+        {
+	  struct value *val;
+	  CORE_ADDR addr;
+
+	  val = evaluate_expression (d->exp);
+	  addr = value_as_address (val);
+	  if (d->format.format == 'i')
+	    addr = gdbarch_addr_bits_remove (d->exp->gdbarch, addr);
+	  do_examine (d->format, d->exp->gdbarch, addr);
+	}
+      if (ex.reason < 0)
+	fprintf_filtered (gdb_stdout, _("<error: %s>\n"), ex.message);
     }
   else
     {
       struct value_print_options opts;
+      volatile struct gdb_exception ex;
 
       annotate_display_format ();
 
@@ -1774,15 +1783,23 @@ do_one_display (struct display *d)
 
       get_formatted_print_options (&opts, d->format.format);
       opts.raw = d->format.raw;
-      print_formatted (evaluate_expression (d->exp),
-		       d->format.size, &opts, gdb_stdout);
+
+      TRY_CATCH (ex, RETURN_MASK_ERROR)
+        {
+	  struct value *val;
+
+	  val = evaluate_expression (d->exp);
+	  print_formatted (val, d->format.size, &opts, gdb_stdout);
+	}
+      if (ex.reason < 0)
+	fprintf_filtered (gdb_stdout, _("<error: %s>"), ex.message);
       printf_filtered ("\n");
     }
 
   annotate_display_end ();
 
   gdb_flush (gdb_stdout);
-  current_display_number = -1;
+  do_cleanups (old_chain);
 }
 
 /* Display all of the values on the auto-display chain which can be

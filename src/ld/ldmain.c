@@ -105,7 +105,7 @@ bfd_boolean add_DT_NEEDED_for_regular;
 /* True means create DT_NEEDED entries for dynamic libraries that
    are DT_NEEDED by dynamic libraries specifically mentioned on
    the command line.  */
-bfd_boolean add_DT_NEEDED_for_dynamic = TRUE;
+bfd_boolean add_DT_NEEDED_for_dynamic;
 
 /* TRUE if we should demangle symbol names.  */
 bfd_boolean demangling;
@@ -427,11 +427,14 @@ main (int argc, char **argv)
       info_msg ("\n==================================================\n");
     }
 
+  if (command_line.print_output_format)
+    info_msg ("%s\n", lang_get_output_target ());
+
   lang_final ();
 
   if (!lang_has_input_file)
     {
-      if (version_printed)
+      if (version_printed || command_line.print_output_format)
 	xexit (0);
       einfo (_("%P%F: no input files\n"));
     }
@@ -488,7 +491,7 @@ main (int argc, char **argv)
 	einfo (_("%P: link errors found, deleting executable `%s'\n"),
 	       output_filename);
 
-      /* The file will be removed by remove_output.  */
+      /* The file will be removed by ld_cleanup.  */
       xexit (1);
     }
   else
@@ -561,7 +564,7 @@ main (int argc, char **argv)
       fflush (stderr);
     }
 
-  /* Prevent remove_output from doing anything, after a successful link.  */
+  /* Prevent ld_cleanup from doing anything, after a successful link.  */
   output_filename = NULL;
 
   xexit (0);

@@ -40,6 +40,7 @@
 #include "gdbcore.h"
 #include "observer.h"
 #include "linux-nat.h"
+#include "linux-procfs.h"
 
 #include <signal.h>
 
@@ -430,6 +431,9 @@ thread_from_lwp (ptid_t ptid)
   td_err_e err;
   struct thread_db_info *info;
   struct thread_get_info_inout io = {0};
+
+  /* Just in case td_ta_map_lwp2thr doesn't initialize it completely.  */
+  th.th_unique = 0;
 
   /* This ptid comes from linux-nat.c, which should always fill in the
      LWP.  */

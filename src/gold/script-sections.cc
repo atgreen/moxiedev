@@ -2846,6 +2846,17 @@ Orphan_output_section::set_section_addresses(Symbol_table*, Layout*,
   uint64_t address = *dot_value;
   address = align_address(address, this->os_->addralign());
 
+  // For a relocatable link, all orphan sections are put at
+  // address 0.  In general we expect all sections to be at
+  // address 0 for a relocatable link, but we permit the linker
+  // script to override that for specific output sections.
+  if (parameters->options().relocatable())
+    {
+      address = 0;
+      *load_address = 0;
+      have_load_address = false;
+    }
+
   if ((this->os_->flags() & elfcpp::SHF_ALLOC) != 0)
     {
       this->os_->set_address(address);
@@ -3925,6 +3936,18 @@ Script_sections::create_note_and_tls_segments(
 
 	  saw_tls = true;
 	}
+
+      // If we are making a shared library, and we see a section named
+      // .interp then put the .interp section in a PT_INTERP segment.
+      // This is for GNU ld compatibility.
+      if (strcmp((*p)->name(), ".interp") == 0)
+	{
+	  elfcpp::Elf_Word seg_flags =
+	    Layout::section_flags_to_segment((*p)->flags());
+	  Output_segment* oseg = layout->make_output_segment(elfcpp::PT_INTERP,
+							     seg_flags);
+	  oseg->add_output_section_to_nonload(*p, seg_flags);
+	}
     }
 }
 
@@ -4027,15 +4050,37 @@ Script_sections::attach_sections_using_phdrs_clause(Layout* layout)
        p != this->sections_elements_->end();
        ++p)
     {
-      bool orphan;
+      bool is_orphan;
       String_list* old_phdr_names = phdr_names;
-      Output_section* os = (*p)->allocate_to_segment(&phdr_names, &orphan);
+      Output_section* os = (*p)->allocate_to_segment(&phdr_names, &is_orphan);
       if (os == NULL)
 	continue;
 
+      elfcpp::Elf_Word seg_flags =
+	Layout::section_flags_to_segment(os->flags());
+
       if (phdr_names == NULL)
 	{
-	  gold_error(_("allocated section not in any segment"));
+	  // Don't worry about empty orphan sections.
+	  if (is_orphan && os->current_data_size() > 0)
+	    gold_error(_("allocated section %s not in any segment"),
+		       os->name());
+
+	  // To avoid later crashes drop this section into the first
+	  // PT_LOAD segment.
+	  for (Phdrs_elements::const_iterator ppe =
+		 this->phdrs_elements_->begin();
+	       ppe != this->phdrs_elements_->end();
+	       ++ppe)
+	    {
+	      Output_segment* oseg = (*ppe)->segment();
+	      if (oseg->type() == elfcpp::PT_LOAD)
+		{
+		  oseg->add_output_section_to_load(layout, os, seg_flags);
+		  break;
+		}
+	    }
+
 	  continue;
 	}
 
@@ -4050,7 +4095,7 @@ Script_sections::attach_sections_using_phdrs_clause(Layout* layout)
       // PT_INTERP segment will pick up following orphan sections,
       // which does not make sense.  If this is not an orphan section,
       // we trust the linker script.
-      if (orphan)
+      if (is_orphan)
 	{
 	  // Enable PT_LOAD segments only filtering until we see another
 	  // list of segment names.
@@ -4070,9 +4115,6 @@ Script_sections::attach_sections_using_phdrs_clause(Layout* layout)
 	      if (load_segments_only
 		  && r->second->type() != elfcpp::PT_LOAD)
 		continue;
-
-	      elfcpp::Elf_Word seg_flags =
-		Layout::section_flags_to_segment(os->flags());
 
 	      if (r->second->type() != elfcpp::PT_LOAD)
 		r->second->add_output_section_to_nonload(os, seg_flags);

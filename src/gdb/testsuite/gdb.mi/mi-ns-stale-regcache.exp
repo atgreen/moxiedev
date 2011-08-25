@@ -17,6 +17,11 @@
 # Regression test for PR11557.  Make sure we don't end up with a stale
 # register cache just after resuming a thread.
 
+if { ![support_displaced_stepping] } { 
+    unsupported "displaced stepping"
+    return -1
+}
+
 load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
@@ -52,7 +57,7 @@ mi_gdb_load $binfile
 
 mi_gdb_test "-gdb-set non-stop 1" ".*"
 mi_gdb_test "-gdb-set target-async 1" ".*"
-detect_async
+mi_detect_async
 
 if { [mi_run_to_main] < 0 } {
     continue

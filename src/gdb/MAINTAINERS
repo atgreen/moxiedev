@@ -465,6 +465,7 @@ Pedro Alves					pedro_alves@portugalmail.pt
 David Anderson					davea@sgi.com
 John David Anglin				dave.anglin@nrc-cnrc.gc.ca
 Shrinivas Atre					shrinivasa@kpitcummins.com
+Sterling Augustine				saugustine@google.com
 Scott Bambrough					scottb@netwinder.org
 Thiago Jung Bauermann				bauerman@br.ibm.com
 Jon Beniston					jon@beniston.com
@@ -472,12 +473,14 @@ Gary Benson					gbenson@redhat.com
 Jan Beulich					jbeulich@novell.com
 Jim Blandy					jimb@codesourcery.com
 Philip Blundell					philb@gnu.org
+Eric Botcazou					ebotcazou@libertysurf.fr
 Per Bothner					per@bothner.com
 Joel Brobecker					brobecker@adacore.com
 Dave Brolley					brolley@redhat.com
 Paul Brook					paul@codesourcery.com
 Julian Brown					julian@codesourcery.com
 Kevin Buettner					kevinb@redhat.com
+Andrew Burgess					aburgess@broadcom.com
 Andrew Cagney					cagney@gnu.org
 David Carlton					carlton@bactrian.org
 Stephane Carrez					stcarrez@nerim.fr
@@ -489,6 +492,7 @@ Nick Clifton					nickc@redhat.com
 J.T. Conklin					jtc@acorntoolworks.com
 Brendan Conoboy					blc@redhat.com
 Ludovic Courtès					ludo@gnu.org
+Jean-Charles Delay				delay@adacore.com
 DJ Delorie					dj@redhat.com
 Chris Demetriou					cgd@google.com
 Philippe De Muyter				phdm@macqel.be
@@ -557,6 +561,7 @@ David S. Miller					davem@redhat.com
 Mark Mitchell					mark@codesourcery.com
 Marko Mlinar                                    markom@opencores.org
 Alan Modra					amodra@gmail.com
+Fawzi Mohamed					fawzi.mohamed@nokia.com
 Jason Molenda					jmolenda@apple.com
 Chris Moller					cmoller@redhat.com
 Phil Muldoon					pmuldoon@redhat.com
@@ -577,6 +582,7 @@ Marek Polacek					mpolacek@redhat.com
 Vladimir Prus                                   vladimir@codesourcery.com
 Yao Qi						yao@codesourcery.com
 Qinwei						qinwei@sunnorth.com.cn
+Matt Rice					ratmice@gmail.com
 Frederic Riss					frederic.riss@st.com
 Aleksandar Ristovski				aristovski@qnx.com
 Tom Rix						trix@redhat.com
@@ -621,6 +627,7 @@ Corinna Vinschen				vinschen@redhat.com
 Sami Wagiaalla					swagiaal@redhat.com
 Keith Walker					keith.walker@arm.com
 Kris Warkentin					kewarken@qnx.com
+Philippe Waroquiers				philippe.waroquiers@skynet.be
 Ulrich Weigand					uweigand@de.ibm.com
 Ken Werner					ken.werner@de.ibm.com
 Nathan Williams					nathanw@wasabisystems.com

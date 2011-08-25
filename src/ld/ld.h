@@ -96,6 +96,7 @@ struct wildcard_spec {
   const char *name;
   struct name_list *exclude_name_list;
   sort_type sorted;
+  struct flag_info *section_flag_list;
 };
 
 struct wildcard_list {
@@ -198,6 +199,9 @@ typedef struct {
      behaviour of the linker.  The new default behaviour is to reject such
      input files.  */
   bfd_boolean accept_unknown_input_arch;
+
+  /* If TRUE we'll just print the default output on stdout.  */
+  bfd_boolean print_output_format;
 
   /* Big or little endian as set on command line.  */
   enum endian_enum endian;

@@ -176,7 +176,7 @@ in the section entitled ``GNU Free Documentation License''.
 @c man title ar create, modify, and extract from archives
 
 @smallexample
-ar [@option{--plugin} @var{name}] [-]@var{p}[@var{mod} [@var{relpos}] [@var{count}]] @var{archive} [@var{member}@dots{}]
+ar [@option{--plugin} @var{name}] [-]@var{p}[@var{mod} [@var{relpos}] [@var{count}]] [@option{--target} @var{bfdname}] @var{archive} [@var{member}@dots{}] 
 ar -M [ <mri-script ]
 @end smallexample
 
@@ -251,7 +251,7 @@ program.
 
 @smallexample
 @c man begin SYNOPSIS ar
-ar [@option{--plugin} @var{name}] [@option{-X32_64}] [@option{-}]@var{p}[@var{mod} [@var{relpos}] [@var{count}]] @var{archive} [@var{member}@dots{}]
+ar [@option{--plugin} @var{name}] [@option{-X32_64}] [@option{-}]@var{p}[@var{mod} [@var{relpos}] [@var{count}]] [@option{--target} @var{bfdname}] @var{archive} [@var{member}@dots{}]
 @c man end
 @end smallexample
 
@@ -383,6 +383,13 @@ are extracted.
 
 Files cannot be extracted from a thin archive.
 
+@item --help
+Displays the list of command line options supported by @command{ar}
+and then exits.
+
+@item --version
+Displays the version information of @command{ar} and then exits.
+
 @end table
 
 A number of modifiers (@var{mod}) may immediately follow the @var{p}
@@ -505,6 +512,11 @@ The optional command line switch @option{--plugin} @var{name} causes
 @command{ar} to load the plugin called @var{name} which adds support
 for more file formats.  This option is only available if the toolchain
 has been built with plugin support enabled.
+
+The optional command line switch @option{--target} @var{bfdname}
+specifies that the archive members are in an object code format
+different from your system's default format.  See
+@xref{Target Selection}, for more information.
 
 @c man end
 
@@ -4262,7 +4274,8 @@ Set the matching input ELF machine type to @var{machine}.  If
 @option{--input-mach} isn't specified, it will match any ELF
 machine types.
 
-The supported ELF machine types are, @var{L1OM} and @var{x86-64}.
+The supported ELF machine types are, @var{L1OM}, @var{K1OM} and
+@var{x86-64}.
 
 @itemx --output-mach=@var{machine}
 Change the ELF machine type in the ELF header to @var{machine}.  The
@@ -4283,7 +4296,8 @@ Set the matching input ELF file OSABI to @var{osabi}.  If
 @option{--input-osabi} isn't specified, it will match any ELF OSABIs.
 
 The supported ELF OSABIs are, @var{none}, @var{HPUX}, @var{NetBSD},
-@var{Linux}, @var{Hurd}, @var{Solaris}, @var{AIX}, @var{Irix},
+@var{GNU}, @var{Linux} (alias for @var{GNU}),
+@var{Solaris}, @var{AIX}, @var{Irix},
 @var{FreeBSD}, @var{TRU64}, @var{Modesto}, @var{OpenBSD}, @var{OpenVMS},
 @var{NSK}, @var{AROS} and @var{FenixOS}.
 

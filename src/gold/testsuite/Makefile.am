@@ -80,6 +80,12 @@ gcctestdir/ld: ../ld-new
 	rm -f gcctestdir/ld
 	(cd gcctestdir && $(LN_S) ../../ld-new ld)
 
+# Some tests require the latest features of an in-tree assembler.
+gcctestdir/as: $(TEST_AS)
+	test -d gcctestdir || mkdir -p gcctestdir
+	rm -f gcctestdir/as
+	(cd gcctestdir && $(LN_S) $(abs_top_builddir)/../gas/as-new as)
+
 endif GCC
 
 check_PROGRAMS += object_unittest
@@ -251,22 +257,28 @@ icf_sht_rel_addend_test.stdout: icf_sht_rel_addend_test
 	$(TEST_NM) icf_sht_rel_addend_test > icf_sht_rel_addend_test.stdout
 
 check_PROGRAMS += basic_test
-check_PROGRAMS += basic_static_test
 check_PROGRAMS += basic_pic_test
-check_PROGRAMS += basic_static_pic_test
 basic_test.o: basic_test.cc
 	$(CXXCOMPILE) -O0 -c -o $@ $<
 basic_test: basic_test.o gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ basic_test.o
+
+if HAVE_STATIC
+check_PROGRAMS += basic_static_test
 basic_static_test: basic_test.o gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ -static basic_test.o
+endif
 
 basic_pic_test.o: basic_test.cc
 	$(CXXCOMPILE) -O0 -c -fpic -o $@ $<
 basic_pic_test: basic_pic_test.o gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ basic_pic_test.o
+
+if HAVE_STATIC
+check_PROGRAMS += basic_static_pic_test
 basic_static_pic_test: basic_pic_test.o gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ -static basic_pic_test.o
+endif
 
 check_PROGRAMS += basic_pie_test
 basic_pie_test.o: basic_test.cc
@@ -275,20 +287,20 @@ basic_pie_test: basic_pie_test.o gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ -pie basic_pie_test.o
 
 check_PROGRAMS += constructor_test
-check_PROGRAMS += constructor_static_test
 constructor_test_SOURCES = constructor_test.cc
 constructor_test_DEPENDENCIES = gcctestdir/ld
 constructor_test_LDFLAGS = -Bgcctestdir/
 constructor_test_LDADD =
 
+if HAVE_STATIC
+check_PROGRAMS += constructor_static_test
 constructor_static_test_SOURCES = $(constructor_test_SOURCES)
 constructor_static_test_DEPENDENCIES = $(constructor_test_DEPENDENCIES)
 constructor_static_test_LDFLAGS = $(constructor_test_LDFLAGS) -static
 constructor_static_test_LDADD = $(constructor_test_LDADD)
-
+endif
 
 check_PROGRAMS += two_file_test
-check_PROGRAMS += two_file_static_test
 check_PROGRAMS += two_file_pic_test
 two_file_test_SOURCES = \
 	two_file_test_1.cc \
@@ -300,10 +312,13 @@ two_file_test_DEPENDENCIES = gcctestdir/ld
 two_file_test_LDFLAGS = -Bgcctestdir/
 two_file_test_LDADD =
 
+if HAVE_STATIC
+check_PROGRAMS += two_file_static_test
 two_file_static_test_SOURCES = $(two_file_test_SOURCES)
 two_file_static_test_DEPENDENCIES = $(two_file_test_DEPENDENCIES)
 two_file_static_test_LDFLAGS = $(two_file_test_LDFLAGS) -static
 two_file_static_test_LDADD = $(two_file_test_LDADD)
+endif
 
 two_file_pic_test_SOURCES = two_file_test_main.cc
 two_file_pic_test_DEPENDENCIES = \
@@ -413,15 +428,15 @@ check_PROGRAMS += two_file_separate_shared_21_nonpic_test
 check_PROGRAMS += two_file_mixed_shared_test
 check_PROGRAMS += two_file_mixed_2_shared_test
 two_file_shared_1_nonpic.so: two_file_test_1.o gcctestdir/ld
-	$(CXXLINK) -Bgcctestdir/ -shared two_file_test_1.o two_file_test_1b.o
+	$(CXXLINK) -Bgcctestdir/ -shared two_file_test_1.o two_file_test_1b.o -Wl,-z,notext
 two_file_shared_2_nonpic.so: two_file_test_2.o gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ -shared two_file_test_2.o
 two_file_shared_nonpic.so: two_file_test_1.o two_file_test_1b.o two_file_test_2.o gcctestdir/ld
-	$(CXXLINK) -Bgcctestdir/ -shared two_file_test_1.o two_file_test_1b.o two_file_test_2.o
+	$(CXXLINK) -Bgcctestdir/ -shared two_file_test_1.o two_file_test_1b.o two_file_test_2.o -Wl,-z,notext
 two_file_shared_mixed.so: two_file_test_1_pic.o two_file_test_1b_pic.o two_file_test_2.o gcctestdir/ld
-	$(CXXLINK) -Bgcctestdir/ -shared two_file_test_1_pic.o two_file_test_1b_pic.o two_file_test_2.o
+	$(CXXLINK) -Bgcctestdir/ -shared two_file_test_1_pic.o two_file_test_1b_pic.o two_file_test_2.o -Wl,-z,notext
 two_file_shared_mixed_1.so: two_file_test_1.o two_file_test_1b_pic.o two_file_shared_2.so gcctestdir/ld
-	$(CXXLINK) -Bgcctestdir/ -shared two_file_test_1.o two_file_test_1b_pic.o two_file_shared_2.so
+	$(CXXLINK) -Bgcctestdir/ -shared two_file_test_1.o two_file_test_1b_pic.o two_file_shared_2.so -Wl,-z,notext
 
 two_file_shared_1_nonpic_test_SOURCES = \
 	two_file_test_2.cc two_file_test_main.cc
@@ -508,7 +523,6 @@ common_test_3.so: common_test_3_pic.o ver_test_2.script gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -shared common_test_3_pic.o -Wl,--version-script,$(srcdir)/ver_test_2.script
 
 check_PROGRAMS += exception_test
-check_PROGRAMS += exception_static_test
 check_PROGRAMS += exception_shared_1_test
 check_PROGRAMS += exception_shared_2_test
 check_PROGRAMS += exception_same_shared_test
@@ -534,10 +548,13 @@ exception_test_DEPENDENCIES = gcctestdir/ld
 exception_test_LDFLAGS = -Bgcctestdir/
 exception_test_LDADD =
 
+if HAVE_STATIC
+check_PROGRAMS += exception_static_test
 exception_static_test_SOURCES = $(exception_test_SOURCES)
 exception_static_test_DEPENDENCIES = $(exception_test_DEPENDENCIES)
 exception_static_test_LDFLAGS = $(exception_test_LDFLAGS) -static
 exception_static_test_LDADD = $(exception_test_LDADD)
+endif
 
 exception_shared_1_test_SOURCES = exception_test_2.cc exception_test_main.cc
 exception_shared_1_test_DEPENDENCIES = gcctestdir/ld exception_shared_1.so
@@ -603,10 +620,10 @@ weak_undef_file1_nonpic.o: weak_undef_file1.cc
 weak_undef_file2_nonpic.o: weak_undef_file2.cc
 	$(CXXCOMPILE) -c -o $@ $<
 weak_undef_lib_nonpic.so: weak_undef_file1_nonpic.o
-	$(CXXLINK) -Bgcctestdir/ -shared weak_undef_file1_nonpic.o
+	$(CXXLINK) -Bgcctestdir/ -shared weak_undef_file1_nonpic.o -Wl,-z,notext
 alt/weak_undef_lib_nonpic.so: weak_undef_file2_nonpic.o
 	test -d alt || mkdir -p alt
-	$(CXXLINK) -Bgcctestdir/ -shared weak_undef_file2_nonpic.o
+	$(CXXLINK) -Bgcctestdir/ -shared weak_undef_file2_nonpic.o -Wl,-z,notext
 endif FN_PTRS_IN_SO_WITHOUT_PIC
 
 
@@ -614,11 +631,11 @@ check_PROGRAMS += weak_alias_test
 weak_alias_test_SOURCES = weak_alias_test_main.cc
 weak_alias_test_DEPENDENCIES = \
 	gcctestdir/ld weak_alias_test_1.so weak_alias_test_2.so \
-	weak_alias_test_3.o weak_alias_test_4.so
+	weak_alias_test_3.o weak_alias_test_4.so weak_alias_test_5.so
 weak_alias_test_LDFLAGS = -Bgcctestdir/ -Wl,-R,.
 weak_alias_test_LDADD = \
 	weak_alias_test_1.so weak_alias_test_2.so weak_alias_test_3.o \
-	weak_alias_test_4.so
+	weak_alias_test_4.so weak_alias_test_5.so
 weak_alias_test_1_pic.o: weak_alias_test_1.cc
 	$(CXXCOMPILE) -c -fpic -o $@ $<
 weak_alias_test_1.so: weak_alias_test_1_pic.o gcctestdir/ld
@@ -633,6 +650,11 @@ weak_alias_test_4_pic.o: weak_alias_test_4.cc
 	$(CXXCOMPILE) -c -fpic -o $@ $<
 weak_alias_test_4.so: weak_alias_test_4_pic.o gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ -shared weak_alias_test_4_pic.o
+weak_alias_test_5_pic.o: weak_alias_test_5.cc
+	$(CXXCOMPILE) -c -fpic -o $@ $<
+weak_alias_test_5.so: weak_alias_test_5_pic.o $(srcdir)/weak_alias_test.script gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -shared weak_alias_test_5_pic.o \
+		-Wl,--version-script,$(srcdir)/weak_alias_test.script
 
 check_SCRIPTS += weak_plt.sh
 check_PROGRAMS += weak_plt
@@ -772,6 +794,7 @@ endif TLS_DESCRIPTORS
 
 endif TLS_GNU2_DIALECT
 
+if HAVE_STATIC
 if STATIC_TLS
 check_PROGRAMS += tls_static_test
 check_PROGRAMS += tls_static_pic_test
@@ -786,11 +809,12 @@ tls_static_pic_test_DEPENDENCIES = $(tls_pic_test_DEPENDENCIES)
 tls_static_pic_test_LDFLAGS = $(tls_pic_test_LDFLAGS) -static
 tls_static_pic_test_LDADD = $(tls_pic_test_LDADD)
 endif
+endif
 
 if FN_PTRS_IN_SO_WITHOUT_PIC
 check_PROGRAMS += tls_shared_nonpic_test
 tls_test_shared_nonpic.so: tls_test.o tls_test_file2.o tls_test_c.o gcctestdir/ld
-	$(CXXLINK) -Bgcctestdir/ -shared tls_test.o tls_test_file2.o tls_test_c.o
+	$(CXXLINK) -Bgcctestdir/ -shared tls_test.o tls_test_file2.o tls_test_c.o -Wl,-z,notext
 
 tls_shared_nonpic_test_SOURCES = tls_test_main.cc
 tls_shared_nonpic_test_DEPENDENCIES = gcctestdir/ld tls_test_shared_nonpic.so
@@ -828,16 +852,29 @@ many_sections_r_test.o: many_sections_test.o gcctestdir/ld
 many_sections_r_test: many_sections_r_test.o gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ many_sections_r_test.o $(LIBS)
 
-if CONSTRUCTOR_PRIORITY
-
 check_PROGRAMS += initpri1
 initpri1_SOURCES = initpri1.c
 initpri1_DEPENDENCIES = gcctestdir/ld
 initpri1_LDFLAGS = -Bgcctestdir/
 initpri1_LDADD =
 
-endif
+check_PROGRAMS += initpri2
+initpri2_SOURCES = initpri2.c
+initpri2_DEPENDENCIES = gcctestdir/ld
+initpri2_LDFLAGS = -Bgcctestdir/
+initpri2_LDADD =
 
+check_PROGRAMS += initpri3a
+initpri3a_SOURCES = initpri3.c
+initpri3a_DEPENDENCIES = gcctestdir/ld
+initpri3a_LDFLAGS = -Bgcctestdir/
+initpri3a_LDADD =
+
+check_PROGRAMS += initpri3b
+initpri3b_SOURCES = initpri3.c
+initpri3b_DEPENDENCIES = gcctestdir/ld
+initpri3b_LDFLAGS = -Bgcctestdir/ -Wl,--no-ctors-in-init-array
+initpri3b_LDADD =
 
 # Test --detect-odr-violations
 check_SCRIPTS += debug_msg.sh
@@ -861,6 +898,29 @@ debug_msg.err: debug_msg.o odr_violation1.o odr_violation2.o gcctestdir/ld
 	  rm -f $@; \
 	  exit 1; \
 	fi
+
+
+if HAVE_ZLIB
+
+# Check that --detect-odr-violations works with compressed debug sections.
+check_DATA += debug_msg_cdebug.err
+MOSTLYCLEANFILES += debug_msg_cdebug.err
+debug_msg_cdebug.o: debug_msg.cc gcctestdir/as
+	$(CXXCOMPILE) -Bgcctestdir/ -O0 -g -Wa,--compress-debug-sections -c -w -o $@ $(srcdir)/debug_msg.cc
+odr_violation1_cdebug.o: odr_violation1.cc gcctestdir/as
+	$(CXXCOMPILE) -Bgcctestdir/ -O0 -g -Wa,--compress-debug-sections -c -w -o $@ $(srcdir)/odr_violation1.cc
+odr_violation2_cdebug.o: odr_violation2.cc gcctestdir/as
+	$(CXXCOMPILE) -Bgcctestdir/ -O2 -g -Wa,--compress-debug-sections -c -w -o $@ $(srcdir)/odr_violation2.cc
+debug_msg_cdebug.err: debug_msg_cdebug.o odr_violation1_cdebug.o odr_violation2_cdebug.o gcctestdir/ld
+	@echo $(CXXLINK) -Bgcctestdir/ -Wl,--detect-odr-violations -o debug_msg_cdebug debug_msg_cdebug.o odr_violation1_cdebug.o odr_violation2_cdebug.o "2>$@"
+	@if $(CXXLINK) -Bgcctestdir/ -Wl,--detect-odr-violations -o debug_msg_cdebug debug_msg_cdebug.o odr_violation1_cdebug.o odr_violation2_cdebug.o 2>$@; \
+	then \
+	  echo 1>&2 "Link of debug_msg_cdebug should have failed"; \
+	  rm -f $@; \
+	  exit 1; \
+	fi
+
+endif HAVE_ZLIB
 
 # See if we can also detect problems when we're linking .so's, not .o's.
 check_DATA += debug_msg_so.err
@@ -944,6 +1004,18 @@ flagstest_o_specialfile_and_compress_debug_sections: flagstest_debug.o \
 	test -s $@
 
 endif HAVE_ZLIB
+
+# Test -TText and -Tdata.
+check_PROGRAMS += flagstest_o_ttext_1
+flagstest_o_ttext_1: flagstest_debug.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -o $@ $< -Wl,-Ttext,0x400000 -Wl,-Tdata,0x800000
+
+# This version won't be runnable, because there is no way to put the
+# PT_PHDR segment at file offset 0.  We just make sure that we can
+# build it without error.
+check_DATA += flagstest_o_ttext_2
+flagstest_o_ttext_2: flagstest_debug.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -o $@ $< -Wl,-Ttext,0x400010 -Wl,-Tdata,0x800010
 
 # Test symbol versioning.
 check_PROGRAMS += ver_test
@@ -1047,6 +1119,14 @@ ver_test_11_LDADD = ver_test_11.a
 ver_test_11.a: ver_test_1.o ver_test_2.o ver_test_4.o
 	$(TEST_AR) rc $@ $^
 
+check_PROGRAMS += ver_test_12
+ver_test_12_SOURCES = ver_test_main_2.cc
+ver_test_12_DEPENDENCIES = gcctestdir/ld ver_test_12.o
+ver_test_12_LDFLAGS = -Bgcctestdir/ -Wl,-R,.
+ver_test_12_LDADD = ver_test_12.o
+ver_test_12.o: gcctestdir/ld ver_test_1.o ver_test_2.o ver_test_4.o
+	gcctestdir/ld -r -o $@ ver_test_1.o ver_test_2.o ver_test_4.o
+
 check_PROGRAMS += protected_1
 protected_1_SOURCES = \
 	protected_main_1.cc protected_main_2.cc protected_main_3.cc
@@ -1095,6 +1175,14 @@ relro_test_pic.o: relro_test.cc
 relro_test.stdout: relro_test.so
 	$(TEST_READELF) -SlW relro_test.so > relro_test.stdout
 
+check_PROGRAMS += relro_now_test
+relro_now_test_SOURCES = relro_test_main.cc
+relro_now_test_DEPENDENCIES = gcctestdir/ld relro_now_test.so
+relro_now_test_LDFLAGS = -Bgcctestdir -Wl,-R,. -Wl,-z,relro -Wl,-z,now
+relro_now_test_LDADD = relro_now_test.so
+relro_now_test.so: gcctestdir/ld relro_test_pic.o
+	$(CXXLINK) -Bgcctestdir/ -shared -Wl,-z,relro -Wl,-z,now relro_test_pic.o
+
 check_PROGRAMS += relro_strip_test
 relro_strip_test_SOURCES = relro_test_main.cc
 relro_strip_test_DEPENDENCIES = gcctestdir/ld relro_strip_test.so
@@ -1132,6 +1220,16 @@ justsyms_2.o: justsyms_2.cc
 	$(CXXCOMPILE) -c -o $@ $<
 justsyms_2r.o: justsyms_2.o gcctestdir/ld $(srcdir)/justsyms.t
 	gcctestdir/ld -o $@ -r -T $(srcdir)/justsyms.t justsyms_2.o
+
+check_PROGRAMS += justsyms_exec
+justsyms_exec_SOURCES = justsyms_exec.c
+justsyms_exec_DEPENDENCIES = gcctestdir/ld justsyms_lib
+justsyms_exec_LDFLAGS = -Bgcctestdir/ -Wl,-R,justsyms_lib
+justsyms_exec_LDADD =
+justsyms_lib.o: justsyms_lib.c
+	$(COMPILE) -c -o $@ $<
+justsyms_lib: justsyms_lib.o gcctestdir/ld
+	gcctestdir/ld -o $@ -Ttext=0x1000200 -Tdata=0x2000000 -e exported_func justsyms_lib.o
 
 check_PROGRAMS += binary_test
 MOSTLYCLEANFILES += binary.txt
@@ -1565,6 +1663,7 @@ ifuncmain1pic.o: ifuncmain1.c
 ifuncmain1pie.o: ifuncmain1.c
 	$(COMPILE) -c -fpie -o $@ $<
 
+if HAVE_STATIC
 check_PROGRAMS += ifuncmain1static
 ifuncmain1static_SOURCES = ifuncmain1.c
 ifuncmain1static_DEPENDENCIES = gcctestdir/ld ifuncdep1.o
@@ -1574,6 +1673,7 @@ ifuncmain1static_LDADD = ifuncdep1.o
 check_PROGRAMS += ifuncmain1picstatic
 ifuncmain1picstatic: ifuncmain1pic.o ifuncmod1.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -static ifuncmain1pic.o ifuncmod1.o
+endif
 
 check_PROGRAMS += ifuncmain1
 ifuncmain1_SOURCES = ifuncmain1.c
@@ -1621,6 +1721,7 @@ ifuncmain2pic.o: ifuncmain2.c
 ifuncdep2pic.o: ifuncdep2.c
 	$(COMPILE) -c -fpic -o $@ $<
 
+if HAVE_STATIC
 check_PROGRAMS += ifuncmain2static
 ifuncmain2static_SOURCES = ifuncmain2.c ifuncdep2.c
 ifuncmain2static_DEPENDENCIES = gcctestdir/ld
@@ -1630,6 +1731,7 @@ ifuncmain2static_LDADD =
 check_PROGRAMS += ifuncmain2picstatic
 ifuncmain2picstatic: ifuncmain2pic.o ifuncdep2pic.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -static ifuncmain2pic.o ifuncdep2pic.o
+endif
 
 check_PROGRAMS += ifuncmain2
 ifuncmain2_SOURCES = ifuncmain2.c ifuncdep2.c
@@ -1655,6 +1757,7 @@ ifuncmain3_LDADD = -ldl
 ifuncmain4pic.o: ifuncmain4.c
 	$(COMPILE) -c -fpic -o $@ $<
 
+if HAVE_STATIC
 check_PROGRAMS += ifuncmain4static
 ifuncmain4static_SOURCES = ifuncmain4.c
 ifuncmain4static_DEPENDENCIES = gcctestdir/ld
@@ -1664,6 +1767,7 @@ ifuncmain4static_LDADD =
 check_PROGRAMS += ifuncmain4picstatic
 ifuncmain4picstatic: ifuncmain4pic.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -static ifuncmain4pic.o
+endif
 
 check_PROGRAMS += ifuncmain4
 ifuncmain4_SOURCES = ifuncmain4.c
@@ -1685,6 +1789,7 @@ ifuncmod5.so: ifuncmod5.o gcctestdir/ld
 ifuncdep5.o: ifuncmod5.c
 	$(COMPILE) -c -o $@ $<
 
+if HAVE_STATIC
 check_PROGRAMS += ifuncmain5static
 ifuncmain5static_SOURCES = ifuncmain5.c
 ifuncmain5static_DEPENDENCIES = gcctestdir/ld ifuncdep5.o
@@ -1694,6 +1799,7 @@ ifuncmain5static_LDADD = ifuncdep5.o
 check_PROGRAMS += ifuncmain5picstatic
 ifuncmain5picstatic: ifuncmain5pic.o ifuncmod5.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -static ifuncmain5pic.o ifuncmod5.o
+endif
 
 check_PROGRAMS += ifuncmain5
 ifuncmain5_SOURCES = ifuncmain5.c
@@ -1731,6 +1837,7 @@ ifuncmain7pic.o: ifuncmain7.c
 ifuncmain7pie.o: ifuncmain7.c
 	$(COMPILE) -c -fpie -o $@ $<
 
+if HAVE_STATIC
 check_PROGRAMS += ifuncmain7static
 ifuncmain7static_SOURCES = ifuncmain7.c
 ifuncmain7static_DEPENDENCIES = gcctestdir/ld
@@ -1740,6 +1847,7 @@ ifuncmain7static_LDADD =
 check_PROGRAMS += ifuncmain7picstatic
 ifuncmain7picstatic: ifuncmain7pic.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -static ifuncmain7pic.o
+endif
 
 check_PROGRAMS += ifuncmain7
 ifuncmain7_SOURCES = ifuncmain7.c
@@ -1754,6 +1862,18 @@ ifuncmain7pic: ifuncmain7pic.o gcctestdir/ld
 check_PROGRAMS += ifuncmain7pie
 ifuncmain7pie: ifuncmain7pie.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -pie ifuncmain7pie.o
+
+check_PROGRAMS += ifuncvar
+ifuncvar1_pic.o: ifuncvar1.c
+	$(COMPILE) -c -fpic -o $@ $<
+ifuncvar2_pic.o: ifuncvar2.c	
+	$(COMPILE) -c -fpic -o $@ $<
+ifuncvar.so: ifuncvar1_pic.o ifuncvar2_pic.o gcctestdir/ld
+	$(LINK) -Bgcctestdir/ -shared ifuncvar1_pic.o ifuncvar2_pic.o
+ifuncvar_SOURCES = ifuncvar3.c
+ifuncvar_DEPENDENCIES = gcctestdir/ld ifuncvar.so
+ifuncvar_LDFLAGS = -Bgcctestdir/ -Wl,-R,.
+ifuncvar_LDADD = ifuncvar.so
 
 endif IFUNC
 
@@ -1820,15 +1940,26 @@ memory_test.stdout: memory_test
 
 if DEFAULT_TARGET_X86_64
 
+two_file_test_1_v1_ndebug.o: two_file_test_1_v1.cc
+	$(CXXCOMPILE) -O0 -g0 -c -o $@ $<
+two_file_test_1_ndebug.o: two_file_test_1.cc
+	$(CXXCOMPILE) -O0 -g0 -c -o $@ $<
+two_file_test_1b_ndebug.o: two_file_test_1b.cc
+	$(CXXCOMPILE) -O0 -g0 -c -o $@ $<
+two_file_test_2_ndebug.o: two_file_test_2.cc
+	$(CXXCOMPILE) -O0 -g0 -c -o $@ $<
+two_file_test_main_ndebug.o: two_file_test_main.cc
+	$(CXXCOMPILE) -O0 -g0 -c -o $@ $<
+
 check_PROGRAMS += incremental_test_2
 MOSTLYCLEANFILES += two_file_test_tmp_2.o
-incremental_test_2: two_file_test_1_v1.o two_file_test_1.o two_file_test_1b.o \
-		    two_file_test_2.o two_file_test_main.o gcctestdir/ld
-	cp -f two_file_test_1_v1.o two_file_test_tmp_2.o
-	$(CXXLINK) -Wl,--incremental-full -Bgcctestdir/ two_file_test_tmp_2.o two_file_test_1b.o two_file_test_2.o two_file_test_main.o
+incremental_test_2: two_file_test_1_v1_ndebug.o two_file_test_1_ndebug.o two_file_test_1b_ndebug.o \
+		    two_file_test_2_ndebug.o two_file_test_main_ndebug.o gcctestdir/ld
+	cp -f two_file_test_1_v1_ndebug.o two_file_test_tmp_2.o
+	$(CXXLINK) -Wl,--incremental-full,--incremental-patch=100 -Bgcctestdir/ two_file_test_tmp_2.o two_file_test_1b_ndebug.o two_file_test_2_ndebug.o two_file_test_main_ndebug.o
 	@sleep 1
-	cp -f two_file_test_1.o two_file_test_tmp_2.o
-	$(CXXLINK) -Wl,--incremental-update -Bgcctestdir/ two_file_test_tmp_2.o two_file_test_1b.o two_file_test_2.o two_file_test_main.o
+	cp -f two_file_test_1_ndebug.o two_file_test_tmp_2.o
+	$(CXXLINK) -Wl,--incremental-update -Bgcctestdir/ two_file_test_tmp_2.o two_file_test_1b_ndebug.o two_file_test_2_ndebug.o two_file_test_main_ndebug.o
 
 check_PROGRAMS += incremental_test_3
 MOSTLYCLEANFILES += two_file_test_tmp_3.o
@@ -1850,6 +1981,48 @@ incremental_test_4: two_file_test_1.o two_file_test_1b.o two_file_test_2_v1.o \
 	@sleep 1
 	cp -f two_file_test_2.o two_file_test_tmp_4.o
 	$(CXXLINK) -Wl,--incremental-update,--incremental-base=incremental_test_4.base -Bgcctestdir/ two_file_test_1.o two_file_test_1b.o two_file_test_tmp_4.o two_file_test_main.o
+
+check_PROGRAMS += incremental_test_5
+MOSTLYCLEANFILES += two_file_test_5.a
+incremental_test_5: two_file_test_1.o two_file_test_1b_v1.o two_file_test_1b.o \
+		    two_file_test_2.o two_file_test_main.o gcctestdir/ld
+	cp -f two_file_test_1b_v1.o two_file_test_tmp_5.o
+	$(TEST_AR) rc two_file_test_5.a two_file_test_1.o two_file_test_tmp_5.o two_file_test_2.o
+	$(CXXLINK) -Wl,--incremental-full -Bgcctestdir/ two_file_test_main.o two_file_test_5.a
+	@sleep 1
+	cp -f two_file_test_1b.o two_file_test_tmp_5.o
+	$(TEST_AR) rc two_file_test_5.a two_file_test_1.o two_file_test_tmp_5.o two_file_test_2.o
+	$(CXXLINK) -Wl,--incremental-update -Bgcctestdir/ two_file_test_main.o two_file_test_5.a
+
+# Test the --incremental-unchanged flag with an archive library.
+# The second link should not update the library.
+check_PROGRAMS += incremental_test_6
+MOSTLYCLEANFILES += two_file_test_6.a
+incremental_test_6: two_file_test_1.o two_file_test_1b_v1.o two_file_test_1b.o \
+		    two_file_test_2.o two_file_test_main.o gcctestdir/ld
+	cp -f two_file_test_1b.o two_file_test_tmp_6.o
+	$(TEST_AR) rc two_file_test_6.a two_file_test_1.o two_file_test_tmp_6.o two_file_test_2.o
+	$(CXXLINK) -Wl,--incremental-full -Bgcctestdir/ two_file_test_main.o two_file_test_6.a
+	@sleep 1
+	cp -f two_file_test_1b_v1.o two_file_test_tmp_6.o
+	$(TEST_AR) rc two_file_test_6.a two_file_test_1.o two_file_test_tmp_6.o two_file_test_2.o
+	$(CXXLINK) -Wl,--incremental-update -Bgcctestdir/ two_file_test_main.o -Wl,--incremental-unchanged two_file_test_6.a -Wl,--incremental-unknown
+
+check_PROGRAMS += incremental_copy_test
+incremental_copy_test: copy_test_v1.o copy_test.o copy_test_1.so copy_test_2.so
+	cp -f copy_test_v1.o copy_test_tmp.o
+	$(CXXLINK) -Wl,--incremental-full -Bgcctestdir/ -Wl,-R,. copy_test_tmp.o copy_test_1.so copy_test_2.so
+	@sleep 1
+	cp -f copy_test.o copy_test_tmp.o
+	$(CXXLINK) -Wl,--incremental-update -Bgcctestdir/ -Wl,-R,. copy_test_tmp.o copy_test_1.so copy_test_2.so
+
+check_PROGRAMS += incremental_common_test_1
+incremental_common_test_1: common_test_1_v1.o common_test_1_v2.o gcctestdir/ld
+	cp -f common_test_1_v1.o common_test_1_tmp.o
+	$(CXXLINK) -Wl,--incremental-full -Bgcctestdir/ common_test_1_tmp.o
+	@sleep 1
+	cp -f common_test_1_v2.o common_test_1_tmp.o
+	$(CXXLINK) -Wl,--incremental-update -Bgcctestdir/ common_test_1_tmp.o
 
 endif DEFAULT_TARGET_X86_64
 
@@ -1969,7 +2142,8 @@ check_DATA += arm_bl_in_range.stdout arm_bl_out_of_range.stdout \
 	thumb2_bl_in_range.stdout thumb2_bl_out_of_range.stdout \
 	thumb_blx_in_range.stdout thumb_blx_out_of_range.stdout \
 	thumb2_blx_in_range.stdout thumb2_blx_out_of_range.stdout \
-	thumb_bl_out_of_range_local.stdout
+	thumb_bl_out_of_range_local.stdout arm_thm_jump11.stdout \
+	arm_thm_jump8.stdout
 
 arm_bl_in_range.stdout: arm_bl_in_range
 	$(TEST_OBJDUMP) -D $< > $@
@@ -2070,10 +2244,29 @@ thumb_bl_out_of_range_local: thumb_bl_out_of_range_local.o ../ld-new
 thumb_bl_out_of_range_local.o: thumb_bl_out_of_range_local.s
 	$(TEST_AS) -o $@ -march=armv5te $<
 
+arm_thm_jump11.stdout: arm_thm_jump11
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_thm_jump11: arm_thm_jump11.o ../ld-new
+	../ld-new -T $(srcdir)/arm_thm_jump11.t -o $@ $<
+
+arm_thm_jump11.o: arm_thm_jump11.s
+	$(TEST_AS) -o $@ $<
+
+arm_thm_jump8.stdout: arm_thm_jump8
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_thm_jump8: arm_thm_jump8.o ../ld-new
+	../ld-new -T $(srcdir)/arm_thm_jump8.t -o $@ $<
+
+arm_thm_jump8.o: arm_thm_jump8.s
+	$(TEST_AS) -o $@ $<
+
 MOSTLYCLEANFILES += arm_bl_in_range arm_bl_out_of_range thumb_bl_in_range \
 	thumb_bl_out_of_range thumb2_bl_in_range thumb2_bl_out_of_range \
 	thumb_blx_in_range thumb_blx_out_of_range thumb2_blx_in_range \
-	thumb2_blx_out_of_range thumb_bl_out_of_range_local
+	thumb2_blx_out_of_range thumb_bl_out_of_range_local arm_thm_jump11 \
+	arm_thm_jump8
 
 check_SCRIPTS += arm_fix_v4bx.sh
 check_DATA += arm_fix_v4bx.stdout arm_fix_v4bx_interworking.stdout \
@@ -2228,6 +2421,20 @@ pr12826_1.o: pr12826_1.s
 
 pr12826_2.o: pr12826_2.s
 	$(TEST_AS) -o $@ $<
+
+check_SCRIPTS += arm_unaligned_reloc.sh
+check_DATA += arm_unaligned_reloc.stdout
+
+arm_unaligned_reloc.stdout: arm_unaligned_reloc
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_unaligned_reloc: arm_unaligned_reloc.o ../ld-new
+	../ld-new -o $@ $<
+
+arm_unaligned_reloc.o: arm_unaligned_reloc.s
+	$(TEST_AS) -o $@ $<
+
+MOSTLYCLEANFILES += arm_unaligned_reloc
 
 endif DEFAULT_TARGET_ARM
 

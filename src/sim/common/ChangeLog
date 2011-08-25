@@ -1,3 +1,22 @@
+2011-07-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-command.c: Include sim-options.h.
+
+2011-07-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* aclocal.m4: Move sinclude comment after AC_INIT comment.
+
+2011-07-12  Mike Frysinger  <vapier@gentoo.org>
+
+	* aclocal.m4 (SIM_AC_COMMON): Call AC_REQUIRE on AC_PROG_CC.
+	Delete direct call to AC_PROG_CC.
+
+2011-07-05  Mike Frysinger  <vapier@gentoo.org>
+
+	* sim-command.c: New file.
+	* Make-common.in (SIM_NEW_COMMON_OBJS): Add sim-command.o.
+	(sim-command.o): New rule.
+
 2011-05-27  Mike Frysinger  <vapier@gentoo.org>
 
 	* sim-options.c (standard_option_handler): Remove arg[0] check

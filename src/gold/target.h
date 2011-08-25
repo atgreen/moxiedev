@@ -1,6 +1,6 @@
 // target.h -- target support for gold   -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -69,34 +69,6 @@ class Target
  public:
   virtual ~Target()
   { }
-
-  // Virtual function which is set to return true by a target if
-  // it can use relocation types to determine if a function's
-  // pointer is taken.
-  virtual bool
-  can_check_for_function_pointers() const
-  { return false; }
-
-  // This function is used in ICF (icf.cc).  This is set to true by
-  // the target if a relocation to a merged section can be processed
-  // to retrieve the contents of the merged section.
-  virtual bool
-  can_icf_inline_merge_sections () const
-  { return false; }
-
-  // Whether a section called SECTION_NAME may have function pointers to
-  // sections not eligible for safe ICF folding.
-  virtual bool
-  section_may_have_icf_unsafe_pointers(const char* section_name) const
-  {
-    // We recognize sections for normal vtables, construction vtables and
-    // EH frames.
-    return (!is_prefix_of(".rodata._ZTV", section_name)
-	    && !is_prefix_of(".data.rel.ro._ZTV", section_name)
-	    && !is_prefix_of(".rodata._ZTC", section_name)
-	    && !is_prefix_of(".data.rel.ro._ZTC", section_name)
-	    && !is_prefix_of(".eh_frame", section_name));
-  }
 
   // Return the bit size that this target implements.  This should
   // return 32 or 64.
@@ -274,17 +246,46 @@ class Target
   reloc_addend(void* arg, unsigned int type, uint64_t addend) const
   { return this->do_reloc_addend(arg, type, addend); }
 
-  // Return the PLT section to use for a global symbol.  This is used
-  // for STT_GNU_IFUNC symbols.
-  Output_data*
-  plt_section_for_global(const Symbol* sym) const
-  { return this->do_plt_section_for_global(sym); }
+  // Return the PLT address to use for a global symbol.  This is used
+  // for STT_GNU_IFUNC symbols.  The symbol's plt_offset is relative
+  // to this PLT address.
+  uint64_t
+  plt_address_for_global(const Symbol* sym) const
+  { return this->do_plt_address_for_global(sym); }
 
-  // Return the PLT section to use for a local symbol.  This is used
-  // for STT_GNU_IFUNC symbols.
-  Output_data*
-  plt_section_for_local(const Relobj* object, unsigned int symndx) const
-  { return this->do_plt_section_for_local(object, symndx); }
+  // Return the PLT address to use for a local symbol.  This is used
+  // for STT_GNU_IFUNC symbols.  The symbol's plt_offset is relative
+  // to this PLT address.
+  uint64_t
+  plt_address_for_local(const Relobj* object, unsigned int symndx) const
+  { return this->do_plt_address_for_local(object, symndx); }
+
+  // Return whether this target can use relocation types to determine
+  // if a function's address is taken.
+  bool
+  can_check_for_function_pointers() const
+  { return this->do_can_check_for_function_pointers(); }
+
+  // Return whether a relocation to a merged section can be processed
+  // to retrieve the contents.
+  bool
+  can_icf_inline_merge_sections () const
+  { return this->pti_->can_icf_inline_merge_sections; }
+
+  // Whether a section called SECTION_NAME may have function pointers to
+  // sections not eligible for safe ICF folding.
+  virtual bool
+  section_may_have_icf_unsafe_pointers(const char* section_name) const
+  { return this->do_section_may_have_icf_unsafe_pointers(section_name); }
+
+  // Return the base to use for the PC value in an FDE when it is
+  // encoded using DW_EH_PE_datarel.  This does not appear to be
+  // documented anywhere, but it is target specific.  Any use of
+  // DW_EH_PE_datarel in gcc requires defining a special macro
+  // (ASM_MAYBE_OUTPUT_ENCODED_ADDR_RTX) to output the value.
+  uint64_t
+  ehframe_datarel_base() const
+  { return this->do_ehframe_datarel_base(); }
 
   // Return true if a reference to SYM from a reloc of type R_TYPE
   // means that the current function may call an object compiled
@@ -385,6 +386,17 @@ class Target
   select_as_default_target()
   { this->do_select_as_default_target(); } 
 
+  // Return the value to store in the EI_OSABI field in the ELF
+  // header.
+  elfcpp::ELFOSABI
+  osabi() const
+  { return this->osabi_; }
+
+  // Set the value to store in the EI_OSABI field in the ELF header.
+  void
+  set_osabi(elfcpp::ELFOSABI osabi)
+  { this->osabi_ = osabi; }
+
  protected:
   // This struct holds the constant information for a child class.  We
   // use a struct to avoid the overhead of virtual function calls for
@@ -406,6 +418,9 @@ class Target
     // Whether an object file with no .note.GNU-stack sections implies
     // that the stack should be executable.
     bool is_default_stack_executable;
+    // Whether a relocation to a merged section can be processed to
+    // retrieve the contents.
+    bool can_icf_inline_merge_sections;
     // Prefix character to strip when checking for wrapping.
     char wrap_char;
     // The default dynamic linker name.
@@ -434,7 +449,7 @@ class Target
 
   Target(const Target_info* pti)
     : pti_(pti), processor_specific_flags_(0),
-      are_processor_specific_flags_set_(false)
+      are_processor_specific_flags_set_(false), osabi_(elfcpp::ELFOSABI_NONE)
   { }
 
   // Virtual function which may be implemented by the child class.
@@ -466,10 +481,10 @@ class Target
   // Adjust the output file header before it is written out.  VIEW
   // points to the header in external form.  LEN is the length, and
   // will be one of the values of elfcpp::Elf_sizes<size>::ehdr_size.
-  // By default, we do nothing.
+  // By default, we set the EI_OSABI field if requested (in
+  // Sized_target).
   virtual void
-  do_adjust_elf_header(unsigned char*, int) const
-  { }
+  do_adjust_elf_header(unsigned char*, int) const = 0;
 
   // Virtual function which may be overridden by the child class.
   virtual bool
@@ -489,12 +504,36 @@ class Target
 
   // Virtual functions that must be overridden by a target that uses
   // STT_GNU_IFUNC symbols.
-  virtual Output_data*
-  do_plt_section_for_global(const Symbol*) const
+  virtual uint64_t
+  do_plt_address_for_global(const Symbol*) const
   { gold_unreachable(); }
 
-  virtual Output_data*
-  do_plt_section_for_local(const Relobj*, unsigned int) const
+  virtual uint64_t
+  do_plt_address_for_local(const Relobj*, unsigned int) const
+  { gold_unreachable(); }
+
+  // Virtual function which may be overriden by the child class.
+  virtual bool
+  do_can_check_for_function_pointers() const
+  { return false; }
+
+  // Virtual function which may be overridden by the child class.  We
+  // recognize some default sections for which we don't care whether
+  // they have function pointers.
+  virtual bool
+  do_section_may_have_icf_unsafe_pointers(const char* section_name) const
+  {
+    // We recognize sections for normal vtables, construction vtables and
+    // EH frames.
+    return (!is_prefix_of(".rodata._ZTV", section_name)
+	    && !is_prefix_of(".data.rel.ro._ZTV", section_name)
+	    && !is_prefix_of(".rodata._ZTC", section_name)
+	    && !is_prefix_of(".data.rel.ro._ZTC", section_name)
+	    && !is_prefix_of(".eh_frame", section_name));
+  }
+
+  virtual uint64_t
+  do_ehframe_datarel_base() const
   { gold_unreachable(); }
 
   // Virtual function which may be overridden by the child class.  The
@@ -609,6 +648,10 @@ class Target
   elfcpp::Elf_Word processor_specific_flags_;
   // Whether the processor-specific flags are set at least once.
   bool are_processor_specific_flags_set_;
+  // If not ELFOSABI_NONE, the value to put in the EI_OSABI field of
+  // the ELF header.  This is handled at this level because it is
+  // OS-specific rather than processor-specific.
+  elfcpp::ELFOSABI osabi_;
 };
 
 // The abstract class for a specific size and endianness of target.
@@ -829,8 +872,16 @@ class Sized_target : public Target
   // A target needs to implement this to support incremental linking.
 
   virtual void
-  register_global_plt_entry(unsigned int /* plt_index */,
+  register_global_plt_entry(Symbol_table*, Layout*,
+			    unsigned int /* plt_index */,
 			    Symbol*)
+  { gold_unreachable(); }
+
+  // Force a COPY relocation for a given symbol.
+  // A target needs to implement this to support incremental linking.
+
+  virtual void
+  emit_copy_reloc(Symbol_table*, Symbol*, Output_section*, off_t)
   { gold_unreachable(); }
 
   // Apply an incremental relocation.
@@ -853,6 +904,10 @@ class Sized_target : public Target
     gold_assert(pti->size == size);
     gold_assert(pti->is_big_endian ? big_endian : !big_endian);
   }
+
+  // Set the EI_OSABI field if requested.
+  virtual void
+  do_adjust_elf_header(unsigned char*, int) const;
 };
 
 } // End namespace gold.

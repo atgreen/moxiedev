@@ -32,10 +32,15 @@ register char *stack_ptr asm ("SP");
 static inline int
 do_syscall (int reason, void *arg)
 {
-  register int r asm ("P0") = reason;
-  register void *a asm ("R0") = arg;
-  register int result asm ("R0");
-  asm volatile ("excpt 0;" : "=r" (result) : "a" (r), "r" (a) : "memory", "CC");
+  int result, result2, errcode;
+  asm volatile ("excpt 0;"
+		: "=q0" (result),
+		  "=q1" (result2),
+		  "=q2" (errcode)
+		: "qA" (reason),
+		  "q0" (arg)
+		: "memory", "CC");
+  errno = errcode;
   return result;
 }
 
@@ -47,17 +52,18 @@ _read (int file, char *ptr, int len)
   block[0] = file;
   block[1] = (int) ptr;
   block[2] = len;
-  
+
   return do_syscall (SYS_read, block);
 }
 
 int
-_lseek (int file, int ptr, int dir)
+_lseek (int file, int ptr, int whence)
 {
-  int block[2];
+  int block[3];
 
   block[0] = file;
   block[1] = ptr;
+  block[2] = whence;
 
   return do_syscall (SYS_lseek, block);
 }
@@ -66,11 +72,11 @@ int
 _write (int file, char *ptr, int len)
 {
   int block[3];
-  
+
   block[0] = file;
   block[1] = (int) ptr;
   block[2] = len;
-  
+
   return do_syscall (SYS_write, block);
 }
 
@@ -111,7 +117,7 @@ _kill (int n, int m)
 int
 _getpid (int n)
 {
-  return 1;
+  return do_syscall (SYS_getpid, &n);
 }
 
 caddr_t
@@ -123,9 +129,9 @@ _sbrk (int incr)
 
   if (heap_end == NULL)
     heap_end = &end;
-  
+
   prev_heap_end = heap_end;
-  
+
   if (heap_end + incr > stack_ptr)
     {
       /* Some of the libstdc++-v3 tests rely upon detecting
@@ -134,14 +140,14 @@ _sbrk (int incr)
       extern void abort (void);
 
       _write (1, "_sbrk: Heap and stack collision\n", 32);
-      
+
       abort ();
 #else
       errno = ENOMEM;
       return (caddr_t) -1;
 #endif
     }
-  
+
   heap_end += incr;
 
   return (caddr_t) prev_heap_end;
@@ -150,40 +156,41 @@ _sbrk (int incr)
 extern void memset (struct stat *, int, unsigned int);
 
 int
-_fstat (int file, struct stat * st)
+_fstat (int file, struct stat *st)
 {
-  memset (st, 0, sizeof (* st));
-  st->st_mode = S_IFCHR;
-  st->st_blksize = 1024;
-  return 0;
+  int block[2];
+
+  block[0] = file;
+  block[1] = (int) st;
+
+  return do_syscall (SYS_fstat, block);
 }
 
 int _stat (const char *fname, struct stat *st)
 {
-  int file;
+  int block[2];
 
-  /* The best we can do is try to open the file readonly.  If it exists,
-     then we can guess a few things about it.  */
-  if ((file = _open (fname, O_RDONLY)) < 0)
-    return -1;
+  block[0] = (int) fname;
+  block[1] = (int) st;
 
-  memset (st, 0, sizeof (* st));
-  st->st_mode = S_IFREG | S_IREAD;
-  st->st_blksize = 1024;
-  _close (file); /* Not interested in the error.  */
-  return 0;
+  return do_syscall (SYS_stat, block);
 }
 
 int
-_link (void)
+_link (const char *existing, const char *new)
 {
-  return -1;
+  int block[2];
+
+  block[0] = (int) existing;
+  block[1] = (int) new;
+
+  return do_syscall (SYS_link, block);
 }
 
 int
-_unlink (void)
+_unlink (const char *path)
 {
-  return -1;
+  return do_syscall (SYS_unlink, path);
 }
 
 void
@@ -201,7 +208,7 @@ _gettimeofday (struct timeval *tv, void *tz)
 }
 
 /* Return a clock that ticks at 100Hz.  */
-clock_t 
+clock_t
 _times (struct tms * tp)
 {
   return -1;

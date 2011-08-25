@@ -1,3 +1,66 @@
+2011-08-19  Nick Clifton  <nickc@redhat.com>
+
+	* iq2000/sim.ld (.gcc_except_table): Include .gcc_except_table.foo
+	sections as well.
+
+2011-08-08  Mike Stump <mikestump@comcast.net>
+
+	* Makefile.in: Make stmp-bsp and install consistent with
+	subdir_do target with regards to error handling.
+
+2011-07-13  Bin Cheng <bin.cheng@arm.com>
+
+	* arm/crt0.S: Support armv6-m processors in libgloss.
+	* arm/swi.h: Likewise.
+	* arm/trap.S: Likewise.
+	* arm/redboot-crt0.S: Likewise.
+	* arm/linux-crt0.c: Likewise.
+	* arm/arm.h: New.
+
+2011-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin/syscalls.c (_getpid): Call do_syscall with func argument n and
+	return the result.
+	(_fstat): Delete stub body.  Add block array and assign file/st to it.
+	Call do_syscall with result.
+	(_stat): Delete stub body.  Add block array and assign fname/st to
+	it.  Call do_syscall with result.
+	(_link): Change func arguments to accept two strings.  Add block array
+	and assign existing/new to it.  Call do_syscall with result.
+	(_unlink): Change func arguments to accept a string.  Call do_syscall
+	with new argument.
+
+2011-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin/syscalls.c (_lseek): Change 3rd arg name to whence.  Increase
+	block array to 3 elements.  Set 3rd element to whence.
+
+2011-06-29  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* arm/Makefile.in: Add $CFLAGS to compile commands for specified .o targets.
+
+2011-06-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin/syscalls.c (do_syscall): Delete local variable definitions.
+	Declare result, result2, errcode local ints.  Delete asm inputs
+	and outputs.  Set output constraints to q0/result, q1/result2, and
+	q2/errcode.  Set input constraints to qA/reason and q0/arg.  Set
+	errno to errcode.
+
+2011-06-21  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin/syscalls.c: Trim trailing whitespace.
+	* bfin/crt0.S: Likewise.
+
+2011-06-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* configure.in: Don't handle strongarm, ep9312 and xscale target
+	names.
+	* configure: Regenerate.
+	* libnosys/configure.in: Don't handle strongarm and thumb target
+	names.
+	* libnosys/configure: Regenerate.
+
 2011-05-27  Nick Clifton  <nickc@redhat.com>
 
 	* v8500/sbrk.c (_sbrk): Tidy code.

@@ -84,6 +84,10 @@ extern unsigned long i386_mach (void);
 #define ELF_TARGET_L1OM_FORMAT	"elf64-l1om"
 #endif
 
+#ifndef ELF_TARGET_K1OM_FORMAT
+#define ELF_TARGET_K1OM_FORMAT	"elf64-k1om"
+#endif
+
 #if ((defined (OBJ_MAYBE_COFF) && defined (OBJ_MAYBE_AOUT)) \
      || defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF) \
      || defined (TE_PE) || defined (TE_PEP) || defined (OBJ_MACH_O))
@@ -224,6 +228,7 @@ enum processor_type
   PROCESSOR_CORE2,
   PROCESSOR_COREI7,
   PROCESSOR_L1OM,
+  PROCESSOR_K1OM,
   PROCESSOR_K6,
   PROCESSOR_ATHLON,
   PROCESSOR_K8,
@@ -273,6 +278,9 @@ extern unsigned int x86_dwarf2_return_column;
 
 extern int x86_cie_data_alignment;
 #define DWARF2_CIE_DATA_ALIGNMENT x86_cie_data_alignment
+
+extern int x86_dwarf2_addr_size (void);
+#define DWARF2_ADDR_SIZE(bfd) x86_dwarf2_addr_size ()
 
 #define tc_parse_to_dw2regnum tc_x86_parse_to_dw2regnum
 extern void tc_x86_parse_to_dw2regnum (expressionS *);

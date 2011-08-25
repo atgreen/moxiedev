@@ -1,6 +1,6 @@
 // resolve.cc -- symbol resolution for gold
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -245,6 +245,21 @@ Symbol_table::resolve(Sized_symbol<size>* to,
 		      unsigned int orig_st_shndx,
 		      Object* object, const char* version)
 {
+  // It's possible for a symbol to be defined in an object file
+  // using .symver to give it a version, and for there to also be
+  // a linker script giving that symbol the same version.  We
+  // don't want to give a multiple-definition error for this
+  // harmless redefinition.
+  bool to_is_ordinary;
+  if (to->source() == Symbol::FROM_OBJECT
+      && to->object() == object
+      && is_ordinary
+      && to->is_defined()
+      && to->shndx(&to_is_ordinary) == st_shndx
+      && to_is_ordinary
+      && to->value() == sym.get_st_value())
+    return;
+
   if (parameters->target().has_resolve())
     {
       Sized_target<size, big_endian>* sized_target;
@@ -306,7 +321,6 @@ Symbol_table::resolve(Sized_symbol<size>* to,
   // inline and the other is not.  (Note: not all ODR violations can
   // be found this way, and not everything this finds is an ODR
   // violation.  But it's helpful to warn about.)
-  bool to_is_ordinary;
   if (parameters->options().detect_odr_violations()
       && (sym.get_st_bind() == elfcpp::STB_WEAK
 	  || to->binding() == elfcpp::STB_WEAK)
@@ -337,8 +351,8 @@ Symbol_table::resolve(Sized_symbol<size>* to,
   bool adjust_common_sizes;
   bool adjust_dyndef;
   typename Sized_symbol<size>::Size_type tosize = to->symsize();
-  if (Symbol_table::should_override(to, frombits, OBJECT, object,
-				    &adjust_common_sizes,
+  if (Symbol_table::should_override(to, frombits, sym.get_st_type(), OBJECT,
+				    object, &adjust_common_sizes,
 				    &adjust_dyndef))
     {
       elfcpp::STB tobinding = to->binding();
@@ -395,8 +409,8 @@ Symbol_table::resolve(Sized_symbol<size>* to,
 
 bool
 Symbol_table::should_override(const Symbol* to, unsigned int frombits,
-                              Defined defined, Object* object,
-			      bool* adjust_common_sizes,
+			      elfcpp::STT fromtype, Defined defined,
+			      Object* object, bool* adjust_common_sizes,
 			      bool* adjust_dyndef)
 {
   *adjust_common_sizes = false;
@@ -420,7 +434,13 @@ Symbol_table::should_override(const Symbol* to, unsigned int frombits,
 			      to->type());
     }
 
-  // FIXME: Warn if either but not both of TO and SYM are STT_TLS.
+  if (to->type() == elfcpp::STT_TLS
+      ? fromtype != elfcpp::STT_TLS
+      : fromtype == elfcpp::STT_TLS)
+    Symbol_table::report_resolve_problem(true,
+					 _("symbol '%s' used as both __thread "
+					   "and non-__thread"),
+					 to, defined, object);
 
   // We use a giant switch table for symbol resolution.  This code is
   // unwieldy, but: 1) it is efficient; 2) we definitely handle all
@@ -830,6 +850,7 @@ Symbol_table::report_resolve_problem(bool is_error, const char* msg,
       objname = _("linker script");
       break;
     case PREDEFINED:
+    case INCREMENTAL_BASE:
       objname = _("linker defined");
       break;
     default:
@@ -855,13 +876,15 @@ Symbol_table::report_resolve_problem(bool is_error, const char* msg,
 // defining special symbols.
 
 bool
-Symbol_table::should_override_with_special(const Symbol* to, Defined defined)
+Symbol_table::should_override_with_special(const Symbol* to,
+					   elfcpp::STT fromtype,
+					   Defined defined)
 {
   bool adjust_common_sizes;
   bool adjust_dyn_def;
   unsigned int frombits = global_flag | regular_flag | def_flag;
-  bool ret = Symbol_table::should_override(to, frombits, defined, NULL,
-					   &adjust_common_sizes,
+  bool ret = Symbol_table::should_override(to, frombits, fromtype, defined,
+					   NULL, &adjust_common_sizes,
 					   &adjust_dyn_def);
   gold_assert(!adjust_common_sizes && !adjust_dyn_def);
   return ret;
@@ -872,7 +895,8 @@ Symbol_table::should_override_with_special(const Symbol* to, Defined defined)
 void
 Symbol::override_base_with_special(const Symbol* from)
 {
-  gold_assert(this->name_ == from->name_ || this->has_alias());
+  bool same_name = this->name_ == from->name_;
+  gold_assert(same_name || this->has_alias());
 
   this->source_ = from->source_;
   switch (from->source_)
@@ -894,7 +918,16 @@ Symbol::override_base_with_special(const Symbol* from)
       break;
     }
 
-  this->override_version(from->version_);
+  if (same_name)
+    {
+      // When overriding a versioned symbol with a special symbol, we
+      // may be changing the version.  This will happen if we see a
+      // special symbol such as "_end" defined in a shared object with
+      // one version (from a version script), but we want to define it
+      // here with a different version (from a different version
+      // script).
+      this->version_ = from->version_;
+    }
   this->type_ = from->type_;
   this->binding_ = from->binding_;
   this->override_visibility(from->visibility_);
@@ -907,6 +940,8 @@ Symbol::override_base_with_special(const Symbol* from)
     this->needs_dynsym_entry_ = true;
   if (from->needs_dynsym_value_)
     this->needs_dynsym_value_ = true;
+
+  this->is_predefined_ = from->is_predefined_;
 
   // We shouldn't see these flags.  If we do, we need to handle them
   // somehow.

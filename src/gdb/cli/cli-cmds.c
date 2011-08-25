@@ -726,7 +726,7 @@ shell_escape (char *arg, int from_tty)
   chdir (current_directory);
 #endif
 #else /* Can fork.  */
-  int rc, status, pid;
+  int status, pid;
 
   if ((pid = vfork ()) == 0)
     {
@@ -750,8 +750,7 @@ shell_escape (char *arg, int from_tty)
     }
 
   if (pid != -1)
-    while ((rc = wait (&status)) != pid && rc != -1)
-      ;
+    waitpid (pid, &status, 0);
   else
     error (_("Fork failed"));
 #endif /* Can fork.  */
@@ -1064,7 +1063,7 @@ print_disassembly (struct gdbarch *gdbarch, const char *name,
 			 paddress (gdbarch, low), paddress (gdbarch, high));
 
       /* Dump the specified range.  */
-      gdb_disassembly (gdbarch, uiout, 0, flags, -1, low, high);
+      gdb_disassembly (gdbarch, current_uiout, 0, flags, -1, low, high);
 
       printf_filtered ("End of assembler dump.\n");
       gdb_flush (gdb_stdout);

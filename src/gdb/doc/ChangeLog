@@ -1,3 +1,79 @@
+2011-08-17  Phil Muldoon  <pmuldoon@redhat.com>
+
+        * gdb.texinfo (Prompt): Add set/show extended-prompt
+        documentation
+        (Basic Python): Add prompt_hook anchor.
+        (Python modules): Reword module text to reflect multiple modules.
+        (gdb.prompt): Document gdb.prompt module.
+
+2011-08-14  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.texinfo (General Query Packets): Document qXfer:fdpic:read packet.
+
+2011-08-14  Yao Qi  <yao@codesourcery.com>
+
+	* gdb.texinfo (Standard Target Features): Document C6x features.
+	(TIC6x Features): New node.
+
+2011-08-12  Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (Symbols In Python): Document symbol.type.
+
+2011-08-09  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* gdb.texinfo (Python): Document command and function
+	auto-loading.
+
+2011-07-26  Jan Kratochvil  <jan.kratochvil@redhat.com>
+	    Eli Zaretskii  <eliz@gnu.org>
+
+	* gdb.texinfo (whatis, ptype): Highlight their differences.  Describe
+	typedefs unrolling.  Extend the sample code by an inner typedef and
+	outer typedefs unrolling.
+
+2011-07-26  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* gdb.texinfo (Caching Remote Data): Document {set,show} dcache
+	size and line-size.
+
+2011-07-21  Matt Rice  <ratmice@gmail.com>
+
+	PR macros/12999
+	* gdb.texinfo (Macros): Add info definitions and info macros commands.
+	Update text and cindex entries for info macro command.
+
+2011-07-21  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* observer.texi (GDB Observers): Add before_prompt observer.
+	* gdb.texinfo (Basic Python): Add documentation for prompt
+	substitution.
+
+2011-07-11  Phil Muldoon  <pmuldoon@redhat.com>
+
+        PR python/12438
+	* gdb.texinfo (Python Commands): Add deprecate note to maint
+          set/show python print-stack.  Document set/show python
+          print-backtrace.
+
+2011-07-05  Thiago Jung Bauermann  <bauerman.ibm.com>
+
+	* gdb.texinfo: Fix typos.
+
+2011-07-01  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Debugging Output): Document set debug
+	check-physname.
+
+2011-06-29  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (GDB/MI Miscellaneous Commands): Document
+	breakpoint-notifications feature.
+
+2011-06-29  Ulrich Weigand  <ulrich.weigand@linaro.org>
+
+	* gdb.texinfo (Target Description): Remove warning about
+	possibly unstable format.
+
 2011-06-03  Tom Tromey  <tromey@redhat.com>
 
 	* gdb.texinfo (GDB/MI Async Records): Document 'exit-code' field.

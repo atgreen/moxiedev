@@ -95,11 +95,16 @@ gdb_test "python print t\[0\].is_constant" "True" "Test t.is_constant"
 gdb_test "python print t\[0\].is_argument" "False" "Test t.is_argument"
 gdb_test "python print t\[0\].is_function" "False" "Test t.is_function"
 gdb_test "python print t\[0\].addr_class == gdb.SYMBOL_LOC_CONST" "True" "Test t.addr_class"
+
+# Test type attribute.
+gdb_test "python print t\[0\].type" "enum tag" "Get type"
+
+# Test symtab attribute.
 gdb_test "python print t\[0\].symtab" "gdb.python/py-symbol.c.*" "Get symtab"
 
 # C++ tests
 # Recompile binary.
- if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable "debug c++"] != "" } {
+ if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}-cxx" executable "debug c++"] != "" } {
      untested "Couldn't compile ${srcfile} in c++ mode"
      return -1
  }
@@ -108,7 +113,7 @@ gdb_test "python print t\[0\].symtab" "gdb.python/py-symbol.c.*" "Get symtab"
 gdb_exit
 gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
-gdb_load ${binfile}
+gdb_load ${binfile}-cxx
 
 if ![runto_main] then {
     fail "Can't run to main"

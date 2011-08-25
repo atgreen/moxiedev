@@ -70,4 +70,15 @@ if [set_lang_java] then {
     # so GDB will report these as "optimized out". See gcc/43260.
     setup_xfail *-*-* gcc/43260
     gdb_test "print *jprint.props" " = .*" "print a java.util.Properties"
+
+    set test "print a java.lang.String"
+    gdb_test_multiple "print jprint.hi" $test {
+	-re " = java.lang.String \"hi maude\"\r\n$gdb_prompt $" {
+	    pass $test
+	}
+	-re "There is no member named data\\.\r\n$gdb_prompt $" {
+	    # GCJ system debug info for java.lang.String is not installed.
+	    xfail $test
+	}
+    }
 }

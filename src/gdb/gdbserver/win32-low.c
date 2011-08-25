@@ -26,6 +26,7 @@
 #include "mem-break.h"
 #include "win32-low.h"
 
+#include <stdint.h>
 #include <windows.h>
 #include <winnt.h>
 #include <imagehlp.h>
@@ -1810,6 +1811,7 @@ static struct target_ops win32_target_ops = {
   NULL, /* supports_multi_process */
   NULL, /* handle_monitor_command */
   NULL, /* core_of_thread */
+  NULL, /* read_loadmap */
   NULL, /* process_qsupported */
   NULL, /* supports_tracepoints */
   NULL, /* read_pc */

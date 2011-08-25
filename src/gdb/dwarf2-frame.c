@@ -312,55 +312,6 @@ read_mem (void *baton, gdb_byte *buf, CORE_ADDR addr, size_t len)
   read_memory (addr, buf, len);
 }
 
-static void
-no_get_frame_base (void *baton, const gdb_byte **start, size_t *length)
-{
-  internal_error (__FILE__, __LINE__,
-		  _("Support for DW_OP_fbreg is unimplemented"));
-}
-
-/* Helper function for execute_stack_op.  */
-
-static CORE_ADDR
-no_get_frame_cfa (void *baton)
-{
-  internal_error (__FILE__, __LINE__,
-		  _("Support for DW_OP_call_frame_cfa is unimplemented"));
-}
-
-/* Helper function for execute_stack_op.  */
-
-static CORE_ADDR
-no_get_frame_pc (void *baton)
-{
-  internal_error (__FILE__, __LINE__, _("\
-Support for DW_OP_GNU_implicit_pointer is unimplemented"));
-}
-
-static CORE_ADDR
-no_get_tls_address (void *baton, CORE_ADDR offset)
-{
-  internal_error (__FILE__, __LINE__, _("\
-Support for DW_OP_GNU_push_tls_address is unimplemented"));
-}
-
-/* Helper function for execute_stack_op.  */
-
-static void
-no_dwarf_call (struct dwarf_expr_context *ctx, size_t die_offset)
-{
-  internal_error (__FILE__, __LINE__,
-		  _("Support for DW_OP_call* is invalid in CFI"));
-}
-
-/* Helper function for execute_stack_op.  */
-
-static struct type *
-no_base_type (struct dwarf_expr_context *ctx, size_t die)
-{
-  error (_("Support for typed DWARF is not supported in CFI"));
-}
-
 /* Execute the required actions for both the DW_CFA_restore and
 DW_CFA_restore_extended instructions.  */
 static void
@@ -391,6 +342,20 @@ register %s (#%d) at %s"),
 		       paddress (gdbarch, fs->pc));
 }
 
+/* Virtual method table for execute_stack_op below.  */
+
+static const struct dwarf_expr_context_funcs dwarf2_frame_ctx_funcs =
+{
+  read_reg,
+  read_mem,
+  ctx_no_get_frame_base,
+  ctx_no_get_frame_cfa,
+  ctx_no_get_frame_pc,
+  ctx_no_get_tls_address,
+  ctx_no_dwarf_call,
+  ctx_no_get_base_type
+};
+
 static CORE_ADDR
 execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
 		  CORE_ADDR offset, struct frame_info *this_frame,
@@ -408,14 +373,7 @@ execute_stack_op (const gdb_byte *exp, ULONGEST len, int addr_size,
   ctx->addr_size = addr_size;
   ctx->offset = offset;
   ctx->baton = this_frame;
-  ctx->read_reg = read_reg;
-  ctx->read_mem = read_mem;
-  ctx->get_frame_base = no_get_frame_base;
-  ctx->get_frame_cfa = no_get_frame_cfa;
-  ctx->get_frame_pc = no_get_frame_pc;
-  ctx->get_tls_address = no_get_tls_address;
-  ctx->dwarf_call = no_dwarf_call;
-  ctx->get_base_type = no_base_type;
+  ctx->funcs = &dwarf2_frame_ctx_funcs;
 
   dwarf_expr_push_address (ctx, initial, initial_in_stack_memory);
   dwarf_expr_eval (ctx, exp, len);
@@ -1801,17 +1759,30 @@ add_fde (struct dwarf2_fde_table *fde_table, struct dwarf2_fde *fde)
 #define DW64_CIE_ID ~0
 #endif
 
+/* Defines the type of eh_frames that are expected to be decoded: CIE, FDE
+   or any of them.  */
+
+enum eh_frame_type
+{
+  EH_CIE_TYPE_ID = 1 << 0,
+  EH_FDE_TYPE_ID = 1 << 1,
+  EH_CIE_OR_FDE_TYPE_ID = EH_CIE_TYPE_ID | EH_FDE_TYPE_ID
+};
+
 static gdb_byte *decode_frame_entry (struct comp_unit *unit, gdb_byte *start,
 				     int eh_frame_p,
                                      struct dwarf2_cie_table *cie_table,
-                                     struct dwarf2_fde_table *fde_table);
+                                     struct dwarf2_fde_table *fde_table,
+                                     enum eh_frame_type entry_type);
 
-/* Decode the next CIE or FDE.  Return NULL if invalid input, otherwise
-   the next byte to be processed.  */
+/* Decode the next CIE or FDE, entry_type specifies the expected type.
+   Return NULL if invalid input, otherwise the next byte to be processed.  */
+
 static gdb_byte *
 decode_frame_entry_1 (struct comp_unit *unit, gdb_byte *start, int eh_frame_p,
                       struct dwarf2_cie_table *cie_table,
-                      struct dwarf2_fde_table *fde_table)
+                      struct dwarf2_fde_table *fde_table,
+                      enum eh_frame_type entry_type)
 {
   struct gdbarch *gdbarch = get_objfile_arch (unit->objfile);
   gdb_byte *buf, *end;
@@ -1861,6 +1832,10 @@ decode_frame_entry_1 (struct comp_unit *unit, gdb_byte *start, int eh_frame_p,
       struct dwarf2_cie *cie;
       char *augmentation;
       unsigned int cie_version;
+
+      /* Check that a CIE was expected.  */
+      if ((entry_type & EH_CIE_TYPE_ID) == 0)
+	error (_("Found a CIE when not expecting it."));
 
       /* Record the offset into the .debug_frame section of this CIE.  */
       cie_pointer = start - unit->dwarf_frame_buffer;
@@ -2027,6 +2002,10 @@ decode_frame_entry_1 (struct comp_unit *unit, gdb_byte *start, int eh_frame_p,
       /* This is a FDE.  */
       struct dwarf2_fde *fde;
 
+      /* Check that an FDE was expected.  */
+      if ((entry_type & EH_FDE_TYPE_ID) == 0)
+	error (_("Found an FDE when not expecting it."));
+
       /* In an .eh_frame section, the CIE pointer is the delta between the
 	 address within the FDE where the CIE pointer is stored and the
 	 address of the CIE.  Convert it to an offset into the .eh_frame
@@ -2048,7 +2027,8 @@ decode_frame_entry_1 (struct comp_unit *unit, gdb_byte *start, int eh_frame_p,
       if (fde->cie == NULL)
 	{
 	  decode_frame_entry (unit, unit->dwarf_frame_buffer + cie_pointer,
-			      eh_frame_p, cie_table, fde_table);
+			      eh_frame_p, cie_table, fde_table,
+			      EH_CIE_TYPE_ID);
 	  fde->cie = find_cie (cie_table, cie_pointer);
 	}
 
@@ -2089,11 +2069,14 @@ decode_frame_entry_1 (struct comp_unit *unit, gdb_byte *start, int eh_frame_p,
   return end;
 }
 
-/* Read a CIE or FDE in BUF and decode it.  */
+/* Read a CIE or FDE in BUF and decode it. Entry_type specifies whether we
+   expect an FDE or a CIE.  */
+
 static gdb_byte *
 decode_frame_entry (struct comp_unit *unit, gdb_byte *start, int eh_frame_p,
                     struct dwarf2_cie_table *cie_table,
-                    struct dwarf2_fde_table *fde_table)
+                    struct dwarf2_fde_table *fde_table,
+                    enum eh_frame_type entry_type)
 {
   enum { NONE, ALIGN4, ALIGN8, FAIL } workaround = NONE;
   gdb_byte *ret;
@@ -2102,7 +2085,7 @@ decode_frame_entry (struct comp_unit *unit, gdb_byte *start, int eh_frame_p,
   while (1)
     {
       ret = decode_frame_entry_1 (unit, start, eh_frame_p,
-                                  cie_table, fde_table);
+				  cie_table, fde_table, entry_type);
       if (ret != NULL)
 	break;
 
@@ -2212,6 +2195,7 @@ dwarf2_build_frame_info (struct objfile *objfile)
   struct dwarf2_cie_table cie_table;
   struct dwarf2_fde_table fde_table;
   struct dwarf2_fde_table *fde_table2;
+  volatile struct gdb_exception e;
 
   cie_table.num_entries = 0;
   cie_table.entries = NULL;
@@ -2227,39 +2211,62 @@ dwarf2_build_frame_info (struct objfile *objfile)
   unit->dbase = 0;
   unit->tbase = 0;
 
-  dwarf2_get_section_info (objfile, DWARF2_EH_FRAME,
-                           &unit->dwarf_frame_section,
-                           &unit->dwarf_frame_buffer,
-                           &unit->dwarf_frame_size);
-  if (unit->dwarf_frame_size)
+  if (objfile->separate_debug_objfile_backlink == NULL)
     {
-      asection *got, *txt;
-
-      /* FIXME: kettenis/20030602: This is the DW_EH_PE_datarel base
-	 that is used for the i386/amd64 target, which currently is
-	 the only target in GCC that supports/uses the
-	 DW_EH_PE_datarel encoding.  */
-      got = bfd_get_section_by_name (unit->abfd, ".got");
-      if (got)
-	unit->dbase = got->vma;
-
-      /* GCC emits the DW_EH_PE_textrel encoding type on sh and ia64
-         so far.  */
-      txt = bfd_get_section_by_name (unit->abfd, ".text");
-      if (txt)
-	unit->tbase = txt->vma;
-
-      frame_ptr = unit->dwarf_frame_buffer;
-      while (frame_ptr < unit->dwarf_frame_buffer + unit->dwarf_frame_size)
-	frame_ptr = decode_frame_entry (unit, frame_ptr, 1,
-                                        &cie_table, &fde_table);
-
-      if (cie_table.num_entries != 0)
+      /* Do not read .eh_frame from separate file as they must be also
+         present in the main file.  */
+      dwarf2_get_section_info (objfile, DWARF2_EH_FRAME,
+                               &unit->dwarf_frame_section,
+                               &unit->dwarf_frame_buffer,
+                               &unit->dwarf_frame_size);
+      if (unit->dwarf_frame_size)
         {
-          /* Reinit cie_table: debug_frame has different CIEs.  */
-          xfree (cie_table.entries);
-          cie_table.num_entries = 0;
-          cie_table.entries = NULL;
+          asection *got, *txt;
+
+          /* FIXME: kettenis/20030602: This is the DW_EH_PE_datarel base
+             that is used for the i386/amd64 target, which currently is
+             the only target in GCC that supports/uses the
+             DW_EH_PE_datarel encoding.  */
+          got = bfd_get_section_by_name (unit->abfd, ".got");
+          if (got)
+            unit->dbase = got->vma;
+
+          /* GCC emits the DW_EH_PE_textrel encoding type on sh and ia64
+             so far.  */
+          txt = bfd_get_section_by_name (unit->abfd, ".text");
+          if (txt)
+            unit->tbase = txt->vma;
+
+	  TRY_CATCH (e, RETURN_MASK_ERROR)
+	    {
+	      frame_ptr = unit->dwarf_frame_buffer;
+	      while (frame_ptr < unit->dwarf_frame_buffer + unit->dwarf_frame_size)
+		frame_ptr = decode_frame_entry (unit, frame_ptr, 1,
+						&cie_table, &fde_table,
+						EH_CIE_OR_FDE_TYPE_ID);
+	    }
+
+	  if (e.reason < 0)
+	    {
+	      warning (_("skipping .eh_frame info of %s: %s"),
+		       objfile->name, e.message);
+
+	      if (fde_table.num_entries != 0)
+		{
+                  xfree (fde_table.entries);
+		  fde_table.entries = NULL;
+		  fde_table.num_entries = 0;
+		}
+	      /* The cie_table is discarded by the next if.  */
+	    }
+
+          if (cie_table.num_entries != 0)
+            {
+              /* Reinit cie_table: debug_frame has different CIEs.  */
+              xfree (cie_table.entries);
+              cie_table.num_entries = 0;
+              cie_table.entries = NULL;
+            }
         }
     }
 
@@ -2269,10 +2276,39 @@ dwarf2_build_frame_info (struct objfile *objfile)
                            &unit->dwarf_frame_size);
   if (unit->dwarf_frame_size)
     {
-      frame_ptr = unit->dwarf_frame_buffer;
-      while (frame_ptr < unit->dwarf_frame_buffer + unit->dwarf_frame_size)
-	frame_ptr = decode_frame_entry (unit, frame_ptr, 0,
-                                        &cie_table, &fde_table);
+      int num_old_fde_entries = fde_table.num_entries;
+
+      TRY_CATCH (e, RETURN_MASK_ERROR)
+	{
+	  frame_ptr = unit->dwarf_frame_buffer;
+	  while (frame_ptr < unit->dwarf_frame_buffer + unit->dwarf_frame_size)
+	    frame_ptr = decode_frame_entry (unit, frame_ptr, 0,
+					    &cie_table, &fde_table,
+					    EH_CIE_OR_FDE_TYPE_ID);
+	}
+      if (e.reason < 0)
+	{
+	  warning (_("skipping .debug_frame info of %s: %s"),
+		   objfile->name, e.message);
+
+	  if (fde_table.num_entries != 0)
+	    {
+	      fde_table.num_entries = num_old_fde_entries;
+	      if (num_old_fde_entries == 0)
+		{
+		  xfree (fde_table.entries);
+		  fde_table.entries = NULL;
+		}
+	      else
+		{
+		  fde_table.entries = xrealloc (fde_table.entries,
+						fde_table.num_entries *
+						sizeof (fde_table.entries[0]));
+		}
+	    }
+	  fde_table.num_entries = num_old_fde_entries;
+	  /* The cie_table is discarded by the next if.  */
+	}
     }
 
   /* Discard the cie_table, it is no longer needed.  */

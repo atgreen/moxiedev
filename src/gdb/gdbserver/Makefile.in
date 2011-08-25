@@ -124,7 +124,10 @@ SFILES=	$(srcdir)/gdbreplay.c $(srcdir)/inferiors.c \
 	$(srcdir)/linux-xtensa-low.c \
 	$(srcdir)/win32-arm-low.c $(srcdir)/win32-i386-low.c \
 	$(srcdir)/win32-low.c $(srcdir)/wincecompat.c \
-	$(srcdir)/hostio.c $(srcdir)/hostio-errno.c
+	$(srcdir)/hostio.c $(srcdir)/hostio-errno.c \
+	$(srcdir)/common/common-utils.c $(srcdir)/common/xml-utils.c \
+	$(srcdir)/common/linux-osdata.c $(srcdir)/common/ptid.c \
+	$(srcdir)/common/buffer.c
 
 DEPFILES = @GDBSERVER_DEPFILES@
 
@@ -136,6 +139,7 @@ TAGFILES = $(SOURCES) ${HFILES} ${ALLPARAM} ${POSSLIBS}
 OBS = inferiors.o regcache.o remote-utils.o server.o signals.o target.o \
 	utils.o version.o \
 	mem-break.o hostio.o event-loop.o tracepoint.o \
+	xml-utils.o common-utils.o ptid.o buffer.o \
 	$(XML_BUILTIN) \
 	$(DEPFILES) $(LIBOBJS)
 GDBREPLAY_OBS = gdbreplay.o version.o
@@ -234,7 +238,7 @@ gdbreplay$(EXEEXT): $(GDBREPLAY_OBS)
 	${CC-LD} $(INTERNAL_CFLAGS) $(INTERNAL_LDFLAGS) -o gdbreplay$(EXEEXT) $(GDBREPLAY_OBS) \
 	  $(XM_CLIBS)
 
-IPA_OBJS=tracepoint-ipa.o utils-ipa.o regcache-ipa.o remote-utils-ipa.o ${IPA_DEPFILES}
+IPA_OBJS=tracepoint-ipa.o utils-ipa.o regcache-ipa.o remote-utils-ipa.o common-utils-ipa.o ${IPA_DEPFILES}
 
 IPA_LIB=libinproctrace.so
 
@@ -276,6 +280,7 @@ clean:
 	rm -f powerpc-isa205-altivec32l.c powerpc-isa205-vsx32l.c powerpc-isa205-altivec64l.c
 	rm -f powerpc-isa205-vsx64l.c
 	rm -f s390-linux32.c s390-linux64.c s390x-linux64.c
+	rm -f tic6x-c64xp-linux.c tic6x-c64x-linux.c tic6x-c62x-linux.c
 	rm -f xml-builtin.c stamp-xml
 	rm -f i386-avx.c i386-avx-linux.c
 	rm -f amd64-avx.c amd64-avx-linux.c
@@ -331,8 +336,16 @@ regdef_h = $(srcdir)/../regformats/regdef.h
 regcache_h = $(srcdir)/regcache.h
 signals_def = $(srcdir)/../../include/gdb/signals.def
 signals_h = $(srcdir)/../../include/gdb/signals.h $(signals_def)
+ptid_h = $(srcdir)/../common/ptid.h
+linux_osdata_h = $(srcdir)/../common/linux-osdata.h
 server_h = $(srcdir)/server.h $(regcache_h) config.h $(srcdir)/target.h \
 		$(srcdir)/mem-break.h $(srcdir)/../common/gdb_signals.h \
+		$(srcdir)/../common/common-utils.h \
+		$(srcdir)/../common/xml-utils.h \
+		$(srcdir)/../common/buffer.h \
+		$(srcdir)/../common/gdb_assert.h \
+		$(srcdir)/../common/gdb_locale.h \
+		$(ptid_h) \
 		$(signals_h)
 
 linux_low_h = $(srcdir)/linux-low.h
@@ -340,6 +353,8 @@ linux_low_h = $(srcdir)/linux-low.h
 linux_ptrace_h = $(srcdir)/../common/linux-ptrace.h
 
 gdb_thread_db_h = $(srcdir)/../common/gdb_thread_db.h
+
+linux_procfs_h = $(srcdir)/../common/linux-procfs.h
 
 lynx_low_h = $(srcdir)/lynx-low.h $(srcdir)/server.h
 
@@ -358,6 +373,8 @@ tracepoint-ipa.o: tracepoint.c $(server_h) $(srcdir)/../common/ax.def
 	$(CC) -c $(IPAGENT_CFLAGS) $< -o tracepoint-ipa.o
 utils-ipa.o: utils.c $(server_h)
 	$(CC) -c $(IPAGENT_CFLAGS) $< -o utils-ipa.o
+common-utils-ipa.o: ../common/common-utils.c $(server_h)
+	$(CC) -c $(IPAGENT_CFLAGS) $< -o common-utils-ipa.o
 remote-utils-ipa.o: remote-utils.c $(server_h)
 	$(CC) -c $(IPAGENT_CFLAGS) $< -o remote-utils-ipa.o
 regcache-ipa.o: regcache.c $(server_h)
@@ -390,6 +407,24 @@ gdbreplay.o: gdbreplay.c config.h
 signals.o: ../common/signals.c $(server_h) $(signals_def)
 	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
 
+linux-procfs.o: ../common/linux-procfs.c $(server_h)
+	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
+
+common-utils.o: ../common/common-utils.c $(server_h)
+	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
+
+xml-utils.o: ../common/xml-utils.c $(server_h)
+	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
+
+linux-osdata.o: ../common/linux-osdata.c $(server_h) $(linux_osdata_h) ../common/gdb_dirent.h
+	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
+
+ptid.o: ../common/ptid.c $(ptid_h)
+	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
+
+buffer.o: ../common/buffer.c $(server_h)
+	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
+
 # We build memmem.c without -Werror because this file is not under
 # our control.  On LynxOS, the compiler generates some warnings
 # because str-two-way.h uses a constant (MAX_SIZE) whose definition
@@ -413,7 +448,8 @@ i386-low.o: i386-low.c $(i386_low_h) $(server_h) $(target_h)
 
 i387-fp.o: i387-fp.c $(server_h)
 
-linux-low.o: linux-low.c $(linux_low_h) $(linux_ptrace_h) $(server_h)
+linux-low.o: linux-low.c $(linux_low_h) $(linux_ptrace_h) $(linux_procfs_h) \
+	$(server_h) $(linux_osdata_h)
 	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< @USE_THREAD_DB@
 
 linux-arm-low.o: linux-arm-low.c $(linux_low_h) $(server_h) \
@@ -428,6 +464,7 @@ linux-mips-low.o: linux-mips-low.c $(linux_low_h) $(server_h) \
 linux-ppc-low.o: linux-ppc-low.c $(linux_low_h) $(server_h)
 linux-s390-low.o: linux-s390-low.c $(linux_low_h) $(server_h)
 linux-sh-low.o: linux-sh-low.c $(linux_low_h) $(server_h)
+linux-tic6x-low.o: linux-tic6x-low.c $(linux_low_h) $(server_h)
 linux-x86-low.o: linux-x86-low.c $(linux_low_h) $(server_h) \
 	$(gdb_proc_service_h) $(i386_low_h)
 linux-xtensa-low.o: linux-xtensa-low.c xtensa-xtregs.c $(linux_low_h) $(server_h)
@@ -563,6 +600,17 @@ s390-linux64.c : $(srcdir)/../regformats/s390-linux64.dat $(regdat_sh)
 s390x-linux64.o : s390x-linux64.c $(regdef_h)
 s390x-linux64.c : $(srcdir)/../regformats/s390x-linux64.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/s390x-linux64.dat s390x-linux64.c
+
+tic6x-c64xp-linux.o : tic6x-c64xp-linux.c $(regdef_h)
+tic6x-c64xp-linux.c : $(srcdir)/../regformats/tic6x-c64xp-linux.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/tic6x-c64xp-linux.dat tic6x-c64xp-linux.c
+tic6x-c64x-linux.o : tic6x-c64x-linux.c $(regdef_h)
+tic6x-c64x-linux.c : $(srcdir)/../regformats/tic6x-c64x-linux.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/tic6x-c64x-linux.dat tic6x-c64x-linux.c
+tic6x-c62x-linux.o : tic6x-c62x-linux.c $(regdef_h)
+tic6x-c62x-linux.c : $(srcdir)/../regformats/tic6x-c62x-linux.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/tic6x-c62x-linux.dat tic6x-c62x-linux.c
+
 reg-sh.o : reg-sh.c $(regdef_h)
 reg-sh.c : $(srcdir)/../regformats/reg-sh.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/reg-sh.dat reg-sh.c

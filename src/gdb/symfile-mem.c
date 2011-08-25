@@ -72,6 +72,7 @@ symbol_file_add_from_memory (struct bfd *templ, CORE_ADDR addr, char *name,
   bfd_vma loadbase;
   struct section_addr_info *sai;
   unsigned int i;
+  struct cleanup *cleanup;
 
   if (bfd_get_flavour (templ) != bfd_target_elf_flavour)
     error (_("add-symbol-file-from-memory not supported for this target"));
@@ -97,7 +98,7 @@ symbol_file_add_from_memory (struct bfd *templ, CORE_ADDR addr, char *name,
     }
 
   sai = alloc_section_addr_info (bfd_count_sections (nbfd));
-  make_cleanup (xfree, sai);
+  cleanup = make_cleanup (xfree, sai);
   i = 0;
   for (sec = nbfd->sections; sec != NULL; sec = sec->next)
     if ((bfd_get_section_flags (nbfd, sec) & (SEC_ALLOC|SEC_LOAD)) != 0)
@@ -114,6 +115,7 @@ symbol_file_add_from_memory (struct bfd *templ, CORE_ADDR addr, char *name,
   /* This might change our ideas about frames already looked at.  */
   reinit_frame_cache ();
 
+  do_cleanups (cleanup);
   return objf;
 }
 
@@ -203,7 +205,7 @@ add_vsyscall_page (struct target_ops *target, int from_tty)
 	 vsyscall DSO was not triggered by the user, even if the user
 	 typed "run" at the TTY.  */
       args.from_tty = 0;
-      catch_exceptions (uiout, symbol_file_add_from_memory_wrapper,
+      catch_exceptions (current_uiout, symbol_file_add_from_memory_wrapper,
 			&args, RETURN_MASK_ALL);
     }
 }

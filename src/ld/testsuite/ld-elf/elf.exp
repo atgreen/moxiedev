@@ -1,5 +1,6 @@
 # Expect script for various ELF tests.
-#   Copyright 2002, 2003, 2005, 2007, 2009, 2010 Free Software Foundation, Inc.
+#   Copyright 2002, 2003, 2005, 2007, 2009, 2010, 2011
+#   Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -38,6 +39,67 @@ if { [istarget alpha*-*-* ] } {
 
 if { [is_remote host] } then {
     remote_download host merge.ld
+}
+
+if { ![istarget hppa64*-hpux*] } {
+    run_ld_link_tests {
+	{"Build symbol3.a"
+	    "" ""
+	    {symbol3.s} {} "symbol3.a"}
+	{"Build symbol3w.a"
+	    "" ""
+	    {symbol3w.s} {} "symbol3w.a"}
+    }
+}
+
+# Run a test to check linking a shared library with a broken linker
+# script that accidentally marks dynamic sections as notes.  The
+# resulting executable is not expected to work, but the linker
+# should not seg-fault whilst creating the binary.
+#
+# Only run the test on targets thats support creating shared libraries.
+if {    ! [istarget arc-*-*]
+     && ! [istarget avr-*-*]
+     && ! [istarget cr16-*-*]
+     && ! [istarget cris*-*-*]
+     && ! [istarget crx-*-*]
+     && ! [istarget d10v-*-*]
+     && ! [istarget d30v-*-*]
+     && ! [istarget dlx-*-*]
+     && ! [istarget fr30-*-*]
+     && ! [istarget frv-*-*]
+     && ! [istarget h8300-*-*]
+     && ! [istarget i860-*-*]
+     && ! [istarget i960-*-*]
+     && ! [istarget ip2k-*-*]
+     && ! [istarget iq2000-*-*]
+     && ! [istarget lm32-*-*]
+     && ! [istarget m32c-*-*]
+     && ! [istarget m32r-*-*]
+     && ! [istarget mcore*-*-*]
+     && ! [istarget mep-*-*]
+     && ! [istarget microblaze-*-*]
+     && ! [istarget mn10200-*-*]
+     && ! [istarget moxie-*-*]
+     && ! [istarget ms1-*-*]
+     && ! [istarget msp430-*-*]
+     && ! [istarget openrisc-*-*]
+     && ! [istarget or32-*-*]
+     && ! [istarget pj-*-*]
+     && ! [istarget rx-*-*]
+     && ! [istarget spu-*-*]
+     && ! [istarget v850*-*-*]
+     && ! [istarget xstormy16-*-*]
+     && ! [istarget *-*-irix*]
+     && ! [istarget *-*-rtems] } {
+  run_ld_link_tests {
+      {"Build shared library for next test"
+       "-shared" "" "note-3.s" {} "note-3.so" }
+      {"Link using broken linker script"
+        "--script note-3.t tmpdir/note-3.so" "" ""
+	  { { ld "note-3.l" } }
+	  "a.out" }
+  }
 }
 
 set test_list [lsort [glob -nocomplain $srcdir/$subdir/*.d]]
@@ -99,8 +161,8 @@ set array_tests_static {
 set xfails [list "*-*-netbsdelf*"]
 run_ld_link_exec_tests $xfails $array_tests
 
-# Run PIE tests only on Linux.
-if { [istarget "*-*-linux*"] } {
+if { [istarget *-*-linux*]
+     || [istarget *-*-gnu*] } {
     run_ld_link_exec_tests $xfails $array_tests_pie
 }
 

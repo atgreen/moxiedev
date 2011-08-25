@@ -1031,7 +1031,8 @@ bfd_get_sign_extend_vma (bfd *abfd)
       || strcmp (name, "pe-x86-64") == 0
       || strcmp (name, "pei-x86-64") == 0
       || strcmp (name, "pe-arm-wince-little") == 0
-      || strcmp (name, "pei-arm-wince-little") == 0)
+      || strcmp (name, "pei-arm-wince-little") == 0
+      || strcmp (name, "aixcoff-rs6000") == 0)
     return 1;
 
   if (CONST_STRNEQ (name, "mach-o"))
@@ -1372,6 +1373,9 @@ DESCRIPTION
 .
 .#define bfd_gc_sections(abfd, link_info) \
 .	BFD_SEND (abfd, _bfd_gc_sections, (abfd, link_info))
+.
+.#define bfd_lookup_section_flags(link_info, flag_info) \
+.	BFD_SEND (abfd, _bfd_lookup_section_flags, (link_info, flag_info))
 .
 .#define bfd_merge_sections(abfd, link_info) \
 .	BFD_SEND (abfd, _bfd_merge_sections, (abfd, link_info))

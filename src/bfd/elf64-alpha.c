@@ -1553,9 +1553,6 @@ elf64_alpha_output_extsym (struct alpha_elf_link_hash_entry *h, PTR data)
   bfd_boolean strip;
   asection *sec, *output_section;
 
-  if (h->root.root.type == bfd_link_hash_warning)
-    h = (struct alpha_elf_link_hash_entry *) h->root.root.u.i.link;
-
   if (h->root.indx == -2)
     strip = FALSE;
   else if ((h->root.def_dynamic
@@ -1885,10 +1882,13 @@ elf64_alpha_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  break;
 
 	case R_ALPHA_TPREL64:
-	  if (info->shared || maybe_dynamic)
+	  if (info->shared && !info->pie)
+	    {
+	      info->flags |= DF_STATIC_TLS;
+	      need = NEED_DYNREL;
+	    }
+	  else if (maybe_dynamic)
 	    need = NEED_DYNREL;
-	  if (info->shared)
-	    info->flags |= DF_STATIC_TLS;
 	  break;
 	}
 
@@ -2151,22 +2151,28 @@ elf64_alpha_merge_symbol_attribute (struct elf_link_hash_entry *h,
    indirect to the new ones.  Consolidate the got and reloc information
    in these situations.  */
 
-static bfd_boolean
-elf64_alpha_merge_ind_symbols (struct alpha_elf_link_hash_entry *hi,
-			       PTR dummy ATTRIBUTE_UNUSED)
+static void
+elf64_alpha_copy_indirect_symbol (struct bfd_link_info *info,
+				  struct elf_link_hash_entry *dir,
+				  struct elf_link_hash_entry *ind)
 {
-  struct alpha_elf_link_hash_entry *hs;
+  struct alpha_elf_link_hash_entry *hi
+    = (struct alpha_elf_link_hash_entry *) ind;
+  struct alpha_elf_link_hash_entry *hs
+    = (struct alpha_elf_link_hash_entry *) dir;
 
-  if (hi->root.root.type != bfd_link_hash_indirect)
-    return TRUE;
-  hs = hi;
-  do {
-    hs = (struct alpha_elf_link_hash_entry *)hs->root.root.u.i.link;
-  } while (hs->root.root.type == bfd_link_hash_indirect);
+  /* Do the merging in the superclass.  */
+  _bfd_elf_link_hash_copy_indirect(info, dir, ind);
 
   /* Merge the flags.  Whee.  */
-
   hs->flags |= hi->flags;
+
+  /* ??? It's unclear to me what's really supposed to happen when
+     "merging" defweak and defined symbols, given that we don't
+     actually throw away the defweak.  This more-or-less copies
+     the logic related to got and plt entries in the superclass.  */
+  if (ind->root.type != bfd_link_hash_indirect)
+    return;
 
   /* Merge the .got entries.  Cannibalize the old symbol's list in
      doing so, since we don't need it anymore.  */
@@ -2220,8 +2226,6 @@ elf64_alpha_merge_ind_symbols (struct alpha_elf_link_hash_entry *hi,
 	}
     }
   hi->reloc_entries = NULL;
-
-  return TRUE;
 }
 
 /* Is it possible to merge two object file's .got tables?  */
@@ -2389,9 +2393,6 @@ elf64_alpha_calc_got_offsets_for_symbol (struct alpha_elf_link_hash_entry *h,
 					 PTR arg ATTRIBUTE_UNUSED)
 {
   struct alpha_elf_got_entry *gotent;
-
-  if (h->root.root.type == bfd_link_hash_warning)
-    h = (struct alpha_elf_link_hash_entry *) h->root.root.u.i.link;
 
   for (gotent = h->got_entries; gotent; gotent = gotent->next)
     if (gotent->use_count > 0)
@@ -2631,10 +2632,6 @@ elf64_alpha_always_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
   if (htab == NULL)
     return FALSE;
 
-  /* First, take care of the indirect symbols created by versioning.  */
-  alpha_elf_link_hash_traverse (htab, elf64_alpha_merge_ind_symbols,
-				NULL);
-
   if (!elf64_alpha_size_got_sections (info))
     return FALSE;
 
@@ -2657,7 +2654,7 @@ elf64_alpha_always_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 /* The number of dynamic relocations required by a static relocation.  */
 
 static int
-alpha_dynamic_entries_for_reloc (int r_type, int dynamic, int shared)
+alpha_dynamic_entries_for_reloc (int r_type, int dynamic, int shared, int pie)
 {
   switch (r_type)
     {
@@ -2667,16 +2664,18 @@ alpha_dynamic_entries_for_reloc (int r_type, int dynamic, int shared)
     case R_ALPHA_TLSLDM:
       return shared;
     case R_ALPHA_LITERAL:
-    case R_ALPHA_GOTTPREL:
       return dynamic || shared;
+    case R_ALPHA_GOTTPREL:
+      return dynamic || (shared && !pie);
     case R_ALPHA_GOTDTPREL:
       return dynamic;
 
     /* May appear in data sections.  */
     case R_ALPHA_REFLONG:
     case R_ALPHA_REFQUAD:
-    case R_ALPHA_TPREL64:
       return dynamic || shared;
+    case R_ALPHA_TPREL64:
+      return dynamic || (shared && !pie);
 
     /* Everything else is illegal.  We'll issue an error during
        relocate_section.  */
@@ -2694,9 +2693,6 @@ elf64_alpha_calc_dynrel_sizes (struct alpha_elf_link_hash_entry *h,
   bfd_boolean dynamic;
   struct alpha_elf_reloc_entry *relent;
   unsigned long entries;
-
-  if (h->root.root.type == bfd_link_hash_warning)
-    h = (struct alpha_elf_link_hash_entry *) h->root.root.u.i.link;
 
   /* If the symbol was defined as a common symbol in a regular object
      file, and there was no definition in any dynamic object, then the
@@ -2727,7 +2723,7 @@ elf64_alpha_calc_dynrel_sizes (struct alpha_elf_link_hash_entry *h,
   for (relent = h->reloc_entries; relent; relent = relent->next)
     {
       entries = alpha_dynamic_entries_for_reloc (relent->rtype, dynamic,
-						 info->shared);
+						 info->shared, info->pie);
       if (entries)
 	{
 	  relent->srel->size +=
@@ -2751,9 +2747,6 @@ elf64_alpha_size_rela_got_1 (struct alpha_elf_link_hash_entry *h,
   struct alpha_elf_got_entry *gotent;
   unsigned long entries;
 
-  if (h->root.root.type == bfd_link_hash_warning)
-    h = (struct alpha_elf_link_hash_entry *) h->root.root.u.i.link;
-
   /* If we're using a plt for this symbol, then all of its relocations
      for its got entries go into .rela.plt.  */
   if (h->root.needs_plt)
@@ -2773,8 +2766,8 @@ elf64_alpha_size_rela_got_1 (struct alpha_elf_link_hash_entry *h,
   entries = 0;
   for (gotent = h->got_entries; gotent ; gotent = gotent->next)
     if (gotent->use_count > 0)
-      entries += alpha_dynamic_entries_for_reloc (gotent->reloc_type,
-						  dynamic, info->shared);
+      entries += alpha_dynamic_entries_for_reloc (gotent->reloc_type, dynamic,
+						  info->shared, info->pie);
 
   if (entries > 0)
     {
@@ -2824,7 +2817,7 @@ elf64_alpha_size_rela_got_section (struct bfd_link_info *info)
 		 gotent ; gotent = gotent->next)
 	      if (gotent->use_count > 0)
 		entries += (alpha_dynamic_entries_for_reloc
-			    (gotent->reloc_type, 0, info->shared));
+			    (gotent->reloc_type, 0, info->shared, info->pie));
 	}
     }
 
@@ -3056,7 +3049,8 @@ elf64_alpha_relax_got_load (struct alpha_relax_info *info, bfd_vma symval,
     return TRUE;
 
   /* Can't use local-exec relocations in shared libraries.  */
-  if (r_type == R_ALPHA_GOTTPREL && info->link_info->shared)
+  if (r_type == R_ALPHA_GOTTPREL
+      && (info->link_info->shared && !info->link_info->pie))
     return TRUE;
 
   if (r_type == R_ALPHA_LITERAL)
@@ -3514,6 +3508,13 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
   pos[3] = info->contents + gpdisp->r_offset;
   pos[4] = pos[3] + gpdisp->r_addend;
 
+  /* Beware of the compiler hoisting part of the sequence out a loop
+     and adjusting the destination register for the TLSGD insn.  If this
+     happens, there will be a move into $16 before the JSR insn, so only
+     transformations of the first insn pair should use this register.  */
+  tlsgd_reg = bfd_get_32 (info->abfd, pos[0]);
+  tlsgd_reg = (tlsgd_reg >> 21) & 31;
+
   /* Generally, the positions are not allowed to be out of order, lest the
      modified insn sequence have different register lifetimes.  We can make
      an exception when pos 1 is adjacent to pos 0.  */
@@ -3580,13 +3581,6 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
 
   use_gottprel = FALSE;
   new_symndx = is_gd ? ELF64_R_SYM (irel->r_info) : STN_UNDEF;
-
-  /* Beware of the compiler hoisting part of the sequence out a loop
-     and adjusting the destination register for the TLSGD insn.  If this
-     happens, there will be a move into $16 before the JSR insn, so only
-     transformations of the first insn pair should use this register.  */
-  tlsgd_reg = bfd_get_32 (info->abfd, pos[0]);
-  tlsgd_reg = (tlsgd_reg >> 21) & 31;
 
   switch (!dynamic && !info->link_info->shared)
     {
@@ -4521,7 +4515,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	    else if (r_type == R_ALPHA_TPREL64)
 	      {
 		BFD_ASSERT (elf_hash_table (info)->tls_sec != NULL);
-		if (!info->shared)
+		if (!info->shared || info->pie)
 		  {
 		    value -= tp_base;
 		    goto default_reloc;
@@ -4642,7 +4636,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	case R_ALPHA_TPRELHI:
 	case R_ALPHA_TPRELLO:
 	case R_ALPHA_TPREL16:
-	  if (info->shared)
+	  if (info->shared && !info->pie)
 	    {
 	      (*_bfd_error_handler)
 		(_("%B: TLS local exec code cannot be linked into shared objects"),
@@ -5455,6 +5449,8 @@ static const struct elf_size_info alpha_elf_size_info =
   elf64_alpha_adjust_dynamic_symbol
 #define elf_backend_merge_symbol_attribute \
   elf64_alpha_merge_symbol_attribute
+#define elf_backend_copy_indirect_symbol \
+  elf64_alpha_copy_indirect_symbol
 #define elf_backend_always_size_sections \
   elf64_alpha_always_size_sections
 #define elf_backend_size_dynamic_sections \

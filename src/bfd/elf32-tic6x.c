@@ -1921,6 +1921,8 @@ elf32_tic6x_gc_mark_extra_sections (struct bfd_link_info *info,
   Elf_Internal_Shdr **elf_shdrp;
   bfd_boolean again;
 
+  _bfd_elf_gc_mark_extra_sections (info, gc_mark_hook);
+
   /* Marking EH data may cause additional code sections to be marked,
      requiring multiple passes.  */
   again = TRUE;
@@ -3127,13 +3129,7 @@ elf32_tic6x_allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
   if (h->root.type == bfd_link_hash_indirect)
     return TRUE;
 
-  if (h->root.type == bfd_link_hash_warning)
-    /* When warning symbols are created, they **replace** the "real"
-       entry in the hash table, thus we never get to see the real
-       symbol in a hash traversal.  So look at it now.  */
-    h = (struct elf_link_hash_entry *) h->root.u.i.link;
   eh = (struct elf32_tic6x_link_hash_entry *) h;
-
   info = (struct bfd_link_info *) inf;
   htab = elf32_tic6x_hash_table (info);
 
@@ -3276,9 +3272,6 @@ elf32_tic6x_readonly_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 {
   struct elf32_tic6x_link_hash_entry *eh;
   struct elf_dyn_relocs *p;
-
-  if (h->root.type == bfd_link_hash_warning)
-    h = (struct elf_link_hash_entry *) h->root.u.i.link;
 
   eh = (struct elf32_tic6x_link_hash_entry *) h;
   for (p = eh->dyn_relocs; p != NULL; p = p->next)
@@ -4480,7 +4473,7 @@ elf32_tic6x_write_section (bfd *output_bfd,
 static void
 elf32_tic6x_set_osabi (bfd *abfd, struct bfd_link_info *link_info)
 {
-  if (link_info == NULL || link_info->relocatable)
+  if (link_info != NULL && link_info->relocatable)
     return;
   _bfd_elf_set_osabi (abfd, link_info);
 }

@@ -1,3 +1,102 @@
+2011-08-24  Luis Machado  <lgustavo@codesourcery.com>
+
+	* linux-low.c: Include linux-procfs.h.
+	(linux_attach_lwp_1): Update comments.
+	(linux_attach): Scan for existing threads when attaching to a
+	process that is the tgid.
+	* Makefile.in: Update dependencies.
+
+2011-08-24  Luis Machado  <lgustavo@codesourcery.com>
+
+	* configure.srv: Add linux-procfs.o dependencies.
+
+2011-08-14  Yao Qi  <yao@codesourcery.com>
+
+	* target.h (struct target_ops): Fix indent.
+	* win32-low.c (win32_target_ops): Fix comment.
+
+2011-08-14  Andrew Jenner  <andrew@codesourcery.com>
+	    Yao Qi  <yao@codesourcery.com>
+
+	* Makefile.in (clean): Remove tic6x-*.c files.
+	(linux-tic6x-low.o, tic6x-c62x-linux.o, tic6x-c64x-linux.o): New rules.
+	(tic6x-c64xp-linux.o, tic6x-c62x-linux.c, tic6x-c64x-linux.c): Likewise.
+	(tic6x-c64xp-linux.c): Likewise.
+	* configure.srv: Add support for tic6x-*-uclinux.
+	* linux-tic6x-low.c: New.
+	* linux-low.c (PT_TEXT_ADDR, PT_DATA_ADDR, PT_TEXT_END_ADDR): Define.
+
+2011-08-14  Andrew Stubbs <ams@codesourcery.com>
+	    Yao Qi  <yao@codesourcery.com>
+
+	* target.h (struct target_ops): Add read_loadmap.
+	* linux-low.c (struct target_loadseg): New type.
+	(struct target_loadmap): New type.
+	(linux_read_loadmap): New function.
+	(linux_target_ops): Add linux_read_loadmap.
+	* server.c (handle_query): Support qXfer:fdpic:read packet.
+	* win32-low.c (win32_target_ops): Initialize field `read_loadmap' to NULL.
+
+2011-08-05  Eli Zaretskii  <eliz@gnu.org>
+
+	* win32-low.c: Include <stdint.h>.
+
+2011-07-22  Pedro Alves  <pedro@codesourcery.com>
+
+	* i386-low.c (i386_insert_aligned_watchpoint): Don't pass the info
+	to the inferior here.
+	(i386_remove_aligned_watchpoint): Ditto.
+	(i386_handle_nonaligned_watchpoint): Return immediate on fail to
+	fit part of the watchpoint in the debug registers.
+	(i386_update_inferior_debug_regs): New.
+	(i386_low_insert_watchpoint): Work on a local mirror of the debug
+	registers, and only update the inferior on success.
+	(i386_low_remove_watchpoint): Ditto.
+
+2011-07-22  Kwok Cheung Yeung  <kcy@codesourcery.com>
+
+	* linux-low.c (compare_ints, unique, list_threads, show_process,
+	linux_core_of_thread): Delete.
+	(linux_target_ops): Change linux_core_of_thread to
+	linux_common_core_of_thread.
+	(linux_qxfer_osdata): Defer to linux_common_xfer_osdata.
+	* utils.c (malloc_failure): Change type of argument.
+	(xmalloc, xrealloc, xcalloc, xsnprintf): Delete.
+	* Makefile.in (SFILES): Add common/common-utils.c, common/xml-utils.c,
+	common/linux-osdata.c, common/ptid.c and common/buffer.c.
+	(OBS): Add xml-utils.o, common-utils.o, ptid.o and buffer.o.
+	(IPA_OBJS): Add common-utils-ipa.o.
+	(ptid_h, linux_osdata_h): New macros.
+	(server_h): Add common/common-utils.h, common/xml-utils.h,
+	common/buffer.h, common/gdb_assert.h, common/gdb_locale.h and
+	common/ptid.h.
+	(common-utils-ipa.o, common-utils.o, xml-utils.o, linux-osdata.o,
+	ptid.o, buffer.o): New rules.
+	(linux-low.o): Add common/linux-osdata.h as a dependency.
+	* configure.srv (srv_tgtobj): Add linux-osdata.o to Linux targets.
+	* configure.ac: Add AC_HEADER_DIRENT check.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+	* remote-utils.c (xml_escape_text): Delete.
+	(buffer_grow, buffer_free, buffer_init, buffer_finish,
+	buffer_xml_printf): Move to common/buffer.c.
+	* server.c (main): Remove call to initialize_inferiors.
+	* server.h (struct ptid, ptid_t, minus_one_ptid, null_ptid,
+	ptid_build, pid_to_ptid, ptid_get_pid, ptid_get_lwp, ptid_get_tid,
+	ptid_equal, ptid_is_pid, initialize_inferiors, xml_escape_text,
+	internal_error, gdb_assert, gdb_assert_fail): Delete.
+	(struct buffer, buffer_grow, buffer_free, buffer_init, buffer_finish,
+	buffer_xml_printf, buffer_grow_str, buffer_grow_str0): Move to
+	common/buffer.h.
+	* inferiors.c (null_ptid, minus_one_ptid, ptid_build, pid_to_ptid,
+	ptid_get_pid, ptid_get_lwp, ptid_get_tid, ptid_equal, ptid_is_pid,
+	initialize_inferiors): Delete.
+
+2011-07-20  Pedro Alves  <pedro@codesourcery.com>
+
+	* tracepoint.c (tracepoint_look_up_symbols): Return upon the first
+	symbol error.
+
 2011-05-31  Pedro Alves  <pedro@codesourcery.com>
 
 	* linux-x86-low.c (i386_dr_low_get_addr): Fix off by one in

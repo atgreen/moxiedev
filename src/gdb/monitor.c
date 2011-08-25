@@ -844,6 +844,8 @@ monitor_open (char *args, struct monitor_ops *mon_ops, int from_tty)
 
   monitor_printf (current_monitor->line_term);
 
+  init_wait_for_inferior ();
+
   start_remote (from_tty);
 }
 
@@ -1862,7 +1864,7 @@ monitor_read_memory (CORE_ADDR memaddr, char *myaddr, int len)
 
   len = min (len, 16);
 
-  /* Some dumpers align the first data with the preceeding 16
+  /* Some dumpers align the first data with the preceding 16
      byte boundary.  Some print blanks and start at the
      requested boundary.  EXACT_DUMPADDR  */
 

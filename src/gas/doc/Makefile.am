@@ -66,8 +66,11 @@ CPU_DOCS = \
 	c-sparc.texi \
         c-tic54x.texi \
         c-tic6x.texi \
+	c-tilegx.texi \
+	c-tilepro.texi \
 	c-vax.texi \
 	c-v850.texi \
+	c-xstormy16.texi \
 	c-xtensa.texi \
 	c-z80.texi \
 	c-z8k.texi

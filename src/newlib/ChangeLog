@@ -1,3 +1,186 @@
+2011-08-24  Corinna Vinschen  <vinschen@redhat.com>
+
+	* libc/time/mktm_r.c (_mktm_r): Fix computing tm_year.
+
+2011-08-23  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* libc/stdlib/putenv_r.c: Use "strchr" instead of obsolete "index".
+	* libc/stdlib/setenv_r.c: Use "memcpy" instead of obsolete "bcopy".
+
+2011-08-23  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* libc/misc/ffs.c, libc/string/bcmp.c, libc/string/bcopy.c,
+	libc/string/bzero.c, libc/string/index.c, libc/string/rindex.c,
+	libc/string/strcasecmp.c, libc/string/strncasecmp.c:
+	Let synopsis reference "#include <strings.h>".
+
+2011-08-23  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* libc/posix/regexec.c: Define "nope" only #ifndef NDEBUG.
+	* libc/stdio/vfscanf.c: Define "state" only #ifdef _MB_CAPABLE.
+	* libc/string/wcwidth.c: Include <wctypes.h> for "iswprint" and
+	"iswcntrl".
+
+2011-08-23  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* libc/sys/rtems/include/limits.h: Compute SSIZE_MAX based on
+	__SIZE_MAX__, __SIZEOF_SIZE_T__ and __CHAR_BIT__.
+
+2011-08-22  Ralf Corsépius <ralf.corsepius@rtems.org>
+
+	* libc/string/index.c: Include <strings.h> for "index".
+	* libc/string/rindex.c: Include <strings.h> for "rindex".
+	* libc/string/strcasecmp.c: Include <strings.h> for "strcasecmp".
+	Don't include <string.h>.
+	* libc/string/strncasecmp.c: Include <strings.h> for "strncasecmp".
+	Don't include <string.h>.
+	* libc/string/bzero.c: Include <strings.h> for "bzero".
+	Don't include <string.h>
+	* libc/misc/ffs.c: Include <strings.h> for "ffs".
+	Don't include <_ansi.h>.
+
+2011-08-19  Ralf Corsépius <ralf.corsepius@rtems.org>
+
+	* libc/sys/rtems/crt0.c: Rework RTEMS_STUB macro.
+	Include <unistd.h>.
+	Remove C++-style comments.
+	Remove hppa, a29k.
+	Add clock_gettime, gettimeofday, sched_yield.
+
+2011-08-19  Ralf Corsépius <ralf.corsepius@rtems.org>
+
+	* libc/stdio/vasiprintf.c: Include "local.h" for "_svfiprintf_r".
+	* libc/stdio/vasprintf.c Include "local.h" for "_svfprintf_r".
+	* libc/stdio/vsiprintf.c: Include "local.h" for "_svfiprintf_r".
+	* libc/stdio/vsniprintf.c: Include "local.h" for "_svfiprintf_r".
+	* libc/stdio/vsnprintf.c: Include "local.h" for "_svfprintf_r"
+	* libc/stdio/vsprintf.c: Include "local.h" for "_svfprintf_r"
+
+2011-08-19  Ralf Corsépius <ralf.corsepius@rtems.org>
+
+	* libc/string/bcmp.c: Include <strings.h> for "bcmp".
+	* libc/string/bcopy.c: Include <strings.h> for "bcopy".
+	* libc/string/strcasestr.c: Include <strings.h> for "strncasecmp".
+	* libc/time/strptime.c: Include <strings.h> for "strncasecmp".
+
+2011-08-19  Corinna Vinschen  <vinschen@redhat.com>
+
+	* libc/include/process.h: Remove exec family function declarations.
+	Add comment.
+	* libc/include/sys/unistd.h (execlpe): Declare for Cygwin.
+
+2011-08-19  Craig Howland  <howland@LGSInnovations.com>
+
+	* libc/time/mktime.c (validate_structure): Account for tm_mon possibly
+	being given as negative.
+	(mktime): Set tm_isdst=0 when !daylight.
+
+2011-08-01  Sebastian Huber <sebastian.huber@embedded-brains.de>
+
+	* libc/include/sys/types.h: XML and RTEMS define
+	_UNIX98_THREAD_MUTEX_ATTRIBUTES and can use the standard
+	definitions. This avoids redefinition warnings.
+
+2011-07-26  Ralf Corsépius <ralf.corsepius@rtems.org>
+
+	* libc/sys/rtems/sys/dirent.h (scandir):
+	Add const to "select" parameter.
+
+2011-07-25  Ralf Corsépius  <ralf.corsepius@rtems.org>
+
+	* libc/iconv/iconv.tex: Rename node "Introduction" into
+	"Introduction to iconv".
+
+2011-07-20  Yaakov Selkowitz  <yselkowitz@...>
+
+	* libc/include/time.h [_POSIX_CLOCK_SELECTION] (clock_nanosleep):
+	Declare.
+	* libc/include/sys/features.h [__CYGWIN__] (_POSIX_CLOCK_SELECTION):
+	Define.
+
+2011-07-19  Yaakov Selkowitz  <yselkowitz@users.sourceforge.net>
+
+	* libc/include/sys/unistd.h (_CS_XBS5_WIDTH_RESTRICTED_ENVS): Define.
+	(_CS_V6_ENV): Fix definition.
+
+2011-07-19  Ralf Corsépius <ralf.corsepius@rtems.org>
+
+	* libc/locale/lmessages.c (_C_messages_locale):
+	Move __HAVE_LOCALE_INFO_EXTENDED__ before codeset.
+
+2011-07-19  Matt Johnson  <johnso87@crhc.illinois.edu>
+
+	* libc/reent/sbrkr.c: Define _sbrk_r independently of the definition
+	of MALLOC_PROVIDED.
+
+2011-07-15  Yufeng Zhang  <yufeng.zhang@arm.com>
+
+	* libc/stdio/vfwprintf.c (wcvt): Add a new parameter len of type
+	int.  *length is set to the value of (rev - digits) regardless
+	of whether _MB_CAPABLE is defined or not.  Replace BUF with len
+	in calling _mbsnrtowcs_r and also in the loop where _MB_CAPABLE
+	is not defined.
+	(_VFWPRINTF_R): Call wcvt with an extra argument.  Call wcvt
+	again with allocated new buffer if buf is not large enough for
+	the conversion.
+	* testsuite/newlib.stdio/stdio.exp: New.
+	* testsuite/newlib.stdio/swprintf.c: Likewise.
+
+2011-07-15  Matt Johnson  <johnso87@crhc.illinois.edu>
+
+	* libc/stdio/fscanf.c (fscanf): Call _vfscanf_r instead of __svfscanf_r
+	to make sure CHECK_INIT is called.
+	(_fscanf_r): Ditto.
+	* /libc/stdio/scanf.c (scanf): Ditto.
+	(_scanf_r): Ditto.
+	* libc/stdio/fwscanf.c (fwscanf): Call _vfwscanf_r instead of
+	__svfwscanf_r to make sure CHECK_INIT is called.
+	(_fwscanf_r): Ditto.
+	* libc/stdio/wscanf.c (wscanf): Ditto.
+	(_wscanf_r): Ditto.
+
+2011-07-13  Hans-Peter Nilsson <hp@axis.com>
+
+	* libm/complex/cacos.c: Use temporaries and correct sequencing
+	error in previous reordering change.
+
+2011-06-25  Andreas Becker  <becker@se-elektronic.de>
+
+	* libc/time/mktime.c (mktime): Lock global timezone info while
+	accessing it.
+
+2011-06-14  Philip Munts  <phil@munts.net>
+
+	* libc/time/asctime_r.c (asctime_r): Replace call to sprintf with call
+	to siprintf.
+	* libc/time/strftime.c: Define snprintf to sniprintf in multibyte case.
+	* libc/time/tzset_r.c: Define sscanf to siscanf.
+
+2011-06-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* configure.host: Don't handle ep9312, strongarm, xscale and thumb
+	target names.
+	* libc/machine/configure.in: Don't handle xscale target names.
+	* libc/machine/configure: Regenerate.
+
+2011-06-14  Craig Howland <howland@LGSInnovations.com>
+
+	* libc/time/tzset_r.c (tzset_r):  Correct behavior for changing from
+	non-GMT to GMT, when un-setting TZ.  Set _timezone and _daylight even
+	if no DST is given in TZ.
+
+2011-06-13  Eric Blake  <eblake@redhat.com>
+
+	* libc/stdio/wsetup.c (__swsetup_r): Set errno on failure.
+	* libc/stdio/fvwrite.c (__sfvwrite_r): Simplify.
+	* libc/stdio/wbuf.c (__swbuf_r): Likewise.
+	* libc/stdio/local.h (cantwrite): Adjust comment.
+
+2011-06-09  Yaakov Selkowitz  <yselkowitz@...>
+
+	* libc/include/string.h (strdupa): New macro function.
+	(strndupa): New macro function.
+
 2011-05-27  Nick Clifton  <nickc@redhat.com>
 
 	* libc/sys/sysnecv850/sbrk.c (_sbrk): Tidy code.
@@ -1321,13 +1504,13 @@
 	* libc/stdlib/atexit.c: Ditto.
 	* libc/stdlib/on_exit.c: Ditto.
 
-2009-12-17  Ralf CorsÃÂ©pius <ralf.corsepius@rtems.org>
+2009-12-17  Ralf Corsépius <ralf.corsepius@rtems.org>
 
 	* libc/include/machine/ieeefp.h: Rework __IEEE_*_ENDIAN handling.
 	* libc/machine/arm/machine/endian.h: Remove (Conflicts with
 	libc/include/machine/endian.h)
 
-2009-12-17  Ralf CorsÃÂ©pius <ralf.corsepius@rtems.org>
+2009-12-17  Ralf Corsépius <ralf.corsepius@rtems.org>
 
 	* libc/include/machine/setjmp.h: Set up _JBLEN #ifdef __m68k__.
 
@@ -1349,11 +1532,11 @@
 	and ETOOMANYREFS into general list as they are referenced
 	by OpenGroup and needed by RTEMS.
 
-2009-12-16  Ralf CorsÃÂ©pius <ralf.corsepius@rtems.org>
+2009-12-16  Ralf Corsépius <ralf.corsepius@rtems.org>
 
 	* libc/search/hcreate.c: Don't include <sys/queue.h> (Unused).
 
-2009-12-16  Ralf CorsÃÂ©pius <ralf.corsepius@rtems.org>
+2009-12-16  Ralf Corsépius <ralf.corsepius@rtems.org>
 
 	* libc/sys/rtems/machine/_types.h: New (Derived from
 	machine/_default_types.h).
@@ -1641,16 +1824,16 @@
 	* libc/locale/locale.c: Drop Cygwin-specific windows.h include.
 	(loadlocale): Call __set_charset_from_codepage with 0 codepage.
 
-2009-09-22  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+2009-09-22  Ralf Corsépius <ralf.corsepius@rtems.org>
 
 	* libc/include/stdlib.h: Add posix_memalign.
 
-2009-09-22  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+2009-09-22  Ralf Corsépius <ralf.corsepius@rtems.org>
 
 	* configure.host (*-rtems*): Remove -DMISSING_SYSCALL_NAMES.
 	Add -DHAVE_BLKSIZE, -D_NO_WORDEXP -D_NO_POPEN.
 
-2009-09-22  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+2009-09-22  Ralf Corsépius <ralf.corsepius@rtems.org>
 
 	* configure.host (m32c): Move setting -DABORT_PROVIDED to second
 	"case $host".
@@ -6728,7 +6911,7 @@
 	* libc/include/sys/unistd.h: Define all _SC_xxx values as
 	required by SUSv3.  Unify formatting.
 
-2007-02-02  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+2007-02-02  Ralf Corsépius <ralf.corsepius@rtems.org>
 
 	* libc/include/sys/errno.h: Add ECANCELED.
 

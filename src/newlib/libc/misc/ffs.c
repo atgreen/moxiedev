@@ -6,9 +6,11 @@ INDEX
 	ffs
 
 ANSI_SYNOPSIS
+	#include <strings.h>
 	int ffs(int <[word]>);
 
 TRAD_SYNOPSIS
+	#include <strings.h>
 	int ffs(<[word]>);
 
 DESCRIPTION
@@ -24,7 +26,7 @@ PORTABILITY
 
 No supporting OS subroutines are required.  */
 
-#include <_ansi.h>
+#include <strings.h>
 
 int
 _DEFUN(ffs, (word),

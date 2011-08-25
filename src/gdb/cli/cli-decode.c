@@ -1018,7 +1018,7 @@ print_doc_line (struct ui_file *stream, char *str)
   line_buffer[p - str] = '\0';
   if (islower (line_buffer[0]))
     line_buffer[0] = toupper (line_buffer[0]);
-  ui_out_text (uiout, line_buffer);
+  ui_out_text (current_uiout, line_buffer);
 }
 
 /* Print one-line help for command C.
@@ -1500,7 +1500,7 @@ deprecated_cmd_warning (char **text)
    
    If LINE refers to an alias, *alias will point to that alias.
    
-   If LINE is a postfix command (i.e. one that is preceeded by a prefix
+   If LINE is a postfix command (i.e. one that is preceded by a prefix
    command) set *prefix_cmd.
    
    Set *cmd to point to the command LINE indicates.

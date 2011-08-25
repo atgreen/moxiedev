@@ -1,3 +1,678 @@
+2011-08-19  Nick Clifton  <nickc@redhat.com>
+
+	* doc/as.texinfo: Include c-xstormy16.texi.
+
+2011-08-18  Alan Modra  <amodra@gmail.com>
+
+	* write.c (resolve_reloc_expr_symbols): Convert local symbols
+	on relocs to section+offset.
+	(get_frag_for_reloc): New function.
+	(write_relocs): Merge sort fixup relocs with those from .reloc
+	directives.
+
+2011-08-10  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* config/tc-mips.c (can_swap_branch_p): Update the comment on
+	MIPS16 fixups.
+
+2011-08-09  Chao-ying Fu  <fu@mips.com>
+            Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* config/tc-mips.c (mips_cpu_info_table): Add "m14k" and
+	"m14kc".
+	* doc/c-mips.texi (MIPS architecture options): Add "m14k" and
+	"m14kc" to the list of -march options.
+
+2011-08-09  Chao-ying Fu  <fu@mips.com>
+            Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* config/tc-mips.c (mips_set_options): Add ase_mcu.
+	(mips_opts): Initialise ase_mcu to -1.
+	(ISA_SUPPORTS_MCU_ASE): New macro.
+	(MIPS_CPU_ASE_MCU): Likewise.
+	(is_opcode_valid): Handle MCU.
+	(macro_build, macro): Likewise.
+	(validate_mips_insn, validate_micromips_insn): Likewise.
+	(mips_ip): Likewise.
+	(options): Add OPTION_MCU and OPTION_NO_MCU.
+	(md_longopts): Add mmcu and mno-mcu.
+	(md_parse_option): Handle OPTION_MCU and OPTION_NO_MCU.
+	(mips_after_parse_args): Handle MCU.
+	(s_mipsset): Likewise.
+	(md_show_usage): Handle MCU options.
+
+	* doc/as.texinfo: Document -mmcu and -mno-mcu options.
+	* doc/c-mips.texi: Likewise, and document ".set mcu" and
+	".set nomcu" directives.
+
+2011-08-09  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* config/tc-mips.c (gpr_mod_mask): Remove INSN2_MOD_GPR_MB,
+	INSN2_MOD_GPR_MC, INSN2_MOD_GPR_ME, INSN2_MOD_GPR_MG,
+	INSN2_MOD_GPR_MHI, INSN2_MOD_GPR_MJ, INSN2_MOD_GPR_MM,
+	INSN2_MOD_GPR_MN, INSN2_MOD_GPR_MP and INSN2_MOD_GPR_MQ opcode
+	register use checks.
+	(gpr_read_mask): Add INSN2_READ_GPR_MC, INSN2_READ_GPR_ME
+	INSN2_READ_GPR_MG, INSN2_READ_GPR_MJ, INSN2_READ_GPR_MMN,
+	INSN2_READ_GPR_MP and INSN2_READ_GPR_MQ opcode register use
+	checks.
+	(gpr_write_mask): Replace INSN2_WRITE_GPR_S opcode register
+	use flag with INSN_WRITE_GPR_S.  Add INSN2_WRITE_GPR_MB,
+	INSN2_WRITE_GPR_MHI, INSN2_WRITE_GPR_MJ and INSN2_WRITE_GPR_MP
+	opcode register use checks.
+	(can_swap_branch_p): Enable microMIPS branch swapping.
+	(append_insn): Likewise.
+
+2011-08-09  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* config/tc-mips.c (RELAX_MICROMIPS_ENCODE): Remove forced 16-bit
+	branch size information.
+	(RELAX_MICROMIPS_U16BIT): Remove macro.
+	(RELAX_MICROMIPS_UNCOND): Adjust accordingly.
+	(RELAX_MICROMIPS_COMPACT, RELAX_MICROMIPS_LINK): Likewise.
+	(RELAX_MICROMIPS_RELAX32): Likewise.
+	(RELAX_MICROMIPS_TOOFAR16): Likewise.
+	(RELAX_MICROMIPS_MARK_TOOFAR16): Likewise.
+	(RELAX_MICROMIPS_CLEAR_TOOFAR16): Likewise.
+	(RELAX_MICROMIPS_TOOFAR32): Likewise.
+	(RELAX_MICROMIPS_MARK_TOOFAR32): Likewise.
+	(RELAX_MICROMIPS_CLEAR_TOOFAR32): Likewise.
+	(append_insn): Always check forced_insn_length for microMIPS
+	relaxation.  Adjust code for the removal of
+	RELAX_MICROMIPS_U16BIT.
+	(mips_ip) <'D', 'E'>: If forced_insn_length, then emit the
+	relocation straight away.
+	(relaxed_micromips_16bit_branch_length): Adjust code for the
+	removal of RELAX_MICROMIPS_U16BIT.
+
+2011-08-08  Tristan Gingold  <gingold@adacore.com>
+
+	* config/obj-macho.c (obj_mach_o_section): New function.
+	(struct known_section): New type.
+	(known_sections): Declare.
+	(obj_mach_o_known_section): New function.
+	(obj_mach_o_common_parse): Ditto.
+	(obj_mach_o_comm): Ditto.
+	(obj_mach_o_subsections_via_symbols): Ditto.
+	(mach_o_pseudo_table): Add new pseudos.
+
+2011-08-06  Richard Henderson  <rth@redhat.com>
+
+	* dw2gencfi.c (all_fde_data): Export.
+	* dw2gencfi.h (all_fde_data): Declare.
+	* config/tc-alpha.c (alpha_elf_md_end): Don't convert legacy unwind
+	info to cfi unwind info if the user already has supplied some.
+
+2011-08-06  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (emit_nop): Delete.
+	(get_delay_slot_nop): New function.
+	(nops_for_insn_or_target): Use it.
+	(append_insn): Likewise.  When avoiding hazards, call add_fixed_insn
+	and insert_into_history directly.
+
+2011-08-06  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (delayed_branch_p, compact_branch_p)
+	(uncond_branch_p, branch_likely_p): New functions.
+	(insns_between, nops_for_insn_or_target, append_insn)
+	(macro_start): Use them.
+	(get_append_method): Likewise.  Remove redundant test.
+
+2011-08-05  David S. Miller  <davem@davemloft.net>
+
+	* config/tc-sparc.c (v9a_asr_table): Add "cps".
+	(sparc_ip): Handle '4', '5' and '(' format codes.
+
+2011-08-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/13056
+	* output-file.c (output_file_close): Call bfd_cache_close_all
+	on error.
+
+	* write.c (write_object_file): Revert the last change.
+
+2011-08-04  Alan Modra  <amodra@gmail.com>
+
+	* write.c (write_object_file): Call set_symtab even if we had
+	errors.
+
+2011-08-04  Tristan Gingold  <gingold@adacore.com>
+
+	* config/obj-elf.c (obj_elf_section): Do not free name.
+
+2011-08-03  James Greenhalgh  <james.greenhalgh@arm.com>
+
+	* config/tc-arm.c (do_t_strexbh): New.
+	(insns): Update accordingly.
+
+2011-08-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/13048
+	* config/tc-i386.c (handle_quad): Removed.
+	(md_pseudo_table): Remove "quad".
+	(tc_gen_reloc): Don't check BFD_RELOC_64 for disallow_64bit_reloc.
+	(x86_dwarf2_addr_size): New.
+
+	* config/tc-i386.h (x86_dwarf2_addr_size): New.
+	(DWARF2_ADDR_SIZE): Likewise.
+
+2011-08-01  Nick Clifton  <nickc@redhat.com>
+
+	PR ld/12974
+	* config/tc-arm.c (literal_pool): Add locs field.
+	(add_to_lit_pool): Initialise the locs entry for the new literal.
+	(s_ltorg): Generate a DWARF2 line number entry for each emitted
+	literal pool entry.
+
+2011-08-01  Tristan Gingold  <gingold@adacore.com>
+
+	* write.c (write_relocs): Fix -Wshadow in DEBUG3 and DEBUG4.
+
+2011-08-01  Tristan Gingold  <gingold@adacore.com>
+
+	* frags.c (frag_grow): Simplify the code.
+
+2011-07-30  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (nops_for_vr4130): Revert previous commit.
+
+2011-07-29  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* config/tc-mips.c: Adjust comments throughout.
+	(reglist_lookup): Reshape code.
+	(jmp_reloc_p, jalr_reloc_p): Reformat.
+	(got16_reloc_p, hi16_reloc_p, lo16_reloc_p): Handle microMIPS
+	relocations.
+	(gpr_mod_mask): Remove unused variable.
+	(gpr_read_mask, gpr_write_mask): Reshape code.
+	(fpr_read_mask, fpr_write_mask): Likewise.
+	(nops_for_vr4130): Ensure non-microMIPS mode.
+	(can_swap_branch_p): Correct pinfo2 reference.  Reshape code.
+	(append_insn): Skip Loongson 2F workaround in MIPS16 mode.  Use
+	the outermost operator of a compound relocation to determines
+	the relocated field.  Fix formatting.
+	(md_convert_frag): Reshape code.
+
+2011-07-29  Tristan Gingold  <gingold@adacore.com>
+
+	* frags.c (frag_var_init): New function.
+	(frag_var): Call frag_var_init to initialize.
+	(frag_variant): Ditto.
+
+2011-07-27  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* dwarf2dbg.c (out_debug_line): Ignore non-normal segments, with a
+	warning.
+	* doc/as.texinfo (Offset): Document .offset directive.
+
+2011-07-27  Tristan Gingold  <gingold@adacore.com>
+
+	* frags.c (frag_grow): Revert previous patch.
+
+2011-07-26  Kazuhiro Inaoka  <kazuhiro.inaoka.ud@renesas.com>
+
+	* config/tc-rx.c (md_convert_frag): Fix encoding of beq.a
+	synthetic instruction.
+
+2011-07-25  Tristan Gingold  <gingold@adacore.com>
+
+	* frags.c (frag_grow): Simplify the code.
+
+2011-07-24  Maciej W. Rozycki  <macro@codesourcery.com>
+            Chao-ying Fu  <fu@mips.com>
+	    Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.h (mips_segment_info): Add one bit for
+	microMIPS.
+	(TC_LABEL_IS_LOCAL): New macro.
+	(mips_label_is_local): New prototype.
+	* config/tc-mips.c (S0, S7): New macros.
+	(emit_branch_likely_macro): New variable.
+	(mips_set_options): Add micromips.
+	(mips_opts): Initialise micromips to -1.
+	(file_ase_micromips): New variable.
+	(CPU_HAS_MICROMIPS): New macro.
+	(hilo_interlocks): Set for microMIPS too.
+	(gpr_interlocks): Likewise.
+	(cop_interlocks): Likewise.
+	(cop_mem_interlocks): Likewise.
+	(HAVE_CODE_COMPRESSION): New macro.
+	(micromips_op_hash): New variable.
+	(micromips_nop16_insn, micromips_nop32_insn): New variables.
+	(NOP_INSN): Handle microMIPS ASE.
+	(mips32_to_micromips_reg_b_map): New macro.
+	(mips32_to_micromips_reg_c_map): Likewise.
+	(mips32_to_micromips_reg_d_map): Likewise.
+	(mips32_to_micromips_reg_e_map): Likewise.
+	(mips32_to_micromips_reg_f_map): Likewise.
+	(mips32_to_micromips_reg_g_map): Likewise.
+	(mips32_to_micromips_reg_l_map): Likewise.
+	(mips32_to_micromips_reg_n_map): Likewise.
+	(mips32_to_micromips_reg_h_map): New variable.
+	(mips32_to_micromips_reg_m_map): Likewise.
+	(mips32_to_micromips_reg_q_map): Likewise.
+	(micromips_to_32_reg_h_map): New variable.
+	(micromips_to_32_reg_i_map): Likewise.
+	(micromips_to_32_reg_m_map): Likewise.
+	(micromips_to_32_reg_q_map): Likewise.
+	(micromips_to_32_reg_b_map): New macro.
+	(micromips_to_32_reg_c_map): Likewise.
+	(micromips_to_32_reg_d_map): Likewise.
+	(micromips_to_32_reg_e_map): Likewise.
+	(micromips_to_32_reg_f_map): Likewise.
+	(micromips_to_32_reg_g_map): Likewise.
+	(micromips_to_32_reg_l_map): Likewise.
+	(micromips_to_32_reg_n_map): Likewise.
+	(micromips_imm_b_map, micromips_imm_c_map): New macros.
+	(RELAX_DELAY_SLOT_16BIT): New macro.
+	(RELAX_DELAY_SLOT_SIZE_FIRST): Likewise.
+	(RELAX_DELAY_SLOT_SIZE_SECOND): Likewise.
+	(RELAX_MICROMIPS_ENCODE, RELAX_MICROMIPS_P): New macros.
+	(RELAX_MICROMIPS_TYPE, RELAX_MICROMIPS_AT): Likewise.
+	(RELAX_MICROMIPS_U16BIT, RELAX_MICROMIPS_UNCOND): Likewise.
+	(RELAX_MICROMIPS_COMPACT, RELAX_MICROMIPS_LINK): Likewise.
+	(RELAX_MICROMIPS_RELAX32, RELAX_MICROMIPS_TOOFAR16): Likewise.
+	(RELAX_MICROMIPS_MARK_TOOFAR16): Likewise.
+	(RELAX_MICROMIPS_CLEAR_TOOFAR16): Likewise.
+	(RELAX_MICROMIPS_TOOFAR32): Likewise.
+	(RELAX_MICROMIPS_MARK_TOOFAR32): Likewise.
+	(RELAX_MICROMIPS_CLEAR_TOOFAR32): Likewise.
+	(INSERT_OPERAND, EXTRACT_OPERAND): Handle microMIPS ASE.
+	(mips_macro_warning): Add delay_slot_16bit_p, delay_slot_32bit_p,
+	fsize and insns.
+	(mips_mark_labels): New function.
+	(mips16_small, mips16_ext): Remove variables, replacing with...
+	(forced_insn_size): ... this.
+	(append_insn, mips16_ip): Update accordingly.
+	(micromips_insn_length): New function.
+	(insn_length): Return the length of microMIPS instructions.
+	(mips_record_mips16_mode): Rename to...
+	(mips_record_compressed_mode): ... this.  Handle microMIPS ASE.
+	(install_insn): Handle microMIPS ASE.
+	(reglist_lookup): New function.
+	(is_size_valid, is_delay_slot_valid): Likewise.
+	(md_begin): Handle microMIPS ASE.
+	(md_assemble): Likewise.  Update for append_insn interface change.
+	(micromips_reloc_p): New function.
+	(got16_reloc_p): Handle microMIPS ASE.
+	(hi16_reloc_p): Likewise.
+	(lo16_reloc_p): Likewise.
+	(jmp_reloc_p): New function.
+	(jalr_reloc_p): Likewise.
+	(matching_lo_reloc): Handle microMIPS ASE.
+	(insn_uses_reg, reg_needs_delay): Likewise.
+	(mips_move_labels): Likewise.
+	(mips16_mark_labels): Rename to...
+	(mips_compressed_mark_labels): ... this.  Handle microMIPS ASE.
+	(gpr_mod_mask): New function.
+	(gpr_read_mask, gpr_write_mask): Handle microMIPS ASE.
+	(fpr_read_mask, fpr_write_mask): Likewise.
+	(insns_between, nops_for_vr4130, nops_for_insn): Likewise.
+	(fix_loongson2f_nop, fix_loongson2f_jump): Likewise.
+	(MICROMIPS_LABEL_CHAR): New macro.
+	(micromips_target_label, micromips_target_name): New variables.
+	(micromips_label_name, micromips_label_expr): New functions.
+	(micromips_label_inc, micromips_add_label): Likewise.
+	(mips_label_is_local): Likewise.
+	(micromips_map_reloc): Likewise.
+	(can_swap_branch_p): Handle microMIPS ASE.
+	(append_insn): Add expansionp argument.  Handle microMIPS ASE.
+	(start_noreorder, end_noreorder): Handle microMIPS ASE.
+	(macro_start, macro_warning, macro_end): Likewise.
+	(brk_fmt, cop12_fmt, jalr_fmt, lui_fmt): New variables.
+	(mem12_fmt, mfhl_fmt, shft_fmt, trap_fmt): Likewise.
+	(BRK_FMT, COP12_FMT, JALR_FMT, LUI_FMT): New macros.
+	(MEM12_FMT, MFHL_FMT, SHFT_FMT, TRAP_FMT): Likewise.
+	(macro_build): Handle microMIPS ASE.  Update for append_insn
+	interface change.
+	(mips16_macro_build): Update for append_insn interface change.
+	(macro_build_jalr): Handle microMIPS ASE.
+	(macro_build_lui): Likewise.  Simplify.
+	(load_register): Handle microMIPS ASE.
+	(load_address): Likewise.
+	(move_register): Likewise.
+	(macro_build_branch_likely): New function.
+	(macro_build_branch_ccl): Likewise.
+	(macro_build_branch_rs): Likewise.
+	(macro_build_branch_rsrt): Likewise.
+	(macro): Handle microMIPS ASE.
+	(validate_micromips_insn): New function.
+	(expr_const_in_range): Likewise.
+	(mips_ip): Handle microMIPS ASE.
+	(options): Add OPTION_MICROMIPS and OPTION_NO_MICROMIPS.
+	(md_longopts): Add mmicromips and mno-micromips.
+	(md_parse_option): Handle OPTION_MICROMIPS and
+	OPTION_NO_MICROMIPS.
+	(mips_after_parse_args): Handle microMIPS ASE.
+	(md_pcrel_from): Handle microMIPS relocations.
+	(mips_force_relocation): Likewise.
+	(md_apply_fix): Likewise.
+	(mips_align): Handle microMIPS ASE.
+	(s_mipsset): Likewise.
+	(s_cpload, s_cpsetup, s_cpreturn): Use relocation wrappers.
+	(s_dtprel_internal): Likewise.
+	(s_gpword, s_gpdword): Likewise.
+	(s_insn): Handle microMIPS ASE.
+	(s_mips_stab): Likewise.
+	(relaxed_micromips_32bit_branch_length): New function.
+	(relaxed_micromips_16bit_branch_length): New function.
+	(md_estimate_size_before_relax): Handle microMIPS ASE.
+	(mips_fix_adjustable): Likewise.
+	(tc_gen_reloc): Handle microMIPS relocations.
+	(mips_relax_frag): Handle microMIPS ASE.
+	(md_convert_frag): Likewise.
+	(mips_frob_file_after_relocs): Likewise.
+	(mips_elf_final_processing): Likewise.
+	(mips_nop_opcode): Likewise.
+	(mips_handle_align): Likewise.
+	(md_show_usage): Handle microMIPS options.
+	* symbols.c (TC_LABEL_IS_LOCAL): New macro.
+	(S_IS_LOCAL): Add a TC_LABEL_IS_LOCAL check.
+
+	* doc/as.texinfo (Target MIPS options): Add -mmicromips and
+	-mno-micromips.
+	(-mmicromips, -mno-micromips): New options.
+	* doc/c-mips.texi (-mmicromips, -mno-micromips): New options.
+	(MIPS ISA): Document .set micromips and .set nomicromips.
+	(MIPS insn): Update for microMIPS support.
+
+2011-07-24  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* config/tc-mips.c (mips_ip): Make a copy of the instruction's
+	mnemonic and use it for further processing.
+
+2011-07-24  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* config/tc-mips.c (can_swap_branch_p): Adjust for the rename of
+	INSN_TRAP to INSN_NO_DELAY_SLOT.  Remove the check for INSN_SYNC
+	as well as explicit checks for ERET and DERET when scheduling
+	branch delay slots.
+
+2011-07-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (cpu_arch): Add k1om.
+	(i386_align_code): Handle PROCESSOR_K1OM.
+	(check_cpu_arch_compatible): Check EM_K1OM.
+	(i386_arch): Handle Intel K1OM.
+	(i386_mach): Return bfd_mach_k1om for Intel K1OM.
+	(i386_target_format): Return ELF_TARGET_K1OM_FORMAT for Intel
+	K1OM.
+
+	* config/tc-i386.h (ELF_TARGET_K1OM_FORMAT): New.
+	(processor_type): Add PROCESSOR_K1OM.
+
+	* doc/c-i386.texi: Document k1om.
+
+2011-07-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* doc/c-i386.texi: Fix a typo.
+
+2011-07-06  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* config/tc-mips.c (append_insn): delete prev_pinfo2 and pinfo2.
+
+2011-07-04  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (gpr_read_mask, gpr_write_mask): Fix handling
+	of register 0.
+
+2011-07-04  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* config/tc-mips.c (append_insn): Make sure DWARF-2 location
+	information is properly adjusted for branches that get swapped.
+
+2011-07-03  Samuel Thibault  <samuel.thibault@gnu.org>
+	    Thomas Schwinge  <thomas@schwinge.name>
+
+	PR binutils/12913
+	* config/obj-elf.c (obj_elf_type): Use ELFOSABI_GNU name instead of
+	ELFOSABI_LINUX alias.
+	* config/tc-ia64.c: Likewise.
+
+2011-06-30  Paul Carroll  <pcarroll@codesourcery.com>
+
+	* config/tc-arm.c (do_t_add_sub): Only allow LSL shifts of less
+	than 4 in Thumb mode.
+
+2011-06-30  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/12848
+	* config/tc-arm.c (BAD_RANGE): New error message define.
+	(md_apply_fix): Use it.
+	Fix range check for thumb branch instructions.
+
+2011-06-29  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (append_method): New enum.
+	(can_swap_branch_p, get_append_method): New functions.
+	(append_insn): Use get_append_method to decide how the instruction
+	should be added.
+
+2011-06-29  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (append_insn): Remove bogus goto.
+
+2011-06-29  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (append_insn): Always clear the history after an
+	unconditional branch.
+
+2011-06-29  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (find_altered_mips16_opcode): New function.
+	(append_insn): Use it.
+
+2011-06-29  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (insn_uses_reg): Delete.
+	(gpr_read_mask, gpr_write_mask): New functions.
+	(fpr_read_mask, fpr_write_mask): Likewise.
+	(insns_between, nops_for_vr4130, append_insn): Use them.
+
+2011-06-29  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (md_mips_end): Call mips_emit_delays.
+
+2011-06-29  Dave Martin  <dave.martin@linaro.org>
+
+	PR gas/12931
+	* config/tc-arm.c (mapping_state): When changing to ARM or THUMB
+	state set the minimum required alignment of the section.
+
+2011-06-29  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-i386.c (i386_mach): Convert to ISO-C.
+	(md_begin, pe_directive_secrel, md_estimate_size_before_relax): Ditto.
+	(md_convert_frag, md_apply_fix, md_undefined_symbol): Ditto.
+	(md_section_align, tc_gen_reloc): Ditto.
+
+2011-06-28  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-alpha.c (s_alpha_pdesc): Fix indentation. Do not
+	generate dummy fix.
+
+2011-06-28  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-alpha.c (load_expression): Use alloca instead of xmalloc.
+	(emit_jsrjmp): Ditto.
+	(tc_gen_reloc): Ditto.
+
+2011-06-28  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-alpha.c (alpha_evax_proc_hash): Remove.
+	(alpha_evax_proc_data): New variable.
+	(s_alpha_ent): Prevent nested function.  Remove has_insert call.
+	(s_alpha_pdesc): Do not call demand_empty_rest_of_line in case of
+	error.  Do not search in the hash table.  Check if match with .ent.
+	(s_alpha_name): Remove unused variable.
+	(md_begin): Remove initialization of alpha_evax_proc_hash.
+
+2011-06-27  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-alpha.c (add_to_link_pool): Remove basesym parameter.
+	Locally declare basesym.  Add comments.  Do not set literal_pool_size.
+	(load_expression): Adjust call to add_to_link_pool.
+	(s_alpha_pdesc): Define pdesc symbol using dot.
+	Do not set literal_pool_size.
+	(s_alpha_end): Use NULL instead of 0.
+
+2011-06-27  Tristan Gingold  <gingold@adacore.com>
+
+	* config/obj-evax.c (evax_frob_file_before_adjust): Add comments.
+	Fix style.
+	* config/obj-evax.h (struct alpha_linkage_fixups): Remove seg
+	field.  Add comments.
+	(obj_symbol_type, object_headers, OBJ_SYMFIELD_TYPE): Remove
+
+2011-06-26  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (fix_24k_record_store_info): If the previous
+	instruction was a store, and the next instructions are unknown,
+	assume the worst.
+
+2011-06-25  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	PR gas/12915
+	* config/tc-mips.c (nops_for_vr4130, nops_for_24k, nops_for_insn)
+	(nops_for_sequence, nops_for_insn_or_target): Add ignore parameters.
+	(mips_emit_delays, start_noreorder): Update accordingly.
+	(append_insn): Likewise.  Revert original fix for this PR
+	and use the ignore parameter instead.
+
+2011-06-24  Tristan Gingold  <gingold@adacore.com>
+
+	PR gas/11625
+	* config/obj-evax.c (evax_frob_symbol): Use as_bad instead of abort.
+
+2011-06-24  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-alpha.c (add_to_link_pool): Remove useless offset
+	variable.  Fix style.
+
+2011-06-23  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	PR gas/12915
+	* config/tc-mips.c (append_insn): Only consider hazards between the
+	pre-noreorder block and ip.
+
+2011-06-21  Sameera Deshpande  <sameera.deshpande@arm.com>
+
+	* config/tc-arm.c (vfp_conv): Add check on range of immediate operand
+	in vcvt instruction between floating-point and fixed-point.
+	(operand_parse_code): Add "OP_oI32z".
+	(parse_operands): OP_oI32z case added.
+
+2011-06-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure.tgt: Revert x32 change.
+
+2011-06-20  Nick Clifton  <nickc@redhat.com>
+
+	* doc/Makefile.am: (CPU_DOCS): Add c-xstormy16.texi.
+	* doc/Makefile.in: Regenerate.
+	* doc/all.texi: Set XSTORMY16.
+	* doc/c-xstormy16.texi: New file.
+
+2011-06-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure.tgt: Support x32.
+
+2011-06-15  Nick Clifton  <nickc@redhat.com>
+
+	* NEWS: Mention addition of TILEPRO and TIKE-Gx support.
+
+2011-06-14  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-ppc.h (struct ppc_tc_sy): Complete comment on within.
+	(tc_new_dot_label): Define.
+	(ppc_new_dot_label): Declare.
+	* config/tc-ppc.c (ppc_frob_label): Set within target field.
+	(ppc_fix_adjustable): Use this field to adjust the reloc.
+	(ppc_new_dot_label): New function.
+
+2011-06-14  Alan Modra  <amodra@gmail.com>
+
+	* po/POTFILES.in: Regenerate.
+
+2011-06-13  Walter Lee  <walt@tilera.com>
+
+	* Makefile.am (TARGET_CPU_CFILES): Add config/tc-tilegx.c and
+	config/tc-tilepro.c.
+	(TARGET_CPU_HFILES): Add config/tc-tilegx.h and
+	config/tc-tilepro.h.
+	* Makefile.in: Regenerate.
+	* configure.tgt (tilepro-*-*): New.
+	(tilegx-*-*): Likewise.
+	* config/tc-tilegx.c: New file.
+	* config/tc-tilegx.h: Likewise.
+	* config/tc-tilepro.h: Likewise.
+	* config/tc-tilepro.c: Likewise.
+	* doc/Makefile.am (CPU_DOCS): Add c-tilegx.texi and
+	c-tilepro.texi.
+	* doc/Makefile.in: Regenerate.
+	* doc/all.texi (TILEGX): Define.
+	(TILEPRO): Define.
+	* doc/as.texinfo: Add Tile-Gx and TILEPro documentation.  Include
+	c-tilegx.texi and c-tilepro.texi.
+	* doc/c-tilegx.texi: New.
+	* doc/c-tilepro.texi: New.
+
+2011-06-13  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/12854
+	* config/tc-arm.c (do_shift): Do not allow shift operations at the
+	end of a register based shift insn.
+	(do_t_shift): Likewise.
+
+2011-06-13  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-score.c (s3_my_get_expression): Delete unused local
+	variable 'seg'.
+	(s3_do_ldst_insn): Delete unused local variable 'strbak'.
+	(s3_do16_ldst_insn): Delete unused local variable 'temp'.
+	(s3_do_macro_bcmp): Zero inst_expand array.
+	(s3_do_macro_bcmpz): Likewise.
+	(s3_s_score_end): Delete unused local variable 'dot'.
+	(s3_gen_reloc): Delete unused local variables 'f', 's', and 'e'.
+	* config/tc-score7.c (s7_my_get_expression): Delete unused local
+	variable 'seg'.
+	(s7_do_ldst_insn): Delete unused local variable 'strbak'.
+	(s7_b32_relax_to_b16): Delete unused local variables 'r_old' and
+	'r_new'.
+	(s7_s_score_end): Delete unused local variable 'dot'.
+	(s7_relax_frag): Delete unused local variable 'relax_size'.
+	(s7_gen_reloc): Delete unused local variables 'f', 's', and 'e'.
+
+2011-06-10  H.J. Lu  <hongjiu.lu@intel.com>
+
+	AVX Programming Reference (June, 2011)
+	* config/tc-i386.c (i386_error): Add invalid_vsib_address and
+	unsupported_vector_index_register.
+	(cpu_arch): Add .avx2, .bmi2, .lzcnt and .invpcid.
+	(check_VecOperands): New.
+	(match_template): Call check_VecOperands.  Handle
+	invalid_vsib_address and unsupported_vector_index_register.
+	(build_modrm_byte): Support VecSIB.  Check register-only source
+	operand when two source operands are swapped.
+	(i386_index_check): Allow Xmm/Ymm index registers.
+
+	* doc/c-i386.texi: Document avx2/.avx2, bmi2/.bmi2, lzcnt/.lzcnt
+	and invpcid./invpcid.
+
+2011-06-09  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/12861
+	* config/tc-cr16.c (tc_gen_reloc): Remove unused local variable
+	code.
+	(check_cinv_options): Remove unused local variables.  Make
+	function void.
+	(md_assemble): Remove unused local variable.
+
+2011-06-09  James Greenhalgh  <james.greenhalgh@arm.com>
+
+	* config/tc-arm.c (do_ldrd): Warn in unpredictable cases.
+
 2011-06-03  Arnaud Patard  <arnaud.patard@rtp-net.org>
 
 	PR gas/12698

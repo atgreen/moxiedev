@@ -1,3 +1,136 @@
+2011-07-05  Mike Frysinger  <vapier@gentoo.org>
+
+	* interp.c (sim_do_command): Delete.
+
+2011-07-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* interp.c (cb_linux_stat_map_32, cb_linux_stat_map_64): Rename from
+	stat_map_32 and stat_map_64.
+	(cb_libgloss_stat_map_32): New stat map.
+	(stat_map_32, stat_map_64): New stat map pointers.
+	(bfin_user_init): Assign stat_map_32 to cb_linux_stat_map_32 and
+	stat_map_64 to cb_linux_stat_map_64.
+	(bfin_virtual_init): New function.
+	(sim_create_inferior): Call bfin_virtual_init for all other envs.
+
+2011-06-22  Mike Frysinger  <vapier@gentoo.org>
+
+	* interp.c (bfin_syscall): Delete old comment.  Set dreg 1 to
+	sc.result2 and dreg 2 to sc.errcode.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (decode_dsp32shift_0): Clear ASTAT[AV] if val is 0,
+	else set it.  Set ASTAT[AVS] if val is 0.  Do this for LSHIFT and
+	ASHIFT accumulator insns.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (ashiftrt): If size is 40, do not call SET_ASTATREG.
+	(lshiftrt): Likewise.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (decode_dsp32shift_0): Use get_unextended_acc
+	rather than get_extended_acc in LSHIFT insns.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (decode_macfunc): Handle MM when mmod is M_TFU.
+	Check MM once when mmod is M_FU to match M_TFU better.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (decode_dsp32shiftimm_0): When shift is greater than
+	32, perform a left shift.  Update the corresponding AV bit.  Set
+	AZ when the low 32bits are also zero.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (decode_dsp32shiftimm_0): With left shift vector insns,
+	call lshift only when count is positive.  Otherwise, call ashiftrt.
+	With arithmetic right shift insns, call ashiftrt when the value is
+	small enough, otherwise call lshift.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (extract_mult): Call saturate_s16 directly when
+	mmod is M_IH rather than computing the result by hand.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (decode_macfunc): Add nosat_acc to track acc value
+	before saturation, set sat when more cases saturate, and set the
+	overflow bit based on these results.  For M_TFU, M_IU, M_FU, and
+	M_W32, change the max values compared against.
+	(decode_dsp32mac_0): Delete v_i and add v_0 and v_1.  Pass v_1
+	when processing MAC1 and pass v_0 when processing MAC0.  Combine
+	the results into the V/VS ASTAT bits.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (extract_mult): Call saturate_s32 when MM is set
+	and mmod is M_IU.  Call saturate_s16 when MM is set and mmod
+	is M_TFU.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (decode_multfunc): Call new is_macmod_signed, and
+	allow MM to sign extend all the time.
+	(decode_macfunc): Likewise.  Drop sign extension of unsigned
+	values.
+
+2011-06-18  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (saturate_s40_astat): Change ">=" to ">".
+	(decode_macfunc): Likewise when mmod is M_IH.
+
+2011-06-18  Mike Frysinger  <vapier@gentoo.org>
+
+	* interp.c (sim_create_inferior): Change free to freeargv.
+
+2011-06-04  Mike Frysinger  <vapier@gentoo.org>
+
+	* machs.c (bf534_dev, bf537_dev): Add glue-or devices.
+	(bf537_port): Define applicable devices with PORT to the glue-or
+	devices instead of SIC.
+	(bfin_model_hw_tree_init): Drop old sim_hw_parse call for bfin_sic.
+	Only parse reg/type when the device has an address.  Move the call
+	to dv_bfin_hw_port_parse up before slash check.
+
+2011-06-04  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-bfin_sic.c (ENC, DEC_PIN, DEC_SIC): Move above the
+	BFIN_SIC_TO_CEC_PORTS definition.
+	(SIC_PORTS): New define.
+	(bfin_sic_50x_ports, bfin_sic_51x_ports, bfin_sic_52x_ports,
+	bfin_sic_533_ports, bfin_sic_537_ports, bfin_sic_538_ports,
+	bfin_sic_54x_ports, bfin_sic_561_ports, bfin_sic_59x_ports):
+	Delete old layouts.
+	(bfin_sic1_ports, bfin_sic2_ports, bfin_sic3_ports,
+	bfin_sic_561_ports): Define new layouts with SIC_PORTS().
+	(bfin_sic_finish): Change reference to bfin_sic_50x_ports,
+	bfin_sic_51x_ports, bfin_sic_52x_ports, and bfin_sic_538_ports
+	to bfin_sic2_ports.  Change reference to bfin_sic_533_ports,
+	bfin_sic_537_ports, and bfin_sic_59x_ports to bfin_sic1_ports.
+	Change reference to bfin_sic_54x_ports to bfin_sic3_ports.
+	* machs.c (bfin_port_layout): New structure.
+	(bfin_model_data): Add new "port" and "port_count" members.
+	(PORT, SIC): New defines.
+	(bf000_port, bf50x_port, bf51x_port, bf52x_port, bf533_port,
+	bf537_port, bf538_port, bf54x_port, bf561_port, bf592_port):
+	Move and redefine port layout from dv-bfin_sic.c to here.
+	(bf504_port, bf506_port, bf512_port, bf514_port, bf516_port,
+	bf518_port, bf522_port, bf523_port, bf524_port, bf525_port,
+	bf526_port, bf527_port, bf531_port, bf532_port, bf534_port,
+	bf536_port, bf539_port, bf542_port, bf544_port, bf547_port,
+	bf548_port, bf549_port): New defines.
+	(bfin_model_data): Link in new bfin_port_layout.port member.
+	(dv_bfin_hw_port_parse): New function.
+	(dv_bfin_hw_parse): Call new dv_bfin_hw_port_parse function.
+	(bfin_model_hw_tree_init): Replace calls to sim_hw_parse for
+	bfin_sic links with new dv_bfin_hw_port_parse function.
+
 2011-06-03  Mike Frysinger  <vapier@gentoo.org>
 
 	* dv-bfin_dma.c (bfin_dma_io_write_buffer): Fix indentation.

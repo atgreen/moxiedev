@@ -1,3 +1,14 @@
+2011-07-03  Samuel Thibault  <samuel.thibault@gnu.org>
+	    Thomas Schwinge  <thomas@schwinge.name>
+
+	PR binutils/12913
+	* elfcpp.h (ELFOSABI): Add ELFOSABI_GNU with value of ELFOSABI_LINUX,
+	keep ELFOSABI_LINUX as an alias.  Remove ELFOSABI_HURD.
+
+2011-07-01  Ian Lance Taylor  <iant@google.com>
+
+	* dwarf.h (enum DW_CFA): Define.
+
 2010-08-12  Cary Coutant  <ccoutant@google.com>
 
 	* elfcpp.h (enum SHT): Add SHT_GNU_INCREMENTAL_GOT_PLT.

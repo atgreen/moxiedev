@@ -218,7 +218,7 @@ md_assemble (char *str)
 	int dest, src;
 	dest = parse_register_operand (&op_end);
 	if (*op_end != ',')
-	  as_warn (_("expecting comma delimeted register operands"));
+	  as_warn (_("expecting comma delimited register operands"));
 	op_end++;
 	src  = parse_register_operand (&op_end);
 	iword += (dest << 4) + src;

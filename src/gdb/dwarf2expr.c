@@ -418,7 +418,7 @@ read_sleb128 (const gdb_byte *buf, const gdb_byte *buf_end, LONGEST * r)
 	break;
     }
   if (shift < (sizeof (*r) * 8) && (byte & 0x40) != 0)
-    result |= -(1 << shift);
+    result |= -(((LONGEST) 1) << shift);
 
   *r = result;
   return buf;
@@ -466,9 +466,9 @@ dwarf_get_base_type (struct dwarf_expr_context *ctx, ULONGEST die, int size)
 {
   struct type *result;
 
-  if (ctx->get_base_type)
+  if (ctx->funcs->get_base_type)
     {
-      result = ctx->get_base_type (ctx, die);
+      result = ctx->funcs->get_base_type (ctx, die);
       if (result == NULL)
 	error (_("Could not find type for DW_OP_GNU_const_type"));
       if (size != 0 && TYPE_LENGTH (result) != size)
@@ -520,6 +520,10 @@ execute_stack_op (struct dwarf_expr_context *ctx,
       ULONGEST uoffset, reg;
       LONGEST offset;
       struct value *result_val = NULL;
+
+      /* The DWARF expression might have a bug causing an infinite
+	 loop.  In that case, quitting is the only way out.  */
+      QUIT;
 
       switch (op)
 	{
@@ -755,7 +759,7 @@ execute_stack_op (struct dwarf_expr_context *ctx,
 	case DW_OP_breg31:
 	  {
 	    op_ptr = read_sleb128 (op_ptr, op_end, &offset);
-	    result = (ctx->read_reg) (ctx->baton, op - DW_OP_breg0);
+	    result = (ctx->funcs->read_reg) (ctx->baton, op - DW_OP_breg0);
 	    result += offset;
 	    result_val = value_from_ulongest (address_type, result);
 	  }
@@ -764,7 +768,7 @@ execute_stack_op (struct dwarf_expr_context *ctx,
 	  {
 	    op_ptr = read_uleb128 (op_ptr, op_end, &reg);
 	    op_ptr = read_sleb128 (op_ptr, op_end, &offset);
-	    result = (ctx->read_reg) (ctx->baton, reg);
+	    result = (ctx->funcs->read_reg) (ctx->baton, reg);
 	    result += offset;
 	    result_val = value_from_ulongest (address_type, result);
 	  }
@@ -784,14 +788,13 @@ execute_stack_op (struct dwarf_expr_context *ctx,
 	    /* FIXME: cagney/2003-03-26: This code should be using
                get_frame_base_address(), and then implement a dwarf2
                specific this_base method.  */
-	    (ctx->get_frame_base) (ctx->baton, &datastart, &datalen);
+	    (ctx->funcs->get_frame_base) (ctx->baton, &datastart, &datalen);
 	    dwarf_expr_eval (ctx, datastart, datalen);
 	    if (ctx->location == DWARF_VALUE_MEMORY)
 	      result = dwarf_expr_fetch_address (ctx, 0);
 	    else if (ctx->location == DWARF_VALUE_REGISTER)
-	      result
-		= (ctx->read_reg) (ctx->baton,
-				   value_as_long (dwarf_expr_fetch (ctx, 0)));
+	      result = (ctx->funcs->read_reg) (ctx->baton,
+				     value_as_long (dwarf_expr_fetch (ctx, 0)));
 	    else
 	      error (_("Not implemented: computing frame "
 		       "base using explicit value operator"));
@@ -876,7 +879,7 @@ execute_stack_op (struct dwarf_expr_context *ctx,
 	    else
 	      type = address_type;
 
-	    (ctx->read_mem) (ctx->baton, buf, addr, addr_size);
+	    (ctx->funcs->read_mem) (ctx->baton, buf, addr, addr_size);
 
 	    /* If the size of the object read from memory is different
 	       from the type length, we need to zero-extend it.  */
@@ -1085,7 +1088,7 @@ execute_stack_op (struct dwarf_expr_context *ctx,
 	  break;
 
 	case DW_OP_call_frame_cfa:
-	  result = (ctx->get_frame_cfa) (ctx->baton);
+	  result = (ctx->funcs->get_frame_cfa) (ctx->baton);
 	  result_val = value_from_ulongest (address_type, result);
 	  in_stack_memory = 1;
 	  break;
@@ -1101,7 +1104,7 @@ execute_stack_op (struct dwarf_expr_context *ctx,
 	  returned.  */
 	  result = value_as_long (dwarf_expr_fetch (ctx, 0));
 	  dwarf_expr_pop (ctx);
-	  result = (ctx->get_tls_address) (ctx->baton, result);
+	  result = (ctx->funcs->get_tls_address) (ctx->baton, result);
 	  result_val = value_from_ulongest (address_type, result);
 	  break;
 
@@ -1174,13 +1177,13 @@ execute_stack_op (struct dwarf_expr_context *ctx,
 	case DW_OP_call2:
 	  result = extract_unsigned_integer (op_ptr, 2, byte_order);
 	  op_ptr += 2;
-	  ctx->dwarf_call (ctx, result);
+	  ctx->funcs->dwarf_call (ctx, result);
 	  goto no_push;
 
 	case DW_OP_call4:
 	  result = extract_unsigned_integer (op_ptr, 4, byte_order);
 	  op_ptr += 4;
-	  ctx->dwarf_call (ctx, result);
+	  ctx->funcs->dwarf_call (ctx, result);
 	  goto no_push;
 	
 	case DW_OP_GNU_entry_value:
@@ -1216,8 +1219,10 @@ execute_stack_op (struct dwarf_expr_context *ctx,
 	    op_ptr = read_uleb128 (op_ptr, op_end, &type_die);
 
 	    type = dwarf_get_base_type (ctx, type_die, 0);
-	    result = (ctx->read_reg) (ctx->baton, reg);
-	    result_val = value_from_ulongest (type, result);
+	    result = (ctx->funcs->read_reg) (ctx->baton, reg);
+	    result_val = value_from_ulongest (address_type, result);
+	    result_val = value_from_contents (type,
+					      value_contents_all (result_val));
 	  }
 	  break;
 
@@ -1229,7 +1234,10 @@ execute_stack_op (struct dwarf_expr_context *ctx,
 
 	    op_ptr = read_uleb128 (op_ptr, op_end, &type_die);
 
-	    type = dwarf_get_base_type (ctx, type_die, 0);
+	    if (type_die == 0)
+	      type = address_type;
+	    else
+	      type = dwarf_get_base_type (ctx, type_die, 0);
 
 	    result_val = dwarf_expr_fetch (ctx, 0);
 	    dwarf_expr_pop (ctx);
@@ -1270,6 +1278,62 @@ execute_stack_op (struct dwarf_expr_context *ctx,
 abort_expression:
   ctx->recursion_depth--;
   gdb_assert (ctx->recursion_depth >= 0);
+}
+
+/* Stub dwarf_expr_context_funcs.read_reg implementation.  */
+
+CORE_ADDR
+ctx_no_read_reg (void *baton, int regnum)
+{
+  error (_("Registers access is invalid in this context"));
+}
+
+/* Stub dwarf_expr_context_funcs.get_frame_base implementation.  */
+
+void
+ctx_no_get_frame_base (void *baton, const gdb_byte **start, size_t *length)
+{
+  error (_("%s is invalid in this context"), "DW_OP_fbreg");
+}
+
+/* Stub dwarf_expr_context_funcs.get_frame_cfa implementation.  */
+
+CORE_ADDR
+ctx_no_get_frame_cfa (void *baton)
+{
+  error (_("%s is invalid in this context"), "DW_OP_call_frame_cfa");
+}
+
+/* Stub dwarf_expr_context_funcs.get_frame_pc implementation.  */
+
+CORE_ADDR
+ctx_no_get_frame_pc (void *baton)
+{
+  error (_("%s is invalid in this context"), "DW_OP_GNU_implicit_pointer");
+}
+
+/* Stub dwarf_expr_context_funcs.get_tls_address implementation.  */
+
+CORE_ADDR
+ctx_no_get_tls_address (void *baton, CORE_ADDR offset)
+{
+  error (_("%s is invalid in this context"), "DW_OP_GNU_push_tls_address");
+}
+
+/* Stub dwarf_expr_context_funcs.dwarf_call implementation.  */
+
+void
+ctx_no_dwarf_call (struct dwarf_expr_context *ctx, size_t die_offset)
+{
+  error (_("%s is invalid in this context"), "DW_OP_call*");
+}
+
+/* Stub dwarf_expr_context_funcs.get_base_type implementation.  */
+
+struct type *
+ctx_no_get_base_type (struct dwarf_expr_context *ctx, size_t die)
+{
+  error (_("Support for typed DWARF is not supported in this context"));
 }
 
 void

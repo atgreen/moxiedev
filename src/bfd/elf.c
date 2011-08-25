@@ -4684,24 +4684,26 @@ assign_file_positions_for_load_sections (bfd *abfd,
 	    }
 	  else
 	    {
-	      if (p->p_type == PT_LOAD
-		  || (this_hdr->sh_type == SHT_NOBITS
-		      && (this_hdr->sh_flags & SHF_TLS) != 0
-		      && this_hdr->sh_offset == 0))
+	      if (p->p_type == PT_LOAD)
 		{
-		  if (this_hdr->sh_type == SHT_NOBITS)
-		    {
-		      /* These sections don't really need sh_offset,
-			 but give them one anyway.  */
-		      bfd_vma adjust = vma_page_aligned_bias (this_hdr->sh_addr,
-							      off, align);
-		      this_hdr->sh_offset = sec->filepos = off + adjust;
-		    }
-		  else
-		    {
-		      this_hdr->sh_offset = sec->filepos = off;
-		      off += this_hdr->sh_size;
-		    }
+		  this_hdr->sh_offset = sec->filepos = off;
+		  if (this_hdr->sh_type != SHT_NOBITS)
+		    off += this_hdr->sh_size;
+		}
+	      else if (this_hdr->sh_type == SHT_NOBITS
+		       && (this_hdr->sh_flags & SHF_TLS) != 0
+		       && this_hdr->sh_offset == 0)
+		{
+		  /* This is a .tbss section that didn't get a PT_LOAD.
+		     (See _bfd_elf_map_sections_to_segments "Create a
+		     final PT_LOAD".)  Set sh_offset to the value it
+		     would have if we had created a zero p_filesz and
+		     p_memsz PT_LOAD header for the section.  This
+		     also makes the PT_TLS header have the same
+		     p_offset value.  */
+		  bfd_vma adjust = vma_page_aligned_bias (this_hdr->sh_addr,
+							  off, align);
+		  this_hdr->sh_offset = sec->filepos = off + adjust;
 		}
 
 	      if (this_hdr->sh_type != SHT_NOBITS)
@@ -6272,6 +6274,8 @@ _bfd_elf_init_private_section_data (bfd *ibfd,
       || obfd->xvec->flavour != bfd_target_elf_flavour)
     return TRUE;
 
+  BFD_ASSERT (elf_section_data (osec) != NULL);
+
   /* For objcopy and relocatable link, don't copy the output ELF
      section type from input if the output BFD section flags have been
      set to something different.  For a final link allow some flags
@@ -7389,6 +7393,9 @@ elf_find_function (bfd *abfd,
   enum { nothing_seen, symbol_seen, file_after_symbol_seen } state;
   const struct elf_backend_data *bed = get_elf_backend_data (abfd);
 
+  if (symbols == NULL)
+    return FALSE;
+
   filename = NULL;
   func = NULL;
   file = NULL;
@@ -7974,6 +7981,12 @@ elfcore_grok_s390_prefix (bfd *abfd, Elf_Internal_Note *note)
   return elfcore_make_note_pseudosection (abfd, ".reg-s390-prefix", note);
 }
 
+static bfd_boolean
+elfcore_grok_arm_vfp (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-arm-vfp", note);
+}
+
 #if defined (HAVE_PRPSINFO_T)
 typedef prpsinfo_t   elfcore_psinfo_t;
 #if defined (HAVE_PRPSINFO32_T)		/* Sparc64 cross Sparc32 */
@@ -8392,6 +8405,13 @@ elfcore_grok_note (bfd *abfd, Elf_Internal_Note *note)
         return elfcore_grok_s390_prefix (abfd, note);
       else
         return TRUE;
+
+    case NT_ARM_VFP:
+      if (note->namesz == 6
+	  && strcmp (note->namedata, "LINUX") == 0)
+	return elfcore_grok_arm_vfp (abfd, note);
+      else
+	return TRUE;
 
     case NT_PRPSINFO:
     case NT_PSINFO:
@@ -9147,6 +9167,18 @@ elfcore_write_s390_prefix (bfd *abfd,
 }
 
 char *
+elfcore_write_arm_vfp (bfd *abfd,
+		       char *buf,
+		       int *bufsiz,
+		       const void *arm_vfp,
+		       int size)
+{
+  char *note_name = "LINUX";
+  return elfcore_write_note (abfd, buf, bufsiz,
+			     note_name, NT_ARM_VFP, arm_vfp, size);
+}
+
+char *
 elfcore_write_register_note (bfd *abfd,
 			     char *buf,
 			     int *bufsiz,
@@ -9176,6 +9208,8 @@ elfcore_write_register_note (bfd *abfd,
     return elfcore_write_s390_ctrs (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-s390-prefix") == 0)
     return elfcore_write_s390_prefix (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-arm-vfp") == 0)
+    return elfcore_write_arm_vfp (abfd, buf, bufsiz, data, size);
   return NULL;
 }
 
@@ -9576,11 +9610,11 @@ _bfd_elf_set_osabi (bfd * abfd,
   i_ehdrp->e_ident[EI_OSABI] = get_elf_backend_data (abfd)->elf_osabi;
 
   /* To make things simpler for the loader on Linux systems we set the
-     osabi field to ELFOSABI_LINUX if the binary contains symbols of
+     osabi field to ELFOSABI_GNU if the binary contains symbols of
      the STT_GNU_IFUNC type or STB_GNU_UNIQUE binding.  */
   if (i_ehdrp->e_ident[EI_OSABI] == ELFOSABI_NONE
       && elf_tdata (abfd)->has_gnu_symbols)
-    i_ehdrp->e_ident[EI_OSABI] = ELFOSABI_LINUX;
+    i_ehdrp->e_ident[EI_OSABI] = ELFOSABI_GNU;
 }
 
 

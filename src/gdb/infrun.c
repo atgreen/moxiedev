@@ -2246,7 +2246,6 @@ start_remote (int from_tty)
 {
   struct inferior *inferior;
 
-  init_wait_for_inferior ();
   inferior = current_inferior ();
   inferior->control.stop_soon = STOP_QUIETLY_REMOTE;
 
@@ -2327,6 +2326,7 @@ struct execution_control_state
 
   struct target_waitstatus ws;
   int random_signal;
+  int stop_func_filled_in;
   CORE_ADDR stop_func_start;
   CORE_ADDR stop_func_end;
   char *stop_func_name;
@@ -2739,7 +2739,16 @@ fetch_inferior_event (void *client_data)
      status mechanism.  */
 
   overlay_cache_invalid = 1;
-  registers_changed ();
+
+  /* But don't do it if the current thread is already stopped (hence
+     this is either a delayed event that will result in
+     TARGET_WAITKIND_IGNORE, or it's an event for another thread (and
+     we always clear the register and frame caches when the user
+     switches threads anyway).  If we didn't do this, a spurious
+     delayed event in all-stop mode would make the user lose the
+     selected frame.  */
+  if (non_stop || is_executing (inferior_ptid))
+    registers_changed ();
 
   make_cleanup_restore_integer (&execution_direction);
   execution_direction = target_execution_direction ();
@@ -3072,6 +3081,36 @@ handle_syscall_event (struct execution_control_state *ecs)
   return 1;
 }
 
+/* Clear the supplied execution_control_state's stop_func_* fields.  */
+
+static void
+clear_stop_func (struct execution_control_state *ecs)
+{
+  ecs->stop_func_filled_in = 0;
+  ecs->stop_func_start = 0;
+  ecs->stop_func_end = 0;
+  ecs->stop_func_name = NULL;
+}
+
+/* Lazily fill in the execution_control_state's stop_func_* fields.  */
+
+static void
+fill_in_stop_func (struct gdbarch *gdbarch,
+		   struct execution_control_state *ecs)
+{
+  if (!ecs->stop_func_filled_in)
+    {
+      /* Don't care about return value; stop_func_start and stop_func_name
+	 will both be 0 if it doesn't work.  */
+      find_pc_partial_function (stop_pc, &ecs->stop_func_name,
+				&ecs->stop_func_start, &ecs->stop_func_end);
+      ecs->stop_func_start
+	+= gdbarch_deprecated_function_start_offset (gdbarch);
+
+      ecs->stop_func_filled_in = 1;
+    }
+}
+
 /* Given an execution control state that has been freshly filled in
    by an event from the inferior, figure out what it means and take
    appropriate action.  */
@@ -3081,7 +3120,6 @@ handle_inferior_event (struct execution_control_state *ecs)
 {
   struct frame_info *frame;
   struct gdbarch *gdbarch;
-  int sw_single_step_trap_p = 0;
   int stopped_by_watchpoint;
   int stepped_after_stopped_by_watchpoint = 0;
   struct symtab_and_line stop_pc_sal;
@@ -3836,7 +3874,6 @@ handle_inferior_event (struct execution_control_state *ecs)
 	}
       else if (singlestep_breakpoints_inserted_p)
 	{
-	  sw_single_step_trap_p = 1;
 	  ecs->random_signal = 0;
 	}
     }
@@ -3919,15 +3956,7 @@ handle_inferior_event (struct execution_control_state *ecs)
       return;
     }
 
-  ecs->stop_func_start = 0;
-  ecs->stop_func_end = 0;
-  ecs->stop_func_name = 0;
-  /* Don't care about return value; stop_func_start and stop_func_name
-     will both be 0 if it doesn't work.  */
-  find_pc_partial_function (stop_pc, &ecs->stop_func_name,
-			    &ecs->stop_func_start, &ecs->stop_func_end);
-  ecs->stop_func_start
-    += gdbarch_deprecated_function_start_offset (gdbarch);
+  clear_stop_func (ecs);
   ecs->event_thread->stepping_over_breakpoint = 0;
   bpstat_clear (&ecs->event_thread->control.stop_bpstat);
   ecs->event_thread->control.stop_step = 0;
@@ -4371,6 +4400,7 @@ process_event_stop_test:
 	    keep_going (ecs);
 	    return;
 	  }
+	fill_in_stop_func (gdbarch, ecs);
 	if (stop_pc == ecs->stop_func_start
 	    && execution_direction == EXEC_REVERSE)
 	  {
@@ -4562,6 +4592,7 @@ process_event_stop_test:
      a dangling pointer.  */
   frame = get_current_frame ();
   gdbarch = get_frame_arch (frame);
+  fill_in_stop_func (gdbarch, ecs);
 
   /* If stepping through a line, keep going if still within it.
 
@@ -5122,6 +5153,8 @@ handle_step_into_function (struct gdbarch *gdbarch,
   struct symtab *s;
   struct symtab_and_line stop_func_sal, sr_sal;
 
+  fill_in_stop_func (gdbarch, ecs);
+
   s = find_pc_symtab (stop_pc);
   if (s && s->language != language_asm)
     ecs->stop_func_start = gdbarch_skip_prologue (gdbarch,
@@ -5200,6 +5233,8 @@ handle_step_into_function_backward (struct gdbarch *gdbarch,
 {
   struct symtab *s;
   struct symtab_and_line stop_func_sal;
+
+  fill_in_stop_func (gdbarch, ecs);
 
   s = find_pc_symtab (stop_pc);
   if (s && s->language != language_asm)
@@ -5579,8 +5614,8 @@ print_end_stepping_range_reason (void)
 {
   if ((!inferior_thread ()->step_multi
        || !inferior_thread ()->control.stop_step)
-      && ui_out_is_mi_like_p (uiout))
-    ui_out_field_string (uiout, "reason",
+      && ui_out_is_mi_like_p (current_uiout))
+    ui_out_field_string (current_uiout, "reason",
                          async_reason_lookup (EXEC_ASYNC_END_STEPPING_RANGE));
 }
 
@@ -5589,6 +5624,8 @@ print_end_stepping_range_reason (void)
 static void
 print_signal_exited_reason (enum target_signal siggnal)
 {
+  struct ui_out *uiout = current_uiout;
+
   annotate_signalled ();
   if (ui_out_is_mi_like_p (uiout))
     ui_out_field_string
@@ -5614,6 +5651,7 @@ print_exited_reason (int exitstatus)
 {
   struct inferior *inf = current_inferior ();
   const char *pidstr = target_pid_to_str (pid_to_ptid (inf->pid));
+  struct ui_out *uiout = current_uiout;
 
   annotate_exited (exitstatus);
   if (exitstatus)
@@ -5650,6 +5688,8 @@ print_exited_reason (int exitstatus)
 static void
 print_signal_received_reason (enum target_signal siggnal)
 {
+  struct ui_out *uiout = current_uiout;
+
   annotate_signal ();
 
   if (siggnal == TARGET_SIGNAL_0 && !ui_out_is_mi_like_p (uiout))
@@ -5687,7 +5727,7 @@ print_signal_received_reason (enum target_signal siggnal)
 static void
 print_no_history_reason (void)
 {
-  ui_out_text (uiout, "\nNo more reverse-execution history.\n");
+  ui_out_text (current_uiout, "\nNo more reverse-execution history.\n");
 }
 
 /* Here to return control to GDB when the inferior stops for real.
@@ -6388,7 +6428,7 @@ siginfo_value_write (struct value *v, struct value *fromval)
     error (_("Unable to write siginfo"));
 }
 
-static struct lval_funcs siginfo_value_funcs =
+static const struct lval_funcs siginfo_value_funcs =
   {
     siginfo_value_read,
     siginfo_value_write
@@ -6766,77 +6806,6 @@ inferior_has_called_syscall (ptid_t pid, int *syscall_number)
 
   *syscall_number = last.value.syscall_number;
   return 1;
-}
-
-/* Oft used ptids */
-ptid_t null_ptid;
-ptid_t minus_one_ptid;
-
-/* Create a ptid given the necessary PID, LWP, and TID components.  */
-
-ptid_t
-ptid_build (int pid, long lwp, long tid)
-{
-  ptid_t ptid;
-
-  ptid.pid = pid;
-  ptid.lwp = lwp;
-  ptid.tid = tid;
-  return ptid;
-}
-
-/* Create a ptid from just a pid.  */
-
-ptid_t
-pid_to_ptid (int pid)
-{
-  return ptid_build (pid, 0, 0);
-}
-
-/* Fetch the pid (process id) component from a ptid.  */
-
-int
-ptid_get_pid (ptid_t ptid)
-{
-  return ptid.pid;
-}
-
-/* Fetch the lwp (lightweight process) component from a ptid.  */
-
-long
-ptid_get_lwp (ptid_t ptid)
-{
-  return ptid.lwp;
-}
-
-/* Fetch the tid (thread id) component from a ptid.  */
-
-long
-ptid_get_tid (ptid_t ptid)
-{
-  return ptid.tid;
-}
-
-/* ptid_equal() is used to test equality of two ptids.  */
-
-int
-ptid_equal (ptid_t ptid1, ptid_t ptid2)
-{
-  return (ptid1.pid == ptid2.pid && ptid1.lwp == ptid2.lwp
-	  && ptid1.tid == ptid2.tid);
-}
-
-/* Returns true if PTID represents a process.  */
-
-int
-ptid_is_pid (ptid_t ptid)
-{
-  if (ptid_equal (minus_one_ptid, ptid))
-    return 0;
-  if (ptid_equal (null_ptid, ptid))
-    return 0;
-
-  return (ptid_get_lwp (ptid) == 0 && ptid_get_tid (ptid) == 0);
 }
 
 int
@@ -7228,8 +7197,6 @@ Tells gdb whether to detach the child of a fork."),
 			   NULL, NULL, &setlist, &showlist);
 
   /* ptid initializations */
-  null_ptid = ptid_build (0, 0, 0);
-  minus_one_ptid = ptid_build (-1, 0, 0);
   inferior_ptid = null_ptid;
   target_last_wait_ptid = minus_one_ptid;
 

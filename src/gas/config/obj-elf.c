@@ -984,7 +984,6 @@ obj_elf_section (int push)
 	  if (beg == NULL)
 	    {
 	      ignore_rest_of_line ();
-	      xfree (name);
 	      return;
 	    }
 	  attr |= obj_elf_parse_section_letters (beg, strlen (beg), &clone);
@@ -1004,7 +1003,6 @@ obj_elf_section (int push)
 		  if (beg == NULL)
 		    {
 		      ignore_rest_of_line ();
-		      xfree (name);
 		      return;
 		    }
 		  type = obj_elf_section_type (beg, strlen (beg), TRUE);
@@ -1086,7 +1084,6 @@ obj_elf_section (int push)
 		{
 		  as_bad (_("character following name is not '#'"));
 		  ignore_rest_of_line ();
-		  xfree (name);
 		  return;
 		}
 	      beg = ++input_line_pointer;
@@ -1704,8 +1701,8 @@ obj_elf_type (int ignore ATTRIBUTE_UNUSED)
       const struct elf_backend_data *bed;
 
       bed = get_elf_backend_data (stdoutput);
-      if (!(bed->elf_osabi == ELFOSABI_LINUX
-	    /* GNU/Linux is still using the default value 0.  */
+      if (!(bed->elf_osabi == ELFOSABI_GNU
+	    /* GNU is still using the default value 0.  */
 	    || bed->elf_osabi == ELFOSABI_NONE))
 	as_bad (_("symbol type \"%s\" is supported only by GNU targets"),
 		type_name);
@@ -1716,14 +1713,14 @@ obj_elf_type (int ignore ATTRIBUTE_UNUSED)
       struct elf_backend_data *bed;
 
       bed = (struct elf_backend_data *) get_elf_backend_data (stdoutput);
-      if (!(bed->elf_osabi == ELFOSABI_LINUX
-	    /* GNU/Linux is still using the default value 0.  */
+      if (!(bed->elf_osabi == ELFOSABI_GNU
+	    /* GNU is still using the default value 0.  */
 	    || bed->elf_osabi == ELFOSABI_NONE))
 	as_bad (_("symbol type \"%s\" is supported only by GNU targets"),
 		type_name);
       type = BSF_OBJECT | BSF_GNU_UNIQUE;
-      /* PR 10549: Always set OSABI field to LINUX for objects containing unique symbols.  */
-      bed->elf_osabi = ELFOSABI_LINUX;
+      /* PR 10549: Always set OSABI field to GNU for objects containing unique symbols.  */
+      bed->elf_osabi = ELFOSABI_GNU;
     }
 #ifdef md_elf_symbol_type
   else if ((type = md_elf_symbol_type (type_name, sym, elfsym)) != -1)

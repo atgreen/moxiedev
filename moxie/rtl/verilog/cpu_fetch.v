@@ -1,6 +1,6 @@
 // cpu_fetch.v - The instruction fetch unit
 //
-// Copyright (c) 2010 Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011 Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -53,6 +53,8 @@ module cpu_fetch (/*AUTOARG*/
   wire [15:0] opcode;
   wire [31:0] operand;
 
+  wire [31:0]  imem_address_o;
+  
   assign imem_address_o = PC;
   
   // The instruction FIFO

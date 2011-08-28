@@ -28,7 +28,7 @@ module muskoka (/*AUTOARG*/
 
   wire [31:0] moxie_dat_i;
   wire [31:0] moxie_dat_o;
-  wire [31:1] moxie_adr_i;
+  wire [31:0] moxie_adr_o;
   wire [1:0]  moxie_sel_i;
   wire 	      moxie_we_i;
   wire 	      moxie_cyc_i;
@@ -37,7 +37,7 @@ module muskoka (/*AUTOARG*/
    
   wb_intercon intercon (.wbm_dat_i (moxie_dat_i),
 			.wbm_dat_o (moxie_dat_o),
-			.wbm_adr_i (moxie_adr_i),
+			.wbm_adr_i (moxie_adr_o),
 			.wbm_sel_i (moxie_sel_i),
 			.wbm_we_i (moxie_we_i),
 			.wbm_cyc_i (moxie_cyc_i),
@@ -48,7 +48,7 @@ module muskoka (/*AUTOARG*/
 	      .clk_i (clk_i),
 	      .wb_dat_i (moxie_dat_i),
 	      .wb_dat_o (moxie_dat_o),
-	      .wb_adr_i (moxie_adr_i),
+	      .wb_adr_o (moxie_adr_o),
 	      .wb_sel_i (moxie_sel_i),
 	      .wb_we_i (moxie_we_i),
 	      .wb_cyc_i (moxie_cyc_i),

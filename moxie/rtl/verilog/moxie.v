@@ -19,9 +19,9 @@
 
 module moxie (/*AUTOARG*/
   // Outputs
-  wb_dat_o, wb_ack_o,
+  wb_dat_o, wb_adr_o, wb_ack_o,
   // Inputs
-  rst_i, clk_i, wb_dat_i, wb_adr_i, wb_sel_i, wb_we_i, wb_cyc_i,
+  rst_i, clk_i, wb_dat_i, wb_sel_i, wb_we_i, wb_cyc_i,
   wb_stb_i
   );
    
@@ -32,7 +32,7 @@ module moxie (/*AUTOARG*/
   // --- Wishbone Interconnect ------------------------------------
   input [31:0]  wb_dat_i;
   output [31:0] wb_dat_o;
-  input [31:1]  wb_adr_i;
+  output [31:0]  wb_adr_o;
   input [1:0]   wb_sel_i;
   input         wb_we_i;
   input         wb_cyc_i;
@@ -97,12 +97,12 @@ module moxie (/*AUTOARG*/
 			 .opcode		(fd_opcode[15:0]),
 			 .valid		(fd_valid),
 			 .operand		(fd_operand[31:0]),
-			 .imem_address_o        (imem_address_o[31:0]),
+			 .imem_address_o        (wb_adr_o[31:0]),
 			 // Inputs
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
 			 .stall_i               (hazard_war),
-			 .imem_data_i           (imem_data_i));
+			 .imem_data_i           (wb_dat_i[31:0]));
     
   cpu_decode stage_decode (// Inputs
 			   .rst_i			(rst_i),

@@ -17,7 +17,16 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 // 02110-1301, USA.
 
-module wb_intercon (/*AUTOARG*/
+module wb_intercon #(
+  parameter slave_0_mask = 20'h00000,
+  parameter slave_0_addr = 20'h00000,
+  parameter slave_1_mask = 20'h00000,
+  parameter slave_1_addr = 20'h00000,
+  parameter slave_2_mask = 20'h00000,
+  parameter slave_2_addr = 20'h00000,
+  parameter slave_3_mask = 20'h00000,
+  parameter slave_3_addr = 20'h00000
+  )(/*AUTOARG*/
   // Outputs
   wbm_dat_o, wbm_ack_o, wbs_0_dat_o,
   wbs_0_adr_o, wbs_0_sel_o,
@@ -44,7 +53,7 @@ module wb_intercon (/*AUTOARG*/
   // Wishbone Master Interface
   input [31:0]  wbm_dat_i;
   output [31:0] wbm_dat_o;
-  input [31:1]  wbm_adr_i;
+  input [31:0]  wbm_adr_i;
   input [1:0]   wbm_sel_i;
   input         wbm_we_i;
   input         wbm_cyc_i;
@@ -54,7 +63,7 @@ module wb_intercon (/*AUTOARG*/
   // Wishbone Slave 0 Interface
   input [31:0]  wbs_0_dat_i;
   output [31:0] wbs_0_dat_o;
-  output [31:1] wbs_0_adr_o;
+  output [31:0] wbs_0_adr_o;
   output [1:0]  wbs_0_sel_o;
   output        wbs_0_we_o;
   output        wbs_0_cyc_o;
@@ -64,7 +73,7 @@ module wb_intercon (/*AUTOARG*/
   // Wishbone Slave 1 Interface
   input [31:0]  wbs_1_dat_i;
   output [31:0] wbs_1_dat_o;
-  output [31:1] wbs_1_adr_o;
+  output [31:0] wbs_1_adr_o;
   output [1:0]  wbs_1_sel_o;
   output        wbs_1_we_o;
   output        wbs_1_cyc_o;
@@ -74,7 +83,7 @@ module wb_intercon (/*AUTOARG*/
   // Wishbone Slave 2 Interface
   input [31:0]  wbs_2_dat_i;
   output [31:0] wbs_2_dat_o;
-  output [31:1] wbs_2_adr_o;
+  output [31:0] wbs_2_adr_o;
   output [1:0]  wbs_2_sel_o;
   output        wbs_2_we_o;
   output        wbs_2_cyc_o;
@@ -84,7 +93,7 @@ module wb_intercon (/*AUTOARG*/
   // Wishbone Slave 3 Interface
   input [31:0]  wbs_3_dat_i;
   output [31:0] wbs_3_dat_o;
-  output [31:1] wbs_3_adr_o;
+  output [31:0] wbs_3_adr_o;
   output [1:0]  wbs_3_sel_o;
   output        wbs_3_we_o;
   output        wbs_3_cyc_o;

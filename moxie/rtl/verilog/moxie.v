@@ -77,6 +77,7 @@ module moxie (/*AUTOARG*/
       $dumpvars(1,stage_decode); 
       $dumpvars(1,stage_execute); 
       $dumpvars(1,regs);
+      $display("-- BEGINNING --");
     end
   // synthesis translate_on 
 

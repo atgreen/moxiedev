@@ -29,16 +29,16 @@ module wb_intercon #(
   )(/*AUTOARG*/
   // Outputs
   wbm_dat_o, wbm_ack_o, wbs_0_dat_o,
-  wbs_0_adr_o, wbs_0_sel_o,
+  wbs_0_adr_i, wbs_0_sel_o,
   wbs_0_we_o, wbs_0_cyc_o,
   wbs_0_stb_o, wbs_1_dat_o,
-  wbs_1_adr_o, wbs_1_sel_o,
+  wbs_1_adr_i, wbs_1_sel_o,
   wbs_1_we_o, wbs_1_cyc_o,
   wbs_1_stb_o, wbs_2_dat_o,
-  wbs_2_adr_o, wbs_2_sel_o,
+  wbs_2_adr_i, wbs_2_sel_o,
   wbs_2_we_o, wbs_2_cyc_o,
   wbs_2_stb_o, wbs_3_dat_o,
-  wbs_3_adr_o, wbs_3_sel_o,
+  wbs_3_adr_i, wbs_3_sel_o,
   wbs_3_we_o, wbs_3_cyc_o,
   wbs_3_stb_o,
   // Inputs
@@ -63,7 +63,7 @@ module wb_intercon #(
   // Wishbone Slave 0 Interface
   input [31:0]  wbs_0_dat_i;
   output [31:0] wbs_0_dat_o;
-  output [31:0] wbs_0_adr_o;
+  output [31:0] wbs_0_adr_i;
   output [1:0]  wbs_0_sel_o;
   output        wbs_0_we_o;
   output        wbs_0_cyc_o;
@@ -73,7 +73,7 @@ module wb_intercon #(
   // Wishbone Slave 1 Interface
   input [31:0]  wbs_1_dat_i;
   output [31:0] wbs_1_dat_o;
-  output [31:0] wbs_1_adr_o;
+  output [31:0] wbs_1_adr_i;
   output [1:0]  wbs_1_sel_o;
   output        wbs_1_we_o;
   output        wbs_1_cyc_o;
@@ -83,7 +83,7 @@ module wb_intercon #(
   // Wishbone Slave 2 Interface
   input [31:0]  wbs_2_dat_i;
   output [31:0] wbs_2_dat_o;
-  output [31:0] wbs_2_adr_o;
+  output [31:0] wbs_2_adr_i;
   output [1:0]  wbs_2_sel_o;
   output        wbs_2_we_o;
   output        wbs_2_cyc_o;
@@ -93,7 +93,7 @@ module wb_intercon #(
   // Wishbone Slave 3 Interface
   input [31:0]  wbs_3_dat_i;
   output [31:0] wbs_3_dat_o;
-  output [31:0] wbs_3_adr_o;
+  output [31:0] wbs_3_adr_i;
   output [1:0]  wbs_3_sel_o;
   output        wbs_3_we_o;
   output        wbs_3_cyc_o;
@@ -119,17 +119,33 @@ module wb_intercon #(
 
   // Hook all of the slave devices up to the bus.
 
-  assign {wbs_0_adr_o, wbs_0_dat_o, wbs_0_sel_o,
+  assign {wbs_0_adr_i, wbs_0_dat_o, wbs_0_sel_o,
           wbs_0_we_o, wbs_0_cyc_o} = master_bus_i;
+  assign wbs_0_stb_o = wbm_cyc_i & wbm_stb_i & slave_0_sel;
   
-  assign {wbs_1_adr_o, wbs_1_dat_o, wbs_1_sel_o,
+  assign {wbs_1_adr_i, wbs_1_dat_o, wbs_1_sel_o,
           wbs_1_we_o, wbs_1_cyc_o} = master_bus_i;
+  assign wbs_1_stb_o = wbm_cyc_i & wbm_stb_i & slave_1_sel;
   
-  assign {wbs_2_adr_o, wbs_2_dat_o, wbs_2_sel_o,
+  assign {wbs_2_adr_i, wbs_2_dat_o, wbs_2_sel_o,
           wbs_2_we_o, wbs_2_cyc_o} = master_bus_i;
+  assign wbs_2_stb_o = wbm_cyc_i & wbm_stb_i & slave_2_sel;
   
-  assign {wbs_3_adr_o, wbs_3_dat_o, wbs_3_sel_o,
+  assign {wbs_3_adr_i, wbs_3_dat_o, wbs_3_sel_o,
           wbs_3_we_o, wbs_3_cyc_o} = master_bus_i;
+  assign wbs_3_stb_o = wbm_cyc_i & wbm_stb_i & slave_3_sel;
+  
+  // Master bus acknowlegement.
+  assign wbm_ack_o = wbs_0_ack_i | wbs_1_ack_i | wbs_2_ack_i | wbs_3_ack_i;
+  
+  // Master bus data output comes from the selected slave.
+  assign wbm_dat_o = (slave_0_sel & wbs_0_dat_o)
+                     | (slave_1_sel & wbs_1_dat_o)
+                     | (slave_2_sel & wbs_2_dat_o)
+                     | (slave_3_sel & wbs_3_dat_o);
+
+  initial
+    $display("wbm_adr_i = 0x%x", wbm_adr_i);
   
 endmodule // wb_intercon
 

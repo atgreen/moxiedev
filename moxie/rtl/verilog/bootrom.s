@@ -1,0 +1,9 @@
+.text
+	xor	$r0, $r0
+	inc	$r0, 0x1
+	inc	$r0, 0x1
+	inc	$r0, 0x1
+	inc	$r0, 0x1
+	inc	$r0, 0x1
+	
+	

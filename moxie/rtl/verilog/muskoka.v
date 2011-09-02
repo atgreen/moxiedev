@@ -32,9 +32,9 @@ module muskoka (/*AUTOARG*/
   wire [31:0] moxie_adr_o;
   wire [1:0]  moxie_sel_i;
   wire 	      moxie_we_i;
-  wire 	      moxie_cyc_i;
-  wire        moxie_stb_i;
-  wire 	      moxie_ack_o;
+  wire 	      moxie_cyc_o;
+  wire        moxie_stb_o;
+  wire 	      moxie_ack_i;
    
   // All _i _o suffixes are relative to the bootrom core.
   wire [31:0] bootrom_dat_i;
@@ -67,13 +67,13 @@ module muskoka (/*AUTOARG*/
 		.slave_3_mask (32'b0000_0000_0000_0000_0000_0000_0000_0000),
 	        .slave_3_addr (32'b1111_1111_1111_1111_1111_1111_1111_1111))
 
-  intercon (.wbm_dat_o (moxie_dat_o),
+  intercon (.wbm_dat_o (moxie_dat_i),
 	    .wbm_adr_i (moxie_adr_o),
 	    .wbm_sel_i (moxie_sel_i),
 	    .wbm_we_i (moxie_we_i),
-	    .wbm_cyc_i (moxie_cyc_i),
-	    .wbm_stb_i (moxie_stb_i),
-	    .wbm_ack_o (moxie_ack_o),
+	    .wbm_cyc_i (moxie_cyc_o),
+	    .wbm_stb_i (moxie_stb_o),
+	    .wbm_ack_o (moxie_ack_i),
             .wbs_0_dat_o (bootrom_dat_o),
 	    .wbs_0_adr_i (bootrom_adr_o),
 	    .wbs_0_sel_o (bootrom_sel_i),
@@ -98,8 +98,8 @@ module muskoka (/*AUTOARG*/
 	      .wb_adr_o (moxie_adr_o),
 	      .wb_sel_i (moxie_sel_i),
 	      .wb_we_i (moxie_we_i),
-	      .wb_cyc_i (moxie_cyc_i),
-	      .wb_stb_i (moxie_stb_i),
-	      .wb_ack_o (moxie_ack_o));
+	      .wb_cyc_o (moxie_cyc_o),
+	      .wb_stb_o (moxie_stb_o),
+	      .wb_ack_i (moxie_ack_i));
 
 endmodule // muskoka

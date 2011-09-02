@@ -114,7 +114,7 @@ module wb_intercon #(
   // An aggregation of all master bus input wires
   wire [32+32+2+1+1-1:0] master_bus_i;
   
-  assign master_bus_i = {wbm_dat_i, wbm_adr_i, wbm_sel_i, 
+  assign master_bus_i = {wbm_adr_i, wbm_dat_i, wbm_sel_i, 
 			 wbm_we_i, wbm_cyc_i};
 
   // Hook all of the slave devices up to the bus.
@@ -139,10 +139,13 @@ module wb_intercon #(
   assign wbm_ack_o = wbs_0_ack_i | wbs_1_ack_i | wbs_2_ack_i | wbs_3_ack_i;
   
   // Master bus data output comes from the selected slave.
-  assign wbm_dat_o = (slave_0_sel & wbs_0_dat_o)
-                     | (slave_1_sel & wbs_1_dat_o)
-                     | (slave_2_sel & wbs_2_dat_o)
-                     | (slave_3_sel & wbs_3_dat_o);
+  wire [31:0] 		 i_dat_s;   // internal shared bus, slave data to master
+  assign i_dat_s = ({32{slave_0_sel}} & wbs_0_dat_o);
+  assign wbm_dat_o = i_dat_s;
+  //
+  //                   | (slave_1_sel & wbs_1_dat_o)
+  //                   | (slave_2_sel & wbs_2_dat_o)
+  //                   | (slave_3_sel & wbs_3_dat_o);
 
   initial
     $display("wbm_adr_i = 0x%x", wbm_adr_i);

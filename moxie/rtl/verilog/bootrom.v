@@ -30,12 +30,12 @@ module bootrom (/*AUTOARG*/
     output        wb_ack_o
   );
 
-  reg  [15:0] rom[0:511];
+  reg  [7:0] rom[0:1023];
   wire [8:0]  index;
 
-  assign index = wb_adr_i[9:1];
+  assign index = wb_adr_i[9:0];
   assign wb_ack_o = wb_stb_i & wb_cyc_i;
-  assign wb_dat_o = {rom[index],rom[index+1]};
+  assign wb_dat_o = {rom[index],rom[index+1],rom[index+2],rom[index+3]};
 
   // synthesis translate_off 
   initial

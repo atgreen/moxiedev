@@ -1,7 +1,7 @@
 
 MSOURCES = sim.v muskoka.v moxie.v cpu_ififo.v cpu_fetch.v \
 cpu_decode.v cpu_execute.v cpu_registerfile.v \
-altera_sdram/sdram_controller.v wb_intercon.v bootrom.v
+altera_sdram/sdram_controller.v wb_intercon.v bootrom.v 
 
 PROJECT = muskoka
 

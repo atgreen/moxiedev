@@ -1,6 +1,6 @@
 // cpu_fetch.v - The instruction fetch unit
 //
-// Copyright (c) 2010 Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011 Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -44,7 +44,7 @@ module cpu_fetch (/*AUTOARG*/
  
   // --- Test memory.  Let's just read from an internal array.  */
   //  reg [7:0] 	MEM [0:128000];
-  reg [7:0] 	MEM [0:16675];
+  reg [7:0] 	MEM [0:32000];
   reg [31:0] 	PC; /* For testing only.  */
 
   wire [0:0] 	valid, empty, full;
@@ -53,6 +53,8 @@ module cpu_fetch (/*AUTOARG*/
   wire [15:0] opcode;
   wire [31:0] operand;
 
+  wire [31:0]  imem_address_o;
+  
   assign imem_address_o = PC;
   
   // The instruction FIFO
@@ -70,14 +72,6 @@ module cpu_fetch (/*AUTOARG*/
 		   .read_en_i		(rden),
 		   .data_i	(wrdata[31:0]));
   
-  // synthesis translate_off 
-  initial
-    begin
-      $readmemh("hello.vh", MEM);
-      $dumpvars(1,ififo); 
-    end
-  // synthesis translate_on
-
   // --- Test fetch -----------------------------------------------
   always @(posedge clk_i) begin
     if (rst_i) begin

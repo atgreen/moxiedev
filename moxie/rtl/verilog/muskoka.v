@@ -26,33 +26,80 @@ module muskoka (/*AUTOARG*/
   input  rst_i, clk_i;
   reg 	 rst;
 
-  wire [31:0] moxie_dat_i;
-  wire [31:0] moxie_dat_o;
-  wire [31:1] moxie_adr_i;
-  wire [1:0]  moxie_sel_i;
-  wire 	      moxie_we_i;
-  wire 	      moxie_cyc_i;
-  wire        moxie_stb_i;
-  wire 	      moxie_ack_o;
+  // Moxie/Wishbone interface
+  wire [31:0] wb2mx_dat;
+  wire [31:0] mx2wb_dat;
+  wire [31:0] mx2wb_adr;
+  wire [1:0]  wb2mx_sel;
+  wire 	      wb2mx_we;
+  wire 	      mx2wb_cyc;
+  wire        mx2wb_stb;
+  wire 	      wb2mx_ack;
    
-  wb_intercon intercon (.wbm_dat_i (moxie_dat_i),
-			.wbm_dat_o (moxie_dat_o),
-			.wbm_adr_i (moxie_adr_i),
-			.wbm_sel_i (moxie_sel_i),
-			.wbm_we_i (moxie_we_i),
-			.wbm_cyc_i (moxie_cyc_i),
-			.wbm_stb_i (moxie_stb_i),
-			.wbm_ack_o (moxie_ack_o));
+  // Bootrom/Wishbone interface
+  wire [31:0] wb2br_dat;
+  wire [31:0] br2wb_dat;
+  wire [31:0] wb2br_adr;
+  wire [1:0]  wb2br_sel;
+  wire 	      wb2br_we;
+  wire 	      wb2br_cyc;
+  wire        wb2br_stb;
+  wire 	      br2wb_ack;
+
+  // synthesis translate_off 
+  initial
+    begin
+      $dumpvars(1,intercon);
+      $dumpvars(1,rom);
+    end
+
+  // slave 0 - bootrom @ 0x1000 for 512 bytes
+  // slave 1 - unused
+  // slave 2 - unused
+  // slave 3 - unused
+  
+  wb_intercon #(.slave_0_mask (32'b1111_1111_1111_1111_1111_0000_0000_0000),
+	        .slave_0_addr (32'b0000_0000_0000_0000_0001_0000_0000_0000),
+		.slave_1_mask (32'b0000_0000_0000_0000_0000_0000_0000_0000),
+	        .slave_1_addr (32'b1111_1111_1111_1111_1111_1111_1111_1111),
+		.slave_2_mask (32'b0000_0000_0000_0000_0000_0000_0000_0000),
+	        .slave_2_addr (32'b1111_1111_1111_1111_1111_1111_1111_1111),
+		.slave_3_mask (32'b0000_0000_0000_0000_0000_0000_0000_0000),
+	        .slave_3_addr (32'b1111_1111_1111_1111_1111_1111_1111_1111))
+
+  intercon (.wbm_dat_o (wb2mx_dat),
+	    .wbm_adr_i (mx2wb_adr),
+	    .wbm_sel_i (wb2mx_sel),
+	    .wbm_we_i (wb2mx_we),
+	    .wbm_cyc_i (mx2wb_cyc),
+	    .wbm_stb_i (mx2wb_stb),
+	    .wbm_ack_o (wb2mx_ack),
+            .wbs_0_dat_o (br2wb_dat),
+	    .wbs_0_adr_i (wb2br_adr),
+	    .wbs_0_sel_o (wb2br_sel),
+	    .wbs_0_we_o (wb2br_we),
+	    .wbs_0_cyc_o (wb2br_cyc),
+	    .wbs_0_stb_o (wb2br_stb),
+	    .wbs_0_ack_i (bootrom_ack_o));
+  
+  bootrom rom (.wb_dat_i (bootrom_dat_i),
+	       .wb_dat_o (bootrom_dat_o),
+	       .wb_adr_i (bootrom_adr_o),
+	       .wb_sel_i (bootrom_sel_i),
+	       .wb_we_i (bootrom_we_i),
+	       .wb_cyc_i (bootrom_cyc_i),
+	       .wb_stb_i (bootrom_stb_i),
+	       .wb_ack_o (bootrom_ack_o));
   
   moxie core (.rst_i (rst_i),
 	      .clk_i (clk_i),
-	      .wb_dat_i (moxie_dat_i),
-	      .wb_dat_o (moxie_dat_o),
-	      .wb_adr_i (moxie_adr_i),
-	      .wb_sel_i (moxie_sel_i),
-	      .wb_we_i (moxie_we_i),
-	      .wb_cyc_i (moxie_cyc_i),
-	      .wb_stb_i (moxie_stb_i),
-	      .wb_ack_o (moxie_ack_o));
-  
+	      .wb_dat_i (wb2mx_dat),
+	      .wb_dat_o (mx2wb_dat),
+	      .wb_adr_o (mx2wb_adr),
+	      .wb_sel_i (wb2mx_sel),
+	      .wb_we_i (wb2mx_we),
+	      .wb_cyc_o (mx2wb_cyc),
+	      .wb_stb_o (mx2wb_stb),
+	      .wb_ack_i (wb2mx_ack));
+
 endmodule // muskoka

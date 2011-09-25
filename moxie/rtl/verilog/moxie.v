@@ -19,10 +19,9 @@
 
 module moxie (/*AUTOARG*/
   // Outputs
-  wb_dat_o, wb_ack_o,
+  wb_dat_o, wb_adr_o, wb_cyc_o, wb_stb_o,
   // Inputs
-  rst_i, clk_i, wb_dat_i, wb_adr_i, wb_sel_i, wb_we_i, wb_cyc_i,
-  wb_stb_i
+  rst_i, clk_i, wb_dat_i, wb_sel_i, wb_we_i, wb_ack_i
   );
    
   // --- Clock and Reset ------------------------------------------
@@ -32,12 +31,18 @@ module moxie (/*AUTOARG*/
   // --- Wishbone Interconnect ------------------------------------
   input [31:0]  wb_dat_i;
   output [31:0] wb_dat_o;
-  input [31:1]  wb_adr_i;
+  output [31:0]  wb_adr_o;
   input [1:0]   wb_sel_i;
   input         wb_we_i;
-  input         wb_cyc_i;
-  input         wb_stb_i;
-  output        wb_ack_o;
+  output        wb_cyc_o;
+  output        wb_stb_o;
+  input         wb_ack_i;
+
+  /*AUTOREG*/
+  // Beginning of automatic regs (for this module's undeclared outputs)
+  reg [31:0]		wb_dat_o;
+  reg			wb_stb_o;
+  // End of automatics
 
   // --- Wires to connect the 5 pipeline stages -------------------
   //
@@ -77,6 +82,7 @@ module moxie (/*AUTOARG*/
       $dumpvars(1,stage_decode); 
       $dumpvars(1,stage_execute); 
       $dumpvars(1,regs);
+      $display("-- BEGINNING --");
     end
   // synthesis translate_on 
 
@@ -92,17 +98,29 @@ module moxie (/*AUTOARG*/
 			 .reg_read_index1_i (dr_reg_index1), 
 			 .reg_read_index2_i (dr_reg_index2), 
 			 .value_i (xr_result));
+
+  always @(posedge clk_i)
+    if (rst_i) begin
+      /* AUTORESET */
+      // Beginning of autoreset for uninitialized flops
+      wb_stb_o <= 1'h0;
+      // End of automatics
+    end else begin
+      wb_stb_o <= #1 (wb_stb_o & !wb_ack_i) | (!wb_stb_o);
+    end
+
+  assign wb_cyc_o = wb_stb_o;
   
   cpu_fetch stage_fetch (// Outputs
 			 .opcode		(fd_opcode[15:0]),
 			 .valid		(fd_valid),
 			 .operand		(fd_operand[31:0]),
-			 .imem_address_o        (imem_address_o[31:0]),
+			 .imem_address_o        (wb_adr_o[31:0]),
 			 // Inputs
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
 			 .stall_i               (hazard_war),
-			 .imem_data_i           (imem_data_i));
+			 .imem_data_i           (wb_dat_i[31:0]));
     
   cpu_decode stage_decode (// Inputs
 			   .rst_i			(rst_i),

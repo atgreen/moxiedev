@@ -1,8 +1,7 @@
 
-MSOURCES = muskoka.v moxie.v cpu_ififo.v cpu_fetch.v \
+MSOURCES = sim.v muskoka.v moxie.v cpu_ififo.v cpu_fetch.v \
 cpu_decode.v cpu_execute.v cpu_registerfile.v \
-altera_sdram/sdram_controller.v \
-wb_intercon.v
+altera_sdram/sdram_controller.v wb_intercon.v bootrom.v 
 
 PROJECT = muskoka
 
@@ -12,13 +11,11 @@ all: a.out smart.log $(PROJECT).asm.rpt $(PROJECT).tan.rpt
 
 sim: a.out
 
-hello.x: hello.c
-	moxie-elf-gcc -o hello.x -O2 hello.c -Tsim.ld
+bootrom.vh: bootrom.s
+	moxie-elf-as -o bootrom.x bootrom.s
+	moxie-elf-objcopy -O verilog bootrom.x bootrom.vh
 
-hello.vh: hello.x
-	moxie-elf-objcopy -O verilog hello.x hello.vh
-
-a.out: $(MSOURCES) hello.vh
+a.out: $(MSOURCES) bootrom.vh
 	iverilog $(MSOURCES)
 
 map: smart.log $(PROJECT).map.rpt

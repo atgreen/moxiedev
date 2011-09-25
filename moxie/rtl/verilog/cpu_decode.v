@@ -1,6 +1,6 @@
 // cpu_decode.v - The instruction decode unit
 //
-// Copyright (c) 2010 Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011 Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -77,15 +77,15 @@ module cpu_decode (/*AUTOARG*/
 	  end
 	else begin
 	  register_write_index_o <= opcode_i[7:4];
-	  casex (opcode_i)
-	    16'b00000000????????:
+	  casex (opcode_i[15:8])
+	    8'b00000000:
 	      begin
 		register_A_read_enable_o <= 0;
 		register_B_read_enable_o <= 0;
 		register_write_enable_o <= 0;
 		op_o <= `OP_NOP;
 	      end
-	    16'b00000001????????:
+	    8'b00000001:
 	      begin
 		op_o <= `OP_LDI_L;
 		register_A_read_enable_o <= 0;
@@ -93,7 +93,7 @@ module cpu_decode (/*AUTOARG*/
 		register_write_enable_o <= 1;
 		operand_o <= operand_i;
 	      end
-	    16'b00000010????????:
+	    8'b00000010:
 	      begin
 		op_o <= `OP_MOV;
 		register_A_read_enable_o <= 0;
@@ -102,15 +102,15 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[7:4];
 		regB_o <= opcode_i[3:0];
 	      end
-	    16'b00000011????????:
+	    8'b00000011:
 	      begin
 		op_o <= `OP_JSRA;
 	      end
-	    16'b00000100????????:
+	    8'b00000100:
 	      begin
 		op_o <= `OP_RET;
 	      end
-	    16'b00000101????????:
+	    8'b00000101:
 	      begin
 		op_o <= `OP_ADD_L;
 		register_A_read_enable_o <= 1;
@@ -119,144 +119,144 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[7:4];
 		regB_o <= opcode_i[3:0];
 	      end
-	    16'b00000110????????:
+	    8'b00000110:
 	      begin
 		op_o <= `OP_PUSH;
 	      end
-	    16'b00000111????????:
+	    8'b00000111:
 	      begin
 		op_o <= `OP_POP;
 	      end
-	    16'b00001000????????:
+	    8'b00001000:
 	      begin
 		op_o <= `OP_LDA_L;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00001001????????:
+	    8'b00001001:
 	      begin
 		op_o <= `OP_STA_L;
 	      end
-	    16'b00001010????????:
+	    8'b00001010:
 	      begin
 		op_o <= `OP_LD_L;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00001011????????:
+	    8'b00001011:
 	      begin
 		op_o <= `OP_ST_L;
 	      end
-	    16'b00001100????????:
+	    8'b00001100:
 	      begin
 		op_o <= `OP_LDO_L;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00001101????????:
+	    8'b00001101:
 	      begin
 		op_o <= `OP_STO_L;
 	      end
-	    16'b00001110????????:
+	    8'b00001110:
 	      begin
 		op_o <= `OP_CMP;
 	      end
-	    16'b00001111????????:
+	    8'b00001111:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00010000????????:
+	    8'b00010000:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00010001????????:
+	    8'b00010001:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00010010????????:
+	    8'b00010010:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00010011????????:
+	    8'b00010011:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00010100????????:
+	    8'b00010100:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00010101????????:
+	    8'b00010101:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00010110????????:
+	    8'b00010110:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00010111????????:
+	    8'b00010111:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00011000????????:
+	    8'b00011000:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00011001????????:
+	    8'b00011001:
 	      begin
 		op_o <= `OP_JSR;
 	      end
-	    16'b00011010????????:
+	    8'b00011010:
 	      begin
 		op_o <= `OP_JMPA;
 	      end
-	    16'b00011011????????:
+	    8'b00011011:
 	      begin
 		op_o <= `OP_LDI_B;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00011100????????:
+	    8'b00011100:
 	      begin
 		op_o <= `OP_LD_B;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00011101????????:
+	    8'b00011101:
 	      begin
 		op_o <= `OP_LDA_B;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00011110????????:
+	    8'b00011110:
 	      begin
 		op_o <= `OP_ST_B;
 	      end
-	    16'b00011111????????:
+	    8'b00011111:
 	      begin
 		op_o <= `OP_STA_B;
 	      end
-	    16'b00100000????????:
+	    8'b00100000:
 	      begin
 		op_o <= `OP_LDI_S;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00100001????????:
+	    8'b00100001:
 	      begin
 		op_o <= `OP_LD_S;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00100010????????:
+	    8'b00100010:
 	      begin
 		op_o <= `OP_LDA_S;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00100011????????:
+	    8'b00100011:
 	      begin
 		op_o <= `OP_ST_S;
 	      end
-	    16'b00100100????????:
+	    8'b00100100:
 	      begin
 		op_o <= `OP_STA_S;
 	      end
-	    16'b00100101????????:
+	    8'b00100101:
 	      begin
 		op_o <= `OP_JMP;
 	      end
-	    16'b00100110????????:
+	    8'b00100110:
 	      begin
 		op_o <= `OP_AND;
 		register_A_read_enable_o <= 1;
@@ -265,17 +265,17 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[7:4];
 		regB_o <= opcode_i[3:0];
 	      end
-	    16'b00100111????????:
+	    8'b00100111:
 	      begin
 		op_o <= `OP_LSHR;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00101000????????:
+	    8'b00101000:
 	      begin
 		op_o <= `OP_ASHL;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00101001????????:
+	    8'b00101001:
 	      begin
 		op_o <= `OP_SUB_L;
 		register_A_read_enable_o <= 1;
@@ -284,12 +284,12 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[7:4];
 		regB_o <= opcode_i[3:0];
 	      end
-	    16'b00101010????????:
+	    8'b00101010:
 	      begin
 		op_o <= `OP_NEG;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00101011????????:
+	    8'b00101011:
 	      begin
 		op_o <= `OP_OR;
 		register_A_read_enable_o <= 1;
@@ -298,26 +298,26 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[7:4];
 		regB_o <= opcode_i[3:0];
 	      end
-	    16'b00101100????????:
+	    8'b00101100:
 	      begin
 		op_o <= `OP_NOT;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00101101????????:
+	    8'b00101101:
 	      begin
 		op_o <= `OP_ASHR;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00101110????????:
+	    8'b00101110:
 	      begin
 		op_o <= `OP_XOR;
 		register_A_read_enable_o <= 1;
 		register_B_read_enable_o <= 1;
 		register_write_enable_o <= 1;
-		regA_o <= opcode_i[7:4];
-		regB_o <= opcode_i[3:0];
+		regA_o <= opcode_i[15:12];
+		regB_o <= opcode_i[11:8];
 	      end
-	    16'b00101111????????:
+	    8'b00101111:
 	      begin
 		op_o <= `OP_MUL_L;
 		register_A_read_enable_o <= 1;
@@ -326,11 +326,11 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[7:4];
 		regB_o <= opcode_i[3:0];
 	      end
-	    16'b00110000????????:
+	    8'b00110000:
 	      begin
 		op_o <= `OP_SWI;
 	      end
-	    16'b00110001????????:
+	    8'b00110001:
 	      begin
 		op_o <= `OP_DIV_L;
 		register_A_read_enable_o <= 1;
@@ -339,7 +339,7 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[7:4];
 		regB_o <= opcode_i[3:0];
 	      end
-	    16'b00110010????????:
+	    8'b00110010:
 	      begin
 		op_o <= `OP_UDIV_L;
 		register_A_read_enable_o <= 1;
@@ -348,7 +348,7 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[7:4];
 		regB_o <= opcode_i[3:0];
 	      end
-	    16'b00110011????????:
+	    8'b00110011:
 	      begin
 		op_o <= `OP_MOD_L;
 		register_A_read_enable_o <= 1;
@@ -357,7 +357,7 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[7:4];
 		regB_o <= opcode_i[3:0];
 	      end
-	    16'b00110100????????:
+	    8'b00110100:
 	      begin
 		op_o <= `OP_UMOD_L;
 		register_A_read_enable_o <= 1;
@@ -366,53 +366,53 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[7:4];
 		regB_o <= opcode_i[3:0];
 	      end
-	    16'b00110101????????:
+	    8'b00110101:
 	      begin
 		op_o <= `OP_BRK;
 	      end
-	    16'b00110110????????:
+	    8'b00110110:
 	      begin
 		op_o <= `OP_LDO_B;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00110111????????:
+	    8'b00110111:
 	      begin
 		op_o <= `OP_STO_B;
 	      end
-	    16'b00111000????????:
+	    8'b00111000:
 	      begin
 		op_o <= `OP_LDO_S;
 		register_write_enable_o <= 1;
 	      end
-	    16'b00111001????????:
+	    8'b00111001:
 	      begin
 		op_o <= `OP_STO_S;
 	      end
-	    16'b00111010????????:
+	    8'b00111010:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00111011????????:
+	    8'b00111011:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00111100????????:
+	    8'b00111100:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00111101????????:
+	    8'b00111101:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00111110????????:
+	    8'b00111110:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b00111111????????:
+	    8'b00111111:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b1000????????????:
+	    8'b1000????:
 	      begin
 		op_o <= `OP_INC;
 		register_A_read_enable_o <= 1;
@@ -421,7 +421,7 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[11:8];
 		operand_o <= opcode_i[7:0];
 	      end
-	    16'b1001????????????:
+	    8'b1001????:
 	      begin
 		op_o <= `OP_DEC;
 		register_A_read_enable_o <= 1;
@@ -430,76 +430,76 @@ module cpu_decode (/*AUTOARG*/
 		regA_o <= opcode_i[11:8];
 		operand_o <= opcode_i[7:0];
 	      end
-	    16'b1010????????????:
+	    8'b1010????:
 	      begin
 		op_o <= `OP_GSR;
 		register_write_enable_o <= 1;
 	      end
-	    16'b1011????????????:
+	    8'b1011????:
 	      begin
 		op_o <= `OP_SSR;
 	      end
-	    16'b110000??????????:
+	    8'b110000??:
 	      begin
 		op_o <= `OP_BEQ;
 	      end
-	    16'b110001??????????:
+	    8'b110001??:
 	      begin
 		op_o <= `OP_BNE;
 	      end
-	    16'b110010??????????:
+	    8'b110010??:
 	      begin
 		op_o <= `OP_BLT;
 	      end
-	    16'b110011??????????:
+	    8'b110011??:
 	      begin
 		op_o <= `OP_BGT;
 	      end
-	    16'b110100??????????:
+	    8'b110100??:
 	      begin
 		op_o <= `OP_BLTU;
 	      end
-	    16'b110101??????????:
+	    8'b110101??:
 	      begin
 		op_o <= `OP_BGTU;
 	      end
-	    16'b110110??????????:
+	    8'b110110??:
 	      begin
 		op_o <= `OP_BGE;
 	      end
-	    16'b110111??????????:
+	    8'b110111??:
 	      begin
 		op_o <= `OP_BLE;
 	      end
-	    16'b111000??????????:
+	    8'b111000??:
 	      begin
 		op_o <= `OP_BGEU;
 	      end
-	    16'b111001??????????:
+	    8'b111001??:
 	      begin
 		op_o <= `OP_BLEU;
 	      end
-	    16'b111010??????????:
+	    8'b111010??:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b111011??????????:
+	    8'b111011??:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b111100??????????:
+	    8'b111100??:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b111101??????????:
+	    8'b111101??:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b111110??????????:
+	    8'b111110??:
 	      begin
 		op_o <= `OP_BAD;
 	      end
-	    16'b111111??????????:
+	    8'b111111??:
 	      begin
 		op_o <= `OP_BAD;
 	      end

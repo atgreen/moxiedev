@@ -268,8 +268,9 @@ Objective-C and Objective-C++ Dialects}.
 -Wsystem-headers  -Wtrampolines  -Wtrigraphs  -Wtype-limits  -Wundef @gol
 -Wuninitialized  -Wunknown-pragmas  -Wno-pragmas @gol
 -Wunsuffixed-float-constants  -Wunused  -Wunused-function @gol
--Wunused-label  -Wunused-parameter -Wno-unused-result -Wunused-value @gol
--Wunused-variable -Wunused-but-set-parameter -Wunused-but-set-variable @gol
+-Wunused-label  -Wunused-local-typedefs -Wunused-parameter @gol
+-Wno-unused-result -Wunused-value @gol -Wunused-variable @gol
+-Wunused-but-set-parameter -Wunused-but-set-variable @gol
 -Wvariadic-macros -Wvla -Wvolatile-register-var  -Wwrite-strings}
 
 @item C and Objective-C-only Warning Options
@@ -814,7 +815,8 @@ See RS/6000 and PowerPC Options.
 -mrecip -mrecip=@var{opt} -mno-recip -mrecip-precision @gol
 -mno-recip-precision @gol
 -mveclibabi=@var{type} -mfriz -mno-friz @gol
--mpointers-to-nested-functions -mno-pointers-to-nested-functions}
+-mpointers-to-nested-functions -mno-pointers-to-nested-functions @gol
+-msave-toc-indirect -mno-save-toc-indirect}
 
 @emph{RX Options}
 @gccoptlist{-m64bit-doubles  -m32bit-doubles  -fpu  -nofpu@gol
@@ -3499,6 +3501,10 @@ This warning is enabled by @option{-Wall}.
 
 To suppress this warning use the @samp{unused} attribute
 (@pxref{Variable Attributes}).
+
+@item -Wunused-local-typedefs @r{(C, Objective-C, C++ and Objective-C++ only)}
+@opindex Wunused-local-typedefs
+Warn when a typedef locally defined in a function is not used.
 
 @item -Wunused-parameter
 @opindex Wunused-parameter
@@ -9075,6 +9081,11 @@ The smallest number of different values for which it is best to use a
 jump-table instead of a tree of conditional branches.  If the value is
 0, use the default for the machine.  The default is 0.
 
+@item tree-reassoc-width
+Set the maximum number of instructions executed in parallel in
+reassociated tree. This parameter overrides target dependent
+heuristics used by default if has non zero value.
+
 @end table
 @end table
 
@@ -10318,6 +10329,10 @@ assembly code.  Permissible names are: @samp{arm2}, @samp{arm250},
 @samp{fa526}, @samp{fa626},
 @samp{fa606te}, @samp{fa626te}, @samp{fmp626}, @samp{fa726te}.
 
+@option{-mcpu=generic-@var{arch}} is also permissible, and is
+equivalent to @option{-march=@var{arch} -mtune=generic-@var{arch}}.
+See @option{-mtune} for more information.
+
 @item -mtune=@var{name}
 @opindex mtune
 This option is very similar to the @option{-mcpu=} option, except that
@@ -10328,6 +10343,13 @@ specified in this option, but still choosing the instructions that it
 will generate based on the CPU specified by a @option{-mcpu=} option.
 For some ARM implementations better performance can be obtained by using
 this option.
+
+@option{-mtune=generic-@var{arch}} specifies that GCC should tune the
+performance for a blend of processors within architecture @var{arch}.
+The aim is to generate code that run well on the current most popular
+processors, balancing between optimizations that benefit some CPUs in the
+range, and avoiding performance pitfalls of other CPUs.  The effects of
+this option may change in future GCC versions as CPU models come and go.
 
 @item -march=@var{name}
 @opindex march
@@ -16438,6 +16460,15 @@ static chain value to be loaded in register @var{r11}.  The
 not be able to call through pointers to nested functions or pointers
 to functions compiled in other languages that use the static chain if
 you use the @option{-mno-pointers-to-nested-functions}.
+
+@item -msave-toc-indirect
+@itemx -mno-save-toc-indirect
+@opindex msave-toc-indirect
+Generate (do not generate) code to save the TOC value in the reserved
+stack location in the function prologue if the function calls through
+a pointer on AIX and 64-bit Linux systems.  If the TOC value is not
+saved in the prologue, it is saved just before the call through the
+pointer.  The @option{-mno-save-toc-indirect} option is the default.
 @end table
 
 @node RX Options
@@ -17273,9 +17304,10 @@ for machine type @var{cpu_type}.  Supported values for @var{cpu_type} are
 @samp{v7}, @samp{cypress}, @samp{v8}, @samp{supersparc}, @samp{hypersparc},
 @samp{leon}, @samp{sparclite}, @samp{f930}, @samp{f934}, @samp{sparclite86x},
 @samp{sparclet}, @samp{tsc701}, @samp{v9}, @samp{ultrasparc},
-@samp{ultrasparc3}, @samp{niagara} and @samp{niagara2}.
+@samp{ultrasparc3}, @samp{niagara}, @samp{niagara2}, @samp{niagara3},
+and @samp{niagara4}.
 
-Native Solaris toolchains also support the value @samp{native},
+Native Solaris and Linux toolchains also support the value @samp{native},
 which selects the best architecture option for the host processor.
 @option{-mcpu=native} has no effect if GCC does not recognize
 the processor.
@@ -17292,7 +17324,7 @@ implementations.
     v8:             supersparc, hypersparc, leon
     sparclite:      f930, f934, sparclite86x
     sparclet:       tsc701
-    v9:             ultrasparc, ultrasparc3, niagara, niagara2
+    v9:             ultrasparc, ultrasparc3, niagara, niagara2, niagara3, niagara4
 @end smallexample
 
 By default (unless configured otherwise), GCC generates code for the V7
@@ -17331,7 +17363,10 @@ optimizes it for the Sun UltraSPARC I/II/IIi chips.  With
 Sun UltraSPARC III/III+/IIIi/IIIi+/IV/IV+ chips.  With
 @option{-mcpu=niagara}, the compiler additionally optimizes it for
 Sun UltraSPARC T1 chips.  With @option{-mcpu=niagara2}, the compiler
-additionally optimizes it for Sun UltraSPARC T2 chips.
+additionally optimizes it for Sun UltraSPARC T2 chips. With
+@option{-mcpu=niagara3}, the compiler additionally optimizes it for Sun
+UltraSPARC T3 chips.  With @option{-mcpu=niagara4}, the compiler
+additionally optimizes it for Sun UltraSPARC T4 chips.
 
 @item -mtune=@var{cpu_type}
 @opindex mtune
@@ -17344,8 +17379,8 @@ The same values for @option{-mcpu=@var{cpu_type}} can be used for
 that select a particular CPU implementation.  Those are @samp{cypress},
 @samp{supersparc}, @samp{hypersparc}, @samp{leon}, @samp{f930}, @samp{f934},
 @samp{sparclite86x}, @samp{tsc701}, @samp{ultrasparc}, @samp{ultrasparc3},
-@samp{niagara}, and @samp{niagara2}.  With native Solaris toolchains,
-@samp{native} can also be used.
+@samp{niagara}, @samp{niagara2}, @samp{niagara3} and @samp{niagara4}.  With
+native Solaris and Linux toolchains, @samp{native} can also be used.
 
 @item -mv8plus
 @itemx -mno-v8plus

@@ -409,6 +409,9 @@ gfc_clear_shape (mpz_t *shape, int rank)
 void
 gfc_free_shape (mpz_t **shape, int rank)
 {
+  if (*shape == NULL)
+    return;
+
   gfc_clear_shape (*shape, rank);
   free (*shape);
   *shape = NULL;
@@ -490,8 +493,7 @@ free_expr0 (gfc_expr *e)
     }
 
   /* Free a shape array.  */
-  if (e->shape != NULL)
-    gfc_free_shape (&e->shape, e->rank);
+  gfc_free_shape (&e->shape, e->rank);
 
   gfc_free_ref_list (e->ref);
 
@@ -3430,7 +3432,7 @@ gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue)
 		     rvalue->symtree->name, &rvalue->where);
 	  return FAILURE;
 	}
-      /* Check for C727.  */
+      /* Check for F08:C729.  */
       if (attr.flavor == FL_PROCEDURE)
 	{
 	  if (attr.proc == PROC_ST_FUNCTION)
@@ -3445,6 +3447,14 @@ gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue)
 			      "invalid in procedure pointer assignment at %L",
 			      rvalue->symtree->name, &rvalue->where) == FAILURE)
 	    return FAILURE;
+	}
+      /* Check for F08:C730.  */
+      if (attr.elemental && !attr.intrinsic)
+	{
+	  gfc_error ("Nonintrinsic elemental procedure '%s' is invalid "
+		     "in procedure pointer assigment at %L",
+		     rvalue->symtree->name, &rvalue->where);
+	  return FAILURE;
 	}
 
       /* Ensure that the calling convention is the same. As other attributes

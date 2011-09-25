@@ -1,3 +1,46 @@
+2011-09-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-elf/pr12975.d: Only run for *-*-linux* and *-*-gnu*
+	targets.
+	* ld-elf/pr13177.d: Likewise.
+
+	* ld-elf/pr13177.s: Avoid relocations in text sections.
+
+2011-09-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/13177
+	* ld-elf/pr13177.d: New.
+	* ld-elf/pr13177.s: Likewise.
+
+2011-09-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/12975
+	* ld-elf/pr12975.d: New.
+	* ld-elf/pr12975.s: Likewise.
+	* ld-elf/pr12975.t: Likewise.
+
+2011-09-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/13178
+	* ld-ifunc/ifunc-13-i386.d: Updated.
+	* ld-ifunc/ifunc-13-x86-64.d: Likewise.
+	* ld-ifunc/ifunc-3a-x86.d: Likewise.
+	* ld-x86-64/pr13082-5a.d: Likewise.
+
+	* ld-ifunc/ifunc-15-i386.d: New.
+	* ld-ifunc/ifunc-15-i386.s: Likewise.
+	* ld-ifunc/ifunc-15-x86-64.d: Likewise.
+	* ld-ifunc/ifunc-15-x86-64.s: Likewise.
+
+2011-09-01  Christophe Lyon  <christophe.lyon@st.com>
+
+	* ld-arm/arm-elf.exp: Add new rodata-merge-map test.
+	* ld-arm/rodata-merge-map.ld: New file.
+	* ld-arm/rodata-merge-map.sym: Likewise.
+	* ld-arm/rodata-merge-map1.s Likewise.
+	* ld-arm/rodata-merge-map2.s: Likewise.
+	* ld-arm/rodata-merge-map3.s: Likewise.
+
 2011-08-22  Alan Modra  <amodra@gmail.com>
 
 	* ld-powerpc/tocopt4a.s, * ld-powerpc/tocopt4b.s,

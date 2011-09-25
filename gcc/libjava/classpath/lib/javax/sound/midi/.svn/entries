@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/sound/midi
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ has-props
 
 1283
 
-MidiEvent.class
-file
-
-
-
-
-2009-04-24T17:48:13.000000Z
-36556e6e88812ca85e66625f074de53f
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-734
-
 Soundbank.class
 file
 
@@ -230,51 +196,14 @@ has-props
 
 430
 
-spi
-dir
-
-MidiSystem.class
+MidiEvent.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-f253bdd647722fa598645e4912771cfc
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8292
-
-MidiMessage.class
-file
-
-
-
-
-2009-04-24T17:48:13.000000Z
-3f500f4c2d74e7c094ad0e467cdaaaf3
+36556e6e88812ca85e66625f074de53f
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -299,7 +228,7 @@ has-props
 
 
 
-1052
+734
 
 Synthesizer.class
 file
@@ -335,6 +264,77 @@ has-props
 
 1039
 
+MidiMessage.class
+file
+
+
+
+
+2009-04-24T17:48:13.000000Z
+3f500f4c2d74e7c094ad0e467cdaaaf3
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1052
+
+MidiSystem.class
+file
+
+
+
+
+2009-04-24T17:48:13.000000Z
+f253bdd647722fa598645e4912771cfc
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8292
+
+spi
+dir
+
 Sequencer.class
 file
 
@@ -369,14 +369,14 @@ has-props
 
 1751
 
-MidiFileFormat.class
+ControllerEventListener.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-d0a381e478891804f5d4e4e562d94f1e
+42d75a83dd5475bb6b4665f1519bc8c1
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -401,7 +401,7 @@ has-props
 
 
 
-1095
+236
 
 MetaMessage.class
 file
@@ -437,14 +437,14 @@ has-props
 
 2002
 
-ControllerEventListener.class
+MidiFileFormat.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-42d75a83dd5475bb6b4665f1519bc8c1
+d0a381e478891804f5d4e4e562d94f1e
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -469,7 +469,7 @@ has-props
 
 
 
-236
+1095
 
 SoundbankResource.class
 file

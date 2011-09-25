@@ -1,3 +1,74 @@
+2011-09-22  Tristan Gingold  <gingold@adacore.com>
+
+	* NEWS: Add marker for 2.22.
+
+2011-09-21  David S. Miller  <davem@davemloft.net>
+
+	* config/tc-sparc.c (hwcap_allowed): New.
+	(struct sparc_arch): New field 'hwcap_allowed' containing a bitmask
+	of F_FOO flags which are enabled by the particular arch setting.
+	Add new options that provide explicit access to new instructions.
+	(md_parse_option): Only bump max_architecture if the requested one
+	is larger, or this is the first explicit request.
+	(get_hwcap_name): New function.
+	(sparc_ip): Validate that hwcaps used by an instruction have actually
+	been enabled.
+	* doc/c-sparc.texi: Document new sparc options.
+
+2011-09-21  David S. Miller  <davem@davemloft.net>
+
+	* config/tc-sparc.c (hwcap_seen): New bitmask, defined when
+	not TE_SOLARIS.
+	(sparc_ip): When not TE_SOLARIS, accumulate hwcap bits from
+	sparc_opcode->flags of instruction into hwcap_seen.
+	(sparc_md_end): Create Tag_GNU_Sparc_HWCAPS attribute if
+	hwcap_seen is non-zero and not TE_SOLARIS.
+
+2011-09-19  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-alpha.c (insert_operand): Call as_bad_value_out_of_range
+	instead of as_warn_out_of_range.
+
+2011-09-08  Mark Fortescue <mark@mtfhpc.demon.co.uk>
+
+	* config/tc-sparc.c (sparc_ip): Handle 'i' + r<0..31>
+	in addition to 'i' + [goli]<0..7>.
+
+2011-09-08  Joern Rennecke <joern.rennecke@embecosm.com>
+
+	* cgen.c (gas_cgen_pcrel_r_type): New function.
+	(gas_cgen_tc_gen_reloc): Check for GAS_CGEN_PCREL_R_TYPE.
+	* cgen.h (gas_cgen_pcrel_r_type): Declare.
+
+2011-09-08  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	PR gas/13167
+	* dwarf2dbg.c (dwarf2_flush_pending_lines): Use symbol_temp_new_now.
+
+2011-09-05  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	PR gas/13024
+	* dwarf2dbg.c (pending_lines, pending_lines_tail): New variables.
+	(dwarf2_gen_line_info_1): Delete.
+	(dwarf2_push_line, dwarf2_flush_pending_lines): New functions.
+	(dwarf2_gen_line_info, dwarf2_emit_label): Use them.
+	(dwarf2_consume_line_info): Call dwarf2_flush_pending_lines.
+	(dwarf2_directive_loc): Push previous .locs instead of generating
+	them immediately.
+
+2011-08-26  Nick Clifton  <nickc@redhat.com>
+
+	* po/es.po: Updated Spanish translation.
+
+2011-08-26  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-alpha.c (s_alpha_linkage): Simplify.  Add comments.
+
+2011-08-26  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-alpha.c (add_to_link_pool): Improve comment.
+	(s_alpha_fp_save): Fix indentation.
+
 2011-08-19  Nick Clifton  <nickc@redhat.com>
 
 	* doc/as.texinfo: Include c-xstormy16.texi.

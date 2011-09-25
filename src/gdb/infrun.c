@@ -55,6 +55,7 @@
 #include "jit.h"
 #include "tracepoint.h"
 #include "continuations.h"
+#include "interps.h"
 
 /* Prototypes for local functions */
 
@@ -1363,6 +1364,23 @@ write_memory_ptid (ptid_t ptid, CORE_ADDR memaddr,
   do_cleanups (ptid_cleanup);
 }
 
+/* Restore the contents of the copy area for thread PTID.  */
+
+static void
+displaced_step_restore (struct displaced_step_inferior_state *displaced,
+			ptid_t ptid)
+{
+  ULONGEST len = gdbarch_max_insn_length (displaced->step_gdbarch);
+
+  write_memory_ptid (ptid, displaced->step_copy,
+		     displaced->step_saved_copy, len);
+  if (debug_displaced)
+    fprintf_unfiltered (gdb_stdlog, "displaced: restored %s %s\n",
+			target_pid_to_str (ptid),
+			paddress (displaced->step_gdbarch,
+				  displaced->step_copy));
+}
+
 static void
 displaced_step_fixup (ptid_t event_ptid, enum target_signal signal)
 {
@@ -1381,17 +1399,7 @@ displaced_step_fixup (ptid_t event_ptid, enum target_signal signal)
 
   old_cleanups = make_cleanup (displaced_step_clear_cleanup, displaced);
 
-  /* Restore the contents of the copy area.  */
-  {
-    ULONGEST len = gdbarch_max_insn_length (displaced->step_gdbarch);
-
-    write_memory_ptid (displaced->step_ptid, displaced->step_copy,
-		       displaced->step_saved_copy, len);
-    if (debug_displaced)
-      fprintf_unfiltered (gdb_stdlog, "displaced: restored %s\n",
-                          paddress (displaced->step_gdbarch,
-				    displaced->step_copy));
-  }
+  displaced_step_restore (displaced, displaced->step_ptid);
 
   /* Did the instruction complete successfully?  */
   if (signal == TARGET_SIGNAL_TRAP)
@@ -2579,14 +2587,6 @@ prepare_for_detach (void)
 
       overlay_cache_invalid = 1;
 
-      /* We have to invalidate the registers BEFORE calling
-	 target_wait because they can be loaded from the target while
-	 in target_wait.  This makes remote debugging a bit more
-	 efficient for those targets that provide critical registers
-	 as part of their normal status mechanism.  */
-
-      registers_changed ();
-
       if (deprecated_target_wait_hook)
 	ecs->ptid = deprecated_target_wait_hook (pid_ptid, &ecs->ws, 0);
       else
@@ -2656,14 +2656,7 @@ wait_for_inferior (void)
     {
       struct cleanup *old_chain;
 
-      /* We have to invalidate the registers BEFORE calling target_wait
-	 because they can be loaded from the target while in target_wait.
-	 This makes remote debugging a bit more efficient for those
-	 targets that provide critical registers as part of their normal
-	 status mechanism.  */
-
       overlay_cache_invalid = 1;
-      registers_changed ();
 
       if (deprecated_target_wait_hook)
 	ecs->ptid = deprecated_target_wait_hook (waiton_ptid, &ecs->ws, 0);
@@ -2712,6 +2705,7 @@ fetch_inferior_event (void *client_data)
   struct cleanup *old_chain = make_cleanup (null_cleanup, NULL);
   struct cleanup *ts_old_chain;
   int was_sync = sync_execution;
+  int cmd_done = 0;
 
   memset (ecs, 0, sizeof (*ecs));
 
@@ -2732,23 +2726,7 @@ fetch_inferior_event (void *client_data)
        running any breakpoint commands.  */
     make_cleanup_restore_current_thread ();
 
-  /* We have to invalidate the registers BEFORE calling target_wait
-     because they can be loaded from the target while in target_wait.
-     This makes remote debugging a bit more efficient for those
-     targets that provide critical registers as part of their normal
-     status mechanism.  */
-
   overlay_cache_invalid = 1;
-
-  /* But don't do it if the current thread is already stopped (hence
-     this is either a delayed event that will result in
-     TARGET_WAITKIND_IGNORE, or it's an event for another thread (and
-     we always clear the register and frame caches when the user
-     switches threads anyway).  If we didn't do this, a spurious
-     delayed event in all-stop mode would make the user lose the
-     selected frame.  */
-  if (non_stop || is_executing (inferior_ptid))
-    registers_changed ();
 
   make_cleanup_restore_integer (&execution_direction);
   execution_direction = target_execution_direction ();
@@ -2779,6 +2757,10 @@ fetch_inferior_event (void *client_data)
   else
     ts_old_chain = make_cleanup (finish_thread_state_cleanup, &ecs->ptid);
 
+  /* Get executed before make_cleanup_restore_current_thread above to apply
+     still for the thread which has thrown the exception.  */
+  make_bpstat_clear_actions_cleanup ();
+
   /* Now figure out what to do with the result of the result.  */
   handle_inferior_event (ecs);
 
@@ -2799,7 +2781,10 @@ fetch_inferior_event (void *client_data)
 	  && ecs->event_thread->control.stop_step)
 	inferior_event_handler (INF_EXEC_CONTINUE, NULL);
       else
-	inferior_event_handler (INF_EXEC_COMPLETE, NULL);
+	{
+	  inferior_event_handler (INF_EXEC_COMPLETE, NULL);
+	  cmd_done = 1;
+	}
     }
 
   /* No error, don't finish the thread states yet.  */
@@ -2809,9 +2794,17 @@ fetch_inferior_event (void *client_data)
   do_cleanups (old_chain);
 
   /* If the inferior was in sync execution mode, and now isn't,
-     restore the prompt.  */
-  if (was_sync && !sync_execution)
+     restore the prompt (a synchronous execution command has finished,
+     and we're ready for input).  */
+  if (interpreter_async && was_sync && !sync_execution)
     display_gdb_prompt (0);
+
+  if (cmd_done
+      && !was_sync
+      && exec_done_display_p
+      && (ptid_equal (inferior_ptid, null_ptid)
+	  || !is_running (inferior_ptid)))
+    printf_unfiltered (_("completed.\n"));
 }
 
 /* Record the frame and location we're currently stepping through.  */
@@ -2834,8 +2827,6 @@ init_thread_stepping_state (struct thread_info *tss)
 {
   tss->stepping_over_breakpoint = 0;
   tss->step_after_step_resume_breakpoint = 0;
-  tss->stepping_through_solib_after_catch = 0;
-  tss->stepping_through_solib_catchpoints = NULL;
 }
 
 /* Return the cached copy of the last pid/waitstatus returned by
@@ -2861,7 +2852,7 @@ nullify_last_target_wait_ptid (void)
 static void
 context_switch (ptid_t ptid)
 {
-  if (debug_infrun)
+  if (debug_infrun && !ptid_equal (ptid, inferior_ptid))
     {
       fprintf_unfiltered (gdb_stdlog, "infrun: Switching context from %s ",
 			  target_pid_to_str (inferior_ptid));
@@ -3388,6 +3379,60 @@ handle_inferior_event (struct execution_control_state *ecs)
     case TARGET_WAITKIND_VFORKED:
       if (debug_infrun)
         fprintf_unfiltered (gdb_stdlog, "infrun: TARGET_WAITKIND_FORKED\n");
+
+      /* Check whether the inferior is displaced stepping.  */
+      {
+	struct regcache *regcache = get_thread_regcache (ecs->ptid);
+	struct gdbarch *gdbarch = get_regcache_arch (regcache);
+	struct displaced_step_inferior_state *displaced
+	  = get_displaced_stepping_state (ptid_get_pid (ecs->ptid));
+
+	/* If checking displaced stepping is supported, and thread
+	   ecs->ptid is displaced stepping.  */
+	if (displaced && ptid_equal (displaced->step_ptid, ecs->ptid))
+	  {
+	    struct inferior *parent_inf
+	      = find_inferior_pid (ptid_get_pid (ecs->ptid));
+	    struct regcache *child_regcache;
+	    CORE_ADDR parent_pc;
+
+	    /* GDB has got TARGET_WAITKIND_FORKED or TARGET_WAITKIND_VFORKED,
+	       indicating that the displaced stepping of syscall instruction
+	       has been done.  Perform cleanup for parent process here.  Note
+	       that this operation also cleans up the child process for vfork,
+	       because their pages are shared.  */
+	    displaced_step_fixup (ecs->ptid, TARGET_SIGNAL_TRAP);
+
+	    if (ecs->ws.kind == TARGET_WAITKIND_FORKED)
+	      {
+		/* Restore scratch pad for child process.  */
+		displaced_step_restore (displaced, ecs->ws.value.related_pid);
+	      }
+
+	    /* Since the vfork/fork syscall instruction was executed in the scratchpad,
+	       the child's PC is also within the scratchpad.  Set the child's PC
+	       to the parent's PC value, which has already been fixed up.
+	       FIXME: we use the parent's aspace here, although we're touching
+	       the child, because the child hasn't been added to the inferior
+	       list yet at this point.  */
+
+	    child_regcache
+	      = get_thread_arch_aspace_regcache (ecs->ws.value.related_pid,
+						 gdbarch,
+						 parent_inf->aspace);
+	    /* Read PC value of parent process.  */
+	    parent_pc = regcache_read_pc (regcache);
+
+	    if (debug_displaced)
+	      fprintf_unfiltered (gdb_stdlog,
+				  "displaced: write child pc from %s to %s\n",
+				  paddress (gdbarch,
+					    regcache_read_pc (child_regcache)),
+				  paddress (gdbarch, parent_pc));
+
+	    regcache_write_pc (child_regcache, parent_pc);
+	  }
+      }
 
       if (!ptid_equal (ecs->ptid, inferior_ptid))
 	{
@@ -4534,37 +4579,6 @@ process_event_stop_test:
 	}
     }
 
-  /* Are we stepping to get the inferior out of the dynamic linker's
-     hook (and possibly the dld itself) after catching a shlib
-     event?  */
-  if (ecs->event_thread->stepping_through_solib_after_catch)
-    {
-#if defined(SOLIB_ADD)
-      /* Have we reached our destination?  If not, keep going.  */
-      if (SOLIB_IN_DYNAMIC_LINKER (PIDGET (ecs->ptid), stop_pc))
-	{
-          if (debug_infrun)
-	    fprintf_unfiltered (gdb_stdlog,
-				"infrun: stepping in dynamic linker\n");
-	  ecs->event_thread->stepping_over_breakpoint = 1;
-	  keep_going (ecs);
-	  return;
-	}
-#endif
-      if (debug_infrun)
-	 fprintf_unfiltered (gdb_stdlog, "infrun: step past dynamic linker\n");
-      /* Else, stop and report the catchpoint(s) whose triggering
-         caused us to begin stepping.  */
-      ecs->event_thread->stepping_through_solib_after_catch = 0;
-      bpstat_clear (&ecs->event_thread->control.stop_bpstat);
-      ecs->event_thread->control.stop_bpstat
-	= bpstat_copy (ecs->event_thread->stepping_through_solib_catchpoints);
-      bpstat_clear (&ecs->event_thread->stepping_through_solib_catchpoints);
-      stop_print_frame = 1;
-      stop_stepping (ecs);
-      return;
-    }
-
   if (ecs->event_thread->control.step_resume_breakpoint)
     {
       if (debug_infrun)
@@ -5124,7 +5138,6 @@ currently_stepping (struct thread_info *tp)
   return ((tp->control.step_range_end
 	   && tp->control.step_resume_breakpoint == NULL)
 	  || tp->control.trap_expected
-	  || tp->stepping_through_solib_after_catch
 	  || bpstat_should_step ());
 }
 
@@ -5138,8 +5151,7 @@ currently_stepping_or_nexting_callback (struct thread_info *tp, void *data)
     return 0;
 
   return (tp->control.step_range_end
- 	  || tp->control.trap_expected
- 	  || tp->stepping_through_solib_after_catch);
+ 	  || tp->control.trap_expected);
 }
 
 /* Inferior has stepped into a subroutine call with source code that
@@ -5809,6 +5821,7 @@ normal_stop (void)
     goto done;
 
   target_terminal_ours ();
+  async_enable_stdin ();
 
   /* Set the current source location.  This will also happen if we
      display the frame below, but the current SAL will be incorrect
@@ -6380,6 +6393,25 @@ signals_info (char *signum_exp, int from_tty)
 		     "to change these tables.\n"));
 }
 
+/* Check if it makes sense to read $_siginfo from the current thread
+   at this point.  If not, throw an error.  */
+
+static void
+validate_siginfo_access (void)
+{
+  /* No current inferior, no siginfo.  */
+  if (ptid_equal (inferior_ptid, null_ptid))
+    error (_("No thread selected."));
+
+  /* Don't try to read from a dead thread.  */
+  if (is_exited (inferior_ptid))
+    error (_("The current thread has terminated"));
+
+  /* ... or from a spinning thread.  */
+  if (is_running (inferior_ptid))
+    error (_("Selected thread is running."));
+}
+
 /* The $_siginfo convenience variable is a bit special.  We don't know
    for sure the type of the value until we actually have a chance to
    fetch the data.  The type can change depending on gdbarch, so it is
@@ -6397,6 +6429,8 @@ static void
 siginfo_value_read (struct value *v)
 {
   LONGEST transferred;
+
+  validate_siginfo_access ();
 
   transferred =
     target_read (&current_target, TARGET_OBJECT_SIGNAL_INFO,
@@ -6416,6 +6450,8 @@ static void
 siginfo_value_write (struct value *v, struct value *fromval)
 {
   LONGEST transferred;
+
+  validate_siginfo_access ();
 
   transferred = target_write (&current_target,
 			      TARGET_OBJECT_SIGNAL_INFO,

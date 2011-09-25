@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/sysdep
 svn://gcc.gnu.org/svn/gcc
 
@@ -30,18 +30,6 @@ powerpc
 dir
 
 arm
-dir
-
-m68k
-dir
-
-alpha
-dir
-
-i386
-dir
-
-s390
 dir
 
 descriptor-n.h
@@ -84,10 +72,19 @@ dir
 ia64
 dir
 
+m68k
+dir
+
+alpha
+dir
+
 sparc
 dir
 
 mips
+dir
+
+i386
 dir
 
 descriptor-y.h
@@ -128,5 +125,8 @@ sh
 dir
 
 generic
+dir
+
+s390
 dir
 

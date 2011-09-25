@@ -1,15 +1,15 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/compat
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-07-11T07:52:23.771976Z
-176135
-gjl
+2011-09-05T13:53:08.811085Z
+178540
+jakub
 
 
 
@@ -468,40 +468,6 @@ jason
 
 1464
 
-fp2-struct-init.h
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-59ca841f17677fc8a60f3e9b812cffb3
-2003-06-10T21:01:39.000000Z
-67734
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-843
-
 struct-by-value-13_y.c
 file
 
@@ -569,6 +535,40 @@ drow
 
 
 2585
+
+fp2-struct-init.h
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+59ca841f17677fc8a60f3e9b812cffb3
+2003-06-10T21:01:39.000000Z
+67734
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+843
 
 scalar-by-value-5_y.c
 file
@@ -5438,11 +5438,11 @@ file
 
 
 
-2009-04-24T17:45:08.000000Z
-6ca1d91a90ca5db92269f454b1e0ec89
-2008-06-09T22:48:37.917662Z
-136604
-hutchinsonandy
+2011-09-25T18:02:30.143897Z
+b3da097900e3dfe300ea64885a287dc4
+2011-09-05T13:53:08.811085Z
+178540
+jakub
 
 
 
@@ -5464,7 +5464,7 @@ hutchinsonandy
 
 
 
-114
+36
 
 struct-by-value-6b_x.c
 file

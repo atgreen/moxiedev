@@ -633,6 +633,20 @@ solib_read_symbols (struct so_list *so, int flags)
   return 0;
 }
 
+/* Return 1 if KNOWN->objfile is used by any other so_list object in the
+   SO_LIST_HEAD list.  Return 0 otherwise.  */
+
+static int
+solib_used (const struct so_list *const known)
+{
+  const struct so_list *pivot;
+
+  for (pivot = so_list_head; pivot != NULL; pivot = pivot->next)
+    if (pivot != known && pivot->objfile == known->objfile)
+      return 1;
+  return 0;
+}
+
 /* Synchronize GDB's shared object list with inferior's.
 
    Extract the list of currently loaded shared objects from the
@@ -749,7 +763,8 @@ update_solib_list (int from_tty, struct target_ops *target)
 	  *gdb_link = gdb->next;
 
 	  /* Unless the user loaded it explicitly, free SO's objfile.  */
-	  if (gdb->objfile && ! (gdb->objfile->flags & OBJF_USERLOADED))
+	  if (gdb->objfile && ! (gdb->objfile->flags & OBJF_USERLOADED)
+	      && !solib_used (gdb))
 	    free_objfile (gdb->objfile);
 
 	  /* Some targets' section tables might be referring to
@@ -1225,7 +1240,8 @@ reload_shared_libraries_1 (int from_tty)
 	  || (found_pathname != NULL
 	      && filename_cmp (found_pathname, so->so_name) != 0))
 	{
-	  if (so->objfile && ! (so->objfile->flags & OBJF_USERLOADED))
+	  if (so->objfile && ! (so->objfile->flags & OBJF_USERLOADED)
+	      && !solib_used (so))
 	    free_objfile (so->objfile);
 	  remove_target_sections (so->abfd);
 	  free_so_symbols (so);
@@ -1336,6 +1352,102 @@ solib_global_lookup (const struct objfile *objfile,
   return NULL;
 }
 
+/* Lookup the value for a specific symbol from dynamic symbol table.  Look
+   up symbol from ABFD.  MATCH_SYM is a callback function to determine
+   whether to pick up a symbol.  DATA is the input of this callback
+   function.  Return NULL if symbol is not found.  */
+
+CORE_ADDR
+gdb_bfd_lookup_symbol_from_symtab (bfd *abfd,
+				   int (*match_sym) (asymbol *, void *),
+				   void *data)
+{
+  long storage_needed = bfd_get_symtab_upper_bound (abfd);
+  CORE_ADDR symaddr = 0;
+
+  if (storage_needed > 0)
+    {
+      unsigned int i;
+
+      asymbol **symbol_table = (asymbol **) xmalloc (storage_needed);
+      struct cleanup *back_to = make_cleanup (xfree, symbol_table);
+      unsigned int number_of_symbols =
+	bfd_canonicalize_symtab (abfd, symbol_table);
+
+      for (i = 0; i < number_of_symbols; i++)
+	{
+	  asymbol *sym  = *symbol_table++;
+
+	  if (match_sym (sym, data))
+	    {
+	      /* BFD symbols are section relative.  */
+	      symaddr = sym->value + sym->section->vma;
+	      break;
+	    }
+	}
+      do_cleanups (back_to);
+    }
+
+  return symaddr;
+}
+
+/* Lookup the value for a specific symbol from symbol table.  Look up symbol
+   from ABFD.  MATCH_SYM is a callback function to determine whether to pick
+   up a symbol.  DATA is the input of this callback function.  Return NULL
+   if symbol is not found.  */
+
+static CORE_ADDR
+bfd_lookup_symbol_from_dyn_symtab (bfd *abfd,
+				   int (*match_sym) (asymbol *, void *),
+				   void *data)
+{
+  long storage_needed = bfd_get_dynamic_symtab_upper_bound (abfd);
+  CORE_ADDR symaddr = 0;
+
+  if (storage_needed > 0)
+    {
+      unsigned int i;
+      asymbol **symbol_table = (asymbol **) xmalloc (storage_needed);
+      struct cleanup *back_to = make_cleanup (xfree, symbol_table);
+      unsigned int number_of_symbols =
+	bfd_canonicalize_dynamic_symtab (abfd, symbol_table);
+
+      for (i = 0; i < number_of_symbols; i++)
+	{
+	  asymbol *sym = *symbol_table++;
+
+	  if (match_sym (sym, data))
+	    {
+	      /* BFD symbols are section relative.  */
+	      symaddr = sym->value + sym->section->vma;
+	      break;
+	    }
+	}
+      do_cleanups (back_to);
+    }
+  return symaddr;
+}
+
+/* Lookup the value for a specific symbol from symbol table and dynamic
+   symbol table.  Look up symbol from ABFD.  MATCH_SYM is a callback
+   function to determine whether to pick up a symbol.  DATA is the
+   input of this callback function.  Return NULL if symbol is not
+   found.  */
+
+CORE_ADDR
+gdb_bfd_lookup_symbol (bfd *abfd,
+		       int (*match_sym) (asymbol *, void *),
+		       void *data)
+{
+  CORE_ADDR symaddr = gdb_bfd_lookup_symbol_from_symtab (abfd, match_sym, data);
+
+  /* On FreeBSD, the dynamic linker is stripped by default.  So we'll
+     have to check the dynamic string table too.  */
+  if (symaddr == 0)
+    symaddr = bfd_lookup_symbol_from_dyn_symtab (abfd, match_sym, data);
+
+  return symaddr;
+}
 
 extern initialize_file_ftype _initialize_solib; /* -Wmissing-prototypes */
 

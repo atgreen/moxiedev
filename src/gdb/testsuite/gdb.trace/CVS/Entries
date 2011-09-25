@@ -2,17 +2,14 @@
 /actions.c/1.2/Sun Jun  5 16:54:38 2011/-ko/
 /actions.exp/1.22/Sun Jun  5 16:54:38 2011/-ko/
 /ax.exp/1.3/Sun Jun  5 16:54:38 2011//
-/backtrace.exp/1.18/Sun Jun  5 16:54:38 2011/-ko/
 /circ.c/1.1.1.1/Sun Jun  5 16:54:38 2011/-ko/
 /circ.exp/1.17/Sun Jun  5 16:54:38 2011/-ko/
 /collection.c/1.5/Sun Jun  5 16:54:38 2011/-ko/
-/collection.exp/1.24/Sun Jun  5 16:54:38 2011/-ko/
 /deltrace.exp/1.18/Sun Jun  5 16:54:38 2011/-ko/
 /infotrace.exp/1.19/Sun Jun  5 16:54:38 2011/-ko/
 /packetlen.exp/1.17/Sun Jun  5 16:54:38 2011/-ko/
 /passc-dyn.exp/1.17/Sun Jun  5 16:54:38 2011/-ko/
 /passcount.exp/1.16/Sun Jun  5 16:54:38 2011/-ko/
-/report.exp/1.19/Sun Jun  5 16:54:38 2011/-ko/
 /save-trace.exp/1.21/Sun Jun  5 16:54:38 2011/-ko/
 /tfile.c/1.5/Sun Jun  5 16:54:38 2011//
 /tfile.exp/1.12/Sun Jun  5 16:54:38 2011//
@@ -20,7 +17,12 @@
 /tracecmd.exp/1.21/Sun Jun  5 16:54:38 2011/-ko/
 /tsv.exp/1.7/Sun Jun  5 16:54:38 2011//
 /unavailable.cc/1.6/Sun Jun  5 16:54:38 2011//
-/unavailable.exp/1.9/Thu Aug 25 20:11:01 2011//
-/while-dyn.exp/1.18/Sun Jun  5 16:54:38 2011/-ko/
 /while-stepping.exp/1.18/Sun Jun  5 16:54:38 2011/-ko/
+/backtrace.exp/1.20/Sun Sep 25 18:07:46 2011/-ko/
+/collection.exp/1.26/Sun Sep 25 18:07:46 2011/-ko/
+/report.exp/1.21/Sun Sep 25 18:07:46 2011/-ko/
+/tspeed.c/1.1/Mon Sep 19 16:55:26 2011//
+/tspeed.exp/1.1/Mon Sep 19 16:55:26 2011//
+/unavailable.exp/1.11/Sun Sep 25 18:07:46 2011//
+/while-dyn.exp/1.20/Sun Sep 25 18:07:46 2011/-ko/
 D

@@ -32,7 +32,7 @@ with Fname;    use Fname;
 with Fname.UF; use Fname.UF;
 with Lib.Util; use Lib.Util;
 with Lib.Xref; use Lib.Xref;
-               use Lib.Xref.ALFA;
+               use Lib.Xref.Alfa;
 with Nlists;   use Nlists;
 with Gnatvsn;  use Gnatvsn;
 with Opt;      use Opt;
@@ -796,6 +796,12 @@ package body Lib.Writ is
                       or else
                      Nkind (Unit (Cunit)) in N_Generic_Renaming_Declaration)
                     and then Generic_May_Lack_ALI (Fname))
+
+              --  In Alfa mode, always generate the dependencies on ALI
+              --  files, which are required to compute frame conditions
+              --  of subprograms.
+
+              or else Alfa_Mode
             then
                Write_Info_Tab (25);
 
@@ -1155,13 +1161,13 @@ package body Lib.Writ is
 
       --  Output R lines for No_Dependence entries
 
-      for J in No_Dependence.First .. No_Dependence.Last loop
-         if In_Extended_Main_Source_Unit (No_Dependence.Table (J).Unit)
-           and then not No_Dependence.Table (J).Warn
+      for J in No_Dependences.First .. No_Dependences.Last loop
+         if In_Extended_Main_Source_Unit (No_Dependences.Table (J).Unit)
+           and then not No_Dependences.Table (J).Warn
          then
             Write_Info_Initiate ('R');
             Write_Info_Char (' ');
-            Write_Unit_Name (No_Dependence.Table (J).Unit);
+            Write_Unit_Name (No_Dependences.Table (J).Unit);
             Write_Info_EOL;
          end if;
       end loop;
@@ -1317,11 +1323,11 @@ package body Lib.Writ is
          SCO_Output;
       end if;
 
-      --  Output ALFA information if needed
+      --  Output Alfa information if needed
 
-      if Opt.Xref_Active and then ALFA_Mode then
-         Collect_ALFA (Sdep_Table => Sdep_Table, Num_Sdep => Num_Sdep);
-         Output_ALFA;
+      if Opt.Xref_Active and then Alfa_Mode then
+         Collect_Alfa (Sdep_Table => Sdep_Table, Num_Sdep => Num_Sdep);
+         Output_Alfa;
       end if;
 
       --  Output final blank line and we are done. This final blank line is

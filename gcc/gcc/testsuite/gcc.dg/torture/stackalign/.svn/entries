@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/torture/stackalign
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ hjl
 
 618
 
-setjmp-2.c
-file
-
-
-
-
-2009-04-24T17:45:20.000000Z
-d39aa8efbcac415216280574106036ba
-2008-07-30T19:24:02.356725Z
-138336
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-884
-
 thiscall-1.c
 file
 
@@ -604,14 +570,14 @@ has-props
 
 485
 
-setjmp-3.c
+setjmp-2.c
 file
 
 
 
 
 2009-04-24T17:45:20.000000Z
-1f8292a7aee3193d3b4bff78a2c50936
+d39aa8efbcac415216280574106036ba
 2008-07-30T19:24:02.356725Z
 138336
 hjl
@@ -636,7 +602,7 @@ hjl
 
 
 
-392
+884
 
 comp-goto-1.c
 file
@@ -671,6 +637,40 @@ hjl
 
 
 555
+
+setjmp-3.c
+file
+
+
+
+
+2009-04-24T17:45:20.000000Z
+1f8292a7aee3193d3b4bff78a2c50936
+2008-07-30T19:24:02.356725Z
+138336
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+392
 
 setjmp-4.c
 file
@@ -808,40 +808,6 @@ danglin
 
 411
 
-inline-2.c
-file
-
-
-
-
-2011-06-04T18:03:31.884104Z
-693888eaf455dd1f76f9aa816dfcacd6
-2010-12-09T22:15:32.838163Z
-167667
-danglin
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-708
-
 push-1.c
 file
 
@@ -875,6 +841,40 @@ hjl
 
 
 916
+
+inline-2.c
+file
+
+
+
+
+2011-06-04T18:03:31.884104Z
+693888eaf455dd1f76f9aa816dfcacd6
+2010-12-09T22:15:32.838163Z
+167667
+danglin
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+708
 
 builtin-return-1.c
 file
@@ -910,14 +910,14 @@ hjl
 
 622
 
-struct-1.c
+pr16660-1.c
 file
 
 
 
 
-2011-06-04T18:03:31.884104Z
-391aed1fce360f4cc82cf5e8f145e687
+2011-06-04T18:03:31.885104Z
+1b7db6c062f70c3f133a35b865e36ad1
 2010-12-09T22:15:32.838163Z
 167667
 danglin
@@ -942,7 +942,7 @@ danglin
 
 
 
-389
+240
 
 check.h
 file
@@ -978,14 +978,14 @@ hjl
 
 549
 
-pr16660-1.c
+struct-1.c
 file
 
 
 
 
-2011-06-04T18:03:31.885104Z
-1b7db6c062f70c3f133a35b865e36ad1
+2011-06-04T18:03:31.884104Z
+391aed1fce360f4cc82cf5e8f145e687
 2010-12-09T22:15:32.838163Z
 167667
 danglin
@@ -1010,7 +1010,7 @@ danglin
 
 
 
-240
+389
 
 pr16660-2.c
 file

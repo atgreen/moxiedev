@@ -13,8 +13,4 @@ stamp-h
 stamp-h.in
 autom4te*.cache
 install
-K 13
-svn:mergeinfo
-V 44
-/branches/CLASSPATH/libjava/classpath:164526
 END

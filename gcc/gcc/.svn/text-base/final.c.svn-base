@@ -1739,7 +1739,7 @@ final (rtx first, FILE *file, int optimize_p)
       if (optimize_p && JUMP_P (insn))
 	{
 	  rtx lab = JUMP_LABEL (insn);
-	  if (lab && LABEL_NUSES (lab) == 1)
+	  if (lab && LABEL_P (lab) && LABEL_NUSES (lab) == 1)
 	    {
 	      LABEL_REFS (lab) = insn;
 	    }
@@ -2492,7 +2492,7 @@ final_scan_insn (rtx insn, FILE *file, int optimize_p ATTRIBUTE_UNUSED,
 	        delete_insn (insn);
 		break;
 	      }
-	    else if (GET_CODE (SET_SRC (body)) == RETURN)
+	    else if (ANY_RETURN_P (SET_SRC (body)))
 	      /* Replace (set (pc) (return)) with (return).  */
 	      PATTERN (insn) = body = SET_SRC (body);
 

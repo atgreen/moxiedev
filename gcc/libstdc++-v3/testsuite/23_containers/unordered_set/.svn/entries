@@ -1,14 +1,14 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/unordered_set
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-07-24T19:20:26.973057Z
-176717
+2011-09-17T09:12:24.719582Z
+178927
 fdumont
 
 
@@ -101,6 +101,9 @@ cons
 dir
 
 hash_policy
+dir
+
+max_load_factor
 dir
 
 requirements

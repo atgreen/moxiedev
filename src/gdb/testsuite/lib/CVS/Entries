@@ -9,7 +9,6 @@
 /fortran.exp/1.2/Sun Jun  5 16:54:38 2011//
 /future.exp/1.1/Wed Jun 29 14:44:45 2011//
 /gdb-python.exp/1.4/Sun Jun  5 16:54:38 2011//
-/gdb.exp/1.184/Thu Aug 25 20:11:02 2011/-ko/
 /gdbserver-support.exp/1.19/Sun Jun  5 16:54:38 2011//
 /java.exp/1.16/Sun Jun  5 16:54:38 2011//
 /mi-support.exp/1.99/Thu Aug 25 20:11:02 2011//
@@ -21,4 +20,6 @@
 /prelink-support.exp/1.4/Sun Jun  5 16:54:38 2011//
 /set_unbuffered_mode.c/1.4/Sun Jun  5 16:54:38 2011//
 /trace-support.exp/1.9/Sun Jun  5 16:54:38 2011/-ko/
+/gdb.exp/1.187/Sun Sep 25 18:07:46 2011/-ko/
+/prompt.exp/1.1/Fri Sep  2 21:16:54 2011//
 D

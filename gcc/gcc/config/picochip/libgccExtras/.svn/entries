@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config/picochip/libgccExtras
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ hariharans
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-divmodsi4.asm
-file
-
-
-
-
-2010-11-22T19:17:39.915794Z
-85aa8c7393d45500d9c6d9ecdd4c11df
-2010-11-15T12:08:16.798463Z
-166751
-hariharans
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7600
 
 setjmp.asm
 file
@@ -94,14 +60,14 @@ hariharans
 
 6199
 
-longjmp.asm
+divmodsi4.asm
 file
 
 
 
 
-2010-11-22T19:17:39.916799Z
-06e2f164590f60996f23579d72f35adf
+2010-11-22T19:17:39.915794Z
+85aa8c7393d45500d9c6d9ecdd4c11df
 2010-11-15T12:08:16.798463Z
 166751
 hariharans
@@ -126,7 +92,41 @@ hariharans
 
 
 
-6222
+7600
+
+ashlsi3.asm
+file
+
+
+
+
+2010-11-22T19:17:39.915794Z
+89945b1da60e0eacc9eb60504bd7b8bc
+2010-11-15T12:08:16.798463Z
+166751
+hariharans
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6468
 
 clzsi2.asm
 file
@@ -162,14 +162,14 @@ jsm28
 
 6259
 
-ashlsi3.asm
+longjmp.asm
 file
 
 
 
 
-2010-11-22T19:17:39.915794Z
-89945b1da60e0eacc9eb60504bd7b8bc
+2010-11-22T19:17:39.916799Z
+06e2f164590f60996f23579d72f35adf
 2010-11-15T12:08:16.798463Z
 166751
 hariharans
@@ -194,7 +194,7 @@ hariharans
 
 
 
-6468
+6222
 
 ashlsi3.c
 file
@@ -332,40 +332,6 @@ hariharans
 
 6194
 
-ashrsi3.asm
-file
-
-
-
-
-2010-11-22T19:17:39.917794Z
-d4c66b3198c0c52b43f34184f510a091
-2010-11-15T12:08:16.798463Z
-166751
-hariharans
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6727
-
 udivmodhi4.asm
 file
 
@@ -399,6 +365,40 @@ hariharans
 
 
 8269
+
+ashrsi3.asm
+file
+
+
+
+
+2010-11-22T19:17:39.917794Z
+d4c66b3198c0c52b43f34184f510a091
+2010-11-15T12:08:16.798463Z
+166751
+hariharans
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6727
 
 ashrsi3.c
 file
@@ -468,40 +468,6 @@ hariharans
 
 6726
 
-lshrsi3.asm
-file
-
-
-
-
-2010-11-22T19:17:39.919784Z
-e9e1222c13beeeb9ac3dfa12e795b066
-2010-11-15T12:08:16.798463Z
-166751
-hariharans
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6480
-
 divmodhi4.asm
 file
 
@@ -535,6 +501,40 @@ hariharans
 
 
 8597
+
+lshrsi3.asm
+file
+
+
+
+
+2010-11-22T19:17:39.919784Z
+e9e1222c13beeeb9ac3dfa12e795b066
+2010-11-15T12:08:16.798463Z
+166751
+hariharans
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6480
 
 udivmodsi4.asm
 file

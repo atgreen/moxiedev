@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/ada/acats/tests
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,10 +26,10 @@ mrs
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-a
+cxf
 dir
 
-cxf
+a
 dir
 
 cxg
@@ -38,16 +38,16 @@ dir
 cxh
 dir
 
-ca
-dir
-
 d
 dir
 
-cb
+ca
 dir
 
 e
+dir
+
+cb
 dir
 
 cc

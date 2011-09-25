@@ -1,15 +1,15 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libffi/src
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-07-11T17:50:04.831891Z
-176172
-aph
+2011-09-04T19:19:39.412496Z
+178512
+iains
 
 
 
@@ -26,10 +26,10 @@ aph
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-powerpc
+arm
 dir
 
-arm
+powerpc
 dir
 
 closures.c
@@ -72,6 +72,15 @@ dir
 sh64
 dir
 
+x86
+dir
+
+alpha
+dir
+
+m68k
+dir
+
 types.c
 file
 
@@ -106,28 +115,19 @@ aph
 
 2904
 
-m68k
-dir
-
-alpha
-dir
-
-x86
+avr32
 dir
 
 frv
 dir
 
-avr32
-dir
-
 s390
 dir
 
-pa
+cris
 dir
 
-cris
+pa
 dir
 
 raw_api.c

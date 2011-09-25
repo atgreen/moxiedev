@@ -9,8 +9,6 @@
 /tui-file.h/1.10/Sun Jun  5 16:54:38 2011/-ko/
 /tui-hooks.c/1.46/Sun Jun  5 16:54:38 2011//
 /tui-hooks.h/1.8/Sun Jun  5 16:54:38 2011//
-/tui-interp.c/1.31/Thu Aug 25 20:11:03 2011//
-/tui-io.c/1.30/Thu Aug 25 20:11:03 2011//
 /tui-io.h/1.9/Sun Jun  5 16:54:38 2011//
 /tui-layout.c/1.40/Sun Jun  5 16:54:38 2011//
 /tui-layout.h/1.10/Sun Jun  5 16:54:38 2011//
@@ -20,7 +18,6 @@
 /tui-regs.h/1.12/Sun Jun  5 16:54:38 2011//
 /tui-source.c/1.29/Sun Jun  5 16:54:38 2011//
 /tui-source.h/1.13/Sun Jun  5 16:54:38 2011//
-/tui-stack.c/1.41/Sun Jun  5 16:54:38 2011//
 /tui-stack.h/1.9/Sun Jun  5 16:54:38 2011//
 /tui-win.c/1.54/Sun Jun  5 16:54:38 2011//
 /tui-win.h/1.13/Sun Jun  5 16:54:38 2011//
@@ -32,4 +29,7 @@
 /tui-winsource.h/1.14/Sun Jun  5 16:54:38 2011//
 /tui.c/1.69/Sun Jun  5 16:54:38 2011/-ko/
 /tui.h/1.34/Sun Jun  5 16:54:38 2011/-ko/
+/tui-interp.c/1.32/Sun Sep 25 18:07:46 2011//
+/tui-io.c/1.31/Sun Sep 25 18:07:46 2011//
+/tui-stack.c/1.42/Sun Sep 25 18:07:46 2011//
 D

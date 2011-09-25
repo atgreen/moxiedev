@@ -799,7 +799,7 @@ mi_cmd_list_thread_groups (char *command, char **argv, int argc)
     {
       AVAILABLE_OPT, RECURSE_OPT
     };
-  static struct mi_opt opts[] =
+  static const struct mi_opt opts[] =
   {
     {"-available", AVAILABLE_OPT, 0},
     {"-recurse", RECURSE_OPT, 1},
@@ -1119,7 +1119,7 @@ get_register (struct frame_info *frame, int regnum, int format)
   struct ui_out *uiout = current_uiout;
   CORE_ADDR addr;
   enum lval_type lval;
-  static struct ui_stream *stb = NULL;
+  struct ui_stream *stb;
   struct value *val;
 
   stb = ui_out_stream_new (uiout);
@@ -1307,7 +1307,7 @@ mi_cmd_data_read_memory (char *command, char **argv, int argc)
     {
       OFFSET_OPT
     };
-  static struct mi_opt opts[] =
+  static const struct mi_opt opts[] =
   {
     {"o", OFFSET_OPT, 1},
     { 0, 0, 0 }
@@ -1493,7 +1493,7 @@ mi_cmd_data_read_memory_bytes (char *command, char **argv, int argc)
     {
       OFFSET_OPT
     };
-  static struct mi_opt opts[] =
+  static const struct mi_opt opts[] =
   {
     {"o", OFFSET_OPT, 1},
     { 0, 0, 0 }
@@ -1594,7 +1594,7 @@ mi_cmd_data_write_memory (char *command, char **argv, int argc)
     {
       OFFSET_OPT
     };
-  static struct mi_opt opts[] =
+  static const struct mi_opt opts[] =
   {
     {"o", OFFSET_OPT, 1},
     { 0, 0, 0 }
@@ -2266,7 +2266,7 @@ mi_load_progress (const char *section_name,
     }
 
   xfree (uiout);
-  uiout = saved_uiout;
+  current_uiout = saved_uiout;
 }
 
 static void 

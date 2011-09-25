@@ -1,14 +1,14 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gfortran.dg/coarray
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-02T15:32:31.357057Z
-177184
+2011-08-25T15:59:40.279912Z
+178068
 burnus
 
 
@@ -127,6 +127,40 @@ burnus
 
 
 476
+
+alloc_comp_1.f90
+file
+
+
+
+
+2011-09-25T18:02:28.802897Z
+a13d27ad5a94545aa23aeac7b571f9f2
+2011-08-25T15:59:40.279912Z
+178068
+burnus
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+327
 
 image_index_1.f90
 file

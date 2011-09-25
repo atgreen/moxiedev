@@ -1,3 +1,36 @@
+2011-09-16  Hui Zhu  <teawater@gmail.com>
+
+	* gdb.texinfo (Tracepoint Restrictions): Change *$esp@300
+	to *(unsigned char *)$esp@300.
+
+2011-09-15  Paul Koning  <paul_koning@dell.com>
+
+	* gdb.texinfo: Make style of Python functions and methods match
+	the syntax of Python.  Also put class and module names explicitly
+	on function, member, and variable names, matching Python
+	documentation conventions.
+	
+2011-09-15  Kevin Pouget  <kevin.pouget@st.com>
+
+	PR Python/12692 Add gdb.selected_inferior() to Python interface.
+	* gdb.texinfo (Inferiors In Python): Describe new
+	gdb.selected_inferior() function.
+
+2011-09-15  Kevin Pouget  <kevin.pouget@st.com>
+
+	Handle multiple breakpoint hits in Python interface:
+	* gdb.texinfo (Events In Python): New function documentation:
+	gdb.BreakpointEvent.breakpoints. Indicate that
+	gdb.BreakpointEvent.breakpoint is now deprecated.
+
+2011-09-04  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.texinfo: Set EDITION to "Tenth" and change ISBN.
+
+2011-08-25  Andrew Oakley  <andrew@ado.is-a-geek.net>
+
+	* gdb.texinfo (Types In Python): Document 'bitpos' for enums.
+
 2011-08-17  Phil Muldoon  <pmuldoon@redhat.com>
 
         * gdb.texinfo (Prompt): Add set/show extended-prompt

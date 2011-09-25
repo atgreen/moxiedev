@@ -977,15 +977,122 @@ generic_correspondence (gfc_formal_arglist *f1, gfc_formal_arglist *f2)
 }
 
 
+/* Check if the characteristics of two dummy arguments match,
+   cf. F08:12.3.2.  */
+
+static gfc_try
+check_dummy_characteristics (gfc_symbol *s1, gfc_symbol *s2,
+			     bool type_must_agree, char *errmsg, int err_len)
+{
+  /* Check type and rank.  */
+  if (type_must_agree && !compare_type_rank (s2, s1))
+    {
+      if (errmsg != NULL)
+	snprintf (errmsg, err_len, "Type/rank mismatch in argument '%s'",
+		  s1->name);
+      return FAILURE;
+    }
+
+  /* Check INTENT.  */
+  if (s1->attr.intent != s2->attr.intent)
+    {
+      snprintf (errmsg, err_len, "INTENT mismatch in argument '%s'",
+		s1->name);
+      return FAILURE;
+    }
+
+  /* Check OPTIONAL attribute.  */
+  if (s1->attr.optional != s2->attr.optional)
+    {
+      snprintf (errmsg, err_len, "OPTIONAL mismatch in argument '%s'",
+		s1->name);
+      return FAILURE;
+    }
+
+  /* Check ALLOCATABLE attribute.  */
+  if (s1->attr.allocatable != s2->attr.allocatable)
+    {
+      snprintf (errmsg, err_len, "ALLOCATABLE mismatch in argument '%s'",
+		s1->name);
+      return FAILURE;
+    }
+
+  /* Check POINTER attribute.  */
+  if (s1->attr.pointer != s2->attr.pointer)
+    {
+      snprintf (errmsg, err_len, "POINTER mismatch in argument '%s'",
+		s1->name);
+      return FAILURE;
+    }
+
+  /* Check TARGET attribute.  */
+  if (s1->attr.target != s2->attr.target)
+    {
+      snprintf (errmsg, err_len, "TARGET mismatch in argument '%s'",
+		s1->name);
+      return FAILURE;
+    }
+
+  /* FIXME: Do more comprehensive testing of attributes, like e.g.
+	    ASYNCHRONOUS, CONTIGUOUS, VALUE, VOLATILE, etc.  */
+
+  /* Check string length.  */
+  if (s1->ts.type == BT_CHARACTER
+      && s1->ts.u.cl && s1->ts.u.cl->length
+      && s2->ts.u.cl && s2->ts.u.cl->length)
+    {
+      int compval = gfc_dep_compare_expr (s1->ts.u.cl->length,
+					  s2->ts.u.cl->length);
+      switch (compval)
+      {
+	case -1:
+	case  1:
+	case -3:
+	  snprintf (errmsg, err_len, "Character length mismatch "
+		    "in argument '%s'", s1->name);
+	  return FAILURE;
+
+	case -2:
+	  /* FIXME: Implement a warning for this case.
+	  gfc_warning ("Possible character length mismatch in argument '%s'",
+		       s1->name);*/
+	  break;
+
+	case 0:
+	  break;
+
+	default:
+	  gfc_internal_error ("check_dummy_characteristics: Unexpected result "
+			      "%i of gfc_dep_compare_expr", compval);
+	  break;
+      }
+    }
+
+  /* Check array shape.  */
+  if (s1->as && s2->as)
+    {
+      if (s1->as->type != s2->as->type)
+	{
+	  snprintf (errmsg, err_len, "Shape mismatch in argument '%s'",
+		    s1->name);
+	  return FAILURE;
+	}
+      /* FIXME: Check exact shape.  */
+    }
+    
+  return SUCCESS;
+}
+
+
 /* 'Compare' two formal interfaces associated with a pair of symbols.
    We return nonzero if there exists an actual argument list that
    would be ambiguous between the two interfaces, zero otherwise.
-   'intent_flag' specifies whether INTENT and OPTIONAL of the arguments are
+   'strict_flag' specifies whether all the characteristics are
    required to match, which is not the case for ambiguity checks.*/
 
 int
 gfc_compare_interfaces (gfc_symbol *s1, gfc_symbol *s2, const char *name2,
-			int generic_flag, int intent_flag,
+			int generic_flag, int strict_flag,
 			char *errmsg, int err_len)
 {
   gfc_formal_arglist *f1, *f2;
@@ -1008,17 +1115,32 @@ gfc_compare_interfaces (gfc_symbol *s1, gfc_symbol *s2, const char *name2,
       return 0;
     }
 
-  /* If the arguments are functions, check type and kind
-     (only for dummy procedures and procedure pointer assignments).  */
-  if (!generic_flag && intent_flag && s1->attr.function && s2->attr.function)
+  /* Do strict checks on all characteristics
+     (for dummy procedures and procedure pointer assignments).  */
+  if (!generic_flag && strict_flag)
     {
-      if (s1->ts.type == BT_UNKNOWN)
-	return 1;
-      if ((s1->ts.type != s2->ts.type) || (s1->ts.kind != s2->ts.kind))
+      if (s1->attr.function && s2->attr.function)
 	{
-	  if (errmsg != NULL)
-	    snprintf (errmsg, err_len, "Type/kind mismatch in return value "
-		      "of '%s'", name2);
+	  /* If both are functions, check type and kind.  */
+	  if (s1->ts.type == BT_UNKNOWN)
+	    return 1;
+	  if ((s1->ts.type != s2->ts.type) || (s1->ts.kind != s2->ts.kind))
+	    {
+	      if (errmsg != NULL)
+		snprintf (errmsg, err_len, "Type/kind mismatch in return value "
+			  "of '%s'", name2);
+	      return 0;
+	    }
+	}
+
+      if (s1->attr.pure && !s2->attr.pure)
+	{
+	  snprintf (errmsg, err_len, "Mismatch in PURE attribute");
+	  return 0;
+	}
+      if (s1->attr.elemental && !s2->attr.elemental)
+	{
+	  snprintf (errmsg, err_len, "Mismatch in ELEMENTAL attribute");
 	  return 0;
 	}
     }
@@ -1059,28 +1181,19 @@ gfc_compare_interfaces (gfc_symbol *s1, gfc_symbol *s2, const char *name2,
 	    return 0;
 	  }
 
-	/* Check type and rank.  */
-	if (!compare_type_rank (f2->sym, f1->sym))
+	if (strict_flag)
 	  {
+	    /* Check all characteristics.  */
+	    if (check_dummy_characteristics (f1->sym, f2->sym,
+					     true, errmsg, err_len) == FAILURE)
+	      return 0;
+	  }
+	else if (!compare_type_rank (f2->sym, f1->sym))
+	  {
+	    /* Only check type and rank.  */
 	    if (errmsg != NULL)
 	      snprintf (errmsg, err_len, "Type/rank mismatch in argument '%s'",
 			f1->sym->name);
-	    return 0;
-	  }
-
-	/* Check INTENT.  */
-	if (intent_flag && (f1->sym->attr.intent != f2->sym->attr.intent))
-	  {
-	    snprintf (errmsg, err_len, "INTENT mismatch in argument '%s'",
-		      f1->sym->name);
-	    return 0;
-	  }
-
-	/* Check OPTIONAL.  */
-	if (intent_flag && (f1->sym->attr.optional != f2->sym->attr.optional))
-	  {
-	    snprintf (errmsg, err_len, "OPTIONAL mismatch in argument '%s'",
-		      f1->sym->name);
 	    return 0;
 	  }
 
@@ -2178,16 +2291,6 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
 	  return 0;
 	}
 
-      if (f->sym->attr.flavor == FL_PROCEDURE && f->sym->attr.pure
-	  && a->expr->ts.type == BT_PROCEDURE
-	  && !a->expr->symtree->n.sym->attr.pure)
-	{
-	  if (where)
-	    gfc_error ("Expected a PURE procedure for argument '%s' at %L",
-		       f->sym->name, &a->expr->where);
-	  return 0;
-	}
-
       if (f->sym->as && f->sym->as->type == AS_ASSUMED_SHAPE
 	  && a->expr->expr_type == EXPR_VARIABLE
 	  && a->expr->symtree->n.sym->as
@@ -2759,6 +2862,13 @@ gfc_procedure_use (gfc_symbol *sym, gfc_actual_arglist **ap, locus *where)
 			"procedure '%s'", &a->expr->where, sym->name);
 	      break;
 	    }
+
+	  if (a->expr && a->expr->expr_type == EXPR_NULL
+	      && a->expr->ts.type == BT_UNKNOWN)
+	    {
+	      gfc_error ("MOLD argument to NULL required at %L", &a->expr->where);
+	      return;
+	    }
 	}
 
       return;
@@ -2851,6 +2961,20 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
 		      gfc_actual_arglist **ap)
 {
   gfc_symbol *elem_sym = NULL;
+  gfc_symbol *null_sym = NULL;
+  locus null_expr_loc;
+  gfc_actual_arglist *a;
+  bool has_null_arg = false;
+
+  for (a = *ap; a; a = a->next)
+    if (a->expr && a->expr->expr_type == EXPR_NULL
+	&& a->expr->ts.type == BT_UNKNOWN)
+      {
+	has_null_arg = true;
+	null_expr_loc = a->expr->where;
+	break;
+      } 
+
   for (; intr; intr = intr->next)
     {
       if (sub_flag && intr->sym->attr.function)
@@ -2860,6 +2984,19 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
 
       if (gfc_arglist_matches_symbol (ap, intr->sym))
 	{
+	  if (has_null_arg && null_sym)
+	    {
+	      gfc_error ("MOLD= required in NULL() argument at %L: Ambiguity "
+			 "between specific functions %s and %s",
+			 &null_expr_loc, null_sym->name, intr->sym->name);
+	      return NULL;
+	    }
+	  else if (has_null_arg)
+	    {
+	      null_sym = intr->sym;
+	      continue;
+	    }
+
 	  /* Satisfy 12.4.4.1 such that an elemental match has lower
 	     weight than a non-elemental match.  */ 
 	  if (intr->sym->attr.elemental)
@@ -2870,6 +3007,9 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
 	  return intr->sym;
 	}
     }
+
+  if (null_sym)
+    return null_sym;
 
   return elem_sym ? elem_sym : NULL;
 }
@@ -3468,18 +3608,18 @@ gfc_free_formal_arglist (gfc_formal_arglist *p)
 }
 
 
-/* Check that it is ok for the typebound procedure proc to override the
-   procedure old.  */
+/* Check that it is ok for the type-bound procedure 'proc' to override the
+   procedure 'old', cf. F08:4.5.7.3.  */
 
 gfc_try
 gfc_check_typebound_override (gfc_symtree* proc, gfc_symtree* old)
 {
   locus where;
-  const gfc_symbol* proc_target;
-  const gfc_symbol* old_target;
+  const gfc_symbol *proc_target, *old_target;
   unsigned proc_pass_arg, old_pass_arg, argpos;
-  gfc_formal_arglist* proc_formal;
-  gfc_formal_arglist* old_formal;
+  gfc_formal_arglist *proc_formal, *old_formal;
+  bool check_type;
+  char err[200];
 
   /* This procedure should only be called for non-GENERIC proc.  */
   gcc_assert (!proc->n.tb->is_generic);
@@ -3637,15 +3777,12 @@ gfc_check_typebound_override (gfc_symtree* proc, gfc_symtree* old)
 	  return FAILURE;
 	}
 
-      /* Check that the types correspond if neither is the passed-object
-	 argument.  */
-      /* FIXME:  Do more comprehensive testing here.  */
-      if (proc_pass_arg != argpos && old_pass_arg != argpos
-	  && !gfc_compare_types (&proc_formal->sym->ts, &old_formal->sym->ts))
+      check_type = proc_pass_arg != argpos && old_pass_arg != argpos;
+      if (check_dummy_characteristics (proc_formal->sym, old_formal->sym,
+				       check_type, err, sizeof(err)) == FAILURE)
 	{
-	  gfc_error ("Types mismatch for dummy argument '%s' of '%s' %L "
-		     "in respect to the overridden procedure",
-		     proc_formal->sym->name, proc->name, &where);
+	  gfc_error ("Argument mismatch for the overriding procedure "
+		     "'%s' at %L: %s", proc->name, &where, err);
 	  return FAILURE;
 	}
 

@@ -10,7 +10,6 @@
 /cr16elf.em/1.7/Sun Jun  5 16:54:38 2011//
 /crxelf.em/1.8/Sun Jun  5 16:54:38 2011//
 /elf-generic.em/1.9/Sun Jun  5 16:54:38 2011//
-/elf32.em/1.222/Thu Aug 25 19:59:29 2011//
 /genelf.em/1.8/Sun Jun  5 16:54:38 2011//
 /generic.em/1.24/Sun Jun  5 16:54:38 2011//
 /gld960.em/1.23/Sun Jun  5 16:54:38 2011//
@@ -38,7 +37,6 @@
 /rxelf.em/1.2/Sun Jun  5 16:54:38 2011//
 /scoreelf.em/1.6/Sun Jun  5 16:54:38 2011//
 /sh64elf.em/1.18/Sun Jun  5 16:54:38 2011//
-/solaris2.em/1.2/Sun Jun  5 16:54:38 2011//
 /spu_icache.S/1.2/Sun Jun  5 16:54:38 2011//
 /spu_icache.o_c/1.3/Sun Jun  5 16:54:38 2011//
 /spu_ovl.S/1.10/Sun Jun  5 16:54:38 2011//
@@ -52,4 +50,6 @@
 /vxworks.em/1.9/Sun Jun  5 16:54:38 2011//
 /xtensaelf.em/1.29/Sun Jun  5 16:54:38 2011//
 /z80.em/1.6/Sun Jun  5 16:54:38 2011//
+/elf32.em/1.223/Sun Sep 25 18:07:19 2011//
+/solaris2.em/1.3/Sun Sep 25 18:07:19 2011//
 D

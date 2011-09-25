@@ -1772,9 +1772,15 @@ assemble_thunks_and_aliases (struct cgraph_node *node)
     if (ref->use == IPA_REF_ALIAS)
       {
 	struct cgraph_node *alias = ipa_ref_refering_node (ref);
+        bool saved_written = TREE_ASM_WRITTEN (alias->thunk.alias);
+
+	/* Force assemble_alias to really output the alias this time instead
+	   of buffering it in same alias pairs.  */
+	TREE_ASM_WRITTEN (alias->thunk.alias) = 1;
 	assemble_alias (alias->decl,
 			DECL_ASSEMBLER_NAME (alias->thunk.alias));
 	assemble_thunks_and_aliases (alias);
+	TREE_ASM_WRITTEN (alias->thunk.alias) = saved_written;
       }
 }
 
@@ -2367,15 +2373,12 @@ cgraph_redirect_edge_call_stmt_to_callee (struct cgraph_edge *e)
   tree decl = gimple_call_fndecl (e->call_stmt);
   gimple new_stmt;
   gimple_stmt_iterator gsi;
-  bool gsi_computed = false;
 #ifdef ENABLE_CHECKING
   struct cgraph_node *node;
 #endif
 
   if (e->indirect_unknown_callee
-      || decl == e->callee->decl
-      /* Don't update call from same body alias to the real function.  */
-      || (decl && cgraph_get_node (decl) == cgraph_get_node (e->callee->decl)))
+      || decl == e->callee->decl)
     return e->call_stmt;
 
 #ifdef ENABLE_CHECKING
@@ -2400,21 +2403,6 @@ cgraph_redirect_edge_call_stmt_to_callee (struct cgraph_edge *e)
 	}
     }
 
-  if (e->indirect_info &&
-      e->indirect_info->thunk_delta != 0
-      && (!e->callee->clone.combined_args_to_skip
-	  || !bitmap_bit_p (e->callee->clone.combined_args_to_skip, 0)))
-    {
-      if (cgraph_dump_file)
-	fprintf (cgraph_dump_file, "          Thunk delta is "
-		 HOST_WIDE_INT_PRINT_DEC "\n", e->indirect_info->thunk_delta);
-      gsi = gsi_for_stmt (e->call_stmt);
-      gsi_computed = true;
-      gimple_adjust_this_by_delta (&gsi,
-				   size_int (e->indirect_info->thunk_delta));
-      e->indirect_info->thunk_delta = 0;
-    }
-
   if (e->callee->clone.combined_args_to_skip)
     {
       int lp_nr;
@@ -2428,8 +2416,7 @@ cgraph_redirect_edge_call_stmt_to_callee (struct cgraph_edge *e)
 	  && TREE_CODE (gimple_vdef (new_stmt)) == SSA_NAME)
 	SSA_NAME_DEF_STMT (gimple_vdef (new_stmt)) = new_stmt;
 
-      if (!gsi_computed)
-	gsi = gsi_for_stmt (e->call_stmt);
+      gsi = gsi_for_stmt (e->call_stmt);
       gsi_replace (&gsi, new_stmt, false);
       /* We need to defer cleaning EH info on the new statement to
          fixup-cfg.  We may not have dominator information at this point

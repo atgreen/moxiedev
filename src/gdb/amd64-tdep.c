@@ -1910,6 +1910,86 @@ amd64_analyze_prologue (struct gdbarch *gdbarch,
   return pc;
 }
 
+/* Work around false termination of prologue - GCC PR debug/48827.
+
+   START_PC is the first instruction of a function, PC is its minimal already
+   determined advanced address.  Function returns PC if it has nothing to do.
+
+   84 c0                test   %al,%al
+   74 23                je     after
+   <-- here is 0 lines advance - the false prologue end marker.
+   0f 29 85 70 ff ff ff movaps %xmm0,-0x90(%rbp)
+   0f 29 4d 80          movaps %xmm1,-0x80(%rbp)
+   0f 29 55 90          movaps %xmm2,-0x70(%rbp)
+   0f 29 5d a0          movaps %xmm3,-0x60(%rbp)
+   0f 29 65 b0          movaps %xmm4,-0x50(%rbp)
+   0f 29 6d c0          movaps %xmm5,-0x40(%rbp)
+   0f 29 75 d0          movaps %xmm6,-0x30(%rbp)
+   0f 29 7d e0          movaps %xmm7,-0x20(%rbp)
+   after:  */
+
+static CORE_ADDR
+amd64_skip_xmm_prologue (CORE_ADDR pc, CORE_ADDR start_pc)
+{
+  struct symtab_and_line start_pc_sal, next_sal;
+  gdb_byte buf[4 + 8 * 7];
+  int offset, xmmreg;
+
+  if (pc == start_pc)
+    return pc;
+
+  start_pc_sal = find_pc_sect_line (start_pc, NULL, 0);
+  if (start_pc_sal.symtab == NULL
+      || producer_is_gcc_ge_4 (start_pc_sal.symtab->producer) < 6
+      || start_pc_sal.pc != start_pc || pc >= start_pc_sal.end)
+    return pc;
+
+  next_sal = find_pc_sect_line (start_pc_sal.end, NULL, 0);
+  if (next_sal.line != start_pc_sal.line)
+    return pc;
+
+  /* START_PC can be from overlayed memory, ignored here.  */
+  if (target_read_memory (next_sal.pc - 4, buf, sizeof (buf)) != 0)
+    return pc;
+
+  /* test %al,%al */
+  if (buf[0] != 0x84 || buf[1] != 0xc0)
+    return pc;
+  /* je AFTER */
+  if (buf[2] != 0x74)
+    return pc;
+
+  offset = 4;
+  for (xmmreg = 0; xmmreg < 8; xmmreg++)
+    {
+      /* 0x0f 0x29 0b??000101 movaps %xmmreg?,-0x??(%rbp) */
+      if (buf[offset] != 0x0f || buf[offset + 1] != 0x29
+          || (buf[offset + 2] & 0x3f) != (xmmreg << 3 | 0x5))
+	return pc;
+
+      /* 0b01?????? */
+      if ((buf[offset + 2] & 0xc0) == 0x40)
+	{
+	  /* 8-bit displacement.  */
+	  offset += 4;
+	}
+      /* 0b10?????? */
+      else if ((buf[offset + 2] & 0xc0) == 0x80)
+	{
+	  /* 32-bit displacement.  */
+	  offset += 7;
+	}
+      else
+	return pc;
+    }
+
+  /* je AFTER */
+  if (offset - 4 != buf[3])
+    return pc;
+
+  return next_sal.end;
+}
+
 /* Return PC of first real instruction.  */
 
 static CORE_ADDR
@@ -1924,7 +2004,7 @@ amd64_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
   if (cache.frameless_p)
     return start_pc;
 
-  return pc;
+  return amd64_skip_xmm_prologue (pc, start_pc);
 }
 
 

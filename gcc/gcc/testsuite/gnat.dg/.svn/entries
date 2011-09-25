@@ -1,15 +1,15 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gnat.dg
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-03T14:33:50.274759Z
-177274
-charlet
+2011-09-21T13:47:25.481052Z
+179047
+ebotcazou
 
 
 
@@ -161,6 +161,40 @@ ebotcazou
 
 
 71
+
+cond_expr2.adb
+file
+
+
+
+
+2011-09-25T18:02:29.690897Z
+6bf0919f37bc57eb62cf0adbb6d3aed5
+2011-09-11T19:14:51.757188Z
+178766
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+209
 
 pack13_pkg.ads
 file
@@ -468,40 +502,6 @@ ebotcazou
 
 333
 
-allocator_maxalign1.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-bbc4e723041a85252bdd22da4896f11f
-2008-07-19T17:49:18.006517Z
-137984
-hainque
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-964
-
 notnot.adb
 file
 
@@ -535,6 +535,40 @@ charlet
 
 
 201
+
+allocator_maxalign1.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+bbc4e723041a85252bdd22da4896f11f
+2008-07-19T17:49:18.006517Z
+137984
+hainque
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+964
 
 renaming2.adb
 file
@@ -671,6 +705,40 @@ hainque
 
 
 150
+
+cond_expr2.ads
+file
+
+
+
+
+2011-09-25T18:02:29.690897Z
+480774e6dc12415e74150ad52fe66697
+2011-09-11T19:14:51.757188Z
+178766
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+82
 
 taft_type1_pkg2.ads
 file
@@ -1351,6 +1419,40 @@ ebotcazou
 
 
 334
+
+opt19.adb
+file
+
+
+
+
+2011-09-25T18:02:29.691897Z
+7b1ad251e878c60fbeed29347ccd09dc
+2011-09-21T13:47:25.481052Z
+179047
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+477
 
 ref_type.adb
 file
@@ -2066,40 +2168,6 @@ charlet
 
 199
 
-aggr7.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-a12ec40d7ebc1ab08b05b0d1f6a57bc4
-2007-06-15T08:27:59.912608Z
-125738
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-813
-
 loop_optimization8.adb
 file
 
@@ -2133,6 +2201,40 @@ ebotcazou
 
 
 597
+
+aggr7.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+a12ec40d7ebc1ab08b05b0d1f6a57bc4
+2007-06-15T08:27:59.912608Z
+125738
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+813
 
 test_oalign.adb
 file
@@ -4208,40 +4310,6 @@ ebotcazou
 
 117
 
-class_wide2.adb
-file
-
-
-
-
-2010-07-08T15:17:56.319091Z
-30b6ec52201e2f3e8871ec34e84d8f92
-2010-06-18T09:28:22.822585Z
-160968
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-287
-
 alignment1.adb
 file
 
@@ -4276,17 +4344,17 @@ charlet
 
 247
 
-incomplete1.ads
+class_wide2.adb
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-94a108b336603d0d2ef666ceaea862ce
-2008-04-16T12:37:38.312892Z
-134345
-sam
+2010-07-08T15:17:56.319091Z
+30b6ec52201e2f3e8871ec34e84d8f92
+2010-06-18T09:28:22.822585Z
+160968
+charlet
 
 
 
@@ -4308,7 +4376,7 @@ sam
 
 
 
-66
+287
 
 pack3.adb
 file
@@ -4343,6 +4411,40 @@ ebotcazou
 
 
 532
+
+incomplete1.ads
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+94a108b336603d0d2ef666ceaea862ce
+2008-04-16T12:37:38.312892Z
+134345
+sam
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+66
 
 allocator_maxalign2.ads
 file
@@ -8594,40 +8696,6 @@ ebotcazou
 
 1192
 
-unchecked_convert3.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-ab71b7c411a24b92bc4692458e82095e
-2009-01-12T19:14:43.620632Z
-143303
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-355
-
 oconst6.ads
 file
 
@@ -8661,6 +8729,40 @@ hainque
 
 
 313
+
+unchecked_convert3.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+ab71b7c411a24b92bc4692458e82095e
+2009-01-12T19:14:43.620632Z
+143303
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+355
 
 discr8.ads
 file
@@ -17332,40 +17434,6 @@ ebotcazou
 
 731
 
-inline_scope_p.ads
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-61aee3c06b85da99bc88bbd90a9c356f
-2006-10-31T18:20:42.966598Z
-118332
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-116
-
 deques.ads
 file
 
@@ -17399,6 +17467,40 @@ charlet
 
 
 400
+
+inline_scope_p.ads
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+61aee3c06b85da99bc88bbd90a9c356f
+2006-10-31T18:20:42.966598Z
+118332
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+116
 
 opt16.adb
 file
@@ -21282,6 +21384,40 @@ ebotcazou
 
 151
 
+atomic5.adb
+file
+
+
+
+
+2011-09-25T18:02:29.691897Z
+5d125d409f6ddcbaaa4768bb9dbf33e9
+2011-09-11T18:56:40.351907Z
+178764
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+319
+
 case_optimization2.adb
 file
 
@@ -21995,6 +22131,40 @@ ebotcazou
 
 
 191
+
+atomic5.ads
+file
+
+
+
+
+2011-09-25T18:02:29.691897Z
+d0a758cdd7c043309ca152bffd5ed330
+2011-09-11T18:56:40.351907Z
+178764
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+404
 
 parameterlessfunc.adb
 file

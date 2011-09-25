@@ -282,7 +282,6 @@ void unloaded_dll (const char *name, CORE_ADDR base_addr);
 
 extern ptid_t cont_thread;
 extern ptid_t general_thread;
-extern ptid_t step_thread;
 
 extern int server_waiting;
 extern int debug_threads;
@@ -539,6 +538,15 @@ struct emit_ops
      argument and a 64-bit int from the top of the stack, and returns
      nothing (for instance, tsv setter).  */
   void (*emit_void_call_2) (CORE_ADDR fn, int arg1);
+
+  /* Emit code specialized for common combinations of compare followed
+     by a goto.  */
+  void (*emit_eq_goto) (int *offset_p, int *size_p);
+  void (*emit_ne_goto) (int *offset_p, int *size_p);
+  void (*emit_lt_goto) (int *offset_p, int *size_p);
+  void (*emit_le_goto) (int *offset_p, int *size_p);
+  void (*emit_gt_goto) (int *offset_p, int *size_p);
+  void (*emit_ge_goto) (int *offset_p, int *size_p);
 };
 
 /* Returns the address of the get_raw_reg function in the IPA.  */

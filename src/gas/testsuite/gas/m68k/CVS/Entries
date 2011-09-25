@@ -1,4 +1,3 @@
-/all.exp/1.26/Sun Jun  5 16:54:36 2011//
 /arch-cpu-1.d/1.2/Sun Jun  5 16:54:36 2011//
 /arch-cpu-1.s/1.2/Sun Jun  5 16:54:36 2011//
 /bitfield.d/1.1.1.1/Sun Jun  5 16:54:36 2011//
@@ -40,8 +39,6 @@
 /mcf-trap.s/1.1/Sun Jun  5 16:54:36 2011//
 /mcf-wdebug.d/1.2/Sun Jun  5 16:54:36 2011//
 /mcf-wdebug.s/1.1/Sun Jun  5 16:54:36 2011//
-/mode5.d/1.3/Sun Jun  5 16:54:36 2011//
-/mode5.s/1.2/Sun Jun  5 16:54:36 2011//
 /op68000.d/1.1.1.1/Sun Jun  5 16:54:36 2011//
 /operands.d/1.1.1.1/Sun Jun  5 16:54:36 2011//
 /operands.s/1.1.1.1/Sun Jun  5 16:54:36 2011//
@@ -63,4 +60,7 @@
 /t2.s/1.1.1.1/Sun Jun  5 16:54:36 2011//
 /tls-gd-3.d/1.1/Sun Jun  5 16:54:36 2011//
 /tls-gd-3.s/1.1/Sun Jun  5 16:54:36 2011//
+/all.exp/1.27/Sun Sep 25 18:07:19 2011//
+/mode5.d/1.4/Sun Sep 25 18:07:19 2011//
+/mode5.s/1.3/Sun Sep 25 18:07:19 2011//
 D

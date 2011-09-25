@@ -49,7 +49,6 @@ D/bfin////
 /needed-by-reloc.s/1.2/Sun Jun  5 16:54:35 2011//
 /nm.exp/1.6/Sun Jun  5 16:54:35 2011//
 /note-1.d/1.2/Sun Jun  5 16:54:35 2011//
-/objcopy.exp/1.74/Thu Aug 25 19:59:11 2011//
 /objdump.W/1.9/Sun Jun  5 16:54:35 2011//
 /objdump.exp/1.27/Sun Jun  5 16:54:35 2011//
 /objdump.s/1.2/Sun Jun  5 16:54:35 2011//
@@ -82,3 +81,8 @@ D/bfin////
 /testranges.s/1.5/Sun Jun  5 16:54:35 2011//
 /unique.s/1.1/Sun Jun  5 16:54:35 2011//
 /unknown.s/1.1/Sun Jun  5 16:54:35 2011//
+D/i386////
+D/x86-64////
+/group-6.d/1.1/Fri Sep 16 04:23:19 2011//
+/group-6.s/1.1/Fri Sep 16 04:23:19 2011//
+/objcopy.exp/1.75/Sun Sep 25 18:07:17 2011//

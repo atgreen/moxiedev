@@ -51,6 +51,11 @@
 /* Maximal allowed offset for an address in the LD command */
 #define MAX_LD_OFFSET(MODE) (64 - (signed)GET_MODE_SIZE (MODE))
 
+/* Return true if STR starts with PREFIX and false, otherwise.  */
+#define STR_PREFIX_P(STR,PREFIX) (0 == strncmp (STR, PREFIX, strlen (PREFIX)))
+
+#define AVR_SECTION_PROGMEM (SECTION_MACH_DEP << 0)
+
 static void avr_option_override (void);
 static int avr_naked_function_p (tree);
 static int interrupt_function_p (tree);
@@ -64,9 +69,7 @@ static const char *ptrreg_to_str (int);
 static const char *cond_string (enum rtx_code);
 static int avr_num_arg_regs (enum machine_mode, const_tree);
 
-static RTX_CODE compare_condition (rtx insn);
 static rtx avr_legitimize_address (rtx, rtx, enum machine_mode);
-static int compare_sign_p (rtx insn);
 static tree avr_handle_progmem_attribute (tree *, tree, tree, int, bool *);
 static tree avr_handle_fndecl_attribute (tree *, tree, tree, int, bool *);
 static tree avr_handle_fntype_attribute (tree *, tree, tree, int, bool *);
@@ -110,6 +113,8 @@ static void avr_function_arg_advance (cumulative_args_t, enum machine_mode,
 static bool avr_function_ok_for_sibcall (tree, tree);
 static void avr_asm_named_section (const char *name, unsigned int flags, tree decl);
 static void avr_encode_section_info (tree, rtx, int);
+static section* avr_asm_function_rodata_section (tree);
+static section* avr_asm_select_section (tree, int, unsigned HOST_WIDE_INT);
 
 /* Allocate registers from r25 to r8 for parameters for function calls.  */
 #define FIRST_CUM_REG 26
@@ -132,7 +137,11 @@ const struct base_arch_s *avr_current_arch;
 /* Current device.  */
 const struct mcu_type_s *avr_current_device;
 
-section *progmem_section;
+/* Section to put switch tables in.  */
+static GTY(()) section *progmem_swtable_section;
+
+/* Unnamed section associated to __attribute__((progmem)) aka. PROGMEM.  */
+static GTY(()) section *progmem_section;
 
 /* To track if code will use .bss and/or .data.  */
 bool avr_need_clear_bss_p = false;
@@ -201,6 +210,8 @@ static const struct attribute_spec avr_attribute_table[] =
 #define TARGET_ASM_INIT_SECTIONS avr_asm_init_sections
 #undef TARGET_ENCODE_SECTION_INFO
 #define TARGET_ENCODE_SECTION_INFO avr_encode_section_info
+#undef TARGET_ASM_SELECT_SECTION
+#define TARGET_ASM_SELECT_SECTION avr_asm_select_section
 
 #undef TARGET_REGISTER_MOVE_COST
 #define TARGET_REGISTER_MOVE_COST avr_register_move_cost
@@ -260,9 +271,76 @@ static const struct attribute_spec avr_attribute_table[] =
 #undef TARGET_EXPAND_BUILTIN
 #define TARGET_EXPAND_BUILTIN avr_expand_builtin
 
+#undef TARGET_ASM_FUNCTION_RODATA_SECTION
+#define TARGET_ASM_FUNCTION_RODATA_SECTION avr_asm_function_rodata_section
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 
+
+/* Custom function to replace string prefix.
+
+   Return a ggc-allocated string with strlen (OLD_PREFIX) characters removed
+   from the start of OLD_STR and then prepended with NEW_PREFIX.  */
+
+static inline const char*
+avr_replace_prefix (const char *old_str,
+                    const char *old_prefix, const char *new_prefix)
+{
+  char *new_str;
+  size_t len = strlen (old_str) + strlen (new_prefix) - strlen (old_prefix);
+
+  gcc_assert (strlen (old_prefix) <= strlen (old_str));
+
+  /* Unfortunately, ggc_alloc_string returns a const char* and thus cannot be
+     used here.  */
+     
+  new_str = (char*) ggc_alloc_atomic (1 + len);
+
+  strcat (stpcpy (new_str, new_prefix), old_str + strlen (old_prefix));
+  
+  return (const char*) new_str;
+}
+
+
+/* Custom function to count number of set bits.  */
+
+static inline int
+avr_popcount (unsigned int val)
+{
+  int pop = 0;
+
+  while (val)
+    {
+      val &= val-1;
+      pop++;
+    }
+
+  return pop;
+}
+
+
+/* Constraint helper function.  XVAL is an CONST_INT.  Return true if the least
+   significant N_BYTES bytes of XVAL all have a popcount in POP_MASK and false,
+   otherwise.  POP_MASK represents a subset of integers which contains an
+   integer N iff bit N of POP_MASK is set.  */
+   
+bool
+avr_popcount_each_byte (rtx xval, int n_bytes, int pop_mask)
+{
+  int i;
+
+  for (i = 0; i < n_bytes; i++)
+    {
+      rtx xval8 = simplify_gen_subreg (QImode, xval, SImode, i);
+      unsigned int val8 = UINTVAL (xval8) & GET_MODE_MASK (QImode);
+
+      if (0 == (pop_mask & (1 << avr_popcount (val8))))
+        return false;
+    }
+
+  return true;
+}
+
 static void
 avr_option_override (void)
 {
@@ -278,22 +356,6 @@ avr_option_override (void)
   init_machine_status = avr_init_machine_status;
 }
 
-/*  return register class from register number.  */
-
-static const enum reg_class reg_class_tab[]={
-  GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,
-  GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,
-  GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,
-  GENERAL_REGS, /* r0 - r15 */
-  LD_REGS,LD_REGS,LD_REGS,LD_REGS,LD_REGS,LD_REGS,LD_REGS,
-  LD_REGS,                      /* r16 - 23 */
-  ADDW_REGS,ADDW_REGS,          /* r24,r25 */
-  POINTER_X_REGS,POINTER_X_REGS, /* r26,27 */
-  POINTER_Y_REGS,POINTER_Y_REGS, /* r28,r29 */
-  POINTER_Z_REGS,POINTER_Z_REGS, /* r30,r31 */
-  STACK_REG,STACK_REG           /* SPL,SPH */
-};
-
 /* Function to set up the backend function structure.  */
 
 static struct machine_function *
@@ -307,8 +369,32 @@ avr_init_machine_status (void)
 enum reg_class
 avr_regno_reg_class (int r)
 {
+  static const enum reg_class reg_class_tab[] =
+    {
+      R0_REG,
+      /* r1 - r15 */
+      NO_LD_REGS, NO_LD_REGS, NO_LD_REGS,
+      NO_LD_REGS, NO_LD_REGS, NO_LD_REGS, NO_LD_REGS,
+      NO_LD_REGS, NO_LD_REGS, NO_LD_REGS, NO_LD_REGS,
+      NO_LD_REGS, NO_LD_REGS, NO_LD_REGS, NO_LD_REGS,
+      /* r16 - r23 */
+      SIMPLE_LD_REGS, SIMPLE_LD_REGS, SIMPLE_LD_REGS, SIMPLE_LD_REGS,
+      SIMPLE_LD_REGS, SIMPLE_LD_REGS, SIMPLE_LD_REGS, SIMPLE_LD_REGS,
+      /* r24, r25 */
+      ADDW_REGS, ADDW_REGS,
+      /* X: r26, 27 */
+      POINTER_X_REGS, POINTER_X_REGS,
+      /* Y: r28, r29 */
+      POINTER_Y_REGS, POINTER_Y_REGS,
+      /* Z: r30, r31 */
+      POINTER_Z_REGS, POINTER_Z_REGS,
+      /* SP: SPL, SPH */
+      STACK_REG, STACK_REG
+    };
+
   if (r <= 33)
     return reg_class_tab[r];
+  
   return ALL_REGS;
 }
 
@@ -360,7 +446,7 @@ signal_function_p (tree func)
   return avr_lookup_function_attribute1 (func, "signal");
 }
 
-/* Return nonzero if FUNC is a OS_task function.  */
+/* Return nonzero if FUNC is an OS_task function.  */
 
 static int
 avr_OS_task_function_p (tree func)
@@ -368,7 +454,7 @@ avr_OS_task_function_p (tree func)
   return avr_lookup_function_attribute1 (func, "OS_task");
 }
 
-/* Return nonzero if FUNC is a OS_main function.  */
+/* Return nonzero if FUNC is an OS_main function.  */
 
 static int
 avr_OS_main_function_p (tree func)
@@ -391,7 +477,7 @@ avr_regs_to_save (HARD_REG_SET *set)
   count = 0;
 
   /* No need to save any registers if the function never returns or 
-     is have "OS_task" or "OS_main" attribute.  */
+     has the "OS_task" or "OS_main" attribute.  */
   if (TREE_THIS_VOLATILE (current_function_decl)
       || cfun->machine->is_OS_task
       || cfun->machine->is_OS_main)
@@ -464,7 +550,7 @@ avr_return_addr_rtx (int count, rtx tem)
 {
   rtx r;
     
-  /* Can only return this functions return address. Others not supported.  */
+  /* Can only return this function's return address. Others not supported.  */
   if (count)
      return NULL;
 
@@ -507,6 +593,17 @@ sequent_regs_live (void)
 
   for (reg = 0; reg < 18; ++reg)
     {
+      if (fixed_regs[reg])
+        {
+          /* Don't recognize sequences that contain global register
+             variables.  */
+      
+          if (live_seq != 0)
+            return 0;
+          else
+            continue;
+        }
+      
       if (!call_used_regs[reg])
 	{
 	  if (df_regs_ever_live_p (reg))
@@ -731,7 +828,7 @@ expand_prologue (void)
                     fp=sp
                     fp-=size
                     sp=fp
-                OR
+                  OR
                     sp-=size
                     fp=sp
               the optimum method depends on function type, stack and frame size.
@@ -1192,7 +1289,8 @@ avr_legitimize_address (rtx x, rtx oldx, enum machine_mode mode)
        by OPERANDS.  This is just forwarding to output_asm_insn.
    
    If PLEN != NULL:
-       Add N_WORDS to *PLEN.
+       If N_WORDS >= 0  Add N_WORDS to *PLEN.
+       If N_WORDS < 0   Set *PLEN to -N_WORDS.
        Don't output anything.
 */
 
@@ -1205,7 +1303,10 @@ avr_asm_len (const char* tpl, rtx* operands, int* plen, int n_words)
     }
   else
     {
-      *plen += n_words;
+      if (n_words < 0)
+        *plen = -n_words;
+      else
+        *plen += n_words;
     }
 }
 
@@ -1469,7 +1570,7 @@ notice_update_cc (rtx body ATTRIBUTE_UNUSED, rtx insn)
       /* Insn doesn't leave CC in a usable state.  */
       CC_STATUS_INIT;
 
-      /* Correct CC for the ashrqi3 with the shift count as CONST_INT != 6 */
+      /* Correct CC for the ashrqi3 with the shift count as CONST_INT < 6 */
       set = single_set (insn);
       if (set)
 	{
@@ -1617,15 +1718,6 @@ ret_cond_branch (rtx x, int len, int reverse)
   return "";
 }
 
-/* Predicate function for immediate operand which fits to byte (8bit) */
-
-int
-byte_immediate_operand (rtx op, enum machine_mode mode ATTRIBUTE_UNUSED)
-{
-  return (GET_CODE (op) == CONST_INT
-          && INTVAL (op) <= 0xff && INTVAL (op) >= 0);
-}
-
 /* Output insn cost for next insn.  */
 
 void
@@ -1760,7 +1852,7 @@ avr_function_arg_advance (cumulative_args_t cum_v, enum machine_mode mode,
 
   /* Test if all registers needed by the ABI are actually available.  If the
      user has fixed a GPR needed to pass an argument, an (implicit) function
-     call would clobber that fixed register.  See PR45099 for an example.  */
+     call will clobber that fixed register.  See PR45099 for an example.  */
   
   if (cum->regno >= 8
       && cum->nregs >= 0)
@@ -1769,8 +1861,8 @@ avr_function_arg_advance (cumulative_args_t cum_v, enum machine_mode mode,
 
       for (regno = cum->regno; regno < cum->regno + bytes; regno++)
         if (fixed_regs[regno])
-          error ("Register %s is needed to pass a parameter but is fixed",
-                 reg_names[regno]);
+          warning (0, "fixed register %s used to pass parameter to function",
+                   reg_names[regno]);
     }
       
   if (cum->nregs <= 0)
@@ -2623,7 +2715,7 @@ out_movsi_mr_r (rtx insn, rtx op[], int *l)
 }
 
 const char *
-output_movsisf (rtx insn, rtx operands[], rtx clobber_reg, int *l)
+output_movsisf (rtx insn, rtx operands[], int *l)
 {
   int dummy;
   rtx dest = operands[0];
@@ -2669,7 +2761,7 @@ output_movsisf (rtx insn, rtx operands[], rtx clobber_reg, int *l)
       else if (CONST_INT_P (src)
                || CONST_DOUBLE_P (src))
         {
-          return output_reload_insisf (insn, operands, clobber_reg, real_l);
+          return output_reload_insisf (insn, operands, NULL_RTX, real_l);
         }
       else if (CONSTANT_P (src))
 	{
@@ -2962,28 +3054,30 @@ compare_condition (rtx insn)
   return UNKNOWN;
 }
 
-/* Returns nonzero if INSN is a tst insn that only tests the sign.  */
 
-static int
+/* Returns true iff INSN is a tst insn that only tests the sign.  */
+
+static bool
 compare_sign_p (rtx insn)
 {
   RTX_CODE cond = compare_condition (insn);
   return (cond == GE || cond == LT);
 }
 
-/* Returns nonzero if the next insn is a JUMP_INSN with a condition
+
+/* Returns true iff the next insn is a JUMP_INSN with a condition
    that needs to be swapped (GT, GTU, LE, LEU).  */
 
-int
+static bool
 compare_diff_p (rtx insn)
 {
   RTX_CODE cond = compare_condition (insn);
   return (cond == GT || cond == GTU || cond == LE || cond == LEU) ? cond : 0;
 }
 
-/* Returns nonzero if INSN is a compare insn with the EQ or NE condition.  */
+/* Returns true iff INSN is a compare insn with the EQ or NE condition.  */
 
-int
+static bool
 compare_eq_p (rtx insn)
 {
   RTX_CODE cond = compare_condition (insn);
@@ -2991,56 +3085,173 @@ compare_eq_p (rtx insn)
 }
 
 
+/* Output compare instruction
+
+      compare (XOP[0], XOP[1])
+
+   for an HI/SI register XOP[0] and an integer XOP[1].  Return "".
+   XOP[2] is an 8-bit scratch register as needed.
+
+   PLEN == NULL:  Output instructions.
+   PLEN != NULL:  Set *PLEN to the length (in words) of the sequence.
+                  Don't output anything.  */
+
+const char*
+avr_out_compare (rtx insn, rtx *xop, int *plen)
+{
+  /* Register to compare and value to compare against. */
+  rtx xreg = xop[0];
+  rtx xval = xop[1];
+  
+  /* MODE of the comparison.  */
+  enum machine_mode mode = GET_MODE (xreg);
+
+  /* Number of bytes to operate on.  */
+  int i, n_bytes = GET_MODE_SIZE (mode);
+
+  /* Value (0..0xff) held in clobber register xop[2] or -1 if unknown.  */
+  int clobber_val = -1;
+
+  gcc_assert (REG_P (xreg)
+              && CONST_INT_P (xval));
+  
+  if (plen)
+    *plen = 0;
+
+  for (i = 0; i < n_bytes; i++)
+    {
+      /* We compare byte-wise.  */
+      rtx reg8 = simplify_gen_subreg (QImode, xreg, mode, i);
+      rtx xval8 = simplify_gen_subreg (QImode, xval, mode, i);
+
+      /* 8-bit value to compare with this byte.  */
+      unsigned int val8 = UINTVAL (xval8) & GET_MODE_MASK (QImode);
+
+      /* Registers R16..R31 can operate with immediate.  */
+      bool ld_reg_p = test_hard_reg_class (LD_REGS, reg8);
+
+      xop[0] = reg8;
+      xop[1] = gen_int_mode (val8, QImode);
+
+      /* Word registers >= R24 can use SBIW/ADIW with 0..63.  */
+
+      if (i == 0
+          && test_hard_reg_class (ADDW_REGS, reg8))
+        {
+          int val16 = trunc_int_for_mode (INTVAL (xval), HImode);
+          
+          if (IN_RANGE (val16, 0, 63)
+              && (val8 == 0
+                  || reg_unused_after (insn, xreg)))
+            {
+              avr_asm_len ("sbiw %0,%1", xop, plen, 1);
+              i++;
+              continue;
+            }
+
+          if (n_bytes == 2
+              && IN_RANGE (val16, -63, -1)
+              && compare_eq_p (insn)
+              && reg_unused_after (insn, xreg))
+            {
+              avr_asm_len ("adiw %0,%n1", xop, plen, 1);
+              break;
+            }
+        }
+
+      /* Comparing against 0 is easy.  */
+      
+      if (val8 == 0)
+        {
+          avr_asm_len (i == 0
+                       ? "cp %0,__zero_reg__"
+                       : "cpc %0,__zero_reg__", xop, plen, 1);
+          continue;
+        }
+
+      /* Upper registers can compare and subtract-with-carry immediates.
+         Notice that compare instructions do the same as respective subtract
+         instruction; the only difference is that comparisons don't write
+         the result back to the target register.  */
+
+      if (ld_reg_p)
+        {
+          if (i == 0)
+            {
+              avr_asm_len ("cpi %0,%1", xop, plen, 1);
+              continue;
+            }
+          else if (reg_unused_after (insn, xreg))
+            {
+              avr_asm_len ("sbci %0,%1", xop, plen, 1);
+              continue;
+            }
+        }
+
+      /* Must load the value into the scratch register.  */
+
+      gcc_assert (REG_P (xop[2]));
+              
+      if (clobber_val != (int) val8)
+        avr_asm_len ("ldi %2,%1", xop, plen, 1);
+      clobber_val = (int) val8;
+              
+      avr_asm_len (i == 0
+                   ? "cp %0,%2"
+                   : "cpc %0,%2", xop, plen, 1);
+    }
+
+  return "";
+}
+
+
 /* Output test instruction for HImode.  */
 
-const char *
-out_tsthi (rtx insn, rtx op, int *l)
+const char*
+avr_out_tsthi (rtx insn, rtx *op, int *plen)
 {
   if (compare_sign_p (insn))
     {
-      if (l) *l = 1;
-      return AS1 (tst,%B0);
+      avr_asm_len ("tst %B0", op, plen, -1);
     }
-  if (reg_unused_after (insn, op)
-      && compare_eq_p (insn))
+  else if (reg_unused_after (insn, op[0])
+           && compare_eq_p (insn))
     {
       /* Faster than sbiw if we can clobber the operand.  */
-      if (l) *l = 1;
-      return "or %A0,%B0";
+      avr_asm_len ("or %A0,%B0", op, plen, -1);
     }
-  if (test_hard_reg_class (ADDW_REGS, op))
+  else
     {
-      if (l) *l = 1;
-      return AS2 (sbiw,%0,0);
+      avr_out_compare (insn, op, plen);
     }
-  if (l) *l = 2;
-  return (AS2 (cp,%A0,__zero_reg__) CR_TAB
-          AS2 (cpc,%B0,__zero_reg__));
+
+  return "";
 }
 
 
 /* Output test instruction for SImode.  */
 
-const char *
-out_tstsi (rtx insn, rtx op, int *l)
+const char*
+avr_out_tstsi (rtx insn, rtx *op, int *plen)
 {
   if (compare_sign_p (insn))
     {
-      if (l) *l = 1;
-      return AS1 (tst,%D0);
+      avr_asm_len ("tst %D0", op, plen, -1);
     }
-  if (test_hard_reg_class (ADDW_REGS, op))
+  else if (reg_unused_after (insn, op[0])
+           && compare_eq_p (insn))
     {
-      if (l) *l = 3;
-      return (AS2 (sbiw,%A0,0) CR_TAB
-              AS2 (cpc,%C0,__zero_reg__) CR_TAB
-              AS2 (cpc,%D0,__zero_reg__));
+      /* Faster than sbiw if we can clobber the operand.  */
+      avr_asm_len ("or %A0,%B0" CR_TAB
+                   "or %A0,%C0" CR_TAB
+                   "or %A0,%D0", op, plen, -3);
     }
-  if (l) *l = 4;
-  return (AS2 (cp,%A0,__zero_reg__) CR_TAB
-          AS2 (cpc,%B0,__zero_reg__) CR_TAB
-          AS2 (cpc,%C0,__zero_reg__) CR_TAB
-          AS2 (cpc,%D0,__zero_reg__));
+  else
+    {
+      avr_out_compare (insn, op, plen);
+    }
+
+  return "";
 }
 
 
@@ -4412,6 +4623,318 @@ lshrsi3_out (rtx insn, rtx operands[], int *len)
   return "";
 }
 
+
+/* Output addition of register XOP[0] and compile time constant XOP[2]:
+
+      XOP[0] = XOP[0] + XOP[2]
+
+   and return "".  If PLEN == NULL, print assembler instructions to perform the
+   addition; otherwise, set *PLEN to the length of the instruction sequence (in
+   words) printed with PLEN == NULL.  XOP[3] is an 8-bit scratch register.
+   CODE == PLUS:  perform addition by using ADD instructions.
+   CODE == MINUS: perform addition by using SUB instructions.  */
+
+static void
+avr_out_plus_1 (rtx *xop, int *plen, enum rtx_code code)
+{
+  /* MODE of the operation.  */
+  enum machine_mode mode = GET_MODE (xop[0]);
+
+  /* Number of bytes to operate on.  */
+  int i, n_bytes = GET_MODE_SIZE (mode);
+
+  /* Value (0..0xff) held in clobber register op[3] or -1 if unknown.  */
+  int clobber_val = -1;
+
+  /* op[0]: 8-bit destination register
+     op[1]: 8-bit const int
+     op[2]: 8-bit scratch register */
+  rtx op[3];
+
+  /* Started the operation?  Before starting the operation we may skip
+     adding 0.  This is no more true after the operation started because
+     carry must be taken into account.  */
+  bool started = false;
+
+  /* Value to add.  There are two ways to add VAL: R += VAL and R -= -VAL.  */
+  rtx xval = xop[2];
+
+  if (MINUS == code)
+    xval = gen_int_mode (-UINTVAL (xval), mode);
+
+  op[2] = xop[3];
+
+  if (plen)
+    *plen = 0;
+
+  for (i = 0; i < n_bytes; i++)
+    {
+      /* We operate byte-wise on the destination.  */
+      rtx reg8 = simplify_gen_subreg (QImode, xop[0], mode, i);
+      rtx xval8 = simplify_gen_subreg (QImode, xval, mode, i);
+
+      /* 8-bit value to operate with this byte. */
+      unsigned int val8 = UINTVAL (xval8) & GET_MODE_MASK (QImode);
+
+      /* Registers R16..R31 can operate with immediate.  */
+      bool ld_reg_p = test_hard_reg_class (LD_REGS, reg8);
+
+      op[0] = reg8;
+      op[1] = GEN_INT (val8);
+      
+      if (!started && i % 2 == 0
+          && test_hard_reg_class (ADDW_REGS, reg8))
+        {
+          rtx xval16 = simplify_gen_subreg (HImode, xval, mode, i);
+          unsigned int val16 = UINTVAL (xval16) & GET_MODE_MASK (HImode);
+
+          /* Registers R24, X, Y, Z can use ADIW/SBIW with constants < 64
+             i.e. operate word-wise.  */
+
+          if (val16 < 64)
+            {
+              if (val16 != 0)
+                {
+                  started = true;
+                  avr_asm_len (code == PLUS ? "adiw %0,%1" : "sbiw %0,%1",
+                               op, plen, 1);
+                }
+
+              i++;
+              continue;
+            }
+        }
+
+      if (val8 == 0)
+        {
+          if (started)
+            avr_asm_len (code == PLUS
+                         ? "adc %0,__zero_reg__" : "sbc %0,__zero_reg__",
+                         op, plen, 1);
+          continue;
+        }
+
+      switch (code)
+        {
+        case PLUS:
+
+          gcc_assert (plen != NULL || REG_P (op[2]));
+
+          if (clobber_val != (int) val8)
+            avr_asm_len ("ldi %2,%1", op, plen, 1);
+          clobber_val = (int) val8;
+              
+          avr_asm_len (started ? "adc %0,%2" : "add %0,%2", op, plen, 1);
+
+          break; /* PLUS */
+
+        case MINUS:
+
+          if (ld_reg_p)
+            avr_asm_len (started ? "sbci %0,%1" : "subi %0,%1", op, plen, 1);
+          else
+            {
+              gcc_assert (plen != NULL || REG_P (op[2]));
+
+              if (clobber_val != (int) val8)
+                avr_asm_len ("ldi %2,%1", op, plen, 1);
+              clobber_val = (int) val8;
+              
+              avr_asm_len (started ? "sbc %0,%2" : "sub %0,%2", op, plen, 1);
+            }
+
+          break; /* MINUS */
+          
+        default:
+          /* Unknown code */
+          gcc_unreachable();
+        }
+
+      started = true;
+
+    } /* for all sub-bytes */
+}
+
+
+/* Output addition of register XOP[0] and compile time constant XOP[2]:
+
+      XOP[0] = XOP[0] + XOP[2]
+
+   and return "".  If PLEN == NULL, print assembler instructions to perform the
+   addition; otherwise, set *PLEN to the length of the instruction sequence (in
+   words) printed with PLEN == NULL.  */
+
+const char*
+avr_out_plus (rtx *xop, int *plen)
+{
+  int len_plus, len_minus;
+
+  /* Work out if  XOP[0] += XOP[2]  is better or  XOP[0] -= -XOP[2].  */
+  
+  avr_out_plus_1 (xop, &len_plus, PLUS);
+  avr_out_plus_1 (xop, &len_minus, MINUS);
+
+  if (plen)
+    *plen = (len_minus <= len_plus) ? len_minus : len_plus;
+  else if (len_minus <= len_plus)
+    avr_out_plus_1 (xop, NULL, MINUS);
+  else
+    avr_out_plus_1 (xop, NULL, PLUS);
+
+  return "";
+}
+
+
+/* Output bit operation (IOR, AND, XOR) with register XOP[0] and compile
+   time constant XOP[2]:
+
+      XOP[0] = XOP[0] <op> XOP[2]
+
+   and return "".  If PLEN == NULL, print assembler instructions to perform the
+   operation; otherwise, set *PLEN to the length of the instruction sequence
+   (in words) printed with PLEN == NULL.  XOP[3] is either an 8-bit clobber
+   register or SCRATCH if no clobber register is needed for the operation.  */
+
+const char*
+avr_out_bitop (rtx insn, rtx *xop, int *plen)
+{
+  /* CODE and MODE of the operation.  */
+  enum rtx_code code = GET_CODE (SET_SRC (single_set (insn)));
+  enum machine_mode mode = GET_MODE (xop[0]);
+
+  /* Number of bytes to operate on.  */
+  int i, n_bytes = GET_MODE_SIZE (mode);
+
+  /* Value of T-flag (0 or 1) or -1 if unknow.  */
+  int set_t = -1;
+
+  /* Value (0..0xff) held in clobber register op[3] or -1 if unknown.  */
+  int clobber_val = -1;
+
+  /* op[0]: 8-bit destination register
+     op[1]: 8-bit const int
+     op[2]: 8-bit clobber register or SCRATCH
+     op[3]: 8-bit register containing 0xff or NULL_RTX  */
+  rtx op[4];
+
+  op[2] = xop[3];
+  op[3] = NULL_RTX;
+
+  if (plen)
+    *plen = 0;
+
+  for (i = 0; i < n_bytes; i++)
+    {
+      /* We operate byte-wise on the destination.  */
+      rtx reg8 = simplify_gen_subreg (QImode, xop[0], mode, i);
+      rtx xval8 = simplify_gen_subreg (QImode, xop[2], mode, i);
+
+      /* 8-bit value to operate with this byte. */
+      unsigned int val8 = UINTVAL (xval8) & GET_MODE_MASK (QImode);
+
+      /* Number of bits set in the current byte of the constant.  */
+      int pop8 = avr_popcount (val8);
+
+      /* Registers R16..R31 can operate with immediate.  */
+      bool ld_reg_p = test_hard_reg_class (LD_REGS, reg8);
+
+      op[0] = reg8;
+      op[1] = GEN_INT (val8);
+    
+      switch (code)
+        {
+        case IOR:
+
+          if (0 == pop8)
+            continue;
+          else if (ld_reg_p)
+            avr_asm_len ("ori %0,%1", op, plen, 1);
+          else if (1 == pop8)
+            {
+              if (set_t != 1)
+                avr_asm_len ("set", op, plen, 1);
+              set_t = 1;
+              
+              op[1] = GEN_INT (exact_log2 (val8));
+              avr_asm_len ("bld %0,%1", op, plen, 1);
+            }
+          else if (8 == pop8)
+            {
+              if (op[3] != NULL_RTX)
+                avr_asm_len ("mov %0,%3", op, plen, 1);
+              else
+                avr_asm_len ("clr %0" CR_TAB
+                             "dec %0", op, plen, 2);
+
+              op[3] = op[0];
+            }
+          else
+            {
+              if (clobber_val != (int) val8)
+                avr_asm_len ("ldi %2,%1", op, plen, 1);
+              clobber_val = (int) val8;
+              
+              avr_asm_len ("or %0,%2", op, plen, 1);
+            }
+
+          continue; /* IOR */
+
+        case AND:
+
+          if (8 == pop8)
+            continue;
+          else if (0 == pop8)
+            avr_asm_len ("clr %0", op, plen, 1);
+          else if (ld_reg_p)
+            avr_asm_len ("andi %0,%1", op, plen, 1);
+          else if (7 == pop8)
+            {
+              if (set_t != 0)
+                avr_asm_len ("clt", op, plen, 1);
+              set_t = 0;
+              
+              op[1] = GEN_INT (exact_log2 (GET_MODE_MASK (QImode) & ~val8));
+              avr_asm_len ("bld %0,%1", op, plen, 1);
+            }
+          else
+            {
+              if (clobber_val != (int) val8)
+                avr_asm_len ("ldi %2,%1", op, plen, 1);
+              clobber_val = (int) val8;
+              
+              avr_asm_len ("and %0,%2", op, plen, 1);
+            }
+
+          continue; /* AND */
+          
+        case XOR:
+
+          if (0 == pop8)
+            continue;
+          else if (8 == pop8)
+            avr_asm_len ("com %0", op, plen, 1);
+          else if (ld_reg_p && val8 == (1 << 7))
+            avr_asm_len ("subi %0,%1", op, plen, 1);
+          else
+            {
+              if (clobber_val != (int) val8)
+                avr_asm_len ("ldi %2,%1", op, plen, 1);
+              clobber_val = (int) val8;
+              
+              avr_asm_len ("eor %0,%2", op, plen, 1);
+            }
+
+          continue; /* XOR */
+          
+        default:
+          /* Unknown rtx_code */
+          gcc_unreachable();
+        }
+    } /* for all sub-bytes */
+
+  return "";
+}
+
 /* Create RTL split patterns for byte sized rotate expressions.  This
   produces a series of move instructions and considers overlap situations.
   Overlapping non-HImode operands need a scratch register.  */
@@ -4561,13 +5084,73 @@ avr_rotate_bytes (rtx operands[])
 }
 
 /* Modifies the length assigned to instruction INSN
- LEN is the initially computed length of the insn.  */
+   LEN is the initially computed length of the insn.  */
 
 int
 adjust_insn_length (rtx insn, int len)
 {
-  rtx patt = PATTERN (insn);
-  rtx set;
+  rtx patt, set;
+  enum attr_adjust_len adjust_len;
+
+  /* Some complex insns don't need length adjustment and therefore
+     the length need not/must not be adjusted for these insns.
+     It is easier to state this in an insn attribute "adjust_len" than
+     to clutter up code here...  */
+  
+  if (-1 == recog_memoized (insn))
+    {
+      return len;
+    }
+
+  /* Read from insn attribute "adjust_len" if/how length is to be adjusted.  */
+
+  adjust_len = get_attr_adjust_len (insn);
+
+  if (adjust_len != ADJUST_LEN_YES)
+    {
+      rtx *op = recog_data.operand;
+      
+      if (adjust_len == ADJUST_LEN_NO)
+        {
+          /* Nothing to adjust: The length from attribute "length" is fine.  */
+          
+          return len;
+        }
+
+      /* Extract insn's operands.  */
+      
+      extract_constrain_insn_cached (insn);
+
+      /* Dispatch to right function.  */
+      
+      switch (adjust_len)
+        {
+        case ADJUST_LEN_RELOAD_IN32:
+          output_reload_insisf (insn, op, op[2], &len);
+          break;
+          
+        case ADJUST_LEN_OUT_BITOP:
+          avr_out_bitop (insn, op, &len);
+          break;
+
+        case ADJUST_LEN_OUT_PLUS:
+          avr_out_plus (op, &len);
+          break;
+
+        case ADJUST_LEN_TSTHI: avr_out_tsthi (insn, op, &len); break;
+        case ADJUST_LEN_TSTSI: avr_out_tstsi (insn, op, &len); break;
+        case ADJUST_LEN_COMPARE: avr_out_compare (insn, op, &len); break;
+          
+        default:
+          gcc_unreachable();
+        }
+      
+      return len;
+    } /* adjust_length != ADJUST_LEN_YES */
+
+  /* adjust_len == "yes": Analyse insn by hand.  */
+  
+  patt = PATTERN (insn);
 
   if (GET_CODE (patt) == SET)
     {
@@ -4587,49 +5170,10 @@ adjust_insn_length (rtx insn, int len)
 	      break;
 	    case SImode:
 	    case SFmode:
-	      output_movsisf (insn, op, NULL_RTX, &len);
+	      output_movsisf (insn, op, &len);
 	      break;
 	    default:
 	      break;
-	    }
-	}
-      else if (op[0] == cc0_rtx && REG_P (op[1]))
-	{
-	  switch (GET_MODE (op[1]))
-	    {
-	    case HImode: out_tsthi (insn, op[1], &len); break;
-	    case SImode: out_tstsi (insn, op[1], &len); break;
-	    default: break;
-	    }
-	}
-      else if (GET_CODE (op[1]) == AND)
-	{
-	  if (GET_CODE (XEXP (op[1],1)) == CONST_INT)
-	    {
-	      HOST_WIDE_INT mask = INTVAL (XEXP (op[1],1));
-	      if (GET_MODE (op[1]) == SImode)
-		len = (((mask & 0xff) != 0xff)
-		       + ((mask & 0xff00) != 0xff00)
-		       + ((mask & 0xff0000L) != 0xff0000L)
-		       + ((mask & 0xff000000L) != 0xff000000L));
-	      else if (GET_MODE (op[1]) == HImode)
-		len = (((mask & 0xff) != 0xff)
-		       + ((mask & 0xff00) != 0xff00));
-	    }
-	}
-      else if (GET_CODE (op[1]) == IOR)
-	{
-	  if (GET_CODE (XEXP (op[1],1)) == CONST_INT)
-	    {
-	      HOST_WIDE_INT mask = INTVAL (XEXP (op[1],1));
-	      if (GET_MODE (op[1]) == SImode)
-		len = (((mask & 0xff) != 0)
-		       + ((mask & 0xff00) != 0)
-		       + ((mask & 0xff0000L) != 0)
-		       + ((mask & 0xff000000L) != 0));
-	      else if (GET_MODE (op[1]) == HImode)
-		len = (((mask & 0xff) != 0)
-		       + ((mask & 0xff00) != 0));
 	    }
 	}
     }
@@ -4658,7 +5202,8 @@ adjust_insn_length (rtx insn, int len)
 	      break;
 	    case SImode:
 	    case SFmode:
-	      output_reload_insisf (insn, op, XEXP (op[2], 0), &len);
+	      /* Handled by ADJUST_LEN_RELOAD_INSISF above.  */
+	      gcc_unreachable();
 	      break;
 	    default:
 	      break;
@@ -4852,7 +5397,7 @@ avr_asm_declare_function_name (FILE *file, const char *name, tree decl)
 
   if (cfun->machine->is_interrupt)
     {
-      if (strncmp (name, "__vector", strlen ("__vector")) != 0)
+      if (!STR_PREFIX_P (name, "__vector"))
         {
           warning_at (DECL_SOURCE_LOCATION (decl), 0,
                       "%qs appears to be a misspelled interrupt handler",
@@ -4861,7 +5406,7 @@ avr_asm_declare_function_name (FILE *file, const char *name, tree decl)
     }
   else if (cfun->machine->is_signal)
     {
-      if (strncmp (name, "__vector", strlen ("__vector")) != 0)
+      if (!STR_PREFIX_P (name, "__vector"))
         {
            warning_at (DECL_SOURCE_LOCATION (decl), 0,
                        "%qs appears to be a misspelled signal handler",
@@ -5017,33 +5562,13 @@ avr_insert_attributes (tree node, tree *attributes)
       if (error_mark_node == node0)
         return;
       
-      if (TYPE_READONLY (node0))
-        {
-          static const char dsec[] = ".progmem.data";
-
-          *attributes = tree_cons (get_identifier ("section"),
-                                   build_tree_list (NULL, build_string (strlen (dsec), dsec)),
-                                   *attributes);
-        }
-      else
+      if (!TYPE_READONLY (node0))
         {
           error ("variable %q+D must be const in order to be put into"
                  " read-only section by means of %<__attribute__((progmem))%>",
                  node);
         }
     }
-}
-
-/* A get_unnamed_section callback for switching to progmem_section.  */
-
-static void
-avr_output_progmem_section_asm_op (const void *arg ATTRIBUTE_UNUSED)
-{
-  fprintf (asm_out_file,
-	   "\t.section .progmem.gcc_sw_table, \"%s\", @progbits\n",
-	   AVR_HAVE_JMP_CALL ? "a" : "ax");
-  /* Should already be aligned, this is just to be safe if it isn't.  */
-  fprintf (asm_out_file, "\t.p2align 1\n");
 }
 
 
@@ -5096,10 +5621,28 @@ avr_output_bss_section_asm_op (const void *data)
 static void
 avr_asm_init_sections (void)
 {
-  progmem_section = get_unnamed_section (AVR_HAVE_JMP_CALL ? 0 : SECTION_CODE,
-					 avr_output_progmem_section_asm_op,
-					 NULL);
+  /* Set up a section for jump tables.  Alignment is handled by
+     ASM_OUTPUT_BEFORE_CASE_LABEL.  */
+  
+  if (AVR_HAVE_JMP_CALL)
+    {
+      progmem_swtable_section
+        = get_unnamed_section (0, output_section_asm_op,
+                               "\t.section\t.progmem.gcc_sw_table"
+                               ",\"a\",@progbits");
+    }
+  else
+    {
+      progmem_swtable_section
+        = get_unnamed_section (SECTION_CODE, output_section_asm_op,
+                               "\t.section\t.progmem.gcc_sw_table"
+                               ",\"ax\",@progbits");
+    }
 
+  progmem_section
+    = get_unnamed_section (0, output_section_asm_op,
+                           "\t.section\t.progmem.data,\"a\",@progbits");
+  
   /* Override section callbacks to keep track of `avr_need_clear_bss_p'
      resp. `avr_need_copy_data_p'.  */
   
@@ -5109,19 +5652,94 @@ avr_asm_init_sections (void)
 }
 
 
+/* Implement `TARGET_ASM_FUNCTION_RODATA_SECTION'.  */
+
+static section*
+avr_asm_function_rodata_section (tree decl)
+{
+  /* If a function is unused and optimized out by -ffunction-sections
+     and --gc-sections, ensure that the same will happen for its jump
+     tables by putting them into individual sections.  */
+
+  unsigned int flags;
+  section * frodata;
+
+  /* Get the frodata section from the default function in varasm.c
+     but treat function-associated data-like jump tables as code
+     rather than as user defined data.  AVR has no constant pools.  */
+  {
+    int fdata = flag_data_sections;
+
+    flag_data_sections = flag_function_sections;
+    frodata = default_function_rodata_section (decl);
+    flag_data_sections = fdata;
+    flags = frodata->common.flags;
+  }
+
+  if (frodata != readonly_data_section
+      && flags & SECTION_NAMED)
+    {
+      /* Adjust section flags and replace section name prefix.  */
+
+      unsigned int i;
+
+      static const char* const prefix[] =
+        {
+          ".rodata",          ".progmem.gcc_sw_table",
+          ".gnu.linkonce.r.", ".gnu.linkonce.t."
+        };
+
+      for (i = 0; i < sizeof (prefix) / sizeof (*prefix); i += 2)
+        {
+          const char * old_prefix = prefix[i];
+          const char * new_prefix = prefix[i+1];
+          const char * name = frodata->named.name;
+
+          if (STR_PREFIX_P (name, old_prefix))
+            {
+              const char *rname = avr_replace_prefix (name, old_prefix, new_prefix);
+
+              flags &= ~SECTION_CODE;
+              flags |= AVR_HAVE_JMP_CALL ? 0 : SECTION_CODE;
+              
+              return get_section (rname, flags, frodata->named.decl);
+            }
+        }
+    }
+        
+  return progmem_swtable_section;
+}
+
+
 /* Implement `TARGET_ASM_NAMED_SECTION'.  */
 /* Track need of __do_clear_bss, __do_copy_data for named sections.  */
 
 static void
 avr_asm_named_section (const char *name, unsigned int flags, tree decl)
 {
+  if (flags & AVR_SECTION_PROGMEM)
+    {
+      const char *old_prefix = ".rodata";
+      const char *new_prefix = ".progmem.data";
+      const char *sname = new_prefix;
+      
+      if (STR_PREFIX_P (name, old_prefix))
+        {
+          sname = avr_replace_prefix (name, old_prefix, new_prefix);
+        }
+
+      default_elf_asm_named_section (sname, flags, decl);
+
+      return;
+    }
+  
   if (!avr_need_copy_data_p)
-    avr_need_copy_data_p = (0 == strncmp (name, ".data", 5)
-                            || 0 == strncmp (name, ".rodata", 7)
-                            || 0 == strncmp (name, ".gnu.linkonce.d", 15));
+    avr_need_copy_data_p = (STR_PREFIX_P (name, ".data")
+                            || STR_PREFIX_P (name, ".rodata")
+                            || STR_PREFIX_P (name, ".gnu.linkonce.d"));
   
   if (!avr_need_clear_bss_p)
-    avr_need_clear_bss_p = (0 == strncmp (name, ".bss", 4));
+    avr_need_clear_bss_p = STR_PREFIX_P (name, ".bss");
   
   default_elf_asm_named_section (name, flags, decl);
 }
@@ -5131,7 +5749,7 @@ avr_section_type_flags (tree decl, const char *name, int reloc)
 {
   unsigned int flags = default_section_type_flags (decl, name, reloc);
 
-  if (strncmp (name, ".noinit", 7) == 0)
+  if (STR_PREFIX_P (name, ".noinit"))
     {
       if (decl && TREE_CODE (decl) == VAR_DECL
 	  && DECL_INITIAL (decl) == NULL_TREE)
@@ -5141,8 +5759,12 @@ avr_section_type_flags (tree decl, const char *name, int reloc)
 		 ".noinit section");
     }
 
-  if (0 == strncmp (name, ".progmem.data", strlen (".progmem.data")))
-    flags &= ~SECTION_WRITE;
+  if (decl && DECL_P (decl)
+      && avr_progmem_p (decl, DECL_ATTRIBUTES (decl)))
+    {
+      flags &= ~SECTION_WRITE;
+      flags |= AVR_SECTION_PROGMEM;
+    }
   
   return flags;
 }
@@ -5171,6 +5793,36 @@ avr_encode_section_info (tree decl, rtx rtl,
   default_encode_section_info (decl, rtl, new_decl_p);
 }
 
+
+/* Implement `TARGET_ASM_SELECT_SECTION' */
+
+static section *
+avr_asm_select_section (tree decl, int reloc, unsigned HOST_WIDE_INT align)
+{
+  section * sect = default_elf_select_section (decl, reloc, align);
+  
+  if (decl && DECL_P (decl)
+      && avr_progmem_p (decl, DECL_ATTRIBUTES (decl)))
+    {
+      if (sect->common.flags & SECTION_NAMED)
+        {
+          const char * name = sect->named.name;
+          const char * old_prefix = ".rodata";
+          const char * new_prefix = ".progmem.data";
+
+          if (STR_PREFIX_P (name, old_prefix))
+            {
+              const char *sname = avr_replace_prefix (name, old_prefix, new_prefix);
+
+              return get_section (sname, sect->common.flags, sect->named.decl);
+            }
+        }
+          
+      return progmem_section;
+    }
+
+  return sect;
+}
 
 /* Implement `TARGET_ASM_FILE_START'.  */
 /* Outputs some appropriate text to go at the start of an assembler
@@ -5413,12 +6065,37 @@ avr_rtx_costs (rtx x, int codearg, int outer_code ATTRIBUTE_UNUSED,
       switch (mode)
 	{
 	case QImode:
+          if (AVR_HAVE_MUL
+              && MULT == GET_CODE (XEXP (x, 0))
+              && register_operand (XEXP (x, 1), QImode))
+            {
+              /* multiply-add */
+              *total = COSTS_N_INSNS (speed ? 4 : 3);
+              /* multiply-add with constant: will be split and load constant. */
+              if (CONST_INT_P (XEXP (XEXP (x, 0), 1)))
+                *total = COSTS_N_INSNS (1) + *total;
+              return true;
+            }
 	  *total = COSTS_N_INSNS (1);
 	  if (GET_CODE (XEXP (x, 1)) != CONST_INT)
 	    *total += avr_operand_rtx_cost (XEXP (x, 1), mode, code, 1, speed);
 	  break;
 
 	case HImode:
+          if (AVR_HAVE_MUL
+              && (MULT == GET_CODE (XEXP (x, 0))
+                  || ASHIFT == GET_CODE (XEXP (x, 0)))
+              && register_operand (XEXP (x, 1), HImode)
+              && (ZERO_EXTEND == GET_CODE (XEXP (XEXP (x, 0), 0))
+                  || SIGN_EXTEND == GET_CODE (XEXP (XEXP (x, 0), 0))))
+            {
+              /* multiply-add */
+              *total = COSTS_N_INSNS (speed ? 5 : 4);
+              /* multiply-add with constant: will be split and load constant. */
+              if (CONST_INT_P (XEXP (XEXP (x, 0), 1)))
+                *total = COSTS_N_INSNS (1) + *total;
+              return true;
+            }
 	  if (GET_CODE (XEXP (x, 1)) != CONST_INT)
 	    {
 	      *total = COSTS_N_INSNS (2);
@@ -5451,6 +6128,33 @@ avr_rtx_costs (rtx x, int codearg, int outer_code ATTRIBUTE_UNUSED,
       return true;
 
     case MINUS:
+      if (AVR_HAVE_MUL
+          && QImode == mode
+          && register_operand (XEXP (x, 0), QImode)
+          && MULT == GET_CODE (XEXP (x, 1)))
+        {
+          /* multiply-sub */
+          *total = COSTS_N_INSNS (speed ? 4 : 3);
+          /* multiply-sub with constant: will be split and load constant. */
+          if (CONST_INT_P (XEXP (XEXP (x, 1), 1)))
+            *total = COSTS_N_INSNS (1) + *total;
+          return true;
+        }
+      if (AVR_HAVE_MUL
+          && HImode == mode
+          && register_operand (XEXP (x, 0), HImode)
+          && (MULT == GET_CODE (XEXP (x, 1))
+              || ASHIFT == GET_CODE (XEXP (x, 1)))
+          && (ZERO_EXTEND == GET_CODE (XEXP (XEXP (x, 1), 0))
+              || SIGN_EXTEND == GET_CODE (XEXP (XEXP (x, 1), 0))))
+        {
+          /* multiply-sub */
+          *total = COSTS_N_INSNS (speed ? 5 : 4);
+          /* multiply-sub with constant: will be split and load constant. */
+          if (CONST_INT_P (XEXP (XEXP (x, 1), 1)))
+            *total = COSTS_N_INSNS (1) + *total;
+          return true;
+        }
     case AND:
     case IOR:
       *total = COSTS_N_INSNS (GET_MODE_SIZE (mode));
@@ -5635,6 +6339,13 @@ avr_rtx_costs (rtx x, int codearg, int outer_code ATTRIBUTE_UNUSED,
                   *total = COSTS_N_INSNS (!speed ? 4 : 6);
                   return true;
                 }
+            }
+          
+          if (const1_rtx == (XEXP (x, 1))
+              && SIGN_EXTEND == GET_CODE (XEXP (x, 0)))
+            {
+              *total = COSTS_N_INSNS (2);
+              return true;
             }
           
 	  if (GET_CODE (XEXP (x, 1)) != CONST_INT)
@@ -6482,21 +7193,17 @@ output_reload_inhi (rtx insn ATTRIBUTE_UNUSED, rtx *operands, int *len)
 }
 
 
-/* Reload a SI or SF compile time constant (OP[1]) into a GPR (OP[0]).
-   CLOBBER_REG is a QI clobber reg needed to move vast majority of consts
-   into a NO_LD_REGS.  If CLOBBER_REG is NULL_RTX we either don't need a
-   clobber reg or have to cook one up.
+/* A helper for `output_reload_insisf'.  */
+/* Set 32-bit register OP[0] to compile-time constant OP[1].
+   CLOBBER_REG is a QI clobber register or NULL_RTX.
+   LEN == NULL: output instructions.
+   LEN != NULL: set *LEN to the length of the instruction sequence
+                (in words) printed with LEN = NULL.
+   If CLEAR_P is true, OP[0] had been cleard to Zero already.
+   If CLEAR_P is false, nothing is known about OP[0].  */
 
-   LEN == NULL: Output instructions.
-   
-   LEN != NULL: Output nothing.  Increment *LEN by number of words occupied
-                by the insns printed.
-
-   Return "".  */
-
-const char *
-output_reload_insisf (rtx insn ATTRIBUTE_UNUSED,
-                      rtx *op, rtx clobber_reg, int *len)
+static void
+output_reload_insisf_1 (rtx *op, rtx clobber_reg, int *len, bool clear_p)
 {
   rtx src = op[1];
   rtx dest = op[0];
@@ -6571,7 +7278,12 @@ output_reload_insisf (rtx insn ATTRIBUTE_UNUSED,
 
           if (INTVAL (lo16) == INTVAL (hi16))
             {
-              avr_asm_len ("movw %C0,%A0", &op[0], len, 1);
+              if (0 != INTVAL (lo16)
+                  || !clear_p)
+                {
+                  avr_asm_len ("movw %C0,%A0", &op[0], len, 1);
+                }
+              
               break;
             }
         }
@@ -6581,7 +7293,9 @@ output_reload_insisf (rtx insn ATTRIBUTE_UNUSED,
       
       if (ival[n] == 0)
         {
-          avr_asm_len ("clr %0", &xdest[n], len, 1);
+          if (!clear_p)
+            avr_asm_len ("clr %0", &xdest[n], len, 1);
+          
           continue;
         }
 
@@ -6621,8 +7335,18 @@ output_reload_insisf (rtx insn ATTRIBUTE_UNUSED,
       
       if (-1 == ival[n])
         {
-          avr_asm_len ("clr %0" CR_TAB
-                       "dec %0", &xdest[n], len, 2);
+          if (!clear_p)
+            avr_asm_len ("clr %0", &xdest[n], len, 1);
+          
+          avr_asm_len ("dec %0", &xdest[n], len, 1);
+          continue;
+        }
+      else if (1 == ival[n])
+        {
+          if (!clear_p)
+            avr_asm_len ("clr %0", &xdest[n], len, 1);
+          
+          avr_asm_len ("inc %0", &xdest[n], len, 1);
           continue;
         }
 
@@ -6632,13 +7356,6 @@ output_reload_insisf (rtx insn ATTRIBUTE_UNUSED,
       if (NULL_RTX == clobber_reg
           && single_one_operand (xval, QImode))
         {
-          if (1 == ival[n])
-            {
-              avr_asm_len ("clr %0" CR_TAB
-                           "inc %0", &xdest[n], len, 2);
-              continue;
-            }
-          
           xop[0] = xdest[n];
           xop[1] = GEN_INT (exact_log2 (ival[n] & GET_MODE_MASK (QImode)));
 
@@ -6650,8 +7367,10 @@ output_reload_insisf (rtx insn ATTRIBUTE_UNUSED,
               avr_asm_len ("set", xop, len, 1);
             }
 
-          avr_asm_len ("clr %0" CR_TAB
-                       "bld %0,%1", xop, len, 2);
+          if (!clear_p)
+            avr_asm_len ("clr %0", xop, len, 1);
+          
+          avr_asm_len ("bld %0,%1", xop, len, 1);
           continue;
         }
 
@@ -6674,7 +7393,68 @@ output_reload_insisf (rtx insn ATTRIBUTE_UNUSED,
     {
       avr_asm_len ("mov %0,__tmp_reg__", &clobber_reg, len, 1);
     }
-  
+}
+
+
+/* Reload a SI or SF compile time constant OP[1] into the register OP[0].
+   CLOBBER_REG is a QI clobber reg needed to move vast majority of consts
+   into a NO_LD_REGS register.  If CLOBBER_REG is NULL_RTX we either don't
+   need a clobber reg or have to cook one up.
+
+   LEN == NULL: Output instructions.
+   
+   LEN != NULL: Output nothing.  Set *LEN to number of words occupied
+                by the insns printed.
+
+   Return "".  */
+
+const char *
+output_reload_insisf (rtx insn ATTRIBUTE_UNUSED,
+                      rtx *op, rtx clobber_reg, int *len)
+{
+  gcc_assert (REG_P (op[0])
+              && CONSTANT_P (op[1]));
+
+  if (AVR_HAVE_MOVW
+      && !test_hard_reg_class (LD_REGS, op[0]))
+    {
+      int len_clr, len_noclr;
+      
+      /* In some cases it is better to clear the destination beforehand, e.g.
+
+             CLR R2   CLR R3   MOVW R4,R2   INC R2
+
+         is shorther than
+
+             CLR R2   INC R2   CLR  R3      CLR R4   CLR R5
+
+         We find it too tedious to work that out in the print function.
+         Instead, we call the print function twice to get the lengths of
+         both methods and use the shortest one.  */
+         
+      output_reload_insisf_1 (op, clobber_reg, &len_clr, true);
+      output_reload_insisf_1 (op, clobber_reg, &len_noclr, false);
+      
+      if (len_noclr - len_clr == 4)
+        {
+          /* Default needs 4 CLR instructions: clear register beforehand.  */
+          
+          avr_asm_len ("clr %A0" CR_TAB
+                       "clr %B0" CR_TAB
+                       "movw %C0,%A0", &op[0], len, 3);
+          
+          output_reload_insisf_1 (op, clobber_reg, len, true);
+          
+          if (len)
+            *len += 3;
+
+          return "";
+        }
+    }
+
+  /* Default: destination not pre-cleared.  */
+
+  output_reload_insisf_1 (op, clobber_reg, len, false);
   return "";
 }
 
@@ -6691,7 +7471,6 @@ avr_output_bld (rtx operands[], int bit_nr)
 void
 avr_output_addr_vec_elt (FILE *stream, int value)
 {
-  switch_to_section (progmem_section);
   if (AVR_HAVE_JMP_CALL)
     fprintf (stream, "\t.word gs(.L%d)\n", value);
   else

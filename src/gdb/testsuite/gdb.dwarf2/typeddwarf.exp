@@ -22,10 +22,10 @@ if ![dwarf2_support] {
     return 0  
 }
 
-# This test can only be run on x86 and amd64 targets.
+# This test can only be run on x86 and amd64 targets (and not x32).
 if { [is_x86_like_target] } {
     set sfile ${test}.S
-} elseif {[istarget "x86_64-*-*"]} {
+} elseif {[istarget "x86_64-*-*"] && [is_lp64_target]} {
     set sfile ${test}-amd64.S
 } else {
     return 0
@@ -39,9 +39,9 @@ if ![runto_main] {
     return -1
 }
 
-global tests
-set tests(_) -
-unset tests(_)
+# Initialize tests to be an empty array.
+unset -nocomplain tests
+array set tests {}
 
 proc gdb-test {line var value} {
     global tests

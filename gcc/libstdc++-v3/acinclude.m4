@@ -1693,6 +1693,100 @@ AC_DEFUN([GLIBCXX_COMPUTE_STDIO_INTEGER_CONSTANTS], [
 ])
 
 dnl
+dnl Check whether required C++ overloads are present in <math.h>.
+dnl
+
+AC_DEFUN([GLIBCXX_CHECK_MATH_PROTO], [
+
+  AC_LANG_SAVE
+  AC_LANG_CPLUSPLUS
+
+  case "$host" in
+    *-*-solaris2.*)
+      # Solaris 8 FCS only had an overload for double std::abs(double) in
+      # <iso/math_iso.h>.  Patches 111721-04 (SPARC) and 112757-01 (x86)
+      # introduced the full set also found from Solaris 9 onwards.
+      AC_MSG_CHECKING([for float std::abs(float) overload])
+      AC_CACHE_VAL(glibcxx_cv_abs_float, [
+	AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+	  [#include <math.h>
+	   namespace std {
+	     inline float abs(float __x)
+	     {  return __builtin_fabsf(__x); }
+	   }
+	])],
+        [glibcxx_cv_abs_float=no],
+        [glibcxx_cv_abs_float=yes]
+      )])
+
+      # autoheader cannot handle indented templates.
+      AH_VERBATIM([__CORRECT_ISO_CPP_MATH_H_PROTO1],
+        [/* Define if all C++ overloads are available in <math.h>.  */
+#if __cplusplus >= 199711L
+#undef __CORRECT_ISO_CPP_MATH_H_PROTO1
+#endif])
+      AH_VERBATIM([__CORRECT_ISO_CPP_MATH_H_PROTO2],
+        [/* Define if only double std::abs(double) is available in <math.h>.  */
+#if __cplusplus >= 199711L
+#undef __CORRECT_ISO_CPP_MATH_H_PROTO2
+#endif])
+
+      if test $glibcxx_cv_abs_float = yes; then
+        AC_DEFINE(__CORRECT_ISO_CPP_MATH_H_PROTO1)
+      else
+        AC_DEFINE(__CORRECT_ISO_CPP_MATH_H_PROTO2)
+      fi
+      AC_MSG_RESULT($glibcxx_cv_abs_float)
+      ;;
+  esac
+
+  AC_LANG_RESTORE
+])
+
+dnl
+dnl Check whether required C++ overloads are present in <stdlib.h>.
+dnl
+
+AC_DEFUN([GLIBCXX_CHECK_STDLIB_PROTO], [
+
+  AC_LANG_SAVE
+  AC_LANG_CPLUSPLUS
+
+  case "$host" in
+    *-*-solaris2.*)
+      # Solaris 8 FCS lacked the overloads for long std::abs(long) and
+      # ldiv_t std::div(long, long) in <iso/stdlib_iso.h>.  Patches 109607-02
+      # (SPARC) and 109608-02 (x86) introduced them.
+      AC_MSG_CHECKING([for long std::abs(long) overload])
+      AC_CACHE_VAL(glibcxx_cv_abs_long, [
+	AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+	  [#include <stdlib.h>
+	   namespace std {
+	     inline long
+	     abs(long __i) { return labs(__i); }
+	   }
+        ])],
+        [glibcxx_cv_abs_long=no],
+        [glibcxx_cv_abs_long=yes]
+      )])
+
+      # autoheader cannot handle indented templates.
+      AH_VERBATIM([__CORRECT_ISO_CPP_STDLIB_H_PROTO],
+        [/* Define if all C++ overloads are available in <stdlib.h>.  */
+#if __cplusplus >= 199711L
+#undef __CORRECT_ISO_CPP_STDLIB_H_PROTO
+#endif])
+      if test $glibcxx_cv_abs_long = yes; then
+        AC_DEFINE(__CORRECT_ISO_CPP_STDLIB_H_PROTO, 1)
+      fi
+      AC_MSG_RESULT($glibcxx_cv_abs_long)
+      ;;
+  esac
+
+  AC_LANG_RESTORE
+])
+
+dnl
 dnl Check whether macros, etc are present for <system_error>
 dnl
 AC_DEFUN([GLIBCXX_CHECK_SYSTEM_ERROR], [
@@ -1700,7 +1794,9 @@ AC_DEFUN([GLIBCXX_CHECK_SYSTEM_ERROR], [
 m4_pushdef([n_syserr], [1])dnl
 m4_foreach([syserr], [EOWNERDEAD, ENOTRECOVERABLE, ENOLINK, EPROTO, ENODATA,
 		      ENOSR, ENOSTR, ETIME, EBADMSG, ECANCELED,
-		      EOVERFLOW, ENOTSUP, EIDRM, ETXTBSY],
+		      EOVERFLOW, ENOTSUP, EIDRM, ETXTBSY,
+		      ECHILD, ENOSPC, EPERM,
+		      ETIMEDOUT, EWOULDBLOCK],
 [m4_pushdef([SYSERR], m4_toupper(syserr))dnl
 AC_MSG_CHECKING([for syserr])
 AC_CACHE_VAL([glibcxx_cv_system_error[]n_syserr], [
@@ -2320,6 +2416,80 @@ EOF
     fi
     AC_MSG_RESULT($enable_dfp)
     rm -f conftest*
+])
+
+dnl
+dnl Check for GNU 128-bit integer and floating point types.
+dnl
+dnl Note: also checks that the types aren't standard types.
+dnl
+dnl Defines:
+dnl  _GLIBCXX_USE_INT128
+dnl  _GLIBCXX_USE_FLOAT128
+dnl
+AC_DEFUN([GLIBCXX_ENABLE_INT128_FLOAT128], [
+
+  AC_LANG_SAVE
+  AC_LANG_CPLUSPLUS
+
+  # Fake what AC_TRY_COMPILE does, without linking as this is
+  # unnecessary for this test.
+
+    cat > conftest.$ac_ext << EOF
+[#]line __oline__ "configure"
+template<typename T1, typename T2>
+  struct same
+  { typedef T2 type; };
+
+template<typename T>
+  struct same<T, T>;
+
+int main()
+{
+  typename same<long, __int128>::type                i1;
+  typename same<long long, __int128>::type           i2;
+}
+EOF
+
+    AC_MSG_CHECKING([for __int128])
+    if AC_TRY_EVAL(ac_compile); then
+      AC_DEFINE(_GLIBCXX_USE_INT128, 1,
+      [Define if __int128 is supported on this host.])
+      enable_int128=yes
+    else
+      enable_int128=no
+    fi
+    AC_MSG_RESULT($enable_int128)
+    rm -f conftest*
+
+    cat > conftest.$ac_ext << EOF
+[#]line __oline__ "configure"
+template<typename T1, typename T2>
+  struct same
+  { typedef T2 type; };
+
+template<typename T>
+  struct same<T, T>;
+
+int main()
+{
+  typename same<double, __float128>::type      f1;	
+  typename same<long double, __float128>::type f2;
+}
+EOF
+
+    AC_MSG_CHECKING([for __float128])
+    if AC_TRY_EVAL(ac_compile); then
+      AC_DEFINE(_GLIBCXX_USE_FLOAT128, 1,
+      [Define if __float128 is supported on this host.])
+      enable_float128=yes
+    else
+      enable_float128=no
+    fi
+    AC_MSG_RESULT($enable_float128)
+    rm -f conftest*
+
+  AC_LANG_RESTORE
 ])
 
 dnl

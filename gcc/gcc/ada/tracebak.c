@@ -203,9 +203,23 @@ extern void (*Unlock_Task) (void);
 
   */
 
-/*--------------------------- PPC AIX/Darwin ----------------------------*/
+/*------------------- Darwin 8 (OSX 10.4) or newer ----------------------*/
+#if defined (__APPLE__) \
+    && defined (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) \
+    && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 1040
+ 
+#define USE_GCC_UNWINDER
 
-#if ((defined (_POWER) && defined (_AIX)) || \
+#if defined (__i386__) || defined (__x86_64__)
+#define PC_ADJUST -2
+#elif defined (__ppc__) || defined (__ppc64__)
+#define PC_ADJUST -4
+#else
+#error Unhandled darwin architecture.
+#endif
+
+/*------------------------ PPC AIX/Older Darwin -------------------------*/
+#elif ((defined (_POWER) && defined (_AIX)) || \
 (defined (__ppc__) && defined (__APPLE__)))
 
 #define USE_GENERIC_UNWINDER
@@ -259,7 +273,13 @@ struct layout
 
 #define FRAME_OFFSET(FP) 0
 #define PC_ADJUST -4
-#define STOP_FRAME(CURRENT, TOP_STACK) ((CURRENT)->next == 0)
+
+/* According to the base PPC ABI, a toplevel frame entry should feature
+   a null backchain.  What happens at signal handler frontiers isn't so
+   well specified, so we add a safety guard on top.  */
+
+#define STOP_FRAME(CURRENT, TOP_STACK) \
+ ((CURRENT)->next == 0 || ((long)(CURRENT)->next % __alignof__(void*)) != 0)
 
 #define BASE_SKIP 1
 

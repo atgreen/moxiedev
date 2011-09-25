@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/objc.dg/torture/strings
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ iains
 
 722
 
-strings.exp
-file
-
-
-
-
-2010-11-22T19:14:56.256785Z
-17703d82a2ae2c55632ad4c2e1eb693a
-2010-10-22T10:30:29.164979Z
-165821
-iains
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1095
-
 string3.m
 file
 
@@ -161,6 +127,40 @@ iains
 
 
 699
+
+strings.exp
+file
+
+
+
+
+2010-11-22T19:14:56.256785Z
+17703d82a2ae2c55632ad4c2e1eb693a
+2010-10-22T10:30:29.164979Z
+165821
+iains
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1095
 
 string4.m
 file
@@ -298,40 +298,6 @@ nicola
 
 945
 
-const-str-8.m
-file
-
-
-
-
-2011-06-11T04:08:11.579912Z
-3e0b925a0c58f41da0dff25baae98066
-2011-06-06T22:46:58.006232Z
-174727
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-963
-
 const-cfstring-1.m
 file
 
@@ -365,6 +331,40 @@ iains
 
 
 2267
+
+const-str-8.m
+file
+
+
+
+
+2011-06-11T04:08:11.579912Z
+3e0b925a0c58f41da0dff25baae98066
+2011-06-06T22:46:58.006232Z
+174727
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+963
 
 const-str-9.m
 file

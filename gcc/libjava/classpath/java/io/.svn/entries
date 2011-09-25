@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/java/io
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,14 +26,14 @@ gandalf
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-FileReader.java
+Reader.java
 file
 
 
 
 
-2011-06-04T18:38:15.665104Z
-d33ad980405d8373ef9fe65befc25079
+2011-06-04T18:38:15.666104Z
+bee98b109fe5613299fba265abef1490
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -58,41 +58,7 @@ gandalf
 
 
 
-3493
-
-CharConversionException.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-77b6282539c010ca1c0737e3eb108930
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2599
+10381
 
 ObjectInputStream.java
 file
@@ -128,14 +94,48 @@ gandalf
 
 71292
 
-Reader.java
+CharConversionException.java
 file
 
 
 
 
-2011-06-04T18:38:15.666104Z
-bee98b109fe5613299fba265abef1490
+2009-04-24T17:47:08.000000Z
+77b6282539c010ca1c0737e3eb108930
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2599
+
+FileReader.java
+file
+
+
+
+
+2011-06-04T18:38:15.665104Z
+d33ad980405d8373ef9fe65befc25079
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -160,7 +160,7 @@ gandalf
 
 
 
-10381
+3493
 
 BufferedReader.java
 file
@@ -298,40 +298,6 @@ gandalf
 
 4741
 
-Writer.java
-file
-
-
-
-
-2011-06-04T18:38:15.667104Z
-842bd4aebf1a45d32baf720f55f304ed
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6971
-
 FileWriter.java
 file
 
@@ -365,6 +331,40 @@ gandalf
 
 
 5034
+
+Writer.java
+file
+
+
+
+
+2011-06-04T18:38:15.667104Z
+842bd4aebf1a45d32baf720f55f304ed
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6971
 
 FileDescriptor.java
 file
@@ -400,40 +400,6 @@ gandalf
 
 4632
 
-File.java
-file
-
-
-
-
-2011-06-04T18:38:15.668104Z
-02903a21b3f6dc2cfbc0d30a1e5ba4f6
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-52657
-
 BufferedWriter.java
 file
 
@@ -467,6 +433,40 @@ gandalf
 
 
 8337
+
+File.java
+file
+
+
+
+
+2011-06-04T18:38:15.668104Z
+02903a21b3f6dc2cfbc0d30a1e5ba4f6
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+52657
 
 UTFDataFormatException.java
 file
@@ -1114,40 +1114,6 @@ gandalf
 
 14184
 
-FileNotFoundException.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-d0faa3a75fdc462d4ea48e21eb986e62
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2646
-
 NotActiveException.java
 file
 
@@ -1181,6 +1147,40 @@ tromey
 
 
 2527
+
+FileNotFoundException.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+d0faa3a75fdc462d4ea48e21eb986e62
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2646
 
 InterruptedIOException.java
 file
@@ -1250,40 +1250,6 @@ tromey
 
 1979
 
-SerializablePermission.java
-file
-
-
-
-
-2011-06-04T18:38:15.674104Z
-bbdb6b7a78db56cd98eb04bb921673ce
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3960
-
 BufferedOutputStream.java
 file
 
@@ -1317,6 +1283,40 @@ gandalf
 
 
 6376
+
+SerializablePermission.java
+file
+
+
+
+
+2011-06-04T18:38:15.674104Z
+bbdb6b7a78db56cd98eb04bb921673ce
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3960
 
 FilterInputStream.java
 file
@@ -1454,14 +1454,14 @@ gandalf
 
 9256
 
-StringReader.java
+PrintWriter.java
 file
 
 
 
 
-2011-06-04T18:38:15.675104Z
-017bca1ff1762cee1d4904346d596f39
+2011-06-04T18:38:15.676104Z
+9bb8e07963013eb166bc65dc7bb59018
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -1486,7 +1486,7 @@ gandalf
 
 
 
-6484
+19340
 
 DataInput.java
 file
@@ -1522,14 +1522,14 @@ gandalf
 
 19081
 
-PrintWriter.java
+StringReader.java
 file
 
 
 
 
-2011-06-04T18:38:15.676104Z
-9bb8e07963013eb166bc65dc7bb59018
+2011-06-04T18:38:15.675104Z
+017bca1ff1762cee1d4904346d596f39
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -1554,7 +1554,7 @@ gandalf
 
 
 
-19340
+6484
 
 DataOutput.java
 file
@@ -1590,40 +1590,6 @@ gandalf
 
 12275
 
-StringBufferInputStream.java
-file
-
-
-
-
-2011-06-04T18:38:15.677104Z
-7eea5cd834c0b4275800501645e6705c
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6790
-
 InvalidObjectException.java
 file
 
@@ -1657,6 +1623,40 @@ tromey
 
 
 2480
+
+StringBufferInputStream.java
+file
+
+
+
+
+2011-06-04T18:38:15.677104Z
+7eea5cd834c0b4275800501645e6705c
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6790
 
 PipedWriter.java
 file
@@ -1692,40 +1692,6 @@ gandalf
 
 6410
 
-ByteArrayOutputStream.java
-file
-
-
-
-
-2011-06-04T18:38:15.677104Z
-973704791df6e4912fbf5f18b9d4df75
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-9576
-
 CharArrayReader.java
 file
 
@@ -1760,17 +1726,17 @@ gandalf
 
 10502
 
-StreamCorruptedException.java
+ByteArrayOutputStream.java
 file
 
 
 
 
-2009-04-24T17:47:08.000000Z
-c4ef1d6c9a84261d35ba2101a989925f
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+2011-06-04T18:38:15.677104Z
+973704791df6e4912fbf5f18b9d4df75
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -1792,7 +1758,7 @@ tromey
 
 
 
-2631
+9576
 
 DeleteFileHelper.java
 file
@@ -1827,6 +1793,40 @@ gandalf
 
 
 3268
+
+StreamCorruptedException.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+c4ef1d6c9a84261d35ba2101a989925f
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2631
 
 StringWriter.java
 file
@@ -1998,40 +1998,6 @@ gandalf
 
 6780
 
-IOException.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-bbe394d33ad390db2c2ae6d9cb83a8dc
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2674
-
 ObjectInput.java
 file
 
@@ -2065,6 +2031,40 @@ gandalf
 
 
 5085
+
+IOException.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+bbe394d33ad390db2c2ae6d9cb83a8dc
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2674
 
 Closeable.java
 file

@@ -261,8 +261,7 @@ package Errout is
    --      it, since it makes it clear that the continuation is part of an
    --      unconditional message.
 
-   --    Insertion character !! (unconditional warning)
-
+   --    Insertion character !! (Double exclamation: unconditional warning)
    --      Normally warning messages issued in other than the main unit are
    --      suppressed. If the message ends with !! then this suppression is
    --      avoided. This is currently used by the Compile_Time_Warning pragma
@@ -452,7 +451,9 @@ package Errout is
 
    Error_Msg_Warn : Boolean renames Err_Vars.Error_Msg_Warn;
    --  Used if current message contains a < insertion character to indicate
-   --  if the current message is a warning message.
+   --  if the current message is a warning message. Must be set appropriately
+   --  before any call to Error_Msg_xxx with a < insertion character present.
+   --  Setting is irrelevant if no < insertion character is present.
 
    Error_Msg_String : String  renames Err_Vars.Error_Msg_String;
    Error_Msg_Strlen : Natural renames Err_Vars.Error_Msg_Strlen;
@@ -495,8 +496,8 @@ package Errout is
    --  Note: a special exception is that RM is never treated as a keyword
    --  but instead is copied literally into the message, this avoids the
    --  need for writing 'R'M for all reference manual quotes. A similar
-   --  exception is applied to the occurrence of the string ALFA used in
-   --  error messages about the ALFA subset of Ada.
+   --  exception is applied to the occurrence of the string Alfa used in
+   --  error messages about the Alfa subset of Ada.
 
    --  In the case of names, the default mode for the error text processor
    --  is to surround the name by quotation marks automatically. The case
@@ -800,6 +801,10 @@ package Errout is
    --  by the Feature argument is not supported in either configurable
    --  run-time mode or no run-time mode (as appropriate). In the former case,
    --  the name of the library is output if available.
+
+   procedure Error_Msg_PT (Typ : Node_Id; Subp : Node_Id);
+   --  Posts an error on the protected type declaration Typ indicating wrong
+   --  mode of the first formal of protected type primitive Subp.
 
    procedure dmsg (Id : Error_Msg_Id) renames Erroutc.dmsg;
    --  Debugging routine to dump an error message

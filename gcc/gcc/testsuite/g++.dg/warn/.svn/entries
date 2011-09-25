@@ -1,15 +1,15 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/warn
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-23T15:53:18.431456Z
-177992
-jakub
+2011-09-08T13:54:24.198207Z
+178692
+dodji
 
 
 
@@ -127,6 +127,40 @@ mmitchel
 
 
 150
+
+Wunused-local-typedefs.C
+file
+
+
+
+
+2011-09-25T18:02:33.503897Z
+780184a84b09b327ee0fb574a960e652
+2011-09-08T13:54:24.198207Z
+178692
+dodji
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1905
 
 pr36999.C
 file
@@ -1012,40 +1046,6 @@ dnovillo
 
 208
 
-anonymous-namespace-3.C
-file
-
-
-
-
-2010-07-08T15:18:17.214102Z
-ad010b6ac9d0b345a59f0fa8f97a81e9
-2010-04-06T21:13:07.005055Z
-158030
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-289
-
 Wunused-var-5.C
 file
 
@@ -1079,6 +1079,40 @@ dodji
 
 
 2610
+
+anonymous-namespace-3.C
+file
+
+
+
+
+2010-07-08T15:18:17.214102Z
+ad010b6ac9d0b345a59f0fa8f97a81e9
+2010-04-06T21:13:07.005055Z
+158030
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+289
 
 Wreturn-type-1.C
 file
@@ -2100,40 +2134,6 @@ jason
 
 167
 
-Wreturn-2.C
-file
-
-
-
-
-2009-04-24T17:44:24.000000Z
-6a9ad99dea244e7a1d6655a1e95ccfea
-2004-10-11T03:42:09.000000Z
-88869
-pinskia
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-118
-
 Winline-3.C
 file
 
@@ -2167,6 +2167,40 @@ mmitchel
 
 
 114
+
+Wreturn-2.C
+file
+
+
+
+
+2009-04-24T17:44:24.000000Z
+6a9ad99dea244e7a1d6655a1e95ccfea
+2004-10-11T03:42:09.000000Z
+88869
+pinskia
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+118
 
 Wvla-3.C
 file
@@ -8628,40 +8662,6 @@ jakub
 
 314
 
-conv2.C
-file
-
-
-
-
-2009-04-24T17:44:24.000000Z
-8cdb559ffcb9d887ccbede485723468a
-2007-03-16T23:32:12.135790Z
-123005
-manu
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-106
-
 Wunused-parm-3.C
 file
 
@@ -8695,6 +8695,40 @@ janis
 
 
 914
+
+conv2.C
+file
+
+
+
+
+2009-04-24T17:44:24.000000Z
+8cdb559ffcb9d887ccbede485723468a
+2007-03-16T23:32:12.135790Z
+123005
+manu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+106
 
 Wreturn-type-6.C
 file

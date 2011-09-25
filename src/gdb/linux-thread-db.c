@@ -1140,9 +1140,25 @@ attach_thread (ptid_t ptid, const td_thrhandle_t *th_p,
 
   /* Under GNU/Linux, we have to attach to each and every thread.  */
   if (target_has_execution
-      && tp == NULL
-      && lin_lwp_attach_lwp (BUILD_LWP (ti_p->ti_lid, GET_PID (ptid))) < 0)
-    return 0;
+      && tp == NULL)
+    {
+      int res;
+
+      res = lin_lwp_attach_lwp (BUILD_LWP (ti_p->ti_lid, GET_PID (ptid)));
+      if (res < 0)
+	{
+	  /* Error, stop iterating.  */
+	  return 0;
+	}
+      else if (res > 0)
+	{
+	  /* Pretend this thread doesn't exist yet, and keep
+	     iterating.  */
+	  return 1;
+	}
+
+      /* Otherwise, we sucessfully attached to the thread.  */
+    }
 
   /* Construct the thread's private data.  */
   private = xmalloc (sizeof (struct private_thread_info));
@@ -1536,20 +1552,6 @@ thread_db_find_new_threads_2 (ptid_t ptid, int until_no_new)
   int pid = ptid_get_pid (ptid);
   int i, loop;
 
-  if (target_has_execution)
-    {
-      struct lwp_info *lp;
-
-      /* In linux, we can only read memory through a stopped lwp.  */
-      ALL_LWPS (lp, ptid)
-	if (lp->stopped && ptid_get_pid (lp->ptid) == pid)
-	  break;
-
-      if (!lp)
-	/* There is no stopped thread.  Bail out.  */
-	return;
-    }
-
   info = get_thread_db_info (GET_PID (ptid));
 
   /* Access an lwp we know is stopped.  */
@@ -1591,13 +1593,25 @@ static void
 thread_db_find_new_threads (struct target_ops *ops)
 {
   struct thread_db_info *info;
+  struct inferior *inf;
 
-  info = get_thread_db_info (GET_PID (inferior_ptid));
+  ALL_INFERIORS (inf)
+    {
+      struct thread_info *thread;
 
-  if (info == NULL)
-    return;
+      if (inf->pid == 0)
+	continue;
 
-  thread_db_find_new_threads_1 (inferior_ptid);
+      info = get_thread_db_info (inf->pid);
+      if (info == NULL)
+	continue;
+
+      thread = any_live_thread_of_process (inf->pid);
+      if (thread == NULL || thread->executing)
+	continue;
+
+      thread_db_find_new_threads_1 (thread->ptid);
+    }
 
   if (target_has_execution)
     iterate_over_lwps (minus_one_ptid /* iterate over all */,

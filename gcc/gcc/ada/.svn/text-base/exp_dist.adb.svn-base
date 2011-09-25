@@ -328,8 +328,8 @@ package body Exp_Dist is
 
       RPC_Receiver_Decl : Node_Id;
       --  Declaration for the RPC receiver entity associated with the
-      --  designated type. As an exception, for the case of an RACW that
-      --  implements a RAS, no object RPC receiver is generated. Instead,
+      --  designated type. As an exception, in the case of GARLIC, for an RACW
+      --  that implements a RAS, no object RPC receiver is generated. Instead,
       --  RPC_Receiver_Decl is the declaration after which the RPC receiver
       --  would have been inserted.
 
@@ -559,14 +559,9 @@ package body Exp_Dist is
    --  call. Decls provides a location where variable declarations can be
    --  appended to construct the necessary values.
 
-   procedure Specific_Build_Stub_Type
-     (RACW_Type         : Entity_Id;
-      Stub_Type_Comps   : out List_Id;
-      RPC_Receiver_Decl : out Node_Id);
-   --  Build a components list for the stub type associated with an RACW type,
-   --  and build the necessary RPC receiver, if applicable. PCS-specific
-   --  ancillary subprogram for Add_Stub_Type. If no RPC receiver declaration
-   --  is generated, then RPC_Receiver_Decl is set to Empty.
+   function Specific_RPC_Receiver_Decl
+     (RACW_Type : Entity_Id) return Node_Id;
+   --  Build the RPC receiver, for RACW, if applicable, else return Empty
 
    procedure Specific_Build_RPC_Receiver_Body
      (RPC_Receiver : Entity_Id;
@@ -656,10 +651,7 @@ package body Exp_Dist is
          RCI_Locator           : Entity_Id;
          Controlling_Parameter : Entity_Id) return RPC_Target;
 
-      procedure Build_Stub_Type
-        (RACW_Type         : Entity_Id;
-         Stub_Type_Comps   : out List_Id;
-         RPC_Receiver_Decl : out Node_Id);
+      function RPC_Receiver_Decl (RACW_Type : Entity_Id) return Node_Id;
 
       function Build_Subprogram_Receiving_Stubs
         (Vis_Decl                 : Node_Id;
@@ -733,10 +725,7 @@ package body Exp_Dist is
          RCI_Locator           : Entity_Id;
          Controlling_Parameter : Entity_Id) return RPC_Target;
 
-      procedure Build_Stub_Type
-        (RACW_Type         : Entity_Id;
-         Stub_Type_Comps   : out List_Id;
-         RPC_Receiver_Decl : out Node_Id);
+      function RPC_Receiver_Decl (RACW_Type : Entity_Id) return Node_Id;
 
       function Build_Subprogram_Receiving_Stubs
         (Vis_Decl                 : Node_Id;
@@ -1976,7 +1965,6 @@ package body Exp_Dist is
 
       Stub_Elements         : constant Stub_Structure :=
                                 Stubs_Table.Get (Designated_Type);
-      Stub_Type_Comps       : List_Id;
       Stub_Type_Decl        : Node_Id;
       Stub_Type_Access_Decl : Node_Id;
 
@@ -1999,7 +1987,9 @@ package body Exp_Dist is
           Chars => New_External_Name
                      (Related_Id => Chars (Stub_Type), Suffix => 'A'));
 
-      Specific_Build_Stub_Type (RACW_Type, Stub_Type_Comps, RPC_Receiver_Decl);
+      RPC_Receiver_Decl := Specific_RPC_Receiver_Decl (RACW_Type);
+
+      --  Create new stub type, copying components from generic RACW_Stub_Type
 
       Stub_Type_Decl :=
         Make_Full_Type_Declaration (Loc,
@@ -2010,7 +2000,8 @@ package body Exp_Dist is
               Limited_Present => True,
               Component_List  =>
                 Make_Component_List (Loc,
-                  Component_Items => Stub_Type_Comps)));
+                  Component_Items =>
+                    Copy_Component_List (RTE (RE_RACW_Stub_Type), Loc))));
 
       --  Does the stub type need to explicitly implement interfaces from the
       --  designated type???
@@ -2041,7 +2032,10 @@ package body Exp_Dist is
 
       if Present (RPC_Receiver_Decl) then
          Append_To (Decls, RPC_Receiver_Decl);
+
       else
+         --  Kludge, requires comment???
+
          RPC_Receiver_Decl := Last (Decls);
       end if;
 
@@ -2084,8 +2078,7 @@ package body Exp_Dist is
    is
       N : constant Name_Id := Chars (Def);
 
-      Overload_Order : constant Int :=
-                         Overload_Counter_Table.Get (N) + 1;
+      Overload_Order : constant Int := Overload_Counter_Table.Get (N) + 1;
 
    begin
       Overload_Counter_Table.Set (N, Overload_Order);
@@ -2400,7 +2393,6 @@ package body Exp_Dist is
           Limited_Present => True,
           Component_List  =>
             Make_Component_List (Loc,
-
               Component_Items => New_List (
                 Make_Component_Declaration (Loc,
                   Defining_Identifier =>
@@ -3875,7 +3867,7 @@ package body Exp_Dist is
             --  Compute distribution identifier
 
             Assign_Subprogram_Identifier
-              (Subp_Def, Current_Subp_Number,  Subp_Val);
+              (Subp_Def, Current_Subp_Number, Subp_Val);
 
             pragma Assert (Current_Subp_Number = Get_Subprogram_Id (Subp_Def));
 
@@ -4712,72 +4704,6 @@ package body Exp_Dist is
          return Target_Info;
       end Build_Stub_Target;
 
-      ---------------------
-      -- Build_Stub_Type --
-      ---------------------
-
-      procedure Build_Stub_Type
-        (RACW_Type         : Entity_Id;
-         Stub_Type_Comps   : out List_Id;
-         RPC_Receiver_Decl : out Node_Id)
-      is
-         Loc    : constant Source_Ptr := Sloc (RACW_Type);
-         Is_RAS : constant Boolean    := not Comes_From_Source (RACW_Type);
-
-      begin
-         Stub_Type_Comps := New_List (
-           Make_Component_Declaration (Loc,
-             Defining_Identifier =>
-               Make_Defining_Identifier (Loc, Name_Origin),
-             Component_Definition =>
-               Make_Component_Definition (Loc,
-                 Aliased_Present    => False,
-                 Subtype_Indication =>
-                   New_Occurrence_Of (RTE (RE_Partition_ID), Loc))),
-
-           Make_Component_Declaration (Loc,
-             Defining_Identifier =>
-               Make_Defining_Identifier (Loc, Name_Receiver),
-             Component_Definition =>
-               Make_Component_Definition (Loc,
-                 Aliased_Present    => False,
-                 Subtype_Indication =>
-                   New_Occurrence_Of (RTE (RE_Unsigned_64), Loc))),
-
-           Make_Component_Declaration (Loc,
-             Defining_Identifier =>
-               Make_Defining_Identifier (Loc, Name_Addr),
-             Component_Definition =>
-               Make_Component_Definition (Loc,
-                 Aliased_Present    => False,
-                 Subtype_Indication =>
-                   New_Occurrence_Of (RTE (RE_Unsigned_64), Loc))),
-
-           Make_Component_Declaration (Loc,
-             Defining_Identifier =>
-               Make_Defining_Identifier (Loc, Name_Asynchronous),
-             Component_Definition =>
-               Make_Component_Definition (Loc,
-                 Aliased_Present    => False,
-                 Subtype_Indication =>
-                   New_Occurrence_Of (Standard_Boolean, Loc))));
-
-         if Is_RAS then
-            RPC_Receiver_Decl := Empty;
-         else
-            declare
-               RPC_Receiver_Request : constant Entity_Id :=
-                                        Make_Defining_Identifier (Loc, Name_R);
-            begin
-               RPC_Receiver_Decl :=
-                 Make_Subprogram_Declaration (Loc,
-                   Build_RPC_Receiver_Specification
-                     (RPC_Receiver      => Make_Temporary (Loc, 'R'),
-                      Request_Parameter => RPC_Receiver_Request));
-            end;
-         end if;
-      end Build_Stub_Type;
-
       --------------------------------------
       -- Build_Subprogram_Receiving_Stubs --
       --------------------------------------
@@ -5253,6 +5179,28 @@ package body Exp_Dist is
       begin
          return Make_Identifier (Loc, Name_V);
       end Result;
+
+      -----------------------
+      -- RPC_Receiver_Decl --
+      -----------------------
+
+      function RPC_Receiver_Decl (RACW_Type : Entity_Id) return Node_Id is
+         Loc    : constant Source_Ptr := Sloc (RACW_Type);
+         Is_RAS : constant Boolean    := not Comes_From_Source (RACW_Type);
+
+      begin
+         --  No RPC receiver for remote access-to-subprogram
+
+         if Is_RAS then
+            return Empty;
+         end if;
+
+         return
+           Make_Subprogram_Declaration (Loc,
+             Build_RPC_Receiver_Specification
+               (RPC_Receiver      => Make_Temporary (Loc, 'R'),
+                Request_Parameter => Make_Defining_Identifier (Loc, Name_R)));
+      end RPC_Receiver_Decl;
 
       ----------------------
       -- Stream_Parameter --
@@ -7659,46 +7607,6 @@ package body Exp_Dist is
 
          return Target_Info;
       end Build_Stub_Target;
-
-      ---------------------
-      -- Build_Stub_Type --
-      ---------------------
-
-      procedure Build_Stub_Type
-        (RACW_Type         : Entity_Id;
-         Stub_Type_Comps   : out List_Id;
-         RPC_Receiver_Decl : out Node_Id)
-      is
-         Loc : constant Source_Ptr := Sloc (RACW_Type);
-
-      begin
-         Stub_Type_Comps := New_List (
-           Make_Component_Declaration (Loc,
-             Defining_Identifier =>
-               Make_Defining_Identifier (Loc, Name_Target),
-             Component_Definition =>
-               Make_Component_Definition (Loc,
-                 Aliased_Present     => False,
-                 Subtype_Indication  =>
-                   New_Occurrence_Of (RTE (RE_Entity_Ptr), Loc))),
-
-           Make_Component_Declaration (Loc,
-             Defining_Identifier =>
-               Make_Defining_Identifier (Loc, Name_Asynchronous),
-
-             Component_Definition =>
-               Make_Component_Definition (Loc,
-                 Aliased_Present    => False,
-                 Subtype_Indication =>
-                   New_Occurrence_Of (Standard_Boolean, Loc))));
-
-         RPC_Receiver_Decl :=
-           Make_Object_Declaration (Loc,
-             Defining_Identifier => Make_Temporary (Loc, 'R'),
-             Aliased_Present     => True,
-             Object_Definition   =>
-               New_Occurrence_Of (RTE (RE_Servant), Loc));
-      end Build_Stub_Type;
 
       -----------------------------
       -- Build_RPC_Receiver_Body --
@@ -10429,12 +10337,11 @@ package body Exp_Dist is
 
                   --  A variant part
 
-                  declare
-                     Discriminant_Type : constant Entity_Id :=
-                                           Etype (Name (Field));
+                  Variant_Part : declare
+                     Disc_Type : constant Entity_Id := Etype (Name (Field));
 
                      Is_Enum : constant Boolean :=
-                                 Is_Enumeration_Type (Discriminant_Type);
+                                 Is_Enumeration_Type (Disc_Type);
 
                      Union_TC_Params : List_Id;
 
@@ -10452,6 +10359,8 @@ package body Exp_Dist is
                      Dummy_Counter : Int := 0;
 
                      Choice_Index : Int := 0;
+                     --  Index of current choice in TypeCode, used to identify
+                     --  it as the default choice if it is a "when others".
 
                      procedure Add_Params_For_Variant_Components;
                      --  Add a struct TypeCode and a corresponding member name
@@ -10465,8 +10374,7 @@ package body Exp_Dist is
                      -- Add_Params_For_Variant_Components --
                      ---------------------------------------
 
-                     procedure Add_Params_For_Variant_Components
-                     is
+                     procedure Add_Params_For_Variant_Components is
                         S_Name : constant Name_Id :=
                                    New_External_Name (U_Name, 'S', -1);
 
@@ -10491,6 +10399,8 @@ package body Exp_Dist is
                         Add_String_Parameter (Name_Str, Union_TC_Params);
                      end Add_Params_For_Variant_Components;
 
+                  --  Start of processing for Variant_Part
+
                   begin
                      Get_Name_String (U_Name);
                      Name_Str := String_From_Name_Buffer;
@@ -10510,8 +10420,7 @@ package body Exp_Dist is
                      --  Build union parameters
 
                      Add_TypeCode_Parameter
-                       (Build_TypeCode_Call
-                          (Loc, Discriminant_Type, Decls),
+                       (Build_TypeCode_Call (Loc, Disc_Type, Decls),
                         Union_TC_Params);
 
                      Add_Long_Parameter (Default, Union_TC_Params);
@@ -10536,72 +10445,65 @@ package body Exp_Dist is
                                  begin
                                     while J <= H loop
                                        if Is_Enum then
-                                          Expr := New_Occurrence_Of (
-                                            Get_Enum_Lit_From_Pos (
-                                              Discriminant_Type, J, Loc), Loc);
+                                          Expr := Get_Enum_Lit_From_Pos
+                                                    (Disc_Type, J, Loc);
                                        else
                                           Expr :=
                                             Make_Integer_Literal (Loc, J);
                                        end if;
+
+                                       Set_Etype (Expr, Disc_Type);
                                        Append_To (Union_TC_Params,
                                          Build_To_Any_Call (Expr, Decls));
 
                                        Add_Params_For_Variant_Components;
                                        J := J + Uint_1;
                                     end loop;
+
+                                    Choice_Index :=
+                                      Choice_Index + UI_To_Int (H - L) + 1;
                                  end;
 
                               when N_Others_Choice =>
 
-                                 --  This variant possess a default choice.
-                                 --  We must therefore set the default
-                                 --  parameter to the current choice index. The
-                                 --  default parameter is by construction the
-                                 --  fourth in the Union_TC_Params list.
+                                 --  This variant has a default choice. We must
+                                 --  therefore set the default parameter to the
+                                 --  current choice index. This parameter is by
+                                 --  construction the 4th in Union_TC_Params.
 
-                                 declare
-                                    Default_Node : constant Node_Id :=
-                                                     Pick (Union_TC_Params, 4);
+                                 Replace
+                                   (Pick (Union_TC_Params, 4),
+                                    Make_Function_Call (Loc,
+                                      Name =>
+                                        New_Occurrence_Of
+                                          (RTE (RE_TA_I32), Loc),
+                                      Parameter_Associations =>
+                                        New_List (
+                                          Make_Integer_Literal (Loc,
+                                            Intval => Choice_Index))));
 
-                                    New_Default_Node : constant Node_Id :=
-                                      Make_Function_Call (Loc,
-                                       Name =>
-                                         New_Occurrence_Of
-                                           (RTE (RE_TA_I32), Loc),
-                                       Parameter_Associations =>
-                                         New_List (
-                                           Make_Integer_Literal
-                                             (Loc, Choice_Index)));
-                                 begin
-                                    Insert_Before (
-                                      Default_Node,
-                                      New_Default_Node);
-
-                                    Remove (Default_Node);
-                                 end;
-
-                                 --  Add a placeholder member label
-                                 --  for the default case.
-                                 --  It must be of the discriminant type.
+                                 --  Add a placeholder member label for the
+                                 --  default case, which must have the
+                                 --  discriminant type.
 
                                  declare
                                     Exp : constant Node_Id :=
-                                      Make_Attribute_Reference (Loc,
-                                       Prefix => New_Occurrence_Of
-                                         (Discriminant_Type, Loc),
-                                       Attribute_Name => Name_First);
+                                            Make_Attribute_Reference (Loc,
+                                              Prefix => New_Occurrence_Of
+                                                          (Disc_Type, Loc),
+                                              Attribute_Name => Name_First);
                                  begin
-                                    Set_Etype (Exp, Discriminant_Type);
+                                    Set_Etype (Exp, Disc_Type);
                                     Append_To (Union_TC_Params,
                                       Build_To_Any_Call (Exp, Decls));
                                  end;
 
                                  Add_Params_For_Variant_Components;
+                                 Choice_Index := Choice_Index + 1;
+
+                              --  Case of an explicit choice
 
                               when others =>
-
-                                 --  Case of an explicit choice
-
                                  declare
                                     Exp : constant Node_Id :=
                                             New_Copy_Tree (Choice);
@@ -10611,15 +10513,15 @@ package body Exp_Dist is
                                  end;
 
                                  Add_Params_For_Variant_Components;
+                                 Choice_Index := Choice_Index + 1;
                            end case;
 
                            Next (Choice);
-                           Choice_Index := Choice_Index + 1;
                         end loop;
 
                         Next_Non_Pragma (Variant);
                      end loop;
-                  end;
+                  end Variant_Part;
                end if;
             end TC_Rec_Add_Process_Element;
 
@@ -10849,6 +10751,16 @@ package body Exp_Dist is
             P_Size : constant Uint      := Esize (FST);
 
          begin
+            --  Special case: for Stream_Element_Offset and Storage_Offset,
+            --  always force transmission as a 64-bit value.
+
+            if Is_RTE (FST, RE_Stream_Element_Offset)
+                 or else
+               Is_RTE (FST, RE_Storage_Offset)
+            then
+               return RTE (RE_Unsigned_64);
+            end if;
+
             if Is_Unsigned_Type (Typ) then
                if P_Size <= 8 then
                   return RTE (RE_Unsigned_8);
@@ -11156,6 +11068,21 @@ package body Exp_Dist is
          Name_Len := Str_Resolve'Length;
          Overload_Counter_Table.Set (Name_Find, 1);
       end Reserve_NamingContext_Methods;
+
+      -----------------------
+      -- RPC_Receiver_Decl --
+      -----------------------
+
+      function RPC_Receiver_Decl (RACW_Type : Entity_Id) return Node_Id is
+         Loc : constant Source_Ptr := Sloc (RACW_Type);
+
+      begin
+         return
+           Make_Object_Declaration (Loc,
+             Defining_Identifier => Make_Temporary (Loc, 'R'),
+             Aliased_Present     => True,
+             Object_Definition   => New_Occurrence_Of (RTE (RE_Servant), Loc));
+      end RPC_Receiver_Decl;
 
    end PolyORB_Support;
 
@@ -11511,26 +11438,22 @@ package body Exp_Dist is
       end case;
    end Specific_Build_Stub_Target;
 
-   ------------------------------
-   -- Specific_Build_Stub_Type --
-   ------------------------------
+   --------------------------------
+   -- Specific_RPC_Receiver_Decl --
+   --------------------------------
 
-   procedure Specific_Build_Stub_Type
-     (RACW_Type         : Entity_Id;
-      Stub_Type_Comps   : out List_Id;
-      RPC_Receiver_Decl : out Node_Id)
+   function Specific_RPC_Receiver_Decl
+     (RACW_Type : Entity_Id) return Node_Id
    is
    begin
       case Get_PCS_Name is
          when Name_PolyORB_DSA =>
-            PolyORB_Support.Build_Stub_Type
-              (RACW_Type, Stub_Type_Comps, RPC_Receiver_Decl);
+            return PolyORB_Support.RPC_Receiver_Decl (RACW_Type);
 
          when others =>
-            GARLIC_Support.Build_Stub_Type
-              (RACW_Type, Stub_Type_Comps, RPC_Receiver_Decl);
+            return GARLIC_Support.RPC_Receiver_Decl (RACW_Type);
       end case;
-   end Specific_Build_Stub_Type;
+   end Specific_RPC_Receiver_Decl;
 
    -----------------------------------------------
    -- Specific_Build_Subprogram_Receiving_Stubs --

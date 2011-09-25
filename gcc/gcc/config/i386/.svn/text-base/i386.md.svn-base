@@ -490,18 +490,16 @@
 
 ;; Set when REX opcode prefix is used.
 (define_attr "prefix_rex" ""
-  (cond [(eq (symbol_ref "TARGET_64BIT") (const_int 0))
+  (cond [(not (match_test "TARGET_64BIT"))
 	   (const_int 0)
 	 (and (eq_attr "mode" "DI")
 	      (and (eq_attr "type" "!push,pop,call,callv,leave,ibr")
 		   (eq_attr "unit" "!mmx")))
 	   (const_int 1)
 	 (and (eq_attr "mode" "QI")
-	      (ne (symbol_ref "x86_extended_QIreg_mentioned_p (insn)")
-		  (const_int 0)))
+	      (match_test "x86_extended_QIreg_mentioned_p (insn)"))
 	   (const_int 1)
-	 (ne (symbol_ref "x86_extended_reg_mentioned_p (insn)")
-	     (const_int 0))
+	 (match_test "x86_extended_reg_mentioned_p (insn)")
 	   (const_int 1)
 	 (and (eq_attr "type" "imovx")
 	      (match_operand:QI 1 "ext_QIreg_operand" ""))
@@ -551,7 +549,7 @@
 	 (eq_attr "unit" "i387")
 	   (const_int 0)
          (and (eq_attr "type" "incdec")
-	      (and (eq (symbol_ref "TARGET_64BIT") (const_int 0))
+	      (and (not (match_test "TARGET_64BIT"))
 		   (ior (match_operand:SI 1 "register_operand" "")
 			(match_operand:HI 1 "register_operand" ""))))
 	   (const_int 0)
@@ -597,7 +595,7 @@
 		       (attr "length_address")))
 	 (ior (eq_attr "prefix" "vex")
 	      (and (eq_attr "prefix" "maybe_vex")
-		    (ne (symbol_ref "TARGET_AVX") (const_int 0))))
+		   (match_test "TARGET_AVX")))
 	   (plus (attr "length_vex")
 		 (plus (attr "length_immediate")
 		       (plus (attr "modrm")
@@ -711,12 +709,19 @@
 (define_attr "movu" "0,1" (const_string "0"))
 
 ;; Used to control the "enabled" attribute on a per-instruction basis.
-(define_attr "isa" "base,noavx,avx,bmi2"
+(define_attr "isa" "base,sse2,sse2_noavx,sse3,sse4,sse4_noavx,noavx,avx,bmi2"
   (const_string "base"))
 
 (define_attr "enabled" ""
-  (cond [(eq_attr "isa" "noavx") (symbol_ref "!TARGET_AVX")
+  (cond [(eq_attr "isa" "sse2") (symbol_ref "TARGET_SSE2")
+	 (eq_attr "isa" "sse2_noavx")
+	   (symbol_ref "TARGET_SSE2 && !TARGET_AVX")
+	 (eq_attr "isa" "sse3") (symbol_ref "TARGET_SSE3")
+	 (eq_attr "isa" "sse4") (symbol_ref "TARGET_SSE4_1")
+	 (eq_attr "isa" "sse4_noavx")
+	   (symbol_ref "TARGET_SSE4_1 && !TARGET_AVX")
 	 (eq_attr "isa" "avx") (symbol_ref "TARGET_AVX")
+	 (eq_attr "isa" "noavx") (symbol_ref "!TARGET_AVX")
 	 (eq_attr "isa" "bmi2") (symbol_ref "TARGET_BMI2")
 	]
 	(const_int 1)))
@@ -745,6 +750,9 @@
 ;; Mark commutative operators as such in constraints.
 (define_code_attr comm [(plus "%") (ss_plus "%") (us_plus "%")
 			(minus "") (ss_minus "") (us_minus "")])
+
+;; Mapping of max and min
+(define_code_iterator maxmin [smax smin umax umin])
 
 ;; Mapping of signed max and min
 (define_code_iterator smaxmin [smax smin])
@@ -1478,7 +1486,8 @@
 	(unspec:HI [(reg:CCFP FPSR_REG)] UNSPEC_FNSTSW))]
   "TARGET_80387"
   "fnstsw\t%0"
-  [(set (attr "length") (symbol_ref "ix86_attr_length_address_default (insn) + 2"))
+  [(set (attr "length")
+	(symbol_ref "ix86_attr_length_address_default (insn) + 2"))
    (set_attr "mode" "SI")
    (set_attr "unit" "i387")])
 
@@ -1505,7 +1514,8 @@
    (set_attr "mode" "SI")])
 
 ;; Pentium Pro can do steps 1 through 3 in one go.
-;; comi*, ucomi*, fcomi*, ficomi*,fucomi* (i387 instructions set condition codes)
+;; comi*, ucomi*, fcomi*, ficomi*, fucomi*
+;; (these i387 instructions set flags directly)
 (define_insn "*cmpfp_i_mixed"
   [(set (reg:CCFP FLAGS_REG)
 	(compare:CCFP (match_operand 0 "register_operand" "f,x")
@@ -1920,16 +1930,13 @@
    (set (attr "mode")
    	(cond [(eq_attr "alternative" "2,3")
 		 (if_then_else
-		   (ne (symbol_ref "optimize_function_for_size_p (cfun)")
-		       (const_int 0))
+		   (match_test "optimize_function_for_size_p (cfun)")
 		   (const_string "V4SF")
 		   (const_string "TI"))
 	       (eq_attr "alternative" "4")
 		 (if_then_else
-		   (ior (ne (symbol_ref "TARGET_SSE_TYPELESS_STORES")
-			    (const_int 0))
-			(ne (symbol_ref "optimize_function_for_size_p (cfun)")
-			    (const_int 0)))
+		   (ior (match_test "TARGET_SSE_TYPELESS_STORES")
+			(match_test "optimize_function_for_size_p (cfun)"))
 		   (const_string "V4SF")
 		   (const_string "TI"))]
 	       (const_string "DI")))])
@@ -1978,13 +1985,11 @@
   [(set_attr "type" "sselog1,ssemov,ssemov")
    (set_attr "prefix" "maybe_vex")
    (set (attr "mode")
-	(cond [(ior (eq (symbol_ref "TARGET_SSE2") (const_int 0))
-		    (ne (symbol_ref "optimize_function_for_size_p (cfun)")
-			(const_int 0)))
+	(cond [(ior (not (match_test "TARGET_SSE2"))
+		    (match_test "optimize_function_for_size_p (cfun)"))
 		 (const_string "V4SF")
 	       (and (eq_attr "alternative" "2")
-		    (ne (symbol_ref "TARGET_SSE_TYPELESS_STORES")
-			(const_int 0)))
+		    (match_test "TARGET_SSE_TYPELESS_STORES"))
 		 (const_string "V4SF")]
 	      (const_string "TI")))])
 
@@ -2153,9 +2158,9 @@
 
 (define_insn "*movdi_internal"
   [(set (match_operand:DI 0 "nonimmediate_operand"
-	  "=r  ,o  ,*y,m*y,*y,*Y2,m  ,*Y2,*Y2,*x,m ,*x,*x,?*Y2,?*Ym")
+	  "=r  ,o  ,*y,m*y,*y,*x,m ,*x,*x,*x,m ,*x,*x,?*x,?*Ym")
 	(match_operand:DI 1 "general_operand"
-	  "riFo,riF,C ,*y ,m ,C  ,*Y2,*Y2,m  ,C ,*x,*x,m ,*Ym ,*Y2"))]
+	  "riFo,riF,C ,*y ,m ,C ,*x,*x,m ,C ,*x,*x,m ,*Ym,*x"))]
   "!TARGET_64BIT && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
 {
   switch (get_attr_type (insn))
@@ -2198,9 +2203,12 @@
     }
 }
   [(set (attr "isa")
-     (if_then_else (eq_attr "alternative" "9,10,11,12")
-       (const_string "noavx")
-       (const_string "*")))
+     (cond [(eq_attr "alternative" "5,6,7,8,13,14")
+	      (const_string "sse2")
+	    (eq_attr "alternative" "9,10,11,12")
+	      (const_string "noavx")
+	   ]
+           (const_string "*")))
    (set (attr "type")
      (cond [(eq_attr "alternative" "0,1")
 	      (const_string "multi")
@@ -2298,11 +2306,11 @@
 	      (const_string "DI")
 	    (eq_attr "alternative" "6,7")
 	      (if_then_else
-	        (eq (symbol_ref "TARGET_SSE2") (const_int 0))
+	        (not (match_test "TARGET_SSE2"))
 	        (const_string "V4SF")
 	        (const_string "TI"))
 	    (and (eq_attr "alternative" "8,9,10,11")
-	         (eq (symbol_ref "TARGET_SSE2") (const_int 0)))
+	         (not (match_test "TARGET_SSE2")))
 	      (const_string "SF")
 	   ]
 	   (const_string "SI")))])
@@ -2326,20 +2334,16 @@
     }
 }
   [(set (attr "type")
-     (cond [(ne (symbol_ref "optimize_function_for_size_p (cfun)")
-		(const_int 0))
+     (cond [(match_test "optimize_function_for_size_p (cfun)")
 	      (const_string "imov")
 	    (and (eq_attr "alternative" "0")
-		 (ior (eq (symbol_ref "TARGET_PARTIAL_REG_STALL")
-			  (const_int 0))
-		      (eq (symbol_ref "TARGET_HIMODE_MATH")
-			  (const_int 0))))
+		 (ior (not (match_test "TARGET_PARTIAL_REG_STALL"))
+		      (not (match_test "TARGET_HIMODE_MATH"))))
 	      (const_string "imov")
 	    (and (eq_attr "alternative" "1,2")
 		 (match_operand:HI 1 "aligned_operand" ""))
 	      (const_string "imov")
-	    (and (ne (symbol_ref "TARGET_MOVX")
-		     (const_int 0))
+	    (and (match_test "TARGET_MOVX")
 		 (eq_attr "alternative" "0,2"))
 	      (const_string "imovx")
 	   ]
@@ -2351,10 +2355,8 @@
 		  (match_operand:HI 1 "aligned_operand" ""))
 	       (const_string "SI")
 	     (and (eq_attr "alternative" "0")
-		  (ior (eq (symbol_ref "TARGET_PARTIAL_REG_STALL")
-			   (const_int 0))
-		       (eq (symbol_ref "TARGET_HIMODE_MATH")
-			   (const_int 0))))
+		  (ior (not (match_test "TARGET_PARTIAL_REG_STALL"))
+		       (not (match_test "TARGET_HIMODE_MATH"))))
 	       (const_string "SI")
 	    ]
 	    (const_string "HI")))])
@@ -2390,19 +2392,15 @@
      (cond [(and (eq_attr "alternative" "5")
 		 (not (match_operand:QI 1 "aligned_operand" "")))
 	      (const_string "imovx")
-	    (ne (symbol_ref "optimize_function_for_size_p (cfun)")
-		(const_int 0))
+	    (match_test "optimize_function_for_size_p (cfun)")
 	      (const_string "imov")
 	    (and (eq_attr "alternative" "3")
-		 (ior (eq (symbol_ref "TARGET_PARTIAL_REG_STALL")
-			  (const_int 0))
-		      (eq (symbol_ref "TARGET_QIMODE_MATH")
-			  (const_int 0))))
+		 (ior (not (match_test "TARGET_PARTIAL_REG_STALL"))
+		      (not (match_test "TARGET_QIMODE_MATH"))))
 	      (const_string "imov")
 	    (eq_attr "alternative" "3,5")
 	      (const_string "imovx")
-	    (and (ne (symbol_ref "TARGET_MOVX")
-		     (const_int 0))
+	    (and (match_test "TARGET_MOVX")
 		 (eq_attr "alternative" "2"))
 	      (const_string "imovx")
 	   ]
@@ -2416,20 +2414,15 @@
 	       (const_string "SI")
 	     (and (eq_attr "type" "imov")
 		  (and (eq_attr "alternative" "0,1")
-		       (and (ne (symbol_ref "TARGET_PARTIAL_REG_DEPENDENCY")
-				(const_int 0))
-			    (and (eq (symbol_ref "optimize_function_for_size_p (cfun)")
-				     (const_int 0))
-				 (eq (symbol_ref "TARGET_PARTIAL_REG_STALL")
-				     (const_int 0))))))
+		       (and (match_test "TARGET_PARTIAL_REG_DEPENDENCY")
+			    (and (not (match_test "optimize_function_for_size_p (cfun)"))
+				 (not (match_test "TARGET_PARTIAL_REG_STALL"))))))
 	       (const_string "SI")
 	     ;; Avoid partial register stalls when not using QImode arithmetic
 	     (and (eq_attr "type" "imov")
 		  (and (eq_attr "alternative" "0,1")
-		       (and (ne (symbol_ref "TARGET_PARTIAL_REG_STALL")
-				(const_int 0))
-			    (eq (symbol_ref "TARGET_QIMODE_MATH")
-				(const_int 0)))))
+		       (and (match_test "TARGET_PARTIAL_REG_STALL")
+			    (not (match_test "TARGET_QIMODE_MATH")))))
 	       (const_string "SI")
 	   ]
 	   (const_string "QI")))])
@@ -2569,8 +2562,7 @@
 }
   [(set (attr "type")
      (if_then_else (ior (not (match_operand:QI 0 "QIreg_operand" ""))
-			(ne (symbol_ref "TARGET_MOVX")
-			    (const_int 0)))
+			(match_test "TARGET_MOVX"))
 	(const_string "imovx")
 	(const_string "imov")))
    (set (attr "mode")
@@ -2596,8 +2588,7 @@
   [(set (attr "type")
      (if_then_else (and (match_operand:QI 0 "register_operand" "")
 			(ior (not (match_operand:QI 0 "QIreg_operand" ""))
-			     (ne (symbol_ref "TARGET_MOVX")
-				 (const_int 0))))
+			     (match_test "TARGET_MOVX")))
 	(const_string "imovx")
 	(const_string "imov")))
    (set (attr "mode")
@@ -2633,8 +2624,7 @@
 }
   [(set (attr "type")
      (if_then_else (ior (not (match_operand:QI 0 "QIreg_operand" ""))
-			(ne (symbol_ref "TARGET_MOVX")
-			    (const_int 0)))
+			(match_test "TARGET_MOVX"))
 	(const_string "imovx")
 	(const_string "imov")))
    (set (attr "mode")
@@ -2661,8 +2651,7 @@
   [(set (attr "type")
      (if_then_else (and (match_operand:QI 0 "register_operand" "")
 			(ior (not (match_operand:QI 0 "QIreg_operand" ""))
-			     (ne (symbol_ref "TARGET_MOVX")
-				 (const_int 0))))
+			     (match_test "TARGET_MOVX")))
 	(const_string "imovx")
 	(const_string "imov")))
    (set (attr "mode")
@@ -2770,7 +2759,7 @@
 
 (define_insn "*pushdf_rex64"
   [(set (match_operand:DF 0 "push_operand" "=<,<,<")
-	(match_operand:DF 1 "general_no_elim_operand" "f,Yd*rFm,Y2"))]
+	(match_operand:DF 1 "general_no_elim_operand" "f,Yd*rFm,x"))]
   "TARGET_64BIT"
 {
   /* This insn should be already split before reg-stack.  */
@@ -2786,13 +2775,14 @@
 
 (define_insn "*pushdf"
   [(set (match_operand:DF 0 "push_operand" "=<,<,<")
-	(match_operand:DF 1 "general_no_elim_operand" "f,Yd*rFo,Y2"))]
+	(match_operand:DF 1 "general_no_elim_operand" "f,Yd*rFo,x"))]
   "!TARGET_64BIT"
 {
   /* This insn should be already split before reg-stack.  */
   gcc_unreachable ();
 }
-  [(set_attr "type" "multi")
+  [(set_attr "isa" "*,*,sse2")
+   (set_attr "type" "multi")
    (set_attr "unit" "i387,*,*")
    (set_attr "mode" "DF,DI,DF")])
 
@@ -2926,16 +2916,13 @@
    (set (attr "mode")
         (cond [(eq_attr "alternative" "0,2")
 		 (if_then_else
-		   (ne (symbol_ref "optimize_function_for_size_p (cfun)")
-		       (const_int 0))
+		   (match_test "optimize_function_for_size_p (cfun)")
 		   (const_string "V4SF")
 		   (const_string "TI"))
 	       (eq_attr "alternative" "1")
 		 (if_then_else
-		   (ior (ne (symbol_ref "TARGET_SSE_TYPELESS_STORES")
-			    (const_int 0))
-			(ne (symbol_ref "optimize_function_for_size_p (cfun)")
-			    (const_int 0)))
+		   (ior (match_test "TARGET_SSE_TYPELESS_STORES")
+			(match_test "optimize_function_for_size_p (cfun)"))
 		   (const_string "V4SF")
 		   (const_string "TI"))]
 	       (const_string "DI")))])
@@ -2976,9 +2963,9 @@
 
 (define_insn "*movdf_internal_rex64"
   [(set (match_operand:DF 0 "nonimmediate_operand"
-		"=f,m,f,?r,?m,?r,!o,Y2*x,Y2*x,Y2*x,m   ,Yi,r ")
+		"=f,m,f,?r,?m,?r,!o,x,x,x,m,Yi,r ")
 	(match_operand:DF 1 "general_operand"
-		"fm,f,G,rm,r ,F ,F ,C   ,Y2*x,m   ,Y2*x,r ,Yi"))]
+		"fm,f,G,rm,r ,F ,F ,C,x,m,x,r ,Yi"))]
   "TARGET_64BIT && !(MEM_P (operands[0]) && MEM_P (operands[1]))
    && (!can_create_pseudo_p ()
        || (ix86_cmodel == CM_MEDIUM || ix86_cmodel == CM_LARGE)
@@ -3046,7 +3033,17 @@
       gcc_unreachable();
     }
 }
-  [(set_attr "type" "fmov,fmov,fmov,imov,imov,imov,multi,sselog1,ssemov,ssemov,ssemov,ssemov,ssemov")
+  [(set (attr "type")
+	(cond [(eq_attr "alternative" "0,1,2")
+		 (const_string "fmov")
+	       (eq_attr "alternative" "3,4,5")
+		 (const_string "imov")
+	       (eq_attr "alternative" "6")
+		 (const_string "multi")
+	       (eq_attr "alternative" "7")
+		 (const_string "sselog1")
+	      ]
+	      (const_string "ssemov")))
    (set (attr "modrm")
      (if_then_else
        (and (eq_attr "alternative" "5") (eq_attr "type" "imov"))
@@ -3073,11 +3070,9 @@
 
 	       /* xorps is one byte shorter.  */
 	       (eq_attr "alternative" "7")
-		 (cond [(ne (symbol_ref "optimize_function_for_size_p (cfun)")
-			    (const_int 0))
+		 (cond [(match_test "optimize_function_for_size_p (cfun)")
 			  (const_string "V4SF")
-			(ne (symbol_ref "TARGET_SSE_LOAD0_BY_PXOR")
-			    (const_int 0))
+			(match_test "TARGET_SSE_LOAD0_BY_PXOR")
 			  (const_string "TI")
 		       ]
 		       (const_string "V2DF"))
@@ -3089,11 +3084,9 @@
 		  movaps encodes one byte shorter.  */
 	       (eq_attr "alternative" "8")
 		 (cond
-		   [(ne (symbol_ref "optimize_function_for_size_p (cfun)")
-		        (const_int 0))
+		   [(match_test "optimize_function_for_size_p (cfun)")
 		      (const_string "V4SF")
-		    (ne (symbol_ref "TARGET_SSE_PARTIAL_REG_DEPENDENCY")
-		        (const_int 0))
+		    (match_test "TARGET_SSE_PARTIAL_REG_DEPENDENCY")
 		      (const_string "V2DF")
 		   ]
 		   (const_string "DF"))
@@ -3102,8 +3095,7 @@
 		  of register.  */
 	       (eq_attr "alternative" "9")
 		 (if_then_else
-		   (ne (symbol_ref "TARGET_SSE_SPLIT_REGS")
-		       (const_int 0))
+		   (match_test "TARGET_SSE_SPLIT_REGS")
 		   (const_string "V1DF")
 		   (const_string "DF"))
 	      ]
@@ -3112,9 +3104,9 @@
 ;; Possible store forwarding (partial memory) stall in alternative 4.
 (define_insn "*movdf_internal"
   [(set (match_operand:DF 0 "nonimmediate_operand"
-		"=f,m,f,?Yd*r ,!o   ,Y2*x,Y2*x,Y2*x,m  ")
+		"=f,m,f,?Yd*r ,!o   ,x,x,x,m,*x,*x,*x,m")
 	(match_operand:DF 1 "general_operand"
-		"fm,f,G,Yd*roF,FYd*r,C   ,Y2*x,m   ,Y2*x"))]
+		"fm,f,G,Yd*roF,FYd*r,C,x,m,x,C ,*x,m ,*x"))]
   "!TARGET_64BIT && !(MEM_P (operands[0]) && MEM_P (operands[1]))
    && (!can_create_pseudo_p ()
        || (ix86_cmodel == CM_MEDIUM || ix86_cmodel == CM_LARGE)
@@ -3142,11 +3134,15 @@
       return "#";
 
     case 5:
+    case 9:
       return standard_sse_constant_opcode (insn, operands[1]);
 
     case 6:
     case 7:
     case 8:
+    case 10:
+    case 11:
+    case 12:
       switch (get_attr_mode (insn))
 	{
 	case MODE_V2DF:
@@ -3173,7 +3169,19 @@
       gcc_unreachable ();
     }
 }
-  [(set_attr "type" "fmov,fmov,fmov,multi,multi,sselog1,ssemov,ssemov,ssemov")
+  [(set (attr "isa")
+     (if_then_else (eq_attr "alternative" "5,6,7,8")
+       (const_string "sse2")
+       (const_string "*")))
+   (set (attr "type")
+	(cond [(eq_attr "alternative" "0,1,2")
+		 (const_string "fmov")
+	       (eq_attr "alternative" "3,4")
+		 (const_string "multi")
+	       (eq_attr "alternative" "5,9")
+		 (const_string "sselog1")
+	      ]
+	      (const_string "ssemov")))
    (set (attr "prefix")
      (if_then_else (eq_attr "alternative" "0,1,2,3,4")
        (const_string "orig")
@@ -3189,19 +3197,17 @@
 		 (const_string "SI")
 
 	       /* For SSE1, we have many fewer alternatives.  */
-	       (eq (symbol_ref "TARGET_SSE2") (const_int 0))
+	       (not (match_test "TARGET_SSE2"))
 		 (if_then_else
-		   (eq_attr "alternative" "5,6")
+		   (eq_attr "alternative" "5,6,9,10")
 		   (const_string "V4SF")
 		   (const_string "V2SF"))
 
 	       /* xorps is one byte shorter.  */
-	       (eq_attr "alternative" "5")
-		 (cond [(ne (symbol_ref "optimize_function_for_size_p (cfun)")
-			    (const_int 0))
+	       (eq_attr "alternative" "5,9")
+		 (cond [(match_test "optimize_function_for_size_p (cfun)")
 			  (const_string "V4SF")
-			(ne (symbol_ref "TARGET_SSE_LOAD0_BY_PXOR")
-			    (const_int 0))
+			(match_test "TARGET_SSE_LOAD0_BY_PXOR")
 			  (const_string "TI")
 		       ]
 		       (const_string "V2DF"))
@@ -3211,23 +3217,20 @@
 		  chains, otherwise use short move to avoid extra work.
 
 		  movaps encodes one byte shorter.  */
-	       (eq_attr "alternative" "6")
+	       (eq_attr "alternative" "6,10")
 		 (cond
-		   [(ne (symbol_ref "optimize_function_for_size_p (cfun)")
-		        (const_int 0))
+		   [(match_test "optimize_function_for_size_p (cfun)")
 		      (const_string "V4SF")
-		    (ne (symbol_ref "TARGET_SSE_PARTIAL_REG_DEPENDENCY")
-		        (const_int 0))
+		    (match_test "TARGET_SSE_PARTIAL_REG_DEPENDENCY")
 		      (const_string "V2DF")
 		   ]
 		   (const_string "DF"))
 	       /* For architectures resolving dependencies on register
 		  parts we may avoid extra work to zero out upper part
 		  of register.  */
-	       (eq_attr "alternative" "7")
+	       (eq_attr "alternative" "7,11")
 		 (if_then_else
-		   (ne (symbol_ref "TARGET_SSE_SPLIT_REGS")
-		       (const_int 0))
+		   (match_test "TARGET_SSE_SPLIT_REGS")
 		   (const_string "V1DF")
 		   (const_string "DF"))
 	      ]
@@ -3292,7 +3295,17 @@
       gcc_unreachable ();
     }
 }
-  [(set_attr "type" "fmov,fmov,fmov,imov,imov,sselog1,ssemov,ssemov,ssemov,mmxmov,mmxmov,mmxmov,ssemov,ssemov,mmxmov,mmxmov")
+  [(set (attr "type")
+	(cond [(eq_attr "alternative" "0,1,2")
+		 (const_string "fmov")
+	       (eq_attr "alternative" "3,4")
+		 (const_string "multi")
+	       (eq_attr "alternative" "5")
+		 (const_string "sselog1")
+	       (eq_attr "alternative" "9,10,11,14,15")
+		 (const_string "mmxmov")
+	      ]
+	      (const_string "ssemov")))
    (set (attr "prefix")
      (if_then_else (eq_attr "alternative" "5,6,7,8,12,13")
        (const_string "maybe_vex")
@@ -3302,12 +3315,9 @@
 		 (const_string "SI")
 	       (eq_attr "alternative" "5")
 		 (if_then_else
-		   (and (and (ne (symbol_ref "TARGET_SSE_LOAD0_BY_PXOR")
-			    	 (const_int 0))
-			     (ne (symbol_ref "TARGET_SSE2")
-				 (const_int 0)))
-			(eq (symbol_ref "optimize_function_for_size_p (cfun)")
-			    (const_int 0)))
+		   (and (and (match_test "TARGET_SSE_LOAD0_BY_PXOR")
+			     (match_test "TARGET_SSE2"))
+			(not (match_test "optimize_function_for_size_p (cfun)")))
 		   (const_string "TI")
 		   (const_string "V4SF"))
 	       /* For architectures resolving dependencies on
@@ -3322,10 +3332,8 @@
 		  to avoid problems on using packed logical operations.  */
 	       (eq_attr "alternative" "6")
 		 (if_then_else
-		   (ior (ne (symbol_ref "TARGET_SSE_PARTIAL_REG_DEPENDENCY")
-			    (const_int 0))
-			(ne (symbol_ref "TARGET_SSE_SPLIT_REGS")
-			    (const_int 0)))
+		   (ior (match_test "TARGET_SSE_PARTIAL_REG_DEPENDENCY")
+			(match_test "TARGET_SSE_SPLIT_REGS"))
 		   (const_string "V4SF")
 		   (const_string "SF"))
 	       (eq_attr "alternative" "11")
@@ -3445,7 +3453,7 @@
 })
 
 (define_insn "*zero_extendsidi2_rex64"
-  [(set (match_operand:DI 0 "nonimmediate_operand"  "=r,o,?*Ym,?*y,?*Yi,*Y2")
+  [(set (match_operand:DI 0 "nonimmediate_operand"  "=r,o,?*Ym,?*y,?*Yi,*x")
 	(zero_extend:DI
 	 (match_operand:SI 1 "nonimmediate_operand" "rm,0,r   ,m  ,r   ,m")))]
   "TARGET_64BIT"
@@ -3470,7 +3478,7 @@
 
 ;; %%% Kill me once multi-word ops are sane.
 (define_insn "zero_extendsidi2_1"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "=r,?r,?o,?*Ym,?*y,?*Yi,*Y2")
+  [(set (match_operand:DI 0 "nonimmediate_operand" "=r,?r,?o,?*Ym,?*y,?*Yi,*x")
 	(zero_extend:DI
 	 (match_operand:SI 1 "nonimmediate_operand" "0,rm,r ,r   ,m  ,r   ,m")))
    (clobber (reg:CC FLAGS_REG))]
@@ -3483,7 +3491,8 @@
    movd\t{%1, %0|%0, %1}
    %vmovd\t{%1, %0|%0, %1}
    %vmovd\t{%1, %0|%0, %1}"
-  [(set_attr "type" "multi,multi,multi,mmxmov,mmxmov,ssemov,ssemov")
+  [(set_attr "isa" "*,*,*,*,*,*,sse2")
+   (set_attr "type" "multi,multi,multi,mmxmov,mmxmov,ssemov,ssemov")
    (set_attr "prefix" "*,*,*,orig,orig,maybe_vex,maybe_vex")
    (set_attr "mode" "SI,SI,SI,DI,DI,TI,TI")])
 
@@ -4115,10 +4124,10 @@
    (set_attr "mode" "SF")])
 
 (define_insn "*truncdfsf_mixed"
-  [(set (match_operand:SF 0 "nonimmediate_operand"   "=m,Y2 ,?f,?x,?*r")
+  [(set (match_operand:SF 0 "nonimmediate_operand"   "=m,x ,?f,?x,?*r")
 	(float_truncate:SF
-	  (match_operand:DF 1 "nonimmediate_operand" "f ,Y2m,f ,f ,f")))
-   (clobber (match_operand:SF 2 "memory_operand"     "=X,X  ,m ,m ,m"))]
+	  (match_operand:DF 1 "nonimmediate_operand" "f ,xm,f ,f ,f")))
+   (clobber (match_operand:SF 2 "memory_operand"     "=X,X ,m ,m ,m"))]
   "TARGET_MIX_SSE_I387"
 {
   switch (which_alternative)
@@ -4132,7 +4141,8 @@
       return "#";
     }
 }
-  [(set_attr "type" "fmov,ssecvt,multi,multi,multi")
+  [(set_attr "isa" "*,sse2,*,*,*")
+   (set_attr "type" "fmov,ssecvt,multi,multi,multi")
    (set_attr "unit" "*,*,i387,i387,i387")
    (set_attr "prefix" "orig,maybe_vex,orig,orig,orig")
    (set_attr "mode" "SF")])
@@ -4219,7 +4229,7 @@
    (set_attr "mode" "SF")])
 
 (define_insn "*truncxfdf2_mixed"
-  [(set (match_operand:DF 0 "nonimmediate_operand" "=m,?f,?Y2,?*r")
+  [(set (match_operand:DF 0 "nonimmediate_operand" "=m,?f,?x,?*r")
 	(float_truncate:DF
 	  (match_operand:XF 1 "register_operand"   "f ,f ,f  ,f")))
    (clobber (match_operand:DF 2 "memory_operand"   "=X,m ,m  ,m"))]
@@ -4228,7 +4238,8 @@
   gcc_assert (!which_alternative);
   return output_387_reg_move (insn, operands);
 }
-  [(set_attr "type" "fmov,multi,multi,multi")
+  [(set_attr "isa" "*,*,sse2,*")
+   (set_attr "type" "fmov,multi,multi,multi")
    (set_attr "unit" "*,i387,i387,i387")
    (set_attr "mode" "DF")])
 
@@ -4453,10 +4464,10 @@
 
 ;; Avoid vector decoded forms of the instruction.
 (define_peephole2
-  [(match_scratch:DF 2 "Y2")
+  [(match_scratch:DF 2 "x")
    (set (match_operand:SWI48x 0 "register_operand" "")
 	(fix:SWI48x (match_operand:DF 1 "memory_operand" "")))]
-  "TARGET_AVOID_VECTOR_DECODE && optimize_insn_for_speed_p ()"
+  "TARGET_SSE2 && TARGET_AVOID_VECTOR_DECODE && optimize_insn_for_speed_p ()"
   [(set (match_dup 2) (match_dup 1))
    (set (match_dup 0) (fix:SWI48x (match_dup 2)))])
 
@@ -4940,7 +4951,7 @@
    (set (attr "prefix_rex")
      (if_then_else
        (and (eq_attr "prefix" "maybe_vex")
-	    (ne (symbol_ref "<SWI48x:MODE>mode == DImode") (const_int 0)))
+	    (match_test "<SWI48x:MODE>mode == DImode"))
        (const_string "1")
        (const_string "*")))
    (set_attr "unit" "i387,*,*")
@@ -4965,7 +4976,7 @@
    (set (attr "prefix_rex")
      (if_then_else
        (and (eq_attr "prefix" "maybe_vex")
-	    (ne (symbol_ref "<SWI48x:MODE>mode == DImode") (const_int 0)))
+	    (match_test "<SWI48x:MODE>mode == DImode"))
        (const_string "1")
        (const_string "*")))
    (set_attr "athlon_decode" "*,direct")
@@ -5160,7 +5171,7 @@
    (set (attr "prefix_rex")
      (if_then_else
        (and (eq_attr "prefix" "maybe_vex")
-	    (ne (symbol_ref "<SWI48x:MODE>mode == DImode") (const_int 0)))
+	    (match_test "<SWI48x:MODE>mode == DImode"))
        (const_string "1")
        (const_string "*")))
    (set_attr "athlon_decode" "double,direct")
@@ -5195,7 +5206,7 @@
    (set (attr "prefix_rex")
      (if_then_else
        (and (eq_attr "prefix" "maybe_vex")
-	    (ne (symbol_ref "<SWI48x:MODE>mode == DImode") (const_int 0)))
+	    (match_test "<SWI48x:MODE>mode == DImode"))
        (const_string "1")
        (const_string "*")))
    (set_attr "athlon_decode" "direct")
@@ -5485,19 +5496,31 @@
   [(set_attr "type" "alu")
    (set_attr "mode" "QI")])
 
-(define_insn "*lea_1"
+(define_insn_and_split "*lea_1"
   [(set (match_operand:SI 0 "register_operand" "=r")
 	(subreg:SI (match_operand:DI 1 "lea_address_operand" "p") 0))]
   "TARGET_64BIT"
   "lea{l}\t{%a1, %0|%0, %a1}"
+  "&& reload_completed && ix86_avoid_lea_for_addr (insn, operands)"
+  [(const_int 0)]
+{
+  ix86_split_lea_for_addr (operands, SImode);
+  DONE;
+}
   [(set_attr "type" "lea")
    (set_attr "mode" "SI")])
 
-(define_insn "*lea<mode>_2"
+(define_insn_and_split "*lea<mode>_2"
   [(set (match_operand:SWI48 0 "register_operand" "=r")
 	(match_operand:SWI48 1 "lea_address_operand" "p"))]
   ""
   "lea{<imodesuffix>}\t{%a1, %0|%0, %a1}"
+  "reload_completed && ix86_avoid_lea_for_addr (insn, operands)"
+  [(const_int 0)]
+{
+  ix86_split_lea_for_addr (operands, <MODE>mode);
+  DONE;
+}
   [(set_attr "type" "lea")
    (set_attr "mode" "<MODE>")])
 
@@ -5798,6 +5821,17 @@
         (const_string "load")
         (const_string "none")))
    (set_attr "mode" "QI")])
+
+;; Split non destructive adds if we cannot use lea.
+(define_split
+  [(set (match_operand:SWI48 0 "register_operand" "")
+	(plus:SWI48 (match_operand:SWI48 1 "register_operand" "")
+              (match_operand:SWI48 2 "nonmemory_operand" "")))
+   (clobber (reg:CC FLAGS_REG))]
+  "reload_completed && ix86_avoid_lea_for_add (insn, operands)"
+  [(set (match_dup 0) (match_dup 1))
+   (parallel [(set (match_dup 0) (plus:<MODE> (match_dup 0) (match_dup 2)))
+	      (clobber (reg:CC FLAGS_REG))])])
 
 ;; Convert add to the lea pattern to avoid flags dependency.
 (define_split
@@ -6821,7 +6855,7 @@
   "@
    mul{<imodesuffix>}\t%2
    #"
-  [(set_attr "isa" "base,bmi2")
+  [(set_attr "isa" "*,bmi2")
    (set_attr "type" "imul,imulx")
    (set_attr "length_immediate" "0,*")
    (set (attr "athlon_decode")
@@ -7729,7 +7763,7 @@
    (set (attr "prefix_rex")
      (if_then_else
        (and (eq_attr "type" "imovx")
-	    (and (ne (symbol_ref "INTVAL (operands[2]) == 0xff") (const_int 0))
+	    (and (match_test "INTVAL (operands[2]) == 0xff")
 		 (match_operand 1 "ext_QIreg_operand" "")))
        (const_string "1")
        (const_string "*")))
@@ -7773,7 +7807,7 @@
    (set (attr "prefix_rex")
      (if_then_else
        (and (eq_attr "type" "imovx")
-	    (and (ne (symbol_ref "INTVAL (operands[2]) == 0xff") (const_int 0))
+	    (and (match_test "INTVAL (operands[2]) == 0xff")
 		 (match_operand 1 "ext_QIreg_operand" "")))
        (const_string "1")
        (const_string "*")))
@@ -9102,14 +9136,13 @@
 	return "sal{<imodesuffix>}\t{%2, %0|%0, %2}";
     }
 }
-  [(set_attr "isa" "base,base,bmi2")
+  [(set_attr "isa" "*,*,bmi2")
    (set (attr "type")
      (cond [(eq_attr "alternative" "1")
 	      (const_string "lea")
 	    (eq_attr "alternative" "2")
 	      (const_string "ishiftx")
-            (and (and (ne (symbol_ref "TARGET_DOUBLE_WITH_ADD")
-		          (const_int 0))
+            (and (and (match_test "TARGET_DOUBLE_WITH_ADD")
 		      (match_operand 0 "register_operand" ""))
 		 (match_operand 2 "const1_operand" ""))
 	      (const_string "alu")
@@ -9120,8 +9153,8 @@
        (ior (eq_attr "type" "alu")
 	    (and (eq_attr "type" "ishift")
 		 (and (match_operand 2 "const1_operand" "")
-		      (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-			  (const_int 0)))))
+		      (ior (match_test "TARGET_SHIFT1")
+			   (match_test "optimize_function_for_size_p (cfun)")))))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "<MODE>")])
@@ -9173,14 +9206,13 @@
 	return "sal{l}\t{%2, %k0|%k0, %2}";
     }
 }
-  [(set_attr "isa" "base,base,bmi2")
+  [(set_attr "isa" "*,*,bmi2")
    (set (attr "type")
      (cond [(eq_attr "alternative" "1")
 	      (const_string "lea")
 	    (eq_attr "alternative" "2")
 	      (const_string "ishiftx")
-            (and (ne (symbol_ref "TARGET_DOUBLE_WITH_ADD")
-		     (const_int 0))
+            (and (match_test "TARGET_DOUBLE_WITH_ADD")
 		 (match_operand 2 "const1_operand" ""))
 	      (const_string "alu")
 	   ]
@@ -9190,8 +9222,8 @@
        (ior (eq_attr "type" "alu")
 	    (and (eq_attr "type" "ishift")
 		 (and (match_operand 2 "const1_operand" "")
-		      (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-			  (const_int 0)))))
+		      (ior (match_test "TARGET_SHIFT1")
+			   (match_test "optimize_function_for_size_p (cfun)")))))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "SI")])
@@ -9235,8 +9267,7 @@
   [(set (attr "type")
      (cond [(eq_attr "alternative" "1")
 	      (const_string "lea")
-            (and (and (ne (symbol_ref "TARGET_DOUBLE_WITH_ADD")
-		          (const_int 0))
+            (and (and (match_test "TARGET_DOUBLE_WITH_ADD")
 		      (match_operand 0 "register_operand" ""))
 		 (match_operand 2 "const1_operand" ""))
 	      (const_string "alu")
@@ -9247,8 +9278,8 @@
        (ior (eq_attr "type" "alu")
 	    (and (eq_attr "type" "ishift")
 		 (and (match_operand 2 "const1_operand" "")
-		      (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-			  (const_int 0)))))
+		      (ior (match_test "TARGET_SHIFT1")
+			   (match_test "optimize_function_for_size_p (cfun)")))))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "HI,SI")])
@@ -9294,8 +9325,7 @@
   [(set (attr "type")
      (cond [(eq_attr "alternative" "2")
 	      (const_string "lea")
-            (and (and (ne (symbol_ref "TARGET_DOUBLE_WITH_ADD")
-		          (const_int 0))
+            (and (and (match_test "TARGET_DOUBLE_WITH_ADD")
 		      (match_operand 0 "register_operand" ""))
 		 (match_operand 2 "const1_operand" ""))
 	      (const_string "alu")
@@ -9306,8 +9336,8 @@
        (ior (eq_attr "type" "alu")
 	    (and (eq_attr "type" "ishift")
 		 (and (match_operand 2 "const1_operand" "")
-		      (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-			  (const_int 0)))))
+		      (ior (match_test "TARGET_SHIFT1")
+			   (match_test "optimize_function_for_size_p (cfun)")))))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "QI,SI,SI")])
@@ -9338,8 +9368,7 @@
     }
 }
   [(set (attr "type")
-     (cond [(and (and (ne (symbol_ref "TARGET_DOUBLE_WITH_ADD")
-		          (const_int 0))
+     (cond [(and (and (match_test "TARGET_DOUBLE_WITH_ADD")
 		      (match_operand 0 "register_operand" ""))
 		 (match_operand 1 "const1_operand" ""))
 	      (const_string "alu")
@@ -9350,8 +9379,8 @@
        (ior (eq_attr "type" "alu")
 	    (and (eq_attr "type" "ishift1")
 		 (and (match_operand 1 "const1_operand" "")
-		      (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-			  (const_int 0)))))
+		      (ior (match_test "TARGET_SHIFT1")
+			   (match_test "optimize_function_for_size_p (cfun)")))))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "QI")])
@@ -9435,8 +9464,7 @@
     }
 }
   [(set (attr "type")
-     (cond [(and (and (ne (symbol_ref "TARGET_DOUBLE_WITH_ADD")
-		          (const_int 0))
+     (cond [(and (and (match_test "TARGET_DOUBLE_WITH_ADD")
 		      (match_operand 0 "register_operand" ""))
 		 (match_operand 2 "const1_operand" ""))
 	      (const_string "alu")
@@ -9447,8 +9475,8 @@
        (ior (eq_attr "type" "alu")
 	    (and (eq_attr "type" "ishift")
 		 (and (match_operand 2 "const1_operand" "")
-		      (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-			  (const_int 0)))))
+		      (ior (match_test "TARGET_SHIFT1")
+			   (match_test "optimize_function_for_size_p (cfun)")))))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "<MODE>")])
@@ -9485,8 +9513,7 @@
     }
 }
   [(set (attr "type")
-     (cond [(and (ne (symbol_ref "TARGET_DOUBLE_WITH_ADD")
-		     (const_int 0))
+     (cond [(and (match_test "TARGET_DOUBLE_WITH_ADD")
 		 (match_operand 2 "const1_operand" ""))
 	      (const_string "alu")
 	   ]
@@ -9496,8 +9523,8 @@
        (ior (eq_attr "type" "alu")
 	    (and (eq_attr "type" "ishift")
 		 (and (match_operand 2 "const1_operand" "")
-		      (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-			  (const_int 0)))))
+		      (ior (match_test "TARGET_SHIFT1")
+			   (match_test "optimize_function_for_size_p (cfun)")))))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "SI")])
@@ -9531,8 +9558,7 @@
     }
 }
   [(set (attr "type")
-     (cond [(and (and (ne (symbol_ref "TARGET_DOUBLE_WITH_ADD")
-		          (const_int 0))
+     (cond [(and (and (match_test "TARGET_DOUBLE_WITH_ADD")
 		      (match_operand 0 "register_operand" ""))
 		 (match_operand 2 "const1_operand" ""))
 	      (const_string "alu")
@@ -9543,8 +9569,8 @@
        (ior (eq_attr "type" "alu")
 	    (and (eq_attr "type" "ishift")
 		 (and (match_operand 2 "const1_operand" "")
-		      (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-			  (const_int 0)))))
+		      (ior (match_test "TARGET_SHIFT1")
+			   (match_test "optimize_function_for_size_p (cfun)")))))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "<MODE>")])
@@ -9757,13 +9783,13 @@
 	return "<shiftrt>{<imodesuffix>}\t{%2, %0|%0, %2}";
     }
 }
-  [(set_attr "isa" "base,bmi2")
+  [(set_attr "isa" "*,bmi2")
    (set_attr "type" "ishift,ishiftx")
    (set (attr "length_immediate")
      (if_then_else
        (and (match_operand 2 "const1_operand" "")
-	    (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		(const_int 0)))
+	    (ior (match_test "TARGET_SHIFT1")
+		 (match_test "optimize_function_for_size_p (cfun)")))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "<MODE>")])
@@ -9810,13 +9836,13 @@
 	return "<shiftrt>{l}\t{%2, %k0|%k0, %2}";
     }
 }
-  [(set_attr "isa" "base,bmi2")
+  [(set_attr "isa" "*,bmi2")
    (set_attr "type" "ishift,ishiftx")
    (set (attr "length_immediate")
      (if_then_else
        (and (match_operand 2 "const1_operand" "")
-	    (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		(const_int 0)))
+	    (ior (match_test "TARGET_SHIFT1")
+		 (match_test "optimize_function_for_size_p (cfun)")))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "SI")])
@@ -9851,8 +9877,8 @@
    (set (attr "length_immediate")
      (if_then_else
        (and (match_operand 2 "const1_operand" "")
-	    (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		(const_int 0)))
+	    (ior (match_test "TARGET_SHIFT1")
+		 (match_test "optimize_function_for_size_p (cfun)")))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "<MODE>")])
@@ -9877,8 +9903,8 @@
    (set (attr "length_immediate")
      (if_then_else
        (and (match_operand 1 "const1_operand" "")
-	    (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		(const_int 0)))
+	    (ior (match_test "TARGET_SHIFT1")
+		 (match_test "optimize_function_for_size_p (cfun)")))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "QI")])
@@ -9912,8 +9938,8 @@
    (set (attr "length_immediate")
      (if_then_else
        (and (match_operand 2 "const1_operand" "")
-	    (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		(const_int 0)))
+	    (ior (match_test "TARGET_SHIFT1")
+		 (match_test "optimize_function_for_size_p (cfun)")))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "<MODE>")])
@@ -9944,8 +9970,8 @@
    (set (attr "length_immediate")
      (if_then_else
        (and (match_operand 2 "const1_operand" "")
-	    (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		(const_int 0)))
+	    (ior (match_test "TARGET_SHIFT1")
+		 (match_test "optimize_function_for_size_p (cfun)")))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "SI")])
@@ -9974,8 +10000,8 @@
    (set (attr "length_immediate")
      (if_then_else
        (and (match_operand 2 "const1_operand" "")
-	    (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		(const_int 0)))
+	    (ior (match_test "TARGET_SHIFT1")
+		 (match_test "optimize_function_for_size_p (cfun)")))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "<MODE>")])
@@ -10137,14 +10163,14 @@
 	return "<rotate>{<imodesuffix>}\t{%2, %0|%0, %2}";
     }
 }
-  [(set_attr "isa" "base,bmi2")
+  [(set_attr "isa" "*,bmi2")
    (set_attr "type" "rotate,rotatex")
    (set (attr "length_immediate")
      (if_then_else
        (and (eq_attr "type" "rotate")
 	    (and (match_operand 2 "const1_operand" "")
-		 (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		     (const_int 0))))
+		 (ior (match_test "TARGET_SHIFT1")
+		      (match_test "optimize_function_for_size_p (cfun)"))))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "<MODE>")])
@@ -10203,14 +10229,14 @@
 	return "<rotate>{l}\t{%2, %k0|%k0, %2}";
     }
 }
-  [(set_attr "isa" "base,bmi2")
+  [(set_attr "isa" "*,bmi2")
    (set_attr "type" "rotate,rotatex")
    (set (attr "length_immediate")
      (if_then_else
        (and (eq_attr "type" "rotate")
 	    (and (match_operand 2 "const1_operand" "")
-		 (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		     (const_int 0))))
+		 (ior (match_test "TARGET_SHIFT1")
+		      (match_test "optimize_function_for_size_p (cfun)"))))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "SI")])
@@ -10257,8 +10283,8 @@
    (set (attr "length_immediate")
      (if_then_else
        (and (match_operand 2 "const1_operand" "")
-	    (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		(const_int 0)))
+	    (ior (match_test "TARGET_SHIFT1")
+		 (match_test "optimize_function_for_size_p (cfun)")))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "<MODE>")])
@@ -10283,8 +10309,8 @@
    (set (attr "length_immediate")
      (if_then_else
        (and (match_operand 1 "const1_operand" "")
-	    (ne (symbol_ref "TARGET_SHIFT1 || optimize_function_for_size_p (cfun)")
-		(const_int 0)))
+	    (ior (match_test "TARGET_SHIFT1")
+		 (match_test "optimize_function_for_size_p (cfun)")))
        (const_string "0")
        (const_string "*")))
    (set_attr "mode" "QI")])
@@ -15759,7 +15785,7 @@
    (set_attr "memory" "both")
    (set (attr "prefix_rex")
 	(if_then_else
-	  (ne (symbol_ref "<P:MODE>mode == DImode") (const_int 0))
+	  (match_test "<P:MODE>mode == DImode")
 	  (const_string "0")
 	  (const_string "*")))
    (set_attr "mode" "QI")])
@@ -15935,7 +15961,7 @@
    (set_attr "memory" "store")
    (set (attr "prefix_rex")
 	(if_then_else
-	  (ne (symbol_ref "<P:MODE>mode == DImode") (const_int 0))
+	  (match_test "<P:MODE>mode == DImode")
 	  (const_string "0")
 	  (const_string "*")))
    (set_attr "mode" "QI")])
@@ -16001,7 +16027,7 @@
    (set_attr "memory" "store")
    (set (attr "prefix_rex")
 	(if_then_else
-	  (ne (symbol_ref "<P:MODE>mode == DImode") (const_int 0))
+	  (match_test "<P:MODE>mode == DImode")
 	  (const_string "0")
 	  (const_string "*")))
    (set_attr "mode" "QI")])
@@ -16121,7 +16147,7 @@
    (set_attr "mode" "QI")
    (set (attr "prefix_rex")
 	(if_then_else
-	  (ne (symbol_ref "<P:MODE>mode == DImode") (const_int 0))
+	  (match_test "<P:MODE>mode == DImode")
 	  (const_string "0")
 	  (const_string "*")))
    (set_attr "prefix_rep" "1")])
@@ -16161,7 +16187,7 @@
    (set_attr "mode" "QI")
    (set (attr "prefix_rex")
 	(if_then_else
-	  (ne (symbol_ref "<P:MODE>mode == DImode") (const_int 0))
+	  (match_test "<P:MODE>mode == DImode")
 	  (const_string "0")
 	  (const_string "*")))
    (set_attr "prefix_rep" "1")])
@@ -16202,7 +16228,7 @@
    (set_attr "mode" "QI")
    (set (attr "prefix_rex")
 	(if_then_else
-	  (ne (symbol_ref "<P:MODE>mode == DImode") (const_int 0))
+	  (match_test "<P:MODE>mode == DImode")
 	  (const_string "0")
 	  (const_string "*")))
    (set_attr "prefix_rep" "1")])
@@ -16629,7 +16655,7 @@
 }
   [(set (attr "type")
 	(cond [(and (eq_attr "alternative" "0")
-		    (eq (symbol_ref "TARGET_OPT_AGU") (const_int 0)))
+		    (not (match_test "TARGET_OPT_AGU")))
 		 (const_string "alu")
 	       (match_operand:<MODE> 2 "const0_operand" "")
 		 (const_string "imov")

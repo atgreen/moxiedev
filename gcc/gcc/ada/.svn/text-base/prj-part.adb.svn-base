@@ -215,7 +215,6 @@ package body Prj.Part is
       Imported_Projects : in out Project_Node_Id;
       Project_Directory : Path_Name_Type;
       From_Extended     : Extension_Origin;
-      In_Limited        : Boolean;
       Packages_To_Check : String_List_Access;
       Depth             : Natural;
       Current_Dir       : String;
@@ -752,7 +751,6 @@ package body Prj.Part is
       Imported_Projects : in out Project_Node_Id;
       Project_Directory : Path_Name_Type;
       From_Extended     : Extension_Origin;
-      In_Limited        : Boolean;
       Packages_To_Check : String_List_Access;
       Depth             : Natural;
       Current_Dir       : String;
@@ -1037,8 +1035,8 @@ package body Prj.Part is
                Proj_Qualifier := Aggregate;
                Scan (In_Tree);
 
-               if Token = Tok_Identifier and then
-                 Token_Name = Snames.Name_Library
+               if Token = Tok_Identifier
+                 and then Token_Name = Snames.Name_Library
                then
                   Proj_Qualifier := Aggregate_Library;
                   Scan (In_Tree);
@@ -1503,7 +1501,6 @@ package body Prj.Part is
                Imported_Projects => Imported_Projects,
                Project_Directory => Project_Directory,
                From_Extended     => From_Ext,
-               In_Limited        => In_Limited,
                Packages_To_Check => Packages_To_Check,
                Depth             => Depth + 1,
                Current_Dir       => Current_Dir,
@@ -1863,7 +1860,6 @@ package body Prj.Part is
             Imported_Projects => Imported_Projects,
             Project_Directory => Project_Directory,
             From_Extended     => From_Ext,
-            In_Limited        => In_Limited,
             Packages_To_Check => Packages_To_Check,
             Depth             => Depth + 1,
             Current_Dir       => Current_Dir,

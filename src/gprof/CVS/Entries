@@ -1,7 +1,6 @@
 D/po////
 /.gdbinit/1.1.1.1/Sun Jun  5 16:54:38 2011//
 /.gitignore/1.1/Sun Jun  5 16:54:38 2011//
-/ChangeLog/1.303/Thu Aug 25 19:59:28 2011//
 /ChangeLog-2004/1.1/Sun Jun  5 16:54:38 2011//
 /ChangeLog-2005/1.1/Sun Jun  5 16:54:38 2011//
 /ChangeLog-2006/1.1/Sun Jun  5 16:54:38 2011//
@@ -68,3 +67,4 @@ D/po////
 /utils.c/1.9/Sun Jun  5 16:54:38 2011//
 /utils.h/1.2/Sun Jun  5 16:54:38 2011//
 /vax.c/1.14/Sun Jun  5 16:54:38 2011//
+/ChangeLog/1.304/Sun Sep 25 18:07:19 2011//

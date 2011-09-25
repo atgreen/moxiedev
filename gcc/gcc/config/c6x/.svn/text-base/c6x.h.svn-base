@@ -329,6 +329,7 @@ enum reg_class
 /* Before the prologue, the return address is in the B3 register.  */
 #define RETURN_ADDR_REGNO REG_B3
 #define INCOMING_RETURN_ADDR_RTX gen_rtx_REG (Pmode, RETURN_ADDR_REGNO)
+#define DWARF_FRAME_RETURN_COLUMN	DWARF_FRAME_REGNUM (RETURN_ADDR_REGNO)
 
 #define RETURN_ADDR_RTX(COUNT, FRAME) c6x_return_addr_rtx (COUNT)
 
@@ -459,8 +460,6 @@ struct GTY(()) machine_function
 #define TARG_VEC_PERMUTE_COST        1
 #endif
 
-/* Exception handling.  */
-#define TARGET_EXTRA_CFI_SECTION(unwind) ((unwind) ? ".c6xabi.exidx" : NULL)
 /* ttype entries (the only interesting data references used) are
    sb-relative got-indirect (aka .ehtype).  */
 #define ASM_PREFERRED_EH_DATA_FORMAT(code, data) \
@@ -611,6 +610,8 @@ do {									\
 #define CLZ_DEFINED_VALUE_AT_ZERO(MODE, VALUE) ((VALUE) = 32, 1)
 #define Pmode SImode
 #define FUNCTION_MODE QImode
+
+#define CPU_UNITS_QUERY 1
 
 extern int c6x_initial_flag_pic;
 

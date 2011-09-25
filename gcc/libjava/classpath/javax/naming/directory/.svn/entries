@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/naming/directory
 svn://gcc.gnu.org/svn/gcc
 
@@ -128,40 +128,6 @@ tromey
 
 2631
 
-SchemaViolationException.java
-file
-
-
-
-
-2009-04-24T17:47:17.000000Z
-d5b107c9c36770aaf9c253c026547dc8
-2006-03-10T21:46:48.115162Z
-111942
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2100
-
 SearchResult.java
 file
 
@@ -195,6 +161,40 @@ gandalf
 
 
 2962
+
+SchemaViolationException.java
+file
+
+
+
+
+2009-04-24T17:47:17.000000Z
+d5b107c9c36770aaf9c253c026547dc8
+2006-03-10T21:46:48.115162Z
+111942
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2100
 
 BasicAttribute.java
 file
@@ -434,17 +434,17 @@ gandalf
 
 2709
 
-InvalidAttributeValueException.java
+AttributeInUseException.java
 file
 
 
 
 
-2009-04-24T17:47:17.000000Z
-b07722b6be70b4b7ed854dda61e2ca6a
-2006-03-10T21:46:48.115162Z
-111942
-mark
+2011-06-04T18:38:00.656104Z
+aafc0c51462682e519545550ccd72394
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
 
 
 
@@ -466,7 +466,7 @@ mark
 
 
 
-2122
+2094
 
 Attributes.java
 file
@@ -502,17 +502,17 @@ gandalf
 
 2281
 
-AttributeInUseException.java
+InvalidAttributeValueException.java
 file
 
 
 
 
-2011-06-04T18:38:00.656104Z
-aafc0c51462682e519545550ccd72394
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
+2009-04-24T17:47:17.000000Z
+b07722b6be70b4b7ed854dda61e2ca6a
+2006-03-10T21:46:48.115162Z
+111942
+mark
 
 
 
@@ -534,7 +534,7 @@ gandalf
 
 
 
-2094
+2122
 
 BasicAttributes.java
 file

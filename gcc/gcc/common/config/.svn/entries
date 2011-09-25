@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/common/config
 svn://gcc.gnu.org/svn/gcc
 
@@ -71,10 +71,10 @@ dir
 spu
 dir
 
-sparc
+mips
 dir
 
-mips
+sparc
 dir
 
 fr30
@@ -92,10 +92,10 @@ dir
 m68k
 dir
 
-rx
+i386
 dir
 
-i386
+rx
 dir
 
 rs6000
@@ -135,19 +135,19 @@ jsm28
 
 1299
 
-picochip
+vax
 dir
 
-vax
+picochip
 dir
 
 cris
 dir
 
-h8300
+v850
 dir
 
-v850
+h8300
 dir
 
 mcore

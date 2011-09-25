@@ -29,6 +29,7 @@
 #include "language.h"
 #include "gdbthread.h"
 #include "continuations.h"
+#include "interps.h"
 
 static int fetch_inferior_event_wrapper (gdb_client_data client_data);
 
@@ -40,8 +41,7 @@ void
 inferior_event_handler (enum inferior_event_type event_type, 
 			gdb_client_data client_data)
 {
-  struct gdb_exception e;
-  int was_sync = 0;
+  struct cleanup *cleanup_if_error = make_bpstat_clear_actions_cleanup ();
 
   switch (event_type)
     {
@@ -53,6 +53,7 @@ inferior_event_handler (enum inferior_event_type event_type,
       if (!catch_errors (fetch_inferior_event_wrapper, 
 			 client_data, "", RETURN_MASK_ALL))
 	{
+	  bpstat_clear_actions ();
 	  do_all_intermediate_continuations (1);
 	  do_all_continuations (1);
 	  async_enable_stdin ();
@@ -61,7 +62,6 @@ inferior_event_handler (enum inferior_event_type event_type,
       break;
 
     case INF_EXEC_COMPLETE:
-
       if (!non_stop)
 	{
 	  /* Unregister the inferior from the event loop.  This is done
@@ -70,12 +70,6 @@ inferior_event_handler (enum inferior_event_type event_type,
 	  if (target_has_execution)
 	    target_async (NULL, 0);
 	}
-
-      /* The call to async_enable_stdin below resets 'sync_execution'.
-	 However, if sync_execution is 1 now, we also need to show the
-	 prompt below, so save the current value.  */
-      was_sync = sync_execution;
-      async_enable_stdin ();
 
       /* Do all continuations associated with the whole inferior (not
 	 a particular thread).  */
@@ -107,24 +101,26 @@ inferior_event_handler (enum inferior_event_type event_type,
       else
 	do_all_continuations (0);
 
-      if (info_verbose
-	  && current_language != expected_language
-	  && language_mode == language_mode_auto)
-	language_info (1);	/* Print what changed.  */
-
-      /* Don't propagate breakpoint commands errors.  Either we're
-	 stopping or some command resumes the inferior.  The user will
-	 be informed.  */
-      TRY_CATCH (e, RETURN_MASK_ALL)
+      /* When running a command list (from a user command, say), these
+	 are only run when the command list is all done.  */
+      if (interpreter_async)
 	{
-	  bpstat_do_actions ();
-	}
+	  volatile struct gdb_exception e;
 
-      if (!was_sync
-	  && exec_done_display_p
-	  && (ptid_equal (inferior_ptid, null_ptid)
-	      || !is_running (inferior_ptid)))
-	printf_unfiltered (_("completed.\n"));
+	  if (info_verbose
+	      && current_language != expected_language
+	      && language_mode == language_mode_auto)
+	    language_info (1);	/* Print what changed.  */
+
+	  /* Don't propagate breakpoint commands errors.  Either we're
+	     stopping or some command resumes the inferior.  The user will
+	     be informed.  */
+	  TRY_CATCH (e, RETURN_MASK_ALL)
+	    {
+	      bpstat_do_actions ();
+	    }
+	  exception_print (gdb_stderr, e);
+	}
       break;
 
     case INF_EXEC_CONTINUE:
@@ -142,6 +138,8 @@ inferior_event_handler (enum inferior_event_type event_type,
       printf_unfiltered (_("Event type not recognized.\n"));
       break;
     }
+
+  discard_cleanups (cleanup_if_error);
 }
 
 static int 

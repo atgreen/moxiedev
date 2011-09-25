@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/microblaze/others
 svn://gcc.gnu.org/svn/gcc
 
@@ -230,40 +230,6 @@ eager
 
 330
 
-strings1.c
-file
-
-
-
-
-2010-11-22T19:14:23.566784Z
-5c0e77ecb2c31ce41179eb4817c776b1
-2010-09-30T18:21:57.971378Z
-164756
-eager
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-318
-
 string_cst2_gpopt.c
 file
 
@@ -297,6 +263,40 @@ eager
 
 
 356
+
+strings1.c
+file
+
+
+
+
+2010-11-22T19:14:23.566784Z
+5c0e77ecb2c31ce41179eb4817c776b1
+2010-09-30T18:21:57.971378Z
+164756
+eager
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+318
 
 interrupt_handler_leaf.c
 file

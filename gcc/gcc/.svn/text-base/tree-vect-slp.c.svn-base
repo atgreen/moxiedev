@@ -1694,41 +1694,17 @@ vect_bb_vectorization_profitable_p (bb_vec_info bb_vinfo)
 
 /* Check if the basic block can be vectorized.  */
 
-bb_vec_info
-vect_slp_analyze_bb (basic_block bb)
+static bb_vec_info
+vect_slp_analyze_bb_1 (basic_block bb)
 {
   bb_vec_info bb_vinfo;
   VEC (ddr_p, heap) *ddrs;
   VEC (slp_instance, heap) *slp_instances;
   slp_instance instance;
-  int i, insns = 0;
-  gimple_stmt_iterator gsi;
+  int i;
   int min_vf = 2;
   int max_vf = MAX_VECTORIZATION_FACTOR;
   bool data_dependence_in_bb = false;
-
-  current_vector_size = 0;
-
-  if (vect_print_dump_info (REPORT_DETAILS))
-    fprintf (vect_dump, "===vect_slp_analyze_bb===\n");
-
-  for (gsi = gsi_start_bb (bb); !gsi_end_p (gsi); gsi_next (&gsi))
-    {
-      gimple stmt = gsi_stmt (gsi);
-      if (!is_gimple_debug (stmt)
-	  && !gimple_nop_p (stmt)
-	  && gimple_code (stmt) != GIMPLE_LABEL)
-	insns++;
-    }
-
-  if (insns > PARAM_VALUE (PARAM_SLP_MAX_INSNS_IN_BB))
-    {
-      if (vect_print_dump_info (REPORT_UNVECTORIZED_LOCATIONS))
-        fprintf (vect_dump, "not vectorized: too many instructions in basic "
-                            "block.\n");
-
-      return NULL;
-    }
 
   bb_vinfo = new_bb_vec_info (bb);
   if (!bb_vinfo)
@@ -1849,6 +1825,61 @@ vect_slp_analyze_bb (basic_block bb)
 }
 
 
+bb_vec_info
+vect_slp_analyze_bb (basic_block bb)
+{
+  bb_vec_info bb_vinfo;
+  int insns = 0;
+  gimple_stmt_iterator gsi;
+  unsigned int vector_sizes;
+
+  if (vect_print_dump_info (REPORT_DETAILS))
+    fprintf (vect_dump, "===vect_slp_analyze_bb===\n");
+
+  for (gsi = gsi_start_bb (bb); !gsi_end_p (gsi); gsi_next (&gsi))
+    {
+      gimple stmt = gsi_stmt (gsi);
+      if (!is_gimple_debug (stmt)
+          && !gimple_nop_p (stmt)
+          && gimple_code (stmt) != GIMPLE_LABEL)
+        insns++;
+    }
+
+  if (insns > PARAM_VALUE (PARAM_SLP_MAX_INSNS_IN_BB))
+    {
+      if (vect_print_dump_info (REPORT_UNVECTORIZED_LOCATIONS))
+        fprintf (vect_dump, "not vectorized: too many instructions in basic "
+                            "block.\n");
+
+      return NULL;
+    }
+
+  /* Autodetect first vector size we try.  */
+  current_vector_size = 0;
+  vector_sizes = targetm.vectorize.autovectorize_vector_sizes ();
+
+  while (1)
+    {
+      bb_vinfo = vect_slp_analyze_bb_1 (bb);
+      if (bb_vinfo)
+        return bb_vinfo;
+
+      destroy_bb_vec_info (bb_vinfo);
+
+      vector_sizes &= ~current_vector_size;
+      if (vector_sizes == 0
+          || current_vector_size == 0)
+        return NULL;
+
+      /* Try the next biggest vector size.  */
+      current_vector_size = 1 << floor_log2 (vector_sizes);
+      if (vect_print_dump_info (REPORT_DETAILS))
+        fprintf (vect_dump, "***** Re-trying analysis with "
+                 "vector size %d\n", current_vector_size);
+    }
+}
+
+
 /* SLP costs are calculated according to SLP instance unrolling factor (i.e.,
    the number of created vector stmts depends on the unrolling factor).
    However, the actual number of vector stmts for every SLP node depends on
@@ -1902,15 +1933,12 @@ vect_get_constant_vectors (tree op, slp_tree slp_node,
   bool constant_p, is_store;
   tree neutral_op = NULL;
   enum tree_code code = gimple_assign_rhs_code (stmt);
+  gimple def_stmt;
+  struct loop *loop;
 
-  if (STMT_VINFO_DEF_TYPE (stmt_vinfo) == vect_reduction_def)
+  if (STMT_VINFO_DEF_TYPE (stmt_vinfo) == vect_reduction_def
+      && reduc_index != -1)
     {
-      if (reduc_index == -1)
-        {
-          VEC_free (tree, heap, *vec_oprnds);
-          return;
-        }
-
       op_num = reduc_index - 1;
       op = gimple_op (stmt, reduc_index);
       /* For additional copies (see the explanation of NUMBER_OF_COPIES below)
@@ -1943,8 +1971,16 @@ vect_get_constant_vectors (tree op, slp_tree slp_node,
             neutral_op = build_int_cst (TREE_TYPE (op), -1);
             break;
 
+          case MAX_EXPR:
+          case MIN_EXPR:
+            def_stmt = SSA_NAME_DEF_STMT (op);
+            loop = (gimple_bb (stmt))->loop_father;
+            neutral_op = PHI_ARG_DEF_FROM_EDGE (def_stmt,
+                                                loop_preheader_edge (loop));
+            break;
+
           default:
-             neutral_op = NULL;
+            neutral_op = NULL;
         }
     }
 
@@ -1997,8 +2033,8 @@ vect_get_constant_vectors (tree op, slp_tree slp_node,
 
           if (reduc_index != -1)
             {
-              struct loop *loop = (gimple_bb (stmt))->loop_father;
-              gimple def_stmt = SSA_NAME_DEF_STMT (op);
+              loop = (gimple_bb (stmt))->loop_father;
+              def_stmt = SSA_NAME_DEF_STMT (op);
 
               gcc_assert (loop);
 
@@ -2154,7 +2190,7 @@ vect_get_slp_defs (tree op0, tree op1, slp_tree slp_node,
     return;
 
   code = gimple_assign_rhs_code (first_stmt);
-  if (get_gimple_rhs_class (code) != GIMPLE_BINARY_RHS || !vec_oprnds1)
+  if (get_gimple_rhs_class (code) != GIMPLE_BINARY_RHS || !vec_oprnds1 || !op1)
     return;
 
   /* The number of vector defs is determined by the number of vector statements

@@ -2131,8 +2131,8 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
 
   /* Don't do any filtering if it is disabled.  */
   if (stream != gdb_stdout
-      || ! pagination_enabled
-      || ! input_from_terminal_p ()
+      || !pagination_enabled
+      || batch_flag
       || (lines_per_page == UINT_MAX && chars_per_line == UINT_MAX)
       || top_level_interpreter () == NULL
       || ui_out_is_mi_like_p (interp_ui_out (top_level_interpreter ())))
@@ -3672,6 +3672,67 @@ parse_pid_to_attach (char *args)
     error (_("Illegal process-id: %s."), args);
 
   return pid;
+}
+
+/* Helper for make_bpstat_clear_actions_cleanup.  */
+
+static void
+do_bpstat_clear_actions_cleanup (void *unused)
+{
+  bpstat_clear_actions ();
+}
+
+/* Call bpstat_clear_actions for the case an exception is throw.  You should
+   discard_cleanups if no exception is caught.  */
+
+struct cleanup *
+make_bpstat_clear_actions_cleanup (void)
+{
+  return make_cleanup (do_bpstat_clear_actions_cleanup, NULL);
+}
+
+/* Check for GCC >= 4.x according to the symtab->producer string.  Return minor
+   version (x) of 4.x in such case.  If it is not GCC or it is GCC older than
+   4.x return -1.  If it is GCC 5.x or higher return INT_MAX.  */
+
+int
+producer_is_gcc_ge_4 (const char *producer)
+{
+  const char *cs;
+  int major, minor;
+
+  if (producer == NULL)
+    {
+      /* For unknown compilers expect their behavior is not compliant.  For GCC
+	 this case can also happen for -gdwarf-4 type units supported since
+	 gcc-4.5.  */
+
+      return -1;
+    }
+
+  /* Skip any identifier after "GNU " - such as "C++" or "Java".  */
+
+  if (strncmp (producer, "GNU ", strlen ("GNU ")) != 0)
+    {
+      /* For non-GCC compilers expect their behavior is not compliant.  */
+
+      return -1;
+    }
+  cs = &producer[strlen ("GNU ")];
+  while (*cs && !isdigit (*cs))
+    cs++;
+  if (sscanf (cs, "%d.%d", &major, &minor) != 2)
+    {
+      /* Not recognized as GCC.  */
+
+      return -1;
+    }
+
+  if (major < 4)
+    return -1;
+  if (major > 4)
+    return INT_MAX;
+  return minor;
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */

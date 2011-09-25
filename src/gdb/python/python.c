@@ -52,6 +52,7 @@ static int gdbpy_should_print_stack = 0;
 #include "target.h"
 #include "gdbthread.h"
 #include "observer.h"
+#include "interps.h"
 
 static PyMethodDef GdbMethods[];
 
@@ -199,6 +200,10 @@ python_command (char *arg, int from_tty)
   struct cleanup *cleanup;
 
   cleanup = ensure_python_env (get_current_arch (), current_language);
+
+  make_cleanup_restore_integer (&interpreter_async);
+  interpreter_async = 0;
+
   while (arg && *arg && isspace (*arg))
     ++arg;
   if (arg && *arg)
@@ -377,6 +382,9 @@ execute_gdb_command (PyObject *self, PyObject *args, PyObject *kw)
       /* Copy the argument text in case the command modifies it.  */
       char *copy = xstrdup (arg);
       struct cleanup *cleanup = make_cleanup (xfree, copy);
+
+      make_cleanup_restore_integer (&interpreter_async);
+      interpreter_async = 0;
 
       prevent_dont_repeat ();
       if (to_string)
@@ -745,7 +753,7 @@ before_prompt_hook (const char *current_gdb_prompt)
   /* If a prompt has been set, PROMPT will not be NULL.  If it is
      NULL, do not set the prompt.  */
   if (prompt != NULL)
-    set_prompt (prompt, 0);
+    set_prompt (prompt);
 
   do_cleanups (cleanup);
   return;
@@ -895,7 +903,10 @@ gdbpy_progspaces (PyObject *unused1, PyObject *unused2)
 static struct objfile *gdbpy_current_objfile;
 
 /* Set the current objfile to OBJFILE and then read STREAM,FILE as
-   Python code.  */
+   Python code.
+   STREAM is left open, it is up to the caller to close it.
+   If an exception occurs python will print the traceback and
+   clear the error indicator.  */
 
 void
 source_python_script_for_objfile (struct objfile *objfile,
@@ -906,8 +917,6 @@ source_python_script_for_objfile (struct objfile *objfile,
   cleanups = ensure_python_env (get_objfile_arch (objfile), current_language);
   gdbpy_current_objfile = objfile;
 
-  /* Note: If an exception occurs python will print the traceback and
-     clear the error indicator.  */
   PyRun_SimpleFile (stream, file);
 
   do_cleanups (cleanups);
@@ -1415,6 +1424,9 @@ Arguments are separate by spaces and may be quoted."
   { "selected_thread", gdbpy_selected_thread, METH_NOARGS,
     "selected_thread () -> gdb.InferiorThread.\n\
 Return the selected thread object." },
+  { "selected_inferior", gdbpy_selected_inferior, METH_NOARGS,
+    "selected_inferior () -> gdb.Inferior.\n\
+Return the selected inferior object." },
   { "inferiors", gdbpy_inferiors, METH_NOARGS,
     "inferiors () -> (gdb.Inferior, ...).\n\
 Return a tuple containing all inferiors." },

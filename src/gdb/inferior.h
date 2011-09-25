@@ -189,7 +189,9 @@ extern void terminal_init_inferior_with_pgrp (int pgrp);
 
 extern int fork_inferior (char *, char *, char **,
 			  void (*)(void),
-			  void (*)(int), void (*)(void), char *);
+			  void (*)(int), void (*)(void), char *,
+                          void (*)(const char *,
+                                   char * const *, char * const *));
 
 
 extern void startup_inferior (int);
@@ -614,6 +616,11 @@ extern struct inferior *current_inferior (void);
 extern void set_current_inferior (struct inferior *);
 
 extern struct cleanup *save_current_inferior (void);
+
+/* Traverse all inferiors.  */
+
+#define ALL_INFERIORS(I) \
+  for ((I) = inferior_list; (I); (I) = (I)->next)
 
 extern struct inferior *inferior_list;
 

@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/net
 svn://gcc.gnu.org/svn/gcc
 
@@ -199,6 +199,9 @@ gandalf
 
 5741
 
+protocol
+dir
+
 EmptyX509TrustManager.java
 file
 
@@ -232,9 +235,6 @@ gandalf
 
 
 2461
-
-protocol
-dir
 
 CRLFInputStream.java
 file
@@ -270,40 +270,6 @@ gandalf
 
 4716
 
-CRLFOutputStream.java
-file
-
-
-
-
-2011-06-04T18:38:08.361104Z
-633d9ac539de3053b6d54be2377d290f
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4647
-
 LineInputStream.java
 file
 
@@ -338,6 +304,43 @@ gandalf
 
 6047
 
+CRLFOutputStream.java
+file
+
+
+
+
+2011-06-04T18:38:08.361104Z
+633d9ac539de3053b6d54be2377d290f
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4647
+
+loader
+dir
+
 GetLocalHostAction.java
 file
 
@@ -371,9 +374,6 @@ gandalf
 
 
 2242
-
-loader
-dir
 
 DefaultProxySelector.java
 file

@@ -1,14 +1,14 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-07-06T18:38:24.939599Z
-175927
+2011-09-22T04:47:32.825291Z
+179076
 ian
 
 
@@ -86,19 +86,22 @@ dir
 asn1
 dir
 
-tabwriter
+url
 dir
 
-bufio
+tabwriter
 dir
 
 html
 dir
 
-utf16
+bufio
 dir
 
 expvar
+dir
+
+utf16
 dir
 
 gob
@@ -126,6 +129,9 @@ archive
 dir
 
 container
+dir
+
+mail
 dir
 
 smtp
@@ -164,6 +170,9 @@ dir
 regexp
 dir
 
+csv
+dir
+
 cmath
 dir
 
@@ -179,6 +188,9 @@ dir
 go
 dir
 
+builtin
+dir
+
 io
 dir
 
@@ -192,5 +204,8 @@ ebnf
 dir
 
 template
+dir
+
+old
 dir
 

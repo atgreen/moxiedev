@@ -162,6 +162,11 @@ Free_list::allocate(off_t len, uint64_t align, off_t minoff)
 
   ++Free_list::num_allocates;
 
+  // We usually want to drop free chunks smaller than 4 bytes.
+  // If we need to guarantee a minimum hole size, though, we need
+  // to keep track of all free chunks.
+  const int fuzz = this->min_hole_ > 0 ? 0 : 3;
+
   for (Iterator p = this->list_.begin(); p != this->list_.end(); ++p)
     {
       ++Free_list::num_allocate_visits;
@@ -173,13 +178,13 @@ Free_list::allocate(off_t len, uint64_t align, off_t minoff)
 	  this->length_ = end;
 	  p->end_ = end;
 	}
-      if (end <= p->end_)
+      if (end == p->end_ || (end <= p->end_ - this->min_hole_))
 	{
-	  if (p->start_ + 3 >= start && p->end_ <= end + 3)
+	  if (p->start_ + fuzz >= start && p->end_ <= end + fuzz)
 	    this->list_.erase(p);
-	  else if (p->start_ + 3 >= start)
+	  else if (p->start_ + fuzz >= start)
 	    p->start_ = end;
-	  else if (p->end_ <= end + 3)
+	  else if (p->end_ <= end + fuzz)
 	    p->end_ = start;
 	  else
 	    {
@@ -893,11 +898,10 @@ Layout::init_fixed_output_section(const char* name,
 {
   unsigned int sh_type = shdr.get_sh_type();
 
-  // We preserve the layout of PROGBITS, NOBITS, and NOTE sections.
+  // We preserve the layout of PROGBITS, NOBITS, INIT_ARRAY, FINI_ARRAY,
+  // PRE_INIT_ARRAY, and NOTE sections.
   // All others will be created from scratch and reallocated.
-  if (sh_type != elfcpp::SHT_PROGBITS
-      && sh_type != elfcpp::SHT_NOBITS
-      && sh_type != elfcpp::SHT_NOTE)
+  if (!can_incremental_update(sh_type))
     return NULL;
 
   typename elfcpp::Elf_types<size>::Elf_Addr sh_addr = shdr.get_sh_addr();
@@ -1437,10 +1441,24 @@ Layout::make_output_section(const char* name, elfcpp::Elf_Word type,
       && order != ORDER_FINI
       && order != ORDER_RELRO_LAST
       && order != ORDER_NON_RELRO_FIRST
+      && strcmp(name, ".eh_frame") != 0
       && strcmp(name, ".ctors") != 0
       && strcmp(name, ".dtors") != 0
       && strcmp(name, ".jcr") != 0)
-    os->set_is_patch_space_allowed();
+    {
+      os->set_is_patch_space_allowed();
+
+      // Certain sections require "holes" to be filled with
+      // specific fill patterns.  These fill patterns may have
+      // a minimum size, so we must prevent allocations from the
+      // free list that leave a hole smaller than the minimum.
+      if (strcmp(name, ".debug_info") == 0)
+        os->set_free_space_fill(new Output_fill_debug_info(false));
+      else if (strcmp(name, ".debug_types") == 0)
+        os->set_free_space_fill(new Output_fill_debug_info(true));
+      else if (strcmp(name, ".debug_line") == 0)
+        os->set_free_space_fill(new Output_fill_debug_line());
+    }
 
   // If we have already attached the sections to segments, then we
   // need to attach this one now.  This happens for sections created

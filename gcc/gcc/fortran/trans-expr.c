@@ -564,7 +564,8 @@ gfc_conv_component_ref (gfc_se * se, gfc_ref * ref)
       se->string_length = tmp;
     }
 
-  if (((c->attr.pointer || c->attr.allocatable) && c->attr.dimension == 0
+  if (((c->attr.pointer || c->attr.allocatable)
+       && (!c->attr.dimension && !c->attr.codimension)
        && c->ts.type != BT_CHARACTER)
       || c->attr.proc_pointer)
     se->expr = build_fold_indirect_ref_loc (input_location,
@@ -2394,18 +2395,12 @@ gfc_conv_subref_array_arg (gfc_se * parmse, gfc_expr * expr, int g77,
 		|| GFC_DESCRIPTOR_TYPE_P (base_type))
     base_type = gfc_get_element_type (base_type);
 
-  loop.temp_ss = gfc_get_ss ();;
-  loop.temp_ss->type = GFC_SS_TEMP;
-  loop.temp_ss->data.temp.type = base_type;
-
-  if (expr->ts.type == BT_CHARACTER)
-    loop.temp_ss->string_length = expr->ts.u.cl->backend_decl;
-  else
-    loop.temp_ss->string_length = NULL;
+  loop.temp_ss = gfc_get_temp_ss (base_type, ((expr->ts.type == BT_CHARACTER)
+					      ? expr->ts.u.cl->backend_decl
+					      : NULL),
+				  loop.dimen);
 
   parmse->string_length = loop.temp_ss->string_length;
-  loop.temp_ss->data.temp.dimen = loop.dimen;
-  loop.temp_ss->next = gfc_ss_terminator;
 
   /* Associate the SS with the loop.  */
   gfc_add_ss_to_loop (&loop, loop.temp_ss);
@@ -3390,11 +3385,11 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
       if (parmse.string_length != NULL_TREE && !sym->attr.is_bind_c)
 	VEC_safe_push (tree, gc, stringargs, parmse.string_length);
 
-      /* For descriptorless coarrays, we pass the token and the offset
-	 as additional arguments.  */
+      /* For descriptorless coarrays and assumed-shape coarray dummies, we
+	 pass the token and the offset as additional arguments.  */
       if (fsym && fsym->attr.codimension
 	  && gfc_option.coarray == GFC_FCOARRAY_LIB
-	  && !fsym->attr.allocatable && fsym->as->type != AS_ASSUMED_SHAPE
+	  && !fsym->attr.allocatable
 	  && e == NULL)
 	{
 	  /* Token and offset. */
@@ -3404,7 +3399,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 	  gcc_assert (fsym->attr.optional);
 	}
       else if (fsym && fsym->attr.codimension
-	       && !fsym->attr.allocatable && fsym->as->type != AS_ASSUMED_SHAPE
+	       && !fsym->attr.allocatable
 	       && gfc_option.coarray == GFC_FCOARRAY_LIB)
 	{
 	  tree caf_decl, caf_type;
@@ -3413,8 +3408,12 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 	  caf_decl = get_tree_for_caf_expr (e);
 	  caf_type = TREE_TYPE (caf_decl);
 
-	  if (GFC_DESCRIPTOR_TYPE_P (caf_type))
+	  if (GFC_DESCRIPTOR_TYPE_P (caf_type)
+	      && GFC_TYPE_ARRAY_AKIND (caf_type) == GFC_ARRAY_ALLOCATABLE)
 	    tmp = gfc_conv_descriptor_token (caf_decl);
+	  else if (DECL_LANG_SPECIFIC (caf_decl)
+		   && GFC_DECL_TOKEN (caf_decl) != NULL_TREE)
+	    tmp = GFC_DECL_TOKEN (caf_decl);
 	  else
 	    {
 	      gcc_assert (GFC_ARRAY_TYPE_P (caf_type)
@@ -3424,8 +3423,12 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 	  
 	  VEC_safe_push (tree, gc, stringargs, tmp);
 
-	  if (GFC_DESCRIPTOR_TYPE_P (caf_type))
+	  if (GFC_DESCRIPTOR_TYPE_P (caf_type)
+	      && GFC_TYPE_ARRAY_AKIND (caf_type) == GFC_ARRAY_ALLOCATABLE)
 	    offset = build_int_cst (gfc_array_index_type, 0);
+	  else if (DECL_LANG_SPECIFIC (caf_decl)
+		   && GFC_DECL_CAF_OFFSET (caf_decl) != NULL_TREE)
+	    offset = GFC_DECL_CAF_OFFSET (caf_decl);
 	  else if (GFC_TYPE_ARRAY_CAF_OFFSET (caf_type) != NULL_TREE)
 	    offset = GFC_TYPE_ARRAY_CAF_OFFSET (caf_type);
 	  else
@@ -3439,7 +3442,15 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 	      tmp = caf_decl;
 	    }
 
-	  if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (parmse.expr)))
+          if (fsym->as->type == AS_ASSUMED_SHAPE)
+	    {
+	      gcc_assert (POINTER_TYPE_P (TREE_TYPE (parmse.expr)));
+	      gcc_assert (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE
+						   (TREE_TYPE (parmse.expr))));
+	      tmp2 = build_fold_indirect_ref_loc (input_location, parmse.expr);
+	      tmp2 = gfc_conv_descriptor_data_get (tmp2);
+	    }
+	  else if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (parmse.expr)))
 	    tmp2 = gfc_conv_descriptor_data_get (parmse.expr);
 	  else
 	    {
@@ -3565,7 +3576,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 
 	  /* Set the type of the array.  */
 	  tmp = gfc_typenode_for_spec (&comp->ts);
-	  info->dimen = se->loop->dimen;
+	  gcc_assert (info->dimen == se->loop->dimen);
 
 	  /* Evaluate the bounds of the result, if known.  */
 	  gfc_set_loop_bounds_from_array_spec (&mapping, se, comp->as);
@@ -3600,7 +3611,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 
 	  /* Set the type of the array.  */
 	  tmp = gfc_typenode_for_spec (&ts);
-	  info->dimen = se->loop->dimen;
+	  gcc_assert (info->dimen == se->loop->dimen);
 
 	  /* Evaluate the bounds of the result, if known.  */
 	  gfc_set_loop_bounds_from_array_spec (&mapping, se, sym->result->as);
@@ -4341,27 +4352,18 @@ gfc_trans_subarray_assign (tree dest, gfc_component * cm, gfc_expr * expr)
   /* Walk the rhs.  */
   rss = gfc_walk_expr (expr);
   if (rss == gfc_ss_terminator)
-    {
-      /* The rhs is scalar.  Add a ss for the expression.  */
-      rss = gfc_get_ss ();
-      rss->next = gfc_ss_terminator;
-      rss->type = GFC_SS_SCALAR;
-      rss->expr = expr;
-    }
+    /* The rhs is scalar.  Add a ss for the expression.  */
+    rss = gfc_get_scalar_ss (gfc_ss_terminator, expr);
 
   /* Create a SS for the destination.  */
-  lss = gfc_get_ss ();
-  lss->type = GFC_SS_COMPONENT;
-  lss->expr = NULL;
+  lss = gfc_get_array_ss (gfc_ss_terminator, NULL, cm->as->rank,
+			  GFC_SS_COMPONENT);
   lss->shape = gfc_get_shape (cm->as->rank);
-  lss->next = gfc_ss_terminator;
-  lss->data.info.dimen = cm->as->rank;
   lss->data.info.descriptor = dest;
   lss->data.info.data = gfc_conv_array_data (dest);
   lss->data.info.offset = gfc_conv_array_offset (dest);
   for (n = 0; n < cm->as->rank; n++)
     {
-      lss->data.info.dim[n] = n;
       lss->data.info.start[n] = gfc_conv_array_lbound (dest, n);
       lss->data.info.stride[n] = gfc_index_one_node;
 
@@ -4411,6 +4413,7 @@ gfc_trans_subarray_assign (tree dest, gfc_component * cm, gfc_expr * expr)
   gfc_add_block_to_block (&block, &loop.pre);
   gfc_add_block_to_block (&block, &loop.post);
 
+  gcc_assert (lss->shape != NULL);
   gfc_free_shape (&lss->shape, cm->as->rank);
   gfc_cleanup_loop (&loop);
 
@@ -6150,13 +6153,9 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
       /* Walk the rhs.  */
       rss = gfc_walk_expr (expr2);
       if (rss == gfc_ss_terminator)
-	{
-	  /* The rhs is scalar.  Add a ss for the expression.  */
-	  rss = gfc_get_ss ();
-	  rss->next = gfc_ss_terminator;
-	  rss->type = GFC_SS_SCALAR;
-	  rss->expr = expr2;
-	}
+	/* The rhs is scalar.  Add a ss for the expression.  */
+	rss = gfc_get_scalar_ss (gfc_ss_terminator, expr2);
+
       /* Associate the SS with the loop.  */
       gfc_add_ss_to_loop (&loop, lss);
       gfc_add_ss_to_loop (&loop, rss);

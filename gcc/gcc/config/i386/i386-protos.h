@@ -90,6 +90,11 @@ extern void ix86_fixup_binary_operands_no_copy (enum rtx_code,
 extern void ix86_expand_binary_operator (enum rtx_code,
 					 enum machine_mode, rtx[]);
 extern bool ix86_binary_operator_ok (enum rtx_code, enum machine_mode, rtx[]);
+extern bool ix86_lea_outperforms (rtx, unsigned int, unsigned int,
+				  unsigned int, unsigned int);
+extern bool ix86_avoid_lea_for_add (rtx, rtx[]);
+extern bool ix86_avoid_lea_for_addr (rtx, rtx[]);
+extern void ix86_split_lea_for_addr (rtx[], enum machine_mode);
 extern bool ix86_lea_for_add_ok (rtx, rtx[]);
 extern bool ix86_vec_interleave_v2df_operator_ok (rtx operands[3], bool high);
 extern bool ix86_dep_by_shift_count (const_rtx set_insn, const_rtx use_insn);
@@ -206,7 +211,7 @@ extern rtx ix86_tls_module_base (void);
 extern void ix86_expand_vector_init (bool, rtx, rtx);
 extern void ix86_expand_vector_set (bool, rtx, rtx, int);
 extern void ix86_expand_vector_extract (bool, rtx, rtx, int);
-extern void ix86_expand_reduc_v4sf (rtx (*)(rtx, rtx, rtx), rtx, rtx);
+extern void ix86_expand_reduc (rtx (*)(rtx, rtx, rtx), rtx, rtx);
 
 extern void ix86_expand_vec_extract_even_odd (rtx, rtx, rtx, unsigned);
 extern bool ix86_expand_pinsr (rtx *);

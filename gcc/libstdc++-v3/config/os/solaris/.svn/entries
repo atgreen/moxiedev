@@ -1,14 +1,14 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/config/os/solaris
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-18T14:59:47.970700Z
-177866
+2011-08-29T12:54:55.265299Z
+178217
 ro
 
 
@@ -27,8 +27,5 @@ ro
 138bc75d-0d04-0410-961f-82ee72b054a4
 
 solaris2.8
-dir
-
-solaris2.9
 dir
 

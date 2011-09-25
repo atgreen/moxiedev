@@ -318,6 +318,8 @@ enum ix86_tune_indices {
   X86_TUNE_VECTORIZE_DOUBLE,
   X86_TUNE_SOFTWARE_PREFETCHING_BENEFICIAL,
   X86_TUNE_AVX128_OPTIMAL,
+  X86_TUNE_REASSOC_INT_TO_PARALLEL,
+  X86_TUNE_REASSOC_FP_TO_PARALLEL,
 
   X86_TUNE_LAST
 };
@@ -416,6 +418,11 @@ extern unsigned char ix86_tune_features[X86_TUNE_LAST];
 	ix86_tune_features[X86_TUNE_SOFTWARE_PREFETCHING_BENEFICIAL]
 #define TARGET_AVX128_OPTIMAL \
 	ix86_tune_features[X86_TUNE_AVX128_OPTIMAL]
+#define TARGET_REASSOC_INT_TO_PARALLEL \
+	ix86_tune_features[X86_TUNE_REASSOC_INT_TO_PARALLEL]
+#define TARGET_REASSOC_FP_TO_PARALLEL \
+	ix86_tune_features[X86_TUNE_REASSOC_FP_TO_PARALLEL]
+
 /* Feature tests against the various architecture variations.  */
 enum ix86_arch_indices {
   X86_ARCH_CMOVE,		/* || TARGET_SSE */
@@ -988,7 +995,8 @@ enum target_cpu_default
 
 #define VALID_AVX256_REG_MODE(MODE)					\
   ((MODE) == V32QImode || (MODE) == V16HImode || (MODE) == V8SImode	\
-   || (MODE) == V4DImode || (MODE) == V8SFmode || (MODE) == V4DFmode)
+   || (MODE) == V4DImode || (MODE) == V2TImode || (MODE) == V8SFmode	\
+   || (MODE) == V4DFmode)
 
 #define VALID_SSE2_REG_MODE(MODE)					\
   ((MODE) == V16QImode || (MODE) == V8HImode || (MODE) == V2DFmode	\
@@ -1028,7 +1036,8 @@ enum target_cpu_default
    || (MODE) == TFmode || (MODE) == V8HImode || (MODE) == V2DFmode	\
    || (MODE) == V2DImode || (MODE) == V4SFmode || (MODE) == V4SImode	\
    || (MODE) == V32QImode || (MODE) == V16HImode || (MODE) == V8SImode	\
-   || (MODE) == V4DImode || (MODE) == V8SFmode || (MODE) == V4DFmode)
+   || (MODE) == V4DImode || (MODE) == V8SFmode || (MODE) == V4DFmode	\
+   || (MODE) == V2TImode)
 
 /* Value is 1 if hard register REGNO can hold a value of machine-mode MODE.  */
 

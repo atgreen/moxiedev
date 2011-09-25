@@ -42,7 +42,6 @@
 /hint.b-err.s/1.1/Sun Jun  5 16:54:36 2011//
 /hint.b-warn.l/1.1/Sun Jun  5 16:54:36 2011//
 /hint.b-warn.s/1.1/Sun Jun  5 16:54:36 2011//
-/ia64.exp/1.43/Sun Jun  5 16:54:36 2011//
 /index.l/1.1/Sun Jun  5 16:54:36 2011//
 /index.s/1.1/Sun Jun  5 16:54:36 2011//
 /invalid-ar.l/1.3/Sun Jun  5 16:54:36 2011//
@@ -150,4 +149,7 @@
 /xdata-ilp32.d/1.1/Sun Jun  5 16:54:36 2011//
 /xdata.d/1.1/Sun Jun  5 16:54:36 2011//
 /xdata.s/1.1/Sun Jun  5 16:54:36 2011//
+/ia64.exp/1.44/Sun Sep 25 18:07:19 2011//
+/pr13167.d/1.1/Thu Sep  8 12:18:28 2011//
+/pr13167.s/1.1/Thu Sep  8 12:18:28 2011//
 D

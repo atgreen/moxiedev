@@ -58,9 +58,10 @@ code_stack;
 static code_stack *cs_base = NULL;
 
 
-/* Nonzero if we're inside a FORALL block.  */
+/* Nonzero if we're inside a FORALL or DO CONCURRENT block.  */
 
 static int forall_flag;
+static int do_concurrent_flag;
 
 /* Nonzero if we're inside a OpenMP WORKSHARE or PARALLEL WORKSHARE block.  */
 
@@ -1013,7 +1014,7 @@ resolve_structure_cons (gfc_expr *expr, int init)
       if (cons->expr->expr_type != EXPR_NULL && rank != cons->expr->rank
 	  && (comp->attr.allocatable || cons->expr->rank))
 	{
-	  gfc_error ("The rank of the element in the derived type "
+	  gfc_error ("The rank of the element in the structure "
 		     "constructor at %L does not match that of the "
 		     "component (%d/%d)", &cons->expr->where,
 		     cons->expr->rank, rank);
@@ -1035,7 +1036,7 @@ resolve_structure_cons (gfc_expr *expr, int init)
 	      t = SUCCESS;
 	    }
 	  else if (comp->attr.pointer && cons->expr->ts.type != BT_UNKNOWN)
-	    gfc_error ("The element in the derived type constructor at %L, "
+	    gfc_error ("The element in the structure constructor at %L, "
 		       "for pointer component '%s', is %s but should be %s",
 		       &cons->expr->where, comp->name,
 		       gfc_basic_typename (cons->expr->ts.type),
@@ -1113,10 +1114,44 @@ resolve_structure_cons (gfc_expr *expr, int init)
 		       || CLASS_DATA (comp)->attr.allocatable))))
 	{
 	  t = FAILURE;
-	  gfc_error ("The NULL in the derived type constructor at %L is "
+	  gfc_error ("The NULL in the structure constructor at %L is "
 		     "being applied to component '%s', which is neither "
 		     "a POINTER nor ALLOCATABLE", &cons->expr->where,
 		     comp->name);
+	}
+
+      if (comp->attr.proc_pointer && comp->ts.interface)
+	{
+	  /* Check procedure pointer interface.  */
+	  gfc_symbol *s2 = NULL;
+	  gfc_component *c2;
+	  const char *name;
+	  char err[200];
+
+	  if (gfc_is_proc_ptr_comp (cons->expr, &c2))
+	    {
+	      s2 = c2->ts.interface;
+	      name = c2->name;
+	    }
+	  else if (cons->expr->expr_type == EXPR_FUNCTION)
+	    {
+	      s2 = cons->expr->symtree->n.sym->result;
+	      name = cons->expr->symtree->n.sym->result->name;
+	    }
+	  else if (cons->expr->expr_type != EXPR_NULL)
+	    {
+	      s2 = cons->expr->symtree->n.sym;
+	      name = cons->expr->symtree->n.sym->name;
+	    }
+
+	  if (s2 && !gfc_compare_interfaces (comp->ts.interface, s2, name, 0, 1,
+					     err, sizeof (err)))
+	    {
+	      gfc_error ("Interface mismatch for procedure-pointer component "
+			 "'%s' in structure constructor at %L: %s",
+			 comp->name, &cons->expr->where, err);
+	      return FAILURE;
+	    }
 	}
 
       if (!comp->attr.pointer || comp->attr.proc_pointer
@@ -1128,7 +1163,7 @@ resolve_structure_cons (gfc_expr *expr, int init)
       if (!a.pointer && !a.target)
 	{
 	  t = FAILURE;
-	  gfc_error ("The element in the derived type constructor at %L, "
+	  gfc_error ("The element in the structure constructor at %L, "
 		     "for pointer component '%s' should be a POINTER or "
 		     "a TARGET", &cons->expr->where, comp->name);
 	}
@@ -1156,7 +1191,7 @@ resolve_structure_cons (gfc_expr *expr, int init)
 	      || gfc_is_coindexed (cons->expr)))
 	{
 	  t = FAILURE;
-	  gfc_error ("Invalid expression in the derived type constructor for "
+	  gfc_error ("Invalid expression in the structure constructor for "
 		     "pointer component '%s' at %L in PURE procedure",
 		     comp->name, &cons->expr->where);
 	}
@@ -3125,9 +3160,16 @@ resolve_function (gfc_expr *expr)
     {
       if (forall_flag)
 	{
-	  gfc_error ("reference to non-PURE function '%s' at %L inside a "
+	  gfc_error ("Reference to non-PURE function '%s' at %L inside a "
 		     "FORALL %s", name, &expr->where,
 		     forall_flag == 2 ? "mask" : "block");
+	  t = FAILURE;
+	}
+      else if (do_concurrent_flag)
+	{
+	  gfc_error ("Reference to non-PURE function '%s' at %L inside a "
+		     "DO CONCURRENT %s", name, &expr->where,
+		     do_concurrent_flag == 2 ? "mask" : "block");
 	  t = FAILURE;
 	}
       else if (gfc_pure (NULL))
@@ -3196,6 +3238,9 @@ pure_subroutine (gfc_code *c, gfc_symbol *sym)
   if (forall_flag)
     gfc_error ("Subroutine call to '%s' in FORALL block at %L is not PURE",
 	       sym->name, &c->loc);
+  else if (do_concurrent_flag)
+    gfc_error ("Subroutine call to '%s' in DO CONCURRENT block at %L is not "
+	       "PURE", sym->name, &c->loc);
   else if (gfc_pure (NULL))
     gfc_error ("Subroutine call to '%s' at %L is not PURE", sym->name,
 	       &c->loc);
@@ -5198,8 +5243,7 @@ check_host_association (gfc_expr *e)
 	      && sym->attr.contained)
 	{
 	  /* Clear the shape, since it might not be valid.  */
-	  if (e->shape != NULL)
-	    gfc_free_shape (&e->shape, e->rank);
+	  gfc_free_shape (&e->shape, e->rank);
 
 	  /* Give the expression the right symtree!  */
 	  gfc_find_sym_tree (e->symtree->name, NULL, 1, &st);
@@ -8106,6 +8150,13 @@ resolve_transfer (gfc_code *code)
 	 && exp->value.op.op == INTRINSIC_PARENTHESES)
     exp = exp->value.op.op1;
 
+  if (exp && exp->expr_type == EXPR_NULL && exp->ts.type == BT_UNKNOWN)
+    {
+      gfc_error ("NULL intrinsic at %L in data transfer statement requires "
+		 "MOLD=", &exp->where);
+      return;
+    }
+
   if (exp == NULL || (exp->expr_type != EXPR_VARIABLE
 		      && exp->expr_type != EXPR_FUNCTION))
     return;
@@ -8171,7 +8222,7 @@ resolve_transfer (gfc_code *code)
 	}
     }
 
-  if (sym->as != NULL && sym->as->type == AS_ASSUMED_SIZE
+  if (sym->as != NULL && sym->as->type == AS_ASSUMED_SIZE && exp->ref
       && exp->ref->type == REF_ARRAY && exp->ref->u.ar.type == AR_FULL)
     {
       gfc_error ("Data transfer element at %L cannot be a full reference to "
@@ -8352,10 +8403,16 @@ resolve_branch (gfc_st_label *label, gfc_code *code)
 	 whether the label is still visible outside of the CRITICAL block,
 	 which is invalid.  */
       for (stack = cs_base; stack; stack = stack->prev)
-	if (stack->current->op == EXEC_CRITICAL
-	    && bitmap_bit_p (stack->reachable_labels, label->value))
-	  gfc_error ("GOTO statement at %L leaves CRITICAL construct for label"
-		      " at %L", &code->loc, &label->where);
+	{
+	  if (stack->current->op == EXEC_CRITICAL
+	      && bitmap_bit_p (stack->reachable_labels, label->value))
+	    gfc_error ("GOTO statement at %L leaves CRITICAL construct for "
+		      "label at %L", &code->loc, &label->where);
+	  else if (stack->current->op == EXEC_DO_CONCURRENT
+		   && bitmap_bit_p (stack->reachable_labels, label->value))
+	    gfc_error ("GOTO statement at %L leaves DO CONCURRENT construct "
+		      "for label at %L", &code->loc, &label->where);
+	}
 
       return;
     }
@@ -8374,6 +8431,12 @@ resolve_branch (gfc_st_label *label, gfc_code *code)
 	     construct as END CRITICAL is still part of it.  */
 	  gfc_error ("GOTO statement at %L leaves CRITICAL construct for label"
 		      " at %L", &code->loc, &label->where);
+	  return;
+	}
+      else if (stack->current->op == EXEC_DO_CONCURRENT)
+	{
+	  gfc_error ("GOTO statement at %L leaves DO CONCURRENT construct for "
+		     "label at %L", &code->loc, &label->where);
 	  return;
 	}
     }
@@ -8799,6 +8862,7 @@ gfc_resolve_blocks (gfc_code *b, gfc_namespace *ns)
 	case EXEC_FORALL:
 	case EXEC_DO:
 	case EXEC_DO_WHILE:
+	case EXEC_DO_CONCURRENT:
 	case EXEC_CRITICAL:
 	case EXEC_READ:
 	case EXEC_WRITE:
@@ -9038,7 +9102,7 @@ static void
 resolve_code (gfc_code *code, gfc_namespace *ns)
 {
   int omp_workshare_save;
-  int forall_save;
+  int forall_save, do_concurrent_save;
   code_stack frame;
   gfc_try t;
 
@@ -9052,6 +9116,7 @@ resolve_code (gfc_code *code, gfc_namespace *ns)
     {
       frame.current = code;
       forall_save = forall_flag;
+      do_concurrent_save = do_concurrent_flag;
 
       if (code->op == EXEC_FORALL)
 	{
@@ -9084,6 +9149,11 @@ resolve_code (gfc_code *code, gfc_namespace *ns)
 	      /* Blocks are handled in resolve_select_type because we have
 		 to transform the SELECT TYPE into ASSOCIATE first.  */
 	      break;
+            case EXEC_DO_CONCURRENT:
+	      do_concurrent_flag = 1;
+	      gfc_resolve_blocks (code->block, ns);
+	      do_concurrent_flag = 2;
+	      break;
 	    case EXEC_OMP_WORKSHARE:
 	      omp_workshare_save = omp_workshare_flag;
 	      omp_workshare_flag = 1;
@@ -9101,6 +9171,7 @@ resolve_code (gfc_code *code, gfc_namespace *ns)
       if (code->op != EXEC_COMPCALL && code->op != EXEC_CALL_PPC)
 	t = gfc_resolve_expr (code->expr1);
       forall_flag = forall_save;
+      do_concurrent_flag = do_concurrent_save;
 
       if (gfc_resolve_expr (code->expr2) == FAILURE)
 	t = FAILURE;
@@ -9368,6 +9439,7 @@ resolve_code (gfc_code *code, gfc_namespace *ns)
 	  resolve_transfer (code);
 	  break;
 
+	case EXEC_DO_CONCURRENT:
 	case EXEC_FORALL:
 	  resolve_forall_iterators (code->ext.forall_iterator);
 
@@ -13537,6 +13609,7 @@ resolve_types (gfc_namespace *ns)
     }
 
   forall_flag = 0;
+  do_concurrent_flag = 0;
   gfc_check_interfaces (ns);
 
   gfc_traverse_ns (ns, resolve_values);

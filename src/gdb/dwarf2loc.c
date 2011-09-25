@@ -44,15 +44,15 @@
 
 extern int dwarf2_always_disassemble;
 
-static void
-dwarf_expr_frame_base_1 (struct symbol *framefunc, CORE_ADDR pc,
-			 const gdb_byte **start, size_t *length);
+static void dwarf_expr_frame_base_1 (struct symbol *framefunc, CORE_ADDR pc,
+				     const gdb_byte **start, size_t *length);
 
-static struct value *
-dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
-			       const gdb_byte *data, unsigned short size,
-			       struct dwarf2_per_cu_data *per_cu,
-			       LONGEST byte_offset);
+static struct value *dwarf2_evaluate_loc_desc_full (struct type *type,
+						    struct frame_info *frame,
+						    const gdb_byte *data,
+						    unsigned short size,
+					      struct dwarf2_per_cu_data *per_cu,
+						    LONGEST byte_offset);
 
 /* A function for dealing with location lists.  Given a
    symbol baton (BATON) and a pc value (PC), find the appropriate
@@ -265,14 +265,19 @@ per_cu_dwarf_call (struct dwarf_expr_context *ctx, size_t die_offset,
 		   void *baton)
 {
   struct dwarf2_locexpr_baton block;
+  struct cleanup *back_to;
 
   block = dwarf2_fetch_die_location_block (die_offset, per_cu,
 					   get_frame_pc, baton);
+
+  back_to = make_cleanup (xfree, (void *) block.data);
 
   /* DW_OP_call_ref is currently not supported.  */
   gdb_assert (block.per_cu == per_cu);
 
   dwarf_expr_eval (ctx, block.data, block.size);
+
+  do_cleanups (back_to);
 }
 
 /* Helper interface of per_cu_dwarf_call for dwarf2_evaluate_loc_desc.  */
@@ -283,7 +288,7 @@ dwarf_expr_dwarf_call (struct dwarf_expr_context *ctx, size_t die_offset)
   struct dwarf_expr_baton *debaton = ctx->baton;
 
   per_cu_dwarf_call (ctx, die_offset, debaton->per_cu,
-		     ctx->get_frame_pc, ctx->baton);
+		     ctx->funcs->get_frame_pc, ctx->baton);
 }
 
 /* Callback function for dwarf2_evaluate_loc_desc.  */
@@ -966,8 +971,9 @@ indirect_pieced_value (struct value *value)
   struct dwarf_expr_piece *piece = NULL;
   struct value *result;
   LONGEST byte_offset;
+  struct cleanup *back_to;
 
-  type = value_type (value);
+  type = check_typedef (value_type (value));
   if (TYPE_CODE (type) != TYPE_CODE_PTR)
     return NULL;
 
@@ -1006,6 +1012,8 @@ indirect_pieced_value (struct value *value)
     }
 
   frame = get_selected_frame (_("No frame selected."));
+
+  /* This is an offset requested by GDB, such as value subcripts.  */
   byte_offset = value_as_address (value);
 
   gdb_assert (piece);
@@ -1013,9 +1021,13 @@ indirect_pieced_value (struct value *value)
 					   get_frame_address_in_block_wrapper,
 					   frame);
 
+  back_to = make_cleanup (xfree, (void *) baton.data);
+
   result = dwarf2_evaluate_loc_desc_full (TYPE_TARGET_TYPE (type), frame,
 					  baton.data, baton.size, baton.per_cu,
-					  byte_offset);
+					  piece->v.ptr.offset + byte_offset);
+
+  do_cleanups (back_to);
 
   return result;
 }
@@ -1051,7 +1063,7 @@ free_pieced_value_closure (struct value *v)
 }
 
 /* Functions for accessing a variable described by DW_OP_piece.  */
-static struct lval_funcs pieced_value_funcs = {
+static const struct lval_funcs pieced_value_funcs = {
   read_pieced_value,
   write_pieced_value,
   check_pieced_value_validity,
@@ -1071,6 +1083,20 @@ invalid_synthetic_pointer (void)
   error (_("access outside bounds of object "
 	   "referenced via synthetic pointer"));
 }
+
+/* Virtual method table for dwarf2_evaluate_loc_desc_full below.  */
+
+static const struct dwarf_expr_context_funcs dwarf_expr_ctx_funcs =
+{
+  dwarf_expr_read_reg,
+  dwarf_expr_read_mem,
+  dwarf_expr_frame_base,
+  dwarf_expr_frame_cfa,
+  dwarf_expr_frame_pc,
+  dwarf_expr_tls_address,
+  dwarf_expr_dwarf_call,
+  dwarf_expr_get_base_type
+};
 
 /* Evaluate a location description, starting at DATA and with length
    SIZE, to find the current location of variable of TYPE in the
@@ -1094,12 +1120,7 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
     invalid_synthetic_pointer ();
 
   if (size == 0)
-    {
-      retval = allocate_value (type);
-      VALUE_LVAL (retval) = not_lval;
-      set_value_optimized_out (retval, 1);
-      return retval;
-    }
+    return allocate_optimized_out_value (type);
 
   baton.frame = frame;
   baton.per_cu = per_cu;
@@ -1112,14 +1133,7 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
   ctx->addr_size = dwarf2_per_cu_addr_size (per_cu);
   ctx->offset = dwarf2_per_cu_text_offset (per_cu);
   ctx->baton = &baton;
-  ctx->read_reg = dwarf_expr_read_reg;
-  ctx->read_mem = dwarf_expr_read_mem;
-  ctx->get_frame_base = dwarf_expr_frame_base;
-  ctx->get_frame_cfa = dwarf_expr_frame_cfa;
-  ctx->get_frame_pc = dwarf_expr_frame_pc;
-  ctx->get_tls_address = dwarf_expr_tls_address;
-  ctx->dwarf_call = dwarf_expr_dwarf_call;
-  ctx->get_base_type = dwarf_expr_get_base_type;
+  ctx->funcs = &dwarf_expr_ctx_funcs;
 
   TRY_CATCH (ex, RETURN_MASK_ERROR)
     {
@@ -1218,7 +1232,13 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
 	    retval = allocate_value (type);
 	    contents = value_contents_raw (retval);
 	    if (n > TYPE_LENGTH (type))
-	      n = TYPE_LENGTH (type);
+	      {
+		struct gdbarch *objfile_gdbarch = get_objfile_arch (objfile);
+
+		if (gdbarch_byte_order (objfile_gdbarch) == BFD_ENDIAN_BIG)
+		  val_bytes += n - TYPE_LENGTH (type);
+		n = TYPE_LENGTH (type);
+	      }
 	    memcpy (contents, val_bytes, n);
 	  }
 	  break;
@@ -1240,16 +1260,20 @@ dwarf2_evaluate_loc_desc_full (struct type *type, struct frame_info *frame,
 	    n -= byte_offset;
 
 	    if (n > TYPE_LENGTH (type))
-	      n = TYPE_LENGTH (type);
+	      {
+		struct gdbarch *objfile_gdbarch = get_objfile_arch (objfile);
+
+		if (gdbarch_byte_order (objfile_gdbarch) == BFD_ENDIAN_BIG)
+		  ldata += n - TYPE_LENGTH (type);
+		n = TYPE_LENGTH (type);
+	      }
 	    memcpy (contents, ldata, n);
 	  }
 	  break;
 
 	case DWARF_VALUE_OPTIMIZED_OUT:
 	  do_cleanups (value_chain);
-	  retval = allocate_value (type);
-	  VALUE_LVAL (retval) = not_lval;
-	  set_value_optimized_out (retval, 1);
+	  retval = allocate_optimized_out_value (type);
 	  break;
 
 	  /* DWARF_VALUE_IMPLICIT_POINTER was converted to a pieced
@@ -1348,8 +1372,22 @@ needs_frame_dwarf_call (struct dwarf_expr_context *ctx, size_t die_offset)
   struct needs_frame_baton *nf_baton = ctx->baton;
 
   per_cu_dwarf_call (ctx, die_offset, nf_baton->per_cu,
-		     ctx->get_frame_pc, ctx->baton);
+		     ctx->funcs->get_frame_pc, ctx->baton);
 }
+
+/* Virtual method table for dwarf2_loc_desc_needs_frame below.  */
+
+static const struct dwarf_expr_context_funcs needs_frame_ctx_funcs =
+{
+  needs_frame_read_reg,
+  needs_frame_read_mem,
+  needs_frame_frame_base,
+  needs_frame_frame_cfa,
+  needs_frame_frame_cfa,	/* get_frame_pc */
+  needs_frame_tls_address,
+  needs_frame_dwarf_call,
+  NULL				/* get_base_type */
+};
 
 /* Return non-zero iff the location expression at DATA (length SIZE)
    requires a frame to evaluate.  */
@@ -1375,13 +1413,7 @@ dwarf2_loc_desc_needs_frame (const gdb_byte *data, unsigned short size,
   ctx->addr_size = dwarf2_per_cu_addr_size (per_cu);
   ctx->offset = dwarf2_per_cu_text_offset (per_cu);
   ctx->baton = &baton;
-  ctx->read_reg = needs_frame_read_reg;
-  ctx->read_mem = needs_frame_read_mem;
-  ctx->get_frame_base = needs_frame_frame_base;
-  ctx->get_frame_cfa = needs_frame_frame_cfa;
-  ctx->get_frame_pc = needs_frame_frame_cfa;
-  ctx->get_tls_address = needs_frame_tls_address;
-  ctx->dwarf_call = needs_frame_dwarf_call;
+  ctx->funcs = &needs_frame_ctx_funcs;
 
   dwarf_expr_eval (ctx, data, size);
 
@@ -2115,12 +2147,14 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	  {
 	    struct dwarf2_locexpr_baton block;
 	    int size = (op == DW_OP_call2 ? 2 : 4);
+	    struct cleanup *back_to;
 
 	    uoffset = extract_unsigned_integer (op_ptr, size, byte_order);
 	    op_ptr += size;
 
 	    block = dwarf2_fetch_die_location_block (uoffset, per_cu,
 						     get_ax_pc, expr);
+	    back_to = make_cleanup (xfree, (void *) block.data);
 
 	    /* DW_OP_call_ref is currently not supported.  */
 	    gdb_assert (block.per_cu == per_cu);
@@ -2128,6 +2162,8 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	    dwarf2_compile_expr_to_ax (expr, loc, arch, addr_size,
 				       block.data, block.data + block.size,
 				       per_cu);
+
+	    do_cleanups (back_to);
 	  }
 	  break;
 
@@ -2185,6 +2221,18 @@ piece_end_p (const gdb_byte *data, const gdb_byte *end)
   return data == end || data[0] == DW_OP_piece || data[0] == DW_OP_bit_piece;
 }
 
+/* Helper for locexpr_describe_location_piece that finds the name of a
+   DWARF register.  */
+
+static const char *
+locexpr_regname (struct gdbarch *gdbarch, int dwarf_regnum)
+{
+  int regnum;
+
+  regnum = gdbarch_dwarf2_reg_to_regnum (gdbarch, dwarf_regnum);
+  return gdbarch_register_name (gdbarch, regnum);
+}
+
 /* Nicely describe a single piece of a location, returning an updated
    position in the bytecode sequence.  This function cannot recognize
    all locations; if a location is not recognized, it simply returns
@@ -2197,13 +2245,11 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
 				 unsigned int addr_size)
 {
   struct gdbarch *gdbarch = get_objfile_arch (objfile);
-  int regno;
 
   if (data[0] >= DW_OP_reg0 && data[0] <= DW_OP_reg31)
     {
-      regno = gdbarch_dwarf2_reg_to_regnum (gdbarch, data[0] - DW_OP_reg0);
       fprintf_filtered (stream, _("a variable in $%s"),
-			gdbarch_register_name (gdbarch, regno));
+			locexpr_regname (gdbarch, data[0] - DW_OP_reg0));
       data += 1;
     }
   else if (data[0] == DW_OP_regx)
@@ -2211,9 +2257,8 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
       ULONGEST reg;
 
       data = read_uleb128 (data + 1, end, &reg);
-      regno = gdbarch_dwarf2_reg_to_regnum (gdbarch, reg);
       fprintf_filtered (stream, _("a variable in $%s"),
-			gdbarch_register_name (gdbarch, regno));
+			locexpr_regname (gdbarch, reg));
     }
   else if (data[0] == DW_OP_fbreg)
     {
@@ -2269,11 +2314,9 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
 	  return save_data;
 	}
 
-      regno = gdbarch_dwarf2_reg_to_regnum (gdbarch, frame_reg);
-
       fprintf_filtered (stream,
 			_("a variable at frame base reg $%s offset %s+%s"),
-			gdbarch_register_name (gdbarch, regno),
+			locexpr_regname (gdbarch, frame_reg),
 			plongest (base_offset), plongest (frame_offset));
     }
   else if (data[0] >= DW_OP_breg0 && data[0] <= DW_OP_breg31
@@ -2281,14 +2324,12 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
     {
       LONGEST offset;
 
-      regno = gdbarch_dwarf2_reg_to_regnum (gdbarch, data[0] - DW_OP_breg0);
-
       data = read_sleb128 (data + 1, end, &offset);
 
       fprintf_filtered (stream,
 			_("a variable at offset %s from base reg $%s"),
 			plongest (offset),
-			gdbarch_register_name (gdbarch, regno));
+			locexpr_regname (gdbarch, data[0] - DW_OP_breg0));
     }
 
   /* The location expression for a TLS variable looks like this (on a
@@ -2345,7 +2386,8 @@ disassemble_dwarf_expression (struct ui_file *stream,
 			      struct gdbarch *arch, unsigned int addr_size,
 			      int offset_size,
 			      const gdb_byte *data, const gdb_byte *end,
-			      int all)
+			      int all,
+			      struct dwarf2_per_cu_data *per_cu)
 {
   const gdb_byte *start = data;
 
@@ -2458,13 +2500,13 @@ disassemble_dwarf_expression (struct ui_file *stream,
 	case DW_OP_reg30:
 	case DW_OP_reg31:
 	  fprintf_filtered (stream, " [$%s]",
-			    gdbarch_register_name (arch, op - DW_OP_reg0));
+			    locexpr_regname (arch, op - DW_OP_reg0));
 	  break;
 
 	case DW_OP_regx:
 	  data = read_uleb128 (data, end, &ul);
 	  fprintf_filtered (stream, " %s [$%s]", pulongest (ul),
-			    gdbarch_register_name (arch, (int) ul));
+			    locexpr_regname (arch, (int) ul));
 	  break;
 
 	case DW_OP_implicit_value:
@@ -2507,7 +2549,7 @@ disassemble_dwarf_expression (struct ui_file *stream,
 	case DW_OP_breg31:
 	  data = read_sleb128 (data, end, &l);
 	  fprintf_filtered (stream, " %s [$%s]", plongest (l),
-			    gdbarch_register_name (arch, op - DW_OP_breg0));
+			    locexpr_regname (arch, op - DW_OP_breg0));
 	  break;
 
 	case DW_OP_bregx:
@@ -2515,7 +2557,7 @@ disassemble_dwarf_expression (struct ui_file *stream,
 	  data = read_sleb128 (data, end, &l);
 	  fprintf_filtered (stream, " register %s [$%s] offset %s",
 			    pulongest (ul),
-			    gdbarch_register_name (arch, (int) ul),
+			    locexpr_regname (arch, (int) ul),
 			    plongest (l));
 	  break;
 
@@ -2598,6 +2640,71 @@ disassemble_dwarf_expression (struct ui_file *stream,
 			      plongest (l));
 	  }
 	  break;
+
+	case DW_OP_GNU_deref_type:
+	  {
+	    int addr_size = *data++;
+	    ULONGEST offset;
+	    struct type *type;
+
+	    data = read_uleb128 (data, end, &offset);
+	    type = dwarf2_get_die_type (offset, per_cu);
+	    fprintf_filtered (stream, "<");
+	    type_print (type, "", stream, -1);
+	    fprintf_filtered (stream, " [0x%s]> %d", phex_nz (offset, 0),
+			      addr_size);
+	  }
+	  break;
+
+	case DW_OP_GNU_const_type:
+	  {
+	    ULONGEST type_die;
+	    struct type *type;
+
+	    data = read_uleb128 (data, end, &type_die);
+	    type = dwarf2_get_die_type (type_die, per_cu);
+	    fprintf_filtered (stream, "<");
+	    type_print (type, "", stream, -1);
+	    fprintf_filtered (stream, " [0x%s]>", phex_nz (type_die, 0));
+	  }
+	  break;
+
+	case DW_OP_GNU_regval_type:
+	  {
+	    ULONGEST type_die, reg;
+	    struct type *type;
+
+	    data = read_uleb128 (data, end, &reg);
+	    data = read_uleb128 (data, end, &type_die);
+
+	    type = dwarf2_get_die_type (type_die, per_cu);
+	    fprintf_filtered (stream, "<");
+	    type_print (type, "", stream, -1);
+	    fprintf_filtered (stream, " [0x%s]> [$%s]", phex_nz (type_die, 0),
+			      locexpr_regname (arch, reg));
+	  }
+	  break;
+
+	case DW_OP_GNU_convert:
+	case DW_OP_GNU_reinterpret:
+	  {
+	    ULONGEST type_die;
+
+	    data = read_uleb128 (data, end, &type_die);
+
+	    if (type_die == 0)
+	      fprintf_filtered (stream, "<0>");
+	    else
+	      {
+		struct type *type;
+
+		type = dwarf2_get_die_type (type_die, per_cu);
+		fprintf_filtered (stream, "<");
+		type_print (type, "", stream, -1);
+		fprintf_filtered (stream, " [0x%s]>", phex_nz (type_die, 0));
+	      }
+	  }
+	  break;
 	}
 
       fprintf_filtered (stream, "\n");
@@ -2614,7 +2721,7 @@ locexpr_describe_location_1 (struct symbol *symbol, CORE_ADDR addr,
 			     struct ui_file *stream,
 			     const gdb_byte *data, int size,
 			     struct objfile *objfile, unsigned int addr_size,
-			     int offset_size)
+			     int offset_size, struct dwarf2_per_cu_data *per_cu)
 {
   const gdb_byte *end = data + size;
   int first_piece = 1, bad = 0;
@@ -2645,7 +2752,8 @@ locexpr_describe_location_1 (struct symbol *symbol, CORE_ADDR addr,
 	data = disassemble_dwarf_expression (stream,
 					     get_objfile_arch (objfile),
 					     addr_size, offset_size, data, end,
-					     dwarf2_always_disassemble);
+					     dwarf2_always_disassemble,
+					     per_cu);
 
       if (data < end)
 	{
@@ -2709,7 +2817,8 @@ locexpr_describe_location (struct symbol *symbol, CORE_ADDR addr,
 
   locexpr_describe_location_1 (symbol, addr, stream,
 			       dlbaton->data, dlbaton->size,
-			       objfile, addr_size, offset_size);
+			       objfile, addr_size, offset_size,
+			       dlbaton->per_cu);
 }
 
 /* Describe the location of SYMBOL as an agent value in VALUE, generating
@@ -2756,11 +2865,7 @@ loclist_read_variable (struct symbol *symbol, struct frame_info *frame)
 
   data = dwarf2_find_location_expression (dlbaton, &size, pc);
   if (data == NULL)
-    {
-      val = allocate_value (SYMBOL_TYPE (symbol));
-      VALUE_LVAL (val) = not_lval;
-      set_value_optimized_out (val, 1);
-    }
+    val = allocate_optimized_out_value (SYMBOL_TYPE (symbol));
   else
     val = dwarf2_evaluate_loc_desc (SYMBOL_TYPE (symbol), frame, data, size,
 				    dlbaton->per_cu);
@@ -2855,7 +2960,8 @@ loclist_describe_location (struct symbol *symbol, CORE_ADDR addr,
 
       /* Now describe this particular location.  */
       locexpr_describe_location_1 (symbol, low, stream, loc_ptr, length,
-				   objfile, addr_size, offset_size);
+				   objfile, addr_size, offset_size,
+				   dlbaton->per_cu);
 
       fprintf_filtered (stream, "\n");
 

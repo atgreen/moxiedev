@@ -1912,6 +1912,11 @@ class Sized_relobj_file : public Sized_relobj<size, big_endian>
   sized_relobj() const
   { return this; }
 
+  // Return the ELF file type.
+  int
+  e_type() const
+  { return this->e_type_; }
+
   // Return the number of symbols.  This is only valid after
   // Object::add_symbols has been called.
   unsigned int
@@ -2220,6 +2225,7 @@ class Sized_relobj_file : public Sized_relobj<size, big_endian>
     section_size_type view_size;
     bool is_input_output_view;
     bool is_postprocessing_view;
+    bool is_ctors_reverse_view;
   };
 
   typedef std::vector<View_size> Views;
@@ -2305,13 +2311,23 @@ class Sized_relobj_file : public Sized_relobj<size, big_endian>
   // Layout an input section.
   void
   layout_section(Layout* layout, unsigned int shndx, const char* name,
-                 typename This::Shdr& shdr, unsigned int reloc_shndx,
+                 const typename This::Shdr& shdr, unsigned int reloc_shndx,
                  unsigned int reloc_type);
+
+  // Layout an input .eh_frame section.
+  void
+  layout_eh_frame_section(Layout* layout, const unsigned char* symbols_data,
+			  section_size_type symbols_size,
+			  const unsigned char* symbol_names_data,
+			  section_size_type symbol_names_size,
+			  unsigned int shndx, const typename This::Shdr&,
+			  unsigned int reloc_shndx, unsigned int reloc_type);
 
   // Write section data to the output file.  Record the views and
   // sizes in VIEWS for use when relocating.
   void
-  write_sections(const unsigned char* pshdrs, Output_file*, Views*);
+  write_sections(const Layout*, const unsigned char* pshdrs, Output_file*,
+		 Views*);
 
   // Relocate the sections in the output file.
   void
@@ -2319,6 +2335,11 @@ class Sized_relobj_file : public Sized_relobj<size, big_endian>
 		    const unsigned char* pshdrs, Output_file* of,
 		    Views* pviews)
   { this->do_relocate_sections(symtab, layout, pshdrs, of, pviews); }
+
+  // Reverse the words in a section.  Used for .ctors sections mapped
+  // to .init_array sections.
+  void
+  reverse_words(unsigned char*, section_size_type);
 
   // Scan the input relocations for --emit-relocs.
   void
@@ -2488,6 +2509,9 @@ class Sized_relobj_file : public Sized_relobj<size, big_endian>
 
   // General access to the ELF file.
   elfcpp::Elf_file<size, big_endian, Object> elf_file_;
+  // Type of ELF file (ET_REL or ET_EXEC).  ET_EXEC files are allowed
+  // as input files only for the --just-symbols option.
+  int e_type_;
   // Index of SHT_SYMTAB section.
   unsigned int symtab_shndx_;
   // The number of local symbols.

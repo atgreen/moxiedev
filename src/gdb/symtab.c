@@ -83,10 +83,6 @@ static void output_source_filename (const char *, int *);
 
 static int find_line_common (struct linetable *, int, int *);
 
-/* This one is used by linespec.c */
-
-char *operator_chars (char *p, char **end);
-
 static struct symbol *lookup_symbol_aux (const char *name,
 					 const struct block *block,
 					 const domain_enum domain,
@@ -500,7 +496,7 @@ symbol_find_demangled_name (struct general_symbol_info *gsymbol,
       || gsymbol->language == language_auto)
     {
       demangled =
-        cplus_demangle (mangled, DMGL_PARAMS | DMGL_ANSI | DMGL_VERBOSE);
+        cplus_demangle (mangled, DMGL_PARAMS | DMGL_ANSI);
       if (demangled != NULL)
 	{
 	  gsymbol->language = language_cplus;
@@ -1090,6 +1086,31 @@ lookup_symbol (const char *name, const struct block *block,
 				    is_a_field_of_this);
 }
 
+/* Look up the `this' symbol for LANG in BLOCK.  Return the symbol if
+   found, or NULL if not found.  */
+
+struct symbol *
+lookup_language_this (const struct language_defn *lang,
+		      const struct block *block)
+{
+  if (lang->la_name_of_this == NULL || block == NULL)
+    return NULL;
+
+  while (block)
+    {
+      struct symbol *sym;
+
+      sym = lookup_block_symbol (block, lang->la_name_of_this, VAR_DOMAIN);
+      if (sym != NULL)
+	return sym;
+      if (BLOCK_FUNCTION (block))
+	break;
+      block = BLOCK_SUPERBLOCK (block);
+    }
+
+  return NULL;
+}
+
 /* Behave like lookup_symbol except that NAME is the natural name
    of the symbol that we're looking for and, if LINKAGE_NAME is
    non-NULL, ensure that the symbol's linkage name matches as
@@ -1123,20 +1144,10 @@ lookup_symbol_aux (const char *name, const struct block *block,
 
   langdef = language_def (language);
 
-  if (langdef->la_name_of_this != NULL && is_a_field_of_this != NULL
-      && block != NULL)
+  if (is_a_field_of_this != NULL)
     {
-      struct symbol *sym = NULL;
-      const struct block *function_block = block;
+      struct symbol *sym = lookup_language_this (langdef, block);
 
-      /* 'this' is only defined in the function's block, so find the
-	 enclosing function block.  */
-      for (; function_block && !BLOCK_FUNCTION (function_block);
-	   function_block = BLOCK_SUPERBLOCK (function_block));
-
-      if (function_block && !dict_empty (BLOCK_DICT (function_block)))
-	sym = lookup_block_symbol (function_block, langdef->la_name_of_this,
-				   VAR_DOMAIN);
       if (sym)
 	{
 	  struct type *t = sym->type;
@@ -2622,7 +2633,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
    some legitimate operator text, return a pointer to the
    beginning of the substring of the operator text.
    Otherwise, return "".  */
-char *
+static char *
 operator_chars (char *p, char **end)
 {
   *end = "";
@@ -2837,7 +2848,7 @@ output_source_filename (const char *name, int *first)
 
 /* A callback for map_partial_symbol_filenames.  */
 static void
-output_partial_symbol_filename (const char *fullname, const char *filename,
+output_partial_symbol_filename (const char *filename, const char *fullname,
 				void *data)
 {
   output_source_filename (fullname ? fullname : filename, data);
@@ -3760,6 +3771,7 @@ struct add_name_data
    This adds a macro's name to the current completion list.  */
 static void
 add_macro_name (const char *name, const struct macro_definition *ignore,
+		struct macro_source_file *ignore2, int ignore3,
 		void *user_data)
 {
   struct add_name_data *datum = (struct add_name_data *) user_data;
@@ -4364,8 +4376,8 @@ in_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR func_start)
    The functions end point and an increasing SAL line are used as
    indicators of the prologue's endpoint.
 
-   This code is based on the function refine_prologue_limit (versions
-   found in both ia64 and ppc).  */
+   This code is based on the function refine_prologue_limit
+   (found in ia64).  */
 
 CORE_ADDR
 skip_prologue_using_sal (struct gdbarch *gdbarch, CORE_ADDR func_addr)
@@ -4382,7 +4394,7 @@ skip_prologue_using_sal (struct gdbarch *gdbarch, CORE_ADDR func_addr)
   prologue_sal = find_pc_line (start_pc, 0);
   if (prologue_sal.line != 0)
     {
-      /* For langauges other than assembly, treat two consecutive line
+      /* For languages other than assembly, treat two consecutive line
 	 entries at the same address as a zero-instruction prologue.
 	 The GNU assembler emits separate line notes for each instruction
 	 in a multi-instruction macro, but compilers generally will not
@@ -4739,7 +4751,6 @@ expand_line_sal (struct symtab_and_line sal)
 
       filter[i] = 1;
       blocks[i] = block_for_pc_sect (ret.sals[i].pc, ret.sals[i].section);
-
     }
   do_cleanups (old_chain);
 

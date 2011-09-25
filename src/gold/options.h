@@ -1,6 +1,6 @@
 // options.h -- handle command line options for gold  -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -63,6 +63,11 @@ class Script_info;
 
 enum Incremental_disposition
 {
+  // Startup files that appear before the first disposition option.
+  // These will default to INCREMENTAL_CHECK unless the
+  // --incremental-startup-unchanged option is given.
+  // (For files added implicitly by gcc before any user options.)
+  INCREMENTAL_STARTUP,
   // Determine the status from the timestamp (default).
   INCREMENTAL_CHECK,
   // Assume the file changed from the previous build.
@@ -96,6 +101,9 @@ parse_uint64(const char* option_name, const char* arg, uint64_t* retval);
 
 extern void
 parse_double(const char* option_name, const char* arg, double* retval);
+
+extern void
+parse_percent(const char* option_name, const char* arg, double* retval);
 
 extern void
 parse_string(const char* option_name, const char* arg, const char** retval);
@@ -372,6 +380,12 @@ struct Struct_special : public Struct_var
 	     #default_value__, helpstring__, helparg__, false,		 \
 	     double, double, options::parse_double)
 
+#define DEFINE_percent(varname__, dashes__, shortname__, default_value__, \
+		       helpstring__, helparg__)				  \
+  DEFINE_var(varname__, dashes__, shortname__, default_value__ / 100.0,	  \
+	     #default_value__, helpstring__, helparg__, false,		  \
+	     double, double, options::parse_percent)
+
 #define DEFINE_string(varname__, dashes__, shortname__, default_value__, \
                       helpstring__, helparg__)                           \
   DEFINE_var(varname__, dashes__, shortname__, default_value__,          \
@@ -629,6 +643,9 @@ class General_options
   DEFINE_bool_alias(dn, Bdynamic, options::ONE_DASH, '\0',
 		    N_("alias for -Bstatic"), NULL, true);
 
+  DEFINE_bool(Bgroup, options::ONE_DASH, '\0', false,
+	      N_("Use group name lookup rules for shared library"), NULL);
+
   DEFINE_bool(Bsymbolic, options::ONE_DASH, '\0', false,
               N_("Bind defined symbols locally"), NULL);
 
@@ -662,6 +679,10 @@ class General_options
   DEFINE_bool(cref, options::TWO_DASHES, '\0', false,
 	      N_("Output cross reference table"),
 	      N_("Do not output cross reference table"));
+
+  DEFINE_bool(ctors_in_init_array, options::TWO_DASHES, '\0', true,
+	      N_("Use DT_INIT_ARRAY for all constructors (default)"),
+	      N_("Handle constructors as directed by compiler"));
 
   DEFINE_bool(define_common, options::TWO_DASHES, 'd', false,
               N_("Define common symbols"),
@@ -721,15 +742,23 @@ class General_options
   DEFINE_special(EB, options::ONE_DASH, '\0',
 		 N_("Link big-endian objects."), NULL);
 
-  DEFINE_bool(eh_frame_hdr, options::TWO_DASHES, '\0', false,
-              N_("Create exception frame header"), NULL);
-
   DEFINE_special(EL, options::ONE_DASH, '\0',
 		 N_("Link little-endian objects."), NULL);
+
+  DEFINE_bool(eh_frame_hdr, options::TWO_DASHES, '\0', false,
+              N_("Create exception frame header"), NULL);
 
   DEFINE_bool(enum_size_warning, options::TWO_DASHES, '\0', true, NULL,
 	      N_("(ARM only) Do not warn about objects with incompatible "
 		 "enum sizes"));
+
+  DEFINE_set(auxiliary, options::TWO_DASHES, 'f',
+	     N_("Auxiliary filter for shared object symbol table"),
+	     N_("SHLIB"));
+
+  DEFINE_string(filter, options::TWO_DASHES, 'F', NULL,
+		N_("Filter for shared object symbol table"),
+		N_("SHLIB"));
 
   DEFINE_bool(fatal_warnings, options::TWO_DASHES, '\0', false,
 	      N_("Treat warnings as errors"),
@@ -801,6 +830,14 @@ class General_options
   DEFINE_special(incremental_unknown, options::TWO_DASHES, '\0',
                  N_("Use timestamps to check files (default)"), NULL);
 
+  DEFINE_special(incremental_startup_unchanged, options::TWO_DASHES, '\0',
+                 N_("Assume startup files unchanged "
+		    "(files preceding this option)"), NULL);
+
+  DEFINE_percent(incremental_patch, options::TWO_DASHES, '\0', 10,
+		 N_("Amount of extra space to allocate for patches"),
+		 N_("PERCENT"));
+
   DEFINE_string(init, options::ONE_DASH, '\0', "_init",
                 N_("Call SYMBOL at load-time"), N_("SYMBOL"));
 
@@ -815,6 +852,10 @@ class General_options
   DEFINE_bool(keep_files_mapped, options::TWO_DASHES, '\0', true,
               N_("Keep files mapped across passes (default)"),
               N_("Release mapped files after each pass"));
+
+  DEFINE_bool(ld_generated_unwind_info, options::TWO_DASHES, '\0', true,
+	      N_("Generate unwind information for PLT (default)"),
+	      N_("Do not generate unwind information for PLT"));
 
   DEFINE_special(library, options::TWO_DASHES, 'l',
                  N_("Search for library LIBNAME"), N_("LIBNAME"));
@@ -831,7 +872,7 @@ class General_options
               NULL);
 
   DEFINE_string(m, options::EXACTLY_ONE_DASH, 'm', "",
-                N_("Ignored for compatibility"), N_("EMULATION"));
+                N_("Set GNU linker emulation; obsolete"), N_("EMULATION"));
 
   DEFINE_bool(print_map, options::TWO_DASHES, 'M', false,
 	      N_("Write map file on standard output"), NULL);
@@ -885,6 +926,9 @@ class General_options
 
   DEFINE_bool(preread_archive_symbols, options::TWO_DASHES, '\0', false,
               N_("Preread archive symbols when multi-threaded"), NULL);
+
+  DEFINE_bool(print_output_format, options::TWO_DASHES, '\0', false,
+	      N_("Print default output format"), NULL);
 
   DEFINE_string(print_symbol_counts, options::TWO_DASHES, '\0', NULL,
 		N_("Print symbols defined and used for each input"),
@@ -1031,6 +1075,13 @@ class General_options
   DEFINE_set(undefined, options::TWO_DASHES, 'u',
 	     N_("Create undefined reference to SYMBOL"), N_("SYMBOL"));
 
+  DEFINE_enum(unresolved_symbols, options::TWO_DASHES, '\0', NULL,
+	      N_("How to handle unresolved symbols"),
+	      ("ignore-all,report-all,ignore-in-object-files,"
+	       "ignore-in-shared-libs"),
+	      {"ignore-all", "report-all", "ignore-in-object-files",
+		  "ignore-in-shared-libs"});
+
   DEFINE_bool(verbose, options::TWO_DASHES, '\0', false,
               N_("Synonym for --debug=files"), NULL);
 
@@ -1162,7 +1213,7 @@ class General_options
 	      N_("Don't mark variables read-only after relocation"));
   DEFINE_bool(text, options::DASH_Z, '\0', false,
 	      N_("Do not permit relocations in read-only segments"),
-	      NULL);
+	      N_("Permit relocations in read-only segments (default)"));
   DEFINE_bool_alias(textoff, text, options::DASH_Z, '\0',
 		    N_("Permit relocations in read-only segments (default)"),
 		    NULL, true);
@@ -1313,6 +1364,12 @@ class General_options
   incremental_disposition() const
   { return this->incremental_disposition_; }
 
+  // The disposition to use for startup files (those that precede the
+  // first --incremental-changed, etc. option).
+  Incremental_disposition
+  incremental_startup_disposition() const
+  { return this->incremental_startup_disposition_; }
+
   // Return true if S is the name of a library excluded from automatic
   // symbol export.
   bool
@@ -1430,9 +1487,12 @@ class General_options
   // --incremental-unchanged or --incremental-unknown option.  The
   // value may change as we proceed parsing the command line flags.
   Incremental_disposition incremental_disposition_;
+  // The disposition to use for startup files (those marked
+  // INCREMENTAL_STARTUP).
+  Incremental_disposition incremental_startup_disposition_;
   // Whether we have seen one of the options that require incremental
-  // build (--incremental-changed, --incremental-unchanged or
-  // --incremental-unknown)
+  // build (--incremental-changed, --incremental-unchanged,
+  // --incremental-unknown, or --incremental-startup-unchanged).
   bool implicit_incremental_;
   // Libraries excluded from automatic export, via --exclude-libs.
   Unordered_set<std::string> excluded_libs_;

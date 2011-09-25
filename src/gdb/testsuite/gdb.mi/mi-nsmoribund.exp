@@ -13,6 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+if { ![support_displaced_stepping] } { 
+    unsupported "displaced stepping"
+    return -1
+}
+
 load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
@@ -38,7 +43,7 @@ mi_gdb_load $binfile
 
 mi_gdb_test "-gdb-set non-stop 1" ".*"
 mi_gdb_test "-gdb-set target-async 1" ".*"
-detect_async
+mi_detect_async
 
 if { [mi_run_to_main] < 0 } {
     continue
@@ -82,15 +87,14 @@ mi_create_breakpoint "-p 5 $srcfile:$bkpt_line" 3 keep thread_function .* .* .* 
 # Resume all threads.  Only thread 5 should report a stop.
 
 set running_re ""
-for {set i $nthreads} {$i > 0} {incr i -1} {
+for {set i $nthreads} {$i > 1} {incr i -1} {
     set running_re "$running_re\\*running,thread-id=\"$decimal\"\r\n"
 }
+# Don't append \r\n after last line.
+set running_re "$running_re\\*running,thread-id=\"$decimal\""
 
-gdb_test_multiple "-exec-continue --all" "resume all, thread specific breakpoint" {
-    -re ".*$running_re$mi_gdb_prompt" {
-	pass "resume all, thread specific breakpoint"
-    }
-}
+mi_gdb_test "-exec-continue --all" "\[^\n\]*\r\n$running_re" \
+    "resume all, thread specific breakpoint"
 
 mi_expect_stop "breakpoint-hit" "thread_function" "\[^\n\]*" "$srcfile" \
     "\[0-9\]*" {"" "disp=\"keep\""} "hit thread specific breakpoint"

@@ -1615,6 +1615,18 @@ proc is_x86_like_target {} {
     return [is_ilp32_target]
 }
 
+# Return 1 if displaced stepping is supported on target, otherwise, return 0.
+proc support_displaced_stepping {} {
+
+    if { [istarget "x86_64-*-linux*"] || [istarget "i\[34567\]86-*-linux*"]
+	 || [istarget "arm*-*-linux*"] || [istarget "powerpc-*-linux*"]
+	 || [istarget "powerpc64-*-linux*"] || [istarget "s390*-*-*"] } {
+	return 1
+    }
+
+    return 0
+}
+
 # Run a test on the target to see if it supports vmx hardware.  Return 0 if so, 
 # 1 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
@@ -2156,7 +2168,7 @@ proc gdb_compile {source dest type options} {
     # dynamically load one by basename, we must specify rpath.  If we
     # are using a remote host, DejaGNU will link to the shared library
     # using a relative path, so again we must specify an rpath.
-    if { $shlib_load || ($shlib_found && [is_remote host]) } {
+    if { $shlib_load || ($shlib_found && [is_remote target]) } {
 	if { ([istarget "*-*-mingw*"]
 	      || [istarget *-*-cygwin*]
 	      || [istarget *-*-pe*]
@@ -2371,11 +2383,56 @@ proc gdb_compile_shlib {sources dest options} {
 		 || [istarget *-*-cygwin*]
 		 || [istarget *-*-pe*])} {
 	       lappend link_options "additional_flags=-Wl,--out-implib,${dest}.a"
-	   }
+	   } elseif [is_remote target] {
+	     # By default, we do not set the soname.  This causes the linker
+	     # on ELF systems to create a DT_NEEDED entry in the executable
+	     # refering to the full path name of the library.  This is a
+	     # problem in remote testing if the library is in a different
+	     # directory there.  To fix this, we set a soname of just the
+	     # base filename for the library, and add an appropriate -rpath
+	     # to the main executable (in gdb_compile).
+             set destbase [file tail $dest]
+             lappend link_options "additional_flags=-Wl,-soname,$destbase"
+           }
        }
        if {[gdb_compile "${objects}" "${dest}" executable $link_options] != ""} {
            return -1
        }
+    }
+}
+
+# This is just like gdb_compile_shlib, above, except that it tries compiling
+# against several different thread libraries, to see which one this
+# system has.
+proc gdb_compile_shlib_pthreads {sources dest options} {
+    set built_binfile 0
+    set why_msg "unrecognized error"
+    foreach lib {-lpthreads -lpthread -lthread ""} {
+        # This kind of wipes out whatever libs the caller may have
+        # set.  Or maybe theirs will override ours.  How infelicitous.
+        set options_with_lib [concat $options [list libs=$lib quiet]]
+        set ccout [gdb_compile_shlib $sources $dest $options_with_lib]
+        switch -regexp -- $ccout {
+            ".*no posix threads support.*" {
+                set why_msg "missing threads include file"
+                break
+            }
+            ".*cannot open -lpthread.*" {
+                set why_msg "missing runtime threads library"
+            }
+            ".*Can't find library for -lpthread.*" {
+                set why_msg "missing runtime threads library"
+            }
+            {^$} {
+                pass "successfully compiled posix threads test case"
+                set built_binfile 1
+                break
+            }
+        }
+    }
+    if {!$built_binfile} {
+        unsupported "Couldn't compile $sources: ${why_msg}"
+        return -1
     }
 }
 
@@ -3594,6 +3651,33 @@ proc get_sizeof { type default } {
     return [get_integer_valueof "sizeof (${type})" $default]
 }
 
+# Get the current value for remotetimeout and return it.
+proc get_remotetimeout { } {
+    global gdb_prompt
+    global decimal
+
+    gdb_test_multiple "show remotetimeout" "" {
+	-re "Timeout limit to wait for target to respond is ($decimal).*$gdb_prompt $" {
+	    return $expect_out(1,string);
+	}
+    }
+
+    # Pick the default that gdb uses
+    warning "Unable to read remotetimeout"
+    return 300
+}
+
+# Set the remotetimeout to the specified timeout.  Nothing is returned.
+proc set_remotetimeout { timeout } {
+    global gdb_prompt
+
+    gdb_test_multiple "set remotetimeout $timeout" "" {
+	-re "$gdb_prompt $" {
+	    verbose "Set remotetimeout to $timeout\n"
+	}
+    }
+}
+
 # Log gdb command line and script if requested.
 if {[info exists TRANSCRIPT]} {
   rename send_gdb real_send_gdb
@@ -3723,3 +3807,5 @@ proc gdb_target_symbol_prefix_flags {} {
     }
 }
 
+# Always load compatibility stuff.
+load_lib future.exp

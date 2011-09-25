@@ -1,6 +1,6 @@
 // powerpc.cc -- powerpc target support for gold.
 
-// Copyright 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by David S. Miller <davem@davemloft.net>
 //        and David Edelsohn <edelsohn@gnu.org>
 
@@ -383,6 +383,7 @@ Target::Target_info Target_powerpc<32, true>::powerpc_info =
   false,		// has_resolve
   false,		// has_code_fill
   true,			// is_default_stack_executable
+  false,		// can_icf_inline_merge_sections
   '\0',			// wrap_char
   "/usr/lib/ld.so.1",	// dynamic_linker
   0x10000000,		// default_text_segment_address
@@ -406,6 +407,7 @@ Target::Target_info Target_powerpc<32, false>::powerpc_info =
   false,		// has_resolve
   false,		// has_code_fill
   true,			// is_default_stack_executable
+  false,		// can_icf_inline_merge_sections
   '\0',			// wrap_char
   "/usr/lib/ld.so.1",	// dynamic_linker
   0x10000000,		// default_text_segment_address
@@ -429,6 +431,7 @@ Target::Target_info Target_powerpc<64, true>::powerpc_info =
   false,		// has_resolve
   false,		// has_code_fill
   true,			// is_default_stack_executable
+  false,		// can_icf_inline_merge_sections
   '\0',			// wrap_char
   "/usr/lib/ld.so.1",	// dynamic_linker
   0x10000000,		// default_text_segment_address
@@ -452,6 +455,7 @@ Target::Target_info Target_powerpc<64, false>::powerpc_info =
   false,		// has_resolve
   false,		// has_code_fill
   true,			// is_default_stack_executable
+  false,		// can_icf_inline_merge_sections
   '\0',			// wrap_char
   "/usr/lib/ld.so.1",	// dynamic_linker
   0x10000000,		// default_text_segment_address
@@ -2120,9 +2124,12 @@ class Target_selector_powerpc : public Target_selector
 public:
   Target_selector_powerpc()
     : Target_selector(elfcpp::EM_NONE, size, big_endian,
-		      (size == 64 ?
-		       (big_endian ? "elf64-powerpc" : "elf64-powerpcle") :
-		       (big_endian ? "elf32-powerpc" : "elf32-powerpcle")))
+		      (size == 64
+		       ? (big_endian ? "elf64-powerpc" : "elf64-powerpcle")
+		       : (big_endian ? "elf32-powerpc" : "elf32-powerpcle")),
+		      (size == 64
+		       ? (big_endian ? "elf64ppc" : "elf64lppc")
+		       : (big_endian ? "elf32ppc" : "elf32lppc")))
   { }
 
   Target* do_recognize(int machine, int, int)

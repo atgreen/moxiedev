@@ -1,11 +1,108 @@
-2011-05-24  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+2011-07-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
 
-	* opcode/s390.h: Replace S390_OPERAND_REG_EVEN with
-	S390_OPERAND_REG_PAIR.
+	* xregex.h (regoff_t): Define.
 
-2011-05-24  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+2011-07-22  Jakub Jelinek  <jakub@redhat.com>
 
-	* opcode/s390.h: Add S390_OPCODE_REG_EVEN flag.
+	* dwarf2.h (DW_AT_GNU_macros): New.
+	(enum dwarf_macro_record_type): New enum.  Add DW_MACRO_GNU_*.
+
+	PR c++/49756
+	* libiberty.h (stack_limit_increase): New prototype.
+
+2011-07-13  Sriraman Tallam  <tmsriram@google.com>
+
+	* plugin-api.h
+	(ld_plugin_section): New struct.
+	(ld_plugin_get_section_count): New typedef.
+	(ld_plugin_get_section_type): New typedef.
+	(ld_plugin_get_section_name): New typedef.
+	(ld_plugin_get_section_contents): New typedef.
+	(ld_plugin_update_section_order): New typedef.
+	(ld_plugin_allow_section_ordering): New typedef.
+	(LDPT_GET_SECTION_COUNT): New enum value.
+	(LDPT_GET_SECTION_TYPE): New enum value.
+	(LDPT_GET_SECTION_NAME): New enum value.
+	(LDPT_GET_SECTION_CONTENTS): New enum value.
+	(LDPT_UPDATE_SECTION_ORDER): New enum value.
+	(LDPT_ALLOW_SECTION_ORDERING): New enum value.
+	(tv_get_section_count): New struct members.
+	(tv_get_section_type): New struct members.
+	(tv_get_section_name): New struct members.
+	(tv_get_section_contents): New struct members.
+	(tv_update_section_order): New struct members.
+	(tv_allow_section_ordering): New struct members.
+
+2011-07-15  Alan Modra  <amodra@gmail.com>
+
+	* bfdlink.h (struct bfd_link_info): Use ENUM_BITFIELD for strip,
+	discard, common_skip_ar_symbols, unresolved_syms_in_objects, and
+	unresolved_syms_in_shared_libs fields.  Move emit_note_gnu_build_id
+	out of bitfields.  Reorder bitfields.
+
+2011-07-13  Sriraman Tallam  <tmsriram@google.com>
+
+	* plugin-api.h (ld_plugin_section): New struct.
+	(ld_plugin_get_section_count): New typedef.
+	(ld_plugin_get_section_type): New typedef.
+	(ld_plugin_get_section_name): New typedef.
+	(ld_plugin_get_section_contents): New typedef.
+	(ld_plugin_update_section_order): New typedef.
+	(ld_plugin_allow_section_ordering): New typedef.
+	(LDPT_GET_SECTION_COUNT): New enum value.
+	(LDPT_GET_SECTION_TYPE): New enum value.
+	(LDPT_GET_SECTION_NAME): New enum value.
+	(LDPT_GET_SECTION_CONTENTS): New enum value.
+	(LDPT_UPDATE_SECTION_ORDER): New enum value.
+	(LDPT_ALLOW_SECTION_ORDERING): New enum value.
+	(tv_get_section_count): New struct members.
+	(tv_get_section_type): New struct members.
+	(tv_get_section_name): New struct members.
+	(tv_get_section_contents): New struct members.
+	(tv_update_section_order): New struct members.
+	(tv_allow_section_ordering): New struct members.
+
+2011-07-11  Catherine Moore  <clm@codesourcery.com>
+
+	* bfdlink.h (flag_type): New enumeration.
+	(flag_info_list): New structure.
+	(flag_info): New structure.
+
+2011-07-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/12942
+	* bfdlink.h (bfd_link_info): Add loading_lto_outputs.
+
+2011-07-01  Joel Brobecker  <brobecker@adacore.com>
+
+	* filenames.h (HAVE_CASE_INSENSITIVE_FILE_SYSTEM): Define
+	on Darwin, as well as on the systems that use a DOS-like
+	filesystem.
+
+2011-06-22  Jakub Jelinek  <jakub@redhat.com>
+
+	PR debug/47858
+	* dwarf2.h (enum dwarf_location_atom): Add DW_OP_GNU_parameter_ref.
+
+2011-06-22  Jakub Jelinek  <jakub@redhat.com>
+
+	* dwarf2.h (enum dwarf_location_atom): Add DW_OP_GNU_parameter_ref.
+
+2011-06-20  Jakub Jelinek  <jakub@redhat.com>
+
+	PR ld/12570
+	* bfdlink.h (struct bfd_link_info): Add no_ld_generated_unwind_info
+	option.
+
+2011-06-13  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* demangle.h (DMGL_RET_POSTFIX): Extend the comment.
+	(DMGL_RET_DROP): New.
+
+2011-06-13  Walter Lee  <walt@tilera.com>
+
+	* dis-asm.h (print_insn_tilegx): Declare.
+	(print_insn_tilepro): Likewise.
 
 2011-05-17  Alan Modra  <amodra@gmail.com>
 
@@ -96,19 +193,10 @@
 
 	* dwarf2.h: Update value for DW_AT_hi_user.
 
-2010-11-25  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
-
-	* opcode/s390.h (enum s390_opcode_cpu_val): Add S390_OPCODE_MAXCPU.
-
 2010-11-16  Ian Lance Taylor  <iant@google.com>
 
 	* simple-object.h (simple_object_attributes_merge): Declare,
 	replacing simple_object_attributes_compare.
-
-2010-11-16  Jie Zhang  <jie.zhang@analog.com>
-
-	* elf/bfin.h (EF_BFIN_CODE_IN_L1): Define.
-	(EF_BFIN_DATA_IN_L1): Define.
 
 2010-11-04  Ian Lance Taylor  <iant@google.com>
 

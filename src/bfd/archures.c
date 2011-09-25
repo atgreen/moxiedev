@@ -181,17 +181,22 @@ DESCRIPTION
 .#define bfd_mach_mipsisa32r2           33
 .#define bfd_mach_mipsisa64             64
 .#define bfd_mach_mipsisa64r2           65
+.#define bfd_mach_mips_micromips        96
 .  bfd_arch_i386,      {* Intel 386 *}
-.#define bfd_mach_i386_i386 1
-.#define bfd_mach_i386_i8086 2
-.#define bfd_mach_i386_i386_intel_syntax 3
-.#define bfd_mach_x64_32 32
-.#define bfd_mach_x64_32_intel_syntax 33
-.#define bfd_mach_x86_64 64
-.#define bfd_mach_x86_64_intel_syntax 65
+.#define bfd_mach_i386_intel_syntax	(1 << 0)
+.#define bfd_mach_i386_i8086		(1 << 1)
+.#define bfd_mach_i386_i386		(1 << 2)
+.#define bfd_mach_x86_64		(1 << 3)
+.#define bfd_mach_x64_32		(1 << 4)
+.#define bfd_mach_i386_i386_intel_syntax (bfd_mach_i386_i386 | bfd_mach_i386_intel_syntax)
+.#define bfd_mach_x86_64_intel_syntax	(bfd_mach_x86_64 | bfd_mach_i386_intel_syntax)
+.#define bfd_mach_x64_32_intel_syntax	(bfd_mach_x64_32 | bfd_mach_i386_intel_syntax)
 .  bfd_arch_l1om,   {* Intel L1OM *}
-.#define bfd_mach_l1om 66
-.#define bfd_mach_l1om_intel_syntax 67
+.#define bfd_mach_l1om			(1 << 5)
+.#define bfd_mach_l1om_intel_syntax	(bfd_mach_l1om | bfd_mach_i386_intel_syntax)
+.  bfd_arch_k1om,   {* Intel K1OM *}
+.#define bfd_mach_k1om			(1 << 6)
+.#define bfd_mach_k1om_intel_syntax	(bfd_mach_k1om | bfd_mach_i386_intel_syntax)
 .  bfd_arch_we32k,     {* AT&T WE32xxx *}
 .  bfd_arch_tahoe,     {* CCI/Harris Tahoe *}
 .  bfd_arch_i860,      {* Intel 860 *}
@@ -437,6 +442,10 @@ DESCRIPTION
 .  bfd_arch_lm32,      {* Lattice Mico32 *}
 .#define bfd_mach_lm32      1
 .  bfd_arch_microblaze,{* Xilinx MicroBlaze. *}
+.  bfd_arch_tilepro,   {* Tilera TILEPro *}
+.  bfd_arch_tilegx, {* Tilera TILE-Gx *}
+.#define bfd_mach_tilepro   1
+.#define bfd_mach_tilegx    1
 .  bfd_arch_last
 .  };
 */
@@ -499,6 +508,7 @@ extern const bfd_arch_info_type bfd_i960_arch;
 extern const bfd_arch_info_type bfd_ia64_arch;
 extern const bfd_arch_info_type bfd_ip2k_arch;
 extern const bfd_arch_info_type bfd_iq2000_arch;
+extern const bfd_arch_info_type bfd_k1om_arch;
 extern const bfd_arch_info_type bfd_l1om_arch;
 extern const bfd_arch_info_type bfd_lm32_arch;
 extern const bfd_arch_info_type bfd_m32c_arch;
@@ -537,6 +547,8 @@ extern const bfd_arch_info_type bfd_tic4x_arch;
 extern const bfd_arch_info_type bfd_tic54x_arch;
 extern const bfd_arch_info_type bfd_tic6x_arch;
 extern const bfd_arch_info_type bfd_tic80_arch;
+extern const bfd_arch_info_type bfd_tilegx_arch;
+extern const bfd_arch_info_type bfd_tilepro_arch;
 extern const bfd_arch_info_type bfd_v850_arch;
 extern const bfd_arch_info_type bfd_vax_arch;
 extern const bfd_arch_info_type bfd_w65_arch;
@@ -576,6 +588,7 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_ia64_arch,
     &bfd_ip2k_arch,
     &bfd_iq2000_arch,
+    &bfd_k1om_arch,
     &bfd_l1om_arch,
     &bfd_lm32_arch,
     &bfd_m32c_arch,
@@ -611,6 +624,8 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_tic54x_arch,
     &bfd_tic6x_arch,
     &bfd_tic80_arch,
+    &bfd_tilegx_arch,
+    &bfd_tilepro_arch,
     &bfd_v850_arch,
     &bfd_vax_arch,
     &bfd_w65_arch,

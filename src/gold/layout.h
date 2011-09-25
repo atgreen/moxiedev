@@ -1,6 +1,6 @@
 // layout.h -- lay out output file sections for gold  -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -492,6 +492,14 @@ class Layout
 	 const char* name, const elfcpp::Shdr<size, big_endian>& shdr,
 	 unsigned int reloc_shndx, unsigned int reloc_type, off_t* offset);
 
+  bool
+  is_section_ordering_specified()
+  { return this->section_ordering_specified_; }
+
+  void
+  set_section_ordering_specified()
+  { this->section_ordering_specified_ = true; }
+
   // For incremental updates, allocate a block of memory from the
   // free list.  Find a block starting at or after MINOFF.
   off_t
@@ -501,6 +509,8 @@ class Layout
   unsigned int
   find_section_order_index(const std::string&);
 
+  // Read the sequence of input sections from the file specified with
+  // linker option --section-ordering-file.
   void
   read_layout_from_file();
 
@@ -548,6 +558,14 @@ class Layout
 		  const elfcpp::Shdr<size, big_endian>& shdr,
 		  unsigned int reloc_shndx, unsigned int reloc_type,
 		  off_t* offset);
+
+  // Add .eh_frame information for a PLT.  The FDE must start with a
+  // 4-byte PC-relative reference to the start of the PLT, followed by
+  // a 4-byte size of PLT.
+  void
+  add_eh_frame_for_plt(Output_data* plt, const unsigned char* cie_data,
+		       size_t cie_length, const unsigned char* fde_data,
+		       size_t fde_length);
 
   // Handle a GNU stack note.  This is called once per input object
   // file.  SEEN_GNU_STACK is true if the object file has a
@@ -609,6 +627,12 @@ class Layout
   dynpool() const
   { return &this->dynpool_; }
 
+  // Return the .dynamic output section.  This is only valid after the
+  // layout has been finalized.
+  Output_section*
+  dynamic_section() const
+  { return this->dynamic_section_; }
+
   // Return the symtab_xindex section used to hold large section
   // indexes for the normal symbol table.
   Output_symtab_xindex*
@@ -644,6 +668,18 @@ class Layout
             || strncmp(name, ".line", sizeof(".line") - 1) == 0
             || strncmp(name, ".stab", sizeof(".stab") - 1) == 0);
   }
+
+  // Return true if RELOBJ is an input file whose base name matches
+  // FILE_NAME.  The base name must have an extension of ".o", and
+  // must be exactly FILE_NAME.o or FILE_NAME, one character, ".o".
+  static bool
+  match_file_name(const Relobj* relobj, const char* file_name);
+
+  // Return whether section SHNDX in RELOBJ is a .ctors/.dtors section
+  // with more than one word being mapped to a .init_array/.fini_array
+  // section.
+  bool
+  is_ctors_in_init_array(Relobj* relobj, unsigned int shndx) const;
 
   // Check if a comdat group or .gnu.linkonce section with the given
   // NAME is selected for the link.  If there is already a section,
@@ -688,6 +724,10 @@ class Layout
   // Return the file offset of the normal symbol table.
   off_t
   symtab_section_offset() const;
+
+  // Return the section index of the normal symbol tabl.e
+  unsigned int
+  symtab_section_shndx() const;
 
   // Return the dynamic symbol table.
   Output_section*
@@ -965,7 +1005,7 @@ class Layout
   // name.  Set *PLEN to the length of the name.  *PLEN must be
   // initialized to the length of NAME.
   static const char*
-  output_section_name(const char* name, size_t* plen);
+  output_section_name(const Relobj*, const char* name, size_t* plen);
 
   // Return the number of allocated output sections.
   size_t
@@ -1001,6 +1041,10 @@ class Layout
   // Attach an allocated section to a segment.
   void
   attach_allocated_section_to_segment(Output_section*);
+
+  // Make the .eh_frame section.
+  Output_section*
+  make_eh_frame_section(const Relobj*);
 
   // Set the final file offsets of all the segments.
   off_t
@@ -1040,7 +1084,7 @@ class Layout
   place_orphan_sections_in_script();
 
   // Return whether SEG1 comes before SEG2 in the output file.
-  static bool
+  bool
   segment_precedes(const Output_segment* seg1, const Output_segment* seg2);
 
   // Use to save and restore segments during relaxation. 
@@ -1090,11 +1134,19 @@ class Layout
 
   // A comparison class for segments.
 
-  struct Compare_segments
+  class Compare_segments
   {
+   public:
+    Compare_segments(Layout* layout)
+      : layout_(layout)
+    { }
+
     bool
     operator()(const Output_segment* seg1, const Output_segment* seg2)
-    { return Layout::segment_precedes(seg1, seg2); }
+    { return this->layout_->segment_precedes(seg1, seg2); }
+
+   private:
+    Layout* layout_;
   };
 
   typedef std::vector<Output_section_data*> Output_section_data_list;
@@ -1168,6 +1220,8 @@ class Layout
   Output_segment* tls_segment_;
   // A pointer to the PT_GNU_RELRO segment if there is one.
   Output_segment* relro_segment_;
+  // A pointer to the PT_INTERP segment if there is one.
+  Output_segment* interp_segment_;
   // A backend may increase the size of the PT_GNU_RELRO segment if
   // there is one.  This is the amount to increase it by.
   unsigned int increase_relro_;
@@ -1224,6 +1278,9 @@ class Layout
   bool resized_signatures_;
   // Whether we have created a .stab*str output section.
   bool have_stabstr_section_;
+  // True if the input sections in the output sections should be sorted
+  // as specified in a section ordering file.
+  bool section_ordering_specified_;
   // In incremental build, holds information check the inputs and build the
   // .gnu_incremental_inputs section.
   Incremental_inputs* incremental_inputs_;

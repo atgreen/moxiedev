@@ -1,3 +1,215 @@
+2011-08-22  Michael Matz  <matz@suse.de>
+
+	* ldmain.c (add_DT_NEEDED_for_dynamic): Default to FALSE.
+	* ld.texinfo (--copy-dt-needed-entries): Mention new default.
+
+2011-08-17  Alan Modra  <amodra@gmail.com>
+
+	PR ld/12762
+	* ldlang.c (section_already_linked): Revert 2011-07-09 changes.
+	* plugin.c: Likewise.
+	(asymbol_from_plugin_symbol): Create linkonce section for syms
+	with comdat_key.
+
+2011-08-09  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* emultempl/armelf.em (fix_arm1176): New variable.
+	(arm_elf_create_output_section_statements): Pass
+	fix_arm1176 option to bfd backend.
+	(OPTION_FIX_ARM1176): New define.
+	(OPTION_NO_FIX_ARM1176): Likewise.
+	(PARSE_AND_LIST_LONGOPTS): Add new command line options.
+	(PARSE_AND_LIST_OPTIONS): Likewise.
+	(PARSE_AND_LIST_ARGS_CASES): Likewise.
+	* ld.texinfo: Document new command line options.
+
+2011-08-09  Alan Modra  <amodra@gmail.com>
+
+	PR ld/13066
+	* plugin.c (add_symbols): Revert 2011-08-05.
+
+2011-08-06  Kai Tietz  <ktietz@redhat.com>
+
+	* scripttempl/pep.sc: Add .debug_macro section.
+	* scripttempl/pe.sc: Likewise.
+
+2011-08-05  Alan Modra  <amodra@gmail.com>
+
+	PR ld/12762
+	* plugin.c (add_symbols): Exclude comdat_key symbols from symbol
+	table if already seen.
+
+2011-08-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ldmain.c (main): Replace remove_output with ld_cleanup in
+	comments.
+
+2011-07-26  Alan Modra  <amodra@gmail.com>
+
+	* emulparams/elf32ppc.sh: Source plt_unwind.sh.
+	* emulparams/elf64ppc.sh: Likewise.
+	* emultempl/ppc32elf.em (OPTION_NO_TLS_OPT): Adjust.
+	(PARSE_AND_LIST_PROLOGUE, PARSE_AND_LIST_LONGOPTS,
+	PARSE_AND_LIST_OPTIONS, PARSE_AND_LIST_ARGS_CASES): Append to
+	existing values.
+	* emultempl/ppc64elf.em (OPTION_STUBGROUP_SIZE): Adjust.
+	(PARSE_AND_LIST_PROLOGUE, PARSE_AND_LIST_LONGOPTS,
+	PARSE_AND_LIST_OPTIONS, PARSE_AND_LIST_ARGS_CASES): Append to
+	existing values.
+
+2011-07-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* Makefile.am (ALL_64_EMULATIONS): Add eelf_k1om.o and
+	eelf_k1om_fbsd.o
+	(eelf_k1om.c): New.
+	(eelf_k1om_fbsd.c): Likewise.
+	* Makefile.in: Regenerated.
+
+	* configure.tgt (targ64_extra_emuls): Add elf_k1om if elf_x86_64
+	is supported.  Add elf_k1om_fbsd if elf_x86_64_fbsd is supported.
+	(targ_extra_emuls): Likewise.
+
+	* emulparams/elf_k1om.sh: New.
+	* emulparams/elf_k1om_fbsd.sh: Likewise.
+
+2011-07-16  Roland McGrath  <roland@hack.frob.com>
+
+	* ld.h (args_type): New field print_output_format.
+	* lexsup.c (enum option_values, ld_options, parse_args):
+	Handle --print-output-format.
+	* ldmain.c (main): Implement --print-output-format.
+	* ld.texinfo (Options): Document it.
+
+	* ldlang.c (lang_get_output_target): Don't return current_target
+	when it's NULL.
+
+2011-07-15  Alan Modra  <amodra@gmail.com>
+
+	* Makefile.am (e*.c): Sort.
+	* Makefile.in: Regenerate.
+
+2011-07-14  Alan Modra  <amodra@gmail.com>
+
+	* emultempl/elf32.em (gld${EMULATION_NAME}_handle_option,
+	gld${EMULATION_NAME}_list_options): Don't condition -z relro
+	and -z norelro on COMMONPAGESIZE being defined.
+
+2011-07-14  Alan Modra  <amodra@gmail.com>
+
+	* emultempl/ppc64elf.em (plt_static_chain): New var.
+	(gld${EMULATION_NAME}_after_allocation): Pass to ppc64_elf_size_stubs.
+	(PARSE_AND_LIST_PROLOGUE, PARSE_AND_LIST_LONGOPTS,
+	PARSE_AND_LIST_OPTIONS, PARSE_AND_LIST_ARGS_CASES): Handle
+	--plt-static-chain and --no-plt-static-chain.
+
+2011-07-14  Alan Modra  <amodra@gmail.com>
+
+	* emultempl/elf32.em (gld${EMULATION_NAME}_add_options,
+	gld${EMULATION_NAME}_handle_option, gld${EMULATION_NAME}_list_options):
+	Provide --build-id, -z defs, -z muldefs, -z max-page-size,
+	-z common-page-size, -z execstack, -z noexecstack for all targets.
+	Add help for --exclude-libs.
+	(OPTION_LD_GENERATED_UNWIND_INFO,
+	OPTION_NO_LD_GENERATED_UNWIND_INFO): Move this..
+	(gld${EMULATION_NAME}_handle_option): ..and code handling
+	--ld-generated-unwind-info and --no-ld-generated-unwind-info..
+	* emulparams/plt_unwind.sh: ..to here.  New file.  Add help.
+	* emulparams/elf32_x86_64.sh: Include plt_unwind.sh.
+	* emulparams/elf_i386.sh: Likewise.
+	* emulparams/elf_i386_chaos.sh: Likewise.
+	* emulparams/elf_i386_ldso.sh: Likewise.
+	* emulparams/elf_l1om.sh: Likewise.
+	* emulparams/elf_x86_64.sh: Likewise.
+
+2011-07-11  Catherine Moore  <clm@codesourcery.com>
+
+	* ld.h (section_flag_list): Add field to struct wildcard_spec.
+	* ld.texinfo (INPUT_SECTION_FLAGS): Document.
+	* ldgram.y (flag_info_list, flag_info): Add to union.
+	(INPUT_SECTION_FLAGS): New token.
+	(wildcard_spec): Initialize section_flag_list to NULL for
+	each alternative.
+	(sect_flag_list, sect_flags): New rules.
+	(input_section_spec_no_keep): Add alternatives to recognize
+	sect_flags.
+	* ldlang.c (walk_wild_consider_section): Initialize
+	section_flag_info field of the section struct.
+	(lang_add_section): Check input section flags.
+	(lang_add_wild): Initialize section_flag_list field of
+	the statement struct.
+	* ldlang.h (lang_input_statement_struct): Add section_flag_list field.
+	(lang_wild_statement_struct): Likewise.
+	* ldlex.l (INPUT_SECTION_FLAGS): New token.
+	* mri.c (mri_draw_tree): Initialize section_flag_list to NULL.
+	* NEWS: Announce INPUT_SECTION_FLAGS enhancement.
+
+2011-07-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/12942
+	* ldlang.c (section_already_linked): Pass "struct already_linked *"
+	to bfd_section_already_linked.
+	(lang_process): Set link_info.loading_lto_outputs before
+	loading LTO outputs.
+	* plugin.c: Include "libbfd.h".
+	(add_symbols): Call bfd_section_already_linked with comdat_key.
+
+2011-06-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure.tgt: Revert x32 change.
+
+2011-06-20  Jakub Jelinek  <jakub@redhat.com>
+
+	PR ld/12570
+	* emultempl/elf32.em (OPTION_LD_GENERATED_UNWIND_INFO,
+	OPTION_NO_LD_GENERATED_UNWIND_INFO): Define.
+	(gld${EMULATION_NAME}_handle_option): Handle
+	--ld-generated-unwind-info and --no-ld-generated-unwind-info.
+	* ld.texinfo (--ld-generated-unwind-info,
+	--no-ld-generated-unwind-info): Document.
+
+2011-06-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure.tgt: Support x32.
+
+2011-06-15  Nick Clifton  <nickc@redhat.com>
+
+	* NEWS: Mention addition of TILEPRO and TIKE-Gx support.
+
+2011-06-13  Walter Lee  <walt@tilera.com>
+
+	* Makefile.am (ALL_EMULATION_SOURCES): Add eelf32tilegx.c and
+	eelf32tilepro.c.
+	(ALL_64_EMULATION_SOURCES): Add eelf64tilegx.c.
+	(eelf32tilegx.c): New target.
+	(eelf32tilepro.c): Likewise.
+	(eelf64tilegx.c): Likewise.
+	* Makefile.in: Regenerate.
+	* configure.tgt: Handle tilegx-*-* and tilepro-*-*.
+	* emulparams/elf32tilegx.sh: New file.
+	* emulparams/elf64tilegx.sh: New file.
+	* emulparams/elf32tilepro.sh: New file.
+
+2011-06-13  Alan Modra  <amodra@gmail.com>
+
+	* ldlang.c (sort_def_symbol, lang_one_common): Don't handle
+	warning symbols here.
+	* emultempl/pe.em (pr_sym): Remove redundant test.
+	* emultempl/pep.em (pr_sym): Likewise.
+
+2011-06-09  Nick Clifton  <nickc@redhat.com>
+
+	PR ld/12845
+	* emultempl/mipself.em (mips_add_stub_section): Do not add stubs
+	for sections that have been removed by garbage collection.
+
+2011-06-08  Alan Modra  <amodra@gmail.com>
+
+	* ldlang.c (lang_one_common): Handle warning symbols.
+
+2011-06-07  Nick Clifton  <nickc@redhat.com>
+
+	* configure.tgt: Accept any V850 architecture.
+
 2011-06-03  Nick Clifton  <nickc@redhat.com>
 
 	* Makefile.am (ALL_EMULATION_SOURCES): Add eelf32am33lin.c
@@ -315,7 +527,7 @@
 2011-03-31  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* configure.tgt: Add elf_l1om to targ_extra_libpath for
-	 x86_64-*-linux-*.
+	x86_64-*-linux-*.
 
 	* emulparams/elf_l1om.sh: Remove duplicates.
 

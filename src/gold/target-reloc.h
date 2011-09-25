@@ -1,6 +1,6 @@
 // target-reloc.h -- target specific relocation support  -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -167,6 +167,57 @@ visibility_error(const Symbol* sym)
     }
   gold_error(_("%s symbol '%s' is not defined locally"),
 	     v, sym->name());
+}
+
+// Return true if we are should issue an error saying that SYM is an
+// undefined symbol.  This is called if there is a relocation against
+// SYM.
+
+inline bool
+issue_undefined_symbol_error(const Symbol* sym)
+{
+  // We only report global symbols.
+  if (sym == NULL)
+    return false;
+
+  // We only report undefined symbols.
+  if (!sym->is_undefined() && !sym->is_placeholder())
+    return false;
+
+  // We don't report weak symbols.
+  if (sym->binding() == elfcpp::STB_WEAK)
+    return false;
+
+  // We don't report symbols defined in discarded sections.
+  if (sym->is_defined_in_discarded_section())
+    return false;
+
+  // If the target defines this symbol, don't report it here.
+  if (parameters->target().is_defined_by_abi(sym))
+    return false;
+
+  // See if we've been told to ignore whether this symbol is
+  // undefined.
+  const char* const u = parameters->options().unresolved_symbols();
+  if (u != NULL)
+    {
+      if (strcmp(u, "ignore-all") == 0)
+	return false;
+      if (strcmp(u, "report-all") == 0)
+	return true;
+      if (strcmp(u, "ignore-in-object-files") == 0 && !sym->in_dyn())
+	return false;
+      if (strcmp(u, "ignore-in-shared-libs") == 0 && !sym->in_reg())
+	return false;
+    }
+
+  // When creating a shared library, only report unresolved symbols if
+  // -z defs was used.
+  if (parameters->options().shared() && !parameters->options().defs())
+    return false;
+
+  // Otherwise issue a warning.
+  return true;
 }
 
 // This function implements the generic part of relocation processing.
@@ -344,13 +395,7 @@ relocate_section(
 	  continue;
 	}
 
-      if (sym != NULL
-	  && (sym->is_undefined() || sym->is_placeholder())
-	  && sym->binding() != elfcpp::STB_WEAK
-	  && !is_defined_in_discarded_section
-          && !target->is_defined_by_abi(sym)
-	  && (!parameters->options().shared()       // -shared
-              || parameters->options().defs()))     // -z defs
+      if (issue_undefined_symbol_error(sym))
 	gold_undefined_symbol_at_location(sym, relinfo, i, offset);
       else if (sym != NULL
 	       && sym->visibility() != elfcpp::STV_DEFAULT

@@ -33,6 +33,7 @@ struct blockvector;
 struct axs_value;
 struct agent_expr;
 struct program_space;
+struct language_defn;
 
 /* Some of the structures in this file are space critical.
    The space-critical structures are:
@@ -778,6 +779,11 @@ struct symtab
 
   unsigned int locations_valid : 1;
 
+  /* DWARF unwinder for this CU is valid even for epilogues (PC at the return
+     instruction).  This is supported by GCC since 4.5.0.  */
+
+  unsigned int epilogue_unwind_valid : 1;
+
   /* The macro table for this symtab.  Like the blockvector, this
      may be shared between different symtabs --- and normally is for
      all the symtabs in a given compilation unit.  */
@@ -846,10 +852,6 @@ struct symtab
 #define VTBL_FNADDR_OFFSET 2
 
 /* External variables and functions for the objects described above.  */
-
-/* See the comment in symfile.c about how current_objfile is used.  */
-
-extern struct objfile *current_objfile;
 
 /* True if we are nested inside psymtab_to_symtab.  */
 
@@ -921,6 +923,9 @@ extern struct symbol *lookup_symbol_aux_block (const char *name,
 					       const struct block *block,
 					       const domain_enum domain);
 
+extern struct symbol *lookup_language_this (const struct language_defn *lang,
+					    const struct block *block);
+
 /* Lookup a symbol only in the file static scope of all the objfiles.  */
 
 struct symbol *lookup_static_symbol_aux (const char *name,
@@ -934,11 +939,11 @@ extern struct symbol *lookup_block_symbol (const struct block *, const char *,
 
 /* lookup a [struct, union, enum] by name, within a specified block.  */
 
-extern struct type *lookup_struct (char *, struct block *);
+extern struct type *lookup_struct (const char *, struct block *);
 
-extern struct type *lookup_union (char *, struct block *);
+extern struct type *lookup_union (const char *, struct block *);
 
-extern struct type *lookup_enum (char *, struct block *);
+extern struct type *lookup_enum (const char *, struct block *);
 
 /* from blockframe.c: */
 

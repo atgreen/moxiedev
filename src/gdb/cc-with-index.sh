@@ -16,8 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # This program requires gdb and objcopy in addition to gcc.
-# The default values are gdb from the build tree and objdump from $PATH.
-# They may be overridden by setting environment variables GDB and OBJDUMP
+# The default values are gdb from the build tree and objcopy from $PATH.
+# They may be overridden by setting environment variables GDB and OBJCOPY
 # respectively.
 # We assume the current directory is either $obj/gdb or $obj/gdb/testsuite.
 #
@@ -40,6 +40,9 @@ then
     elif [ -f ../gdb ]
     then
 	GDB="../gdb"
+    elif [ -f ../../gdb ]
+    then
+	GDB="../../gdb"
     else
 	echo "$myname: unable to find usable gdb" >&2
 	exit 1

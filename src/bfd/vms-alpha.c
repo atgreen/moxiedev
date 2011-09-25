@@ -330,7 +330,7 @@ struct vms_private_data_struct
   struct vms_internal_eisd_map *gbl_eisd_tail;
 
   /* linkage index counter used by conditional store commands */
-  int vms_linkage_index;
+  unsigned int vms_linkage_index;
 
   /* see tc-alpha.c of gas for a description.  */
   int flag_hash_long_names;	/* -+, hash instead of truncate */
@@ -2660,7 +2660,7 @@ _bfd_vms_write_eeom (bfd *abfd)
   _bfd_vms_output_alignment (recwr, 2);
 
   _bfd_vms_output_begin (recwr, EOBJ__C_EEOM);
-  _bfd_vms_output_long (recwr, (unsigned long) (PRIV (vms_linkage_index) >> 1));
+  _bfd_vms_output_long (recwr, PRIV (vms_linkage_index + 1) >> 1);
   _bfd_vms_output_byte (recwr, 0);	/* Completion code.  */
   _bfd_vms_output_byte (recwr, 0);	/* Fill byte.  */
 
@@ -3736,7 +3736,7 @@ _bfd_vms_write_etir (bfd * abfd, int objtype ATTRIBUTE_UNUSED)
 
   _bfd_vms_output_alignment (recwr, 4);
 
-  PRIV (vms_linkage_index) = 1;
+  PRIV (vms_linkage_index) = 0;
 
   for (section = abfd->sections; section; section = section->next)
     {
@@ -3947,8 +3947,9 @@ _bfd_vms_write_etir (bfd * abfd, int objtype ATTRIBUTE_UNUSED)
 		  etir_output_check (abfd, section, curr_addr, 64);
 		  _bfd_vms_output_begin_subrec (recwr, ETIR__C_STC_LP_PSB);
 		  _bfd_vms_output_long
-		    (recwr, (unsigned long) PRIV (vms_linkage_index));
-		  PRIV (vms_linkage_index) += 2;
+		    (recwr, (unsigned long) rptr->addend);
+                  if (rptr->addend > PRIV (vms_linkage_index))
+                    PRIV (vms_linkage_index) = rptr->addend;
 		  hash = _bfd_vms_length_hash_symbol
                     (abfd, sym->name, EOBJ__C_SYMSIZ);
 		  _bfd_vms_output_counted (recwr, hash);
@@ -3974,13 +3975,11 @@ _bfd_vms_write_etir (bfd * abfd, int objtype ATTRIBUTE_UNUSED)
 		  _bfd_vms_output_begin_subrec (recwr, ETIR__C_STC_NOP_GBL);
 		  _bfd_vms_output_long (recwr, (unsigned long) udata->lkindex);
 		  _bfd_vms_output_long
-		    (recwr,
-                     (unsigned long) udata->enbsym->section->target_index);
+		    (recwr, (unsigned long) section->target_index);
 		  _bfd_vms_output_quad (recwr, rptr->address);
 		  _bfd_vms_output_long (recwr, (unsigned long) 0x47ff041f);
 		  _bfd_vms_output_long
-		    (recwr,
-                     (unsigned long) udata->enbsym->section->target_index);
+		    (recwr, (unsigned long) section->target_index);
 		  _bfd_vms_output_quad (recwr, rptr->addend);
 		  _bfd_vms_output_counted
 		    (recwr, _bfd_vms_length_hash_symbol
@@ -4001,8 +4000,7 @@ _bfd_vms_write_etir (bfd * abfd, int objtype ATTRIBUTE_UNUSED)
 		  _bfd_vms_output_long
 		    (recwr, (unsigned long) udata->lkindex + 1);
 		  _bfd_vms_output_long
-		    (recwr,
-                     (unsigned long) udata->enbsym->section->target_index);
+		    (recwr, (unsigned long) section->target_index);
 		  _bfd_vms_output_quad (recwr, rptr->address);
 		  _bfd_vms_output_long (recwr, (unsigned long) 0x237B0000);
 		  _bfd_vms_output_long
@@ -4022,13 +4020,11 @@ _bfd_vms_write_etir (bfd * abfd, int objtype ATTRIBUTE_UNUSED)
 		  _bfd_vms_output_begin_subrec (recwr, ETIR__C_STC_BOH_GBL);
 		  _bfd_vms_output_long (recwr, (unsigned long) udata->lkindex);
 		  _bfd_vms_output_long
-		    (recwr,
-                     (unsigned long) udata->enbsym->section->target_index);
+		    (recwr, (unsigned long) section->target_index);
 		  _bfd_vms_output_quad (recwr, rptr->address);
 		  _bfd_vms_output_long (recwr, (unsigned long) 0xD3400000);
 		  _bfd_vms_output_long
-		    (recwr,
-                     (unsigned long) udata->enbsym->section->target_index);
+		    (recwr, (unsigned long) section->target_index);
 		  _bfd_vms_output_quad (recwr, rptr->addend);
 		  _bfd_vms_output_counted
 		    (recwr, _bfd_vms_length_hash_symbol
@@ -5106,7 +5102,14 @@ alpha_vms_slurp_relocs (bfd *abfd)
                 (*_bfd_error_handler) (_("Invalid section index in ETIR"));
                 return FALSE;
               }
+
             sec = PRIV (sections)[cur_psect];
+            if (sec == bfd_abs_section_ptr)
+              {
+                (*_bfd_error_handler) (_("Relocation for non-REL psect"));
+                return FALSE;
+              }
+
             vms_sec = vms_section_data (sec);
 
             /* Allocate a reloc entry.  */
@@ -5117,7 +5120,7 @@ alpha_vms_slurp_relocs (bfd *abfd)
                     vms_sec->reloc_max = 64;
                     sec->relocation = bfd_zmalloc
                       (vms_sec->reloc_max * sizeof (arelent));
-                }
+                  }
                 else
                   {
                     vms_sec->reloc_max *= 2;
@@ -8600,21 +8603,31 @@ alpha_vms_build_fixups (struct bfd_link_info *info)
   return TRUE;
 }
 
-/* Called by bfd_link_hash_traverse to fill the symbol table.
+/* Called by bfd_hash_traverse to fill the symbol table.
    Return FALSE in case of failure.  */
 
 static bfd_boolean
-alpha_vms_link_output_symbol (struct bfd_link_hash_entry *hc, void *infov)
+alpha_vms_link_output_symbol (struct bfd_hash_entry *bh, void *infov)
 {
+  struct bfd_link_hash_entry *hc = (struct bfd_link_hash_entry *) bh;
   struct bfd_link_info *info = (struct bfd_link_info *)infov;
-  struct alpha_vms_link_hash_entry *h = (struct alpha_vms_link_hash_entry *)hc;
+  struct alpha_vms_link_hash_entry *h;
   struct vms_symbol_entry *sym;
+
+  if (hc->type == bfd_link_hash_warning)
+    {
+      hc = hc->u.i.link;
+      if (hc->type == bfd_link_hash_new)
+	return TRUE;
+    }
+  h = (struct alpha_vms_link_hash_entry *) hc;
 
   switch (h->root.type)
     {
     case bfd_link_hash_undefined:
       return TRUE;
     case bfd_link_hash_new:
+    case bfd_link_hash_warning:
       abort ();
     case bfd_link_hash_undefweak:
       return TRUE;
@@ -8634,7 +8647,6 @@ alpha_vms_link_output_symbol (struct bfd_link_hash_entry *hc, void *infov)
     case bfd_link_hash_common:
       break;
     case bfd_link_hash_indirect:
-    case bfd_link_hash_warning:
       return TRUE;
     }
 
@@ -8740,7 +8752,7 @@ alpha_vms_bfd_final_link (bfd *abfd, struct bfd_link_info *info)
   /* Generate the symbol table.  */
   BFD_ASSERT (PRIV (syms) == NULL);
   if (info->strip != strip_all)
-    bfd_link_hash_traverse (info->hash, alpha_vms_link_output_symbol, info);
+    bfd_hash_traverse (&info->hash->table, alpha_vms_link_output_symbol, info);
 
   /* Find the entry point.  */
   if (bfd_get_start_address (abfd) == 0)
@@ -9324,6 +9336,7 @@ bfd_vms_get_data (bfd *abfd)
 
 #define alpha_vms_bfd_relax_section bfd_generic_relax_section
 #define alpha_vms_bfd_gc_sections bfd_generic_gc_sections
+#define alpha_vms_bfd_lookup_section_flags bfd_generic_lookup_section_flags
 #define alpha_vms_bfd_merge_sections bfd_generic_merge_sections
 #define alpha_vms_bfd_is_group_section bfd_generic_is_group_section
 #define alpha_vms_bfd_discard_group bfd_generic_discard_group
@@ -9362,6 +9375,7 @@ const bfd_target vms_alpha_vec =
   0,				/* symbol_leading_char.  */
   ' ',				/* ar_pad_char.  */
   15,				/* ar_max_namelen.  */
+  0,				/* match priority.  */
   bfd_getl64, bfd_getl_signed_64, bfd_putl64,
   bfd_getl32, bfd_getl_signed_32, bfd_putl32,
   bfd_getl16, bfd_getl_signed_16, bfd_putl16,

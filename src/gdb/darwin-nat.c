@@ -233,13 +233,25 @@ unparse_exception_type (unsigned int i)
     }
 }
 
+/* Set errno to zero, and then call ptrace with the given arguments.
+   If inferior debugging traces are on, then also print a debug
+   trace.
+
+   The returned value is the same as the value returned by ptrace,
+   except in the case where that value is -1 but errno is zero.
+   This case is documented to be a non-error situation, so we
+   return zero in that case. */
+
 static int
 darwin_ptrace (const char *name,
 	       int request, int pid, PTRACE_TYPE_ARG3 arg3, int arg4)
 {
   int ret;
 
+  errno = 0;
   ret = ptrace (request, pid, (caddr_t) arg3, arg4);
+  if (ret == -1 && errno == 0)
+    ret = 0;
 
   inferior_debug (4, _("ptrace (%s, %d, 0x%x, %d): %d (%s)\n"),
                   name, pid, arg3, arg4, ret,
@@ -603,8 +615,11 @@ darwin_decode_exception_message (mach_msg_header_t *hdr,
     return -1;
   *pthread = thread;
 
+  /* The thread should be running.  However we have observed cases where a thread
+     got a SIGTTIN message after being stopped.  */
+  gdb_assert (thread->msg_state != DARWIN_MESSAGE);
+
   /* Finish decoding.  */
-  gdb_assert (thread->msg_state == DARWIN_RUNNING);
   thread->event.header = *hdr;
   thread->event.thread_port = thread_port;
   thread->event.task_port = task_port;
@@ -1301,7 +1316,10 @@ darwin_kill_inferior (struct target_ops *ops)
       darwin_stop_inferior (inf);
 
       res = PTRACE (PT_KILL, inf->pid, 0, 0);
-      gdb_assert (res == 0);
+      if (res != 0)
+        warning (_("Failed to kill inferior: ptrace returned %d "
+	           "[%s] (pid=%d)"),
+		 res, safe_strerror (errno), inf->pid);
 
       darwin_reply_to_all_pending_messages (inf);
 
@@ -1601,7 +1619,11 @@ darwin_detach (struct target_ops *ops, char *args, int from_tty)
 
   darwin_reply_to_all_pending_messages (inf);
 
-  darwin_resume_inferior (inf);
+  /* When using ptrace, we have just performed a PT_DETACH, which
+     resumes the inferior.  On the other hand, when we are not using
+     ptrace, we need to resume its execution ourselves.  */
+  if (inf->private->no_ptrace)
+    darwin_resume_inferior (inf);
 
   darwin_mourn_inferior (ops);
 }

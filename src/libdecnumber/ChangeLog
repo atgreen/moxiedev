@@ -1,3 +1,21 @@
+2011-04-20  Jim Meyering  <meyering@redhat.com>
+
+	* decNumber.c (decNumberFromString): Remove useless
+	if-before-free test.
+	(decNumberCompareTotalMag, decNumberExp, decNumberFMA): Likewise.
+	(decNumberLn, decNumberLog10, decNumberPower): Likewise.
+	(decNumberReduce, decNumberSquareRoot, decAddOp): Likewise.
+	(decDivideOp, NEEDTWO, decExpOp, LN2): Likewise.
+
+2011-03-28  Mike Frysinger  <vapier@gentoo.org>
+
+	* .gitignore: New file.
+
+2010-11-24  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* dconfig.h (LIBGCC2_FLOAT_WORDS_BIG_ENDIAN): Delete.
+	(WORDS_BIG_ENDIAN): Define based on value of __FLOAT_WORD_ORDER__.
+
 2010-10-23  Nathan Froyd  <froydnj@codesourcery.com>
 
 	* dconfig.h (LIBGCC2_WORDS_BIG_ENDIAN): Delete.

@@ -42,6 +42,7 @@
 #include "reloc.h"
 #include "merge.h"
 #include "descriptors.h"
+#include "layout.h"
 #include "output.h"
 
 // For systems without mmap support.
@@ -1346,7 +1347,7 @@ Output_data_got<size, big_endian>::Got_entry::write(unsigned char* pov) const
 	// RELATIVE relocation.
 	Symbol* gsym = this->u_.gsym;
 	if (this->use_plt_offset_ && gsym->has_plt_offset())
-	  val = (parameters->target().plt_section_for_global(gsym)->address()
+	  val = (parameters->target().plt_address_for_global(gsym)
 		 + gsym->plt_offset());
 	else
 	  {
@@ -1380,9 +1381,9 @@ Output_data_got<size, big_endian>::Got_entry::write(unsigned char* pov) const
 	  val = symval->value(this->u_.object, 0);
 	else
 	  {
-	    const Output_data* plt =
-	      parameters->target().plt_section_for_local(object, lsi);
-	    val = plt->address() + object->local_plt_offset(lsi);
+	    uint64_t plt_address =
+	      parameters->target().plt_address_for_local(object, lsi);
+	    val = plt_address + object->local_plt_offset(lsi);
 	  }
       }
       break;
@@ -1705,8 +1706,8 @@ Output_data_got<size, big_endian>::add_got_entry(Got_entry got_entry)
       // For an incremental update, find an available slot.
       off_t got_offset = this->free_list_.allocate(size / 8, size / 8, 0);
       if (got_offset == -1)
-	gold_fatal(_("out of patch space (GOT);"
-		     " relink with --incremental-full"));
+	gold_fallback(_("out of patch space (GOT);"
+			" relink with --incremental-full"));
       unsigned int got_index = got_offset / (size / 8);
       gold_assert(got_index < this->entries_.size());
       this->entries_[got_index] = got_entry;
@@ -1735,8 +1736,8 @@ Output_data_got<size, big_endian>::add_got_entry_pair(Got_entry got_entry_1,
       // For an incremental update, find an available pair of slots.
       off_t got_offset = this->free_list_.allocate(2 * size / 8, size / 8, 0);
       if (got_offset == -1)
-	gold_fatal(_("out of patch space (GOT);"
-		     " relink with --incremental-full"));
+	gold_fallback(_("out of patch space (GOT);"
+			" relink with --incremental-full"));
       unsigned int got_index = got_offset / (size / 8);
       gold_assert(got_index < this->entries_.size());
       this->entries_[got_index] = got_entry_1;
@@ -2152,10 +2153,12 @@ Output_section::Output_section(const char* name, elfcpp::Elf_Word type,
     is_noload_(false),
     always_keeps_input_sections_(false),
     has_fixed_layout_(false),
+    is_patch_space_allowed_(false),
     tls_offset_(0),
     checkpoint_(NULL),
     lookup_maps_(new Output_section_lookup_maps),
-    free_list_()
+    free_list_(),
+    patch_space_(0)
 {
   // An unallocated section has no address.  Forcing this means that
   // we don't need special treatment for symbols defined in debug
@@ -2270,7 +2273,9 @@ Output_section::add_input_section(Layout* layout,
       offset_in_section = this->free_list_.allocate(input_section_size,
 						    addralign, 0);
       if (offset_in_section == -1)
-        gold_fatal(_("out of patch space; relink with --incremental-full"));
+        gold_fallback(_("out of patch space in section %s; "
+			"relink with --incremental-full"),
+		      this->name());
       aligned_offset_in_section = offset_in_section;
     }
   else
@@ -2291,7 +2296,7 @@ Output_section::add_input_section(Layout* layout,
       && (sh_flags & elfcpp::SHF_EXECINSTR) != 0
       && parameters->target().has_code_fill()
       && (parameters->target().may_relax()
-          || parameters->options().section_ordering_file()))
+          || layout->is_section_ordering_specified()))
     {
       gold_assert(this->fills_.empty());
       this->generate_code_fills_at_write_ = true;
@@ -2330,10 +2335,10 @@ Output_section::add_input_section(Layout* layout,
       || this->must_sort_attached_input_sections()
       || parameters->options().user_set_Map()
       || parameters->target().may_relax()
-      || parameters->options().section_ordering_file())
+      || layout->is_section_ordering_specified())
     {
       Input_section isecn(object, shndx, input_section_size, addralign);
-      if (parameters->options().section_ordering_file())
+      if (layout->is_section_ordering_specified())
         {
           unsigned int section_order_index =
             layout->find_section_order_index(std::string(secname));
@@ -2374,7 +2379,9 @@ Output_section::add_output_section_data(Output_section_data* posd)
 	  offset_in_section = this->free_list_.allocate(posd->data_size(),
 							posd->addralign(), 0);
 	  if (offset_in_section == -1)
-	    gold_fatal(_("out of patch space; relink with --incremental-full"));
+	    gold_fallback(_("out of patch space in section %s; "
+			    "relink with --incremental-full"),
+			  this->name());
 	  // Finalize the address and offset now.
 	  uint64_t addr = this->address();
 	  off_t offset = this->offset();
@@ -2414,7 +2421,7 @@ Output_section::add_relaxed_input_section(Layout* layout,
 
   // If the --section-ordering-file option is used to specify the order of
   // sections, we need to keep track of sections.
-  if (parameters->options().section_ordering_file())
+  if (layout->is_section_ordering_specified())
     {
       unsigned int section_order_index =
         layout->find_section_order_index(name);
@@ -2944,30 +2951,48 @@ Output_section::update_data_size()
 void
 Output_section::set_final_data_size()
 {
+  off_t data_size;
+
   if (this->input_sections_.empty())
+    data_size = this->current_data_size_for_child();
+  else
     {
-      this->set_data_size(this->current_data_size_for_child());
-      return;
+      if (this->must_sort_attached_input_sections()
+	  || this->input_section_order_specified())
+	this->sort_attached_input_sections();
+
+      uint64_t address = this->address();
+      off_t startoff = this->offset();
+      off_t off = startoff + this->first_input_offset_;
+      for (Input_section_list::iterator p = this->input_sections_.begin();
+	   p != this->input_sections_.end();
+	   ++p)
+	{
+	  off = align_address(off, p->addralign());
+	  p->set_address_and_file_offset(address + (off - startoff), off,
+					 startoff);
+	  off += p->data_size();
+	}
+      data_size = off - startoff;
     }
 
-  if (this->must_sort_attached_input_sections()
-      || this->input_section_order_specified())
-    this->sort_attached_input_sections();
-
-  uint64_t address = this->address();
-  off_t startoff = this->offset();
-  off_t off = startoff + this->first_input_offset_;
-  for (Input_section_list::iterator p = this->input_sections_.begin();
-       p != this->input_sections_.end();
-       ++p)
+  // For full incremental links, we want to allocate some patch space
+  // in most sections for subsequent incremental updates.
+  if (this->is_patch_space_allowed_ && parameters->incremental_full())
     {
-      off = align_address(off, p->addralign());
-      p->set_address_and_file_offset(address + (off - startoff), off,
-				     startoff);
-      off += p->data_size();
+      double pct = parameters->options().incremental_patch();
+      off_t extra = static_cast<off_t>(data_size * pct);
+      off_t new_size = align_address(data_size + extra, this->addralign());
+      this->patch_space_ = new_size - data_size;
+      gold_debug(DEBUG_INCREMENTAL,
+		 "set_final_data_size: %08lx + %08lx: section %s",
+		 static_cast<long>(data_size),
+		 static_cast<long>(this->patch_space_),
+		 this->name());
+      data_size = new_size;
     }
 
-  this->set_data_size(off - startoff);
+  this->set_data_size(data_size);
 }
 
 // Reset the address and file offset.
@@ -2986,8 +3011,16 @@ Output_section::do_reset_address_and_file_offset()
        p != this->input_sections_.end();
        ++p)
     p->reset_address_and_file_offset();
+
+  // Remove any patch space that was added in set_final_data_size.
+  if (this->patch_space_ > 0)
+    {
+      this->set_current_data_size_for_child(this->current_data_size_for_child()
+					    - this->patch_space_);
+      this->patch_space_ = 0;
+    }
 }
-  
+
 // Return true if address and file offset have the values after reset.
 
 bool
@@ -3016,7 +3049,7 @@ Output_section::do_set_tls_offset(uint64_t tls_base)
 // priority ordering implemented by the GNU linker, in which the
 // priority becomes part of the section name and the sections are
 // sorted by name.  We only do this for an output section if we see an
-// attached input section matching ".ctor.*", ".dtor.*",
+// attached input section matching ".ctors.*", ".dtors.*",
 // ".init_array.*" or ".fini_array.*".
 
 class Output_section::Input_section_sort_entry
@@ -3091,6 +3124,34 @@ class Output_section::Input_section_sort_entry
     return this->section_name_.find('.', 1) != std::string::npos;
   }
 
+  // Return the priority.  Believe it or not, gcc encodes the priority
+  // differently for .ctors/.dtors and .init_array/.fini_array
+  // sections.
+  unsigned int
+  get_priority() const
+  {
+    gold_assert(this->section_has_name_);
+    bool is_ctors;
+    if (is_prefix_of(".ctors.", this->section_name_.c_str())
+	|| is_prefix_of(".dtors.", this->section_name_.c_str()))
+      is_ctors = true;
+    else if (is_prefix_of(".init_array.", this->section_name_.c_str())
+	     || is_prefix_of(".fini_array.", this->section_name_.c_str()))
+      is_ctors = false;
+    else
+      return 0;
+    char* end;
+    unsigned long prio = strtoul((this->section_name_.c_str()
+				  + (is_ctors ? 7 : 12)),
+				 &end, 10);
+    if (*end != '\0')
+      return 0;
+    else if (is_ctors)
+      return 65535 - prio;
+    else
+      return prio;
+  }
+
   // Return true if this an input file whose base name matches
   // FILE_NAME.  The base name must have an extension of ".o", and
   // must be exactly FILE_NAME.o or FILE_NAME, one character, ".o".
@@ -3099,18 +3160,8 @@ class Output_section::Input_section_sort_entry
   // file name this way is a dreadful hack, but the GNU linker does it
   // in order to better support gcc, and we need to be compatible.
   bool
-  match_file_name(const char* match_file_name) const
-  {
-    const std::string& file_name(this->input_section_.relobj()->name());
-    const char* base_name = lbasename(file_name.c_str());
-    size_t match_len = strlen(match_file_name);
-    if (strncmp(base_name, match_file_name, match_len) != 0)
-      return false;
-    size_t base_len = strlen(base_name);
-    if (base_len != match_len + 2 && base_len != match_len + 3)
-      return false;
-    return memcmp(base_name + base_len - 2, ".o", 2) == 0;
-  }
+  match_file_name(const char* file_name) const
+  { return Layout::match_file_name(this->input_section_.relobj(), file_name); }
 
   // Returns 1 if THIS should appear before S in section order, -1 if S
   // appears before THIS and 0 if they are not comparable.
@@ -3232,6 +3283,28 @@ Output_section::Input_section_sort_init_fini_compare::operator()(
   if (!s1_has_priority && s2_has_priority)
     return false;
 
+  // .ctors and .dtors sections without priority come after
+  // .init_array and .fini_array sections without priority.
+  if (!s1_has_priority
+      && (s1.section_name() == ".ctors" || s1.section_name() == ".dtors")
+      && s1.section_name() != s2.section_name())
+    return false;
+  if (!s2_has_priority
+      && (s2.section_name() == ".ctors" || s2.section_name() == ".dtors")
+      && s2.section_name() != s1.section_name())
+    return true;
+
+  // Sort by priority if we can.
+  if (s1_has_priority)
+    {
+      unsigned int s1_prio = s1.get_priority();
+      unsigned int s2_prio = s2.get_priority();
+      if (s1_prio < s2_prio)
+	return true;
+      else if (s1_prio > s2_prio)
+	return false;
+    }
+
   // Check if a section order exists for these sections through a section
   // ordering file.  If sequence_num is 0, an order does not exist.
   int sequence_num = s1.compare_section_ordering(s2);
@@ -3264,6 +3337,38 @@ Output_section::Input_section_sort_section_order_index_compare::operator()(
     return s1.index() < s2.index();
   
   return s1_secn_index < s2_secn_index;
+}
+
+// This updates the section order index of input sections according to the
+// the order specified in the mapping from Section id to order index.
+
+void
+Output_section::update_section_layout(
+  const Section_layout_order& order_map)
+{
+  for (Input_section_list::iterator p = this->input_sections_.begin();
+       p != this->input_sections_.end();
+       ++p)
+    {
+      if (p->is_input_section()
+	  || p->is_relaxed_input_section())
+        {
+	  Object* obj = (p->is_input_section()
+			 ? p->relobj()
+		         : p->relaxed_input_section()->relobj());
+	  unsigned int shndx = p->shndx();
+	  Section_layout_order::const_iterator it
+	    = order_map.find(Section_id(obj, shndx));
+	  if (it == order_map.end())
+	    continue;
+	  unsigned int section_order_index = it->second;
+	  if (section_order_index != 0)
+            {
+              p->set_section_order_index(section_order_index);
+              this->set_input_section_order_specified();
+	    }
+        }
+    }
 }
 
 // Sort the input sections attached to an output section.
@@ -3308,7 +3413,7 @@ Output_section::sort_attached_input_sections()
     }
   else
     {
-      gold_assert(parameters->options().section_ordering_file());
+      gold_assert(this->input_section_order_specified());
       std::sort(sort_list.begin(), sort_list.end(),
 	        Input_section_sort_section_order_index_compare());
     }
@@ -3348,7 +3453,7 @@ Output_section::write_header(const Layout* layout,
   if (this->link_section_ != NULL)
     oshdr->put_sh_link(this->link_section_->out_shndx());
   else if (this->should_link_to_symtab_)
-    oshdr->put_sh_link(layout->symtab_section()->out_shndx());
+    oshdr->put_sh_link(layout->symtab_section_shndx());
   else if (this->should_link_to_dynsym_)
     oshdr->put_sh_link(layout->dynsym_section()->out_shndx());
   else
@@ -3726,10 +3831,20 @@ Output_section::set_fixed_layout(uint64_t sh_addr, off_t sh_offset,
 
 // Reserve space within the fixed layout for the section.  Used for
 // incremental update links.
+
 void
 Output_section::reserve(uint64_t sh_offset, uint64_t sh_size)
 {
   this->free_list_.remove(sh_offset, sh_offset + sh_size);
+}
+
+// Allocate space from the free list for the section.  Used for
+// incremental update links.
+
+off_t
+Output_section::allocate(off_t len, uint64_t addralign)
+{
+  return this->free_list_.allocate(len, addralign, 0);
 }
 
 // Output segment methods.
@@ -4146,10 +4261,7 @@ Output_segment::set_section_list_addresses(Layout* layout, bool reset,
                 }
             }
 
-	  // FIXME: Need to handle TLS and .bss with incremental update.
-	  if (!parameters->incremental_update()
-	      || (*p)->is_section_flag_set(elfcpp::SHF_TLS)
-	      || (*p)->is_section_type(elfcpp::SHT_NOBITS))
+	  if (!parameters->incremental_update())
 	    {
 	      off = align_address(off, align);
 	      (*p)->set_address_and_file_offset(addr + (off - startoff), off);
@@ -4163,17 +4275,17 @@ Output_segment::set_section_list_addresses(Layout* layout, bool reset,
 	      if (off == -1)
 	        {
 		  gold_assert((*p)->output_section() != NULL);
-		  gold_fatal(_("out of patch space for section %s; "
-			       "relink with --incremental-full"),
-			     (*p)->output_section()->name());
+		  gold_fallback(_("out of patch space for section %s; "
+				  "relink with --incremental-full"),
+				(*p)->output_section()->name());
 	        }
 	      (*p)->set_address_and_file_offset(addr + (off - startoff), off);
 	      if ((*p)->data_size() > current_size)
 		{
 		  gold_assert((*p)->output_section() != NULL);
-		  gold_fatal(_("%s: section changed size; "
-			       "relink with --incremental-full"),
-			     (*p)->output_section()->name());
+		  gold_fallback(_("%s: section changed size; "
+				  "relink with --incremental-full"),
+				(*p)->output_section()->name());
 		}
 	    }
 	}
@@ -4216,14 +4328,15 @@ Output_segment::set_section_list_addresses(Layout* layout, bool reset,
 	  (*p)->finalize_data_size();
 	}
 
-      gold_debug(DEBUG_INCREMENTAL,
-		 "set_section_list_addresses: %08lx %08lx %s",
-		 static_cast<long>(off),
-		 static_cast<long>((*p)->data_size()),
-		 ((*p)->output_section() != NULL
-		  ? (*p)->output_section()->name() : "(special)"));
+      if (parameters->incremental_update())
+	gold_debug(DEBUG_INCREMENTAL,
+		   "set_section_list_addresses: %08lx %08lx %s",
+		   static_cast<long>(off),
+		   static_cast<long>((*p)->data_size()),
+		   ((*p)->output_section() != NULL
+		    ? (*p)->output_section()->name() : "(special)"));
 
-      // We want to ignore the size of a SHF_TLS or SHT_NOBITS
+      // We want to ignore the size of a SHF_TLS SHT_NOBITS
       // section.  Such a section does not affect the size of a
       // PT_LOAD segment.
       if (!(*p)->is_section_flag_set(elfcpp::SHF_TLS)

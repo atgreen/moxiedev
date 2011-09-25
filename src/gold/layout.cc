@@ -46,6 +46,7 @@
 #include "ehframe.h"
 #include "compressed_output.h"
 #include "reduced_debug_output.h"
+#include "object.h"
 #include "reloc.h"
 #include "descriptors.h"
 #include "plugin.h"
@@ -167,6 +168,11 @@ Free_list::allocate(off_t len, uint64_t align, off_t minoff)
       off_t start = p->start_ > minoff ? p->start_ : minoff;
       start = align_address(start, align);
       off_t end = start + len;
+      if (end > p->end_ && p->end_ == this->length_ && this->extend_)
+	{
+	  this->length_ = end;
+	  p->end_ = end;
+	}
       if (end <= p->end_)
 	{
 	  if (p->start_ + 3 >= start && p->end_ <= end + 3)
@@ -184,6 +190,12 @@ Free_list::allocate(off_t len, uint64_t align, off_t minoff)
 	    }
 	  return start;
 	}
+    }
+  if (this->extend_)
+    {
+      off_t start = align_address(this->length_, align);
+      this->length_ = start + len;
+      return start;
     }
   return -1;
 }
@@ -360,6 +372,7 @@ Layout::Layout(int number_of_input_files, Script_options* script_options)
     section_headers_(NULL),
     tls_segment_(NULL),
     relro_segment_(NULL),
+    interp_segment_(NULL),
     increase_relro_(0),
     symtab_section_(NULL),
     symtab_xindex_(NULL),
@@ -386,11 +399,14 @@ Layout::Layout(int number_of_input_files, Script_options* script_options)
     any_postprocessing_sections_(false),
     resized_signatures_(false),
     have_stabstr_section_(false),
+    section_ordering_specified_(false),
     incremental_inputs_(NULL),
     record_output_section_data_from_script_(false),
     script_output_section_data_list_(),
     segment_states_(NULL),
     relaxation_debug_check_(NULL),
+    input_section_position_(),
+    input_section_glob_(),
     incremental_base_(NULL),
     free_list_()
 {
@@ -616,19 +632,52 @@ Layout::find_output_segment(elfcpp::PT type, elfcpp::Elf_Word set,
   return NULL;
 }
 
+// When we put a .ctors or .dtors section with more than one word into
+// a .init_array or .fini_array section, we need to reverse the words
+// in the .ctors/.dtors section.  This is because .init_array executes
+// constructors front to back, where .ctors executes them back to
+// front, and vice-versa for .fini_array/.dtors.  Although we do want
+// to remap .ctors/.dtors into .init_array/.fini_array because it can
+// be more efficient, we don't want to change the order in which
+// constructors/destructors are run.  This set just keeps track of
+// these sections which need to be reversed.  It is only changed by
+// Layout::layout.  It should be a private member of Layout, but that
+// would require layout.h to #include object.h to get the definition
+// of Section_id.
+static Unordered_set<Section_id, Section_id_hash> ctors_sections_in_init_array;
+
+// Return whether OBJECT/SHNDX is a .ctors/.dtors section mapped to a
+// .init_array/.fini_array section.
+
+bool
+Layout::is_ctors_in_init_array(Relobj* relobj, unsigned int shndx) const
+{
+  return (ctors_sections_in_init_array.find(Section_id(relobj, shndx))
+	  != ctors_sections_in_init_array.end());
+}
+
 // Return the output section to use for section NAME with type TYPE
 // and section flags FLAGS.  NAME must be canonicalized in the string
-// pool, and NAME_KEY is the key.  IS_INTERP is true if this is the
-// .interp section.  IS_DYNAMIC_LINKER_SECTION is true if this section
-// is used by the dynamic linker.  IS_RELRO is true for a relro
-// section.  IS_LAST_RELRO is true for the last relro section.
-// IS_FIRST_NON_RELRO is true for the first non-relro section.
+// pool, and NAME_KEY is the key.  ORDER is where this should appear
+// in the output sections.  IS_RELRO is true for a relro section.
 
 Output_section*
 Layout::get_output_section(const char* name, Stringpool::Key name_key,
 			   elfcpp::Elf_Word type, elfcpp::Elf_Xword flags,
 			   Output_section_order order, bool is_relro)
 {
+  elfcpp::Elf_Word lookup_type = type;
+
+  // For lookup purposes, treat INIT_ARRAY, FINI_ARRAY, and
+  // PREINIT_ARRAY like PROGBITS.  This ensures that we combine
+  // .init_array, .fini_array, and .preinit_array sections by name
+  // whatever their type in the input file.  We do this because the
+  // types are not always right in the input files.
+  if (lookup_type == elfcpp::SHT_INIT_ARRAY
+      || lookup_type == elfcpp::SHT_FINI_ARRAY
+      || lookup_type == elfcpp::SHT_PREINIT_ARRAY)
+    lookup_type = elfcpp::SHT_PROGBITS;
+
   elfcpp::Elf_Xword lookup_flags = flags;
 
   // Ignoring SHF_WRITE and SHF_EXECINSTR here means that we combine
@@ -637,7 +686,7 @@ Layout::get_output_section(const char* name, Stringpool::Key name_key,
   // controlling this.
   lookup_flags &= ~(elfcpp::SHF_WRITE | elfcpp::SHF_EXECINSTR);
 
-  const Key key(name_key, std::make_pair(type, lookup_flags));
+  const Key key(name_key, std::make_pair(lookup_type, lookup_flags));
   const std::pair<Key, Output_section*> v(key, NULL);
   std::pair<Section_name_map::iterator, bool> ins(
     this->section_name_map_.insert(v));
@@ -654,20 +703,24 @@ Layout::get_output_section(const char* name, Stringpool::Key name_key,
       // there should be an option to control this.
       Output_section* os = NULL;
 
-      if (type == elfcpp::SHT_PROGBITS)
+      if (lookup_type == elfcpp::SHT_PROGBITS)
 	{
           if (flags == 0)
             {
               Output_section* same_name = this->find_output_section(name);
               if (same_name != NULL
-                  && same_name->type() == elfcpp::SHT_PROGBITS
+                  && (same_name->type() == elfcpp::SHT_PROGBITS
+		      || same_name->type() == elfcpp::SHT_INIT_ARRAY
+		      || same_name->type() == elfcpp::SHT_FINI_ARRAY
+		      || same_name->type() == elfcpp::SHT_PREINIT_ARRAY)
                   && (same_name->flags() & elfcpp::SHF_TLS) == 0)
                 os = same_name;
             }
           else if ((flags & elfcpp::SHF_TLS) == 0)
             {
               elfcpp::Elf_Xword zero_flags = 0;
-              const Key zero_key(name_key, std::make_pair(type, zero_flags));
+              const Key zero_key(name_key, std::make_pair(lookup_type,
+							  zero_flags));
               Section_name_map::iterator p =
                   this->section_name_map_.find(zero_key);
               if (p != this->section_name_map_.end())
@@ -687,12 +740,9 @@ Layout::get_output_section(const char* name, Stringpool::Key name_key,
 // RELOBJ, with type TYPE and flags FLAGS.  RELOBJ may be NULL for a
 // linker created section.  IS_INPUT_SECTION is true if we are
 // choosing an output section for an input section found in a input
-// file.  IS_INTERP is true if this is the .interp section.
-// IS_DYNAMIC_LINKER_SECTION is true if this section is used by the
-// dynamic linker.  IS_RELRO is true for a relro section.
-// IS_LAST_RELRO is true for the last relro section.
-// IS_FIRST_NON_RELRO is true for the first non-relro section.  This
-// will return NULL if the input section should be discarded.
+// file.  ORDER is where this section should appear in the output
+// sections.  IS_RELRO is true for a relro section.  This will return
+// NULL if the input section should be discarded.
 
 Output_section*
 Layout::choose_output_section(const Relobj* relobj, const char* name,
@@ -820,7 +870,7 @@ Layout::choose_output_section(const Relobj* relobj, const char* name,
   if (is_input_section
       && !this->script_options_->saw_sections_clause()
       && !parameters->options().relocatable())
-    name = Layout::output_section_name(name, &len);
+    name = Layout::output_section_name(relobj, name, &len);
 
   Stringpool::Key name_key;
   name = this->namepool_.add_with_length(name, len, true, &name_key);
@@ -889,32 +939,11 @@ Layout::layout(Sized_relobj_file<size, big_endian>* object, unsigned int shndx,
   if (!this->include_section(object, name, shdr))
     return NULL;
 
-  Output_section* os;
-
-  // Sometimes .init_array*, .preinit_array* and .fini_array* do not have
-  // correct section types.  Force them here.
   elfcpp::Elf_Word sh_type = shdr.get_sh_type();
-  if (sh_type == elfcpp::SHT_PROGBITS)
-    {
-      static const char init_array_prefix[] = ".init_array";
-      static const char preinit_array_prefix[] = ".preinit_array";
-      static const char fini_array_prefix[] = ".fini_array";
-      static size_t init_array_prefix_size = sizeof(init_array_prefix) - 1;
-      static size_t preinit_array_prefix_size =
-	sizeof(preinit_array_prefix) - 1;
-      static size_t fini_array_prefix_size = sizeof(fini_array_prefix) - 1;
-
-      if (strncmp(name, init_array_prefix, init_array_prefix_size) == 0)
-	sh_type = elfcpp::SHT_INIT_ARRAY;
-      else if (strncmp(name, preinit_array_prefix, preinit_array_prefix_size)
-	       == 0)
-	sh_type = elfcpp::SHT_PREINIT_ARRAY;
-      else if (strncmp(name, fini_array_prefix, fini_array_prefix_size) == 0)
-	sh_type = elfcpp::SHT_FINI_ARRAY;
-    }
 
   // In a relocatable link a grouped section must not be combined with
   // any other sections.
+  Output_section* os;
   if (parameters->options().relocatable()
       && (shdr.get_sh_flags() & elfcpp::SHF_GROUP) != 0)
     {
@@ -932,15 +961,37 @@ Layout::layout(Sized_relobj_file<size, big_endian>* object, unsigned int shndx,
     }
 
   // By default the GNU linker sorts input sections whose names match
-  // .ctor.*, .dtor.*, .init_array.*, or .fini_array.*.  The sections
-  // are sorted by name.  This is used to implement constructor
-  // priority ordering.  We are compatible.
+  // .ctors.*, .dtors.*, .init_array.*, or .fini_array.*.  The
+  // sections are sorted by name.  This is used to implement
+  // constructor priority ordering.  We are compatible.  When we put
+  // .ctor sections in .init_array and .dtor sections in .fini_array,
+  // we must also sort plain .ctor and .dtor sections.
   if (!this->script_options_->saw_sections_clause()
+      && !parameters->options().relocatable()
       && (is_prefix_of(".ctors.", name)
 	  || is_prefix_of(".dtors.", name)
 	  || is_prefix_of(".init_array.", name)
-	  || is_prefix_of(".fini_array.", name)))
+	  || is_prefix_of(".fini_array.", name)
+	  || (parameters->options().ctors_in_init_array()
+	      && (strcmp(name, ".ctors") == 0
+		  || strcmp(name, ".dtors") == 0))))
     os->set_must_sort_attached_input_sections();
+
+  // If this is a .ctors or .ctors.* section being mapped to a
+  // .init_array section, or a .dtors or .dtors.* section being mapped
+  // to a .fini_array section, we will need to reverse the words if
+  // there is more than one.  Record this section for later.  See
+  // ctors_sections_in_init_array above.
+  if (!this->script_options_->saw_sections_clause()
+      && !parameters->options().relocatable()
+      && shdr.get_sh_size() > size / 8
+      && (((strcmp(name, ".ctors") == 0
+	    || is_prefix_of(".ctors.", name))
+	   && strcmp(os->name(), ".init_array") == 0)
+	  || ((strcmp(name, ".dtors") == 0
+	       || is_prefix_of(".dtors.", name))
+	      && strcmp(os->name(), ".fini_array") == 0)))
+    ctors_sections_in_init_array.insert(Section_id(object, shndx));
 
   // FIXME: Handle SHF_LINK_ORDER somewhere.
 
@@ -1095,11 +1146,77 @@ Layout::layout_eh_frame(Sized_relobj_file<size, big_endian>* object,
 			unsigned int reloc_shndx, unsigned int reloc_type,
 			off_t* off)
 {
-  gold_assert(shdr.get_sh_type() == elfcpp::SHT_PROGBITS);
+  gold_assert(shdr.get_sh_type() == elfcpp::SHT_PROGBITS
+	      || shdr.get_sh_type() == elfcpp::SHT_X86_64_UNWIND);
   gold_assert((shdr.get_sh_flags() & elfcpp::SHF_ALLOC) != 0);
 
-  const char* const name = ".eh_frame";
-  Output_section* os = this->choose_output_section(object, name,
+  Output_section* os = this->make_eh_frame_section(object);
+  if (os == NULL)
+    return NULL;
+
+  gold_assert(this->eh_frame_section_ == os);
+
+  elfcpp::Elf_Xword orig_flags = os->flags();
+
+  if (!parameters->incremental()
+      && this->eh_frame_data_->add_ehframe_input_section(object,
+							 symbols,
+							 symbols_size,
+							 symbol_names,
+							 symbol_names_size,
+							 shndx,
+							 reloc_shndx,
+							 reloc_type))
+    {
+      os->update_flags_for_input_section(shdr.get_sh_flags());
+
+      // A writable .eh_frame section is a RELRO section.
+      if ((orig_flags & (elfcpp::SHF_WRITE | elfcpp::SHF_EXECINSTR))
+	  != (os->flags() & (elfcpp::SHF_WRITE | elfcpp::SHF_EXECINSTR)))
+	{
+	  os->set_is_relro();
+	  os->set_order(ORDER_RELRO);
+	}
+
+      // We found a .eh_frame section we are going to optimize, so now
+      // we can add the set of optimized sections to the output
+      // section.  We need to postpone adding this until we've found a
+      // section we can optimize so that the .eh_frame section in
+      // crtbegin.o winds up at the start of the output section.
+      if (!this->added_eh_frame_data_)
+	{
+	  os->add_output_section_data(this->eh_frame_data_);
+	  this->added_eh_frame_data_ = true;
+	}
+      *off = -1;
+    }
+  else
+    {
+      // We couldn't handle this .eh_frame section for some reason.
+      // Add it as a normal section.
+      bool saw_sections_clause = this->script_options_->saw_sections_clause();
+      *off = os->add_input_section(this, object, shndx, ".eh_frame", shdr,
+				   reloc_shndx, saw_sections_clause);
+      this->have_added_input_section_ = true;
+
+      if ((orig_flags & (elfcpp::SHF_WRITE | elfcpp::SHF_EXECINSTR))
+	  != (os->flags() & (elfcpp::SHF_WRITE | elfcpp::SHF_EXECINSTR)))
+	os->set_order(this->default_section_order(os, false));
+    }
+
+  return os;
+}
+
+// Create and return the magic .eh_frame section.  Create
+// .eh_frame_hdr also if appropriate.  OBJECT is the object with the
+// input .eh_frame section; it may be NULL.
+
+Output_section*
+Layout::make_eh_frame_section(const Relobj* object)
+{
+  // FIXME: On x86_64, this could use SHT_X86_64_UNWIND rather than
+  // SHT_PROGBITS.
+  Output_section* os = this->choose_output_section(object, ".eh_frame",
 						   elfcpp::SHT_PROGBITS,
 						   elfcpp::SHF_ALLOC, false,
 						   ORDER_EHFRAME, false);
@@ -1143,47 +1260,31 @@ Layout::layout_eh_frame(Sized_relobj_file<size, big_endian>* object,
 	}
     }
 
-  gold_assert(this->eh_frame_section_ == os);
-
-  if (!parameters->incremental()
-      && this->eh_frame_data_->add_ehframe_input_section(object,
-							 symbols,
-							 symbols_size,
-							 symbol_names,
-							 symbol_names_size,
-							 shndx,
-							 reloc_shndx,
-							 reloc_type))
-    {
-      os->update_flags_for_input_section(shdr.get_sh_flags());
-
-      // A writable .eh_frame section is a RELRO section.
-      if ((shdr.get_sh_flags() & elfcpp::SHF_WRITE) != 0)
-	os->set_is_relro();
-
-      // We found a .eh_frame section we are going to optimize, so now
-      // we can add the set of optimized sections to the output
-      // section.  We need to postpone adding this until we've found a
-      // section we can optimize so that the .eh_frame section in
-      // crtbegin.o winds up at the start of the output section.
-      if (!this->added_eh_frame_data_)
-	{
-	  os->add_output_section_data(this->eh_frame_data_);
-	  this->added_eh_frame_data_ = true;
-	}
-      *off = -1;
-    }
-  else
-    {
-      // We couldn't handle this .eh_frame section for some reason.
-      // Add it as a normal section.
-      bool saw_sections_clause = this->script_options_->saw_sections_clause();
-      *off = os->add_input_section(this, object, shndx, name, shdr, reloc_shndx,
-				   saw_sections_clause);
-      this->have_added_input_section_ = true;
-    }
-
   return os;
+}
+
+// Add an exception frame for a PLT.  This is called from target code.
+
+void
+Layout::add_eh_frame_for_plt(Output_data* plt, const unsigned char* cie_data,
+			     size_t cie_length, const unsigned char* fde_data,
+			     size_t fde_length)
+{
+  if (parameters->incremental())
+    {
+      // FIXME: Maybe this could work some day....
+      return;
+    }
+  Output_section* os = this->make_eh_frame_section(NULL);
+  if (os == NULL)
+    return;
+  this->eh_frame_data_->add_ehframe_for_plt(plt, cie_data, cie_length,
+					    fde_data, fde_length);
+  if (!this->added_eh_frame_data_)
+    {
+      os->add_output_section_data(this->eh_frame_data_);
+      this->added_eh_frame_data_ = true;
+    }
 }
 
 // Add POSD to an output section using NAME, TYPE, and FLAGS.  Return
@@ -1251,6 +1352,18 @@ Layout::make_output_section(const char* name, elfcpp::Elf_Word type,
     }
   else
     {
+      // Sometimes .init_array*, .preinit_array* and .fini_array* do
+      // not have correct section types.  Force them here.
+      if (type == elfcpp::SHT_PROGBITS)
+	{
+	  if (is_prefix_of(".init_array", name))
+	    type = elfcpp::SHT_INIT_ARRAY;
+	  else if (is_prefix_of(".preinit_array", name))
+	    type = elfcpp::SHT_PREINIT_ARRAY;
+	  else if (is_prefix_of(".fini_array", name))
+	    type = elfcpp::SHT_FINI_ARRAY;
+	}
+
       // FIXME: const_cast is ugly.
       Target* target = const_cast<Target*>(&parameters->target());
       os = target->make_output_section(name, type, flags);
@@ -1298,10 +1411,12 @@ Layout::make_output_section(const char* name, elfcpp::Elf_Word type,
   // do the same.  We need to know that this might happen before we
   // attach any input sections.
   if (!this->script_options_->saw_sections_clause()
-      && (strcmp(name, ".ctors") == 0
-	  || strcmp(name, ".dtors") == 0
-	  || strcmp(name, ".init_array") == 0
-	  || strcmp(name, ".fini_array") == 0))
+      && !parameters->options().relocatable()
+      && (strcmp(name, ".init_array") == 0
+	  || strcmp(name, ".fini_array") == 0
+	  || (!parameters->options().ctors_in_init_array()
+	      && (strcmp(name, ".ctors") == 0
+		  || strcmp(name, ".dtors") == 0))))
     os->set_may_sort_attached_input_sections();
 
   // Check for .stab*str sections, as .stab* sections need to link to
@@ -1311,6 +1426,21 @@ Layout::make_output_section(const char* name, elfcpp::Elf_Word type,
       && strncmp(name, ".stab", 5) == 0
       && strcmp(name + strlen(name) - 3, "str") == 0)
     this->have_stabstr_section_ = true;
+
+  // During a full incremental link, we add patch space to most
+  // PROGBITS and NOBITS sections.  Flag those that may be
+  // arbitrarily padded.
+  if ((type == elfcpp::SHT_PROGBITS || type == elfcpp::SHT_NOBITS)
+      && order != ORDER_INTERP
+      && order != ORDER_INIT
+      && order != ORDER_PLT
+      && order != ORDER_FINI
+      && order != ORDER_RELRO_LAST
+      && order != ORDER_NON_RELRO_FIRST
+      && strcmp(name, ".ctors") != 0
+      && strcmp(name, ".dtors") != 0
+      && strcmp(name, ".jcr") != 0)
+    os->set_is_patch_space_allowed();
 
   // If we have already attached the sections to segments, then we
   // need to attach this one now.  This happens for sections created
@@ -1541,6 +1671,20 @@ Layout::attach_allocated_section_to_segment(Output_section* os)
 	this->make_output_segment(elfcpp::PT_GNU_RELRO, seg_flags);
       this->relro_segment_->add_output_section_to_nonload(os, seg_flags);
     }
+
+  // If we see a section named .interp, put it into a PT_INTERP
+  // segment.  This seems broken to me, but this is what GNU ld does,
+  // and glibc expects it.
+  if (strcmp(os->name(), ".interp") == 0
+      && !this->script_options_->saw_phdrs_clause())
+    {
+      if (this->interp_segment_ == NULL)
+	this->make_output_segment(elfcpp::PT_INTERP, seg_flags);
+      else
+	gold_warning(_("multiple '.interp' sections in input files "
+		       "may cause confusing PT_INTERP segment"));
+      this->interp_segment_->add_output_section_to_nonload(os, seg_flags);
+    }
 }
 
 // Make an output section for a script.
@@ -1645,15 +1789,20 @@ Layout::create_initial_dynamic_sections(Symbol_table* symtab)
 						       false, ORDER_RELRO,
 						       true);
 
-  this->dynamic_symbol_ =
-    symtab->define_in_output_data("_DYNAMIC", NULL, Symbol_table::PREDEFINED,
-				  this->dynamic_section_, 0, 0,
-				  elfcpp::STT_OBJECT, elfcpp::STB_LOCAL,
-				  elfcpp::STV_HIDDEN, 0, false, false);
+  // A linker script may discard .dynamic, so check for NULL.
+  if (this->dynamic_section_ != NULL)
+    {
+      this->dynamic_symbol_ =
+	symtab->define_in_output_data("_DYNAMIC", NULL,
+				      Symbol_table::PREDEFINED,
+				      this->dynamic_section_, 0, 0,
+				      elfcpp::STT_OBJECT, elfcpp::STB_LOCAL,
+				      elfcpp::STV_HIDDEN, 0, false, false);
 
-  this->dynamic_data_ =  new Output_data_dynamic(&this->dynpool_);
+      this->dynamic_data_ =  new Output_data_dynamic(&this->dynpool_);
 
-  this->dynamic_section_->add_output_section_data(this->dynamic_data_);
+      this->dynamic_section_->add_output_section_data(this->dynamic_data_);
+    }
 }
 
 // For each output section whose name can be represented as C symbol,
@@ -1946,8 +2095,12 @@ Layout::relaxation_loop_body(
   // If the user set the address of the text segment, that may not be
   // compatible with putting the segment headers and file headers into
   // that segment.
-  if (parameters->options().user_set_Ttext())
-    load_seg = NULL;
+  if (parameters->options().user_set_Ttext()
+      && parameters->options().Ttext() % target->common_pagesize() != 0)
+    {
+      load_seg = NULL;
+      phdr_seg = NULL;
+    }
 
   gold_assert(phdr_seg == NULL
 	      || load_seg != NULL
@@ -2063,7 +2216,7 @@ Layout::find_section_order_index(const std::string& section_name)
 }
 
 // Read the sequence of input sections from the file specified with
-// --section-ordering-file.
+// option --section-ordering-file.
 
 void
 Layout::read_layout_from_file()
@@ -2079,6 +2232,7 @@ Layout::read_layout_from_file()
 
   std::getline(in, line);   // this chops off the trailing \n, if any
   unsigned int position = 1;
+  this->set_section_ordering_specified();
 
   while (in)
     {
@@ -2163,8 +2317,11 @@ Layout::finalize(const Input_objects* input_objects, Symbol_table* symtab,
 				  &versions);
 
       // Create the .interp section to hold the name of the
-      // interpreter, and put it in a PT_INTERP segment.
-      if (!parameters->options().shared())
+      // interpreter, and put it in a PT_INTERP segment.  Don't do it
+      // if we saw a .interp section in an input file.
+      if ((!parameters->options().shared()
+	   || parameters->options().dynamic_linker() != NULL)
+	  && this->interp_segment_ == NULL)
         this->create_interp(target);
 
       // Finish the .dynamic section to hold the dynamic data, and put
@@ -2673,7 +2830,7 @@ Layout::create_incremental_info_sections(Symbol_table* symtab)
 
 // Return whether SEG1 should be before SEG2 in the output file.  This
 // is based entirely on the segment type and flags.  When this is
-// called the segment addresses has normally not yet been set.
+// called the segment addresses have normally not yet been set.
 
 bool
 Layout::segment_precedes(const Output_segment* seg1,
@@ -2799,8 +2956,10 @@ Layout::segment_precedes(const Output_segment* seg1,
     return (flags1 & elfcpp::PF_R) == 0;
 
   // We shouldn't get here--we shouldn't create segments which we
-  // can't distinguish.
-  gold_unreachable();
+  // can't distinguish.  Unless of course we are using a weird linker
+  // script.
+  gold_assert(this->script_options_->saw_phdrs_clause());
+  return false;
 }
 
 // Increase OFF so that it is congruent to ADDR modulo ABI_PAGESIZE.
@@ -2824,9 +2983,11 @@ off_t
 Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 			    unsigned int* pshndx)
 {
-  // Sort them into the final order.
-  std::sort(this->segment_list_.begin(), this->segment_list_.end(),
-	    Layout::Compare_segments());
+  // Sort them into the final order.  We use a stable sort so that we
+  // don't randomize the order of indistinguishable segments created
+  // by linker scripts.
+  std::stable_sort(this->segment_list_.begin(), this->segment_list_.end(),
+		   Layout::Compare_segments(this));
 
   // Find the PT_LOAD segments, and set their addresses and offsets
   // and their section's addresses and offsets.
@@ -2877,6 +3038,11 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 	      // When it comes to setting file offsets, we care about
 	      // the physical address.
 	      addr = (*p)->paddr();
+	    }
+	  else if (parameters->options().user_set_Ttext()
+		   && ((*p)->flags() & elfcpp::PF_W) == 0)
+	    {
+	      are_addresses_set = true;
 	    }
 	  else if (parameters->options().user_set_Tdata()
 		   && ((*p)->flags() & elfcpp::PF_W) != 0
@@ -2957,7 +3123,7 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 	  if (!are_addresses_set
 	      && !has_relro
 	      && aligned_addr != addr
-	      && !parameters->incremental_update())
+	      && !parameters->incremental())
 	    {
 	      uint64_t first_off = (common_pagesize
 				    - (aligned_addr
@@ -3125,18 +3291,18 @@ Layout::set_section_offsets(off_t off, Layout::Section_offset_pass pass)
 	      if (is_debugging_enabled(DEBUG_INCREMENTAL))
 	        this->free_list_.dump();
 	      gold_assert((*p)->output_section() != NULL);
-	      gold_fatal(_("out of patch space for section %s; "
-			   "relink with --incremental-full"),
-			 (*p)->output_section()->name());
+	      gold_fallback(_("out of patch space for section %s; "
+			      "relink with --incremental-full"),
+			    (*p)->output_section()->name());
 	    }
 	  (*p)->set_file_offset(off);
 	  (*p)->finalize_data_size();
 	  if ((*p)->data_size() > current_size)
 	    {
 	      gold_assert((*p)->output_section() != NULL);
-	      gold_fatal(_("%s: section changed size; "
-			   "relink with --incremental-full"),
-			 (*p)->output_section()->name());
+	      gold_fallback(_("%s: section changed size; "
+			      "relink with --incremental-full"),
+			    (*p)->output_section()->name());
 	    }
 	  gold_debug(DEBUG_INCREMENTAL,
 		     "set_section_offsets: %08lx %08lx %s",
@@ -3391,8 +3557,8 @@ Layout::create_symtab_sections(const Input_objects* input_objects,
 	{
 	  symtab_off = this->allocate(off, align, *poff);
           if (off == -1)
-	    gold_fatal(_("out of patch space for symbol table; "
-		         "relink with --incremental-full"));
+	    gold_fallback(_("out of patch space for symbol table; "
+			    "relink with --incremental-full"));
 	  gold_debug(DEBUG_INCREMENTAL,
 		     "create_symtab_sections: %08lx %08lx .symtab",
 		     static_cast<long>(symtab_off),
@@ -3462,8 +3628,8 @@ Layout::create_shdrs(const Output_section* shstrtab_section, off_t* poff)
       oshdrs->pre_finalize_data_size();
       off = this->allocate(oshdrs->data_size(), oshdrs->addralign(), *poff);
       if (off == -1)
-	  gold_fatal(_("out of patch space for section header table; "
-		       "relink with --incremental-full"));
+	  gold_fallback(_("out of patch space for section header table; "
+			  "relink with --incremental-full"));
       gold_debug(DEBUG_INCREMENTAL,
 		 "create_shdrs: %08lx %08lx (section header table)",
 		 static_cast<long>(off),
@@ -3560,20 +3726,27 @@ Layout::create_dynamic_symtab(const Input_objects* input_objects,
 						       ORDER_DYNAMIC_LINKER,
 						       false);
 
-  Output_section_data* odata = new Output_data_fixed_space(index * symsize,
-							   align,
-							   "** dynsym");
-  dynsym->add_output_section_data(odata);
+  // Check for NULL as a linker script may discard .dynsym.
+  if (dynsym != NULL)
+    {
+      Output_section_data* odata = new Output_data_fixed_space(index * symsize,
+							       align,
+							       "** dynsym");
+      dynsym->add_output_section_data(odata);
 
-  dynsym->set_info(local_symcount);
-  dynsym->set_entsize(symsize);
-  dynsym->set_addralign(align);
+      dynsym->set_info(local_symcount);
+      dynsym->set_entsize(symsize);
+      dynsym->set_addralign(align);
 
-  this->dynsym_section_ = dynsym;
+      this->dynsym_section_ = dynsym;
+    }
 
   Output_data_dynamic* const odyn = this->dynamic_data_;
-  odyn->add_section_address(elfcpp::DT_SYMTAB, dynsym);
-  odyn->add_constant(elfcpp::DT_SYMENT, symsize);
+  if (odyn != NULL)
+    {
+      odyn->add_section_address(elfcpp::DT_SYMTAB, dynsym);
+      odyn->add_constant(elfcpp::DT_SYMENT, symsize);
+    }
 
   // If there are more than SHN_LORESERVE allocated sections, we
   // create a .dynsym_shndx section.  It is possible that we don't
@@ -3590,20 +3763,23 @@ Layout::create_dynamic_symtab(const Input_objects* input_objects,
 				    elfcpp::SHF_ALLOC,
 				    false, ORDER_DYNAMIC_LINKER, false);
 
-      this->dynsym_xindex_ = new Output_symtab_xindex(index);
+      if (dynsym_xindex != NULL)
+	{
+	  this->dynsym_xindex_ = new Output_symtab_xindex(index);
 
-      dynsym_xindex->add_output_section_data(this->dynsym_xindex_);
+	  dynsym_xindex->add_output_section_data(this->dynsym_xindex_);
 
-      dynsym_xindex->set_link_section(dynsym);
-      dynsym_xindex->set_addralign(4);
-      dynsym_xindex->set_entsize(4);
+	  dynsym_xindex->set_link_section(dynsym);
+	  dynsym_xindex->set_addralign(4);
+	  dynsym_xindex->set_entsize(4);
 
-      dynsym_xindex->set_after_input_sections();
+	  dynsym_xindex->set_after_input_sections();
 
-      // This tells the driver code to wait until the symbol table has
-      // written out before writing out the postprocessing sections,
-      // including the .dynsym_shndx section.
-      this->any_postprocessing_sections_ = true;
+	  // This tells the driver code to wait until the symbol table
+	  // has written out before writing out the postprocessing
+	  // sections, including the .dynsym_shndx section.
+	  this->any_postprocessing_sections_ = true;
+	}
     }
 
   // Create the dynamic string table section.
@@ -3615,16 +3791,24 @@ Layout::create_dynamic_symtab(const Input_objects* input_objects,
 						       ORDER_DYNAMIC_LINKER,
 						       false);
 
-  Output_section_data* strdata = new Output_data_strtab(&this->dynpool_);
-  dynstr->add_output_section_data(strdata);
+  if (dynstr != NULL)
+    {
+      Output_section_data* strdata = new Output_data_strtab(&this->dynpool_);
+      dynstr->add_output_section_data(strdata);
 
-  dynsym->set_link_section(dynstr);
-  this->dynamic_section_->set_link_section(dynstr);
+      if (dynsym != NULL)
+	dynsym->set_link_section(dynstr);
+      if (this->dynamic_section_ != NULL)
+	this->dynamic_section_->set_link_section(dynstr);
 
-  odyn->add_section_address(elfcpp::DT_STRTAB, dynstr);
-  odyn->add_section_size(elfcpp::DT_STRSZ, dynstr);
+      if (odyn != NULL)
+	{
+	  odyn->add_section_address(elfcpp::DT_STRTAB, dynstr);
+	  odyn->add_section_size(elfcpp::DT_STRSZ, dynstr);
+	}
 
-  *pdynstr = dynstr;
+      *pdynstr = dynstr;
+    }
 
   // Create the hash tables.
 
@@ -3645,12 +3829,18 @@ Layout::create_dynamic_symtab(const Input_objects* input_objects,
 								   hashlen,
 								   align,
 								   "** hash");
-      hashsec->add_output_section_data(hashdata);
+      if (hashsec != NULL && hashdata != NULL)
+	hashsec->add_output_section_data(hashdata);
 
-      hashsec->set_link_section(dynsym);
-      hashsec->set_entsize(4);
+      if (hashsec != NULL)
+	{
+	  if (dynsym != NULL)
+	    hashsec->set_link_section(dynsym);
+	  hashsec->set_entsize(4);
+	}
 
-      odyn->add_section_address(elfcpp::DT_HASH, hashsec);
+      if (odyn != NULL)
+	odyn->add_section_address(elfcpp::DT_HASH, hashsec);
     }
 
   if (strcmp(parameters->options().hash_style(), "gnu") == 0
@@ -3670,17 +3860,23 @@ Layout::create_dynamic_symtab(const Input_objects* input_objects,
 								   hashlen,
 								   align,
 								   "** hash");
-      hashsec->add_output_section_data(hashdata);
+      if (hashsec != NULL && hashdata != NULL)
+	hashsec->add_output_section_data(hashdata);
 
-      hashsec->set_link_section(dynsym);
+      if (hashsec != NULL)
+	{
+	  if (dynsym != NULL)
+	    hashsec->set_link_section(dynsym);
 
-      // For a 64-bit target, the entries in .gnu.hash do not have a
-      // uniform size, so we only set the entry size for a 32-bit
-      // target.
-      if (parameters->target().get_size() == 32)
-	hashsec->set_entsize(4);
+	  // For a 64-bit target, the entries in .gnu.hash do not have
+	  // a uniform size, so we only set the entry size for a
+	  // 32-bit target.
+	  if (parameters->target().get_size() == 32)
+	    hashsec->set_entsize(4);
 
-      odyn->add_section_address(elfcpp::DT_GNU_HASH, hashsec);
+	  if (odyn != NULL)
+	    odyn->add_section_address(elfcpp::DT_GNU_HASH, hashsec);
+	}
     }
 }
 
@@ -3690,7 +3886,8 @@ void
 Layout::assign_local_dynsym_offsets(const Input_objects* input_objects)
 {
   Output_section* dynsym = this->dynsym_section_;
-  gold_assert(dynsym != NULL);
+  if (dynsym == NULL)
+    return;
 
   off_t off = dynsym->offset();
 
@@ -3771,46 +3968,59 @@ Layout::sized_create_version_sections(
 						     ORDER_DYNAMIC_LINKER,
 						     false);
 
-  unsigned char* vbuf;
-  unsigned int vsize;
-  versions->symbol_section_contents<size, big_endian>(symtab, &this->dynpool_,
-						      local_symcount,
-						      dynamic_symbols,
-						      &vbuf, &vsize);
+  // Check for NULL since a linker script may discard this section.
+  if (vsec != NULL)
+    {
+      unsigned char* vbuf;
+      unsigned int vsize;
+      versions->symbol_section_contents<size, big_endian>(symtab,
+							  &this->dynpool_,
+							  local_symcount,
+							  dynamic_symbols,
+							  &vbuf, &vsize);
 
-  Output_section_data* vdata = new Output_data_const_buffer(vbuf, vsize, 2,
-							    "** versions");
+      Output_section_data* vdata = new Output_data_const_buffer(vbuf, vsize, 2,
+								"** versions");
 
-  vsec->add_output_section_data(vdata);
-  vsec->set_entsize(2);
-  vsec->set_link_section(this->dynsym_section_);
+      vsec->add_output_section_data(vdata);
+      vsec->set_entsize(2);
+      vsec->set_link_section(this->dynsym_section_);
+    }
 
   Output_data_dynamic* const odyn = this->dynamic_data_;
-  odyn->add_section_address(elfcpp::DT_VERSYM, vsec);
+  if (odyn != NULL && vsec != NULL)
+    odyn->add_section_address(elfcpp::DT_VERSYM, vsec);
 
   if (versions->any_defs())
     {
       Output_section* vdsec;
-      vdsec= this->choose_output_section(NULL, ".gnu.version_d",
-					 elfcpp::SHT_GNU_verdef,
-					 elfcpp::SHF_ALLOC,
-					 false, ORDER_DYNAMIC_LINKER, false);
+      vdsec = this->choose_output_section(NULL, ".gnu.version_d",
+					  elfcpp::SHT_GNU_verdef,
+					  elfcpp::SHF_ALLOC,
+					  false, ORDER_DYNAMIC_LINKER, false);
 
-      unsigned char* vdbuf;
-      unsigned int vdsize;
-      unsigned int vdentries;
-      versions->def_section_contents<size, big_endian>(&this->dynpool_, &vdbuf,
-						       &vdsize, &vdentries);
+      if (vdsec != NULL)
+	{
+	  unsigned char* vdbuf;
+	  unsigned int vdsize;
+	  unsigned int vdentries;
+	  versions->def_section_contents<size, big_endian>(&this->dynpool_,
+							   &vdbuf, &vdsize,
+							   &vdentries);
 
-      Output_section_data* vddata =
-	new Output_data_const_buffer(vdbuf, vdsize, 4, "** version defs");
+	  Output_section_data* vddata =
+	    new Output_data_const_buffer(vdbuf, vdsize, 4, "** version defs");
 
-      vdsec->add_output_section_data(vddata);
-      vdsec->set_link_section(dynstr);
-      vdsec->set_info(vdentries);
+	  vdsec->add_output_section_data(vddata);
+	  vdsec->set_link_section(dynstr);
+	  vdsec->set_info(vdentries);
 
-      odyn->add_section_address(elfcpp::DT_VERDEF, vdsec);
-      odyn->add_constant(elfcpp::DT_VERDEFNUM, vdentries);
+	  if (odyn != NULL)
+	    {
+	      odyn->add_section_address(elfcpp::DT_VERDEF, vdsec);
+	      odyn->add_constant(elfcpp::DT_VERDEFNUM, vdentries);
+	    }
+	}
     }
 
   if (versions->any_needs())
@@ -3821,22 +4031,28 @@ Layout::sized_create_version_sections(
 					  elfcpp::SHF_ALLOC,
 					  false, ORDER_DYNAMIC_LINKER, false);
 
-      unsigned char* vnbuf;
-      unsigned int vnsize;
-      unsigned int vnentries;
-      versions->need_section_contents<size, big_endian>(&this->dynpool_,
-							&vnbuf, &vnsize,
-							&vnentries);
+      if (vnsec != NULL)
+	{
+	  unsigned char* vnbuf;
+	  unsigned int vnsize;
+	  unsigned int vnentries;
+	  versions->need_section_contents<size, big_endian>(&this->dynpool_,
+							    &vnbuf, &vnsize,
+							    &vnentries);
 
-      Output_section_data* vndata =
-	new Output_data_const_buffer(vnbuf, vnsize, 4, "** version refs");
+	  Output_section_data* vndata =
+	    new Output_data_const_buffer(vnbuf, vnsize, 4, "** version refs");
 
-      vnsec->add_output_section_data(vndata);
-      vnsec->set_link_section(dynstr);
-      vnsec->set_info(vnentries);
+	  vnsec->add_output_section_data(vndata);
+	  vnsec->set_link_section(dynstr);
+	  vnsec->set_info(vnentries);
 
-      odyn->add_section_address(elfcpp::DT_VERNEED, vnsec);
-      odyn->add_constant(elfcpp::DT_VERNEEDNUM, vnentries);
+	  if (odyn != NULL)
+	    {
+	      odyn->add_section_address(elfcpp::DT_VERNEED, vnsec);
+	      odyn->add_constant(elfcpp::DT_VERNEEDNUM, vnentries);
+	    }
+	}
     }
 }
 
@@ -3845,6 +4061,8 @@ Layout::sized_create_version_sections(
 void
 Layout::create_interp(const Target* target)
 {
+  gold_assert(this->interp_segment_ == NULL);
+
   const char* interp = parameters->options().dynamic_linker();
   if (interp == NULL)
     {
@@ -3861,14 +4079,8 @@ Layout::create_interp(const Target* target)
 						     elfcpp::SHF_ALLOC,
 						     false, ORDER_INTERP,
 						     false);
-  osec->add_output_section_data(odata);
-
-  if (!this->script_options_->saw_phdrs_clause())
-    {
-      Output_segment* oseg = this->make_output_segment(elfcpp::PT_INTERP,
-						       elfcpp::PF_R);
-      oseg->add_output_section_to_nonload(osec, elfcpp::PF_R);
-    }
+  if (osec != NULL)
+    osec->add_output_section_data(odata);
 }
 
 // Add dynamic tags for the PLT and the dynamic relocs.  This is
@@ -3884,7 +4096,8 @@ Layout::create_interp(const Target* target)
 // some targets have multiple reloc sections in PLT_REL.
 
 // If DYN_REL is not NULL, it is used for DT_REL/DT_RELA,
-// DT_RELSZ/DT_RELASZ, DT_RELENT/DT_RELAENT.
+// DT_RELSZ/DT_RELASZ, DT_RELENT/DT_RELAENT.  Again we use the output
+// section.
 
 // If ADD_DEBUG is true, we add a DT_DEBUG entry when generating an
 // executable.
@@ -3913,13 +4126,16 @@ Layout::add_target_dynamic_tags(bool use_rel, const Output_data* plt_got,
   if (dyn_rel != NULL && dyn_rel->output_section() != NULL)
     {
       odyn->add_section_address(use_rel ? elfcpp::DT_REL : elfcpp::DT_RELA,
-				dyn_rel);
-      if (plt_rel != NULL && dynrel_includes_plt)
+				dyn_rel->output_section());
+      if (plt_rel != NULL
+	  && plt_rel->output_section() != NULL
+	  && dynrel_includes_plt)
 	odyn->add_section_size(use_rel ? elfcpp::DT_RELSZ : elfcpp::DT_RELASZ,
-			       dyn_rel, plt_rel);
+			       dyn_rel->output_section(),
+			       plt_rel->output_section());
       else
 	odyn->add_section_size(use_rel ? elfcpp::DT_RELSZ : elfcpp::DT_RELASZ,
-			       dyn_rel);
+			       dyn_rel->output_section());
       const int size = parameters->target().get_size();
       elfcpp::DT rel_tag;
       int rel_size;
@@ -3970,7 +4186,8 @@ void
 Layout::finish_dynamic_section(const Input_objects* input_objects,
 			       const Symbol_table* symtab)
 {
-  if (!this->script_options_->saw_phdrs_clause())
+  if (!this->script_options_->saw_phdrs_clause()
+      && this->dynamic_section_ != NULL)
     {
       Output_segment* oseg = this->make_output_segment(elfcpp::PT_DYNAMIC,
 						       (elfcpp::PF_R
@@ -3980,6 +4197,8 @@ Layout::finish_dynamic_section(const Input_objects* input_objects,
     }
 
   Output_data_dynamic* const odyn = this->dynamic_data_;
+  if (odyn == NULL)
+    return;
 
   for (Input_objects::Dynobj_iterator p = input_objects->dynobj_begin();
        p != input_objects->dynobj_end();
@@ -4072,7 +4291,8 @@ Layout::finish_dynamic_section(const Input_objects* input_objects,
            p != this->segment_list_.end();
            ++p)
         {
-          if (((*p)->flags() & elfcpp::PF_W) == 0
+          if ((*p)->type() == elfcpp::PT_LOAD
+	      && ((*p)->flags() & elfcpp::PF_W) == 0
               && (*p)->has_dynamic_reloc())
             {
               have_textrel = true;
@@ -4092,7 +4312,7 @@ Layout::finish_dynamic_section(const Input_objects* input_objects,
         {
           if (((*p)->flags() & elfcpp::SHF_ALLOC) != 0
               && ((*p)->flags() & elfcpp::SHF_WRITE) == 0
-              && ((*p)->has_dynamic_reloc()))
+              && (*p)->has_dynamic_reloc())
             {
               have_textrel = true;
               break;
@@ -4100,8 +4320,18 @@ Layout::finish_dynamic_section(const Input_objects* input_objects,
         }
     }
 
-  // Add a DT_FLAGS entry. We add it even if no flags are set so that
-  // post-link tools can easily modify these flags if desired.
+  if (parameters->options().filter() != NULL)
+    odyn->add_string(elfcpp::DT_FILTER, parameters->options().filter());
+  if (parameters->options().any_auxiliary())
+    {
+      for (options::String_set::const_iterator p =
+	     parameters->options().auxiliary_begin();
+	   p != parameters->options().auxiliary_end();
+	   ++p)
+	odyn->add_string(elfcpp::DT_AUXILIARY, *p);
+    }
+
+  // Add a DT_FLAGS entry if necessary.
   unsigned int flags = 0;
   if (have_textrel)
     {
@@ -4127,7 +4357,8 @@ Layout::finish_dynamic_section(const Input_objects* input_objects,
     }
   if (parameters->options().now())
     flags |= elfcpp::DF_BIND_NOW;
-  odyn->add_constant(elfcpp::DT_FLAGS, flags);
+  if (flags != 0)
+    odyn->add_constant(elfcpp::DT_FLAGS, flags);
 
   flags = 0;
   if (parameters->options().initfirst())
@@ -4152,7 +4383,9 @@ Layout::finish_dynamic_section(const Input_objects* input_objects,
     flags |= elfcpp::DF_1_ORIGIN;
   if (parameters->options().now())
     flags |= elfcpp::DF_1_NOW;
-  if (flags)
+  if (parameters->options().Bgroup())
+    flags |= elfcpp::DF_1_GROUP;
+  if (flags != 0)
     odyn->add_constant(elfcpp::DT_FLAGS_1, flags);
 }
 
@@ -4163,7 +4396,11 @@ void
 Layout::set_dynamic_symbol_size(const Symbol_table* symtab)
 {
   Output_data_dynamic* const odyn = this->dynamic_data_;
+  if (odyn == NULL)
+    return;
   odyn->finalize_data_size();
+  if (this->dynamic_symbol_ == NULL)
+    return;
   off_t data_size = odyn->data_size();
   const int size = parameters->target().get_size();
   if (size == 32)
@@ -4183,8 +4420,6 @@ Layout::set_dynamic_symbol_size(const Symbol_table* symtab)
 const Layout::Section_name_mapping Layout::section_name_mapping[] =
 {
   MAPPING_INIT(".text.", ".text"),
-  MAPPING_INIT(".ctors.", ".ctors"),
-  MAPPING_INIT(".dtors.", ".dtors"),
   MAPPING_INIT(".rodata.", ".rodata"),
   MAPPING_INIT(".data.rel.ro.local", ".data.rel.ro.local"),
   MAPPING_INIT(".data.rel.ro", ".data.rel.ro"),
@@ -4236,7 +4471,8 @@ const int Layout::section_name_mapping_count =
 // length of NAME.
 
 const char*
-Layout::output_section_name(const char* name, size_t* plen)
+Layout::output_section_name(const Relobj* relobj, const char* name,
+			    size_t* plen)
 {
   // gcc 4.3 generates the following sorts of section names when it
   // needs a section name specific to a function:
@@ -4283,7 +4519,60 @@ Layout::output_section_name(const char* name, size_t* plen)
 	}
     }
 
+  // As an additional complication, .ctors sections are output in
+  // either .ctors or .init_array sections, and .dtors sections are
+  // output in either .dtors or .fini_array sections.
+  if (is_prefix_of(".ctors.", name) || is_prefix_of(".dtors.", name))
+    {
+      if (parameters->options().ctors_in_init_array())
+	{
+	  *plen = 11;
+	  return name[1] == 'c' ? ".init_array" : ".fini_array";
+	}
+      else
+	{
+	  *plen = 6;
+	  return name[1] == 'c' ? ".ctors" : ".dtors";
+	}
+    }
+  if (parameters->options().ctors_in_init_array()
+      && (strcmp(name, ".ctors") == 0 || strcmp(name, ".dtors") == 0))
+    {
+      // To make .init_array/.fini_array work with gcc we must exclude
+      // .ctors and .dtors sections from the crtbegin and crtend
+      // files.
+      if (relobj == NULL
+	  || (!Layout::match_file_name(relobj, "crtbegin")
+	      && !Layout::match_file_name(relobj, "crtend")))
+	{
+	  *plen = 11;
+	  return name[1] == 'c' ? ".init_array" : ".fini_array";
+	}
+    }
+
   return name;
+}
+
+// Return true if RELOBJ is an input file whose base name matches
+// FILE_NAME.  The base name must have an extension of ".o", and must
+// be exactly FILE_NAME.o or FILE_NAME, one character, ".o".  This is
+// to match crtbegin.o as well as crtbeginS.o without getting confused
+// by other possibilities.  Overall matching the file name this way is
+// a dreadful hack, but the GNU linker does it in order to better
+// support gcc, and we need to be compatible.
+
+bool
+Layout::match_file_name(const Relobj* relobj, const char* match)
+{
+  const std::string& file_name(relobj->name());
+  const char* base_name = lbasename(file_name.c_str());
+  size_t match_len = strlen(match);
+  if (strncmp(base_name, match, match_len) != 0)
+    return false;
+  size_t base_len = strlen(base_name);
+  if (base_len != match_len + 2 && base_len != match_len + 3)
+    return false;
+  return memcmp(base_name + base_len - 2, ".o", 2) == 0;
 }
 
 // Check if a comdat group or .gnu.linkonce section with the given
@@ -4389,6 +4678,8 @@ Layout::make_output_segment(elfcpp::Elf_Word type, elfcpp::Elf_Word flags)
     this->tls_segment_ = oseg;
   else if (type == elfcpp::PT_GNU_RELRO)
     this->relro_segment_ = oseg;
+  else if (type == elfcpp::PT_INTERP)
+    this->interp_segment_ = oseg;
 
   return oseg;
 }
@@ -4400,6 +4691,17 @@ Layout::symtab_section_offset() const
 {
   if (this->symtab_section_ != NULL)
     return this->symtab_section_->offset();
+  return 0;
+}
+
+// Return the section index of the normal symbol table.  It may have
+// been stripped by the -s/--strip-all option.
+
+unsigned int
+Layout::symtab_section_shndx() const
+{
+  if (this->symtab_section_ != NULL)
+    return this->symtab_section_->out_shndx();
   return 0;
 }
 

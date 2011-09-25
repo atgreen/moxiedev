@@ -222,7 +222,7 @@ struct ui_out def_uiout =
 /* FIXME: This should not be a global, but something passed down from main.c
    or top.c.  */
 
-struct ui_out *uiout = &def_uiout;
+struct ui_out *current_uiout = &def_uiout;
 
 /* These are the interfaces to implementation functions.  */
 
@@ -485,6 +485,8 @@ ui_out_field_fmt_int (struct ui_out *uiout,
 
   uo_field_int (uiout, fldno, input_width, input_align, fldname, value);
 }
+
+/* Documented in ui-out.h.  */
 
 void
 ui_out_field_core_addr (struct ui_out *uiout,
@@ -1112,13 +1114,6 @@ specified after table_body and inside a list."));
     }
 }
 
-
-/* Access to ui_out format private members.  */
-
-void
-ui_out_get_field_separator (struct ui_out *uiout)
-{
-}
 
 /* Access to ui-out members data.  */
 

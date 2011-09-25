@@ -2198,7 +2198,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	    {
 	      struct value *v_one, *retval;
 
-	      v_one = value_one (value_type (arg2), not_lval);
+	      v_one = value_one (value_type (arg2));
 	      binop_promote (exp->language_defn, exp->gdbarch, &arg1, &v_one);
 	      retval = value_binop (arg1, v_one, op);
 	      return retval;
@@ -2742,7 +2742,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	    {
 	      struct value *tmp = arg1;
 
-	      arg2 = value_one (value_type (arg1), not_lval);
+	      arg2 = value_one (value_type (arg1));
 	      binop_promote (exp->language_defn, exp->gdbarch, &tmp, &arg2);
 	      arg2 = value_binop (tmp, arg2, BINOP_ADD);
 	    }
@@ -2766,7 +2766,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	    {
 	      struct value *tmp = arg1;
 
-	      arg2 = value_one (value_type (arg1), not_lval);
+	      arg2 = value_one (value_type (arg1));
 	      binop_promote (exp->language_defn, exp->gdbarch, &tmp, &arg2);
 	      arg2 = value_binop (tmp, arg2, BINOP_SUB);
 	    }
@@ -2792,7 +2792,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	    {
 	      struct value *tmp = arg1;
 
-	      arg2 = value_one (value_type (arg1), not_lval);
+	      arg2 = value_one (value_type (arg1));
 	      binop_promote (exp->language_defn, exp->gdbarch, &tmp, &arg2);
 	      arg2 = value_binop (tmp, arg2, BINOP_ADD);
 	    }
@@ -2819,7 +2819,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	    {
 	      struct value *tmp = arg1;
 
-	      arg2 = value_one (value_type (arg1), not_lval);
+	      arg2 = value_one (value_type (arg1));
 	      binop_promote (exp->language_defn, exp->gdbarch, &tmp, &arg2);
 	      arg2 = value_binop (tmp, arg2, BINOP_SUB);
 	    }
@@ -2830,11 +2830,7 @@ evaluate_subexp_standard (struct type *expect_type,
 
     case OP_THIS:
       (*pos) += 1;
-      return value_of_this (1);
-
-    case OP_OBJC_SELF:
-      (*pos) += 1;
-      return value_of_local ("self", 1);
+      return value_of_this (exp->language_defn, 1);
 
     case OP_TYPE:
       /* The value is not supposed to be used.  This is here to make it

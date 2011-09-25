@@ -293,8 +293,6 @@ size_t md_longopts_size = sizeof (md_longopts);
 #undef AXP_REG_GP
 #define AXP_REG_GP AXP_REG_PV
 
-static struct hash_control *alpha_evax_proc_hash;
-
 #endif /* OBJ_EVAX  */
 
 /* The cpu for which we are generating code.  */
@@ -429,6 +427,7 @@ static struct alpha_linkage_fixups *alpha_linkage_fixup_tail;
 
 /* Current procedure descriptor.  */
 static struct alpha_evax_procs *alpha_evax_proc;
+static struct alpha_evax_procs alpha_evax_proc_data;
 
 static int alpha_flag_hash_long_names = 0;		/* -+ */
 static int alpha_flag_show_after_trunc = 0;		/* -H */
@@ -582,7 +581,7 @@ static void emit_insn (struct alpha_insn *);
 static void assemble_tokens (const char *, const expressionS *, int, int);
 #ifdef OBJ_EVAX
 static char *s_alpha_section_name (void);
-static symbolS *add_to_link_pool (symbolS *, symbolS *, offsetT);
+static symbolS *add_to_link_pool (symbolS *, offsetT);
 #endif
 
 static struct alpha_reloc_tag *
@@ -1388,7 +1387,7 @@ load_expression (int targreg,
 		    ptr1 = strstr (symname, "..") + 2;
 		    if (ptr1 > ptr2)
 		      ptr1 = symname;
-		    ensymname = (char *) xmalloc (ptr2 - ptr1 + 5);
+		    ensymname = (char *) alloca (ptr2 - ptr1 + 5);
 		    memcpy (ensymname, ptr1, ptr2 - ptr1);
 		    memcpy (ensymname + (ptr2 - ptr1), "..en", 5);
 
@@ -1420,7 +1419,7 @@ load_expression (int targreg,
 		    ptr1 = strstr (symname, "..") + 2;
 		    if (ptr1 > ptr2)
 		      ptr1 = symname;
-		    psymname = (char *) xmalloc (ptr2 - ptr1 + 1);
+		    psymname = (char *) alloca (ptr2 - ptr1 + 1);
 		    memcpy (psymname, ptr1, ptr2 - ptr1);
 		    psymname [ptr2 - ptr1] = 0;
 
@@ -1448,8 +1447,7 @@ load_expression (int targreg,
 
 		if (!range_signed_32 (addend))
 		  addend = sign_extend_32 (addend);
-		linkexp = add_to_link_pool (alpha_evax_proc->symbol,
-					    exp->X_add_symbol, 0);
+		linkexp = add_to_link_pool (exp->X_add_symbol, 0);
 		set_tok_reg (newtok[0], targreg);
 		set_tok_sym (newtok[1], linkexp, 0);
 		set_tok_preg (newtok[2], basereg);
@@ -1516,8 +1514,7 @@ load_expression (int targreg,
       /* For 64-bit addends, just put it in the literal pool.  */
 #ifdef OBJ_EVAX
       /* Emit "ldq targreg, lit(basereg)".  */
-      litexp = add_to_link_pool (alpha_evax_proc->symbol,
-				 section_symbol (absolute_section), addend);
+      litexp = add_to_link_pool (section_symbol (absolute_section), addend);
       set_tok_reg (newtok[0], targreg);
       set_tok_sym (newtok[1], litexp, 0);
       set_tok_preg (newtok[2], alpha_gp_register);
@@ -2887,7 +2884,7 @@ emit_jsrjmp (const expressionS *tok,
       char *ensymname;
 
       /* Build the entry name as 'NAME..en'.  */
-      ensymname = (char *) xmalloc (symlen + 5);
+      ensymname = (char *) alloca (symlen + 5);
       memcpy (ensymname, symname, symlen);
       memcpy (ensymname + symlen, "..en", 5);
 
@@ -3372,26 +3369,24 @@ assemble_tokens (const char *opname,
 
 #ifdef OBJ_EVAX
 
-/* Add symbol+addend to link pool.
-   Return offset from basesym to entry in link pool.
+/* Add sym+addend to link pool.
+   Return offset from curent procedure value (pv) to entry in link pool.
 
    Add new fixup only if offset isn't 16bit.  */
 
 static symbolS *
-add_to_link_pool (symbolS *basesym,
-		  symbolS *sym,
-		  offsetT addend)
+add_to_link_pool (symbolS *sym, offsetT addend)
 {
+  symbolS *basesym;
   segT current_section = now_seg;
   int current_subsec = now_subseg;
-  valueT offset;
   char *p;
   segment_info_type *seginfo = seg_info (alpha_link_section);
   fixS *fixp;
   symbolS *linksym, *expsym;
   expressionS e;
   
-  offset = 0; /* ??? DBR */
+  basesym = alpha_evax_proc->symbol;
 
   /* @@ This assumes all entries in a given section will be of the same
      size...  Probably correct, but unwise to rely on.  */
@@ -3402,11 +3397,6 @@ add_to_link_pool (symbolS *basesym,
 	 fixp != (fixS *) NULL;
 	 fixp = fixp->fx_next)
       {
-	if (fixp->tc_fix_data.info
-	    && fixp->tc_fix_data.info->sym
-	    && fixp->tc_fix_data.info->sym->sy_value.X_op_symbol == basesym)
-	  offset += 8;
-	
 	if (fixp->fx_addsy == sym
 	    && fixp->fx_offset == (valueT)addend
 	    && fixp->tc_fix_data.info
@@ -3415,14 +3405,14 @@ add_to_link_pool (symbolS *basesym,
 	  return fixp->tc_fix_data.info->sym;
       }
 
-  /* Not found in 16bit signed range.  */
-
+  /* Not found, add a new entry.  */
   subseg_set (alpha_link_section, 0);
   linksym = symbol_new
     (FAKE_LABEL_NAME, now_seg, (valueT) frag_now_fix (), frag_now);
   p = frag_more (8);
   memset (p, 0, 8);
 
+  /* Create the basesym - linksym expression (offset of the added entry).  */
   e.X_op = O_subtract;
   e.X_add_symbol = linksym;
   e.X_op_symbol = basesym;
@@ -3430,12 +3420,11 @@ add_to_link_pool (symbolS *basesym,
   expsym = make_expr_symbol (&e);
 
   fixp = fix_new
-    (frag_now, p-frag_now->fr_literal, 8, sym, addend, 0, BFD_RELOC_64);
+    (frag_now, p - frag_now->fr_literal, 8, sym, addend, 0, BFD_RELOC_64);
   fixp->tc_fix_data.info = get_alpha_reloc_tag (next_sequence_num--);
   fixp->tc_fix_data.info->sym = expsym;
 
   subseg_set (current_section, current_subsec);
-  seginfo->literal_pool_size += 8;
   return expsym;
 }
 #endif /* OBJ_EVAX */
@@ -4053,6 +4042,14 @@ alpha_elf_md_end (void)
   if (bfd_get_section_by_name (stdoutput, ".eh_frame") != NULL)
     return;
 
+  /* ??? In theory we could look for functions for which we have
+     generated unwind info via CFI directives, and those we have not.
+     Those we have not could still get their unwind info from here.
+     For now, do nothing if we've seen any CFI directives.  Note that
+     the above test will not trigger, as we've not emitted data yet.  */
+  if (all_fde_data != NULL)
+    return;
+
   /* Generate .eh_frame data for the unwind directives specified.  */
   for (p = all_frame_data; p ; p = p->next)
     if (p->prologue_sym)
@@ -4366,8 +4363,10 @@ s_alpha_ent (int ignore ATTRIBUTE_UNUSED)
   symbolS *symbol;
   expressionS symexpr;
 
-  alpha_evax_proc
-    = (struct alpha_evax_procs *) xmalloc (sizeof (struct alpha_evax_procs));
+  if (alpha_evax_proc != NULL)
+    as_bad (_("previous .ent not closed by a .end"));
+
+  alpha_evax_proc = &alpha_evax_proc_data;
 
   alpha_evax_proc->pdsckind = 0;
   alpha_evax_proc->framereg = -1;
@@ -4394,10 +4393,6 @@ s_alpha_ent (int ignore ATTRIBUTE_UNUSED)
   symbol = make_expr_symbol (&symexpr);
   symbol_get_bfdsym (symbol)->flags |= BSF_FUNCTION;
   alpha_evax_proc->symbol = symbol;
-
-  (void) hash_insert
-    (alpha_evax_proc_hash,
-     symbol_get_bfdsym (alpha_evax_proc->symbol)->name, (PTR)alpha_evax_proc);
 
   demand_empty_rest_of_line ();
 }
@@ -4486,49 +4481,48 @@ s_alpha_pdesc (int ignore ATTRIBUTE_UNUSED)
   register char *p;
   expressionS exp;
   symbolS *entry_sym;
-  fixS *fixp;
-  segment_info_type *seginfo = seg_info (alpha_link_section);
   const char *entry_sym_name;
-  char *sym_name;
-  int len;
+  const char *pdesc_sym_name;
+  fixS *fixp;
+  size_t len;
 
   if (now_seg != alpha_link_section)
     {
       as_bad (_(".pdesc directive not in link (.link) section"));
-      demand_empty_rest_of_line ();
       return;
     }
 
   expression (&exp);
   if (exp.X_op != O_symbol)
     {
-      as_warn (_(".pdesc directive has no entry symbol"));
-      demand_empty_rest_of_line ();
+      as_bad (_(".pdesc directive has no entry symbol"));
       return;
     }
   
   entry_sym = make_expr_symbol (&exp);
-  entry_sym_name = symbol_get_bfdsym (entry_sym)->name;
+  entry_sym_name = S_GET_NAME (entry_sym);
  
+  /* Strip "..en".  */
   len = strlen (entry_sym_name);
-  sym_name = (char *) xmalloc (len - 4 + 1);
-  strncpy (sym_name, entry_sym_name, len - 4);
-  sym_name [len - 4] = 0;
-  
-  alpha_evax_proc = (struct alpha_evax_procs *)
-    hash_find (alpha_evax_proc_hash, sym_name);
- 
-  if (!alpha_evax_proc || !S_IS_DEFINED (alpha_evax_proc->symbol))
+  if (len < 4 || strcmp (entry_sym_name + len - 4, "..en") != 0)
     {
-      as_fatal (_(".pdesc has no matching .ent"));
-      demand_empty_rest_of_line ();
+      as_bad (_(".pdesc has a bad entry symbol"));
+      return;
+    }
+  len -= 4;
+  pdesc_sym_name = S_GET_NAME (alpha_evax_proc->symbol);
+
+  if (!alpha_evax_proc
+      || !S_IS_DEFINED (alpha_evax_proc->symbol)
+      || strlen (pdesc_sym_name) != len
+      || memcmp (entry_sym_name, pdesc_sym_name, len) != 0)
+    {
+      as_fatal (_(".pdesc doesn't match with last .ent"));
       return;
     }
 
-  *symbol_get_obj (alpha_evax_proc->symbol) =
-    (valueT) seginfo->literal_pool_size;
-
-  alpha_evax_proc->symbol->sy_obj = (valueT)seginfo->literal_pool_size;
+  /* Define pdesc symbol.  */
+  symbol_set_value_now (alpha_evax_proc->symbol);
  
   /* Save bfd symbol of proc entry in function symbol.  */
   ((struct evax_private_udata_struct *)
@@ -4574,7 +4568,6 @@ s_alpha_pdesc (int ignore ATTRIBUTE_UNUSED)
   p = frag_more (16);
   fixp = fix_new (frag_now, p - frag_now->fr_literal, 8, 0, 0, 0, 0);
   fixp->fx_done = 1;
-  seginfo->literal_pool_size += 16;
 
   *p = alpha_evax_proc->pdsckind
     | ((alpha_evax_proc->framereg == 29) ? PDSC_S_M_BASE_REG_IS_FP : 0)
@@ -4605,20 +4598,15 @@ s_alpha_pdesc (int ignore ATTRIBUTE_UNUSED)
   /* Signature offset.  */
   md_number_to_chars (p + 6, (valueT) 0, 2);
 
-  fix_new_exp (frag_now, p - frag_now->fr_literal+8, 8, &exp, 0, BFD_RELOC_64);
+  fix_new_exp (frag_now, p - frag_now->fr_literal + 8,
+               8, &exp, 0, BFD_RELOC_64);
 
   if (alpha_evax_proc->pdsckind == PDSC_S_K_KIND_NULL)
     return;
 
-  /* Add dummy fix to make add_to_link_pool work.  */
-  p = frag_more (6);
-  fixp = fix_new (frag_now, p - frag_now->fr_literal, 6, 0, 0, 0, 0);
-  fixp->fx_done = 1;
-  seginfo->literal_pool_size += 6;
-  
   /* pdesc+16: Size.  */
+  p = frag_more (6);
   md_number_to_chars (p, (valueT) alpha_evax_proc->framesize, 4);
-
   md_number_to_chars (p + 4, (valueT) 0, 2);
 
   /* Entry length.  */
@@ -4630,14 +4618,8 @@ s_alpha_pdesc (int ignore ATTRIBUTE_UNUSED)
   if (alpha_evax_proc->pdsckind == PDSC_S_K_KIND_FP_REGISTER)
     return;
 
-  /* Add dummy fix to make add_to_link_pool work.  */
-  p = frag_more (8);
-  fixp = fix_new (frag_now, p - frag_now->fr_literal, 8, 0, 0, 0, 0);
-  fixp->fx_done = 1;
-  seginfo->literal_pool_size += 8;
-
   /* pdesc+24: register masks.  */
-
+  p = frag_more (8);
   md_number_to_chars (p, alpha_evax_proc->imask, 4);
   md_number_to_chars (p + 4, alpha_evax_proc->fmask, 4);
 
@@ -4650,11 +4632,7 @@ s_alpha_pdesc (int ignore ATTRIBUTE_UNUSED)
 
   if (alpha_evax_proc->handler_data)
     {
-      /* Add dummy fix to make add_to_link_pool work.  */
       p = frag_more (8);
-      fixp = fix_new (frag_now, p - frag_now->fr_literal, 8, 0, 0, 0, 0);
-      fixp->fx_done = 1;
-      seginfo->literal_pool_size += 8;
       md_number_to_chars (p, alpha_evax_proc->handler_data, 8);
     }
 }
@@ -4666,7 +4644,6 @@ s_alpha_name (int ignore ATTRIBUTE_UNUSED)
 {
   char *p;
   expressionS exp;
-  segment_info_type *seginfo = seg_info (alpha_link_section);
 
   if (now_seg != alpha_link_section)
     {
@@ -4691,7 +4668,6 @@ s_alpha_name (int ignore ATTRIBUTE_UNUSED)
 
   frag_align (3, 0, 0);
   p = frag_more (8);
-  seginfo->literal_pool_size += 8;
 
   fix_new_exp (frag_now, p - frag_now->fr_literal, 8, &exp, 0, BFD_RELOC_64);
 }
@@ -4830,7 +4806,7 @@ s_alpha_end (int ignore ATTRIBUTE_UNUSED)
   c = get_symbol_end ();
   *input_line_pointer = c;
   demand_empty_rest_of_line ();
-  alpha_evax_proc = 0;
+  alpha_evax_proc = NULL;
 }
 
 static void
@@ -5534,7 +5510,6 @@ md_begin (void)
 
 #ifdef OBJ_EVAX
   create_literal_section (".link", &alpha_link_section, &alpha_link_symbol);
-  alpha_evax_proc_hash = hash_new ();
 #endif
 
 #ifdef OBJ_ELF
@@ -6303,11 +6278,14 @@ tc_gen_reloc (asection *sec ATTRIBUTE_UNUSED,
       if (pname_len > 4 && strcmp (pname + pname_len - 4, "..en") == 0)
 	{
 	  symbolS *sym;
-	  char *my_pname = xstrdup (pname);
+	  char *my_pname = (char *) alloca (pname_len - 4 + 1);
+
+	  memcpy (my_pname, pname, pname_len - 4);
 	  my_pname [pname_len - 4] = 0;
 	  sym = symbol_find (my_pname);
 	  if (sym == NULL)
 	    abort ();
+
 	  while (symbol_equated_reloc_p (sym))
 	    {
 	      symbolS *n = symbol_get_value_expression (sym)->X_add_symbol;

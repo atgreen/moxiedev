@@ -1,6 +1,6 @@
 /* BFD back-end for HP PA-RISC ELF files.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    Original code by
@@ -950,9 +950,9 @@ elf32_hppa_object_p (bfd *abfd)
   i_ehdrp = elf_elfheader (abfd);
   if (strcmp (bfd_get_target (abfd), "elf32-hppa-linux") == 0)
     {
-      /* GCC on hppa-linux produces binaries with OSABI=Linux,
+      /* GCC on hppa-linux produces binaries with OSABI=GNU,
 	 but the kernel produces corefiles with OSABI=SysV.  */
-      if (i_ehdrp->e_ident[EI_OSABI] != ELFOSABI_LINUX &&
+      if (i_ehdrp->e_ident[EI_OSABI] != ELFOSABI_GNU &&
 	  i_ehdrp->e_ident[EI_OSABI] != ELFOSABI_NONE) /* aka SYSV */
 	return FALSE;
     }
@@ -1938,9 +1938,6 @@ allocate_plt_static (struct elf_link_hash_entry *eh, void *inf)
   if (eh->root.type == bfd_link_hash_indirect)
     return TRUE;
 
-  if (eh->root.type == bfd_link_hash_warning)
-    eh = (struct elf_link_hash_entry *) eh->root.u.i.link;
-
   info = (struct bfd_link_info *) inf;
   hh = hppa_elf_hash_entry (eh);
   htab = hppa_link_hash_table (info);
@@ -2007,9 +2004,6 @@ allocate_dynrelocs (struct elf_link_hash_entry *eh, void *inf)
 
   if (eh->root.type == bfd_link_hash_indirect)
     return TRUE;
-
-  if (eh->root.type == bfd_link_hash_warning)
-    eh = (struct elf_link_hash_entry *) eh->root.u.i.link;
 
   info = inf;
   htab = hppa_link_hash_table (info);
@@ -2170,9 +2164,6 @@ static bfd_boolean
 clobber_millicode_symbols (struct elf_link_hash_entry *eh,
 			   struct bfd_link_info *info)
 {
-  if (eh->root.type == bfd_link_hash_warning)
-    eh = (struct elf_link_hash_entry *) eh->root.u.i.link;
-
   if (eh->type == STT_PARISC_MILLI
       && !eh->forced_local)
     {
@@ -2188,9 +2179,6 @@ readonly_dynrelocs (struct elf_link_hash_entry *eh, void *inf)
 {
   struct elf32_hppa_link_hash_entry *hh;
   struct elf32_hppa_dyn_reloc_entry *hdh_p;
-
-  if (eh->root.type == bfd_link_hash_warning)
-    eh = (struct elf_link_hash_entry *) eh->root.u.i.link;
 
   hh = hppa_elf_hash_entry (eh);
   for (hdh_p = hh->dyn_relocs; hdh_p != NULL; hdh_p = hdh_p->hdh_next)
@@ -4498,12 +4486,19 @@ elf32_hppa_finish_dynamic_sections (bfd *output_bfd,
   bfd *dynobj;
   struct elf32_hppa_link_hash_table *htab;
   asection *sdyn;
+  asection * sgot;
 
   htab = hppa_link_hash_table (info);
   if (htab == NULL)
     return FALSE;
 
   dynobj = htab->etab.dynobj;
+
+  sgot = htab->sgot;
+  /* A broken linker script might have discarded the dynamic sections.
+     Catch this here so that we do not seg-fault later on.  */
+  if (sgot != NULL && bfd_is_abs_section (sgot->output_section))
+    return FALSE;
 
   sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
 
@@ -4569,19 +4564,19 @@ elf32_hppa_finish_dynamic_sections (bfd *output_bfd,
 	}
     }
 
-  if (htab->sgot != NULL && htab->sgot->size != 0)
+  if (sgot != NULL && sgot->size != 0)
     {
       /* Fill in the first entry in the global offset table.
 	 We use it to point to our dynamic section, if we have one.  */
       bfd_put_32 (output_bfd,
 		  sdyn ? sdyn->output_section->vma + sdyn->output_offset : 0,
-		  htab->sgot->contents);
+		  sgot->contents);
 
       /* The second entry is reserved for use by the dynamic linker.  */
-      memset (htab->sgot->contents + GOT_ENTRY_SIZE, 0, GOT_ENTRY_SIZE);
+      memset (sgot->contents + GOT_ENTRY_SIZE, 0, GOT_ENTRY_SIZE);
 
       /* Set .got entry size.  */
-      elf_section_data (htab->sgot->output_section)
+      elf_section_data (sgot->output_section)
 	->this_hdr.sh_entsize = GOT_ENTRY_SIZE;
     }
 
@@ -4601,8 +4596,8 @@ elf32_hppa_finish_dynamic_sections (bfd *output_bfd,
 	  if ((htab->splt->output_offset
 	       + htab->splt->output_section->vma
 	       + htab->splt->size)
-	      != (htab->sgot->output_offset
-		  + htab->sgot->output_section->vma))
+	      != (sgot->output_offset
+		  + sgot->output_section->vma))
 	    {
 	      (*_bfd_error_handler)
 		(_(".got section not immediately after .plt section"));
@@ -4683,7 +4678,7 @@ elf32_hppa_elf_get_symbol_type (Elf_Internal_Sym *elf_sym, int type)
 #undef TARGET_BIG_NAME
 #define TARGET_BIG_NAME		"elf32-hppa-linux"
 #undef ELF_OSABI
-#define ELF_OSABI		ELFOSABI_LINUX
+#define ELF_OSABI		ELFOSABI_GNU
 #undef elf32_bed
 #define elf32_bed		elf32_hppa_linux_bed
 

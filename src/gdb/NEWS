@@ -3,6 +3,41 @@
 
 *** Changes since GDB 7.3
 
+* GDB has two new commands: "set remote hardware-watchpoint-length-limit"
+  and "show remote hardware-watchpoint-length-limit".  These allows to
+  set or show the maximum length limit (in bytes) of a remote
+  target hardware watchpoint.
+
+  This allows e.g. to use "unlimited" hardware watchpoints with the
+  gdbserver integrated in Valgrind version >= 3.7.0.  Such Valgrind
+  watchpoints are slower than real hardware watchpoints but are
+  significantly faster than gdb software watchpoints.
+
+* Python scripting
+
+  ** The "maint set python print-stack on|off" command has been
+     deprecated, and a new command: "set python print-stack on|off" has
+     replaced it.  Additionally, the default for "print-stack" is now
+     "off".
+   
+  ** A prompt subsitution hook (prompt_hook) is now available to the
+     Python API.
+
+  ** A new command set/show extended-prompt has been added.
+
+  ** A new Python module, gdb.prompt has been added to the GDB Python
+     modules library.  This module provides functionality for
+     escape sequentions in prompts (used by set/show
+     extended-prompt).  These escape sequences are replaced by their
+     corresponding value.
+
+  ** Python commands and convenience-functions located in
+    'data-directory'/python/gdb/command and
+    'data-directory'/python/gdb/function are now automatically loaded
+     on GDB start-up.
+
+  ** Symbols now provide the "type" attribute, the type of the symbol.
+
 * libthread-db-search-path now supports two special values: $sdir and $pdir.
   $sdir specifies the default system locations of shared libraries.
   $pdir specifies the directory where the libpthread used by the application
@@ -35,6 +70,8 @@
   the first connection is made.  The listening port used by GDBserver will
   become available after that.
 
+* New commands "info macros", and "info definitions" have been added.
+
 * Changed commands
 
 watch EXPRESSION mask MASK_VALUE
@@ -61,6 +98,13 @@ QTEnable
 QTDisable
 
   Dynamically disable a tracepoint in a started trace experiment.
+
+* Dcache size (number of lines) and line-size are now runtime-configurable
+  via "set dcache line" and "set dcache line-size" commands.
+
+* New targets
+
+Texas Instruments TMS320C6x		tic6x-*-*
 
 *** Changes in GDB 7.3
 

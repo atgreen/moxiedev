@@ -111,6 +111,7 @@ processor names are recognized:
 @code{core2},
 @code{corei7},
 @code{l1om},
+@code{k1om},
 @code{k6},
 @code{k6_2},
 @code{athlon},
@@ -141,6 +142,7 @@ accept various extension mnemonics.  For example,
 @code{sse4},
 @code{nosse},
 @code{avx},
+@code{avx2},
 @code{noavx},
 @code{vmx},
 @code{smx},
@@ -151,9 +153,12 @@ accept various extension mnemonics.  For example,
 @code{fsgsbase},
 @code{rdrnd},
 @code{f16c},
+@code{bmi2},
 @code{fma},
 @code{movbe},
 @code{ept},
+@code{lzcnt},
+@code{invpcid},
 @code{clflush},
 @code{lwp},
 @code{fma4},
@@ -206,7 +211,7 @@ for any SSE intruction.
 @cindex @samp{-mavxscalar=} option, x86-64
 @item -mavxscalar=@var{128}
 @itemx -mavxscalar=@var{256}
-This options control how the assembler should encode scalar AVX
+These options control how the assembler should encode scalar AVX
 instructions.  @option{-mavxscalar=@var{128}} will encode scalar
 AVX instructions with 128bit vector length, which is the default.
 @option{-mavxscalar=@var{256}} will encode scalar AVX instructions
@@ -999,7 +1004,7 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{i486} @tab @samp{i586} @tab @samp{i686} @tab @samp{pentium}
 @item @samp{pentiumpro} @tab @samp{pentiumii} @tab @samp{pentiumiii} @tab @samp{pentium4}
 @item @samp{prescott} @tab @samp{nocona} @tab @samp{core} @tab @samp{core2}
-@item @samp{corei7} @tab @samp{l1om}
+@item @samp{corei7} @tab @samp{l1om} @tab @samp{k1om}
 @item @samp{k6} @tab @samp{k6_2} @tab @samp{athlon} @tab @samp{k8}
 @item @samp{amdfam10} @tab @samp{bdver1} @tab @samp{bdver2}
 @item @samp{generic32} @tab @samp{generic64}
@@ -1008,7 +1013,8 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.avx} @tab @samp{.vmx} @tab @samp{.smx} @tab @samp{.ept}
 @item @samp{.clflush} @tab @samp{.movbe} @tab @samp{.xsave} @tab @samp{.xsaveopt}
 @item @samp{.aes} @tab @samp{.pclmul} @tab @samp{.fma} @tab @samp{.fsgsbase}
-@item @samp{.rdrnd} @tab @samp{.f16c}
+@item @samp{.rdrnd} @tab @samp{.f16c} @tab @samp{.avx2} @tab @samp{.bmi2}
+@item @samp{.lzcnt} @tab @samp{.invpcid}
 @item @samp{.3dnow} @tab @samp{.3dnowa} @tab @samp{.sse4a} @tab @samp{.sse5}
 @item @samp{.syscall} @tab @samp{.rdtscp} @tab @samp{.svme} @tab @samp{.abm}
 @item @samp{.lwp} @tab @samp{.fma4} @tab @samp{.xop}

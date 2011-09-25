@@ -1,6 +1,6 @@
 // arm.cc -- arm target support for gold.
 
-// Copyright 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Doug Kwan <dougkwan@google.com> based on the i386 code
 // by Ian Lance Taylor <iant@google.com>.
 // This file also contains borrowed and adapted code from
@@ -2182,23 +2182,6 @@ class Target_arm : public Sized_target<32, big_endian>
       fix_cortex_a8_(false), cortex_a8_relocs_info_()
   { }
 
-  // Virtual function which is set to return true by a target if
-  // it can use relocation types to determine if a function's
-  // pointer is taken.
-  virtual bool
-  can_check_for_function_pointers() const
-  { return true; }
-
-  // Whether a section called SECTION_NAME may have function pointers to
-  // sections not eligible for safe ICF folding.
-  virtual bool
-  section_may_have_icf_unsafe_pointers(const char* section_name) const
-  {
-    return (!is_prefix_of(".ARM.exidx", section_name)
-	    && !is_prefix_of(".ARM.extab", section_name)
-	    && Target::section_may_have_icf_unsafe_pointers(section_name));
-  }
-  
   // Whether we can use BLX.
   bool
   may_use_blx() const
@@ -2553,6 +2536,23 @@ class Target_arm : public Sized_target<32, big_endian>
     arm_reloc_property_table = new Arm_reloc_property_table();
   }
 
+  // Virtual function which is set to return true by a target if
+  // it can use relocation types to determine if a function's
+  // pointer is taken.
+  virtual bool
+  do_can_check_for_function_pointers() const
+  { return true; }
+
+  // Whether a section called SECTION_NAME may have function pointers to
+  // sections not eligible for safe ICF folding.
+  virtual bool
+  do_section_may_have_icf_unsafe_pointers(const char* section_name) const
+  {
+    return (!is_prefix_of(".ARM.exidx", section_name)
+	    && !is_prefix_of(".ARM.extab", section_name)
+	    && Target::do_section_may_have_icf_unsafe_pointers(section_name));
+  }
+  
  private:
   // The class which scans relocations.
   class Scan
@@ -2946,6 +2946,7 @@ const Target::Target_info Target_arm<big_endian>::arm_info =
   false,		// has_resolve
   false,		// has_code_fill
   true,			// is_default_stack_executable
+  false,		// can_icf_inline_merge_sections
   '\0',			// wrap_char
   "/usr/lib/libc.so.1",	// dynamic_linker
   0x8000,		// default_text_segment_address
@@ -3214,11 +3215,10 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
        const Symbol_value<32>* psymval)
   {
     typedef typename elfcpp::Swap<8, big_endian>::Valtype Valtype;
-    typedef typename elfcpp::Swap<32, big_endian>::Valtype Reltype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
     Valtype val = elfcpp::Swap<8, big_endian>::readval(wv);
-    Reltype addend = utils::sign_extend<8>(val);
-    Reltype x = psymval->value(object, addend);
+    int32_t addend = utils::sign_extend<8>(val);
+    Arm_address x = psymval->value(object, addend);
     val = utils::bit_select(val, x, 0xffU);
     elfcpp::Swap<8, big_endian>::writeval(wv, val);
 
@@ -3276,15 +3276,17 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
 	const Sized_relobj_file<32, big_endian>* object,
 	const Symbol_value<32>* psymval)
   {
-    typedef typename elfcpp::Swap<16, big_endian>::Valtype Valtype;
+    typedef typename elfcpp::Swap_unaligned<16, big_endian>::Valtype Valtype;
     typedef typename elfcpp::Swap<32, big_endian>::Valtype Reltype;
-    Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Valtype val = elfcpp::Swap<16, big_endian>::readval(wv);
-    Reltype addend = utils::sign_extend<16>(val);
-    Reltype x = psymval->value(object, addend);
+    Valtype val = elfcpp::Swap_unaligned<16, big_endian>::readval(view);
+    int32_t addend = utils::sign_extend<16>(val);
+    Arm_address x = psymval->value(object, addend);
     val = utils::bit_select(val, x, 0xffffU);
-    elfcpp::Swap<16, big_endian>::writeval(wv, val);
-    return (utils::has_signed_unsigned_overflow<16>(x)
+    elfcpp::Swap_unaligned<16, big_endian>::writeval(view, val);
+
+    // R_ARM_ABS16 permits signed or unsigned results.
+    int signed_x = static_cast<int32_t>(x);
+    return ((signed_x < -32768 || signed_x > 65536)
 	    ? This::STATUS_OVERFLOW
 	    : This::STATUS_OKAY);
   }
@@ -3296,11 +3298,10 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
 	const Symbol_value<32>* psymval,
 	Arm_address thumb_bit)
   {
-    typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
-    Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Valtype addend = elfcpp::Swap<32, big_endian>::readval(wv);
+    typedef typename elfcpp::Swap_unaligned<32, big_endian>::Valtype Valtype;
+    Valtype addend = elfcpp::Swap_unaligned<32, big_endian>::readval(view);
     Valtype x = psymval->value(object, addend) | thumb_bit;
-    elfcpp::Swap<32, big_endian>::writeval(wv, x);
+    elfcpp::Swap_unaligned<32, big_endian>::writeval(view, x);
     return This::STATUS_OKAY;
   }
 
@@ -3312,11 +3313,10 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
 	Arm_address address,
 	Arm_address thumb_bit)
   {
-    typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
-    Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Valtype addend = elfcpp::Swap<32, big_endian>::readval(wv);
+    typedef typename elfcpp::Swap_unaligned<32, big_endian>::Valtype Valtype;
+    Valtype addend = elfcpp::Swap_unaligned<32, big_endian>::readval(view);
     Valtype x = (psymval->value(object, addend) | thumb_bit) - address;
-    elfcpp::Swap<32, big_endian>::writeval(wv, x);
+    elfcpp::Swap_unaligned<32, big_endian>::writeval(view, x);
     return This::STATUS_OKAY;
   }
 
@@ -3356,13 +3356,14 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
 	    Arm_address address)
   {
     typedef typename elfcpp::Swap<16, big_endian>::Valtype Valtype;
-    typedef typename elfcpp::Swap<16, big_endian>::Valtype Reltype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
     Valtype val = elfcpp::Swap<16, big_endian>::readval(wv);
-    Reltype addend = utils::sign_extend<8>((val & 0x00ff) << 1);
-    Reltype x = (psymval->value(object, addend) - address);
-    elfcpp::Swap<16, big_endian>::writeval(wv, (val & 0xff00) | ((x & 0x01fe) >> 1));
-    return (utils::has_overflow<8>(x)
+    int32_t addend = utils::sign_extend<8>((val & 0x00ff) << 1);
+    int32_t x = (psymval->value(object, addend) - address);
+    elfcpp::Swap<16, big_endian>::writeval(wv, ((val & 0xff00)
+                                                | ((x & 0x01fe) >> 1)));
+    // We do a 9-bit overflow check because x is right-shifted by 1 bit.
+    return (utils::has_overflow<9>(x)
 	    ? This::STATUS_OVERFLOW
 	    : This::STATUS_OKAY);
   }
@@ -3375,13 +3376,14 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
 	    Arm_address address)
   {
     typedef typename elfcpp::Swap<16, big_endian>::Valtype Valtype;
-    typedef typename elfcpp::Swap<16, big_endian>::Valtype Reltype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
     Valtype val = elfcpp::Swap<16, big_endian>::readval(wv);
-    Reltype addend = utils::sign_extend<11>((val & 0x07ff) << 1);
-    Reltype x = (psymval->value(object, addend) - address);
-    elfcpp::Swap<16, big_endian>::writeval(wv, (val & 0xf800) | ((x & 0x0ffe) >> 1));
-    return (utils::has_overflow<11>(x)
+    int32_t addend = utils::sign_extend<11>((val & 0x07ff) << 1);
+    int32_t x = (psymval->value(object, addend) - address);
+    elfcpp::Swap<16, big_endian>::writeval(wv, ((val & 0xf800)
+                                                | ((x & 0x0ffe) >> 1)));
+    // We do a 12-bit overflow check because x is right-shifted by 1 bit.
+    return (utils::has_overflow<12>(x)
 	    ? This::STATUS_OVERFLOW
 	    : This::STATUS_OKAY);
   }
@@ -3432,13 +3434,12 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
 	 Arm_address address,
 	 Arm_address thumb_bit)
   {
-    typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
-    Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Valtype val = elfcpp::Swap<32, big_endian>::readval(wv);
+    typedef typename elfcpp::Swap_unaligned<32, big_endian>::Valtype Valtype;
+    Valtype val = elfcpp::Swap_unaligned<32, big_endian>::readval(view);
     Valtype addend = utils::sign_extend<31>(val);
     Valtype x = (psymval->value(object, addend) | thumb_bit) - address;
     val = utils::bit_select(val, x, 0x7fffffffU);
-    elfcpp::Swap<32, big_endian>::writeval(wv, val);
+    elfcpp::Swap_unaligned<32, big_endian>::writeval(view, val);
     return (utils::has_overflow<31>(x) ?
 	    This::STATUS_OVERFLOW : This::STATUS_OKAY);
   }
@@ -5218,8 +5219,7 @@ Arm_exidx_cantunwind::do_fixed_endian_write(Output_file* of)
   const section_size_type oview_size = 8;
   unsigned char* const oview = of->get_output_view(offset, oview_size);
   
-  typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
-  Valtype* wv = reinterpret_cast<Valtype*>(oview);
+  typedef typename elfcpp::Swap_unaligned<32, big_endian>::Valtype Valtype;
 
   Output_section* os = this->relobj_->output_section(this->shndx_);
   gold_assert(os != NULL);
@@ -5260,8 +5260,10 @@ Arm_exidx_cantunwind::do_fixed_endian_write(Output_file* of)
   uint32_t prel31_offset = output_address - this->address();
   if (utils::has_overflow<31>(offset))
     gold_error(_("PREL31 overflow in EXIDX_CANTUNWIND entry"));
-  elfcpp::Swap<32, big_endian>::writeval(wv, prel31_offset & 0x7fffffffU);
-  elfcpp::Swap<32, big_endian>::writeval(wv + 1, elfcpp::EXIDX_CANTUNWIND);
+  elfcpp::Swap_unaligned<32, big_endian>::writeval(oview,
+						   prel31_offset & 0x7fffffffU);
+  elfcpp::Swap_unaligned<32, big_endian>::writeval(oview + 4,
+						   elfcpp::EXIDX_CANTUNWIND);
 
   of->write_output_view(this->offset(), oview_size, oview);
 }
@@ -5803,8 +5805,7 @@ Arm_output_section<big_endian>::append_text_sections_to_list(
     {
       // We only care about plain or relaxed input sections.  We also
       // ignore any merged sections.
-      if ((p->is_input_section() || p->is_relaxed_input_section())
-	  && p->data_size() != 0)
+      if (p->is_input_section() || p->is_relaxed_input_section())
 	list->push_back(Text_section_list::value_type(p->relobj(),
 						      p->shndx()));
     }
@@ -11902,7 +11903,8 @@ class Target_selector_arm : public Target_selector
  public:
   Target_selector_arm()
     : Target_selector(elfcpp::EM_ARM, 32, big_endian,
-		      (big_endian ? "elf32-bigarm" : "elf32-littlearm"))
+		      (big_endian ? "elf32-bigarm" : "elf32-littlearm"),
+		      (big_endian ? "armelfb" : "armelf"))
   { }
 
   Target*

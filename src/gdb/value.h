@@ -204,12 +204,14 @@ struct lval_funcs
    and closure CLOSURE.  */
 
 extern struct value *allocate_computed_value (struct type *type,
-                                              struct lval_funcs *funcs,
-                                              void *closure);
+					      const struct lval_funcs *funcs,
+					      void *closure);
+
+extern struct value *allocate_optimized_out_value (struct type *type);
 
 /* If VALUE is lval_computed, return its lval_funcs structure.  */
 
-extern struct lval_funcs *value_computed_funcs (struct value *value);
+extern const struct lval_funcs *value_computed_funcs (struct value *value);
 
 /* If VALUE is lval_computed, return its closure.  The meaning of the
    returned value depends on the functions VALUE uses.  */
@@ -613,7 +615,7 @@ extern struct value *value_dynamic_cast (struct type *type, struct value *arg);
 
 extern struct value *value_zero (struct type *type, enum lval_type lv);
 
-extern struct value *value_one (struct type *type, enum lval_type lv);
+extern struct value *value_one (struct type *type);
 
 extern struct value *value_repeat (struct value *arg1, int count);
 
@@ -715,7 +717,8 @@ extern int value_logical_not (struct value *arg1);
 
 /* C++ */
 
-extern struct value *value_of_this (int complain);
+extern struct value *value_of_this (const struct language_defn *lang,
+				    int complain);
 
 extern struct value *value_x_binop (struct value *arg1, struct value *arg2,
 				    enum exp_opcode op,
@@ -834,8 +837,6 @@ extern struct value *find_function_in_inferior (const char *,
 						struct objfile **);
 
 extern struct value *value_allocate_space_in_inferior (int);
-
-extern struct value *value_of_local (const char *name, int complain);
 
 extern struct value *value_subscripted_rvalue (struct value *array,
 					       LONGEST index, int lowerbound);

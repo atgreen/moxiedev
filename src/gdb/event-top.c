@@ -33,6 +33,7 @@
 #include "cli/cli-script.h"     /* for reset_command_nest_depth */
 #include "main.h"
 #include "gdbthread.h"
+#include "observer.h"
 #include "continuations.h"
 #include "gdbcmd.h"		/* for dont_repeat() */
 
@@ -190,17 +191,17 @@ cli_command_loop (void)
     {
       int length;
       char *a_prompt;
-      char *gdb_prompt = get_prompt ();
+      char *gdb_prompt = get_prompt (0);
 
       /* Tell readline what the prompt to display is and what function
          it will need to call after a whole line is read.  This also
          displays the first prompt.  */
-      length = strlen (PREFIX (0)) 
-	+ strlen (gdb_prompt) + strlen (SUFFIX (0)) + 1;
+      length = strlen (get_prefix (0))
+	+ strlen (gdb_prompt) + strlen (get_suffix(0)) + 1;
       a_prompt = (char *) alloca (length);
-      strcpy (a_prompt, PREFIX (0));
+      strcpy (a_prompt, get_prefix (0));
       strcat (a_prompt, gdb_prompt);
-      strcat (a_prompt, SUFFIX (0));
+      strcat (a_prompt, get_suffix (0));
       rl_callback_handler_install (a_prompt, input_handler);
     }
   else
@@ -258,7 +259,7 @@ void
 display_gdb_prompt (char *new_prompt)
 {
   int prompt_length = 0;
-  char *gdb_prompt = get_prompt ();
+  char *actual_gdb_prompt = NULL;
 
   /* Reset the nesting depth used when trace-commands is set.  */
   reset_command_nest_depth ();
@@ -267,6 +268,25 @@ display_gdb_prompt (char *new_prompt)
      prompt.  */
   if (!current_interp_display_prompt_p ())
     return;
+
+  /* Get the prompt before the observers are called as observer hook
+     functions may change the prompt.  Do not call observers on an
+     explicit prompt change as passed to this function, as this forms
+     a temporary prompt, IE, displayed but not set.  */
+  if (! new_prompt)
+    {
+      char *post_gdb_prompt = NULL;
+      char *pre_gdb_prompt = xstrdup (get_prompt (0));
+
+      observer_notify_before_prompt (pre_gdb_prompt);
+      post_gdb_prompt = get_prompt (0);
+
+      /* If the observer changed the prompt, use that prompt.  */
+      if (strcmp (pre_gdb_prompt, post_gdb_prompt) != 0)
+	actual_gdb_prompt = post_gdb_prompt;
+
+      xfree (pre_gdb_prompt);
+    }
 
   if (sync_execution && is_running (inferior_ptid))
     {
@@ -289,27 +309,35 @@ display_gdb_prompt (char *new_prompt)
       return;
     }
 
-  if (!new_prompt)
+  /* If the observer changed the prompt, ACTUAL_GDB_PROMPT will not be
+     NULL.  Otherwise, either copy the existing prompt, or set it to
+     NEW_PROMPT.  */
+  if (! actual_gdb_prompt)
     {
-      /* Just use the top of the prompt stack.  */
-      prompt_length = strlen (PREFIX (0)) +
-	strlen (SUFFIX (0)) +
-	strlen (gdb_prompt) + 1;
+      if (! new_prompt)
+	{
+	  /* Just use the top of the prompt stack.  */
+	  prompt_length = strlen (get_prefix (0)) +
+	    strlen (get_suffix (0)) +
+	    strlen (get_prompt (0)) + 1;
 
-      new_prompt = (char *) alloca (prompt_length);
+	  actual_gdb_prompt = (char *) alloca (prompt_length);
 
-      /* Prefix needs to have new line at end.  */
-      strcpy (new_prompt, PREFIX (0));
-      strcat (new_prompt, gdb_prompt);
-      /* Suffix needs to have a new line at end and \032 \032 at
-         beginning.  */
-      strcat (new_prompt, SUFFIX (0));
+	  /* Prefix needs to have new line at end.  */
+	  strcpy (actual_gdb_prompt, get_prefix (0));
+	  strcat (actual_gdb_prompt, get_prompt (0));
+	  /* Suffix needs to have a new line at end and \032 \032 at
+	     beginning.  */
+	  strcat (actual_gdb_prompt, get_suffix (0));
+	}
+      else
+	actual_gdb_prompt = new_prompt;;
     }
 
   if (async_command_editing_p)
     {
       rl_callback_handler_remove ();
-      rl_callback_handler_install (new_prompt, input_handler);
+      rl_callback_handler_install (actual_gdb_prompt, input_handler);
     }
   /* new_prompt at this point can be the top of the stack or the one
      passed in.  It can't be NULL.  */
@@ -318,7 +346,7 @@ display_gdb_prompt (char *new_prompt)
       /* Don't use a _filtered function here.  It causes the assumed
          character position to be off, since the newline we read from
          the user is not accounted for.  */
-      fputs_unfiltered (new_prompt, gdb_stdout);
+      fputs_unfiltered (actual_gdb_prompt, gdb_stdout);
       gdb_flush (gdb_stdout);
     }
 }
@@ -333,7 +361,7 @@ change_annotation_level (void)
 {
   char *prefix, *suffix;
 
-  if (!PREFIX (0) || !PROMPT (0) || !SUFFIX (0))
+  if (!get_prefix (0) || !get_prompt (0) || !get_suffix (0))
     {
       /* The prompt stack has not been initialized to "", we are
          using gdb w/o the --async switch.  */
@@ -343,7 +371,7 @@ change_annotation_level (void)
 
   if (annotation_level > 1)
     {
-      if (!strcmp (PREFIX (0), "") && !strcmp (SUFFIX (0), ""))
+      if (!strcmp (get_prefix (0), "") && !strcmp (get_suffix (0), ""))
 	{
 	  /* Push a new prompt if the previous annotation_level was not >1.  */
 	  prefix = (char *) alloca (strlen (async_annotation_suffix) + 10);
@@ -361,7 +389,7 @@ change_annotation_level (void)
     }
   else
     {
-      if (strcmp (PREFIX (0), "") && strcmp (SUFFIX (0), ""))
+      if (strcmp (get_prefix (0), "") && strcmp (get_suffix (0), ""))
 	{
 	  /* Pop the top of the stack, we are going back to annotation < 1.  */
 	  pop_prompt ();
@@ -377,17 +405,17 @@ void
 push_prompt (char *prefix, char *prompt, char *suffix)
 {
   the_prompts.top++;
-  PREFIX (0) = xstrdup (prefix);
+  set_prefix (prefix, 0);
 
   /* Note that this function is used by the set annotate 2
      command.  This is why we take care of saving the old prompt
      in case a new one is not specified.  */
   if (prompt)
-    PROMPT (0) = xstrdup (prompt);
+    set_prompt (prompt, 0);
   else
-    PROMPT (0) = xstrdup (PROMPT (-1));
+    set_prompt (get_prompt (-1), 0);
 
-  SUFFIX (0) = xstrdup (suffix);
+  set_suffix (suffix, 0);
 }
 
 /* Pops the top of the prompt stack, and frees the memory allocated
@@ -397,20 +425,17 @@ pop_prompt (void)
 {
   /* If we are not during a 'synchronous' execution command, in which
      case, the top prompt would be empty.  */
-  if (strcmp (PROMPT (0), ""))
+  if (strcmp (get_prompt (0), ""))
     /* This is for the case in which the prompt is set while the
        annotation level is 2.  The top prompt will be changed, but when
        we return to annotation level < 2, we want that new prompt to be
        in effect, until the user does another 'set prompt'.  */
-    if (strcmp (PROMPT (0), PROMPT (-1)))
-      {
-	xfree (PROMPT (-1));
-	PROMPT (-1) = xstrdup (PROMPT (0));
-      }
+    if (strcmp (get_prompt (0), get_prompt (-1)))
+      set_prompt (get_prompt (0), -1);
 
-  xfree (PREFIX (0));
-  xfree (PROMPT (0));
-  xfree (SUFFIX (0));
+  set_prefix (NULL, 0);
+  set_prompt (NULL, 0);
+  set_suffix (NULL, 0);
   the_prompts.top--;
 }
 
@@ -520,8 +545,6 @@ command_line_handler (char *rl)
   static unsigned linelength = 0;
   char *p;
   char *p1;
-  extern char *line;
-  extern int linesize;
   char *nline;
   char got_eof = 0;
 
@@ -661,7 +684,7 @@ command_line_handler (char *rl)
      previous command, return the value in the global buffer.  */
   if (repeat && p == linebuffer && *p != '\\')
     {
-      command_handler (line);
+      command_handler (saved_command_line);
       display_gdb_prompt (0);
       return;
     }
@@ -669,7 +692,7 @@ command_line_handler (char *rl)
   for (p1 = linebuffer; *p1 == ' ' || *p1 == '\t'; p1++);
   if (repeat && !*p1)
     {
-      command_handler (line);
+      command_handler (saved_command_line);
       display_gdb_prompt (0);
       return;
     }
@@ -693,15 +716,15 @@ command_line_handler (char *rl)
   /* Save into global buffer if appropriate.  */
   if (repeat)
     {
-      if (linelength > linesize)
+      if (linelength > saved_command_line_size)
 	{
-	  line = xrealloc (line, linelength);
-	  linesize = linelength;
+	  saved_command_line = xrealloc (saved_command_line, linelength);
+	  saved_command_line_size = linelength;
 	}
-      strcpy (line, linebuffer);
+      strcpy (saved_command_line, linebuffer);
       if (!more_to_come)
 	{
-	  command_handler (line);
+	  command_handler (saved_command_line);
 	  display_gdb_prompt (0);
 	}
       return;
@@ -957,7 +980,7 @@ handle_stop_sig (int sig)
 static void
 async_stop_sig (gdb_client_data arg)
 {
-  char *prompt = get_prompt ();
+  char *prompt = get_prompt (0);
 
 #if STOP_SIGNAL == SIGTSTP
   signal (SIGTSTP, SIG_DFL);
@@ -1035,7 +1058,7 @@ set_async_annotation_level (char *args, int from_tty,
 void
 set_async_prompt (char *args, int from_tty, struct cmd_list_element *c)
 {
-  PROMPT (0) = xstrdup (new_async_prompt);
+  set_prompt (new_async_prompt, 0);
 }
 
 /* Set things up for readline to be invoked via the alternate

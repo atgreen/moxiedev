@@ -62,8 +62,8 @@
 #define ELFOSABI_NONE	      0	/* UNIX System V ABI */
 #define ELFOSABI_HPUX	      1	/* HP-UX operating system */
 #define ELFOSABI_NETBSD	      2	/* NetBSD */
-#define ELFOSABI_LINUX	      3	/* GNU/Linux */
-#define ELFOSABI_HURD	      4	/* GNU/Hurd */
+#define ELFOSABI_GNU	      3	/* GNU */
+#define ELFOSABI_LINUX	      3	/* Alias for ELFOSABI_GNU */
 #define ELFOSABI_SOLARIS      6	/* Solaris */
 #define ELFOSABI_AIX	      7	/* AIX */
 #define ELFOSABI_IRIX	      8	/* IRIX */
@@ -285,7 +285,7 @@
 #define EM_ETPU		178	/* Freescale Extended Time Processing Unit */
 #define EM_SLE9X	179	/* Infineon Technologies SLE9X core */
 #define EM_L1OM		180	/* Intel L1OM */
-#define EM_INTEL181	181	/* Reserved by Intel */
+#define EM_K1OM		181	/* Intel K1OM */
 #define EM_INTEL182	182	/* Reserved by Intel */
 #define EM_res183	183	/* Reserved by ARM */
 #define EM_res184	184	/* Reserved by ARM */
@@ -295,6 +295,7 @@
 #define EM_TILEPRO	188	/* Tilera TILEPro multicore architecture family */
 #define EM_MICROBLAZE	189	/* Xilinx MicroBlaze 32-bit RISC soft processor core */
 #define EM_CUDA		190	/* NVIDIA CUDA architecture */
+#define EM_TILEGX	191	/* Tilera TILE-Gx multicore architecture family */
 
 /* If it is necessary to assign new unofficial EM_* values, please pick large
    random numbers (0x8523, 0xa7f2, etc.) to minimize the chances of collision
@@ -537,6 +538,8 @@
 #define NT_S390_CTRS	0x304		/* S390 control registers */
 					/*   note name must be "LINUX".  */
 #define NT_S390_PREFIX	0x305		/* S390 prefix register */
+					/*   note name must be "LINUX".  */
+#define NT_ARM_VFP	0x400		/* ARM VFP registers */
 					/*   note name must be "LINUX".  */
 
 /* Note segments for core files on dir-style procfs systems.  */

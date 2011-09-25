@@ -50,7 +50,7 @@ static void
 breakpoint_notify (struct breakpoint *b)
 {
   if (mi_can_breakpoint_notify)
-    gdb_breakpoint_query (uiout, b->number, NULL);
+    gdb_breakpoint_query (current_uiout, b->number, NULL);
 }
 
 enum bp_type
@@ -169,7 +169,7 @@ mi_cmd_break_insert (char *command, char **argv, int argc)
 		     temp_p, type_wanted,
 		     ignore_count,
 		     pending ? AUTO_BOOLEAN_TRUE : AUTO_BOOLEAN_FALSE,
-		     NULL, 0, enabled, 0);
+		     &bkpt_breakpoint_ops, 0, enabled, 0);
   do_cleanups (back_to);
 
 }
@@ -186,7 +186,7 @@ mi_cmd_break_passcount (char *command, char **argv, int argc)
 {
   int n;
   int p;
-  struct breakpoint *t;
+  struct tracepoint *t;
 
   if (argc != 2)
     error (_("Usage: tracepoint-number passcount"));
@@ -202,7 +202,7 @@ mi_cmd_break_passcount (char *command, char **argv, int argc)
     }
   else
     {
-      error (_("Cound not find tracepoint %d"), n);
+      error (_("Could not find tracepoint %d"), n);
     }
 }
 

@@ -2665,6 +2665,11 @@ class Output_section : public Output_data
   flags() const
   { return this->flags_; }
 
+  typedef std::map<Section_id, unsigned int> Section_layout_order;
+
+  void
+  update_section_layout(const Section_layout_order& order_map);
+
   // Update the output section flags based on input section flags.
   void
   update_flags_for_input_section(elfcpp::Elf_Xword flags);
@@ -3427,10 +3432,21 @@ class Output_section : public Output_data
   has_fixed_layout() const
   { return this->has_fixed_layout_; }
 
+  // Set flag to allow patch space for this section.  Used for full
+  // incremental links.
+  void
+  set_is_patch_space_allowed()
+  { this->is_patch_space_allowed_ = true; }
+
   // Reserve space within the fixed layout for the section.  Used for
   // incremental update links.
   void
   reserve(uint64_t sh_offset, uint64_t sh_size);
+
+  // Allocate space from the free list for the section.  Used for
+  // incremental update links.
+  off_t
+  allocate(off_t len, uint64_t addralign);
 
  protected:
   // Return the output section--i.e., the object itself.
@@ -3885,6 +3901,8 @@ class Output_section : public Output_data
   bool always_keeps_input_sections_ : 1;
   // Whether this section has a fixed layout, for incremental update links.
   bool has_fixed_layout_ : 1;
+  // True if we can add patch space to this section.
+  bool is_patch_space_allowed_ : 1;
   // For SHT_TLS sections, the offset of this section relative to the base
   // of the TLS segment.
   uint64_t tls_offset_;
@@ -3895,6 +3913,8 @@ class Output_section : public Output_data
   // List of available regions within the section, for incremental
   // update links.
   Free_list free_list_;
+  // Amount added as patch space for incremental linking.
+  off_t patch_space_;
 };
 
 // An output segment.  PT_LOAD segments are built from collections of

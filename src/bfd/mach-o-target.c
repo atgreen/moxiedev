@@ -1,5 +1,5 @@
 /* Mach-O support for BFD.
-   Copyright 1999, 2000, 2001, 2002, 2005, 2007, 2008, 2009, 2010
+   Copyright 1999, 2000, 2001, 2002, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -27,7 +27,6 @@
 
 #define bfd_mach_o_close_and_cleanup                  _bfd_generic_close_and_cleanup
 #define bfd_mach_o_bfd_free_cached_info               _bfd_generic_bfd_free_cached_info
-#define bfd_mach_o_new_section_hook                   _bfd_generic_new_section_hook
 #define bfd_mach_o_get_section_contents_in_window     _bfd_generic_get_section_contents_in_window
 #define bfd_mach_o_bfd_is_target_special_symbol       ((bfd_boolean (*) (bfd *, asymbol *)) bfd_false)
 #define bfd_mach_o_bfd_is_local_label_name            bfd_generic_is_local_label_name
@@ -51,6 +50,7 @@
 #define bfd_mach_o_bfd_set_private_flags              _bfd_generic_bfd_set_private_flags
 #define bfd_mach_o_get_section_contents               _bfd_generic_get_section_contents
 #define bfd_mach_o_bfd_gc_sections                    bfd_generic_gc_sections
+#define bfd_mach_o_bfd_lookup_section_flags           bfd_generic_lookup_section_flags
 #define bfd_mach_o_bfd_merge_sections                 bfd_generic_merge_sections
 #define bfd_mach_o_bfd_is_group_section               bfd_generic_is_group_section
 #define bfd_mach_o_bfd_discard_group                  bfd_generic_discard_group
@@ -118,6 +118,7 @@ const bfd_target TARGET_NAME =
   '_',				/* symbol_leading_char.  */
   ' ',				/* ar_pad_char.  */
   16,				/* ar_max_namelen.  */
+  0,				/* match priority.  */
 
 #if TARGET_BIG_ENDIAN
   bfd_getb64, bfd_getb_signed_64, bfd_putb64,

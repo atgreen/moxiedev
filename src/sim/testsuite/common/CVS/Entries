@@ -1,8 +1,8 @@
-/Make-common.in/1.1.1.1/Sat Jun  4 17:41:33 2011/-ko/
-/Makefile.in/1.1.1.1/Sat Jun  4 17:41:33 2011/-ko/
-/alu-n-tst.h/1.1.1.1/Sat Jun  4 17:41:33 2011/-ko/
-/alu-tst.c/1.1.1.1/Sat Jun  4 17:41:33 2011/-ko/
-/bits-gen.c/1.7/Sat Jun  4 17:43:39 2011/-ko/
-/bits-tst.c/1.1.1.1/Sat Jun  4 17:41:33 2011/-ko/
-/fpu-tst.c/1.1.1.1/Sat Jun  4 17:41:33 2011/-ko/
+/Make-common.in/1.1.1.1/Sun Jun  5 16:54:42 2011/-ko/
+/Makefile.in/1.1.1.1/Sun Jun  5 16:54:42 2011/-ko/
+/alu-n-tst.h/1.1.1.1/Sun Jun  5 16:54:42 2011/-ko/
+/alu-tst.c/1.1.1.1/Sun Jun  5 16:54:42 2011/-ko/
+/bits-gen.c/1.7/Sun Jun  5 16:54:42 2011/-ko/
+/bits-tst.c/1.1.1.1/Sun Jun  5 16:54:42 2011/-ko/
+/fpu-tst.c/1.1.1.1/Sun Jun  5 16:54:42 2011/-ko/
 D

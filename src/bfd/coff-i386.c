@@ -1,6 +1,6 @@
 /* BFD back-end for Intel 386 COFF files.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
+   2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
    Free Software Foundation, Inc.
    Written by Cygnus Support.
 
@@ -661,6 +661,7 @@ const bfd_target
 #endif
   '/',				/* ar_pad_char */
   15,				/* ar_max_namelen */
+  0,				/* match priority.  */
 
   bfd_getl64, bfd_getl_signed_64, bfd_putl64,
      bfd_getl32, bfd_getl_signed_32, bfd_putl32,
@@ -670,8 +671,13 @@ const bfd_target
      bfd_getl16, bfd_getl_signed_16, bfd_putl16, /* hdrs */
 
 /* Note that we allow an object file to be treated as a core file as well.  */
-    {_bfd_dummy_target, coff_object_p, /* bfd_check_format */
-       bfd_generic_archive_p, coff_object_p},
+    /* bfd_check_format */
+#ifdef COFF_CHECK_FORMAT
+    {_bfd_dummy_target, COFF_CHECK_FORMAT,
+       bfd_generic_archive_p, COFF_CHECK_FORMAT},
+#else
+    {_bfd_dummy_target, coff_object_p, bfd_generic_archive_p, coff_object_p},
+#endif
     {bfd_false, coff_mkobject, _bfd_generic_mkarchive, /* bfd_set_format */
        bfd_false},
     {bfd_false, coff_write_object_contents, /* bfd_write_contents */

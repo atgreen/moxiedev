@@ -46,7 +46,6 @@ class Incremental_inputs;
 class Incremental_binary;
 class Incremental_library;
 class Object;
-class Script_info;
 
 // Incremental input type as stored in .gnu_incremental_inputs.
 
@@ -67,6 +66,20 @@ enum Incremental_input_flags
   INCREMENTAL_INPUT_IN_SYSTEM_DIR = 0x8000,
   INCREMENTAL_INPUT_AS_NEEDED = 0x4000
 };
+
+// Symbol flags for the incremental symbol table.
+// These flags are stored in the top two bits of
+// the symbol index field.
+
+enum Incremental_shlib_symbol_flags
+{
+  // Symbol is defined in this library.
+  INCREMENTAL_SHLIB_SYM_DEF = 2,
+  // Symbol is defined in this library, with a COPY relocation.
+  INCREMENTAL_SHLIB_SYM_COPY = 3
+};
+
+static const int INCREMENTAL_SHLIB_SYM_FLAGS_SHIFT = 30;
 
 // Create an Incremental_binary object for FILE. Returns NULL is this is not
 // possible, e.g. FILE is not an ELF file or has an unsupported target.
@@ -245,7 +258,13 @@ class Script_info
 {
  public:
   Script_info(const std::string& filename)
-    : filename_(filename), incremental_script_entry_(NULL)
+    : filename_(filename), input_file_index_(0),
+      incremental_script_entry_(NULL)
+  { }
+
+  Script_info(const std::string& filename, unsigned int input_file_index)
+    : filename_(filename), input_file_index_(input_file_index),
+      incremental_script_entry_(NULL)
   { }
 
   // Store a pointer to the incremental information for this script.
@@ -258,6 +277,11 @@ class Script_info
   filename() const
   { return this->filename_; }
 
+  // Return the input file index.
+  unsigned int
+  input_file_index() const
+  { return this->input_file_index_; }
+
   // Return the pointer to the incremental information for this script.
   Incremental_script_entry*
   incremental_info() const
@@ -265,6 +289,7 @@ class Script_info
 
  private:
   const std::string filename_;
+  unsigned int input_file_index_;
   Incremental_script_entry* incremental_script_entry_;
 };
 
@@ -1012,17 +1037,33 @@ class Incremental_inputs_reader
 
     // Return the output symbol index for the Nth global symbol -- for shared
     // libraries only.  Sets *IS_DEF to TRUE if the symbol is defined in this
-    // input file.
+    // input file.  Sets *IS_COPY to TRUE if the symbol was copied from this
+    // input file with a COPY relocation.
     unsigned int
-    get_output_symbol_index(unsigned int n, bool* is_def)
+    get_output_symbol_index(unsigned int n, bool* is_def, bool* is_copy)
     {
       gold_assert(this->type() == INCREMENTAL_INPUT_SHARED_LIBRARY);
       const unsigned char* p = (this->inputs_->p_
 				+ this->info_offset_ + 8
 				+ n * 4);
       unsigned int output_symndx = Swap32::readval(p);
-      *is_def = (output_symndx & (1U << 31)) != 0;
-      return output_symndx & ((1U << 31) - 1);
+      unsigned int flags = output_symndx >> INCREMENTAL_SHLIB_SYM_FLAGS_SHIFT;
+      output_symndx &= ((1U << INCREMENTAL_SHLIB_SYM_FLAGS_SHIFT) - 1);
+      switch (flags)
+	{
+	  case INCREMENTAL_SHLIB_SYM_DEF:
+	    *is_def = true;
+	    *is_copy = false;
+	    break;
+	  case INCREMENTAL_SHLIB_SYM_COPY:
+	    *is_def = true;
+	    *is_copy = true;
+	    break;
+	  default:
+	    *is_def = false;
+	    *is_copy = false;
+	}
+      return output_symndx;
     }
 
    private:
@@ -1373,12 +1414,12 @@ class Incremental_binary
 
   // Return an Incremental_library for the given input file.
   Incremental_library*
-  get_library(unsigned int n)
+  get_library(unsigned int n) const
   { return this->library_map_[n]; }
 
   // Return a Script_info for the given input file.
   Script_info*
-  get_script_info(unsigned int n)
+  get_script_info(unsigned int n) const
   { return this->script_map_[n]; }
 
   // Initialize the layout of the output file based on the existing
@@ -1396,6 +1437,11 @@ class Incremental_binary
   void
   process_got_plt(Symbol_table* symtab, Layout* layout)
   { this->do_process_got_plt(symtab, layout); }
+
+  // Emit COPY relocations from the existing output file.
+  void
+  emit_copy_relocs(Symbol_table* symtab)
+  { this->do_emit_copy_relocs(symtab); }
 
   // Apply incremental relocations for symbols whose values have changed.
   void
@@ -1479,6 +1525,10 @@ class Incremental_binary
   virtual void
   do_process_got_plt(Symbol_table* symtab, Layout* layout) = 0;
 
+  // Emit COPY relocations from the existing output file.
+  virtual void
+  do_emit_copy_relocs(Symbol_table* symtab) = 0;
+
   // Apply incremental relocations for symbols whose values have changed.
   virtual void
   do_apply_incremental_relocs(const Symbol_table*, Layout*, Output_file*) = 0;
@@ -1514,9 +1564,9 @@ class Sized_incremental_binary : public Incremental_binary
                            const elfcpp::Ehdr<size, big_endian>& ehdr,
                            Target* target)
     : Incremental_binary(output, target), elf_file_(this, ehdr),
-      input_objects_(), section_map_(), symbol_map_(), main_symtab_loc_(),
-      main_strtab_loc_(), has_incremental_info_(false), inputs_reader_(),
-      symtab_reader_(), relocs_reader_(), got_plt_reader_(),
+      input_objects_(), section_map_(), symbol_map_(), copy_relocs_(),
+      main_symtab_loc_(), main_strtab_loc_(), has_incremental_info_(false),
+      inputs_reader_(), symtab_reader_(), relocs_reader_(), got_plt_reader_(),
       input_entry_readers_()
   { this->setup_readers(); }
 
@@ -1557,6 +1607,11 @@ class Sized_incremental_binary : public Incremental_binary
   Symbol*
   global_symbol(unsigned int symndx) const
   { return this->symbol_map_[symndx]; }
+
+  // Add a COPY relocation for a global symbol.
+  void
+  add_copy_reloc(Symbol* gsym, Output_section* os, off_t offset)
+  { this->copy_relocs_.push_back(Copy_reloc(gsym, os, offset)); }
 
   // Readers for the incremental info sections.
 
@@ -1605,6 +1660,10 @@ class Sized_incremental_binary : public Incremental_binary
   // Process the GOT and PLT entries from the existing output file.
   virtual void
   do_process_got_plt(Symbol_table* symtab, Layout* layout);
+
+  // Emit COPY relocations from the existing output file.
+  virtual void
+  do_emit_copy_relocs(Symbol_table* symtab);
 
   // Apply incremental relocations for symbols whose values have changed.
   virtual void
@@ -1664,6 +1723,22 @@ class Sized_incremental_binary : public Incremental_binary
   }
 
  private:
+  // List of symbols that need COPY relocations.
+  struct Copy_reloc
+  {
+    Copy_reloc(Symbol* sym, Output_section* os, off_t off)
+      : symbol(sym), output_section(os), offset(off)
+    { }
+
+    // The global symbol to copy.
+    Symbol* symbol;
+    // The output section into which the symbol was copied.
+    Output_section* output_section;
+    // The offset within that output section.
+    off_t offset;
+  };
+  typedef std::vector<Copy_reloc> Copy_relocs;
+
   bool
   find_incremental_inputs_sections(unsigned int* p_inputs_shndx,
 				   unsigned int* p_symtab_shndx,
@@ -1686,6 +1761,9 @@ class Sized_incremental_binary : public Incremental_binary
 
   // Map global symbols from the input file to the symbol table.
   std::vector<Symbol*> symbol_map_;
+
+  // List of symbols that need COPY relocations.
+  Copy_relocs copy_relocs_;
 
   // Locations of the main symbol table and symbol string table.
   Location main_symtab_loc_;

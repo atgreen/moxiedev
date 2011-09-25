@@ -134,8 +134,6 @@ static int remote_is_async_p (void);
 static void remote_async (void (*callback) (enum inferior_event_type event_type,
 					    void *context), void *context);
 
-static int remote_async_mask (int new_mask);
-
 static void remote_detach (struct target_ops *ops, char *args, int from_tty);
 
 static void remote_interrupt (int signo);
@@ -721,8 +719,6 @@ static struct target_ops remote_ops;
 
 static struct target_ops extended_remote_ops;
 
-static int remote_async_mask_value = 1;
-
 /* FIXME: cagney/1999-09-23: Even though getpkt was called with
    ``forever'' still use the normal timeout mechanism.  This is
    currently used by the ASYNC code to guarentee that target reads
@@ -1266,6 +1262,7 @@ enum {
   PACKET_bs,
   PACKET_TracepointSource,
   PACKET_QAllow,
+  PACKET_qXfer_fdpic,
   PACKET_MAX
 };
 
@@ -3284,6 +3281,17 @@ remote_start_remote (int from_tty, struct target_ops *target, int extended_p)
       /* Always add the main thread.  */
       add_thread_silent (inferior_ptid);
 
+      /* init_wait_for_inferior should be called before get_offsets in order
+	 to manage `inserted' flag in bp loc in a correct state.
+	 breakpoint_init_inferior, called from init_wait_for_inferior, set
+	 `inserted' flag to 0, while before breakpoint_re_set, called from
+	 start_remote, set `inserted' flag to 1.  In the initialization of
+	 inferior, breakpoint_init_inferior should be called first, and then
+	 breakpoint_re_set can be called.  If this order is broken, state of
+	 `inserted' flag is wrong, and cause some problems on breakpoint
+	 manipulation.  */
+      init_wait_for_inferior ();
+
       get_offsets ();		/* Get text, data & bss offsets.  */
 
       /* If we could not find a description using qXfer, and we know
@@ -3751,6 +3759,8 @@ static struct protocol_feature remote_protocol_features[] = {
     PACKET_QAllow },
   { "EnableDisableTracepoints", PACKET_DISABLE,
     remote_enable_disable_tracepoint_feature, -1 },
+  { "qXfer:fdpic:read", PACKET_DISABLE, remote_supported_packet,
+    PACKET_qXfer_fdpic },
 };
 
 static char *remote_support_xml;
@@ -7756,7 +7766,21 @@ remote_remove_watchpoint (CORE_ADDR addr, int len, int type,
 
 
 int remote_hw_watchpoint_limit = -1;
+int remote_hw_watchpoint_length_limit = -1;
 int remote_hw_breakpoint_limit = -1;
+
+static int
+remote_region_ok_for_hw_watchpoint (CORE_ADDR addr, int len)
+{
+  if (remote_hw_watchpoint_length_limit == 0)
+    return 0;
+  else if (remote_hw_watchpoint_length_limit < 0)
+    return 1;
+  else if (len <= remote_hw_watchpoint_length_limit)
+    return 1;
+  else
+    return 0;
+}
 
 static int
 remote_check_watch_resources (int type, int cnt, int ot)
@@ -8281,6 +8305,10 @@ remote_xfer_partial (struct target_ops *ops, enum target_object object,
       return remote_read_qxfer
 	(ops, "traceframe-info", annex, readbuf, offset, len,
 	 &remote_protocol_packets[PACKET_qXfer_traceframe_info]);
+
+    case TARGET_OBJECT_FDPIC:
+      return remote_read_qxfer (ops, "fdpic", annex, readbuf, offset, len,
+				&remote_protocol_packets[PACKET_qXfer_fdpic]);
     default:
       return -1;
     }
@@ -9744,7 +9772,7 @@ remote_download_command_source (int num, ULONGEST addr,
 }
 
 static void
-remote_download_tracepoint (struct breakpoint *t)
+remote_download_tracepoint (struct breakpoint *b)
 {
   struct bp_location *loc;
   CORE_ADDR tpaddr;
@@ -9757,13 +9785,14 @@ remote_download_tracepoint (struct breakpoint *t)
   struct agent_expr *aexpr;
   struct cleanup *aexpr_chain = NULL;
   char *pkt;
+  struct tracepoint *t = (struct tracepoint *) b;
 
   /* Iterate over all the tracepoint locations.  It's up to the target to
      notice multiple tracepoint packets with the same number but different
      addresses, and treat them as multiple locations.  */
-  for (loc = t->loc; loc; loc = loc->next)
+  for (loc = b->loc; loc; loc = loc->next)
     {
-      encode_actions (t, loc, &tdp_actions, &stepping_actions);
+      encode_actions (b, loc, &tdp_actions, &stepping_actions);
       old_chain = make_cleanup (free_actions_list_cleanup_wrapper,
 				tdp_actions);
       (void) make_cleanup (free_actions_list_cleanup_wrapper,
@@ -9771,14 +9800,14 @@ remote_download_tracepoint (struct breakpoint *t)
 
       tpaddr = loc->address;
       sprintf_vma (addrbuf, tpaddr);
-      sprintf (buf, "QTDP:%x:%s:%c:%lx:%x", t->number, 
+      sprintf (buf, "QTDP:%x:%s:%c:%lx:%x", b->number,
 	       addrbuf, /* address */
-	       (t->enable_state == bp_enabled ? 'E' : 'D'),
+	       (b->enable_state == bp_enabled ? 'E' : 'D'),
 	       t->step_count, t->pass_count);
       /* Fast tracepoints are mostly handled by the target, but we can
 	 tell the target how big of an instruction block should be moved
 	 around.  */
-      if (t->type == bp_fast_tracepoint)
+      if (b->type == bp_fast_tracepoint)
 	{
 	  /* Only test for support at download time; we may not know
 	     target capabilities at definition time.  */
@@ -9801,9 +9830,9 @@ remote_download_tracepoint (struct breakpoint *t)
 	       tracepoints, so don't take lack of support as a reason to
 	       give up on the trace run.  */
 	    warning (_("Target does not support fast tracepoints, "
-		       "downloading %d as regular tracepoint"), t->number);
+		       "downloading %d as regular tracepoint"), b->number);
 	}
-      else if (t->type == bp_static_tracepoint)
+      else if (b->type == bp_static_tracepoint)
 	{
 	  /* Only test for support at download time; we may not know
 	     target capabilities at definition time.  */
@@ -9841,10 +9870,10 @@ remote_download_tracepoint (struct breakpoint *t)
 	    }
 	  else
 	    warning (_("Target does not support conditional tracepoints, "
-		       "ignoring tp %d cond"), t->number);
+		       "ignoring tp %d cond"), b->number);
 	}
 
-  if (t->commands || *default_collect)
+  if (b->commands || *default_collect)
 	strcat (buf, "-");
       putpkt (buf);
       remote_get_noisy_reply (&target_buf, &target_buf_size);
@@ -9858,7 +9887,7 @@ remote_download_tracepoint (struct breakpoint *t)
 	    {
 	      QUIT;	/* Allow user to bail out with ^C.  */
 	      sprintf (buf, "QTDP:-%x:%s:%s%c",
-		       t->number, addrbuf, /* address */
+		       b->number, addrbuf, /* address */
 		       tdp_actions[ndx],
 		       ((tdp_actions[ndx + 1] || stepping_actions)
 			? '-' : 0));
@@ -9875,7 +9904,7 @@ remote_download_tracepoint (struct breakpoint *t)
 	    {
 	      QUIT;	/* Allow user to bail out with ^C.  */
 	      sprintf (buf, "QTDP:-%x:%s:%s%s%s",
-		       t->number, addrbuf, /* address */
+		       b->number, addrbuf, /* address */
 		       ((ndx == 0) ? "S" : ""),
 		       stepping_actions[ndx],
 		       (stepping_actions[ndx + 1] ? "-" : ""));
@@ -9890,11 +9919,11 @@ remote_download_tracepoint (struct breakpoint *t)
       if (remote_protocol_packets[PACKET_TracepointSource].support
 	  == PACKET_ENABLE)
 	{
-	  if (t->addr_string)
+	  if (b->addr_string)
 	    {
 	      strcpy (buf, "QTDPsrc:");
-	      encode_source_string (t->number, loc->address,
-				    "at", t->addr_string, buf + strlen (buf),
+	      encode_source_string (b->number, loc->address,
+				    "at", b->addr_string, buf + strlen (buf),
 				    2048 - strlen (buf));
 
 	      putpkt (buf);
@@ -9902,19 +9931,19 @@ remote_download_tracepoint (struct breakpoint *t)
 	      if (strcmp (target_buf, "OK"))
 		warning (_("Target does not support source download."));
 	    }
-	  if (t->cond_string)
+	  if (b->cond_string)
 	    {
 	      strcpy (buf, "QTDPsrc:");
-	      encode_source_string (t->number, loc->address,
-				    "cond", t->cond_string, buf + strlen (buf),
+	      encode_source_string (b->number, loc->address,
+				    "cond", b->cond_string, buf + strlen (buf),
 				    2048 - strlen (buf));
 	      putpkt (buf);
 	      remote_get_noisy_reply (&target_buf, &target_buf_size);
 	      if (strcmp (target_buf, "OK"))
 		warning (_("Target does not support source download."));
 	    }
-	  remote_download_command_source (t->number, loc->address,
-					  breakpoint_commands (t));
+	  remote_download_command_source (b->number, loc->address,
+					  breakpoint_commands (b));
 	}
 
       do_cleanups (old_chain);
@@ -9981,6 +10010,7 @@ remote_trace_set_readonly_regions (void)
   bfd_size_type size;
   bfd_vma vma;
   int anysecs = 0;
+  int offset = 0;
 
   if (!exec_bfd)
     return;			/* No information to give.  */
@@ -9989,6 +10019,7 @@ remote_trace_set_readonly_regions (void)
   for (s = exec_bfd->sections; s; s = s->next)
     {
       char tmp1[40], tmp2[40];
+      int sec_length;
 
       if ((s->flags & SEC_LOAD) == 0 ||
       /*  (s->flags & SEC_CODE) == 0 || */
@@ -10000,8 +10031,17 @@ remote_trace_set_readonly_regions (void)
       size = bfd_get_section_size (s);
       sprintf_vma (tmp1, vma);
       sprintf_vma (tmp2, vma + size);
-      sprintf (target_buf + strlen (target_buf), 
-	       ":%s,%s", tmp1, tmp2);
+      sec_length = 1 + strlen (tmp1) + 1 + strlen (tmp2);
+      if (offset + sec_length + 1 > target_buf_size)
+	{
+	  if (remote_protocol_packets[PACKET_qXfer_traceframe_info].support
+	      != PACKET_ENABLE)
+	    warning (_("\
+Too many sections for read-only sections definition packet."));
+	  break;
+	}
+      sprintf (target_buf + offset, ":%s,%s", tmp1, tmp2);
+      offset += sec_length;
     }
   if (anysecs)
     {
@@ -10024,14 +10064,25 @@ remote_trace_start (void)
 static int
 remote_get_trace_status (struct trace_status *ts)
 {
-  char *p;
+  /* Initialize it just to avoid a GCC false warning.  */
+  char *p = NULL;
   /* FIXME we need to get register block size some other way.  */
   extern int trace_regblock_size;
+  volatile struct gdb_exception ex;
 
   trace_regblock_size = get_remote_arch_state ()->sizeof_g_packet;
 
   putpkt ("qTStatus");
-  p = remote_get_noisy_reply (&target_buf, &target_buf_size);
+
+  TRY_CATCH (ex, RETURN_MASK_ERROR)
+    {
+      p = remote_get_noisy_reply (&target_buf, &target_buf_size);
+    }
+  if (ex.reason < 0)
+    {
+      exception_fprintf (gdb_stderr, ex, "qTStatus: ");
+      return -1;
+    }
 
   /* If the remote target doesn't do tracing, flag it.  */
   if (*p == '\0')
@@ -10326,6 +10377,8 @@ Specify the serial device it is connected to\n\
   remote_ops.to_can_use_hw_breakpoint = remote_check_watch_resources;
   remote_ops.to_insert_hw_breakpoint = remote_insert_hw_breakpoint;
   remote_ops.to_remove_hw_breakpoint = remote_remove_hw_breakpoint;
+  remote_ops.to_region_ok_for_hw_watchpoint
+     = remote_region_ok_for_hw_watchpoint;
   remote_ops.to_insert_watchpoint = remote_insert_watchpoint;
   remote_ops.to_remove_watchpoint = remote_remove_watchpoint;
   remote_ops.to_kill = remote_kill;
@@ -10359,7 +10412,6 @@ Specify the serial device it is connected to\n\
   remote_ops.to_can_async_p = remote_can_async_p;
   remote_ops.to_is_async_p = remote_is_async_p;
   remote_ops.to_async = remote_async;
-  remote_ops.to_async_mask = remote_async_mask;
   remote_ops.to_terminal_inferior = remote_terminal_inferior;
   remote_ops.to_terminal_ours = remote_terminal_ours;
   remote_ops.to_supports_non_stop = remote_supports_non_stop;
@@ -10426,7 +10478,7 @@ remote_can_async_p (void)
     return 0;
 
   /* We're async whenever the serial device is.  */
-  return remote_async_mask_value && serial_can_async_p (remote_desc);
+  return serial_can_async_p (remote_desc);
 }
 
 static int
@@ -10437,7 +10489,7 @@ remote_is_async_p (void)
     return 0;
 
   /* We're async whenever the serial device is.  */
-  return remote_async_mask_value && serial_is_async_p (remote_desc);
+  return serial_is_async_p (remote_desc);
 }
 
 /* Pass the SERIAL event on and up to the client.  One day this code
@@ -10473,10 +10525,6 @@ static void
 remote_async (void (*callback) (enum inferior_event_type event_type,
 				void *context), void *context)
 {
-  if (remote_async_mask_value == 0)
-    internal_error (__FILE__, __LINE__,
-		    _("Calling remote_async when async is masked"));
-
   if (callback != NULL)
     {
       serial_async (remote_desc, remote_async_serial_handler, NULL);
@@ -10485,15 +10533,6 @@ remote_async (void (*callback) (enum inferior_event_type event_type,
     }
   else
     serial_async (remote_desc, NULL, NULL);
-}
-
-static int
-remote_async_mask (int new_mask)
-{
-  int curr_mask = remote_async_mask_value;
-
-  remote_async_mask_value = new_mask;
-  return curr_mask;
 }
 
 static void
@@ -10509,6 +10548,7 @@ show_remote_cmd (char *args, int from_tty)
      the redundant "show remote Z-packet" and the legacy aliases.  */
   struct cleanup *showlist_chain;
   struct cmd_list_element *list = remote_show_cmdlist;
+  struct ui_out *uiout = current_uiout;
 
   showlist_chain = make_cleanup_ui_out_tuple_begin_end (uiout, "showlist");
   for (; list != NULL; list = list->next)
@@ -10735,6 +10775,15 @@ Specify a negative limit for unlimited."),
 					   number of target hardware
 					   watchpoints is %s.  */
 			    &remote_set_cmdlist, &remote_show_cmdlist);
+  add_setshow_zinteger_cmd ("hardware-watchpoint-length-limit", no_class,
+			    &remote_hw_watchpoint_length_limit, _("\
+Set the maximum length (in bytes) of a target hardware watchpoint."), _("\
+Show the maximum length (in bytes) of a target hardware watchpoint."), _("\
+Specify a negative limit for unlimited."),
+			    NULL, NULL, /* FIXME: i18n: The maximum
+                                           length (in bytes) of a target
+                                           hardware watchpoint is %s.  */
+			    &remote_set_cmdlist, &remote_show_cmdlist);
   add_setshow_zinteger_cmd ("hardware-breakpoint-limit", no_class,
 			    &remote_hw_breakpoint_limit, _("\
 Set the maximum number of target hardware breakpoints."), _("\
@@ -10887,6 +10936,9 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
 
   add_packet_config_cmd (&remote_protocol_packets[PACKET_qXfer_statictrace_read],
                          "qXfer:statictrace:read", "read-sdata-object", 0);
+
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_qXfer_fdpic],
+			 "qXfer:fdpic:read", "read-fdpic-loadmap", 0);
 
   /* Keep the old ``set remote Z-packet ...'' working.  Each individual
      Z sub-packet has its own set and show commands, but users may

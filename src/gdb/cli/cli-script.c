@@ -317,12 +317,12 @@ execute_user_command (struct cmd_list_element *c, char *args)
   static int user_call_depth = 0;
   extern int max_user_call_depth;
 
-  old_chain = setup_user_args (args);
-
   cmdlines = c->user_commands;
   if (cmdlines == 0)
     /* Null command */
     return;
+
+  old_chain = setup_user_args (args);
 
   if (++user_call_depth > max_user_call_depth)
     error (_("Max user call depth exceeded -- command aborted."));
@@ -1661,7 +1661,7 @@ show_user_1 (struct cmd_list_element *c, char *prefix, char *name,
     return;
   fprintf_filtered (stream, "User command \"%s%s\":\n", prefix, name);
 
-  print_command_lines (uiout, cmdlines, 1);
+  print_command_lines (current_uiout, cmdlines, 1);
   fputs_filtered ("\n", stream);
 }
 

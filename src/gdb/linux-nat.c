@@ -31,6 +31,7 @@
 #include <sys/ptrace.h>
 #include "linux-nat.h"
 #include "linux-ptrace.h"
+#include "linux-procfs.h"
 #include "linux-fork.h"
 #include "gdbthread.h"
 #include "gdbcmd.h"
@@ -57,6 +58,7 @@
 #include "terminal.h"
 #include <sys/vfs.h>
 #include "solib.h"
+#include "linux-osdata.h"
 
 #ifndef SPUFS_MAGIC
 #define SPUFS_MAGIC 0x23c9b64e
@@ -250,14 +252,10 @@ static int linux_supports_tracesysgood_flag = -1;
 
 static int linux_supports_tracevforkdone_flag = -1;
 
-/* Async mode support.  */
-
-/* Zero if the async mode, although enabled, is masked, which means
-   linux_nat_wait should behave as if async mode was off.  */
-static int linux_nat_async_mask_value = 1;
-
 /* Stores the current used ptrace() options.  */
 static int current_ptrace_options = 0;
+
+/* Async mode support.  */
 
 /* The read/write ends of the pipe registered as waitable file in the
    event loop.  */
@@ -306,7 +304,6 @@ static void linux_nat_async (void (*callback)
 			     (enum inferior_event_type event_type,
 			      void *context),
 			     void *context);
-static int linux_nat_async_mask (int mask);
 static int kill_lwp (int lwpid, int signo);
 
 static int stop_callback (struct lwp_info *lp, void *data);
@@ -1287,34 +1284,6 @@ exit_lwp (struct lwp_info *lp)
     }
 
   delete_lwp (lp->ptid);
-}
-
-/* Return an lwp's tgid, found in `/proc/PID/status'.  */
-
-int
-linux_proc_get_tgid (int lwpid)
-{
-  FILE *status_file;
-  char buf[100];
-  int tgid = -1;
-
-  snprintf (buf, sizeof (buf), "/proc/%d/status", (int) lwpid);
-  status_file = fopen (buf, "r");
-  if (status_file != NULL)
-    {
-      while (fgets (buf, sizeof (buf), status_file))
-	{
-	  if (strncmp (buf, "Tgid:", 5) == 0)
-	    {
-	      tgid = strtoul (buf + strlen ("Tgid:"), NULL, 10);
-	      break;
-	    }
-	}
-
-      fclose (status_file);
-    }
-
-  return tgid;
 }
 
 /* Detect `T (stopped)' in `/proc/PID/status'.
@@ -5119,148 +5088,9 @@ linux_nat_xfer_osdata (struct target_ops *ops, enum target_object object,
 		       const char *annex, gdb_byte *readbuf,
 		       const gdb_byte *writebuf, ULONGEST offset, LONGEST len)
 {
-  /* We make the process list snapshot when the object starts to be
-     read.  */
-  static const char *buf;
-  static LONGEST len_avail = -1;
-  static struct obstack obstack;
-
-  DIR *dirp;
-
   gdb_assert (object == TARGET_OBJECT_OSDATA);
 
-  if (!annex)
-    {
-      if (offset == 0)
-	{
-	  if (len_avail != -1 && len_avail != 0)
-	    obstack_free (&obstack, NULL);
-	  len_avail = 0;
-	  buf = NULL;
-	  obstack_init (&obstack);
-	  obstack_grow_str (&obstack, "<osdata type=\"types\">\n");
-
-	  obstack_xml_printf (&obstack,
-			      "<item>"
-			      "<column name=\"Type\">processes</column>"
-			      "<column name=\"Description\">"
-			      "Listing of all processes</column>"
-			      "</item>");
-
-	  obstack_grow_str0 (&obstack, "</osdata>\n");
-	  buf = obstack_finish (&obstack);
-	  len_avail = strlen (buf);
-	}
-
-      if (offset >= len_avail)
-	{
-	  /* Done.  Get rid of the obstack.  */
-	  obstack_free (&obstack, NULL);
-	  buf = NULL;
-	  len_avail = 0;
-	  return 0;
-	}
-
-      if (len > len_avail - offset)
-	len = len_avail - offset;
-      memcpy (readbuf, buf + offset, len);
-
-      return len;
-    }
-
-  if (strcmp (annex, "processes") != 0)
-    return 0;
-
-  gdb_assert (readbuf && !writebuf);
-
-  if (offset == 0)
-    {
-      if (len_avail != -1 && len_avail != 0)
-	obstack_free (&obstack, NULL);
-      len_avail = 0;
-      buf = NULL;
-      obstack_init (&obstack);
-      obstack_grow_str (&obstack, "<osdata type=\"processes\">\n");
-
-      dirp = opendir ("/proc");
-      if (dirp)
-	{
-	  struct dirent *dp;
-
-	  while ((dp = readdir (dirp)) != NULL)
-	    {
-	      struct stat statbuf;
-	      char procentry[sizeof ("/proc/4294967295")];
-
-	      if (!isdigit (dp->d_name[0])
-		  || NAMELEN (dp) > sizeof ("4294967295") - 1)
-		continue;
-
-	      sprintf (procentry, "/proc/%s", dp->d_name);
-	      if (stat (procentry, &statbuf) == 0
-		  && S_ISDIR (statbuf.st_mode))
-		{
-		  char *pathname;
-		  FILE *f;
-		  char cmd[MAXPATHLEN + 1];
-		  struct passwd *entry;
-
-		  pathname = xstrprintf ("/proc/%s/cmdline", dp->d_name);
-		  entry = getpwuid (statbuf.st_uid);
-
-		  if ((f = fopen (pathname, "r")) != NULL)
-		    {
-		      size_t length = fread (cmd, 1, sizeof (cmd) - 1, f);
-
-		      if (length > 0)
-			{
-			  int i;
-
-			  for (i = 0; i < length; i++)
-			    if (cmd[i] == '\0')
-			      cmd[i] = ' ';
-			  cmd[length] = '\0';
-
-			  obstack_xml_printf (
-			    &obstack,
-			    "<item>"
-			    "<column name=\"pid\">%s</column>"
-			    "<column name=\"user\">%s</column>"
-			    "<column name=\"command\">%s</column>"
-			    "</item>",
-			    dp->d_name,
-			    entry ? entry->pw_name : "?",
-			    cmd);
-			}
-		      fclose (f);
-		    }
-
-		  xfree (pathname);
-		}
-	    }
-
-	  closedir (dirp);
-	}
-
-      obstack_grow_str0 (&obstack, "</osdata>\n");
-      buf = obstack_finish (&obstack);
-      len_avail = strlen (buf);
-    }
-
-  if (offset >= len_avail)
-    {
-      /* Done.  Get rid of the obstack.  */
-      obstack_free (&obstack, NULL);
-      buf = NULL;
-      len_avail = 0;
-      return 0;
-    }
-
-  if (len > len_avail - offset)
-    len = len_avail - offset;
-  memcpy (readbuf, buf + offset, len);
-
-  return len;
+  return linux_common_xfer_osdata (annex, readbuf, offset, len);
 }
 
 static LONGEST
@@ -5359,11 +5189,7 @@ linux_nat_is_async_p (void)
   /* NOTE: palves 2008-03-21: We're only async when the user requests
      it explicitly with the "set target-async" command.
      Someday, linux will always be async.  */
-  if (!target_async_permitted)
-    return 0;
-
-  /* See target.h/target_async_mask.  */
-  return linux_nat_async_mask_value;
+  return target_async_permitted;
 }
 
 /* target_can_async_p implementation.  */
@@ -5374,11 +5200,7 @@ linux_nat_can_async_p (void)
   /* NOTE: palves 2008-03-21: We're only async when the user requests
      it explicitly with the "set target-async" command.
      Someday, linux will always be async.  */
-  if (!target_async_permitted)
-    return 0;
-
-  /* See target.h/target_async_mask.  */
-  return linux_nat_async_mask_value;
+  return target_async_permitted;
 }
 
 static int
@@ -5396,37 +5218,6 @@ static int
 linux_nat_supports_multi_process (void)
 {
   return linux_multi_process;
-}
-
-/* target_async_mask implementation.  */
-
-static int
-linux_nat_async_mask (int new_mask)
-{
-  int curr_mask = linux_nat_async_mask_value;
-
-  if (curr_mask != new_mask)
-    {
-      if (new_mask == 0)
-	{
-	  linux_nat_async (NULL, 0);
-	  linux_nat_async_mask_value = new_mask;
-	}
-      else
-	{
-	  linux_nat_async_mask_value = new_mask;
-
-	  /* If we're going out of async-mask in all-stop, then the
-	     inferior is stopped.  The next resume will call
-	     target_async.  In non-stop, the target event source
-	     should be always registered in the event loop.  Do so
-	     now.  */
-	  if (non_stop)
-	    linux_nat_async (inferior_event_handler, 0);
-	}
-    }
-
-  return curr_mask;
 }
 
 static int async_terminal_is_ours = 1;
@@ -5555,10 +5346,6 @@ static void
 linux_nat_async (void (*callback) (enum inferior_event_type event_type,
 				   void *context), void *context)
 {
-  if (linux_nat_async_mask_value == 0 || !target_async_permitted)
-    internal_error (__FILE__, __LINE__,
-		    "Calling target_async when async is masked");
-
   if (callback != NULL)
     {
       async_client_callback = callback;
@@ -5650,9 +5437,6 @@ linux_nat_close (int quitting)
   /* Unregister from the event loop.  */
   if (target_is_async_p ())
     target_async (NULL, 0);
-
-  /* Reset the async_masking.  */
-  linux_nat_async_mask_value = 1;
 
   if (linux_ops->to_close)
     linux_ops->to_close (quitting);
@@ -5800,7 +5584,6 @@ linux_nat_add_target (struct target_ops *t)
   t->to_is_async_p = linux_nat_is_async_p;
   t->to_supports_non_stop = linux_nat_supports_non_stop;
   t->to_async = linux_nat_async;
-  t->to_async_mask = linux_nat_async_mask;
   t->to_terminal_inferior = linux_nat_terminal_inferior;
   t->to_terminal_ours = linux_nat_terminal_ours;
   t->to_close = linux_nat_close;

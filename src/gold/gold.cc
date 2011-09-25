@@ -1,6 +1,6 @@
 // gold.cc -- main linker functions
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -30,6 +30,7 @@
 #include "libiberty.h"
 
 #include "options.h"
+#include "target-select.h"
 #include "debug.h"
 #include "workqueue.h"
 #include "dirsearch.h"
@@ -58,15 +59,15 @@ process_incremental_input(Incremental_binary*, unsigned int, Input_objects*,
 			  Task_token*, Task_token*);
 
 void
-gold_exit(bool status)
+gold_exit(Exit_status status)
 {
   if (parameters != NULL
       && parameters->options_valid()
       && parameters->options().has_plugins())
     parameters->options().plugins()->cleanup();
-  if (!status && parameters != NULL && parameters->options_valid())
+  if (status != GOLD_OK && parameters != NULL && parameters->options_valid())
     unlink_if_ordinary(parameters->options().output_file_name());
-  exit(status ? EXIT_SUCCESS : EXIT_FAILURE);
+  exit(status);
 }
 
 void
@@ -87,7 +88,7 @@ gold_nomem()
       const char* const s = ": out of memory\n";
       len = write(2, s, strlen(s));
     }
-  gold_exit(false);
+  gold_exit(GOLD_ERR);
 }
 
 // Handle an unreachable case.
@@ -97,7 +98,7 @@ do_gold_unreachable(const char* filename, int lineno, const char* function)
 {
   fprintf(stderr, _("%s: internal error in %s, at %s:%d\n"),
 	  program_name, function, filename, lineno);
-  gold_exit(false);
+  gold_exit(GOLD_ERR);
 }
 
 // This class arranges to run the functions done in the middle of the
@@ -175,8 +176,16 @@ queue_initial_tasks(const General_options& options,
 {
   if (cmdline.begin() == cmdline.end())
     {
+      bool is_ok = false;
       if (options.printed_version())
-	gold_exit(true);
+	is_ok = true;
+      if (options.print_output_format())
+	{
+	  print_output_format();
+	  is_ok = true;
+	}
+      if (is_ok)
+	gold_exit(GOLD_OK);
       gold_fatal(_("no input files"));
     }
 
@@ -200,6 +209,9 @@ queue_initial_tasks(const General_options& options,
 	gold_error(_("incremental linking is incompatible with --icf"));
       if (options.has_plugins())
 	gold_error(_("incremental linking is incompatible with --plugin"));
+      if (strcmp(options.compress_debug_sections(), "none") != 0)
+	gold_error(_("incremental linking is incompatible with "
+		     "--compress-debug-sections"));
 
       if (parameters->incremental_update())
 	{
@@ -222,7 +234,7 @@ queue_initial_tasks(const General_options& options,
 	      if (set_parameters_incremental_full())
 		gold_info(_("linking with --incremental-full"));
 	      else
-		gold_fatal(_("restart link with --incremental-full"));
+		gold_fallback(_("restart link with --incremental-full"));
 	    }
 	}
     }
@@ -622,11 +634,13 @@ queue_middle_tasks(const General_options& options,
 	}
     }
 
-  // For incremental updates, record the existing GOT and PLT entries.
+  // For incremental updates, record the existing GOT and PLT entries,
+  // and the COPY relocations.
   if (parameters->incremental_update())
     {
       Incremental_binary* ibase = layout->incremental_base();
       ibase->process_got_plt(symtab, layout);
+      ibase->emit_copy_relocs(symtab);
     }
 
   if (is_debugging_enabled(DEBUG_SCRIPT))
@@ -746,7 +760,7 @@ queue_middle_tasks(const General_options& options,
 	  // THIS_BLOCKER to be NULL here.  There's no real point in
 	  // continuing if that happens.
 	  gold_assert(parameters->errors()->error_count() > 0);
-	  gold_exit(false);
+	  gold_exit(GOLD_ERR);
 	}
     }
 

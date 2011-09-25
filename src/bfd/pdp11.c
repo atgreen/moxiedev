@@ -1,5 +1,5 @@
 /* BFD back-end for PDP-11 a.out binaries.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2009, 2010
+   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2009, 2010, 2011
    Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -2892,8 +2892,9 @@ aout_link_includes_newfunc (struct bfd_hash_entry *entry,
 }
 
 static bfd_boolean
-aout_link_write_other_symbol (struct aout_link_hash_entry *h, void * data)
+aout_link_write_other_symbol (struct bfd_hash_entry *bh, void *data)
 {
+  struct aout_link_hash_entry *h = (struct aout_link_hash_entry *) bh;
   struct aout_final_link_info *finfo = (struct aout_final_link_info *) data;
   bfd *output_bfd;
   int type;
@@ -3056,7 +3057,7 @@ aout_link_reloc_link_order (struct aout_final_link_info *finfo,
 	     symbol.  */
 	  h->indx = -2;
 	  h->written = FALSE;
-	  if (! aout_link_write_other_symbol (h, (void *) finfo))
+	  if (!aout_link_write_other_symbol (&h->root.root, finfo))
 	    return FALSE;
 	  r_index = h->indx;
 	}
@@ -3335,8 +3336,8 @@ pdp11_aout_link_input_section (struct aout_final_link_info *finfo,
 			    {
 			      h->indx = -2;
 			      h->written = FALSE;
-			      if (! aout_link_write_other_symbol (h,
-								  (void *) finfo))
+			      if (!aout_link_write_other_symbol (&h->root.root,
+								 finfo))
 				return FALSE;
 			    }
 			  r_index = h->indx;
@@ -3799,7 +3800,7 @@ NAME (aout, final_link) (bfd *abfd,
     h = aout_link_hash_lookup (aout_hash_table (info), "__DYNAMIC",
 			       FALSE, FALSE, FALSE);
     if (h != NULL)
-      aout_link_write_other_symbol (h, &aout_info);
+      aout_link_write_other_symbol (&h->root.root, &aout_info);
   }
 
   /* The most time efficient way to do the link would be to read all
@@ -3871,9 +3872,9 @@ NAME (aout, final_link) (bfd *abfd,
     }
 
   /* Write out any symbols that we have not already written out.  */
-  aout_link_hash_traverse (aout_hash_table (info),
-			   aout_link_write_other_symbol,
-			   (void *) &aout_info);
+  bfd_hash_traverse (&info->hash->table,
+		     aout_link_write_other_symbol,
+		     &aout_info);
 
   /* Now handle any relocs we were asked to create by the linker.
      These did not come from any input file.  We must do these after
@@ -4511,6 +4512,7 @@ const bfd_target MY (vec) =
   MY_symbol_leading_char,
   AR_PAD_CHAR,			/* AR_pad_char.  */
   15,				/* AR_max_namelen.  */
+  0,				/* match priority.  */
   bfd_getl64, bfd_getl_signed_64, bfd_putl64,
      bfd_getp32, bfd_getp_signed_32, bfd_putp32,
      bfd_getl16, bfd_getl_signed_16, bfd_putl16, /* Data.  */

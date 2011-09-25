@@ -150,7 +150,8 @@ fnpy_call (struct gdbarch *gdbarch, const struct language_defn *language,
 static int
 fnpy_init (PyObject *self, PyObject *args, PyObject *kwds)
 {
-  char *name, *docstring = NULL;
+  const char *name;
+  char *docstring = NULL;
 
   if (! PyArg_ParseTuple (args, "s", &name))
     return -1;
@@ -181,6 +182,7 @@ fnpy_init (PyObject *self, PyObject *args, PyObject *kwds)
 void
 gdbpy_initialize_functions (void)
 {
+  fnpy_object_type.tp_new = PyType_GenericNew;
   if (PyType_Ready (&fnpy_object_type) < 0)
     return;
 
@@ -230,5 +232,4 @@ static PyTypeObject fnpy_object_type =
   0,				  /* tp_dictoffset */
   fnpy_init,			  /* tp_init */
   0,				  /* tp_alloc */
-  PyType_GenericNew		  /* tp_new */
 };

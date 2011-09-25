@@ -421,6 +421,7 @@ Sized_relobj_file<size, big_endian>::Sized_relobj_file(
     deferred_layout_relocs_(),
     compressed_sections_()
 {
+  this->e_type_ = ehdr.get_e_type();
 }
 
 template<int size, bool big_endian>
@@ -511,7 +512,9 @@ bool
 Sized_relobj_file<size, big_endian>::check_eh_frame_flags(
     const elfcpp::Shdr<size, big_endian>* shdr) const
 {
-  return (shdr->get_sh_type() == elfcpp::SHT_PROGBITS
+  elfcpp::Elf_Word sh_type = shdr->get_sh_type();
+  return ((sh_type == elfcpp::SHT_PROGBITS
+	   || sh_type == elfcpp::SHT_X86_64_UNWIND)
 	  && (shdr->get_sh_flags() & elfcpp::SHF_ALLOC) != 0);
 }
 
@@ -746,10 +749,11 @@ Sized_relobj_file<size, big_endian>::include_section_group(
   // just like ordinary sections.
   elfcpp::Elf_Word flags = elfcpp::Swap<32, big_endian>::readval(pword);
 
-  // Look up the group signature, which is the name of a symbol.  This
-  // is a lot of effort to go to to read a string.  Why didn't they
-  // just have the group signature point into the string table, rather
-  // than indirect through a symbol?
+  // Look up the group signature, which is the name of a symbol.  ELF
+  // uses a symbol name because some group signatures are long, and
+  // the name is generally already in the symbol table, so it makes
+  // sense to put the long string just once in .strtab rather than in
+  // both .strtab and .shstrtab.
 
   // Get the appropriate symbol table header (this will normally be
   // the single SHT_SYMTAB section, but in principle it need not be).
@@ -1016,12 +1020,13 @@ Sized_relobj_file<size, big_endian>::include_linkonce_section(
 
 template<int size, bool big_endian>
 inline void
-Sized_relobj_file<size, big_endian>::layout_section(Layout* layout,
-						    unsigned int shndx,
-						    const char* name,
-						    typename This::Shdr& shdr,
-						    unsigned int reloc_shndx,
-						    unsigned int reloc_type)
+Sized_relobj_file<size, big_endian>::layout_section(
+    Layout* layout,
+    unsigned int shndx,
+    const char* name,
+    const typename This::Shdr& shdr,
+    unsigned int reloc_shndx,
+    unsigned int reloc_type)
 {
   off_t offset;
   Output_section* os = layout->layout(this, shndx, name, shdr,
@@ -1037,6 +1042,53 @@ Sized_relobj_file<size, big_endian>::layout_section(Layout* layout,
   // relocs that apply to it, then we must do the special handling
   // before we apply the relocs.
   if (offset == -1 && reloc_shndx != 0)
+    this->set_relocs_must_follow_section_writes();
+}
+
+// Layout an input .eh_frame section.
+
+template<int size, bool big_endian>
+void
+Sized_relobj_file<size, big_endian>::layout_eh_frame_section(
+    Layout* layout,
+    const unsigned char* symbols_data,
+    section_size_type symbols_size,
+    const unsigned char* symbol_names_data,
+    section_size_type symbol_names_size,
+    unsigned int shndx,
+    const typename This::Shdr& shdr,
+    unsigned int reloc_shndx,
+    unsigned int reloc_type)
+{
+  gold_assert(this->has_eh_frame_);
+
+  off_t offset;
+  Output_section* os = layout->layout_eh_frame(this,
+					       symbols_data,
+					       symbols_size,
+					       symbol_names_data,
+					       symbol_names_size,
+					       shndx,
+					       shdr,
+					       reloc_shndx,
+					       reloc_type,
+					       &offset);
+  this->output_sections()[shndx] = os;
+  if (os == NULL || offset == -1)
+    {
+      // An object can contain at most one section holding exception
+      // frame information.
+      gold_assert(this->discarded_eh_frame_shndx_ == -1U);
+      this->discarded_eh_frame_shndx_ = shndx;
+      this->section_offsets()[shndx] = invalid_address;
+    }
+  else
+    this->section_offsets()[shndx] = convert_types<Address, off_t>(offset);
+
+  // If this section requires special handling, and if there are
+  // relocs that aply to it, then we must do the special handling
+  // before we apply the relocs.
+  if (os != NULL && offset == -1 && reloc_shndx != 0)
     this->set_relocs_must_follow_section_writes();
 }
 
@@ -1243,7 +1295,7 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
         { 
           if (this->handle_gnu_warning_section(name, i, symtab))
             { 
-    	      if (!relocatable)
+    	      if (!relocatable && !parameters->options().shared())
 	        omit[i] = true;
 	    }
 
@@ -1262,8 +1314,7 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
 	  // -fsplit-stack.
 	  if (this->handle_split_stack_section(name))
 	    {
-	      if (!parameters->options().relocatable()
-		  && !parameters->options().shared())
+	      if (!relocatable && !parameters->options().shared())
 		omit[i] = true;
 	    }
 
@@ -1299,8 +1350,13 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
 	      && (shdr.get_sh_type() == elfcpp::SHT_PROGBITS
 	          || shdr.get_sh_type() == elfcpp::SHT_NOBITS
 	          || shdr.get_sh_type() == elfcpp::SHT_NOTE))
-	    incremental_inputs->report_input_section(this, i, name,
-						     shdr.get_sh_size());
+	    {
+	      off_t sh_size = shdr.get_sh_size();
+	      section_size_type uncompressed_size;
+	      if (this->section_is_compressed(i, &uncompressed_size))
+		sh_size = uncompressed_size;
+	      incremental_inputs->report_input_section(this, i, name, sh_size);
+	    }
 
           if (discard)
             {
@@ -1361,7 +1417,12 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
               out_sections[i] = reinterpret_cast<Output_section*>(1);
               out_section_offsets[i] = invalid_address;
             }
-          else
+          else if (should_defer_layout)
+	    this->deferred_layout_.push_back(Deferred_layout(i, name,
+							     pshdrs,
+							     reloc_shndx[i],
+							     reloc_type[i]));
+	  else
             eh_frame_sections.push_back(i);
           continue;
         }
@@ -1521,7 +1582,6 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
        p != eh_frame_sections.end();
        ++p)
     {
-      gold_assert(this->has_eh_frame_);
       gold_assert(external_symbols_offset != 0);
 
       unsigned int i = *p;
@@ -1529,33 +1589,15 @@ Sized_relobj_file<size, big_endian>::do_layout(Symbol_table* symtab,
       pshdr = section_headers_data + i * This::shdr_size;
       typename This::Shdr shdr(pshdr);
 
-      off_t offset;
-      Output_section* os = layout->layout_eh_frame(this,
-						   symbols_data,
-						   symbols_size,
-						   symbol_names_data,
-						   symbol_names_size,
-						   i, shdr,
-						   reloc_shndx[i],
-						   reloc_type[i],
-						   &offset);
-      out_sections[i] = os;
-      if (os == NULL || offset == -1)
-	{
-	  // An object can contain at most one section holding exception
-	  // frame information.
-	  gold_assert(this->discarded_eh_frame_shndx_ == -1U);
-	  this->discarded_eh_frame_shndx_ = i;
-	  out_section_offsets[i] = invalid_address;
-	}
-      else
-        out_section_offsets[i] = convert_types<Address, off_t>(offset);
-
-      // If this section requires special handling, and if there are
-      // relocs that apply to it, then we must do the special handling
-      // before we apply the relocs.
-      if (os != NULL && offset == -1 && reloc_shndx[i] != 0)
-	this->set_relocs_must_follow_section_writes();
+      this->layout_eh_frame_section(layout,
+				    symbols_data,
+				    symbols_size,
+				    symbol_names_data,
+				    symbol_names_size,
+				    i,
+				    shdr,
+				    reloc_shndx[i],
+				    reloc_type[i]);
     }
 
   if (is_gc_pass_two)
@@ -1594,8 +1636,27 @@ Sized_relobj_file<size, big_endian>::do_layout_deferred_sections(Layout* layout)
       if (!this->is_section_included(deferred->shndx_))
         continue;
 
-      this->layout_section(layout, deferred->shndx_, deferred->name_.c_str(),
-                           shdr, deferred->reloc_shndx_, deferred->reloc_type_);
+      if (parameters->options().relocatable()
+	  || deferred->name_ != ".eh_frame"
+	  || !this->check_eh_frame_flags(&shdr))
+	this->layout_section(layout, deferred->shndx_, deferred->name_.c_str(),
+			     shdr, deferred->reloc_shndx_,
+			     deferred->reloc_type_);
+      else
+	{
+	  // Reading the symbols again here may be slow.
+	  Read_symbols_data sd;
+	  this->read_symbols(&sd);
+	  this->layout_eh_frame_section(layout,
+					sd.symbols->data(),
+					sd.symbols_size,
+					sd.symbol_names->data(),
+					sd.symbol_names_size,
+					deferred->shndx_,
+					shdr,
+					deferred->reloc_shndx_,
+					deferred->reloc_type_);
+	}
     }
 
   this->deferred_layout_.clear();

@@ -1,6 +1,6 @@
 // script.cc -- handle linker scripts for gold.
 
-// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -146,13 +146,7 @@ class Token
   }
 
   uint64_t
-  integer_value() const
-  {
-    gold_assert(this->classification_ == TOKEN_INTEGER);
-    // Null terminate.
-    std::string s(this->value_, this->value_length_);
-    return strtoull(s.c_str(), NULL, 0);
-  }
+  integer_value() const;
 
  private:
   // The token classification.
@@ -170,6 +164,35 @@ class Token
   // (one based).
   int charpos_;
 };
+
+// Return the value of a TOKEN_INTEGER.
+
+uint64_t
+Token::integer_value() const
+{
+  gold_assert(this->classification_ == TOKEN_INTEGER);
+
+  size_t len = this->value_length_;
+
+  uint64_t multiplier = 1;
+  char last = this->value_[len - 1];
+  if (last == 'm' || last == 'M')
+    {
+      multiplier = 1024 * 1024;
+      --len;
+    }
+  else if (last == 'k' || last == 'K')
+    {
+      multiplier = 1024;
+      --len;
+    }
+
+  char *end;
+  uint64_t ret = strtoull(this->value_, &end, 0);
+  gold_assert(static_cast<size_t>(end - this->value_) == len);
+
+  return ret * multiplier;
+}
 
 // This class handles lexing a file into a sequence of tokens.
 
@@ -474,9 +497,7 @@ Lex::can_continue_name(const char* c)
 // For a number we accept 0x followed by hex digits, or any sequence
 // of digits.  The old linker accepts leading '$' for hex, and
 // trailing HXBOD.  Those are for MRI compatibility and we don't
-// accept them.  The old linker also accepts trailing MK for mega or
-// kilo.  FIXME: Those are mentioned in the documentation, and we
-// should accept them.
+// accept them.
 
 // Return whether C1 C2 C3 can start a hex number.
 
@@ -703,8 +724,15 @@ Lex::gather_token(Token::Classification classification,
 		  const char** pp)
 {
   const char* new_match = NULL;
-  while ((new_match = (this->*can_continue_fn)(match)))
+  while ((new_match = (this->*can_continue_fn)(match)) != NULL)
     match = new_match;
+
+  // A special case: integers may be followed by a single M or K,
+  // case-insensitive.
+  if (classification == Token::TOKEN_INTEGER
+      && (*match == 'm' || *match == 'M' || *match == 'k' || *match == 'K'))
+    ++match;
+
   *pp = match;
   return this->make_token(classification, start, match - start, start);
 }
@@ -2804,7 +2832,7 @@ script_check_output_format(void* closurev,
 {
   Parser_closure* closure = static_cast<Parser_closure*>(closurev);
   std::string name(default_name, default_length);
-  Target* target = select_target_by_name(name.c_str());
+  Target* target = select_target_by_bfd_name(name.c_str());
   if (target == NULL || !parameters->is_compatible_target(target))
     {
       if (closure->skip_on_incompatible_target())

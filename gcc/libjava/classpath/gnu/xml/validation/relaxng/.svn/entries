@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/xml/validation/relaxng
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ gandalf
 
 2020
 
-NameClass.java
-file
-
-
-
-
-2011-06-04T18:38:06.452105Z
-1a3c7718445858bdcfc51db2d1553c8a
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1957
-
 NotAllowedPattern.java
 file
 
@@ -230,14 +196,14 @@ gandalf
 
 1997
 
-DataPattern.java
+NameClass.java
 file
 
 
 
 
-2011-06-04T18:38:06.453105Z
-883e45f1b2d8b3148e39d70543a96038
+2011-06-04T18:38:06.452105Z
+1a3c7718445858bdcfc51db2d1553c8a
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -262,7 +228,7 @@ gandalf
 
 
 
-2157
+1957
 
 NameNameClass.java
 file
@@ -298,6 +264,40 @@ gandalf
 
 2085
 
+DataPattern.java
+file
+
+
+
+
+2011-06-04T18:38:06.453105Z
+883e45f1b2d8b3148e39d70543a96038
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2157
+
 NSNameNameClass.java
 file
 
@@ -331,40 +331,6 @@ gandalf
 
 
 2168
-
-ListPattern.java
-file
-
-
-
-
-2011-06-04T18:38:06.454105Z
-2306f05e947044ab7ed7d1ecf69224db
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1929
 
 RELAXNGSchemaFactory.java
 file
@@ -400,14 +366,14 @@ gandalf
 
 5229
 
-RefPattern.java
+ListPattern.java
 file
 
 
 
 
 2011-06-04T18:38:06.454105Z
-88cfc49bc65b697f609b1a038926f7bd
+2306f05e947044ab7ed7d1ecf69224db
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -432,7 +398,7 @@ gandalf
 
 
 
-1922
+1929
 
 ValuePattern.java
 file
@@ -467,6 +433,40 @@ gandalf
 
 
 2078
+
+RefPattern.java
+file
+
+
+
+
+2011-06-04T18:38:06.454105Z
+88cfc49bc65b697f609b1a038926f7bd
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1922
 
 Pattern.java
 file

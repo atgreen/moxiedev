@@ -5730,11 +5730,18 @@ prepare_call_arguments (basic_block bb, rtx insn)
       {
 	rtx item = NULL_RTX;
 	x = XEXP (XEXP (link, 0), 0);
-	if (REG_P (x))
+	if (GET_MODE (link) == VOIDmode
+	    || GET_MODE (link) == BLKmode
+	    || (GET_MODE (link) != GET_MODE (x)
+		&& (GET_MODE_CLASS (GET_MODE (link)) != MODE_INT
+		    || GET_MODE_CLASS (GET_MODE (x)) != MODE_INT)))
+	  /* Can't do anything for these, if the original type mode
+	     isn't known or can't be converted.  */;
+	else if (REG_P (x))
 	  {
 	    cselib_val *val = cselib_lookup (x, GET_MODE (x), 0, VOIDmode);
 	    if (val && cselib_preserved_value_p (val))
-	      item = gen_rtx_CONCAT (GET_MODE (x), x, val->val_rtx);
+	      item = val->val_rtx;
 	    else if (GET_MODE_CLASS (GET_MODE (x)) == MODE_INT)
 	      {
 		enum machine_mode mode = GET_MODE (x);
@@ -5749,10 +5756,7 @@ prepare_call_arguments (basic_block bb, rtx insn)
 		    val = cselib_lookup (reg, mode, 0, VOIDmode);
 		    if (val && cselib_preserved_value_p (val))
 		      {
-			item = gen_rtx_CONCAT (GET_MODE (x), x,
-					       lowpart_subreg (GET_MODE (x),
-							       val->val_rtx,
-							       mode));
+			item = val->val_rtx;
 			break;
 		      }
 		  }
@@ -5776,7 +5780,7 @@ prepare_call_arguments (basic_block bb, rtx insn)
 	      }
 	    val = cselib_lookup (mem, GET_MODE (mem), 0, VOIDmode);
 	    if (val && cselib_preserved_value_p (val))
-	      item = gen_rtx_CONCAT (GET_MODE (x), copy_rtx (x), val->val_rtx);
+	      item = val->val_rtx;
 	    else if (GET_MODE_CLASS (GET_MODE (mem)) != MODE_INT)
 	      {
 		/* For non-integer stack argument see also if they weren't
@@ -5787,15 +5791,22 @@ prepare_call_arguments (basic_block bb, rtx insn)
 		    val = cselib_lookup (adjust_address_nv (mem, imode, 0),
 					 imode, 0, VOIDmode);
 		    if (val && cselib_preserved_value_p (val))
-		      item = gen_rtx_CONCAT (GET_MODE (x), copy_rtx (x),
-					     lowpart_subreg (GET_MODE (x),
-							     val->val_rtx,
-							     imode));
+		      item = lowpart_subreg (GET_MODE (x), val->val_rtx,
+					     imode);
 		  }
 	      }
 	  }
 	if (item)
-	  call_arguments = gen_rtx_EXPR_LIST (VOIDmode, item, call_arguments);
+	  {
+	    rtx x2 = x;
+	    if (GET_MODE (item) != GET_MODE (link))
+	      item = lowpart_subreg (GET_MODE (link), item, GET_MODE (item));
+	    if (GET_MODE (x2) != GET_MODE (link))
+	      x2 = lowpart_subreg (GET_MODE (link), x2, GET_MODE (x2));
+	    item = gen_rtx_CONCAT (GET_MODE (link), x2, item);
+	    call_arguments
+	      = gen_rtx_EXPR_LIST (VOIDmode, item, call_arguments);
+	  }
 	if (t && t != void_list_node)
 	  {
 	    tree argtype = TREE_VALUE (t);
@@ -8488,13 +8499,13 @@ create_entry_value (rtx rtl, cselib_val *val)
   cselib_val *val2;
   struct elt_loc_list *el;
   el = (struct elt_loc_list *) ggc_alloc_cleared_atomic (sizeof (*el));
-  el->next = val->locs;
   el->loc = gen_rtx_ENTRY_VALUE (GET_MODE (rtl));
   ENTRY_VALUE_EXP (el->loc) = rtl;
-  el->setting_insn = get_insns ();
-  val->locs = el;
   val2 = cselib_lookup_from_insn (el->loc, GET_MODE (rtl), true,
 				  VOIDmode, get_insns ());
+  el->next = val->locs;
+  el->setting_insn = get_insns ();
+  val->locs = el;
   if (val2
       && val2 != val
       && val2->locs

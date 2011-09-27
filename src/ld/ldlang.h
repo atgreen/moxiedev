@@ -270,12 +270,13 @@ typedef struct lang_input_statement_struct
   /* Whether to search for this entry as a dynamic archive.  */
   unsigned int dynamic : 1;
 
-  /* Whether DT_NEEDED tags should be added for dynamic libraries in
-     DT_NEEDED tags from this entry.  */
+  /* Set if a DT_NEEDED tag should be added not just for the dynamic library
+     explicitly given by this entry but also for any dynamic libraries in
+     this entry's needed list.  */
   unsigned int add_DT_NEEDED_for_dynamic : 1;
 
-  /* Whether this entry should cause a DT_NEEDED tag only when
-     satisfying references from regular files, or always.  */
+  /* Set if this entry should cause a DT_NEEDED tag only when some
+     regular file references its symbols (ie. --as-needed is in effect).  */
   unsigned int add_DT_NEEDED_for_regular : 1;
 
   /* Whether to include the entire contents of an archive.  */
@@ -295,6 +296,9 @@ typedef struct lang_input_statement_struct
 
   /* Set if the file was claimed from an archive.  */
   unsigned int claim_archive : 1;
+
+  /* Set if reloading an --as-needed lib.  */
+  unsigned int reload : 1;
 #endif /* ENABLE_PLUGINS */
 
 } lang_input_statement_type;
@@ -627,8 +631,6 @@ extern void lang_leave_overlay_section
 extern void lang_leave_overlay
   (etree_type *, int, fill_type *, const char *,
    lang_output_section_phdr_list *, const char *);
-
-extern struct bfd_elf_version_tree *lang_elf_version_info;
 
 extern struct bfd_elf_version_expr *lang_new_vers_pattern
   (struct bfd_elf_version_expr *, const char *, const char *, bfd_boolean);

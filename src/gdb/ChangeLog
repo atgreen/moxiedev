@@ -1,3 +1,734 @@
+2011-09-23  Joseph Myers  <joseph@codesourcery.com>
+
+	PR gdb/13079
+	* i386-tdep.c (i386_frame_align): New.
+	(i386_gdbarch_init): Use i386_frame_align.
+
+2011-09-23  Yao Qi  <yao@codesourcery.com>
+
+	* i386-linux-nat.c (i386_linux_resume): Use read_memory_unsigned_integer
+	to get address.
+
+2011-09-22  Tristan Gingold  <gingold@adacore.com>
+
+	* fork-child.c (fork_inferior): Add exec_fun parameter.
+	Call exec_fun or execvp.
+	* inferior.h: Adjust prototype.
+	* gnu-nat.c (gnu_create_inferior): Adjust fork_inferior call.
+	* inf-ttrace.c (inf_ttrace_create_inferior): Ditto.
+	* inf-ptrace.c (inf_ptrace_create_inferior): Ditto.
+	* procfs.c (procfs_create_inferior): Ditto.
+	* darwin-nat.c (darwin_execvp): New function.
+	(darwin_create_inferior): Use it.
+
+2011-09-22  Yao Qi  <yao@codesourcery.com>
+
+	* infrun.c (context_switch): Print debug message when switching to
+	a different thread.
+
+2011-09-21  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* s390-tdep.c (s390_function_arg_pass_by_reference): Handle
+	complex and vector types.
+	(s390_return_value_convention): Likewise.
+
+	(s390_value_from_register): Call check_typedef.
+	(extend_simple_arg): Likewise.
+	(alignment_of): Likewise.
+	(s390_push_dummy_call): Likewise.
+	(s390_return_value): Likewise.
+
+2011-09-21  Joseph Myers  <joseph@codesourcery.com>
+
+	* event-top.c (async_disconnect): If an exception is thrown from
+	quit_cover, call pop_all_targets.  Use TRY_CATCH instead of
+	catch_errors.
+	* top.c (quit_cover): Return void and take no arguments.
+	* top.h (quit_cover): Update prototype.
+
+2011-09-20  Joseph Myers  <joseph@codesourcery.com>
+
+	* mi/mi-main.c (mi_load_progress): Restore saved_uiout value to
+	current_uiout, not uiout.
+
+2011-09-19  Doug Evans  <dje@google.com>
+
+	* python/py-auto-load.c (source_section_scripts): Fix file
+	descriptor leak.
+	* python/python.c (source_python_script_for_objfile): Tweak comments.
+
+2011-09-18  Yao Qi  <yao@codesourcery.com>
+	    Ulrich Weigand  <ulrich.weigand@linaro.org>
+
+	Support displaced stepping for Thumb 16-bit insns.
+	* arm-tdep.c (THUMB_NOP) Define.
+	(thumb_copy_unmodified_16bit): New.
+	(thumb_copy_b, thumb_copy_bx_blx_reg): New.
+	(thumb_copy_alu_reg): New.
+	(arm_copy_svc): Move some common code to ...
+	(install_svc): ... here.  New.
+	(thumb_copy_svc): New.
+	(install_pc_relative): New.
+	(thumb_copy_pc_relative_16bit): New.
+	(thumb_decode_pc_relative_16bit): New.
+	(thumb_copy_16bit_ldr_literal): New.
+	(thumb_copy_cbnz_cbz): New.
+	(cleanup_pop_pc_16bit_all): New.
+	(thumb_copy_pop_pc_16bit): New.
+	(thumb_process_displaced_16bit_insn): New.
+	(thumb_process_displaced_32bit_insn): New.
+	(thumb_process_displaced_insn): process thumb instruction.
+
+	Support displaced stepping for Thumb 32-bit insns.
+	* arm-tdep.c (thumb_copy_unmodified_32bit): New.
+	(thumb2_copy_preload): New.
+	(thumb2_copy_copro_load_store): New.
+	(thumb2_copy_b_bl_blx): New.
+	(thumb2_copy_alu_imm): New.
+	(thumb2_copy_load_reg_imm): New.
+	(thumb2_copy_load_literal): New
+	(thumb2_copy_block_xfer): New.
+	(thumb_32bit_copy_undef): New.
+	(thumb_32bit_copy_unpred): New.
+	(thumb2_decode_ext_reg_ld_st): New.
+	(thumb2_decode_svc_copro): New.
+	(decode_thumb_32bit_store_single_data_item): New.
+	(thumb_copy_pc_relative_32bit): New.
+	(thumb_decode_pc_relative_32bit): New.
+	(decode_thumb_32bit_ld_mem_hints): New.
+	(thumb2_copy_table_branch): New
+	(thumb_process_displaced_32bit_insn): Process Thumb 32-bit
+	instructions.
+
+2011-09-18  Yao Qi  <yao@codesourcery.com>
+
+	* arm-tdep.c (install_copro_load_store): PC is set 4-byte aligned.
+	(install_b_bl_blx): Likewise.
+
+2011-09-17  Yao Qi  <yao@codesourcery.com>
+
+        * arm-tdep.c (install_ldr_str_ldrb_strb): Renamed to ...
+        (install_load_store): ... this.  New.
+        Change parameter BYTE to SIZE.
+        (arm_copy_ldr_str_ldrb_strb): Update caller.
+        (arm_decode_ld_st_word_ubyte): Update caller.
+
+2011-09-17  Yao Qi  <yao@codesourcery.com>
+
+	* infrun.c (displaced_step_fixup): Move some code ...
+	(displaced_step_restore): ... here.  New function.
+	(handle_inferior_event): Cleanup displaced stepping state for both
+	child and parent when get forked or vforked event.
+	* regcache.c (get_thread_arch_aspace_regcache): New function.
+	get_thread_arch_regcache (): Call it.
+
+2011-09-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-tasks.c (print_ada_task_info): New function, merging
+	short_task_info and info_tasks together.  Reimplement using
+	ui-out instead of printing to stdout directly.  Move the code
+	building and checking the task list here, instead of leaving it
+	in info_tasks_command.
+	(info_task): Move the code building and checking the task
+	list here, instead of leaving it in info_tasks_command.
+	(info_tasks_command): Delete code building and checking
+	the task list - moved elsewhere.  Update calls to info_tasks
+	and info_task.
+
+2011-09-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-tasks.c (info_task): Delete parameter `from_tty'.
+
+2011-09-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-tasks.c (info_tasks): Delete parameter `from_tty'.
+
+2011-09-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-lang.h (ada_build_task_list): Remove parameter
+	`warn_if_null'.
+	* ada-tasks.c (ada_build_task_list): Remove parameter
+	`warn_if_null'.  Adjust implementation and documentation.
+	(valid_task_id, ada_get_environment_task)
+	iterate_over_live_ada_tasks): Adjust call to ada_build_task_list.
+	(info_tasks_command): Adjust implementation.
+	(task_command): Likewise.
+	* ravenscar-thread.c (ravenscar_find_new_threads): Fix call
+	to ada_build_task_list.
+
+2011-09-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-tasks.c (ada_tasks_check_symbol_table, task_list): Delete.
+	(enum ada_known_tasks_kind, struct ada_tasks_inferior_data): New.
+	(ada_tasks_inferior_data_handle): New static global.
+	(get_ada_tasks_inferior_data): New function.
+	(ada_get_task_number, get_task_number_from_id, valid_task_id)
+	(ada_get_environment_task, iterate_over_live_ada_tasks)
+	(add_ada_task, read_known_tasks_array, read_known_tasks_list):
+	Adjust.
+	(ada_set_current_inferior_known_tasks_addr): New function.
+	(read_known_tasks, ada_build_task_list, short_task_info)
+	(info_tasks, info_task, info_tasks_command, task_command_1)
+	(task_command, ada_task_list_changed): Adjust.
+	(ada_tasks_invalidate_inferior_data): New function.
+	(ada_normal_stop_observer, ada_new_objfile_observer): Adjust.
+	(_initialize_tasks): Set ada_tasks_inferior_data_handle.
+	* ada-lang.h (struct inferior): Add declaration.
+	(ada_task_list_changed): Update profile.
+	* remote-wtx-pd.c: #include "inferior.h".
+	(switch_to_pd_internal): Update call to ada_task_list_changed.
+
+2011-09-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-tasks.c: #include "progspace.h" and "objfiles.h".
+	(atcb_type, atcb_common_type, atcb_ll_type, atcb_call_type)
+	(atcb_fieldno): Delete these static globals.
+	(struct ada_tasks_pspace_data): New struct.
+	(ada_tasks_pspace_data_handle): New static global.
+	(get_ada_tasks_pspace_data): New function.
+	(ada_tasks_invalidate_pspace_data): New function.
+	(get_tcb_types_info, ptid_from_atcb_common, read_atcb)
+	(read_known_tasks_list, ada_new_objfile_observer): Adjust.
+	(_initialize_tasks): Create this module's per-progspace
+	data handle.
+
+2011-09-16  Joel Brobecker  <brobecker@adacore.com>
+
+	* ada-tasks.c (struct atcb_fieldnos): Renames struct tcb_fieldnos.
+
+2011-09-16  Tristan Gingold  <gingold@adacore.com>
+
+	* fork-child.c (fork_inferior): Update comment.  Use alloca
+	instead of xmalloc for argv.  Move len and shell_command
+	declarations in the block where they are used.
+	Only call execvp.  Factorize failure code.
+
+2011-09-16  Abhijit Halder  <abhijit.k.halder@gmail.com>
+
+	Code cleanup.
+	* parse.c (write_exp_elt): Change argument to pass a pointer of union
+	`exp_element' instead of an element of the same and make the function
+	static.
+	(write_exp_elt_opcode, write_exp_elt_sym, write_exp_elt_block)
+	(write_exp_elt_objfile, write_exp_elt_longcst, write_exp_elt_dblcst)
+	(write_exp_elt_decfloatcst, write_exp_elt_type, write_exp_elt_intern):
+	Change argument of `write_exp_elt' function call.
+	Remove extra spaces from comments.
+	* parser-defs.h (write_exp_elt): Remove prototype.
+
+2011-09-15  Paul Koning  <paul_koning@dell.com>
+
+	* python/py-cmd.c (gdbpy_string_to_argv): Decrement reference
+	count of item appended to list.
+	* python/py-type.c (typy_fields): Likewise.
+
+2011-09-15  Paul Koning  <paul_koning@dell.com>
+
+	* MAINTAINERS (Write After Approval): Add myself to the list.
+
+2011-09-15  Kevin Pouget  <kevin.pouget@st.com>
+
+	PR threads/12628
+	* linux-fork.c (checkpoint_command): Disallow checkpointing of
+	processes with multiple threads.
+	(inf_has_multiple_thread_cb): New function.
+	(inf_has_multiple_threads): New function.
+
+2011-09-15  Kevin Pouget  <kevin.pouget@st.com>
+
+	PR Python/12692 Add gdb.selected_inferior() to Python interface.
+	* python/py-inferior.c (GdbMethods): New Python method definition.
+
+2011-09-15  Kevin Pouget  <kevin.pouget@st.com>
+
+	Handle multiple breakpoint hits in Python interface:
+	* python/py-bpevent.c (create_breakpoint_event_object): Rename C/Python
+	variable to breakpoints.
+	* python/py-stopevent.c (emit_stop_event): Return a Python tuple of
+	bps instead of single breakpoint. Fix some space typos.
+	* python/py-stopevent.c (create_breakpoint_event_object): Rename
+	variable to breakpoints.
+
+2011-09-15  Kevin Pouget  <kevin.pouget@st.com>
+
+	* breakpoint.c (describe_other_breakpoints): Do not write 'duplicate'
+	note if the breakpoint is internal.
+
+2011-09-15  Kevin Pouget  <kevin.pouget@st.com>
+
+	* MAINTAINERS (Write After Approval): Add myself to the list
+
+2011-09-14  Pedro Alves  <pedro@codesourcery.com>
+
+	* infrun.c (prepare_for_detach, wait_for_inferior)
+	(fetch_inferior_event): Don't flush the register cache.
+	* remote.c (struct stop_reply) <regcache>: Add comment.
+
+2011-09-13  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Remove excessive DWARF expressions memory duplication.
+	* dwarf2loc.c (per_cu_dwarf_call): Remove variable back_to and its use
+	for block.data.
+	(indirect_pieced_value): Remove variable result.  Remove variable
+	back_to and its use for baton.data.
+	(dwarf2_compile_expr_to_ax): Remove variable back_to and its use for
+	block.data.
+	* dwarf2read.c (dwarf2_fetch_die_location_block): Remove xmemdup.
+	Update the function comment.
+
+2011-09-13  Pedro Alves  <pedro@codesourcery.com>
+
+	* inferior.h (ALL_INFERIORS): New.
+	* linux-thread-db.c (thread_db_find_new_threads_2): Remove check
+	for a stopped thread.
+	(thread_db_find_new_threads): Look for threads in all inferiors.
+
+2011-09-13  Pedro Alves  <pedro@codesourcery.com>
+
+	* breakpoint.c (update_watchpoint): Handle the case of the
+	watchpoint to update not being in the breakpoint list yet.
+	(hw_watchpoint_use_count): New, factored out from
+	hw_watchpoint_used_count.
+	(hw_watchpoint_used_count): Rename to ...
+	(hw_watchpoint_used_count_others): ... this.  Add `except'
+	parameter.  Don't count resources of `except'.  Use
+	hw_watchpoint_use_count.
+
+2011-09-13  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdbthread.h (enum thread_state): Moved here.
+	(struct thread_info): Rename `executing_' field to `executing' and
+	`state_' to `state'.
+	* thread.c (enum thread_state): Moved to gdbthread.h.
+	(new_thread, add_thread_silent, delete_thread_1)
+	(any_live_thread_of_process, thread_alive, set_running)
+	(set_running, is_thread_state, any_running, is_executing)
+	(set_executing, finish_thread_state, print_thread_info)
+	(do_captured_thread_select): Adjust.
+
+2011-09-13  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix compatibility with gcc < 4.3 and non-gcc compilers.
+	* amd64-tdep.c (amd64_skip_xmm_prologue): Convert 0b constants.
+
+2011-09-12  Pedro Alves  <pedro@codesourcery.com>
+	    Matt Rice  <ratmice@gmail.com>
+
+	PR gdb/13175
+
+	* interps.c (struct interp) <interpreter_out>: Delete field.
+	(interp_new): Remove the data and uiout parameters and adjust.
+	(interp_set): Only set the current_uiout from the interpreter's
+	uiout after initializing the interpreter.  Adjust call to
+	init_proc.
+	(interp_ui_out): Adjust to call procs->ui_out_proc.
+	(interp_data, interp_name): New.
+	* interps.h (interp_init_ftype): Add `self' parameter.
+	(interp_ui_out_ftype): New typedef.
+	(struct interp_procs) <ui_out_proc>: New method pointer.
+	(interp_new): Remove the data and uiout parameters.
+	(interp_data, interp_name): Declare.
+	* tui/tui-interp.c (tui_init): Adjust prototype.
+	(tui_ui_out): New.
+	(_initialize_tui_interp): Install tui_ui_out.  Don't instanciate
+	tui_out here.  Adjust call to interp_new.
+	* tui/tui-io.c (tui_initialize_io): Don't set current_uiout here.
+	* cli/cli-interp.c (cli_interpreter_init): Adjust prototype.
+	(cli_ui_out): New.
+	(_initialize_cli_interp): Install it.  Adjust call to interp_new.
+	* mi/mi-common.h (struct mi_interp) <uiout>: New field.
+	* mi/mi-interp.c (mi_interpreter_init): Adjust prototype.
+	Initialize mi->uiout depending on the mi_version as extracted from
+	the interpreter's name.
+	(mi_ui_out): New.
+	(_initialize_mi_interp): Install mi_ui_out.  Adjust calls to
+	interp_new.  Don't allocate the ui_out's of the interpreters here.
+
+2011-09-12  Aleksandar Ristovski  <aristovski@qnx.com>
+
+	* solib.c (solib_used): New function.
+	(update_solib_list, reload_shared_libraries_1): Check if objfile is used
+	by another so_list object before freeing it.
+
+2011-09-11  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Code cleanup.
+	* mi/mi-cmd-stack.c (list_args_or_locals): Use enum for the parameter
+	values.
+
+2011-09-09  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Code cleanup.
+	* amd64-tdep.c (amd64_skip_prologue): Move the XMM code to ...
+	(amd64_skip_xmm_prologue): ... this new function.  Describe its
+	parameters.  No longer use amd64_prologue_line_bug.
+	* defs.h (producer_is_gcc_ge_4): New declaration.
+	* dwarf2read.c (producer_is_gcc_ge_4): Move to utils.c.
+	(process_full_comp_unit): Update its caller.  Remove
+	amd64_prologue_line_bug initialization.
+	* symtab.h (struct symtab): Remove field amd64_prologue_line_bug.
+	* utils.c (producer_is_gcc_ge_4): Moved here from dwarf2read.c.
+
+2011-09-09  Pedro Alves  <pedro@codesourcery.com>
+
+	* linux-nat.h (enum resume_kind): New.
+	(struct lwp_info) <last_resume_kind>: New field.
+	* linux-nat.c (linux_child_follow_fork): Set last_resume_kind to
+	resume_stop on the new lwp.
+	(add_lwp): Set last_resume_kind as resume_continue by default.
+	(lin_lwp_attach_lwp): Set last_resume_kind as resume_stop.
+	(resume_lwp): New, factored out from resume_callback.  Also check
+	for pending status in lp->waitstatus.
+	(resume_callback): Reimplement.
+	(resume_clear_callback): Set last_resume_kind as resume_stop.
+	(resume_set_callback): Set last_resume_kind as resume_continue.
+	(linux_nat_resume, linux_handle_extended_wait): Set
+	last_resume_kind.
+	(running_callback): Also check lp->waitstatus for pending events.
+	(select_singlestep_lwp_callback): Check that lp->last_resume_kind
+	is resume_step.
+	(stop_and_resume_callback): Don't re-resume if the core wanted the
+	lwp stopped.  Use resume_lwp instead of resume_callback.  Avoid
+	using an invalidated pointer.
+	(linux_nat_filter_event): Don't discard SIGSTOPs as delayed
+	SIGSTOPs if the core wanted the LWP to stop.
+	(linux_nat_wait_1) Don't consume a pending SIGSTOP if the core
+	wanted the lwp to stop.  If the core wanted the lwp to stop, and
+	the lwp stopped with a SIGSTOP, report a TARGET_SIGNAL_0 instead
+	of TARGET_SIGNAL_STOP.
+	(linux_nat_stop_lwp): Don't synchronously wait for the lwp to stop
+	here.  Instead, signal the lwp, and set the last_resume_kind to
+	resume_stop.
+
+2011-09-09  Pedro Alves  <pedro@codesourcery.com>
+
+	* linux-nat.c (lin_lwp_attach_lwp): Return 1 (ignore) instead of
+	-1 (error), if the lwp exits right after attaching.
+
+2011-09-08  Doug Evans  <dje@google.com>
+
+	* py-cmd.c: Some minor formatting fixes.
+	(gdbpy_parse_command_name): Rename text arg to name, make const.
+	All callers updated.
+	* python-internal.h (gdbpy_parse_command_name): Update.
+
+	* cli/cli-decode.c (add_cmd): Add comment.
+
+2011-09-08  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	PR breakpoints/12435
+	* amd64-tdep.c (amd64_skip_prologue): New variables start_pc_sal,
+	next_sal, buf, offset and xmmreg.  Advance PC if it sees the PR.
+	* dwarf2read.c (process_full_comp_unit): Initialize
+	amd64_prologue_line_bug.
+	* symtab.h (struct symtab): New field amd64_prologue_line_bug.
+
+2011-09-08  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix TUI screen corruption.
+	* utils.c (fputs_maybe_filtered): Replace !input_from_terminal_p by
+	batch_flag.
+
+2011-09-08  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* findvar.c (read_var_value): Never return NULL, throw an error
+	instead.  Update the function comment.  State symbol name in the error
+	messages.
+	* python/py-frame.c (frapy_read_var): Remove handling of NULL from
+	read_var_value.
+	* stack.c (print_frame_args): Likewise.
+	* valops.c (value_of_variable): Likewise.
+
+2011-09-08  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* stack.c (print_frame_args): New variable except.  Wrap
+	read_var_value and common_val_print into TRY_CATCH.
+
+2011-09-08  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* eval.c (evaluate_subexp_standard) <OP_THIS>: Update the value_of_this
+	caller to value_of_this.
+	* p-exp.y: Update the value_of_this caller to value_of_this_silent.
+	Twice.
+	* valops.c (value_of_this): Remove parameter complain and variable ret.
+	Update function comment.  Never return NULL by this code.
+	(value_of_this_silent): New function.
+	* value.h (value_of_this): Remove parameter complain.
+	(value_of_this_silent): New declaration.
+
+2011-09-07  Yao Qi  <yao@codesourcery.com>
+
+	* gdbthread.h (struct thread_info): Remove fields
+	`stepping_through_solib_after_catch' and
+	`stepping_through_solib_catchpoints'.
+	* infrun.c (init_thread_stepping_state): Update.
+	(process_event_stop_test, currently_stepping): Update.
+	(currently_stepping_or_nexting_callback): Update.
+
+2011-09-07  Yao Qi  <yao@codesourcery.com>
+
+	* gdbthread.h (struct thread_info): Comment on field
+	`step_after_step_resume_breakpoint'.
+
+2011-09-07  Abhijit Halder  <abhijit.k.halder@gmail.com>
+
+	* remote.c (remote_console_output): Reindent.
+
+2011-09-06  Luis Machado  <lgustavo@codesourcery.com>
+
+	* frame.c (has_stack_frames): Check for currently selected
+	traceframe.
+
+2011-09-06  Pedro Alves  <pedro@codesourcery.com>
+
+	* event-top.h (MAXPROMPTS, struct prompts): Delete.
+	(set_async_annotation_level, set_async_prompt, pop_prompt)
+	(push_prompt, new_async_prompt): Delete declarations.
+	* top.h (get_prompt, set_prompt): Change prototype.
+	(get_prefix, set_prefix, get_suffix, set_suffix): Delete
+	declarations.
+	* top.c (command_loop):
+	(top_prompt): New global.
+	(get_prefix, set_prefix, get_suffix, ): Delete.
+	(get_prompt, set_prompt): Rewrite.
+	(show_new_async_prompt): Rename to ...
+	(show_prompt): ... this.
+	(init_main): Adjust.  Don't handle --annotate=2 here.
+	* event-top.c (new_async_prompt): Delete.
+	(the_prompts): Delete.
+	(more_to_come): Make static.
+	(display_gdb_prompt): Use top_level_prompt() to compute the top
+	level prompt, and don't notify the before_prompt observers
+	directly here.  Always trick readline into not trying to display
+	the prompt if sync_execution and displaying the primary prompt.
+	If displaying a local/secondary prompt, always show it, even if
+	sync_execution is set.
+	(change_annotation_level): Delete.
+	(top_level_prompt): New, based on change_annotation_level.
+	(push_prompt, pop_prompt): Delete.
+	(async_disable_stdin): No longer pushes prompt.
+	(command_line_handler): No longer pushes or pops prompt.  If more
+	input is expected, call display_gdb_prompt with an explicit empty
+	prompt.
+	(async_stop_sig): Adjust.
+	(set_async_annotation_level, set_async_prompt): Delete.
+	* python/python.c (before_prompt_hook): Adjust.
+
+2011-09-05  Pedro Alves  <pedro@codesourcery.com>
+
+	PR cli/13110
+
+	* infrun.c (fetch_inferior_event): Check if there's a selected
+	thread before checking if the selected thread is executing.
+
+2011-09-05  Pedro Alves  <pedro@codesourcery.com>
+
+	* inf-loop.c (execute_command): Don't check if the current thread
+	if running before synchronously waiting for command completion.
+	* infrun.c (fetch_inferior_event): Handle "set exec-done-display"
+	here.
+	(normal_stop): Call async_enable_stdin here.
+	* inf-loop.c (inferior_event_handler): Don't call
+	async_enable_stdin, nor handle "set exec-done-display" here.
+
+2011-09-04  Joel Brobecker  <brobecker@adacore.com>
+
+	GDB 7.3.1 released.
+
+2011-09-04  Joel Brobecker  <brobecker@adacore.com>
+
+	* NEWS: Change `7.3' into `7.3.1' in `Changes since GDB 7.3'.
+
+2011-09-04  Joel Brobecker  <brobecker@adacore.com>
+
+	* NEWS: Add entry for OpenBSD/NetBSD build failure.
+
+2011-09-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* config/s390/s390.mh (NATDEPFILES): Add linux-procfs.o dependency.
+
+2011-09-02  Matt Rice  <ratmice@gmail.com>
+
+	PR gdb/10720
+	* event-top.c (cli_command_loop): Replace readline setup with
+	direct call to display_gdb_prompt.
+	(display_gdb_prompt): Do not call observer mechanism during
+	synchronous execution.
+
+2011-09-02  Pedro Alves  <pedro@codesourcery.com>
+
+	* linux-nat.c (in_pid_list_p): New.
+	(linux_record_stopped_pid): Delete.
+	(lin_lwp_attach_lwp): Check if PTRACE_ATTACH failed because we're
+	already attached to the LWP.  Return an indication if so.
+	(linux_nat_filter_event): Adjust.
+	* linux-thread-db.c (attach_thread): Handle lin_lwp_attach_lwp
+	returning an indication to ignore this thread.
+
+2011-09-02  Pedro Alves  <pedro@codesourcery.com>
+
+	* top.c: Include interps.h.
+	(execute_command): If the target can async, but the interpreter is
+	in sync mode, synchronously wait for the command to finish before
+	returning.
+	(execute_command_to_string): Force the interpreter to sync mode.
+	* infrun.c: Include interps.h.
+	(fetch_inferior_event): Don't restore the prompt yet if the
+	interpreter is in sync mode.
+	* interps.c (interpreter_async): New global.
+	* interps.h (interpreter_async): Declare.
+	* inf-loop.c: Include interps.h.
+	(inferior_event_handler): Don't print the language change or run
+	breakpoint commands yet if the interpreter in is sync mode.
+	* main.c (captured_command_loop): Flip the interpreter to async
+	mode.
+	* cli/cli-script.c: Include interps.h.
+	(execute_user_command, while_command, if_command): Force the
+	interpreter to sync mode.
+	* python/python.c: Include interps.h.
+	(python_command, execute_gdb_command): Force the interpreter to
+	sync mode.
+
+2011-09-02  Pedro Alves  <pedro@codesourcery.com>
+
+	* value.c (show_convenience): Catch errors thrown while printing
+	each internal variable.
+	* infrun.c (validate_siginfo_access): New function.
+	(siginfo_value_read, siginfo_value_write): Call it.
+
+2011-09-01  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Revert:
+	2010-05-21  Pierre Muller  <muller@ics.u-strasbg.fr>
+	* dwarf2read.c (new_symbol): Handle DW_AT_variable_parameter
+	attribute.
+
+2011-08-29  Yao Qi  <yao@codesourcery.com>
+
+	* solib-dsbt.c (bfd_lookup_symbol): Removed.
+	(cmp_name): New.
+	(enable_break2): Update caller.
+	* solib-frv.c (bfd_lookup_symbol): Removed.
+	(cmp_name): New.
+	(enable_break2): Update caller.
+	* solib-pa64.c (bfd_lookup_symbol): Removed.
+	(cmp_name): New.
+	* solib-svr4.c (bfd_lookup_symbol): Removed.
+	(cmp_name_and_sec_flags): New.
+	(enable_break): Update caller.
+	* solib.c (gdb_bfd_lookup_symbol_from_symtab): New.
+	(gdb_bfd_lookup_symbol_from_dyn_symtab): New.
+	(gdb_bfd_lookup_symbol): New.
+	* solib.h: Functions declarations.
+
+2011-08-29  Yao Qi  <yao@codesourcery.com>
+
+	* Makefile.in (ALL_TARGET_OBS): Add tic6x-tdep.o tic6x-linux-tdep.o
+	and solib-dsbt.o.
+
+2011-08-29  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix TUI stepi on code without symbols.
+	* tui/tui-stack.c (tui_show_frame_info): Remove error, set LOW for
+	current PC instead.
+
+2011-08-28  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Code cleanup.
+	* mi/mi-cmd-stack.c (list_args_or_locals): Remove stb initialization
+	and the static keyword.
+	* mi/mi-cmd-target.c (mi_cmd_target_file_get, mi_cmd_target_file_put):
+	Make prefix an array.
+	* mi/mi-cmd-target.c (mi_cmd_target_file_delete): Likewise.
+	* mi/mi-main.c (get_register): Remove stb initialization and the static
+	keyword.
+
+2011-08-28  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Code cleanup - make mi_opt const.
+	* mi/mi-cmd-break.c (mi_cmd_break_insert, mi_cmd_break_watch): Make
+	opts const.
+	* mi/mi-cmd-disas.c (mi_cmd_disassemble): Likewise.
+	* mi/mi-cmd-env.c (mi_cmd_env_path): Likewise.
+	(mi_cmd_env_dir): Likewise.
+	* mi/mi-cmd-target.c (mi_cmd_target_file_get): Likewise.
+	(mi_cmd_target_file_put): Likewise.
+	* mi/mi-cmd-target.c (mi_cmd_target_file_delete): Likewise.
+	* mi/mi-cmd-var.c (mi_cmd_var_evaluate_expression): Likewise.
+	* mi/mi-getopt.c (mi_getopt): Make opts and opt const.
+	(mi_valid_noargs): Make opts const.
+	* mi/mi-getopt.h (mi_getopt): Make opts and opt const.
+	* mi/mi-main.c (mi_cmd_list_thread_groups): Make opts const.
+	(mi_cmd_data_read_memory): Likewise.
+	(mi_cmd_data_read_memory_bytes): Likewise.
+	(mi_cmd_data_write_memory): Likewise.
+
+2011-08-26  Matt Rice  <ratmice@gmail.com>
+
+	* solib-sunos.c (allocate_rt_common_objfile): Add missing arguments to
+	bcache_xmalloc,  replace bcache_xmalloc with call to
+	psymbol_bcache_init for psymbol_cache.
+	* symfile.c (reread_symbols): Remove extra calls to bcache_xmalloc.
+
+2011-08-26  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* inf-loop.c (inferior_event_handler): Add exception_print in
+	INF_EXEC_COMPLETE.
+
+2011-08-26  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* breakpoint.c (bpstat_do_actions): New variable cleanup_if_error, call
+	make_bpstat_clear_actions_cleanup and discard_cleanups for it.
+	* defs.h (make_bpstat_clear_actions_cleanup): New declaration.
+	* exceptions.c (throw_exception): Remove the bpstat_clear_actions call.
+	* inf-loop.c (inferior_event_handler): New variable cleanup_if_error,
+	call make_bpstat_clear_actions_cleanup and discard_cleanups for it.
+	Call bpstat_clear_actions for failed fetch_inferior_event_wrapper.
+	* infrun.c (fetch_inferior_event): Call
+	make_bpstat_clear_actions_cleanup.
+	* top.c (execute_command): New variable cleanup_if_error, call
+	make_bpstat_clear_actions_cleanup and discard_cleanups for it.
+	* utils.c (do_bpstat_clear_actions_cleanup)
+	(make_bpstat_clear_actions_cleanup): New functions.
+
+2011-08-26  Pedro Alves  <pedro@codesourcery.com>
+
+	* linux-nat.c (linux_child_follow_fork): Don't set lp->resumed on
+	either the parent or the child forks.  Rename a couple locals.
+
+2011-08-26  Pedro Alves  <pedro@codesourcery.com>
+
+	* linux-nat.c (wait_lwp): Avoid assuming errno is preserved by a
+	library call.  Avoid reading the `status' local if all waitpid
+	calls failed.
+
+2011-08-26  Pedro Alves  <pedro@codesourcery.com>
+
+	* common/linux-osdata.c (get_cores_used_by_process): Don't assume
+	opening /proc/PID/task always succeeds.
+
+2011-08-26  Aleksandar Ristovski <aristovski@qnx.com>
+
+	* linespec.c (symtab_from_filename): Check for the end of string.
+
+2011-08-26  Marc Khouzam  <marc.khouzam@ericsson.com>
+
+	PR mi/11912
+	* varobj.c (cplus_describe_child): Add the keyword
+	'class' to the output of the method when dealing 
+	with a cast to a base class.
+
+2011-08-26  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	No functionality change.
+	* breakpoint.c (bpstat_clear_actions): Remove the BS parameter, make
+	function comment a reference, new variables tp and bs, move here code
+	from throw_exception.
+	* breakpoint.h (bpstat_clear_actions): Remove the BS parameter,
+	describe it in the comment.
+	* exceptions.c (throw_exception): Remove variable tp, move the code for
+	bpstat_clear_actions to bpstat_clear_actions.
+
 2011-08-24  Luis Machado  <lgustavo@codesourcery.com>
 
 	* linux-nat.h (linux_proc_get_tgid): Remove declaration.

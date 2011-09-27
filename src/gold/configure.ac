@@ -238,6 +238,8 @@ AC_DEFINE_UNQUOTED(GOLD_DEFAULT_BIG_ENDIAN, $default_big_endian,
 AC_DEFINE_UNQUOTED(GOLD_DEFAULT_OSABI, $default_osabi,
 		   [Default OSABI code])
 
+AC_CHECK_TOOL(NM, nm)
+
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_YACC
@@ -374,23 +376,58 @@ AC_SUBST(RANDOM_SEED_CFLAGS)
 
 dnl On GNU/Linux ifunc is supported by the dynamic linker in glibc
 dnl 2.11 or later, and by binutils 2.20.1 or later.
-AC_CACHE_CHECK([for glibc >= 2.11], [gold_cv_lib_glibc2_11],
-[AC_COMPILE_IFELSE([
+AC_CACHE_CHECK([for glibc ifunc support], [gold_cv_lib_glibc_ifunc],
+[save_LDFLAGS="$LDFLAGS"
+LDFLAGS="$LDFLAGS -static"
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <features.h>
 #if !defined __GLIBC__
 error
 #elif __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 11)
 error
 #endif
-__asm__(".type foo, %gnu_indirect_function");
-], [gold_cv_lib_glibc2_11=yes], [gold_cv_lib_glibc2_11=no])])
+void func (void) { }
+void invoke (void);
+__asm__(".type invoke, %gnu_indirect_function");
+typedef void (*funcptr) (void);
+funcptr dispatch (void) __asm__ ("invoke");
+funcptr dispatch (void) { return &func; }]],
+[[invoke();]])
+], [
+if ${NM} conftest$EXEEXT | grep "__rela\?_iplt_start" >/dev/null 2>&1; then
+  gold_cv_lib_glibc_ifunc=both
+else
+  gold_cv_lib_glibc_ifunc=dyn
+fi], [gold_cv_lib_glibc_ifunc=no])
+LDFLAGS="$save_LDFLAGS"])
 
-AM_CONDITIONAL(IFUNC, test "$gold_cv_lib_glibc2_11" = "yes")
+AM_CONDITIONAL(IFUNC, test "$gold_cv_lib_glibc_ifunc" != "no")
+AM_CONDITIONAL(IFUNC_STATIC, test "$gold_cv_lib_glibc_ifunc" = "both")
 
 AM_BINUTILS_WARNINGS
 
 WARN_CXXFLAGS=`echo ${WARN_CFLAGS} | sed -e 's/-Wstrict-prototypes//' -e 's/-Wmissing-prototypes//' -e 's/-Wshadow//'`
 AC_SUBST(WARN_CXXFLAGS)
+
+AC_ARG_WITH(gold-ldflags,
+[  --with-gold-ldflags=FLAGS  additional link flags for gold],
+[if test "$withval" = "no" -o "$withval" = "yes"; then
+   GOLD_LDFLAGS=
+ else
+   GOLD_LDFLAGS=$withval
+ fi],
+[GOLD_LDFLAGS=])
+AC_SUBST(GOLD_LDFLAGS)
+
+AC_ARG_WITH(gold-ldadd,
+[  --with-gold-ldadd=LIBS     additional libraries for gold],
+[if test "$withval" = "no" -o "$withval" = "yes"; then
+   GOLD_LDADD=
+ else
+   GOLD_LDADD=$withval
+ fi],
+[GOLD_LDADD=])
+AC_SUBST(GOLD_LDADD)
 
 dnl Force support for large files by default.  This may need to be
 dnl host dependent.  If build == host, we can check getconf LFS_CFLAGS.

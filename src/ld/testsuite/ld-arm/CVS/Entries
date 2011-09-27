@@ -16,7 +16,6 @@
 /arm-call1.s/1.2/Sun Jun  5 16:54:38 2011//
 /arm-call2.s/1.2/Sun Jun  5 16:54:38 2011//
 /arm-dyn.ld/1.4/Sun Jun  5 16:54:38 2011//
-/arm-elf.exp/1.89/Thu Aug 25 19:59:29 2011//
 /arm-lib-plt-2.dd/1.1/Sun Jun  5 16:54:38 2011//
 /arm-lib-plt-2.rd/1.1/Sun Jun  5 16:54:38 2011//
 /arm-lib-plt-2a.s/1.1/Sun Jun  5 16:54:38 2011//
@@ -437,4 +436,10 @@
 /vxworks2-static.sd/1.1/Sun Jun  5 16:54:38 2011//
 /vxworks2.s/1.1/Sun Jun  5 16:54:38 2011//
 /vxworks2.sd/1.1/Sun Jun  5 16:54:38 2011//
+/arm-elf.exp/1.90/Sun Sep 25 18:07:19 2011//
+/rodata-merge-map.ld/1.1/Thu Sep  1 14:10:40 2011//
+/rodata-merge-map.sym/1.1/Thu Sep  1 14:10:40 2011//
+/rodata-merge-map1.s/1.1/Thu Sep  1 14:10:40 2011//
+/rodata-merge-map2.s/1.1/Thu Sep  1 14:10:40 2011//
+/rodata-merge-map3.s/1.1/Thu Sep  1 14:10:40 2011//
 D

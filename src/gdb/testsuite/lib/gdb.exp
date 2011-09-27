@@ -1527,6 +1527,22 @@ proc support_complex_tests {} {
     return $support_complex_tests_saved
 }
 
+# Return 1 if target hardware or OS supports single stepping to signal
+# handler, otherwise, return 0.
+
+proc can_single_step_to_signal_handler {} {
+
+    # Targets don't have hardware single step.  On these targets, when
+    # a signal is delivered during software single step, gdb is unable
+    # to determine the next instruction addresses, because start of signal
+    # handler is one of them.
+    if { [istarget "arm*-*-*"] || [istarget "mips*-*-*"] } {
+	return 0
+    }
+
+    return 1
+}
+
 # Return 1 if target is ILP32.
 # This cannot be decided simply from looking at the target string,
 # as it might depend on externally passed compiler options like -m64.
@@ -1604,6 +1620,49 @@ proc is_lp64_target {} {
     return [set is_lp64_target_saved($board) 1]
 }
 
+# Return 1 if target has x86_64 registers - either amd64 or x32.
+# x32 target identifies as x86_64-*-linux*, therefore it cannot be determined
+# just from the target string.
+proc is_amd64_regs_target {} {
+    global is_amd64_regs_target_saved
+
+    if {![istarget "x86_64-*-*"]} {
+	return 0
+    }
+
+    # Use the cached value, if it exists.  Cache value per "board" to handle
+    # runs with multiple options (e.g. unix/{-m32,-64}) correctly.
+    set me "is_amd64_regs_target"
+    set board [target_info name]
+    if [info exists is_amd64_regs_target_saved($board)] {
+        verbose "$me:  returning saved $is_amd64_regs_target_saved($board)" 2
+        return $is_amd64_regs_target_saved($board)
+    }
+
+    set src reg64[pid].s
+    set obj reg64[pid].o
+
+    set f [open $src "w"]
+    foreach reg \
+            {rax rbx rcx rdx rsi rdi rbp rsp r8 r9 r10 r11 r12 r13 r14 r15} {
+	puts $f "\tincq %$reg"
+    }
+    close $f
+
+    verbose "$me:  compiling testfile $src" 2
+    set lines [gdb_compile $src $obj object {quiet}]
+    file delete $src
+    file delete $obj
+
+    if ![string match "" $lines] then {
+        verbose "$me:  testfile compilation failed, returning 0" 2
+        return [set is_amd64_regs_target_saved($board) 0]
+    }
+
+    verbose "$me:  returning 1" 2
+    return [set is_amd64_regs_target_saved($board) 1]
+}
+
 # Return 1 if this target is an x86 or x86-64 with -m32.
 proc is_x86_like_target {} {
     if {[istarget i?86-*]} {
@@ -1612,7 +1671,7 @@ proc is_x86_like_target {} {
     if {![istarget "x86_64-*-*"]} {
 	return 0
     }
-    return [is_ilp32_target]
+    return [expr [is_ilp32_target] && ![is_amd64_regs_target]]
 }
 
 # Return 1 if displaced stepping is supported on target, otherwise, return 0.
@@ -2174,7 +2233,7 @@ proc gdb_compile {source dest type options} {
 	      || [istarget *-*-pe*]
 	      || [istarget hppa*-*-hpux*])} {
 	    # Do not need anything.
-	} elseif { [istarget *-*-openbsd*] } {
+	} elseif { [istarget *-*-freebsd*] || [istarget *-*-openbsd*] } {
 	    lappend new_options "ldflags=-Wl,-rpath,${outdir}"
 	} elseif { [istarget arm*-*-symbianelf*] } {
 	    if { $shlib_load } {

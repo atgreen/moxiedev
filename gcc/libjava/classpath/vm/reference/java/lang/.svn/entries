@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/vm/reference/java/lang
 svn://gcc.gnu.org/svn/gcc
 
@@ -63,40 +63,6 @@ gandalf
 reflect
 dir
 
-VMFloat.java
-file
-
-
-
-
-2011-06-04T18:38:02.819104Z
-2e606a4289478fc7120b69016e0aa9a9
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4389
-
 VMClass.java
 file
 
@@ -131,14 +97,14 @@ gandalf
 
 17044
 
-VMString.java
+VMFloat.java
 file
 
 
 
 
 2011-06-04T18:38:02.819104Z
-69025ea56fbfa6fa5b4af81bd266718e
+2e606a4289478fc7120b69016e0aa9a9
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -163,7 +129,7 @@ gandalf
 
 
 
-3361
+4389
 
 VMObject.java
 file
@@ -199,6 +165,40 @@ gandalf
 
 4187
 
+VMString.java
+file
+
+
+
+
+2011-06-04T18:38:02.819104Z
+69025ea56fbfa6fa5b4af81bd266718e
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3361
+
 VMThread.java
 file
 
@@ -233,40 +233,6 @@ gandalf
 
 15388
 
-VMDouble.java
-file
-
-
-
-
-2011-06-04T18:38:02.820104Z
-bafe6d0fefa7cd112cd6733ed22ee96f
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4243
-
 VMCompiler.java
 file
 
@@ -300,6 +266,40 @@ tromey
 
 
 3773
+
+VMDouble.java
+file
+
+
+
+
+2011-06-04T18:38:02.820104Z
+bafe6d0fefa7cd112cd6733ed22ee96f
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4243
 
 VMProcess.java
 file
@@ -437,6 +437,9 @@ tromey
 
 3186
 
+management
+dir
+
 VMMath.java
 file
 
@@ -470,7 +473,4 @@ gandalf
 
 
 20757
-
-management
-dir
 

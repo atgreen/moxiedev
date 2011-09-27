@@ -413,6 +413,7 @@ extern GTY(()) int darwin_ms_struct;
 #define DEBUG_PUBTYPES_SECTION	"__DWARF,__debug_pubtypes,regular,debug"
 #define DEBUG_STR_SECTION	"__DWARF,__debug_str,regular,debug"
 #define DEBUG_RANGES_SECTION	"__DWARF,__debug_ranges,regular,debug"
+#define DEBUG_MACRO_SECTION    "__DWARF,__debug_macro,regular,debug"
 
 #define TARGET_WANT_DEBUG_PUB_SECTIONS true
 
@@ -943,5 +944,9 @@ extern void darwin_driver_init (unsigned int *,struct cl_decoded_option **);
 /* The Apple assembler and linker do not support constructor priorities.  */
 #undef SUPPORTS_INIT_PRIORITY
 #define SUPPORTS_INIT_PRIORITY 0
+
+/* When building cross-compilers (and native crosses) we shall default to 
+   providing an osx-version-min of this unless overridden by the User.  */
+#define DEF_MIN_OSX_VERSION "10.4"
 
 #endif /* CONFIG_DARWIN_H */

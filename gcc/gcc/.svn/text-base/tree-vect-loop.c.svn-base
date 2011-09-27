@@ -2126,15 +2126,15 @@ vect_is_simple_reduction_1 (loop_vec_info loop_info, gimple phi,
           return NULL;
         }
 
-      op3 = TREE_OPERAND (gimple_assign_rhs1 (def_stmt), 0);
+      op3 = gimple_assign_rhs1 (def_stmt);
       if (COMPARISON_CLASS_P (op3))
         {
           op4 = TREE_OPERAND (op3, 1);
           op3 = TREE_OPERAND (op3, 0);
         }
 
-      op1 = TREE_OPERAND (gimple_assign_rhs1 (def_stmt), 1);
-      op2 = TREE_OPERAND (gimple_assign_rhs1 (def_stmt), 2);
+      op1 = gimple_assign_rhs2 (def_stmt);
+      op2 = gimple_assign_rhs3 (def_stmt);
 
       if (TREE_CODE (op1) != SSA_NAME && TREE_CODE (op2) != SSA_NAME)
         {
@@ -2149,7 +2149,7 @@ vect_is_simple_reduction_1 (loop_vec_info loop_info, gimple phi,
       op1 = gimple_assign_rhs1 (def_stmt);
       op2 = gimple_assign_rhs2 (def_stmt);
 
-      if (TREE_CODE (op1) != SSA_NAME || TREE_CODE (op2) != SSA_NAME)
+      if (TREE_CODE (op1) != SSA_NAME && TREE_CODE (op2) != SSA_NAME)
         {
           if (vect_print_dump_info (REPORT_DETAILS))
 	    report_vect_op (def_stmt, "reduction: uses not ssa_names: ");
@@ -2255,7 +2255,7 @@ vect_is_simple_reduction_1 (loop_vec_info loop_info, gimple phi,
     def2 = SSA_NAME_DEF_STMT (op2);
 
   if (code != COND_EXPR
-      && (!def1 || !def2 || gimple_nop_p (def1) || gimple_nop_p (def2)))
+      && ((!def1 || gimple_nop_p (def1)) && (!def2 || gimple_nop_p (def2))))
     {
       if (vect_print_dump_info (REPORT_DETAILS))
 	report_vect_op (def_stmt, "reduction: no defs for operands: ");
@@ -2268,6 +2268,7 @@ vect_is_simple_reduction_1 (loop_vec_info loop_info, gimple phi,
 
   if (def2 && def2 == phi
       && (code == COND_EXPR
+	  || !def1 || gimple_nop_p (def1)
           || (def1 && flow_bb_inside_loop_p (loop, gimple_bb (def1))
               && (is_gimple_assign (def1)
 		  || is_gimple_call (def1)
@@ -2285,6 +2286,7 @@ vect_is_simple_reduction_1 (loop_vec_info loop_info, gimple phi,
 
   if (def1 && def1 == phi
       && (code == COND_EXPR
+	  || !def2 || gimple_nop_p (def2)
           || (def2 && flow_bb_inside_loop_p (loop, gimple_bb (def2))
  	      && (is_gimple_assign (def2)
 		  || is_gimple_call (def2)

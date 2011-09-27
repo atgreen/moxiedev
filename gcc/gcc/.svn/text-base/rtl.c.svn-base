@@ -256,6 +256,7 @@ copy_rtx (rtx orig)
     case PC:
     case CC0:
     case RETURN:
+    case SIMPLE_RETURN:
     case SCRATCH:
       /* SCRATCH must be shared because they represent distinct values.  */
       return orig;
@@ -287,12 +288,6 @@ copy_rtx (rtx orig)
   /* We do not copy the USED flag, which is used as a mark bit during
      walks over the RTL.  */
   RTX_FLAG (copy, used) = 0;
-
-  /* We do not copy FRAME_RELATED for INSNs.  */
-  if (INSN_P (orig))
-    RTX_FLAG (copy, frame_related) = 0;
-  RTX_FLAG (copy, jump) = RTX_FLAG (orig, jump);
-  RTX_FLAG (copy, call) = RTX_FLAG (orig, call);
 
   format_ptr = GET_RTX_FORMAT (GET_CODE (copy));
 

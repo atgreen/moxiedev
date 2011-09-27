@@ -221,7 +221,7 @@ static struct ipcp_value *values_topo;
 static inline struct ipcp_lattice *
 ipa_get_lattice (struct ipa_node_params *info, int i)
 {
-  gcc_assert (i >= 0 && i <= ipa_get_param_count (info));
+  gcc_assert (i >= 0 && i < ipa_get_param_count (info));
   gcc_checking_assert (!info->ipcp_orig_node);
   gcc_checking_assert (info->lattices);
   return &(info->lattices[i]);
@@ -360,7 +360,6 @@ print_all_lattices (FILE * f, bool dump_sources, bool dump_benefits)
 static void
 determine_versionability (struct cgraph_node *node)
 {
-  struct cgraph_edge *edge;
   const char *reason = NULL;
 
   /* There are a number of generic reasons functions cannot be versioned.  We
@@ -368,33 +367,16 @@ determine_versionability (struct cgraph_node *node)
      present.  */
   if (node->alias || node->thunk.thunk_p)
     reason = "alias or thunk";
-  else if (!inline_summary (node)->versionable)
-    reason = "inliner claims it is so";
-  else if (TYPE_ATTRIBUTES (TREE_TYPE (node->decl)))
-    reason = "there are type attributes";
+  else if (!node->local.versionable)
+    reason = "not a tree_versionable_function";
   else if (cgraph_function_body_availability (node) <= AVAIL_OVERWRITABLE)
     reason = "insufficient body availability";
-  else
-    /* Removing arguments doesn't work if the function takes varargs
-       or use __builtin_apply_args.
-       FIXME: handle this together with can_change_signature flag.  */
-    for (edge = node->callees; edge; edge = edge->next_callee)
-      {
-	tree t = edge->callee->decl;
-	if (DECL_BUILT_IN_CLASS (t) == BUILT_IN_NORMAL
-	    && (DECL_FUNCTION_CODE (t) == BUILT_IN_APPLY_ARGS
-		|| DECL_FUNCTION_CODE (t) == BUILT_IN_VA_START))
-	  {
-	    reason = "prohibitive builtins called";
-	    break;
-	  };
-      }
 
   if (reason && dump_file && !node->alias && !node->thunk.thunk_p)
     fprintf (dump_file, "Function %s/%i is not versionable, reason: %s.\n",
 	     cgraph_node_name (node), node->uid, reason);
 
-  IPA_NODE_REF (node)->node_versionable = (reason == NULL);
+  node->local.versionable = (reason == NULL);
 }
 
 /* Return true if it is at all technically possible to create clones of a
@@ -403,7 +385,7 @@ determine_versionability (struct cgraph_node *node)
 static bool
 ipcp_versionable_function_p (struct cgraph_node *node)
 {
-  return IPA_NODE_REF (node)->node_versionable;
+  return node->local.versionable;
 }
 
 /* Structure holding accumulated information about callers of a node.  */
@@ -610,9 +592,7 @@ initialize_node_lattices (struct cgraph_node *node)
   int i;
 
   gcc_checking_assert (cgraph_function_with_gimple_body_p (node));
-  if (ipa_is_called_with_var_arguments (info))
-    disable = true;
-  else if (!node->local.local)
+  if (!node->local.local)
     {
       /* When cloning is allowed, we can assume that externally visible
 	 functions are not called.  We will compensate this by cloning
@@ -694,6 +674,20 @@ ipa_get_jf_ancestor_result (struct ipa_jump_func *jfunc, tree input)
     return NULL_TREE;
 }
 
+/* Extract the acual BINFO being described by JFUNC which must be a known type
+   jump function.  */
+
+static tree
+ipa_value_from_known_type_jfunc (struct ipa_jump_func *jfunc)
+{
+  tree base_binfo = TYPE_BINFO (jfunc->value.known_type.base_type);
+  if (!base_binfo)
+    return NULL_TREE;
+  return get_binfo_at_offset (base_binfo,
+			      jfunc->value.known_type.offset,
+			      jfunc->value.known_type.component_type);
+}
+
 /* Determine whether JFUNC evaluates to a known value (that is either a
    constant or a binfo) and if so, return it.  Otherwise return NULL. INFO
    describes the caller node so that pass-through jump functions can be
@@ -705,7 +699,7 @@ ipa_value_from_jfunc (struct ipa_node_params *info, struct ipa_jump_func *jfunc)
   if (jfunc->type == IPA_JF_CONST)
     return jfunc->value.constant;
   else if (jfunc->type == IPA_JF_KNOWN_TYPE)
-    return jfunc->value.base_binfo;
+    return ipa_value_from_known_type_jfunc (jfunc);
   else if (jfunc->type == IPA_JF_PASS_THROUGH
 	   || jfunc->type == IPA_JF_ANCESTOR)
     {
@@ -1011,7 +1005,11 @@ propagate_accross_jump_function (struct cgraph_edge *cs,
       tree val;
 
       if (jfunc->type == IPA_JF_KNOWN_TYPE)
-	val = jfunc->value.base_binfo;
+	{
+	  val = ipa_value_from_known_type_jfunc (jfunc);
+	  if (!val)
+	    return set_lattice_contains_variable (dest_lat);
+	}
       else
 	val = jfunc->value.constant;
       return add_value_to_lattice (dest_lat, val, cs, NULL, 0);
@@ -1068,18 +1066,17 @@ propagate_constants_accross_call (struct cgraph_edge *cs)
   struct cgraph_node *callee, *alias_or_thunk;
   struct ipa_edge_args *args;
   bool ret = false;
-  int i, count;
+  int i, args_count, parms_count;
 
   callee = cgraph_function_node (cs->callee, &availability);
   if (!callee->analyzed)
     return false;
   gcc_checking_assert (cgraph_function_with_gimple_body_p (callee));
   callee_info = IPA_NODE_REF (callee);
-  if (ipa_is_called_with_var_arguments (callee_info))
-    return false;
 
   args = IPA_EDGE_REF (cs);
-  count = ipa_get_cs_argument_count (args);
+  args_count = ipa_get_cs_argument_count (args);
+  parms_count = ipa_get_param_count (callee_info);
 
   /* If this call goes through a thunk we must not propagate to the first (0th)
      parameter.  However, we might need to uncover a thunk from below a series
@@ -1095,7 +1092,7 @@ propagate_constants_accross_call (struct cgraph_edge *cs)
   else
     i = 0;
 
-  for (; i < count; i++)
+  for (; (i < args_count) && (i < parms_count); i++)
     {
       struct ipa_jump_func *jump_func = ipa_get_ith_jump_func (args, i);
       struct ipcp_lattice *dest_lat = ipa_get_lattice (callee_info, i);
@@ -1105,16 +1102,18 @@ propagate_constants_accross_call (struct cgraph_edge *cs)
       else
 	ret |= propagate_accross_jump_function (cs, jump_func, dest_lat);
     }
+  for (; i < parms_count; i++)
+    ret |= set_lattice_contains_variable (ipa_get_lattice (callee_info, i));
+
   return ret;
 }
 
 /* If an indirect edge IE can be turned into a direct one based on KNOWN_VALS
    (which can contain both constants and binfos) or KNOWN_BINFOS (which can be
-   NULL) return the destination.  If simple thunk delta must be applied too,
-   store it to DELTA.  */
+   NULL) return the destination.  */
 
 static tree
-get_indirect_edge_target (struct cgraph_edge *ie, tree *delta,
+get_indirect_edge_target (struct cgraph_edge *ie,
 			  VEC (tree, heap) *known_vals,
 			  VEC (tree, heap) *known_binfos)
 {
@@ -1132,10 +1131,7 @@ get_indirect_edge_target (struct cgraph_edge *ie, tree *delta,
       if (t &&
 	  TREE_CODE (t) == ADDR_EXPR
 	  && TREE_CODE (TREE_OPERAND (t, 0)) == FUNCTION_DECL)
-	{
-	  *delta = NULL_TREE;
-	  return TREE_OPERAND (t, 0);
-	}
+	return TREE_OPERAND (t, 0);
       else
 	return NULL_TREE;
     }
@@ -1159,7 +1155,7 @@ get_indirect_edge_target (struct cgraph_edge *ie, tree *delta,
       binfo = get_binfo_at_offset (binfo, anc_offset, otr_type);
       if (!binfo)
 	return NULL_TREE;
-      return gimple_get_virt_method_for_binfo (token, binfo, delta);
+      return gimple_get_virt_method_for_binfo (token, binfo);
     }
   else
     {
@@ -1168,7 +1164,7 @@ get_indirect_edge_target (struct cgraph_edge *ie, tree *delta,
       binfo = get_binfo_at_offset (t, anc_offset, otr_type);
       if (!binfo)
 	return NULL_TREE;
-      return gimple_get_virt_method_for_binfo (token, binfo, delta);
+      return gimple_get_virt_method_for_binfo (token, binfo);
     }
 }
 
@@ -1187,9 +1183,9 @@ devirtualization_time_bonus (struct cgraph_node *node,
     {
       struct cgraph_node *callee;
       struct inline_summary *isummary;
-      tree delta, target;
+      tree target;
 
-      target = get_indirect_edge_target (ie, &delta, known_csts, known_binfos);
+      target = get_indirect_edge_target (ie, known_csts, known_binfos);
       if (!target)
 	continue;
 
@@ -1674,12 +1670,12 @@ ipcp_discover_new_direct_edges (struct cgraph_node *node,
 
   for (ie = node->indirect_calls; ie; ie = next_ie)
     {
-      tree delta, target;
+      tree target;
 
       next_ie = ie->next_callee;
-      target = get_indirect_edge_target (ie, &delta, known_vals, NULL);
+      target = get_indirect_edge_target (ie, known_vals, NULL);
       if (target)
-	ipa_make_edge_direct_to_target (ie, target, delta);
+	ipa_make_edge_direct_to_target (ie, target);
     }
 }
 
@@ -2008,7 +2004,11 @@ create_specialized_node (struct cgraph_node *node,
 	}
     }
   else
-    args_to_skip = NULL;
+    {
+      args_to_skip = NULL;
+      if (dump_file && (dump_flags & TDF_DETAILS))
+	fprintf (dump_file, "      cannot change function signature\n");
+    }
 
   for (i = 0; i < count ; i++)
     {
@@ -2070,8 +2070,12 @@ find_more_values_for_callers_subset (struct cgraph_node *node,
 	  struct ipa_jump_func *jump_func;
 	  tree t;
 
+          if (i >= ipa_get_cs_argument_count (IPA_EDGE_REF (cs)))
+            {
+              newval = NULL_TREE;
+              break;
+            }
 	  jump_func = ipa_get_ith_jump_func (IPA_EDGE_REF (cs), i);
-
 	  t = ipa_value_from_jfunc (IPA_NODE_REF (cs->caller), jump_func);
 	  if (!t
 	      || (newval
@@ -2141,6 +2145,11 @@ perhaps_add_new_callers (struct cgraph_node *node, struct ipcp_value *val)
 		  if (!val)
 		    continue;
 
+		  if (i >= ipa_get_cs_argument_count (args))
+		    {
+		      insufficient = true;
+		      break;
+		    }
 		  jump_func = ipa_get_ith_jump_func (args, i);
 		  t = ipa_value_from_jfunc (caller_info, jump_func);
 		  if (!t || !values_equal_for_ipcp_p (val, t))
@@ -2467,14 +2476,11 @@ ipcp_generate_summary (void)
     fprintf (dump_file, "\nIPA constant propagation start:\n");
   ipa_register_cgraph_hooks ();
 
-  /* FIXME: We could propagate through thunks happily and we could be
-     even able to clone them, if needed.  Do that later.  */
   FOR_EACH_FUNCTION_WITH_GIMPLE_BODY (node)
       {
 	/* Unreachable nodes should have been eliminated before ipcp.  */
 	gcc_assert (node->needed || node->reachable);
-
-	inline_summary (node)->versionable = tree_versionable_function_p (node->decl);
+	node->local.versionable = tree_versionable_function_p (node->decl);
 	ipa_analyze_node (node);
       }
 }

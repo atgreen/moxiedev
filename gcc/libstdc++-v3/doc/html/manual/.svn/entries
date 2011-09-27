@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/doc/html/manual
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ redi
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-dynamic_memory.html
-file
-
-
-
-
-2011-06-04T18:05:50.570104Z
-eaf01882b2fc2fddcbe0b3b61730cce3
-2011-05-02T10:39:15.714849Z
-173243
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4569
 
 iterators.html
 file
@@ -94,14 +60,14 @@ redi
 
 9796
 
-generalized_numeric_operations.html
+dynamic_memory.html
 file
 
 
 
 
-2011-06-04T18:05:50.571104Z
-2021bac2e603c7acac9e0eccaaa2d089
+2011-06-04T18:05:50.570104Z
+eaf01882b2fc2fddcbe0b3b61730cce3
 2011-05-02T10:39:15.714849Z
 173243
 redi
@@ -126,7 +92,7 @@ redi
 
 
 
-3486
+4569
 
 spine.html
 file
@@ -162,6 +128,40 @@ redi
 
 35700
 
+generalized_numeric_operations.html
+file
+
+
+
+
+2011-06-04T18:05:50.571104Z
+2021bac2e603c7acac9e0eccaaa2d089
+2011-05-02T10:39:15.714849Z
+173243
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3486
+
 bk01pt03ch18s05.html
 file
 
@@ -195,40 +195,6 @@ redi
 
 
 2953
-
-bk01pt03ch19s05.html
-file
-
-
-
-
-2011-06-04T18:05:50.572104Z
-767a0ba403c40c82a453bc702f85f660
-2011-05-02T10:39:15.714849Z
-173243
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5977
 
 configure.html
 file
@@ -264,14 +230,14 @@ redi
 
 16753
 
-ext_allocators.html
+bk01pt03ch19s05.html
 file
 
 
 
 
-2011-06-04T18:05:50.574104Z
-af68ef92cf5926c1d2e96371575b73c1
+2011-06-04T18:05:50.572104Z
+767a0ba403c40c82a453bc702f85f660
 2011-05-02T10:39:15.714849Z
 173243
 redi
@@ -296,7 +262,7 @@ redi
 
 
 
-24932
+5977
 
 status.html
 file
@@ -332,14 +298,14 @@ redi
 
 189118
 
-ext_containers.html
+ext_allocators.html
 file
 
 
 
 
 2011-06-04T18:05:50.574104Z
-c2d61cefee1f70a563a80078378a821e
+af68ef92cf5926c1d2e96371575b73c1
 2011-05-02T10:39:15.714849Z
 173243
 redi
@@ -364,7 +330,7 @@ redi
 
 
 
-2484
+24932
 
 using.html
 file
@@ -400,6 +366,40 @@ redi
 
 8458
 
+ext_containers.html
+file
+
+
+
+
+2011-06-04T18:05:50.574104Z
+c2d61cefee1f70a563a80078378a821e
+2011-05-02T10:39:15.714849Z
+173243
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2484
+
 ext_io.html
 file
 
@@ -434,40 +434,6 @@ redi
 
 5276
 
-termination.html
-file
-
-
-
-
-2011-06-04T18:05:50.575104Z
-f874317aa097baa625a181129e4d95a7
-2011-05-02T10:39:15.714849Z
-173243
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7029
-
 using_macros.html
 file
 
@@ -501,6 +467,40 @@ redi
 
 
 7042
+
+termination.html
+file
+
+
+
+
+2011-06-04T18:05:50.575104Z
+f874317aa097baa625a181129e4d95a7
+2011-05-02T10:39:15.714849Z
+173243
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7029
 
 concurrency.html
 file
@@ -1114,40 +1114,6 @@ redi
 
 19470
 
-intro.html
-file
-
-
-
-
-2011-06-04T18:05:50.581104Z
-f373848e008e14112586250a2c0da045
-2011-05-31T08:11:15.294954Z
-174468
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7536
-
 abi.html
 file
 
@@ -1182,14 +1148,14 @@ redi
 
 47098
 
-atomics.html
+intro.html
 file
 
 
 
 
-2011-06-04T18:05:50.582104Z
-c680e27661583608b9c8945e72a7b27e
+2011-06-04T18:05:50.581104Z
+f373848e008e14112586250a2c0da045
 2011-05-31T08:11:15.294954Z
 174468
 redi
@@ -1214,7 +1180,7 @@ redi
 
 
 
-2964
+7536
 
 internals.html
 file
@@ -1250,6 +1216,40 @@ redi
 
 23820
 
+atomics.html
+file
+
+
+
+
+2011-06-04T18:05:50.582104Z
+c680e27661583608b9c8945e72a7b27e
+2011-05-31T08:11:15.294954Z
+174468
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2964
+
 bugs.html
 file
 
@@ -1283,40 +1283,6 @@ redi
 
 
 29428
-
-bk01pt04.html
-file
-
-
-
-
-2011-06-04T18:05:50.583104Z
-6ff05706ded9850a99989b52a31dcd4c
-2011-05-02T10:39:15.714849Z
-173243
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8662
 
 ext_numerics.html
 file
@@ -1352,14 +1318,14 @@ redi
 
 2692
 
-bk01pt03ch21s02.html
+bk01pt04.html
 file
 
 
 
 
 2011-06-04T18:05:50.583104Z
-7425a503812e2c8972499937d037721a
+6ff05706ded9850a99989b52a31dcd4c
 2011-05-02T10:39:15.714849Z
 173243
 redi
@@ -1384,7 +1350,7 @@ redi
 
 
 
-4410
+8662
 
 bk01pt03pr01.html
 file
@@ -1419,6 +1385,40 @@ redi
 
 
 2647
+
+bk01pt03ch21s02.html
+file
+
+
+
+
+2011-06-04T18:05:50.583104Z
+7425a503812e2c8972499937d037721a
+2011-05-02T10:39:15.714849Z
+173243
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4410
 
 memory.html
 file
@@ -1522,40 +1522,6 @@ redi
 
 9733
 
-bk01pt03ch18s03.html
-file
-
-
-
-
-2011-06-04T18:05:50.585104Z
-af04ccd4c78e71a84a873f32156602f1
-2011-05-31T08:11:15.294954Z
-174468
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-17946
-
 bk01pt03ch28s02.html
 file
 
@@ -1589,6 +1555,40 @@ redi
 
 
 5668
+
+bk01pt03ch18s03.html
+file
+
+
+
+
+2011-06-04T18:05:50.585104Z
+af04ccd4c78e71a84a873f32156602f1
+2011-05-31T08:11:15.294954Z
+174468
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+17946
 
 bk01pt03ch19s03.html
 file
@@ -1658,40 +1658,6 @@ redi
 
 48305
 
-fstreams.html
-file
-
-
-
-
-2011-06-04T18:05:50.586104Z
-8c727f533bddbb38042e6ac8b58779b3
-2011-05-02T10:39:15.714849Z
-173243
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-11784
-
 source_organization.html
 file
 
@@ -1725,6 +1691,40 @@ redi
 
 
 6087
+
+fstreams.html
+file
+
+
+
+
+2011-06-04T18:05:50.586104Z
+8c727f533bddbb38042e6ac8b58779b3
+2011-05-02T10:39:15.714849Z
+173243
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11784
 
 ext_demangling.html
 file
@@ -1794,40 +1794,6 @@ redi
 
 4035
 
-containers_and_c.html
-file
-
-
-
-
-2011-06-04T18:05:50.588104Z
-46c35baf6bbd9eaadf99e7c1a5c1035b
-2011-05-02T10:39:15.714849Z
-173243
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5638
-
 strings.html
 file
 
@@ -1861,6 +1827,40 @@ redi
 
 
 22646
+
+containers_and_c.html
+file
+
+
+
+
+2011-06-04T18:05:50.588104Z
+46c35baf6bbd9eaadf99e7c1a5c1035b
+2011-05-02T10:39:15.714849Z
+173243
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5638
 
 io_and_c.html
 file
@@ -1964,40 +1964,6 @@ redi
 
 11659
 
-setup.html
-file
-
-
-
-
-2011-06-04T18:05:50.589104Z
-a77c012f0e735d34f31979a852de5775
-2011-05-02T10:39:15.714849Z
-173243
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7557
-
 parallel_mode.html
 file
 
@@ -2032,14 +1998,14 @@ redi
 
 8404
 
-source_design_notes.html
+setup.html
 file
 
 
 
 
-2011-06-04T18:05:50.590104Z
-83e7eb93a824cdf8610d47609f409910
+2011-06-04T18:05:50.589104Z
+a77c012f0e735d34f31979a852de5775
 2011-05-02T10:39:15.714849Z
 173243
 redi
@@ -2064,7 +2030,7 @@ redi
 
 
 
-57820
+7557
 
 backwards.html
 file
@@ -2099,6 +2065,40 @@ redi
 
 
 42799
+
+source_design_notes.html
+file
+
+
+
+
+2011-06-04T18:05:50.590104Z
+83e7eb93a824cdf8610d47609f409910
+2011-05-02T10:39:15.714849Z
+173243
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+57820
 
 facets.html
 file

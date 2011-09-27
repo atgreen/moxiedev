@@ -192,7 +192,7 @@ class Expression
   // Make an expression which is a method bound to its first
   // parameter.
   static Bound_method_expression*
-  make_bound_method(Expression* object, Expression* method, source_location);
+  make_bound_method(Expression* object, Named_object* method, source_location);
 
   // Make an index or slice expression.  This is a parser expression
   // which represents LEFT[START:END].  END may be NULL, meaning an
@@ -359,9 +359,9 @@ class Expression
   string_constant_value(std::string* val) const
   { return this->do_string_constant_value(val); }
 
-  // This is called by the parser if the value of this expression is
-  // being discarded.  This issues warnings about computed values
-  // being unused.
+  // This is called if the value of this expression is being
+  // discarded.  This issues warnings about computed values being
+  // unused.
   void
   discarding_value()
   { this->do_discarding_value(); }
@@ -725,9 +725,9 @@ class Expression
   virtual void
   do_export(Export*) const;
 
-  // For children to call to warn about an unused value.
+  // For children to call to give an error for an unused value.
   void
-  warn_about_unused_value();
+  unused_value_error();
 
   // For children to call when they detect that they are in error.
   void
@@ -1198,8 +1198,9 @@ class Call_expression : public Expression
 		  source_location location)
     : Expression(EXPRESSION_CALL, location),
       fn_(fn), args_(args), type_(NULL), results_(NULL), tree_(NULL),
-      is_varargs_(is_varargs), varargs_are_lowered_(false),
-      types_are_determined_(false), is_deferred_(false), issued_error_(false)
+      is_varargs_(is_varargs), are_hidden_fields_ok_(false),
+      varargs_are_lowered_(false), types_are_determined_(false),
+      is_deferred_(false), issued_error_(false)
   { }
 
   // The function to call.
@@ -1243,6 +1244,17 @@ class Call_expression : public Expression
   bool
   is_varargs() const
   { return this->is_varargs_; }
+
+  // Note that varargs have already been lowered.
+  void
+  set_varargs_are_lowered()
+  { this->varargs_are_lowered_ = true; }
+
+  // Note that it is OK for this call to set hidden fields when
+  // passing arguments.
+  void
+  set_hidden_fields_are_ok()
+  { this->are_hidden_fields_ok_ = true; }
 
   // Whether this call is being deferred.
   bool
@@ -1307,7 +1319,7 @@ class Call_expression : public Expression
   { this->args_ = args; }
 
   // Let a builtin expression lower varargs.
-  Expression*
+  void
   lower_varargs(Gogo*, Named_object* function, Statement_inserter* inserter,
 		Type* varargs_type, size_t param_count);
 
@@ -1322,9 +1334,6 @@ class Call_expression : public Expression
  private:
   bool
   check_argument_type(int, const Type*, const Type*, source_location, bool);
-
-  tree
-  bound_method_function(Translate_context*, Bound_method_expression*, tree*);
 
   tree
   interface_method_function(Translate_context*,
@@ -1348,6 +1357,9 @@ class Call_expression : public Expression
   tree tree_;
   // True if the last argument is a varargs argument (f(a...)).
   bool is_varargs_;
+  // True if this statement may pass hidden fields in the arguments.
+  // This is used for generated method stubs.
+  bool are_hidden_fields_ok_;
   // True if varargs have already been lowered.
   bool varargs_are_lowered_;
   // True if types have been determined.
@@ -1636,7 +1648,7 @@ class Map_index_expression : public Expression
 class Bound_method_expression : public Expression
 {
  public:
-  Bound_method_expression(Expression* expr, Expression* method,
+  Bound_method_expression(Expression* expr, Named_object* method,
 			  source_location location)
     : Expression(EXPRESSION_BOUND_METHOD, location),
       expr_(expr), expr_type_(NULL), method_(method)
@@ -1654,8 +1666,8 @@ class Bound_method_expression : public Expression
   first_argument_type() const
   { return this->expr_type_; }
 
-  // Return the reference to the method function.
-  Expression*
+  // Return the method function.
+  Named_object*
   method()
   { return this->method_; }
 
@@ -1680,8 +1692,7 @@ class Bound_method_expression : public Expression
   Expression*
   do_copy()
   {
-    return new Bound_method_expression(this->expr_->copy(),
-				       this->method_->copy(),
+    return new Bound_method_expression(this->expr_->copy(), this->method_,
 				       this->location());
   }
 
@@ -1699,8 +1710,8 @@ class Bound_method_expression : public Expression
   // NULL in the normal case, non-NULL when using a method from an
   // anonymous field which does not require a stub.
   Type* expr_type_;
-  // The method itself.  This is a Func_expression.
-  Expression* method_;
+  // The method itself.
+  Named_object* method_;
 };
 
 // A reference to a field in a struct.

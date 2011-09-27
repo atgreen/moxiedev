@@ -13,8 +13,6 @@
 /amd64-i386-address.exp/1.4/Sun Jun  5 16:54:38 2011//
 /amd64-pseudo.c/1.2/Sun Jun  5 16:54:38 2011//
 /amd64-word.exp/1.5/Sun Jun  5 16:54:38 2011//
-/arm-disp-step.S/1.5/Sun Jun  5 16:54:38 2011//
-/arm-disp-step.exp/1.4/Sun Jun  5 16:54:38 2011//
 /e500-abi.c/1.1/Sun Jun  5 16:54:38 2011//
 /e500-abi.exp/1.11/Sun Jun  5 16:54:38 2011//
 /e500-prologue.c/1.7/Sun Jun  5 16:54:38 2011//
@@ -88,4 +86,9 @@
 /thumb2-it.exp/1.4/Sun Jun  5 16:54:38 2011//
 /vsx-regs.c/1.1/Sun Jun  5 16:54:38 2011//
 /vsx-regs.exp/1.9/Sun Jun  5 16:54:38 2011//
+/amd64-prologue-xmm.c/1.1/Thu Sep  8 15:38:16 2011//
+/amd64-prologue-xmm.exp/1.1/Thu Sep  8 15:38:16 2011//
+/amd64-prologue-xmm.s/1.1/Thu Sep  8 15:38:16 2011//
+/arm-disp-step.S/1.6/Sun Sep 25 18:07:45 2011//
+/arm-disp-step.exp/1.5/Sun Sep 25 18:07:45 2011//
 D

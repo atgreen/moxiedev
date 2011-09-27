@@ -1128,6 +1128,7 @@ begin
            Pragma_Default_Storage_Pool          |
            Pragma_Dimension                     |
            Pragma_Discard_Names                 |
+           Pragma_Dispatching_Domain            |
            Pragma_Eliminate                     |
            Pragma_Elaborate                     |
            Pragma_Elaborate_All                 |
@@ -1148,6 +1149,7 @@ begin
            Pragma_Finalize_Storage_Only         |
            Pragma_Float_Representation          |
            Pragma_Ident                         |
+           Pragma_Implementation_Defined        |
            Pragma_Implemented                   |
            Pragma_Implicit_Packing              |
            Pragma_Import                        |

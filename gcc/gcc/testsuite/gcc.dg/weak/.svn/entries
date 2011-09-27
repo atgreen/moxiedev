@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/weak
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ nickc
 
 1087
 
-typeof-2.c
-file
-
-
-
-
-2010-02-03T11:41:35.714492Z
-e381c78ab6446defa2261322f93d638d
-2010-01-20T14:17:00.504637Z
-156081
-green
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2059
-
 weak-10.c
 file
 
@@ -127,6 +93,40 @@ jsm28
 
 
 450
+
+typeof-2.c
+file
+
+
+
+
+2010-02-03T11:41:35.714492Z
+e381c78ab6446defa2261322f93d638d
+2010-01-20T14:17:00.504637Z
+156081
+green
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2059
 
 weak-11.c
 file

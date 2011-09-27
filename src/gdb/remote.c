@@ -4879,8 +4879,8 @@ remote_console_output (char *msg)
       tb[1] = 0;
       fputs_unfiltered (tb, gdb_stdtarg);
     }
-    gdb_flush (gdb_stdtarg);
-  }
+  gdb_flush (gdb_stdtarg);
+}
 
 typedef struct cached_reg
 {
@@ -4898,6 +4898,10 @@ struct stop_reply
 
   struct target_waitstatus ws;
 
+  /* Expedited registers.  This makes remote debugging a bit more
+     efficient for those targets that provide critical registers as
+     part of their normal status mechanism (as another roundtrip to
+     fetch them is avoided).  */
   VEC(cached_reg_t) *regcache;
 
   int stopped_by_watchpoint_p;

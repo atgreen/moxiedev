@@ -104,10 +104,14 @@ D/widewide////
 /sym_print_name.exp/1.7/Sun Jun  5 16:54:38 2011//
 /taft_type.exp/1.6/Sun Jun  5 16:54:38 2011//
 /tagged.exp/1.6/Sun Jun  5 16:54:38 2011//
-/tasks.exp/1.6/Sun Jun  5 16:54:38 2011//
 /tick_last_segv.exp/1.4/Sun Jun  5 16:54:38 2011//
 /type_coercion.exp/1.7/Sun Jun  5 16:54:38 2011//
 /uninitialized_vars.exp/1.5/Sun Jun  5 16:54:38 2011//
 /variant_record_packed_array.exp/1.4/Sun Jun  5 16:54:38 2011//
 /watch_arg.exp/1.11/Sun Jun  5 16:54:38 2011//
 /widewide.exp/1.1/Sun Jun  5 16:54:38 2011//
+D/array_first_last////
+D/char_enum////
+D/ptr_typedef////
+D/same_enum////
+/tasks.exp/1.7/Sun Sep 25 18:07:44 2011//

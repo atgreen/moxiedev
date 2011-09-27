@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja/g++.ext
 svn://gcc.gnu.org/svn/gcc
 
@@ -774,14 +774,14 @@ hjl
 
 325
 
-addrfunc1.C
+stmtexpr1.C
 file
 
 
 
 
 2009-04-24T17:44:29.000000Z
-bd0efa0a1fe0ed98636fcebbc5fd05e3
+ea46aef8157f0a37daa39b1ac8c6bfa8
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -806,7 +806,7 @@ mmitchel
 
 
 
-335
+131
 
 attrib2.C
 file
@@ -842,14 +842,14 @@ hjl
 
 335
 
-stmtexpr1.C
+addrfunc1.C
 file
 
 
 
 
 2009-04-24T17:44:29.000000Z
-ea46aef8157f0a37daa39b1ac8c6bfa8
+bd0efa0a1fe0ed98636fcebbc5fd05e3
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -874,41 +874,7 @@ mmitchel
 
 
 
-131
-
-attrib3.C
-file
-
-
-
-
-2011-08-24T20:09:38.158372Z
-2036e7542ce315fbfca215322b08030b
-2011-07-09T19:25:11.722277Z
-176090
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-405
+335
 
 addrfunc2.C
 file
@@ -944,17 +910,51 @@ mmitchel
 
 264
 
-attrib4.C
+attrib3.C
+file
+
+
+
+
+2011-08-24T20:09:38.158372Z
+2036e7542ce315fbfca215322b08030b
+2011-07-09T19:25:11.722277Z
+176090
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+405
+
+pretty2.C
 file
 
 
 
 
 2009-04-24T17:44:29.000000Z
-ae9068ea19cc94f508bcfca599cf3160
-2008-09-17T00:06:57.961095Z
-140405
-janis
+02044b0d3f0a562855e9108718011a3e
+2003-09-05T15:36:37.000000Z
+71114
+pinskia
 
 
 
@@ -976,7 +976,7 @@ janis
 
 
 
-656
+1677
 
 addrfunc3.C
 file
@@ -1012,17 +1012,17 @@ mmitchel
 
 266
 
-pretty2.C
+attrib4.C
 file
 
 
 
 
 2009-04-24T17:44:29.000000Z
-02044b0d3f0a562855e9108718011a3e
-2003-09-05T15:36:37.000000Z
-71114
-pinskia
+ae9068ea19cc94f508bcfca599cf3160
+2008-09-17T00:06:57.961095Z
+140405
+janis
 
 
 
@@ -1044,7 +1044,7 @@ pinskia
 
 
 
-1677
+656
 
 attrib5.C
 file

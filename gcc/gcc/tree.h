@@ -795,7 +795,7 @@ enum tree_node_structure_enum {
 			     (CODE1), (CODE2), (CODE3), (CODE4), 0);	\
     __t; })
 
-#define NON_TREE_CHECK4(T, CODE1, CODE2, CODE3, CODE4) __extension__	\
+#define TREE_NOT_CHECK4(T, CODE1, CODE2, CODE3, CODE4) __extension__	\
 ({  __typeof (T) const __t = (T);					\
     if (TREE_CODE (__t) == (CODE1)					\
 	|| TREE_CODE (__t) == (CODE2)					\
@@ -5274,7 +5274,7 @@ extern tree build_simple_mem_ref_loc (location_t, tree);
 extern double_int mem_ref_offset (const_tree);
 extern tree reference_alias_ptr_type (const_tree);
 extern tree build_invariant_address (tree, tree, HOST_WIDE_INT);
-extern tree constant_boolean_node (int, tree);
+extern tree constant_boolean_node (bool, tree);
 extern tree div_if_zero_remainder (enum tree_code, const_tree, const_tree);
 
 extern bool tree_swap_operands_p (const_tree, const_tree, bool);

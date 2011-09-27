@@ -161,6 +161,22 @@ Incremental_binary::error(const char* format, ...) const
   va_end(args);
 }
 
+// Return TRUE if a section of type SH_TYPE can be updated in place
+// during an incremental update.  We can update sections of type PROGBITS,
+// NOBITS, INIT_ARRAY, FINI_ARRAY, PREINIT_ARRAY, and NOTE.  All others
+// will be regenerated.
+
+bool
+can_incremental_update(unsigned int sh_type)
+{
+  return (sh_type == elfcpp::SHT_PROGBITS
+	  || sh_type == elfcpp::SHT_NOBITS
+	  || sh_type == elfcpp::SHT_INIT_ARRAY
+	  || sh_type == elfcpp::SHT_FINI_ARRAY
+	  || sh_type == elfcpp::SHT_PREINIT_ARRAY
+	  || sh_type == elfcpp::SHT_NOTE);
+}
+
 // Find the .gnu_incremental_inputs section and related sections.
 
 template<int size, bool big_endian>
@@ -2008,7 +2024,9 @@ Sized_relobj_incr<size, big_endian>::do_layout(
         this->error(_("COMDAT group has no signature"));
       bool keep = layout->find_or_add_kept_section(signature, this, i, true,
 						   true, NULL);
-      if (!keep)
+      if (keep)
+	incremental_inputs->report_comdat_group(this, signature);
+      else
         this->error(_("COMDAT group %s included twice in incremental link"),
 		    signature);
     }

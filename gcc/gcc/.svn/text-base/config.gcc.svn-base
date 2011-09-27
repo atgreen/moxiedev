@@ -353,7 +353,7 @@ i[34567]86-*-*)
 		       immintrin.h x86intrin.h avxintrin.h xopintrin.h
 		       ia32intrin.h cross-stdarg.h lwpintrin.h popcntintrin.h
 		       lzcntintrin.h bmiintrin.h bmi2intrin.h tbmintrin.h
-		       avx2intrin.h"
+		       avx2intrin.h fmaintrin.h"
 	;;
 x86_64-*-*)
 	cpu_type=i386
@@ -366,7 +366,7 @@ x86_64-*-*)
 		       immintrin.h x86intrin.h avxintrin.h xopintrin.h
 		       ia32intrin.h cross-stdarg.h lwpintrin.h popcntintrin.h
 		       lzcntintrin.h bmiintrin.h tbmintrin.h bmi2intrin.h
-		       avx2intrin.h"
+		       avx2intrin.h fmaintrin.h"
 	need_64bit_hwint=yes
 	;;
 ia64-*-*)
@@ -422,6 +422,7 @@ score*-*-*)
 	;;
 sparc*-*-*)
 	cpu_type=sparc
+	extra_headers="visintrin.h"
 	need_64bit_hwint=yes
 	;;
 spu*-*-*)
@@ -2501,7 +2502,7 @@ sparc*-*-solaris2*)
 	tm_file="sparc/biarch64.h ${tm_file} ${sol2_tm_file} sol2-bi.h"
 	case ${target} in
 	    sparc64-*-* | sparcv9-*-*)
-		tm_file="sparc/sol2-64.h ${tm_file}"
+		tm_file="sparc/default-64.h ${tm_file}"
 		;;
 	    *)
 		test x$with_cpu != x || with_cpu=v9
@@ -2523,7 +2524,7 @@ sparc64-*-rtems*)
 	tmake_file="${tmake_file} t-rtems"
 	;;
 sparc64-*-linux*)
-	tm_file="sparc/biarch64.h ${tm_file} dbxelf.h elfos.h sparc/sysv4.h gnu-user.h linux.h glibc-stdint.h sparc/linux64.h"
+	tm_file="sparc/biarch64.h ${tm_file} dbxelf.h elfos.h sparc/sysv4.h gnu-user.h linux.h glibc-stdint.h sparc/default-64.h sparc/linux64.h"
 	extra_options="${extra_options} sparc/long-double-switch.opt"
 	tmake_file="${tmake_file} sparc/t-linux sparc/t-linux64"
 	extra_parts="${extra_parts} crtfastmath.o"
@@ -3482,7 +3483,8 @@ case "${target}" in
 			| v8 | supersparc | hypersparc | leon \
 			| sparclite | f930 | f934 | sparclite86x \
 			| sparclet | tsc701 \
-			| v9 | ultrasparc | ultrasparc3 | niagara | niagara2)
+			| v9 | ultrasparc | ultrasparc3 | niagara | niagara2 \
+			| niagara3 | niagara4)
 				# OK
 				;;
 			*)

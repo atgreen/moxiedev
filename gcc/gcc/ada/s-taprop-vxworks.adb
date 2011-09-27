@@ -39,7 +39,6 @@ pragma Polling (Off);
 --  operations. It causes infinite loops and other problems.
 
 with Ada.Unchecked_Conversion;
-with Ada.Unchecked_Deallocation;
 
 with Interfaces.C;
 
@@ -67,8 +66,10 @@ package body System.Task_Primitives.Operations is
    use System.Parameters;
    use type System.VxWorks.Ext.t_id;
    use type Interfaces.C.int;
+   use type System.OS_Interface.unsigned;
 
    subtype int is System.OS_Interface.int;
+   subtype unsigned is System.OS_Interface.unsigned;
 
    Relative : constant := 0;
 
@@ -103,6 +104,10 @@ package body System.Task_Primitives.Operations is
    Time_Slice_Val : Integer;
    pragma Import (C, Time_Slice_Val, "__gl_time_slice_val");
 
+   Null_Thread_Id : constant Thread_Id := 0;
+   --  Constant to indicate that the thread identifier has not yet been
+   --  initialized.
+
    --------------------
    -- Local Packages --
    --------------------
@@ -119,11 +124,8 @@ package body System.Task_Primitives.Operations is
 
       procedure Set (Self_Id : Task_Id);
       pragma Inline (Set);
-      --  Set the self id for the current task
-
-      procedure Delete;
-      pragma Inline (Delete);
-      --  Delete the task specific data associated with the current task
+      --  Set the self id for the current task, unless Self_Id is null, in
+      --  which case the task specific data is deleted.
 
       function Self return Task_Id;
       pragma Inline (Self);
@@ -133,6 +135,13 @@ package body System.Task_Primitives.Operations is
 
    package body Specific is separate;
    --  The body of this package is target specific
+
+   ----------------------------------
+   -- ATCB allocation/deallocation --
+   ----------------------------------
+
+   package body ATCB_Allocation is separate;
+   --  The body of this package is shared across several targets
 
    ---------------------------------
    -- Support for foreign threads --
@@ -188,7 +197,7 @@ package body System.Task_Primitives.Operations is
       --  It is not safe to raise an exception when using ZCX and the GCC
       --  exception handling mechanism.
 
-      if ZCX_By_Default and then GCC_ZCX_Support then
+      if ZCX_By_Default then
          return;
       end if;
 
@@ -822,15 +831,6 @@ package body System.Task_Primitives.Operations is
       end if;
    end Enter_Task;
 
-   --------------
-   -- New_ATCB --
-   --------------
-
-   function New_ATCB (Entry_Num : Task_Entry_Index) return Task_Id is
-   begin
-      return new Ada_Task_Control_Block (Entry_Num);
-   end New_ATCB;
-
    -------------------
    -- Is_Valid_Task --
    -------------------
@@ -857,7 +857,7 @@ package body System.Task_Primitives.Operations is
    procedure Initialize_TCB (Self_ID : Task_Id; Succeeded : out Boolean) is
    begin
       Self_ID.Common.LL.CV := semBCreate (SEM_Q_PRIORITY, SEM_EMPTY);
-      Self_ID.Common.LL.Thread := 0;
+      Self_ID.Common.LL.Thread := Null_Thread_Id;
 
       if Self_ID.Common.LL.CV = 0 then
          Succeeded := False;
@@ -883,12 +883,24 @@ package body System.Task_Primitives.Operations is
       Succeeded  : out Boolean)
    is
       Adjusted_Stack_Size : size_t;
-      Result : int := 0;
 
-      use System.Task_Info;
       use type System.Multiprocessors.CPU_Range;
 
    begin
+      --  Check whether both Dispatching_Domain and CPU are specified for the
+      --  task, and the CPU value is not contained within the range of
+      --  processors for the domain.
+
+      if T.Common.Domain /= null
+        and then T.Common.Base_CPU /= System.Multiprocessors.Not_A_Specific_CPU
+        and then
+          (T.Common.Base_CPU not in T.Common.Domain'Range
+            or else not T.Common.Domain (T.Common.Base_CPU))
+      then
+         Succeeded := False;
+         return;
+      end if;
+
       --  Ask for four extra bytes of stack space so that the ATCB pointer can
       --  be stored below the stack limit, plus extra space for the frame of
       --  Task_Wrapper. This is so the user gets the amount of stack requested
@@ -952,26 +964,9 @@ package body System.Task_Primitives.Operations is
 
       --  Set processor affinity
 
-      if T.Common.Base_CPU /= System.Multiprocessors.Not_A_Specific_CPU then
-         --  Ada 2012 pragma CPU uses CPU numbers starting from 1, while
-         --  on VxWorks the first CPU is identified by a 0, so we need to
-         --  adjust.
+      Set_Task_Affinity (T);
 
-         Result :=
-           taskCpuAffinitySet
-             (T.Common.LL.Thread, int (T.Common.Base_CPU) - 1);
-
-      elsif T.Common.Task_Info /= Unspecified_Task_Info then
-         Result :=
-           taskCpuAffinitySet (T.Common.LL.Thread, T.Common.Task_Info);
-      end if;
-
-      if Result = -1 then
-         taskDelete (T.Common.LL.Thread);
-         T.Common.LL.Thread := -1;
-      end if;
-
-      if T.Common.LL.Thread = -1 then
+      if T.Common.LL.Thread <= Null_Thread_Id then
          Succeeded := False;
       else
          Succeeded := True;
@@ -985,12 +980,7 @@ package body System.Task_Primitives.Operations is
    ------------------
 
    procedure Finalize_TCB (T : Task_Id) is
-      Result  : int;
-      Tmp     : Task_Id          := T;
-      Is_Self : constant Boolean := (T = Self);
-
-      procedure Free is new
-        Ada.Unchecked_Deallocation (Ada_Task_Control_Block, Task_Id);
+      Result : int;
 
    begin
       if not Single_Lock then
@@ -998,7 +988,7 @@ package body System.Task_Primitives.Operations is
          pragma Assert (Result = 0);
       end if;
 
-      T.Common.LL.Thread := 0;
+      T.Common.LL.Thread := Null_Thread_Id;
 
       Result := semDelete (T.Common.LL.CV);
       pragma Assert (Result = 0);
@@ -1007,11 +997,7 @@ package body System.Task_Primitives.Operations is
          Known_Tasks (T.Known_Tasks_Index) := null;
       end if;
 
-      Free (Tmp);
-
-      if Is_Self then
-         Specific.Delete;
-      end if;
+      ATCB_Allocation.Free_ATCB (T);
    end Finalize_TCB;
 
    ---------------
@@ -1273,7 +1259,7 @@ package body System.Task_Primitives.Operations is
       Thread_Self : Thread_Id) return Boolean
    is
    begin
-      if T.Common.LL.Thread /= 0
+      if T.Common.LL.Thread /= Null_Thread_Id
         and then T.Common.LL.Thread /= Thread_Self
       then
          return taskSuspend (T.Common.LL.Thread) = 0;
@@ -1291,7 +1277,7 @@ package body System.Task_Primitives.Operations is
       Thread_Self : Thread_Id) return Boolean
    is
    begin
-      if T.Common.LL.Thread /= 0
+      if T.Common.LL.Thread /= Null_Thread_Id
         and then T.Common.LL.Thread /= Thread_Self
       then
          return taskResume (T.Common.LL.Thread) = 0;
@@ -1317,7 +1303,7 @@ package body System.Task_Primitives.Operations is
 
       C := All_Tasks_List;
       while C /= null loop
-         if C.Common.LL.Thread /= 0
+         if C.Common.LL.Thread /= Null_Thread_Id
            and then C.Common.LL.Thread /= Thread_Self
          then
             Dummy := Task_Stop (C.Common.LL.Thread);
@@ -1335,7 +1321,7 @@ package body System.Task_Primitives.Operations is
 
    function Stop_Task (T : ST.Task_Id) return Boolean is
    begin
-      if T.Common.LL.Thread /= 0 then
+      if T.Common.LL.Thread /= Null_Thread_Id then
          return Task_Stop (T.Common.LL.Thread) = 0;
       else
          return True;
@@ -1349,7 +1335,7 @@ package body System.Task_Primitives.Operations is
    function Continue_Task (T : ST.Task_Id) return Boolean
    is
    begin
-      if T.Common.LL.Thread /= 0 then
+      if T.Common.LL.Thread /= Null_Thread_Id then
          return Task_Cont (T.Common.LL.Thread) = 0;
       else
          return True;
@@ -1371,8 +1357,7 @@ package body System.Task_Primitives.Operations is
 
    procedure Initialize (Environment_Task : Task_Id) is
       Result : int;
-
-      use type System.Multiprocessors.CPU_Range;
+      pragma Unreferenced (Result);
 
    begin
       Environment_Task_Id := Environment_Task;
@@ -1413,19 +1398,72 @@ package body System.Task_Primitives.Operations is
 
       --  Set processor affinity
 
-      if Environment_Task.Common.Base_CPU /=
-         System.Multiprocessors.Not_A_Specific_CPU
-      then
-         --  Ada 2012 pragma CPU uses CPU numbers starting from 1, while
-         --  on VxWorks the first CPU is identified by a 0, so we need to
-         --  adjust.
+      Set_Task_Affinity (Environment_Task);
+   end Initialize;
+
+   -----------------------
+   -- Set_Task_Affinity --
+   -----------------------
+
+   procedure Set_Task_Affinity (T : ST.Task_Id) is
+      Result : int := 0;
+      pragma Unreferenced (Result);
+
+      use System.Task_Info;
+      use type System.Multiprocessors.CPU_Range;
+
+   begin
+      --  Do nothing if the underlying thread has not yet been created. If the
+      --  thread has not yet been created then the proper affinity will be set
+      --  during its creation.
+
+      if T.Common.LL.Thread = Null_Thread_Id then
+         null;
+
+      --  pragma CPU
+
+      elsif T.Common.Base_CPU /= Multiprocessors.Not_A_Specific_CPU then
+
+         --  Ada 2012 pragma CPU uses CPU numbers starting from 1, while on
+         --  VxWorks the first CPU is identified by a 0, so we need to adjust.
 
          Result :=
            taskCpuAffinitySet
-             (Environment_Task.Common.LL.Thread,
-              int (Environment_Task.Common.Base_CPU) - 1);
-         pragma Assert (Result /= -1);
+             (T.Common.LL.Thread, int (T.Common.Base_CPU) - 1);
+
+      --  Task_Info
+
+      elsif T.Common.Task_Info /= Unspecified_Task_Info then
+         Result := taskCpuAffinitySet (T.Common.LL.Thread, T.Common.Task_Info);
+
+      --  Handle dispatching domains
+
+      elsif T.Common.Domain /= null
+        and then (T.Common.Domain /= ST.System_Domain
+                   or else T.Common.Domain.all /=
+                             (Multiprocessors.CPU'First ..
+                              Multiprocessors.Number_Of_CPUs => True))
+      then
+         declare
+            CPU_Set : unsigned := 0;
+
+         begin
+            --  Set the affinity to all the processors belonging to the
+            --  dispatching domain.
+
+            for Proc in T.Common.Domain'Range loop
+               if T.Common.Domain (Proc) then
+
+                  --  The thread affinity mask is a bit vector in which each
+                  --  bit represents a logical processor.
+
+                  CPU_Set := CPU_Set + 2 ** (Integer (Proc) - 1);
+               end if;
+            end loop;
+
+            Result := taskMaskAffinitySet (T.Common.LL.Thread, CPU_Set);
+         end;
       end if;
-   end Initialize;
+   end Set_Task_Affinity;
 
 end System.Task_Primitives.Operations;

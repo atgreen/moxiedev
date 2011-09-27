@@ -516,7 +516,8 @@ do_build_copy_constructor (tree fndecl)
       for (vbases = CLASSTYPE_VBASECLASSES (current_class_type), i = 0;
 	   VEC_iterate (tree, vbases, i, binfo); i++)
 	{
-	  init = build_base_path (PLUS_EXPR, parm, binfo, 1);
+	  init = build_base_path (PLUS_EXPR, parm, binfo, 1,
+				  tf_warning_or_error);
 	  if (move_p)
 	    init = move (init);
 	  member_init_list
@@ -531,7 +532,8 @@ do_build_copy_constructor (tree fndecl)
 	  if (BINFO_VIRTUAL_P (base_binfo))
 	    continue;
 
-	  init = build_base_path (PLUS_EXPR, parm, base_binfo, 1);
+	  init = build_base_path (PLUS_EXPR, parm, base_binfo, 1,
+				  tf_warning_or_error);
 	  if (move_p)
 	    init = move (init);
 	  member_init_list
@@ -624,7 +626,8 @@ do_build_copy_assign (tree fndecl)
 
 	  /* We must convert PARM directly to the base class
 	     explicitly since the base class may be ambiguous.  */
-	  converted_parm = build_base_path (PLUS_EXPR, parm, base_binfo, 1);
+	  converted_parm = build_base_path (PLUS_EXPR, parm, base_binfo, 1,
+					    tf_warning_or_error);
 	  if (move_p)
 	    converted_parm = move (converted_parm);
 	  /* Call the base class assignment operator.  */
@@ -952,23 +955,14 @@ process_subob_fn (tree fn, bool move_p, tree *spec_p, bool *trivial_p,
       goto bad;
     }
 
-  if (constexpr_p)
+  if (constexpr_p && !DECL_DECLARED_CONSTEXPR_P (fn))
     {
-      /* If this is a specialization of a constexpr template, we need to
-	 force the instantiation now so that we know whether or not it's
-	 really constexpr.  */
-      if (DECL_DECLARED_CONSTEXPR_P (fn) && DECL_TEMPLATE_INSTANTIATION (fn)
-	  && !DECL_TEMPLATE_INSTANTIATED (fn))
-	instantiate_decl (fn, /*defer_ok*/false, /*expl_class*/false);
-      if (!DECL_DECLARED_CONSTEXPR_P (fn))
+      *constexpr_p = false;
+      if (msg)
 	{
-	  *constexpr_p = false;
-	  if (msg)
-	    {
-	      inform (0, "defaulted constructor calls non-constexpr "
-		      "%q+D", fn);
-	      explain_invalid_constexpr_fn (fn);
-	    }
+	  inform (0, "defaulted constructor calls non-constexpr "
+		  "%q+D", fn);
+	  explain_invalid_constexpr_fn (fn);
 	}
     }
 
@@ -1024,8 +1018,7 @@ walk_field_subobs (tree fields, tree fnname, special_function_kind sfk,
 	{
 	  bool bad = true;
 	  if (CP_TYPE_CONST_P (mem_type)
-	      && (!CLASS_TYPE_P (mem_type)
-		  || !type_has_user_provided_default_constructor (mem_type)))
+	      && default_init_uninitialized_part (mem_type))
 	    {
 	      if (msg)
 		error ("uninitialized non-static const member %q#D",
@@ -1043,10 +1036,26 @@ walk_field_subobs (tree fields, tree fnname, special_function_kind sfk,
 	  if (bad && deleted_p)
 	    *deleted_p = true;
 
+	  if (DECL_INITIAL (field))
+	    {
+	      if (msg && DECL_INITIAL (field) == error_mark_node)
+		inform (0, "initializer for %q+#D is invalid", field);
+	      if (trivial_p)
+		*trivial_p = false;
+	      /* Core 1351: If the field has an NSDMI that could throw, the
+		 default constructor is noexcept(false).  FIXME this is
+	         broken by deferred parsing and 1360 saying we can't
+		 lazily declare a non-trivial default constructor.  */
+	      if (spec_p && !expr_noexcept_p (DECL_INITIAL (field), complain))
+		*spec_p = noexcept_false_spec;
+
+	      /* Don't do the normal processing.  */
+	      continue;
+	    }
+
 	  /* For an implicitly-defined default constructor to be constexpr,
-	     every member must have a user-provided default constructor.  */
-	  /* FIXME will need adjustment for non-static data member
-	     initializers.  */
+	     every member must have a user-provided default constructor or
+	     an explicit initializer.  */
 	  if (constexpr_p && !CLASS_TYPE_P (mem_type))
 	    {
 	      *constexpr_p = false;
@@ -1196,7 +1205,7 @@ synthesized_method_walk (tree ctype, special_function_kind sfk, bool const_p,
       && (!copy_arg_p || cxx_dialect < cxx0x))
     {
       if (constexpr_p && sfk == sfk_constructor)
-	*constexpr_p = synthesized_default_constructor_is_constexpr (ctype);
+	*constexpr_p = trivial_default_constructor_is_constexpr (ctype);
       return;
     }
 

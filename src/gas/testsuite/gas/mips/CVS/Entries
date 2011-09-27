@@ -469,7 +469,6 @@
 /mips-macro-ill-nofp.s/1.1/Sun Jun  5 16:54:36 2011//
 /mips-macro-ill-sfp.l/1.1/Sun Jun  5 16:54:36 2011//
 /mips-macro-ill-sfp.s/1.1/Sun Jun  5 16:54:36 2011//
-/mips.exp/1.191/Thu Aug 25 19:59:26 2011//
 /mips1-fp.d/1.2/Sun Jun  5 16:54:36 2011//
 /mips1-fp.l/1.1/Sun Jun  5 16:54:36 2011//
 /mips1-fp.s/1.1/Sun Jun  5 16:54:36 2011//
@@ -761,4 +760,9 @@
 /vxworks1.s/1.1/Sun Jun  5 16:54:36 2011//
 /xlr-ext.d/1.1/Sun Jun  5 16:54:36 2011//
 /xlr-ext.s/1.1/Sun Jun  5 16:54:36 2011//
+/loc-swap-2.d/1.1/Mon Sep  5 19:19:00 2011//
+/loc-swap-2.s/1.1/Mon Sep  5 19:19:00 2011//
+/micromips@loc-swap-2.d/1.1/Mon Sep  5 19:19:00 2011//
+/mips.exp/1.192/Sun Sep 25 18:07:19 2011//
+/mips16@loc-swap-2.d/1.1/Mon Sep  5 19:19:00 2011//
 D

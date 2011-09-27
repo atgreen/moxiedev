@@ -1,15 +1,15 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/c-c++-common
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-22T15:00:06.072712Z
-177957
-jakub
+2011-09-08T13:54:24.198207Z
+178692
+dodji
 
 
 
@@ -949,6 +949,40 @@ jason
 
 
 166
+
+Wunused-local-typedefs.c
+file
+
+
+
+
+2011-09-25T18:02:34.222897Z
+f79bc4a80b6890a56ed93a450311aa3f
+2011-09-08T13:54:24.198207Z
+178692
+dodji
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+521
 
 attr-used-2.c
 file
@@ -2038,40 +2072,6 @@ jason
 
 3962
 
-Wunused-var-10.c
-file
-
-
-
-
-2010-07-08T15:18:35.869096Z
-0880bcc58a4ae32455c59a0c3e1950b4
-2010-06-04T18:42:42.820410Z
-160289
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-866
-
 raw-string-4.c
 file
 
@@ -2105,6 +2105,40 @@ jason
 
 
 1015
+
+Wunused-var-10.c
+file
+
+
+
+
+2010-07-08T15:18:35.869096Z
+0880bcc58a4ae32455c59a0c3e1950b4
+2010-06-04T18:42:42.820410Z
+160289
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+866
 
 Wunused-var-12.c
 file
@@ -2207,6 +2241,40 @@ jason
 
 
 246
+
+Wunused-var-14.c
+file
+
+
+
+
+2011-09-25T18:02:34.222897Z
+80c4ecb8009d5febfdba9eeaee769526
+2011-08-26T14:37:22.570891Z
+178110
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+279
 
 pr20000.c
 file

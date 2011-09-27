@@ -1,3 +1,52 @@
+2011-09-21  David S. Miller  <davem@davemloft.net>
+
+	* gas/sparc/hpcvis3.s: Update for fixed fchksum16 mnemonic.
+	* gas/sparc/hpcvis3.d: Likewise.
+
+	* gas/sparc/imm-plus-rreg.d: Fix address regex for 64-bit.
+	* gas/sparc/save-args.d: Likewise.
+	* gas/sparc/ticc-imm-reg.d: Likewise, add -32 to options.
+	* gas/sparc/v8-movwr-imm.d: Likewise.
+
+	* gas/sparc/hpcvis3.d: Pass '-Av9v'.
+
+2011-09-08  Mark Fortescue <mark@mtfhpc.demon.co.uk>
+
+	* gas/sparc/imm-plus-rreg.[sd]: New test.
+	* gas/sparc/sparc.exp: Run new test.
+
+	* gas/sparc/ticc-imm-reg.[sd]: New test.
+	* gas/sparc/v8-movwr-imm.[sd]: New test.
+	* gas/sparc/sparc.exp: Run new tests.
+
+	* gas/sparc/save-args.[sd]: New test.
+	* gas/sparc/sparc.exp: Run new test.
+
+2011-09-08  David S. Miller  <davem@davemloft.net>
+
+	* gas/sparc/hpcvis3.s: Correct pdistn test.
+	* gas/sparc/hpcvis3.d: Likewise.
+
+2011-09-08  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	PR gas/13167
+	* gas/ia64/pr13167.d, gas/ia64/pr13167.s: New test.
+	* gas/ia64/ia64.exp: Run it.
+
+2011-09-07  Andreas Schwab  <schwab@linux-m68k.org>
+
+	PR gas/13145
+	* gas/m68k/all.exp: Run "mode5" test also with -mcpu=5200.
+	* gas/m68k/mode5.s: Add moveml testcases.
+	* gas/m68k/mode5.d: Update.
+
+2011-09-05  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* gas/mips/loc-swap-2.s, gas/mips/loc-swap-2.d,
+	gas/mips/micromips@loc-swap-2.d,
+	gas/mips/mips16@loc-swap-2.d: New test.
+	* gas/mips/mips.exp: Run it.
+
 2011-08-19  Sergey A. Guriev  <sergeya.a.guriev@intel.com>
 
 	* gas/i386/avx-gather-intel.d: Added missing vpgather tests.

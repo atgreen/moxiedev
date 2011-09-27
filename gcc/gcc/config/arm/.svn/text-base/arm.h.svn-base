@@ -47,6 +47,8 @@ extern char arm_arch_name[];
     {							\
 	if (TARGET_DSP_MULTIPLY)			\
 	   builtin_define ("__ARM_FEATURE_DSP");	\
+	if (unaligned_access)				\
+	  builtin_define ("__ARM_FEATURE_UNALIGNED");	\
 	/* Define __arm__ even when in thumb mode, for	\
 	   consistency with armcc.  */			\
 	builtin_define ("__arm__");			\
@@ -189,6 +191,7 @@ extern void (*arm_lang_output_object_attributes_hook)(void);
    Do not define this macro if it does not need to do anything.  */
 #define EXTRA_SPECS						\
   { "subtarget_cpp_spec",	SUBTARGET_CPP_SPEC },           \
+  { "asm_cpu_spec",		ASM_CPU_SPEC },			\
   SUBTARGET_EXTRA_SPECS
 
 #ifndef SUBTARGET_EXTRA_SPECS
@@ -823,6 +826,16 @@ extern int arm_arch_thumb_hwdiv;
 /* The register that holds the return address in exception handlers.  */
 #define ARM_EH_STACKADJ_REGNUM	2
 #define EH_RETURN_STACKADJ_RTX	gen_rtx_REG (SImode, ARM_EH_STACKADJ_REGNUM)
+
+#ifndef ARM_TARGET2_DWARF_FORMAT
+#define ARM_TARGET2_DWARF_FORMAT DW_EH_PE_pcrel
+
+/* ttype entries (the only interesting data references used)
+   use TARGET2 relocations.  */
+#define ASM_PREFERRED_EH_DATA_FORMAT(code, data) \
+  (((code) == 0 && (data) == 1 && ARM_UNWIND_INFO) ? ARM_TARGET2_DWARF_FORMAT \
+			       : DW_EH_PE_absptr)
+#endif
 
 /* The native (Norcroft) Pascal compiler for the ARM passes the static chain
    as an invisible last argument (possible since varargs don't exist in
@@ -2222,5 +2235,9 @@ extern int making_const_table;
 /* The maximum number of parallel loads or stores we support in an ldm/stm
    instruction.  */
 #define MAX_LDM_STM_OPS 4
+
+#define ASM_CPU_SPEC \
+   " %{mcpu=generic-*:-march=%*;"				\
+   "   :%{mcpu=*:-mcpu=%*} %{march=*:-march=%*}}"
 
 #endif /* ! GCC_ARM_H */

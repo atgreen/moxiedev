@@ -28,10 +28,14 @@ D/gdb.reverse////
 D/gdb.cell////
 D/gdb.opencl////
 /.gdbinit/1.1.1.1/Sun Jun  5 16:54:38 2011/-ko/
-/ChangeLog/1.2837/Thu Aug 25 20:10:34 2011/-ko/
 /Makefile.in/1.39/Sun Jun  5 16:54:38 2011/-ko/
 /TODO/1.1.1.1/Sun Jun  5 16:54:38 2011/-ko/
 /aclocal.m4/1.4/Sun Jun  5 16:54:38 2011/-ko/
 /configure/1.37/Sun Jun  5 16:54:38 2011/-ko/
 /configure.ac/1.20/Sun Jun  5 16:54:38 2011//
 /dg-extract-results.sh/1.2/Sun Jun  5 16:54:38 2011//
+D/gdb.c++////
+D/gdb.chill////
+D/gdb.gdbserver////
+D/gdb.twreverse////
+/ChangeLog/1.2861/Sun Sep 25 18:07:44 2011/-ko/

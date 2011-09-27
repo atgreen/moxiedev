@@ -394,7 +394,9 @@ typedef enum cpp0x_warn_str
   /* inline namespaces */
   CPP0X_INLINE_NAMESPACES,
   /* override controls, override/final */
-  CPP0X_OVERRIDE_CONTROLS
+  CPP0X_OVERRIDE_CONTROLS,
+  /* non-static data member initializers */
+  CPP0X_NSDMI
 } cpp0x_warn_str;
   
 /* The various kinds of operation used by composite_pointer_type. */
@@ -3705,6 +3707,17 @@ more_aggr_init_expr_args_p (const aggr_init_expr_arg_iterator *iter)
 #define DECL_FRIEND_PSEUDO_TEMPLATE_INSTANTIATION(DECL) \
   (DECL_TEMPLATE_INFO (DECL) && !DECL_USE_TEMPLATE (DECL))
 
+/* Nonzero if DECL is a function generated from a function 'temploid',
+   i.e. template, member of class template, or dependent friend.  */
+#define DECL_TEMPLOID_INSTANTIATION(DECL)		\
+  (DECL_TEMPLATE_INSTANTIATION (DECL)			\
+   || DECL_FRIEND_PSEUDO_TEMPLATE_INSTANTIATION (DECL))
+
+/* Nonzero if DECL is either defined implicitly by the compiler or
+   generated from a temploid.  */
+#define DECL_GENERATED_P(DECL) \
+  (DECL_TEMPLOID_INSTANTIATION (DECL) || DECL_DEFAULTED_FN (DECL))
+
 /* Nonzero iff we are currently processing a declaration for an
    entity with its own template parameter list, and which is not a
    full specialization.  */
@@ -4294,6 +4307,8 @@ enum overload_flags { NO_SPECIAL = 0, DTOR_FLAG, TYPENAME_FLAG };
 #define LOOKUP_ALREADY_DIGESTED (LOOKUP_DEFAULTED << 1)
 /* An instantiation with explicit template arguments.  */
 #define LOOKUP_EXPLICIT_TMPL_ARGS (LOOKUP_ALREADY_DIGESTED << 1)
+/* Like LOOKUP_NO_TEMP_BIND, but also prevent binding to xvalues.  */
+#define LOOKUP_NO_RVAL_BIND (LOOKUP_EXPLICIT_TMPL_ARGS << 1)
 
 #define LOOKUP_NAMESPACES_ONLY(F)  \
   (((F) & LOOKUP_PREFER_NAMESPACES) && !((F) & LOOKUP_PREFER_TYPES))
@@ -4551,8 +4566,8 @@ typedef struct cp_decl_specifier_seq {
   /* The storage class specified -- or sc_none if no storage class was
      explicitly specified.  */
   cp_storage_class storage_class;
-  /* True iff TYPE_SPEC indicates a user-defined type.  */
-  BOOL_BITFIELD user_defined_type_p : 1;
+  /* True iff TYPE_SPEC defines a class or enum.  */
+  BOOL_BITFIELD type_definition_p : 1;
   /* True iff multiple types were (erroneously) specified for this
      decl-specifier-seq.  */
   BOOL_BITFIELD multiple_types_p : 1;
@@ -4719,9 +4734,11 @@ extern bool check_dtor_name			(tree, tree);
 extern tree build_conditional_expr		(tree, tree, tree, 
                                                  tsubst_flags_t);
 extern tree build_addr_func			(tree);
+extern void set_flags_from_callee		(tree);
 extern tree build_call_a			(tree, int, tree*);
 extern tree build_call_n			(tree, int, ...);
 extern bool null_ptr_cst_p			(tree);
+extern bool null_member_pointer_value_p		(tree);
 extern bool sufficient_parms_p			(const_tree);
 extern tree type_decays_to			(tree);
 extern tree build_user_type_conversion		(tree, tree, int);
@@ -4754,7 +4771,8 @@ extern tree type_passed_as			(tree);
 extern tree convert_for_arg_passing		(tree, tree);
 extern bool is_properly_derived_from		(tree, tree);
 extern tree set_up_extended_ref_temp		(tree, tree, tree *, tree *);
-extern tree initialize_reference		(tree, tree, tree, tree *, tsubst_flags_t);
+extern tree initialize_reference		(tree, tree, tree, tree *, int,
+						 tsubst_flags_t);
 extern tree make_temporary_var_for_ref_to_temp	(tree, tree);
 extern tree strip_top_quals			(tree);
 extern bool reference_related_p			(tree, tree);
@@ -4774,7 +4792,7 @@ extern void validate_conversion_obstack		(void);
 /* in class.c */
 extern tree build_vfield_ref			(tree, tree);
 extern tree build_base_path			(enum tree_code, tree,
-						 tree, int);
+						 tree, int, tsubst_flags_t);
 extern tree convert_to_base			(tree, tree, bool, bool,
 						 tsubst_flags_t);
 extern tree convert_to_base_statically		(tree, tree);
@@ -4822,7 +4840,8 @@ extern tree in_class_defaulted_default_constructor (tree);
 extern bool user_provided_p			(tree);
 extern bool type_has_user_provided_constructor  (tree);
 extern bool type_has_user_provided_default_constructor (tree);
-extern bool synthesized_default_constructor_is_constexpr (tree);
+extern tree default_init_uninitialized_part (tree);
+extern bool trivial_default_constructor_is_constexpr (tree);
 extern bool type_has_constexpr_default_constructor (tree);
 extern bool type_has_virtual_destructor		(tree);
 extern bool type_has_move_constructor		(tree);
@@ -5028,6 +5047,7 @@ extern tree build_throw				(tree);
 extern int nothrow_libfn_p			(const_tree);
 extern void check_handlers			(tree);
 extern tree finish_noexcept_expr		(tree, tsubst_flags_t);
+extern bool expr_noexcept_p			(tree, tsubst_flags_t);
 extern void perform_deferred_noexcept_checks	(void);
 extern bool nothrow_spec_p			(const_tree);
 extern bool type_noexcept_p			(const_tree);
@@ -5366,7 +5386,6 @@ extern void finish_handler_parms		(tree, tree);
 extern void finish_handler			(tree);
 extern void finish_cleanup			(tree, tree);
 extern bool literal_type_p (tree);
-extern tree validate_constexpr_fundecl (tree);
 extern tree register_constexpr_fundef (tree, tree);
 extern bool check_constexpr_ctor_body (tree, tree);
 extern tree ensure_literal_type_for_constexpr_object (tree);

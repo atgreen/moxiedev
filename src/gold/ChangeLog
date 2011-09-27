@@ -1,3 +1,112 @@
+2011-09-23  Simon Baldwin  <simonb@google.com>
+
+	* configure.ac: Add new --with-gold-ldadd and --with-gold-ldflags
+	configuration options.
+	* configure: Regenerate.
+	* Makefile.am: Handle GOLD_LDADD and GOLD_LDFLAGS.
+	* Makefile.in: Regenerate.
+	* testsuite/Makefile.in: Regenerate.
+
+2011-09-19  Sriraman Tallam  <tmsriram@google.com>
+
+	* plugin.h (should_defer_layout): Modify to check for any_claimed_.
+
+2011-09-19  Cary Coutant  <ccoutant@google.com>
+
+	* incremental.cc (can_incremental_update): Fix typo in comment.
+	* incremental.h (can_incremental_update): Likewise.
+
+2011-09-18  Cary Coutant  <ccoutant@google.com>
+
+	* incremental.cc (can_incremental_update): New function.
+	* incremental.h (can_incremental_update): New function.
+	* layout.cc (Layout::init_fixed_output_section): Call it.
+	(Layout::make_output_section): Don't allow patch space in .eh_frame.
+	* object.cc (Sized_relobj_file::do_layout): Call
+	can_incremental_update.
+
+2011-09-13  Cary Coutant  <ccoutant@google.com>
+
+	* configure.ac: Check for glibc support for gnu_indirect_function
+	support with static linking, setting automake conditional
+	IFUNC_STATIC.
+	* Makefile.in: Regenerate.
+	* configure: Regenerate.
+
+	* testsuite/Makefile.am (ifuncmain1static, ifuncmain2static)
+	(ifuncmain4static, ifuncmain5static, ifuncmain7static): Add check
+	for IFUNC_STATIC.
+	* testsuite/Makefile.in: Regenerate.
+
+2011-09-13  Cary Coutant  <ccoutant@google.com>
+
+	* incremental.cc (Sized_relobj_incr::do_layout): Call
+	report_comdat_group for kept comdat sections.
+	* testsuite/Makefile.am (incremental_comdat_test_1): New test.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/incr_comdat_test_1.cc: New source file.
+	* testsuite/incr_comdat_test_2_v1.cc: New source file.
+	* testsuite/incr_comdat_test_2_v2.cc: New source file.
+	* testsuite/incr_comdat_test_2_v3.cc: New source file.
+
+2011-09-13  Ian Lance Taylor  <iant@google.com>
+
+	* object.cc (Sized_relobj_file::do_layout): Remove unused local
+	variable external_symbols_offset.
+
+2011-09-12  Ian Lance Taylor  <iant@google.com>
+
+	* object.cc (Sized_relobj_file::do_layout): Remove assertion which
+	triggered if object has no symbols.
+
+2011-09-09  David S. Miller  <davem@davemloft.net>
+
+	* output.cc (Output_fill_debug_info::do_write): Use Swap_unaligned.
+	(Output_fill_debug_line::do_write): Likewise.
+
+2011-08-29  Cary Coutant  <ccoutant@google.com>
+
+	* output.cc: (Output_fill_debug_info::do_minimum_hole_size): Add
+	casts to match formatting specs.
+	(Output_fill_debug_line::do_minimum_hole_size): Likewise.
+
+2011-08-26  Cary Coutant  <ccoutant@google.com>
+
+	* layout.cc (Free_list::allocate): Provide guarantee of minimum
+	remaining hole size when allocating.
+	(Layout::make_output_section): Set fill methods for debug sections.
+	* layout.h (Free_list::Free_list_node): Move from private to
+	public.
+	(Free_list::set_min_hole_size): New function.
+	(Free_list::begin, Free_list::end): New functions.
+	(Free_list::min_hole_): New data member.
+	* output.cc: Include dwarf.h.
+	(Output_fill_debug_info::do_minimum_hole_size): New function.
+	(Output_fill_debug_info::do_write): New function.
+	(Output_fill_debug_line::do_minimum_hole_size): New function.
+	(Output_fill_debug_line::do_write): New function.
+	(Output_section::Output_section): Initialize new data member.
+	(Output_section::set_final_data_size): Ensure patch space is larger
+	than minimum hole size.
+	(Output_section::do_write): Fill holes in debug sections.
+	* output.h (Output_fill): New class.
+	(Output_fill_debug_info): New class.
+	(Output_fill_debug_line): New class.
+	(Output_section::set_free_space_fill): New function.
+	(Output_section::free_space_fill_): New data member.
+	* testsuite/Makefile.am (incremental_test_3): Add
+	--incremental-patch option.
+	(incremental_test_4): Likewise.
+	(incremental_test_5): Likewise.
+	(incremental_test_6): Likewise.
+	(incremental_copy_test): Likewise.
+	(incremental_common_test_1): Likewise.
+	* testsuite/Makefile.in: Regenerate.
+
+2011-08-26  Nick Clifton  <nickc@redhat.com>
+
+	* po/es.po: Updated Spanish translation.
+
 2011-08-01  Cary Coutant  <ccoutant@google.com>
 
 	* gold/testsuite/Makefile.am (justsyms_exec): New testcase.

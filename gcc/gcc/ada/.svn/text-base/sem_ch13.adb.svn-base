@@ -73,11 +73,11 @@ package body Sem_Ch13 is
    -- Local Subprograms --
    -----------------------
 
-   procedure Alignment_Check_For_Esize_Change (Typ : Entity_Id);
-   --  This routine is called after setting the Esize of type entity Typ.
-   --  The purpose is to deal with the situation where an alignment has been
-   --  inherited from a derived type that is no longer appropriate for the
-   --  new Esize value. In this case, we reset the Alignment to unknown.
+   procedure Alignment_Check_For_Size_Change (Typ : Entity_Id; Size : Uint);
+   --  This routine is called after setting one of the sizes of type entity
+   --  Typ to Size. The purpose is to deal with the situation of a derived
+   --  type whose inherited alignment is no longer appropriate for the new
+   --  size value. In this case, we reset the Alignment to unknown.
 
    procedure Build_Predicate_Function (Typ : Entity_Id; N : Node_Id);
    --  If Typ has predicates (indicated by Has_Predicates being set for Typ,
@@ -235,8 +235,8 @@ package body Sem_Ch13 is
       --  Processing depends on version of Ada
 
       --  For Ada 95, we just renumber bits within a storage unit. We do the
-      --  same for Ada 83 mode, since we recognize pragma Bit_Order in Ada 83,
-      --  and are free to add this extension.
+      --  same for Ada 83 mode, since we recognize the Bit_Order attribute in
+      --  Ada 83, and are free to add this extension.
 
       if Ada_Version < Ada_2005 then
          Comp := First_Component_Or_Discriminant (R);
@@ -661,11 +661,11 @@ package body Sem_Ch13 is
       end if;
    end Adjust_Record_For_Reverse_Bit_Order;
 
-   --------------------------------------
-   -- Alignment_Check_For_Esize_Change --
-   --------------------------------------
+   -------------------------------------
+   -- Alignment_Check_For_Size_Change --
+   -------------------------------------
 
-   procedure Alignment_Check_For_Esize_Change (Typ : Entity_Id) is
+   procedure Alignment_Check_For_Size_Change (Typ : Entity_Id; Size : Uint) is
    begin
       --  If the alignment is known, and not set by a rep clause, and is
       --  inconsistent with the size being set, then reset it to unknown,
@@ -674,11 +674,11 @@ package body Sem_Ch13 is
 
       if Known_Alignment (Typ)
         and then not Has_Alignment_Clause (Typ)
-        and then Esize (Typ) mod (Alignment (Typ) * SSU) /= 0
+        and then Size mod (Alignment (Typ) * SSU) /= 0
       then
          Init_Alignment (Typ);
       end if;
-   end Alignment_Check_For_Esize_Change;
+   end Alignment_Check_For_Size_Change;
 
    -----------------------------------
    -- Analyze_Aspect_Specifications --
@@ -710,7 +710,7 @@ package body Sem_Ch13 is
       --  or attribute definition node in either case to activate special
       --  processing (e.g. not traversing the list of homonyms for inline).
 
-      Delay_Required : Boolean;
+      Delay_Required : Boolean := False;
       --  Set True if delay is required
 
    begin
@@ -803,6 +803,19 @@ package body Sem_Ch13 is
             if Analyzed (Aspect) then
                goto Continue;
             end if;
+
+            --  Check restriction No_Implementation_Aspect_Specifications
+
+            if Impl_Defined_Aspects (A_Id) then
+               Check_Restriction
+                 (No_Implementation_Aspect_Specifications, Aspect);
+            end if;
+
+            --  Check restriction No_Specification_Of_Aspect
+
+            Check_Restriction_No_Specification_Of_Aspect (Aspect);
+
+            --  Analyze this aspect
 
             Set_Analyzed (Aspect);
             Set_Entity (Aspect, E);
@@ -904,7 +917,7 @@ package body Sem_Ch13 is
 
                   --  Never need to delay for boolean aspects
 
-                  Delay_Required := False;
+                  pragma Assert (not Delay_Required);
 
                --  Library unit aspects. These are boolean aspects, but we
                --  have to do special things with the insertion, since the
@@ -944,7 +957,7 @@ package body Sem_Ch13 is
 
                   --  If not package declaration, no delay is required
 
-                  Delay_Required := False;
+                  pragma Assert (not Delay_Required);
 
                --  Aspects related to container iterators. These aspects denote
                --  subprograms, and thus must be delayed.
@@ -1026,6 +1039,7 @@ package body Sem_Ch13 is
                     Aspect_Output         |
                     Aspect_Read           |
                     Aspect_Size           |
+                    Aspect_Small          |
                     Aspect_Storage_Pool   |
                     Aspect_Storage_Size   |
                     Aspect_Stream_Size    |
@@ -1045,7 +1059,8 @@ package body Sem_Ch13 is
                   --  to take care of it right away.
 
                   if Nkind_In (Expr, N_Integer_Literal, N_String_Literal) then
-                     Delay_Required := False;
+                     pragma Assert (not Delay_Required);
+                     null;
                   else
                      Delay_Required := True;
                      Set_Is_Delayed_Aspect (Aspect);
@@ -1072,7 +1087,7 @@ package body Sem_Ch13 is
                   --  We don't have to play the delay game here, since the only
                   --  values are check names which don't get analyzed anyway.
 
-                  Delay_Required := False;
+                  pragma Assert (not Delay_Required);
 
                --  Aspects corresponding to pragmas with two arguments, where
                --  the second argument is a local name referring to the entity,
@@ -1094,7 +1109,7 @@ package body Sem_Ch13 is
                   --  We don't have to play the delay game here, since the only
                   --  values are ON/OFF which don't get analyzed anyway.
 
-                  Delay_Required := False;
+                  pragma Assert (not Delay_Required);
 
                --  Default_Value and Default_Component_Value aspects. These
                --  are specially handled because they have no corresponding
@@ -1134,6 +1149,56 @@ package body Sem_Ch13 is
                   Delay_Required := True;
                   Set_Is_Delayed_Aspect (Aspect);
                   Set_Has_Default_Aspect (Base_Type (Entity (Ent)));
+
+               when Aspect_Attach_Handler =>
+                  Aitem :=
+                    Make_Pragma (Loc,
+                      Pragma_Identifier            =>
+                        Make_Identifier (Sloc (Id), Name_Attach_Handler),
+                      Pragma_Argument_Associations =>
+                        New_List (Ent, Relocate_Node (Expr)));
+
+                  Set_From_Aspect_Specification (Aitem, True);
+                  Set_Corresponding_Aspect (Aitem, Aspect);
+
+                  pragma Assert (not Delay_Required);
+
+               when Aspect_Priority           |
+                    Aspect_Interrupt_Priority |
+                    Aspect_Dispatching_Domain |
+                    Aspect_CPU                =>
+                  declare
+                     Pname : Name_Id;
+
+                  begin
+                     if A_Id = Aspect_Priority then
+                        Pname := Name_Priority;
+
+                     elsif A_Id = Aspect_Interrupt_Priority then
+                        Pname := Name_Interrupt_Priority;
+
+                     elsif A_Id = Aspect_CPU then
+                        Pname := Name_CPU;
+
+                     else
+                        Pname := Name_Dispatching_Domain;
+                     end if;
+
+                     Aitem :=
+                       Make_Pragma (Loc,
+                           Pragma_Identifier            =>
+                             Make_Identifier (Sloc (Id), Pname),
+                           Pragma_Argument_Associations =>
+                             New_List
+                               (Make_Pragma_Argument_Association
+                                  (Sloc       => Sloc (Id),
+                                   Expression => Relocate_Node (Expr))));
+
+                     Set_From_Aspect_Specification (Aitem, True);
+                     Set_Corresponding_Aspect (Aitem, Aspect);
+
+                     pragma Assert (not Delay_Required);
+                  end;
 
                --  Aspects Pre/Post generate Precondition/Postcondition pragmas
                --  with a first argument that is the expression, and a second
@@ -1209,6 +1274,7 @@ package body Sem_Ch13 is
                   end if;
 
                   Set_From_Aspect_Specification (Aitem, True);
+                  Set_Corresponding_Aspect (Aitem, Aspect);
                   Set_Is_Delayed_Aspect (Aspect);
 
                   --  For Pre/Post cases, insert immediately after the entity
@@ -1239,14 +1305,9 @@ package body Sem_Ch13 is
                when Aspect_Invariant      |
                     Aspect_Type_Invariant =>
 
-                  --  Check placement legality
-
-                  if not Nkind_In (N, N_Private_Type_Declaration,
-                                      N_Private_Extension_Declaration)
-                  then
-                     Error_Msg_N
-                       ("invariant aspect must apply to a private type", N);
-                  end if;
+                  --  Analysis of the pragma will verify placement legality:
+                  --  an invariant must apply to a private type, or appear in
+                  --  the private part of a spec and apply to a completion.
 
                   --  Construct the pragma
 
@@ -1271,6 +1332,7 @@ package body Sem_Ch13 is
                   end if;
 
                   Set_From_Aspect_Specification (Aitem, True);
+                  Set_Corresponding_Aspect (Aitem, Aspect);
                   Set_Is_Delayed_Aspect (Aspect);
 
                   --  For Invariant case, insert immediately after the entity
@@ -1300,14 +1362,7 @@ package body Sem_Ch13 is
                         Make_Identifier (Sloc (Id), Name_Predicate));
 
                   Set_From_Aspect_Specification (Aitem, True);
-
-                  --  Set special flags for dynamic/static cases
-
-                  if A_Id = Aspect_Dynamic_Predicate then
-                     Set_From_Dynamic_Predicate (Aitem);
-                  elsif A_Id = Aspect_Static_Predicate then
-                     Set_From_Static_Predicate (Aitem);
-                  end if;
+                  Set_Corresponding_Aspect (Aitem, Aspect);
 
                   --  Make sure we have a freeze node (it might otherwise be
                   --  missing in cases like subtype X is Y, and we would not
@@ -1333,6 +1388,12 @@ package body Sem_Ch13 is
 
                begin
                   Args := New_List;
+
+                  if Nkind (Parent (N)) = N_Compilation_Unit then
+                     Error_Msg_N
+                       ("incorrect placement of aspect `Test_Case`", E);
+                     goto Continue;
+                  end if;
 
                   if Nkind (Expr) /= N_Aggregate then
                      Error_Msg_NE
@@ -1375,6 +1436,7 @@ package body Sem_Ch13 is
                         Args);
 
                   Set_From_Aspect_Specification (Aitem, True);
+                  Set_Corresponding_Aspect (Aitem, Aspect);
                   Set_Is_Delayed_Aspect (Aspect);
 
                   --  Insert immediately after the entity declaration
@@ -1393,6 +1455,11 @@ package body Sem_Ch13 is
             if Delay_Required then
                if Present (Aitem) then
                   Set_From_Aspect_Specification (Aitem, True);
+
+                  if Nkind (Aitem) = N_Pragma then
+                     Set_Corresponding_Aspect (Aitem, Aspect);
+                  end if;
+
                   Set_Is_Delayed_Aspect (Aitem);
                   Set_Aspect_Rep_Item (Aspect, Aitem);
                end if;
@@ -1405,6 +1472,10 @@ package body Sem_Ch13 is
 
             else
                Set_From_Aspect_Specification (Aitem, True);
+
+               if Nkind (Aitem) = N_Pragma then
+                  Set_Corresponding_Aspect (Aitem, Aspect);
+               end if;
 
                --  If this is a compilation unit, we will put the pragma in
                --  the Pragmas_After list of the N_Compilation_Unit_Aux node.
@@ -1433,18 +1504,76 @@ package body Sem_Ch13 is
                --  Here if not compilation unit case
 
                else
-                  --  For Pre/Post cases, insert immediately after the entity
-                  --  declaration, since that is the required pragma placement.
+                  case A_Id is
 
-                  if A_Id in Pre_Post_Aspects then
-                     Insert_After (N, Aitem);
+                     --  For Pre/Post cases, insert immediately after the
+                     --  entity declaration, since that is the required pragma
+                     --  placement.
 
-                  --  For all other cases, insert in sequence
+                     when Pre_Post_Aspects =>
+                        Insert_After (N, Aitem);
 
-                  else
-                     Insert_After (Ins_Node, Aitem);
-                     Ins_Node := Aitem;
-                  end if;
+                     --  For Priority aspects, insert into the task or
+                     --  protected definition, which we need to create if it's
+                     --  not there. The same applies to CPU and
+                     --  Dispatching_Domain but only to tasks.
+
+                     when Aspect_Priority           |
+                          Aspect_Interrupt_Priority |
+                          Aspect_Dispatching_Domain |
+                          Aspect_CPU                =>
+                        declare
+                           T : Node_Id; -- the type declaration
+                           L : List_Id; -- list of decls of task/protected
+
+                        begin
+                           if Nkind (N) = N_Object_Declaration then
+                              T := Parent (Etype (Defining_Identifier (N)));
+                           else
+                              T := N;
+                           end if;
+
+                           if Nkind (T) = N_Protected_Type_Declaration
+                             and then A_Id /= Aspect_Dispatching_Domain
+                             and then A_Id /= Aspect_CPU
+                           then
+                              pragma Assert
+                                (Present (Protected_Definition (T)));
+
+                              L := Visible_Declarations
+                                     (Protected_Definition (T));
+
+                           elsif Nkind (T) = N_Task_Type_Declaration then
+                              if No (Task_Definition (T)) then
+                                 Set_Task_Definition
+                                   (T,
+                                    Make_Task_Definition
+                                      (Sloc (T),
+                                       Visible_Declarations => New_List,
+                                       End_Label => Empty));
+                              end if;
+
+                              L := Visible_Declarations (Task_Definition (T));
+
+                           else
+                              raise Program_Error;
+                           end if;
+
+                           Prepend (Aitem, To => L);
+
+                           --  Analyze rewritten pragma. Otherwise, its
+                           --  analysis is done too late, after the task or
+                           --  protected object has been created.
+
+                           Analyze (Aitem);
+                        end;
+
+                     --  For all other cases, insert in sequence
+
+                     when others =>
+                        Insert_After (Ins_Node, Aitem);
+                        Ins_Node := Aitem;
+                  end case;
                end if;
             end if;
          end;
@@ -1538,6 +1667,13 @@ package body Sem_Ch13 is
       --  Check that the function in Constant_Indexing or Variable_Indexing
       --  attribute has the proper type structure. If the name is overloaded,
       --  check that all interpretations are legal.
+
+      procedure Check_Iterator_Functions;
+      --  Check that there is a single function in Default_Iterator attribute
+      --  has the proper type structure.
+
+      function Check_Primitive_Function (Subp : Entity_Id) return Boolean;
+      --  Common legality check for the previous two
 
       -----------------------------------
       -- Analyze_Stream_TSS_Definition --
@@ -1681,7 +1817,6 @@ package body Sem_Ch13 is
       ------------------------------
 
       procedure Check_Indexing_Functions is
-         Ctrl : Entity_Id;
 
          procedure Check_One_Function (Subp : Entity_Id);
          --  Check one possible interpretation
@@ -1692,34 +1827,10 @@ package body Sem_Ch13 is
 
          procedure Check_One_Function (Subp : Entity_Id) is
          begin
-            if Ekind (Subp) /= E_Function then
-               Error_Msg_N ("indexing requires a function", Subp);
-            end if;
-
-            if No (First_Formal (Subp)) then
-               Error_Msg_N
-                 ("function for indexing must have parameters", Subp);
-            else
-               Ctrl := Etype (First_Formal (Subp));
-            end if;
-
-            if Ctrl = Ent
-              or else Ctrl = Class_Wide_Type (Ent)
-              or else
-                (Ekind (Ctrl) = E_Anonymous_Access_Type
-                  and then
-                    (Designated_Type (Ctrl) = Ent
-                      or else Designated_Type (Ctrl) = Class_Wide_Type (Ent)))
-            then
-               null;
-
-            else
-               Error_Msg_N ("indexing function must apply to type&", Subp);
-            end if;
-
-            if No (Next_Formal (First_Formal (Subp))) then
-               Error_Msg_N
-                 ("function for indexing must have two parameters", Subp);
+            if not Check_Primitive_Function (Subp) then
+               Error_Msg_NE
+                 ("aspect Indexing requires a function that applies to type&",
+                   Subp, Ent);
             end if;
 
             if not Has_Implicit_Dereference (Etype (Subp)) then
@@ -1731,6 +1842,10 @@ package body Sem_Ch13 is
       --  Start of processing for Check_Indexing_Functions
 
       begin
+         if In_Instance then
+            return;
+         end if;
+
          Analyze (Expr);
 
          if not Is_Overloaded (Expr) then
@@ -1758,6 +1873,133 @@ package body Sem_Ch13 is
             end;
          end if;
       end Check_Indexing_Functions;
+
+      ------------------------------
+      -- Check_Iterator_Functions --
+      ------------------------------
+
+      procedure Check_Iterator_Functions is
+         Default : Entity_Id;
+
+         function Valid_Default_Iterator (Subp : Entity_Id) return Boolean;
+         --  Check one possible interpretation for validity
+
+         ----------------------------
+         -- Valid_Default_Iterator --
+         ----------------------------
+
+         function Valid_Default_Iterator (Subp : Entity_Id) return Boolean is
+            Formal : Entity_Id;
+
+         begin
+            if not Check_Primitive_Function (Subp) then
+               return False;
+            else
+               Formal := First_Formal (Subp);
+            end if;
+
+            --  False if any subsequent formal has no default expression
+
+            Formal := Next_Formal (Formal);
+            while Present (Formal) loop
+               if No (Expression (Parent (Formal))) then
+                  return False;
+               end if;
+
+               Next_Formal (Formal);
+            end loop;
+
+            --  True if all subsequent formals have default expressions
+
+            return True;
+         end Valid_Default_Iterator;
+
+      --  Start of processing for Check_Iterator_Functions
+
+      begin
+         Analyze (Expr);
+
+         if not Is_Entity_Name (Expr) then
+            Error_Msg_N ("aspect Iterator must be a function name", Expr);
+         end if;
+
+         if not Is_Overloaded (Expr) then
+            if not Check_Primitive_Function (Entity (Expr)) then
+               Error_Msg_NE
+                 ("aspect Indexing requires a function that applies to type&",
+                   Entity (Expr), Ent);
+            end if;
+
+            if not Valid_Default_Iterator (Entity (Expr)) then
+               Error_Msg_N ("improper function for default iterator", Expr);
+            end if;
+
+         else
+            Default := Empty;
+            declare
+               I : Interp_Index;
+               It : Interp;
+
+            begin
+               Get_First_Interp (Expr, I, It);
+               while Present (It.Nam) loop
+                  if not Check_Primitive_Function (It.Nam)
+                    or else not Valid_Default_Iterator (It.Nam)
+                  then
+                     Remove_Interp (I);
+
+                  elsif Present (Default) then
+                     Error_Msg_N ("default iterator must be unique", Expr);
+
+                  else
+                     Default := It.Nam;
+                  end if;
+
+                  Get_Next_Interp (I, It);
+               end loop;
+            end;
+
+            if Present (Default) then
+               Set_Entity (Expr, Default);
+               Set_Is_Overloaded (Expr, False);
+            end if;
+         end if;
+      end Check_Iterator_Functions;
+
+      -------------------------------
+      -- Check_Primitive_Function  --
+      -------------------------------
+
+      function Check_Primitive_Function (Subp : Entity_Id) return Boolean is
+         Ctrl : Entity_Id;
+
+      begin
+         if Ekind (Subp) /= E_Function then
+            return False;
+         end if;
+
+         if No (First_Formal (Subp)) then
+            return False;
+         else
+            Ctrl := Etype (First_Formal (Subp));
+         end if;
+
+         if Ctrl = Ent
+           or else Ctrl = Class_Wide_Type (Ent)
+           or else
+             (Ekind (Ctrl) = E_Anonymous_Access_Type
+               and then
+                 (Designated_Type (Ctrl) = Ent
+                   or else Designated_Type (Ctrl) = Class_Wide_Type (Ent)))
+         then
+            null;
+
+         else
+            return False;
+         end if;
+
+         return True;
+      end Check_Primitive_Function;
 
       ----------------------
       -- Duplicate_Clause --
@@ -1807,9 +2049,10 @@ package body Sem_Ch13 is
       end if;
 
       --  Process Ignore_Rep_Clauses option (we also ignore rep clauses in
-      --  CodePeer mode, since they are not relevant in that context).
+      --  CodePeer mode or Alfa mode, since they are not relevant in these
+      --  contexts).
 
-      if Ignore_Rep_Clauses or CodePeer_Mode then
+      if Ignore_Rep_Clauses or CodePeer_Mode or Alfa_Mode then
          case Id is
 
             --  The following should be ignored. They do not affect legality
@@ -1829,8 +2072,8 @@ package body Sem_Ch13 is
                Rewrite (N, Make_Null_Statement (Sloc (N)));
                return;
 
-            --  We do not want too ignore 'Small in CodePeer_Mode, since it
-            --  has an impact on the exact computations performed.
+            --  We do not want too ignore 'Small in CodePeer_Mode or Alfa_Mode,
+            --  since it has an impact on the exact computations performed.
 
             --  Perhaps 'Small should also not be ignored by
             --  Ignore_Rep_Clauses ???
@@ -2385,6 +2628,39 @@ package body Sem_Ch13 is
          when Attribute_Constant_Indexing =>
             Check_Indexing_Functions;
 
+         ----------------------
+         -- Default_Iterator --
+         ----------------------
+
+         when Attribute_Default_Iterator =>  Default_Iterator : declare
+            Func : Entity_Id;
+
+         begin
+            if not Is_Tagged_Type (U_Ent) then
+               Error_Msg_N
+                 ("aspect Default_Iterator applies to  tagged type", Nam);
+            end if;
+
+            Check_Iterator_Functions;
+
+            Analyze (Expr);
+
+            if not Is_Entity_Name (Expr)
+              or else Ekind (Entity (Expr)) /= E_Function
+            then
+               Error_Msg_N ("aspect Iterator must be a function", Expr);
+            else
+               Func := Entity (Expr);
+            end if;
+
+            if No (First_Formal (Func))
+              or else Etype (First_Formal (Func)) /= U_Ent
+            then
+               Error_Msg_NE
+                 ("Default Iterator must be a primitive of&", Func, U_Ent);
+            end if;
+         end Default_Iterator;
+
          ------------------
          -- External_Tag --
          ------------------
@@ -2431,9 +2707,10 @@ package body Sem_Ch13 is
 
          when Attribute_Implicit_Dereference =>
 
-            --  Legality checks already performed above
+            --  Legality checks already performed at the point of
+            --  the type declaration, aspect is not delayed.
 
-            null;   --  TBD???
+            null;
 
          -----------
          -- Input --
@@ -2442,6 +2719,19 @@ package body Sem_Ch13 is
          when Attribute_Input =>
             Analyze_Stream_TSS_Definition (TSS_Stream_Input);
             Set_Has_Specified_Stream_Input (Ent);
+
+         ----------------------
+         -- Iterator_Element --
+         ----------------------
+
+         when Attribute_Iterator_Element =>
+            Analyze (Expr);
+
+            if not Is_Entity_Name (Expr)
+              or else not Is_Type (Entity (Expr))
+            then
+               Error_Msg_N ("aspect Iterator_Element must be a type", Expr);
+            end if;
 
          -------------------
          -- Machine_Radix --
@@ -2510,7 +2800,7 @@ package body Sem_Ch13 is
 
                Set_Esize (U_Ent, Size);
                Set_Has_Object_Size_Clause (U_Ent);
-               Alignment_Check_For_Esize_Change (U_Ent);
+               Alignment_Check_For_Size_Change (U_Ent, Size);
             end if;
          end Object_Size;
 
@@ -2603,6 +2893,9 @@ package body Sem_Ch13 is
                   --  (object size) unset, the back end will set it from the
                   --  size and alignment in an appropriate manner.
 
+                  --  In both cases, we check whether the alignment must be
+                  --  reset in the wake of the size change.
+
                   if Is_Elementary_Type (U_Ent) then
                      if Size <= System_Storage_Unit then
                         Init_Esize (U_Ent, System_Storage_Unit);
@@ -2614,7 +2907,9 @@ package body Sem_Ch13 is
                         Set_Esize  (U_Ent, (Size + 63) / 64 * 64);
                      end if;
 
-                     Alignment_Check_For_Esize_Change (U_Ent);
+                     Alignment_Check_For_Size_Change (U_Ent, Esize (U_Ent));
+                  else
+                     Alignment_Check_For_Size_Change (U_Ent, Size);
                   end if;
 
                --  For objects, set Esize only
@@ -3541,6 +3836,7 @@ package body Sem_Ch13 is
                if Nkind (Ritem) = N_Aspect_Specification
                  and then Entity (Ritem) = E
                  and then Is_Delayed_Aspect (Ritem)
+                 and then Scope (E) = Current_Scope
                then
                   Check_Aspect_At_Freeze_Point (Ritem);
                end if;
@@ -3648,9 +3944,7 @@ package body Sem_Ch13 is
             --  This seems dubious, this destroys the source tree in a manner
             --  not detectable by ASIS ???
 
-            if Operating_Mode = Check_Semantics
-              and then ASIS_Mode
-            then
+            if Operating_Mode = Check_Semantics and then ASIS_Mode then
                AtM_Nod :=
                  Make_Attribute_Definition_Clause (Loc,
                    Name       => New_Reference_To (Base_Type (Rectype), Loc),
@@ -4460,10 +4754,15 @@ package body Sem_Ch13 is
             if Nkind (Ritem) = N_Pragma
               and then Pragma_Name (Ritem) = Name_Predicate
             then
-               if From_Dynamic_Predicate (Ritem) then
-                  Dynamic_Predicate_Present := True;
-               elsif From_Static_Predicate (Ritem) then
-                  Static_Predicate_Present := Ritem;
+               if Present (Corresponding_Aspect (Ritem)) then
+                  case Chars (Identifier (Corresponding_Aspect (Ritem))) is
+                     when Name_Dynamic_Predicate =>
+                        Dynamic_Predicate_Present := True;
+                     when Name_Static_Predicate =>
+                        Static_Predicate_Present := Ritem;
+                     when others =>
+                        null;
+                  end case;
                end if;
 
                --  Acquire arguments
@@ -5477,7 +5776,7 @@ package body Sem_Ch13 is
       Ident : constant Node_Id   := Identifier (ASN);
 
       Freeze_Expr : constant Node_Id := Expression (ASN);
-      --  Preanalyzed expression from call to Check_Aspect_At_Freeze_Point
+      --  Expression from call to Check_Aspect_At_Freeze_Point
 
       End_Decl_Expr : constant Node_Id := Entity (Ident);
       --  Expression to be analyzed at end of declarations
@@ -5507,11 +5806,25 @@ package body Sem_Ch13 is
          Err := Entity (End_Decl_Expr) /= Entity (Freeze_Expr);
 
       elsif A_Id = Aspect_Variable_Indexing or else
-            A_Id = Aspect_Constant_Indexing
+            A_Id = Aspect_Constant_Indexing or else
+            A_Id = Aspect_Default_Iterator  or else
+            A_Id = Aspect_Iterator_Element
       then
+         --  Make type unfrozen before analysis, to prevent spurious errors
+         --  about late attributes.
+
+         Set_Is_Frozen (Ent, False);
          Analyze (End_Decl_Expr);
          Analyze (Aspect_Rep_Item (ASN));
-         Err := Entity (End_Decl_Expr) /= Entity (Freeze_Expr);
+         Set_Is_Frozen (Ent, True);
+
+         --  If the end of declarations comes before any other freeze
+         --  point, the Freeze_Expr is not analyzed: no check needed.
+
+         Err :=
+           Analyzed (Freeze_Expr)
+             and then not In_Instance
+             and then Entity (End_Decl_Expr) /= Entity (Freeze_Expr);
 
       --  All other cases
 
@@ -5583,6 +5896,9 @@ package body Sem_Ch13 is
          when Aspect_Test_Case =>
             raise Program_Error;
 
+         when Aspect_Attach_Handler =>
+            T := RTE (RE_Interrupt_ID);
+
          --  Default_Value is resolved with the type entity in question
 
          when Aspect_Default_Value =>
@@ -5601,8 +5917,20 @@ package body Sem_Ch13 is
          when Aspect_Bit_Order =>
             T := RTE (RE_Bit_Order);
 
+         when Aspect_CPU =>
+            T := RTE (RE_CPU_Range);
+
+         when Aspect_Dispatching_Domain =>
+            T := RTE (RE_Dispatching_Domain);
+
          when Aspect_External_Tag =>
             T := Standard_String;
+
+         when Aspect_Priority | Aspect_Interrupt_Priority =>
+            T := Standard_Integer;
+
+         when Aspect_Small =>
+            T := Universal_Real;
 
          when Aspect_Storage_Pool =>
             T := Class_Wide_Type (RTE (RE_Root_Storage_Pool));

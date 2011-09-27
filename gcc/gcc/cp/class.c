@@ -235,7 +235,8 @@ tree
 build_base_path (enum tree_code code,
 		 tree expr,
 		 tree binfo,
-		 int nonnull)
+		 int nonnull,
+		 tsubst_flags_t complain)
 {
   tree v_binfo = NULL_TREE;
   tree d_binfo = NULL_TREE;
@@ -276,14 +277,16 @@ build_base_path (enum tree_code code,
 
   if (code == MINUS_EXPR && v_binfo)
     {
-      error ("cannot convert from base %qT to derived type %qT via virtual base %qT",
-	     BINFO_TYPE (binfo), BINFO_TYPE (d_binfo), BINFO_TYPE (v_binfo));
+      if (complain & tf_error)
+	error ("cannot convert from base %qT to derived type %qT via "
+	       "virtual base %qT", BINFO_TYPE (binfo), BINFO_TYPE (d_binfo),
+	       BINFO_TYPE (v_binfo));
       return error_mark_node;
     }
 
   if (!want_pointer)
     /* This must happen before the call to save_expr.  */
-    expr = cp_build_addr_expr (expr, tf_warning_or_error);
+    expr = cp_build_addr_expr (expr, complain);
   else
     expr = mark_rvalue_use (expr);
 
@@ -341,7 +344,7 @@ build_base_path (enum tree_code code,
 	 interesting to the optimizers anyway.  */
       && !has_empty)
     {
-      expr = cp_build_indirect_ref (expr, RO_NULL, tf_warning_or_error);
+      expr = cp_build_indirect_ref (expr, RO_NULL, complain);
       expr = build_simple_base_path (expr, binfo);
       if (want_pointer)
 	expr = build_address (expr);
@@ -366,19 +369,18 @@ build_base_path (enum tree_code code,
 	  t = TREE_TYPE (TYPE_VFIELD (current_class_type));
 	  t = build_pointer_type (t);
 	  v_offset = convert (t, current_vtt_parm);
-	  v_offset = cp_build_indirect_ref (v_offset, RO_NULL, 
-                                            tf_warning_or_error);
+	  v_offset = cp_build_indirect_ref (v_offset, RO_NULL, complain);
 	}
       else
 	v_offset = build_vfield_ref (cp_build_indirect_ref (expr, RO_NULL,
-                                                            tf_warning_or_error),
+                                                            complain),
 				     TREE_TYPE (TREE_TYPE (expr)));
 
       v_offset = fold_build_pointer_plus (v_offset, BINFO_VPTR_FIELD (v_binfo));
       v_offset = build1 (NOP_EXPR,
 			 build_pointer_type (ptrdiff_type_node),
 			 v_offset);
-      v_offset = cp_build_indirect_ref (v_offset, RO_NULL, tf_warning_or_error);
+      v_offset = cp_build_indirect_ref (v_offset, RO_NULL, complain);
       TREE_CONSTANT (v_offset) = 1;
 
       offset = convert_to_integer (ptrdiff_type_node,
@@ -418,7 +420,7 @@ build_base_path (enum tree_code code,
     null_test = NULL;
 
   if (!want_pointer)
-    expr = cp_build_indirect_ref (expr, RO_NULL, tf_warning_or_error);
+    expr = cp_build_indirect_ref (expr, RO_NULL, complain);
 
  out:
   if (null_test)
@@ -523,7 +525,7 @@ convert_to_base (tree object, tree type, bool check_access, bool nonnull,
   if (!binfo || binfo == error_mark_node)
     return error_mark_node;
 
-  return build_base_path (PLUS_EXPR, object, binfo, nonnull);
+  return build_base_path (PLUS_EXPR, object, binfo, nonnull, complain);
 }
 
 /* EXPR is an expression with unqualified class type.  BASE is a base
@@ -2726,7 +2728,8 @@ add_implicitly_declared_members (tree t,
       CLASSTYPE_LAZY_DEFAULT_CTOR (t) = 1;
       if (cxx_dialect >= cxx0x)
 	TYPE_HAS_CONSTEXPR_CTOR (t)
-	  = synthesized_default_constructor_is_constexpr (t);
+	  /* This might force the declaration.  */
+	  = type_has_constexpr_default_constructor (t);
     }
 
   /* [class.ctor]
@@ -2955,7 +2958,7 @@ check_field_decl (tree field,
     {
       /* `build_class_init_list' does not recognize
 	 non-FIELD_DECLs.  */
-      if (TREE_CODE (t) == UNION_TYPE && any_default_members != 0)
+      if (TREE_CODE (t) == UNION_TYPE && *any_default_members != 0)
 	error ("multiple fields in union %qT initialized", t);
       *any_default_members = 1;
     }
@@ -3251,6 +3254,14 @@ check_field_decls (tree t, tree *access_decls,
       else if (! TYPE_HAS_COPY_ASSIGN (t))
 	warning (OPT_Weffc__,
 		 "  but does not override %<operator=(const %T&)%>", t);
+    }
+
+  /* Non-static data member initializers make the default constructor
+     non-trivial.  */
+  if (any_default_members)
+    {
+      TYPE_NEEDS_CONSTRUCTING (t) = true;
+      TYPE_HAS_COMPLEX_DFLT (t) = true;
     }
 
   /* If any of the fields couldn't be packed, unset TYPE_PACKED.  */
@@ -4355,15 +4366,49 @@ type_has_user_provided_default_constructor (tree t)
   return false;
 }
 
-/* Returns true iff for class T, a synthesized default constructor
+/* If default-initialization leaves part of TYPE uninitialized, returns
+   a DECL for the field or TYPE itself (DR 253).  */
+
+tree
+default_init_uninitialized_part (tree type)
+{
+  tree t, r, binfo;
+  int i;
+
+  type = strip_array_types (type);
+  if (!CLASS_TYPE_P (type))
+    return type;
+  if (type_has_user_provided_default_constructor (type))
+    return NULL_TREE;
+  for (binfo = TYPE_BINFO (type), i = 0;
+       BINFO_BASE_ITERATE (binfo, i, t); ++i)
+    {
+      r = default_init_uninitialized_part (BINFO_TYPE (t));
+      if (r)
+	return r;
+    }
+  for (t = TYPE_FIELDS (type); t; t = DECL_CHAIN (t))
+    if (TREE_CODE (t) == FIELD_DECL
+	&& !DECL_ARTIFICIAL (t)
+	&& !DECL_INITIAL (t))
+      {
+	r = default_init_uninitialized_part (TREE_TYPE (t));
+	if (r)
+	  return DECL_P (r) ? r : t;
+      }
+
+  return NULL_TREE;
+}
+
+/* Returns true iff for class T, a trivial synthesized default constructor
    would be constexpr.  */
 
 bool
-synthesized_default_constructor_is_constexpr (tree t)
+trivial_default_constructor_is_constexpr (tree t)
 {
-  /* A defaulted default constructor is constexpr
+  /* A defaulted trivial default constructor is constexpr
      if there is nothing to initialize.  */
-  /* FIXME adjust for non-static data member initializers.  */
+  gcc_assert (!TYPE_HAS_COMPLEX_DFLT (t));
   return is_really_empty_class (t);
 }
 
@@ -4381,7 +4426,12 @@ type_has_constexpr_default_constructor (tree t)
       return false;
     }
   if (CLASSTYPE_LAZY_DEFAULT_CTOR (t))
-    return synthesized_default_constructor_is_constexpr (t);
+    {
+      if (!TYPE_HAS_COMPLEX_DFLT (t))
+	return trivial_default_constructor_is_constexpr (t);
+      /* Non-trivial, we need to check subobject constructors.  */
+      lazily_declare_fn (sfk_constructor, t);
+    }
   fns = locate_ctor (t);
   return (fns && DECL_DECLARED_CONSTEXPR_P (fns));
 }
@@ -4575,7 +4625,7 @@ finalize_literal_type_property (tree t)
 	  && !DECL_CONSTRUCTOR_P (fn))
 	{
 	  DECL_DECLARED_CONSTEXPR_P (fn) = false;
-	  if (!DECL_TEMPLATE_INFO (fn))
+	  if (!DECL_GENERATED_P (fn))
 	    {
 	      error ("enclosing class of constexpr non-static member "
 		     "function %q+#D is not a literal type", fn);
@@ -4608,9 +4658,14 @@ explain_non_literal_class (tree t)
   else if (CLASSTYPE_NON_AGGREGATE (t)
 	   && !TYPE_HAS_TRIVIAL_DFLT (t)
 	   && !TYPE_HAS_CONSTEXPR_CTOR (t))
-    inform (0, "  %q+T is not an aggregate, does not have a trivial "
-	    "default constructor, and has no constexpr constructor that "
-	    "is not a copy or move constructor", t);
+    {
+      inform (0, "  %q+T is not an aggregate, does not have a trivial "
+	      "default constructor, and has no constexpr constructor that "
+	      "is not a copy or move constructor", t);
+      if (TYPE_HAS_DEFAULT_CONSTRUCTOR (t)
+	  && !type_has_user_provided_default_constructor (t))
+	explain_invalid_constexpr_fn (locate_ctor (t));
+    }
   else
     {
       tree binfo, base_binfo, field; int i;
@@ -5795,10 +5850,25 @@ finish_struct_1 (tree t)
   /* Finish debugging output for this type.  */
   rest_of_type_compilation (t, ! LOCAL_CLASS_P (t));
 
-  if (TYPE_TRANSPARENT_AGGR (t) && first_field (t) == NULL_TREE)
+  if (TYPE_TRANSPARENT_AGGR (t))
     {
-      error ("type transparent class %qT does not have any fields", t);
-      TYPE_TRANSPARENT_AGGR (t) = 0;
+      tree field = first_field (t);
+      if (field == NULL_TREE || error_operand_p (field))
+	{
+	  error ("type transparent class %qT does not have any fields", t);
+	  TYPE_TRANSPARENT_AGGR (t) = 0;
+	}
+      else if (DECL_ARTIFICIAL (field))
+	{
+	  if (DECL_FIELD_IS_BASE (field))
+	    error ("type transparent class %qT has base classes", t);
+	  else
+	    {
+	      gcc_checking_assert (DECL_VIRTUAL_P (field));
+	      error ("type transparent class %qT has virtual functions", t);
+	    }
+	  TYPE_TRANSPARENT_AGGR (t) = 0;
+	}
     }
 }
 

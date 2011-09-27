@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/xml/validation/datatype
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ gandalf
 
 2330
 
-Facet.java
-file
-
-
-
-
-2011-06-04T18:38:06.876104Z
-5e63565313f24ac5a69e6ee8a7f97136
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2680
-
 NegativeIntegerType.java
 file
 
@@ -229,6 +195,40 @@ gandalf
 
 
 3433
+
+Facet.java
+file
+
+
+
+
+2011-06-04T18:38:06.876104Z
+5e63565313f24ac5a69e6ee8a7f97136
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2680
 
 TotalDigitsFacet.java
 file
@@ -298,40 +298,6 @@ gandalf
 
 7928
 
-NonNegativeIntegerType.java
-file
-
-
-
-
-2011-06-04T18:38:06.877104Z
-af8366f0413e2ee1afc59ca4d3d6ccd5
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3767
-
 NotationType.java
 file
 
@@ -366,14 +332,14 @@ gandalf
 
 2786
 
-UnsignedLongType.java
+NonNegativeIntegerType.java
 file
 
 
 
 
-2011-06-04T18:38:06.878104Z
-83f4b043c7cebd6a975d3b25e119e20c
+2011-06-04T18:38:06.877104Z
+af8366f0413e2ee1afc59ca4d3d6ccd5
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -398,7 +364,7 @@ gandalf
 
 
 
-3856
+3767
 
 GMonthType.java
 file
@@ -433,6 +399,40 @@ gandalf
 
 
 4456
+
+UnsignedLongType.java
+file
+
+
+
+
+2011-06-04T18:38:06.878104Z
+83f4b043c7cebd6a975d3b25e119e20c
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3856
 
 DecimalType.java
 file
@@ -1148,40 +1148,6 @@ gandalf
 
 3306
 
-GYearType.java
-file
-
-
-
-
-2011-06-04T18:38:06.884104Z
-daf4c0bb7327c0dc2fe4e1a20a775d64
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4139
-
 AnyURIType.java
 file
 
@@ -1215,6 +1181,40 @@ gandalf
 
 
 2948
+
+GYearType.java
+file
+
+
+
+
+2011-06-04T18:38:06.884104Z
+daf4c0bb7327c0dc2fe4e1a20a775d64
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4139
 
 Annotation.java
 file
@@ -1420,40 +1420,6 @@ gandalf
 
 3398
 
-DurationType.java
-file
-
-
-
-
-2011-06-04T18:38:06.886104Z
-bed9e93560ad5c245ae0f2f75ad84a22
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6847
-
 ListSimpleType.java
 file
 
@@ -1487,6 +1453,40 @@ gandalf
 
 
 2938
+
+DurationType.java
+file
+
+
+
+
+2011-06-04T18:38:06.886104Z
+bed9e93560ad5c245ae0f2f75ad84a22
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6847
 
 TypeBuilder.java
 file
@@ -1522,40 +1522,6 @@ gandalf
 
 9482
 
-AnyType.java
-file
-
-
-
-
-2011-06-04T18:38:06.887104Z
-470b37e0a26cc94766fd6d935dec0964
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2112
-
 EnumerationFacet.java
 file
 
@@ -1590,14 +1556,14 @@ gandalf
 
 2323
 
-HexBinaryType.java
+AnyType.java
 file
 
 
 
 
 2011-06-04T18:38:06.887104Z
-07592a6dc7175b1302dff006b3486616
+470b37e0a26cc94766fd6d935dec0964
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -1622,7 +1588,7 @@ gandalf
 
 
 
-2896
+2112
 
 Base64BinaryType.java
 file
@@ -1658,6 +1624,40 @@ gandalf
 
 4140
 
+HexBinaryType.java
+file
+
+
+
+
+2011-06-04T18:38:06.887104Z
+07592a6dc7175b1302dff006b3486616
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2896
+
 TypeLibraryFactory.java
 file
 
@@ -1692,40 +1692,6 @@ gandalf
 
 2295
 
-NCNameType.java
-file
-
-
-
-
-2011-06-04T18:38:06.888104Z
-f2950ba6fb7ba41efa6fadc7dca1296f
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3674
-
 QNameType.java
 file
 
@@ -1759,6 +1725,40 @@ gandalf
 
 
 3924
+
+NCNameType.java
+file
+
+
+
+
+2011-06-04T18:38:06.888104Z
+f2950ba6fb7ba41efa6fadc7dca1296f
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3674
 
 UnionSimpleType.java
 file
@@ -1896,40 +1896,6 @@ gandalf
 
 3544
 
-NameType.java
-file
-
-
-
-
-2011-06-04T18:38:06.890104Z
-0337caaa6dfa3686d9267dfc3e64e34a
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3376
-
 PositiveIntegerType.java
 file
 
@@ -1963,6 +1929,40 @@ gandalf
 
 
 3431
+
+NameType.java
+file
+
+
+
+
+2011-06-04T18:38:06.890104Z
+0337caaa6dfa3686d9267dfc3e64e34a
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3376
 
 LengthFacet.java
 file
@@ -2032,40 +2032,6 @@ gandalf
 
 4736
 
-AtomicSimpleType.java
-file
-
-
-
-
-2011-06-04T18:38:06.891104Z
-06c538344ff14d064fb6e63e2bc23eec
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2752
-
 MinLengthFacet.java
 file
 
@@ -2099,6 +2065,40 @@ gandalf
 
 
 2358
+
+AtomicSimpleType.java
+file
+
+
+
+
+2011-06-04T18:38:06.891104Z
+06c538344ff14d064fb6e63e2bc23eec
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2752
 
 UnsignedIntType.java
 file

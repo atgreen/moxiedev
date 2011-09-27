@@ -377,6 +377,7 @@ enum standard_datatypes
   ADT_longjmp_decl,
   ADT_update_setjmp_buf_decl,
   ADT_raise_nodefer_decl,
+  ADT_reraise_zcx_decl,
   ADT_begin_handler_decl,
   ADT_end_handler_decl,
   ADT_others_decl,
@@ -422,6 +423,7 @@ extern GTY(()) tree gnat_raise_decls_ext[(int) LAST_REASON_CODE + 1];
 #define longjmp_decl gnat_std_decls[(int) ADT_longjmp_decl]
 #define update_setjmp_buf_decl gnat_std_decls[(int) ADT_update_setjmp_buf_decl]
 #define raise_nodefer_decl gnat_std_decls[(int) ADT_raise_nodefer_decl]
+#define reraise_zcx_decl gnat_std_decls[(int) ADT_reraise_zcx_decl]
 #define begin_handler_decl gnat_std_decls[(int) ADT_begin_handler_decl]
 #define others_decl gnat_std_decls[(int) ADT_others_decl]
 #define all_others_decl gnat_std_decls[(int) ADT_all_others_decl]
@@ -811,16 +813,11 @@ extern tree build_cond_expr (tree result_type, tree condition_operand,
 extern tree build_compound_expr (tree result_type, tree stmt_operand,
 				 tree expr_operand);
 
-/* Build a CALL_EXPR to call FUNDECL with one argument, ARG.  Return
-   the CALL_EXPR.  */
-extern tree build_call_1_expr (tree fundecl, tree arg);
-
-/* Build a CALL_EXPR to call FUNDECL with two argument, ARG1 & ARG2.  Return
-   the CALL_EXPR.  */
-extern tree build_call_2_expr (tree fundecl, tree arg1, tree arg2);
-
-/* Likewise to call FUNDECL with no arguments.  */
-extern tree build_call_0_expr (tree fundecl);
+/* Conveniently construct a function call expression.  FNDECL names the
+   function to be called, N is the number of arguments, and the "..."
+   parameters are the argument expressions.  Unlike build_call_expr
+   this doesn't fold the call, hence it will always return a CALL_EXPR.  */
+extern tree build_call_n_expr (tree fndecl, int n, ...);
 
 /* Call a function that raises an exception and pass the line number and file
    name, if requested.  MSG says which exception function to call.
@@ -954,7 +951,7 @@ extern Pos get_target_double_size (void);
 extern Pos get_target_long_double_size (void);
 extern Pos get_target_pointer_size (void);
 extern Pos get_target_maximum_default_alignment (void);
-extern Pos get_target_default_allocator_alignment (void);
+extern Pos get_target_system_allocator_alignment (void);
 extern Pos get_target_maximum_allowed_alignment (void);
 extern Pos get_target_maximum_alignment (void);
 extern Nat get_float_words_be (void);

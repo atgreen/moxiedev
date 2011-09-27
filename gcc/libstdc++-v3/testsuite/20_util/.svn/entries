@@ -1,15 +1,15 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-03T21:05:14.540918Z
-177299
-bkoz
+2011-09-21T11:23:11.786004Z
+179044
+paolo
 
 
 
@@ -50,13 +50,16 @@ dir
 enable_if
 dir
 
-allocator_traits
+make_signed
 dir
 
 move
 dir
 
-make_signed
+allocator_traits
+dir
+
+is_floating_point
 dir
 
 is_rvalue_reference
@@ -116,10 +119,10 @@ dir
 conditional
 dir
 
-is_signed
+has_trivial_copy_constructor
 dir
 
-has_trivial_copy_constructor
+is_signed
 dir
 
 is_unsigned
@@ -134,28 +137,28 @@ dir
 scoped_allocator
 dir
 
-is_nothrow_move_constructible
-dir
-
 underlying_type
 dir
 
-is_nothrow_assignable
+is_nothrow_move_constructible
 dir
 
 hash
 dir
 
+is_nothrow_assignable
+dir
+
 is_destructible
 dir
 
-is_nothrow_copy_constructible
+decay
 dir
 
 function
 dir
 
-decay
+is_nothrow_copy_constructible
 dir
 
 raw_storage_iterator
@@ -195,10 +198,10 @@ jakub
 
 1160
 
-is_nothrow_constructible
+unique_ptr
 dir
 
-unique_ptr
+is_nothrow_constructible
 dir
 
 function_objects
@@ -207,10 +210,10 @@ dir
 is_integral
 dir
 
-is_object
+is_lvalue_reference
 dir
 
-is_lvalue_reference
+is_object
 dir
 
 is_trivial
@@ -219,10 +222,10 @@ dir
 default_delete
 dir
 
-time_point
+is_convertible
 dir
 
-is_convertible
+time_point
 dir
 
 remove_reference

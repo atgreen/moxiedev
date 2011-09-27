@@ -51,7 +51,6 @@
 /mi-var-child.c/1.12/Sun Jun  5 16:54:38 2011//
 /mi-var-child.exp/1.36/Sun Jun  5 16:54:38 2011//
 /mi-var-cmd.exp/1.49/Sun Jun  5 16:54:38 2011//
-/mi-var-cp.cc/1.13/Sun Jun  5 16:54:38 2011//
 /mi-var-cp.exp/1.12/Sun Jun  5 16:54:38 2011//
 /mi-var-display.exp/1.37/Thu Aug 25 20:10:56 2011//
 /mi-var-invalidate.exp/1.9/Sun Jun  5 16:54:38 2011//
@@ -88,4 +87,7 @@
 /testcmds/1.1/Sun Jun  5 16:54:38 2011//
 /until.c/1.1/Sun Jun  5 16:54:38 2011//
 /var-cmd.c/1.23/Sun Jun  5 16:54:38 2011//
+/mi-inheritance-syntax-error.cc/1.3/Fri Aug 26 21:11:08 2011//
+/mi-inheritance-syntax-error.exp/1.3/Fri Aug 26 21:11:08 2011//
+/mi-var-cp.cc/1.14/Sun Sep 25 18:07:46 2011//
 D

@@ -1081,11 +1081,20 @@ old_insns_match_p (int mode ATTRIBUTE_UNUSED, rtx i1, rtx i2)
   /* ??? Do not allow cross-jumping between different stack levels.  */
   p1 = find_reg_note (i1, REG_ARGS_SIZE, NULL);
   p2 = find_reg_note (i2, REG_ARGS_SIZE, NULL);
-  if (p1)
-    p1 = XEXP (p1, 0);
-  if (p2)
-    p2 = XEXP (p2, 0);
-  if (!rtx_equal_p (p1, p2))
+  if (p1 && p2)
+    {
+      p1 = XEXP (p1, 0);
+      p2 = XEXP (p2, 0);
+      if (!rtx_equal_p (p1, p2))
+        return dir_none;
+
+      /* ??? Worse, this adjustment had better be constant lest we
+         have differing incoming stack levels.  */
+      if (!frame_pointer_needed
+          && find_args_size_adjust (i1) == HOST_WIDE_INT_MIN)
+	return dir_none;
+    }
+  else if (p1 || p2)
     return dir_none;
 
   p1 = PATTERN (i1);
@@ -2205,7 +2214,14 @@ try_head_merge_bb (basic_block bb)
 
   cond = get_condition (jump, &move_before, true, false);
   if (cond == NULL_RTX)
-    move_before = jump;
+    {
+#ifdef HAVE_cc0
+      if (reg_mentioned_p (cc0_rtx, jump))
+	move_before = prev_nonnote_nondebug_insn (jump);
+      else
+#endif
+	move_before = jump;
+    }
 
   for (ix = 0; ix < nedges; ix++)
     if (EDGE_SUCC (bb, ix)->dest == EXIT_BLOCK_PTR)
@@ -2367,7 +2383,14 @@ try_head_merge_bb (basic_block bb)
       jump = BB_END (final_dest_bb);
       cond = get_condition (jump, &move_before, true, false);
       if (cond == NULL_RTX)
-	move_before = jump;
+	{
+#ifdef HAVE_cc0
+	  if (reg_mentioned_p (cc0_rtx, jump))
+	    move_before = prev_nonnote_nondebug_insn (jump);
+	  else
+#endif
+	    move_before = jump;
+	}
     }
 
   do

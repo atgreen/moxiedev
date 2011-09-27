@@ -29,11 +29,11 @@ mi_cmd_target_file_get (char *command, char **argv, int argc)
   int optind = 0;
   char *optarg;
   const char *remote_file, *local_file;
-  static struct mi_opt opts[] =
+  static const struct mi_opt opts[] =
   {
     { 0, 0, 0 }
   };
-  static const char *prefix = "-target-file-get";
+  static const char prefix[] = "-target-file-get";
 
   if (mi_getopt (prefix, argc, argv, opts, &optind, &optarg) != -1
       || optind != argc - 2)
@@ -53,11 +53,11 @@ mi_cmd_target_file_put (char *command, char **argv, int argc)
   int optind = 0;
   char *optarg;
   const char *remote_file, *local_file;
-  static struct mi_opt opts[] =
+  static const struct mi_opt opts[] =
   {
     { 0, 0, 0 }
   };
-  static const char *prefix = "-target-file-put";
+  static const char prefix[] = "-target-file-put";
 
   if (mi_getopt (prefix, argc, argv, opts, &optind, &optarg) != -1
       || optind != argc - 2)
@@ -77,11 +77,11 @@ mi_cmd_target_file_delete (char *command, char **argv, int argc)
   int optind = 0;
   char *optarg;
   const char *remote_file;
-  static struct mi_opt opts[] =
+  static const struct mi_opt opts[] =
   {
     { 0, 0, 0 }
   };
-  static const char *prefix = "-target-file-delete";
+  static const char prefix[] = "-target-file-delete";
 
   if (mi_getopt (prefix, argc, argv, opts, &optind, &optarg) != -1
       || optind != argc - 1)

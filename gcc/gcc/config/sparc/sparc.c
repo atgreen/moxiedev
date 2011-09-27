@@ -269,8 +269,32 @@ struct processor_costs niagara2_costs = {
   COSTS_N_INSNS (5), /* imul */
   COSTS_N_INSNS (5), /* imulX */
   0, /* imul bit factor */
-  COSTS_N_INSNS (31), /* idiv, average of 12 - 41 cycle range */
-  COSTS_N_INSNS (31), /* idivX, average of 12 - 41 cycle range */
+  COSTS_N_INSNS (26), /* idiv, average of 12 - 41 cycle range */
+  COSTS_N_INSNS (26), /* idivX, average of 12 - 41 cycle range */
+  COSTS_N_INSNS (1), /* movcc/movr */
+  0, /* shift penalty */
+};
+
+static const
+struct processor_costs niagara3_costs = {
+  COSTS_N_INSNS (3), /* int load */
+  COSTS_N_INSNS (3), /* int signed load */
+  COSTS_N_INSNS (3), /* int zeroed load */
+  COSTS_N_INSNS (3), /* float load */
+  COSTS_N_INSNS (9), /* fmov, fneg, fabs */
+  COSTS_N_INSNS (9), /* fadd, fsub */
+  COSTS_N_INSNS (9), /* fcmp */
+  COSTS_N_INSNS (9), /* fmov, fmovr */
+  COSTS_N_INSNS (9), /* fmul */
+  COSTS_N_INSNS (23), /* fdivs */
+  COSTS_N_INSNS (37), /* fdivd */
+  COSTS_N_INSNS (23), /* fsqrts */
+  COSTS_N_INSNS (37), /* fsqrtd */
+  COSTS_N_INSNS (9), /* imul */
+  COSTS_N_INSNS (9), /* imulX */
+  0, /* imul bit factor */
+  COSTS_N_INSNS (31), /* idiv, average of 17 - 45 cycle range */
+  COSTS_N_INSNS (30), /* idivX, average of 16 - 44 cycle range */
   COSTS_N_INSNS (1), /* movcc/movr */
   0, /* shift penalty */
 };
@@ -305,7 +329,7 @@ char leaf_reg_remap[] =
   72, 73, 74, 75, 76, 77, 78, 79,
   80, 81, 82, 83, 84, 85, 86, 87,
   88, 89, 90, 91, 92, 93, 94, 95,
-  96, 97, 98, 99, 100};
+  96, 97, 98, 99, 100, 101, 102};
 
 /* Vector, indexed by hard register number, which contains 1
    for a register that is allowable in a candidate for leaf
@@ -323,7 +347,7 @@ char sparc_leaf_regs[] =
   1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1};
+  1, 1, 1, 1, 1, 1, 1};
 
 struct GTY(()) machine_function
 {
@@ -709,6 +733,8 @@ sparc_option_override (void)
     { TARGET_CPU_ultrasparc3, PROCESSOR_ULTRASPARC3 },
     { TARGET_CPU_niagara, PROCESSOR_NIAGARA },
     { TARGET_CPU_niagara2, PROCESSOR_NIAGARA2 },
+    { TARGET_CPU_niagara3, PROCESSOR_NIAGARA3 },
+    { TARGET_CPU_niagara4, PROCESSOR_NIAGARA4 },
     { -1, PROCESSOR_V7 }
   };
   const struct cpu_default *def;
@@ -748,6 +774,10 @@ sparc_option_override (void)
     { MASK_ISA,
       MASK_V9|MASK_DEPRECATED_V8_INSNS},
     /* UltraSPARC T2 */
+    { MASK_ISA, MASK_V9},
+    /* UltraSPARC T3 */
+    { MASK_ISA, MASK_V9},
+    /* UltraSPARC T4 */
     { MASK_ISA, MASK_V9},
   };
   const struct cpu_table *cpu;
@@ -840,6 +870,10 @@ sparc_option_override (void)
       target_flags &= ~(MASK_V8 | MASK_SPARCLET | MASK_SPARCLITE);
     }
 
+  /* -mvis also implies -mv8plus on 32-bit */
+  if (TARGET_VIS && ! TARGET_ARCH64)
+    target_flags |= MASK_V8PLUS;
+
   /* Use the deprecated v8 insns for sparc64 in 32 bit mode.  */
   if (TARGET_V9 && TARGET_ARCH32)
     target_flags |= MASK_DEPRECATED_V8_INSNS;
@@ -857,7 +891,9 @@ sparc_option_override (void)
       && (sparc_cpu == PROCESSOR_ULTRASPARC
 	  || sparc_cpu == PROCESSOR_ULTRASPARC3
 	  || sparc_cpu == PROCESSOR_NIAGARA
-	  || sparc_cpu == PROCESSOR_NIAGARA2))
+	  || sparc_cpu == PROCESSOR_NIAGARA2
+	  || sparc_cpu == PROCESSOR_NIAGARA3
+	  || sparc_cpu == PROCESSOR_NIAGARA4))
     align_functions = 32;
 
   /* Validate PCC_STRUCT_RETURN.  */
@@ -911,6 +947,10 @@ sparc_option_override (void)
     case PROCESSOR_NIAGARA2:
       sparc_costs = &niagara2_costs;
       break;
+    case PROCESSOR_NIAGARA3:
+    case PROCESSOR_NIAGARA4:
+      sparc_costs = &niagara3_costs;
+      break;
     case PROCESSOR_NATIVE:
       gcc_unreachable ();
     };
@@ -923,7 +963,9 @@ sparc_option_override (void)
   maybe_set_param_value (PARAM_SIMULTANEOUS_PREFETCHES,
 			 ((sparc_cpu == PROCESSOR_ULTRASPARC
 			   || sparc_cpu == PROCESSOR_NIAGARA
-			   || sparc_cpu == PROCESSOR_NIAGARA2)
+			   || sparc_cpu == PROCESSOR_NIAGARA2
+			   || sparc_cpu == PROCESSOR_NIAGARA3
+			   || sparc_cpu == PROCESSOR_NIAGARA4)
 			  ? 2
 			  : (sparc_cpu == PROCESSOR_ULTRASPARC3
 			     ? 8 : 3)),
@@ -933,7 +975,9 @@ sparc_option_override (void)
 			 ((sparc_cpu == PROCESSOR_ULTRASPARC
 			   || sparc_cpu == PROCESSOR_ULTRASPARC3
 			   || sparc_cpu == PROCESSOR_NIAGARA
-			   || sparc_cpu == PROCESSOR_NIAGARA2)
+			   || sparc_cpu == PROCESSOR_NIAGARA2
+			   || sparc_cpu == PROCESSOR_NIAGARA3
+			   || sparc_cpu == PROCESSOR_NIAGARA4)
 			  ? 64 : 32),
 			 global_options.x_param_values,
 			 global_options_set.x_param_values);
@@ -3996,8 +4040,8 @@ static const int hard_32bit_mode_classes[] = {
   /* %fcc[0123] */
   CCFP_MODES, CCFP_MODES, CCFP_MODES, CCFP_MODES,
 
-  /* %icc */
-  CC_MODES
+  /* %icc, %sfp, %gsr */
+  CC_MODES, 0, D_MODES
 };
 
 static const int hard_64bit_mode_classes[] = {
@@ -4021,8 +4065,8 @@ static const int hard_64bit_mode_classes[] = {
   /* %fcc[0123] */
   CCFP_MODES, CCFP_MODES, CCFP_MODES, CCFP_MODES,
 
-  /* %icc */
-  CC_MODES
+  /* %icc, %sfp, %gsr */
+  CC_MODES, 0, D_MODES
 };
 
 int sparc_mode_class [NUM_MACHINE_MODES];
@@ -8342,7 +8386,9 @@ sparc32_initialize_trampoline (rtx m_tramp, rtx fnaddr, rtx cxt)
   if (sparc_cpu != PROCESSOR_ULTRASPARC
       && sparc_cpu != PROCESSOR_ULTRASPARC3
       && sparc_cpu != PROCESSOR_NIAGARA
-      && sparc_cpu != PROCESSOR_NIAGARA2)
+      && sparc_cpu != PROCESSOR_NIAGARA2
+      && sparc_cpu != PROCESSOR_NIAGARA3
+      && sparc_cpu != PROCESSOR_NIAGARA4)
     emit_insn (gen_flush (validize_mem (adjust_address (m_tramp, SImode, 8))));
 
   /* Call __enable_execute_stack after writing onto the stack to make sure
@@ -8385,7 +8431,9 @@ sparc64_initialize_trampoline (rtx m_tramp, rtx fnaddr, rtx cxt)
   if (sparc_cpu != PROCESSOR_ULTRASPARC
       && sparc_cpu != PROCESSOR_ULTRASPARC3
       && sparc_cpu != PROCESSOR_NIAGARA
-      && sparc_cpu != PROCESSOR_NIAGARA2)
+      && sparc_cpu != PROCESSOR_NIAGARA2
+      && sparc_cpu != PROCESSOR_NIAGARA3
+      && sparc_cpu != PROCESSOR_NIAGARA4)
     emit_insn (gen_flushdi (validize_mem (adjust_address (m_tramp, DImode, 8))));
 
   /* Call __enable_execute_stack after writing onto the stack to make sure
@@ -8578,7 +8626,9 @@ static int
 sparc_use_sched_lookahead (void)
 {
   if (sparc_cpu == PROCESSOR_NIAGARA
-      || sparc_cpu == PROCESSOR_NIAGARA2)
+      || sparc_cpu == PROCESSOR_NIAGARA2
+      || sparc_cpu == PROCESSOR_NIAGARA3
+      || sparc_cpu == PROCESSOR_NIAGARA4)
     return 0;
   if (sparc_cpu == PROCESSOR_ULTRASPARC
       || sparc_cpu == PROCESSOR_ULTRASPARC3)
@@ -8597,6 +8647,8 @@ sparc_issue_rate (void)
     {
     case PROCESSOR_NIAGARA:
     case PROCESSOR_NIAGARA2:
+    case PROCESSOR_NIAGARA3:
+    case PROCESSOR_NIAGARA4:
     default:
       return 1;
     case PROCESSOR_V9:
@@ -9052,9 +9104,21 @@ sparc_init_libfuncs (void)
     }
 }
 
-#define def_builtin(NAME, CODE, TYPE) \
-  add_builtin_function((NAME), (TYPE), (CODE), BUILT_IN_MD, NULL, \
-                       NULL_TREE)
+static tree def_builtin(const char *name, int code, tree type)
+{
+  return add_builtin_function(name, type, code, BUILT_IN_MD, NULL,
+			      NULL_TREE);
+}
+
+static tree def_builtin_const(const char *name, int code, tree type)
+{
+  tree t = def_builtin(name, code, type);
+
+  if (t)
+    TREE_READONLY (t) = 1;
+
+  return t;
+}
 
 /* Implement the TARGET_INIT_BUILTINS target hook.
    Create builtin functions for special SPARC instructions.  */
@@ -9101,32 +9165,45 @@ sparc_vis_init_builtins (void)
   tree ptr_ftype_ptr_di = build_function_type_list (ptr_type_node,
 		        			    ptr_type_node,
 					            intDI_type_node, 0);
+  tree si_ftype_ptr_ptr = build_function_type_list (intSI_type_node,
+		        			    ptr_type_node,
+					            ptr_type_node, 0);
+  tree si_ftype_v4hi_v4hi = build_function_type_list (intSI_type_node,
+						      v4hi, v4hi, 0);
+  tree si_ftype_v2si_v2si = build_function_type_list (intSI_type_node,
+						      v2si, v2si, 0);
+  tree void_ftype_di = build_function_type_list (void_type_node,
+						 intDI_type_node, 0);
+  tree di_ftype_void = build_function_type_list (intDI_type_node,
+						 void_type_node, 0);
 
   /* Packing and expanding vectors.  */
-  def_builtin ("__builtin_vis_fpack16", CODE_FOR_fpack16_vis, v4qi_ftype_v4hi);
+  def_builtin ("__builtin_vis_fpack16", CODE_FOR_fpack16_vis,
+	       v4qi_ftype_v4hi);
   def_builtin ("__builtin_vis_fpack32", CODE_FOR_fpack32_vis,
 	       v8qi_ftype_v2si_v8qi);
   def_builtin ("__builtin_vis_fpackfix", CODE_FOR_fpackfix_vis,
 	       v2hi_ftype_v2si);
-  def_builtin ("__builtin_vis_fexpand", CODE_FOR_fexpand_vis, v4hi_ftype_v4qi);
-  def_builtin ("__builtin_vis_fpmerge", CODE_FOR_fpmerge_vis,
-	       v8qi_ftype_v4qi_v4qi);
+  def_builtin_const ("__builtin_vis_fexpand", CODE_FOR_fexpand_vis,
+		     v4hi_ftype_v4qi);
+  def_builtin_const ("__builtin_vis_fpmerge", CODE_FOR_fpmerge_vis,
+		     v8qi_ftype_v4qi_v4qi);
 
   /* Multiplications.  */
-  def_builtin ("__builtin_vis_fmul8x16", CODE_FOR_fmul8x16_vis,
-	       v4hi_ftype_v4qi_v4hi);
-  def_builtin ("__builtin_vis_fmul8x16au", CODE_FOR_fmul8x16au_vis,
-	       v4hi_ftype_v4qi_v2hi);
-  def_builtin ("__builtin_vis_fmul8x16al", CODE_FOR_fmul8x16al_vis,
-	       v4hi_ftype_v4qi_v2hi);
-  def_builtin ("__builtin_vis_fmul8sux16", CODE_FOR_fmul8sux16_vis,
-	       v4hi_ftype_v8qi_v4hi);
-  def_builtin ("__builtin_vis_fmul8ulx16", CODE_FOR_fmul8ulx16_vis,
-	       v4hi_ftype_v8qi_v4hi);
-  def_builtin ("__builtin_vis_fmuld8sux16", CODE_FOR_fmuld8sux16_vis,
-	       v2si_ftype_v4qi_v2hi);
-  def_builtin ("__builtin_vis_fmuld8ulx16", CODE_FOR_fmuld8ulx16_vis,
-	       v2si_ftype_v4qi_v2hi);
+  def_builtin_const ("__builtin_vis_fmul8x16", CODE_FOR_fmul8x16_vis,
+		     v4hi_ftype_v4qi_v4hi);
+  def_builtin_const ("__builtin_vis_fmul8x16au", CODE_FOR_fmul8x16au_vis,
+		     v4hi_ftype_v4qi_v2hi);
+  def_builtin_const ("__builtin_vis_fmul8x16al", CODE_FOR_fmul8x16al_vis,
+		     v4hi_ftype_v4qi_v2hi);
+  def_builtin_const ("__builtin_vis_fmul8sux16", CODE_FOR_fmul8sux16_vis,
+		     v4hi_ftype_v8qi_v4hi);
+  def_builtin_const ("__builtin_vis_fmul8ulx16", CODE_FOR_fmul8ulx16_vis,
+		     v4hi_ftype_v8qi_v4hi);
+  def_builtin_const ("__builtin_vis_fmuld8sux16", CODE_FOR_fmuld8sux16_vis,
+		     v2si_ftype_v4qi_v2hi);
+  def_builtin_const ("__builtin_vis_fmuld8ulx16", CODE_FOR_fmuld8ulx16_vis,
+		     v2si_ftype_v4qi_v2hi);
 
   /* Data aligning.  */
   def_builtin ("__builtin_vis_faligndatav4hi", CODE_FOR_faligndatav4hi_vis,
@@ -9136,17 +9213,80 @@ sparc_vis_init_builtins (void)
   def_builtin ("__builtin_vis_faligndatav2si", CODE_FOR_faligndatav2si_vis,
 	       v2si_ftype_v2si_v2si);
   def_builtin ("__builtin_vis_faligndatadi", CODE_FOR_faligndatadi_vis,
-               di_ftype_di_di);
+	       di_ftype_di_di);
+
+  def_builtin ("__builtin_vis_write_gsr", CODE_FOR_wrgsr_vis,
+	       void_ftype_di);
+  def_builtin ("__builtin_vis_read_gsr", CODE_FOR_rdgsr_vis,
+	       di_ftype_void);
+
   if (TARGET_ARCH64)
-    def_builtin ("__builtin_vis_alignaddr", CODE_FOR_alignaddrdi_vis,
-	         ptr_ftype_ptr_di);
+    {
+      def_builtin ("__builtin_vis_alignaddr", CODE_FOR_alignaddrdi_vis,
+		   ptr_ftype_ptr_di);
+      def_builtin ("__builtin_vis_alignaddrl", CODE_FOR_alignaddrldi_vis,
+		   ptr_ftype_ptr_di);
+    }
   else
-    def_builtin ("__builtin_vis_alignaddr", CODE_FOR_alignaddrsi_vis,
-	         ptr_ftype_ptr_si);
+    {
+      def_builtin ("__builtin_vis_alignaddr", CODE_FOR_alignaddrsi_vis,
+		   ptr_ftype_ptr_si);
+      def_builtin ("__builtin_vis_alignaddrl", CODE_FOR_alignaddrlsi_vis,
+		   ptr_ftype_ptr_si);
+    }
 
   /* Pixel distance.  */
-  def_builtin ("__builtin_vis_pdist", CODE_FOR_pdist_vis,
-	       di_ftype_v8qi_v8qi_di);
+  def_builtin_const ("__builtin_vis_pdist", CODE_FOR_pdist_vis,
+		     di_ftype_v8qi_v8qi_di);
+
+  /* Edge handling.  */
+  if (TARGET_ARCH64)
+    {
+      def_builtin_const ("__builtin_vis_edge8", CODE_FOR_edge8di_vis,
+			 si_ftype_ptr_ptr);
+      def_builtin_const ("__builtin_vis_edge8l", CODE_FOR_edge8ldi_vis,
+			 si_ftype_ptr_ptr);
+      def_builtin_const ("__builtin_vis_edge16", CODE_FOR_edge16di_vis,
+			 si_ftype_ptr_ptr);
+      def_builtin_const ("__builtin_vis_edge16l", CODE_FOR_edge16ldi_vis,
+			 si_ftype_ptr_ptr);
+      def_builtin_const ("__builtin_vis_edge32", CODE_FOR_edge32di_vis,
+			 si_ftype_ptr_ptr);
+      def_builtin_const ("__builtin_vis_edge32l", CODE_FOR_edge32ldi_vis,
+			 si_ftype_ptr_ptr);
+    }
+  else
+    {
+      def_builtin_const ("__builtin_vis_edge8", CODE_FOR_edge8si_vis,
+			 si_ftype_ptr_ptr);
+      def_builtin_const ("__builtin_vis_edge8l", CODE_FOR_edge8lsi_vis,
+			 si_ftype_ptr_ptr);
+      def_builtin_const ("__builtin_vis_edge16", CODE_FOR_edge16si_vis,
+			 si_ftype_ptr_ptr);
+      def_builtin_const ("__builtin_vis_edge16l", CODE_FOR_edge16lsi_vis,
+			 si_ftype_ptr_ptr);
+      def_builtin_const ("__builtin_vis_edge32", CODE_FOR_edge32si_vis,
+			 si_ftype_ptr_ptr);
+      def_builtin_const ("__builtin_vis_edge32l", CODE_FOR_edge32lsi_vis,
+			 si_ftype_ptr_ptr);
+    }
+
+  def_builtin_const ("__builtin_vis_fcmple16", CODE_FOR_fcmple16_vis,
+		     si_ftype_v4hi_v4hi);
+  def_builtin_const ("__builtin_vis_fcmple32", CODE_FOR_fcmple32_vis,
+		     si_ftype_v2si_v2si);
+  def_builtin_const ("__builtin_vis_fcmpne16", CODE_FOR_fcmpne16_vis,
+		     si_ftype_v4hi_v4hi);
+  def_builtin_const ("__builtin_vis_fcmpne32", CODE_FOR_fcmpne32_vis,
+		     si_ftype_v2si_v2si);
+  def_builtin_const ("__builtin_vis_fcmpgt16", CODE_FOR_fcmpgt16_vis,
+		     si_ftype_v4hi_v4hi);
+  def_builtin_const ("__builtin_vis_fcmpgt32", CODE_FOR_fcmpgt32_vis,
+		     si_ftype_v2si_v2si);
+  def_builtin_const ("__builtin_vis_fcmpeq16", CODE_FOR_fcmpeq16_vis,
+		     si_ftype_v4hi_v4hi);
+  def_builtin_const ("__builtin_vis_fcmpeq32", CODE_FOR_fcmpeq32_vis,
+		     si_ftype_v2si_v2si);
 }
 
 /* Handle TARGET_EXPAND_BUILTIN target hook.
@@ -9163,32 +9303,47 @@ sparc_expand_builtin (tree exp, rtx target,
   tree fndecl = TREE_OPERAND (CALL_EXPR_FN (exp), 0);
   unsigned int icode = DECL_FUNCTION_CODE (fndecl);
   rtx pat, op[4];
-  enum machine_mode mode[4];
   int arg_count = 0;
+  bool nonvoid;
 
-  mode[0] = insn_data[icode].operand[0].mode;
-  if (!target
-      || GET_MODE (target) != mode[0]
-      || ! (*insn_data[icode].operand[0].predicate) (target, mode[0]))
-    op[0] = gen_reg_rtx (mode[0]);
-  else
-    op[0] = target;
+  nonvoid = TREE_TYPE (TREE_TYPE (fndecl)) != void_type_node;
 
+  if (nonvoid)
+    {
+      enum machine_mode tmode = insn_data[icode].operand[0].mode;
+      if (!target
+	  || GET_MODE (target) != tmode
+	  || ! (*insn_data[icode].operand[0].predicate) (target, tmode))
+	op[0] = gen_reg_rtx (tmode);
+      else
+	op[0] = target;
+    }
   FOR_EACH_CALL_EXPR_ARG (arg, iter, exp)
     {
+      const struct insn_operand_data *insn_op;
+
+      if (arg == error_mark_node)
+	return NULL_RTX;
+
       arg_count++;
-      mode[arg_count] = insn_data[icode].operand[arg_count].mode;
+      insn_op = &insn_data[icode].operand[arg_count - !nonvoid];
       op[arg_count] = expand_normal (arg);
 
       if (! (*insn_data[icode].operand[arg_count].predicate) (op[arg_count],
-							      mode[arg_count]))
-	op[arg_count] = copy_to_mode_reg (mode[arg_count], op[arg_count]);
+							      insn_op->mode))
+	op[arg_count] = copy_to_mode_reg (insn_op->mode, op[arg_count]);
     }
 
   switch (arg_count)
     {
+    case 0:
+      pat = GEN_FCN (icode) (op[0]);
+      break;
     case 1:
-      pat = GEN_FCN (icode) (op[0], op[1]);
+      if (nonvoid)
+	pat = GEN_FCN (icode) (op[0], op[1]);
+      else
+	pat = GEN_FCN (icode) (op[1]);
       break;
     case 2:
       pat = GEN_FCN (icode) (op[0], op[1], op[2]);
@@ -9205,7 +9360,10 @@ sparc_expand_builtin (tree exp, rtx target,
 
   emit_insn (pat);
 
-  return op[0];
+  if (nonvoid)
+    return op[0];
+  else
+    return const0_rtx;
 }
 
 static int
@@ -9290,7 +9448,8 @@ sparc_fold_builtin (tree fndecl, int n_args ATTRIBUTE_UNUSED,
 
   if (ignore
       && icode != CODE_FOR_alignaddrsi_vis
-      && icode != CODE_FOR_alignaddrdi_vis)
+      && icode != CODE_FOR_alignaddrdi_vis
+      && icode != CODE_FOR_wrgsr_vis)
     return build_zero_cst (rtype);
 
   switch (icode)
@@ -9635,7 +9794,9 @@ sparc_register_move_cost (enum machine_mode mode ATTRIBUTE_UNUSED,
       if (sparc_cpu == PROCESSOR_ULTRASPARC
 	  || sparc_cpu == PROCESSOR_ULTRASPARC3
 	  || sparc_cpu == PROCESSOR_NIAGARA
-	  || sparc_cpu == PROCESSOR_NIAGARA2)
+	  || sparc_cpu == PROCESSOR_NIAGARA2
+	  || sparc_cpu == PROCESSOR_NIAGARA3
+	  || sparc_cpu == PROCESSOR_NIAGARA4)
 	return 12;
 
       return 6;

@@ -1,7 +1,7 @@
 10
 
 dir
-178046
+179164
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/decimal
 svn://gcc.gnu.org/svn/gcc
 
@@ -264,40 +264,6 @@ janis
 
 4276
 
-conversion-to-generic-float.cc
-file
-
-
-
-
-2009-10-08T17:30:28.000000Z
-58c28274da0d7a26bd6b5f791f4400b4
-2009-10-06T23:17:07.656728Z
-152502
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2516
-
 compound-assignment-memfunc.cc
 file
 
@@ -331,6 +297,40 @@ janis
 
 
 7913
+
+conversion-to-generic-float.cc
+file
+
+
+
+
+2009-10-08T17:30:28.000000Z
+58c28274da0d7a26bd6b5f791f4400b4
+2009-10-06T23:17:07.656728Z
+152502
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2516
 
 cast_neg.cc
 file
@@ -468,40 +468,6 @@ jason
 
 3971
 
-conversion-from-float.cc
-file
-
-
-
-
-2009-10-08T17:30:28.000000Z
-6d23b6a3ec9c27165d90e8b18e5181d4
-2009-10-06T23:17:07.656728Z
-152502
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2769
-
 binary-arith.cc
 file
 
@@ -535,6 +501,40 @@ janis
 
 
 10255
+
+conversion-from-float.cc
+file
+
+
+
+
+2009-10-08T17:30:28.000000Z
+6d23b6a3ec9c27165d90e8b18e5181d4
+2009-10-06T23:17:07.656728Z
+152502
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2769
 
 conversion-from-integral.cc
 file

@@ -49,6 +49,15 @@
    (DOM_CC_X_OR_Y   2)
   ]
 )
+;; conditional compare combination
+(define_constants
+  [(CMP_CMP 0)
+   (CMN_CMP 1)
+   (CMP_CMN 2)
+   (CMN_CMN 3)
+   (NUM_OF_COND_CMP 4)
+  ]
+)
 
 ;; UNSPEC Usage:
 ;; Note: sin and cos are no-longer used.
@@ -103,6 +112,10 @@
   UNSPEC_SYMBOL_OFFSET  ; The offset of the start of the symbol from
                         ; another symbolic address.
   UNSPEC_MEMORY_BARRIER ; Represent a memory barrier.
+  UNSPEC_UNALIGNED_LOAD	; Used to represent ldr/ldrh instructions that access
+			; unaligned locations, on architectures which support
+			; that.
+  UNSPEC_UNALIGNED_STORE ; Same for str/strh.
 ])
 
 ;; UNSPEC_VOLATILE Usage:
@@ -202,31 +215,31 @@
 	 (const_string "yes")
 
 	 (and (eq_attr "arch" "a")
-	      (ne (symbol_ref "TARGET_ARM") (const_int 0)))
+	      (match_test "TARGET_ARM"))
 	 (const_string "yes")
 
 	 (and (eq_attr "arch" "t")
-	      (ne (symbol_ref "TARGET_THUMB") (const_int 0)))
+	      (match_test "TARGET_THUMB"))
 	 (const_string "yes")
 
 	 (and (eq_attr "arch" "t1")
-	      (ne (symbol_ref "TARGET_THUMB1") (const_int 0)))
+	      (match_test "TARGET_THUMB1"))
 	 (const_string "yes")
 
 	 (and (eq_attr "arch" "t2")
-	      (ne (symbol_ref "TARGET_THUMB2") (const_int 0)))
+	      (match_test "TARGET_THUMB2"))
 	 (const_string "yes")
 
 	 (and (eq_attr "arch" "32")
-	      (ne (symbol_ref "TARGET_32BIT") (const_int 0)))
+	      (match_test "TARGET_32BIT"))
 	 (const_string "yes")
 
 	 (and (eq_attr "arch" "v6")
-	      (ne (symbol_ref "(TARGET_32BIT && arm_arch6)") (const_int 0)))
+	      (match_test "TARGET_32BIT && arm_arch6"))
 	 (const_string "yes")
 
 	 (and (eq_attr "arch" "nov6")
-	      (ne (symbol_ref "(TARGET_32BIT && !arm_arch6)") (const_int 0)))
+	      (match_test "TARGET_32BIT && !arm_arch6"))
 	 (const_string "yes")
 
 	 (and (eq_attr "arch" "onlya8")
@@ -708,21 +721,24 @@
 ;;  (plus (reg rN) (reg sp)) into (reg rN).  In this case reload will
 ;; put the duplicated register first, and not try the commutative version.
 (define_insn_and_split "*arm_addsi3"
-  [(set (match_operand:SI          0 "s_register_operand" "=r, k,r,r, k,r")
-	(plus:SI (match_operand:SI 1 "s_register_operand" "%rk,k,r,rk,k,rk")
-		 (match_operand:SI 2 "reg_or_int_operand" "rI,rI,k,L, L,?n")))]
+  [(set (match_operand:SI          0 "s_register_operand" "=r, k,r,r, k, r, k,r, k, r")
+	(plus:SI (match_operand:SI 1 "s_register_operand" "%rk,k,r,rk,k, rk,k,rk,k, rk")
+		 (match_operand:SI 2 "reg_or_int_operand" "rI,rI,k,Pj,Pj,L, L,PJ,PJ,?n")))]
   "TARGET_32BIT"
   "@
    add%?\\t%0, %1, %2
    add%?\\t%0, %1, %2
    add%?\\t%0, %2, %1
+   addw%?\\t%0, %1, %2
+   addw%?\\t%0, %1, %2
    sub%?\\t%0, %1, #%n2
    sub%?\\t%0, %1, #%n2
+   subw%?\\t%0, %1, #%n2
+   subw%?\\t%0, %1, #%n2
    #"
   "TARGET_32BIT
    && GET_CODE (operands[2]) == CONST_INT
-   && !(const_ok_for_arm (INTVAL (operands[2]))
-        || const_ok_for_arm (-INTVAL (operands[2])))
+   && !const_ok_for_op (INTVAL (operands[2]), PLUS)
    && (reload_completed || !arm_eliminable_register (operands[1]))"
   [(clobber (const_int 0))]
   "
@@ -731,8 +747,9 @@
 		      operands[1], 0);
   DONE;
   "
-  [(set_attr "length" "4,4,4,4,4,16")
-   (set_attr "predicable" "yes")]
+  [(set_attr "length" "4,4,4,4,4,4,4,4,4,16")
+   (set_attr "predicable" "yes")
+   (set_attr "arch" "*,*,*,t2,t2,*,*,t2,t2,*")]
 )
 
 (define_insn_and_split "*thumb1_addsi3"
@@ -2468,10 +2485,10 @@
 ;;; this insv pattern, so this pattern needs to be reevalutated.
 
 (define_expand "insv"
-  [(set (zero_extract:SI (match_operand:SI 0 "s_register_operand" "")
-                         (match_operand:SI 1 "general_operand" "")
-                         (match_operand:SI 2 "general_operand" ""))
-        (match_operand:SI 3 "reg_or_int_operand" ""))]
+  [(set (zero_extract (match_operand 0 "nonimmediate_operand" "")
+                      (match_operand 1 "general_operand" "")
+                      (match_operand 2 "general_operand" ""))
+        (match_operand 3 "reg_or_int_operand" ""))]
   "TARGET_ARM || arm_arch_thumb2"
   "
   {
@@ -2482,34 +2499,69 @@
 
     if (arm_arch_thumb2)
       {
-	bool use_bfi = TRUE;
-
-	if (GET_CODE (operands[3]) == CONST_INT)
+        if (unaligned_access && MEM_P (operands[0])
+	    && s_register_operand (operands[3], GET_MODE (operands[3]))
+	    && (width == 16 || width == 32) && (start_bit % BITS_PER_UNIT) == 0)
 	  {
-	    HOST_WIDE_INT val = INTVAL (operands[3]) & mask;
+	    rtx base_addr;
 
-	    if (val == 0)
+	    if (BYTES_BIG_ENDIAN)
+	      start_bit = GET_MODE_BITSIZE (GET_MODE (operands[3])) - width
+			  - start_bit;
+
+	    if (width == 32)
 	      {
-		emit_insn (gen_insv_zero (operands[0], operands[1],
-					  operands[2]));
-		DONE;
+	        base_addr = adjust_address (operands[0], SImode,
+					    start_bit / BITS_PER_UNIT);
+		emit_insn (gen_unaligned_storesi (base_addr, operands[3]));
 	      }
+	    else
+	      {
+	        rtx tmp = gen_reg_rtx (HImode);
 
-	    /* See if the set can be done with a single orr instruction.  */
-	    if (val == mask && const_ok_for_arm (val << start_bit))
-	      use_bfi = FALSE;
-	  }
-	  
-	if (use_bfi)
-	  {
-	    if (GET_CODE (operands[3]) != REG)
-	      operands[3] = force_reg (SImode, operands[3]);
-
-	    emit_insn (gen_insv_t2 (operands[0], operands[1], operands[2],
-				    operands[3]));
+	        base_addr = adjust_address (operands[0], HImode,
+					    start_bit / BITS_PER_UNIT);
+		emit_move_insn (tmp, gen_lowpart (HImode, operands[3]));
+		emit_insn (gen_unaligned_storehi (base_addr, tmp));
+	      }
 	    DONE;
 	  }
+	else if (s_register_operand (operands[0], GET_MODE (operands[0])))
+	  {
+	    bool use_bfi = TRUE;
+
+	    if (GET_CODE (operands[3]) == CONST_INT)
+	      {
+		HOST_WIDE_INT val = INTVAL (operands[3]) & mask;
+
+		if (val == 0)
+		  {
+		    emit_insn (gen_insv_zero (operands[0], operands[1],
+					      operands[2]));
+		    DONE;
+		  }
+
+		/* See if the set can be done with a single orr instruction.  */
+		if (val == mask && const_ok_for_arm (val << start_bit))
+		  use_bfi = FALSE;
+	      }
+
+	    if (use_bfi)
+	      {
+		if (GET_CODE (operands[3]) != REG)
+		  operands[3] = force_reg (SImode, operands[3]);
+
+		emit_insn (gen_insv_t2 (operands[0], operands[1], operands[2],
+					operands[3]));
+		DONE;
+	      }
+	  }
+	else
+	  FAIL;
       }
+
+    if (!s_register_operand (operands[0], GET_MODE (operands[0])))
+      FAIL;
 
     target = copy_rtx (operands[0]);
     /* Avoid using a subreg as a subtarget, and avoid writing a paradoxical 
@@ -3702,12 +3754,10 @@
 ;; to reduce register pressure later on.
 
 (define_expand "extzv"
-  [(set (match_dup 4)
-	(ashift:SI (match_operand:SI   1 "register_operand" "")
-		   (match_operand:SI   2 "const_int_operand" "")))
-   (set (match_operand:SI              0 "register_operand" "")
-	(lshiftrt:SI (match_dup 4)
-		     (match_operand:SI 3 "const_int_operand" "")))]
+  [(set (match_operand 0 "s_register_operand" "")
+	(zero_extract (match_operand 1 "nonimmediate_operand" "")
+		      (match_operand 2 "const_int_operand" "")
+		      (match_operand 3 "const_int_operand" "")))]
   "TARGET_THUMB1 || arm_arch_thumb2"
   "
   {
@@ -3716,10 +3766,57 @@
     
     if (arm_arch_thumb2)
       {
-	emit_insn (gen_extzv_t2 (operands[0], operands[1], operands[2],
-				 operands[3]));
-	DONE;
+	HOST_WIDE_INT width = INTVAL (operands[2]);
+	HOST_WIDE_INT bitpos = INTVAL (operands[3]);
+
+	if (unaligned_access && MEM_P (operands[1])
+	    && (width == 16 || width == 32) && (bitpos % BITS_PER_UNIT) == 0)
+	  {
+	    rtx base_addr;
+
+	    if (BYTES_BIG_ENDIAN)
+	      bitpos = GET_MODE_BITSIZE (GET_MODE (operands[0])) - width
+		       - bitpos;
+
+	    if (width == 32)
+              {
+		base_addr = adjust_address (operands[1], SImode,
+					    bitpos / BITS_PER_UNIT);
+		emit_insn (gen_unaligned_loadsi (operands[0], base_addr));
+              }
+	    else
+              {
+		rtx dest = operands[0];
+		rtx tmp = gen_reg_rtx (SImode);
+
+		/* We may get a paradoxical subreg here.  Strip it off.  */
+		if (GET_CODE (dest) == SUBREG
+		    && GET_MODE (dest) == SImode
+		    && GET_MODE (SUBREG_REG (dest)) == HImode)
+		  dest = SUBREG_REG (dest);
+
+		if (GET_MODE_BITSIZE (GET_MODE (dest)) != width)
+		  FAIL;
+
+		base_addr = adjust_address (operands[1], HImode,
+					    bitpos / BITS_PER_UNIT);
+		emit_insn (gen_unaligned_loadhiu (tmp, base_addr));
+		emit_move_insn (gen_lowpart (SImode, dest), tmp);
+	      }
+	    DONE;
+	  }
+	else if (s_register_operand (operands[1], GET_MODE (operands[1])))
+	  {
+	    emit_insn (gen_extzv_t2 (operands[0], operands[1], operands[2],
+				     operands[3]));
+	    DONE;
+	  }
+	else
+	  FAIL;
       }
+    
+    if (!s_register_operand (operands[1], GET_MODE (operands[1])))
+      FAIL;
 
     operands[3] = GEN_INT (rshift);
     
@@ -3729,12 +3826,154 @@
         DONE;
       }
       
-    operands[2] = GEN_INT (lshift);
-    operands[4] = gen_reg_rtx (SImode);
+    emit_insn (gen_extzv_t1 (operands[0], operands[1], GEN_INT (lshift),
+			     operands[3], gen_reg_rtx (SImode)));
+    DONE;
   }"
 )
 
-(define_insn "extv"
+;; Helper for extzv, for the Thumb-1 register-shifts case.
+
+(define_expand "extzv_t1"
+  [(set (match_operand:SI 4 "s_register_operand" "")
+	(ashift:SI (match_operand:SI 1 "nonimmediate_operand" "")
+		   (match_operand:SI 2 "const_int_operand" "")))
+   (set (match_operand:SI 0 "s_register_operand" "")
+	(lshiftrt:SI (match_dup 4)
+		     (match_operand:SI 3 "const_int_operand" "")))]
+  "TARGET_THUMB1"
+  "")
+
+(define_expand "extv"
+  [(set (match_operand 0 "s_register_operand" "")
+	(sign_extract (match_operand 1 "nonimmediate_operand" "")
+		      (match_operand 2 "const_int_operand" "")
+		      (match_operand 3 "const_int_operand" "")))]
+  "arm_arch_thumb2"
+{
+  HOST_WIDE_INT width = INTVAL (operands[2]);
+  HOST_WIDE_INT bitpos = INTVAL (operands[3]);
+
+  if (unaligned_access && MEM_P (operands[1]) && (width == 16 || width == 32)
+      && (bitpos % BITS_PER_UNIT)  == 0)
+    {
+      rtx base_addr;
+      
+      if (BYTES_BIG_ENDIAN)
+	bitpos = GET_MODE_BITSIZE (GET_MODE (operands[0])) - width - bitpos;
+      
+      if (width == 32)
+        {
+	  base_addr = adjust_address (operands[1], SImode,
+				      bitpos / BITS_PER_UNIT);
+	  emit_insn (gen_unaligned_loadsi (operands[0], base_addr));
+        }
+      else
+        {
+	  rtx dest = operands[0];
+	  rtx tmp = gen_reg_rtx (SImode);
+	  
+	  /* We may get a paradoxical subreg here.  Strip it off.  */
+	  if (GET_CODE (dest) == SUBREG
+	      && GET_MODE (dest) == SImode
+	      && GET_MODE (SUBREG_REG (dest)) == HImode)
+	    dest = SUBREG_REG (dest);
+	  
+	  if (GET_MODE_BITSIZE (GET_MODE (dest)) != width)
+	    FAIL;
+	  
+	  base_addr = adjust_address (operands[1], HImode,
+				      bitpos / BITS_PER_UNIT);
+	  emit_insn (gen_unaligned_loadhis (tmp, base_addr));
+	  emit_move_insn (gen_lowpart (SImode, dest), tmp);
+	}
+
+      DONE;
+    }
+  else if (!s_register_operand (operands[1], GET_MODE (operands[1])))
+    FAIL;
+  else if (GET_MODE (operands[0]) == SImode
+	   && GET_MODE (operands[1]) == SImode)
+    {
+      emit_insn (gen_extv_regsi (operands[0], operands[1], operands[2],
+				 operands[3]));
+      DONE;
+    }
+
+  FAIL;
+})
+
+; Helper to expand register forms of extv with the proper modes.
+
+(define_expand "extv_regsi"
+  [(set (match_operand:SI 0 "s_register_operand" "")
+	(sign_extract:SI (match_operand:SI 1 "s_register_operand" "")
+			 (match_operand 2 "const_int_operand" "")
+			 (match_operand 3 "const_int_operand" "")))]
+  ""
+{
+})
+
+; ARMv6+ unaligned load/store instructions (used for packed structure accesses).
+
+(define_insn "unaligned_loadsi"
+  [(set (match_operand:SI 0 "s_register_operand" "=l,r")
+	(unspec:SI [(match_operand:SI 1 "memory_operand" "Uw,m")]
+		   UNSPEC_UNALIGNED_LOAD))]
+  "unaligned_access && TARGET_32BIT"
+  "ldr%?\t%0, %1\t@ unaligned"
+  [(set_attr "arch" "t2,any")
+   (set_attr "length" "2,4")
+   (set_attr "predicable" "yes")
+   (set_attr "type" "load1")])
+
+(define_insn "unaligned_loadhis"
+  [(set (match_operand:SI 0 "s_register_operand" "=l,r")
+	(sign_extend:SI
+	  (unspec:HI [(match_operand:HI 1 "memory_operand" "Uw,m")]
+		     UNSPEC_UNALIGNED_LOAD)))]
+  "unaligned_access && TARGET_32BIT"
+  "ldr%(sh%)\t%0, %1\t@ unaligned"
+  [(set_attr "arch" "t2,any")
+   (set_attr "length" "2,4")
+   (set_attr "predicable" "yes")
+   (set_attr "type" "load_byte")])
+
+(define_insn "unaligned_loadhiu"
+  [(set (match_operand:SI 0 "s_register_operand" "=l,r")
+	(zero_extend:SI
+	  (unspec:HI [(match_operand:HI 1 "memory_operand" "Uw,m")]
+		     UNSPEC_UNALIGNED_LOAD)))]
+  "unaligned_access && TARGET_32BIT"
+  "ldr%(h%)\t%0, %1\t@ unaligned"
+  [(set_attr "arch" "t2,any")
+   (set_attr "length" "2,4")
+   (set_attr "predicable" "yes")
+   (set_attr "type" "load_byte")])
+
+(define_insn "unaligned_storesi"
+  [(set (match_operand:SI 0 "memory_operand" "=Uw,m")
+	(unspec:SI [(match_operand:SI 1 "s_register_operand" "l,r")]
+		   UNSPEC_UNALIGNED_STORE))]
+  "unaligned_access && TARGET_32BIT"
+  "str%?\t%1, %0\t@ unaligned"
+  [(set_attr "arch" "t2,any")
+   (set_attr "length" "2,4")
+   (set_attr "predicable" "yes")
+   (set_attr "type" "store1")])
+
+(define_insn "unaligned_storehi"
+  [(set (match_operand:HI 0 "memory_operand" "=Uw,m")
+	(unspec:HI [(match_operand:HI 1 "s_register_operand" "l,r")]
+		   UNSPEC_UNALIGNED_STORE))]
+  "unaligned_access && TARGET_32BIT"
+  "str%(h%)\t%1, %0\t@ unaligned"
+  [(set_attr "arch" "t2,any")
+   (set_attr "length" "2,4")
+   (set_attr "predicable" "yes")
+   (set_attr "type" "store1")])
+
+(define_insn "*extv_reg"
   [(set (match_operand:SI 0 "s_register_operand" "=r")
 	(sign_extract:SI (match_operand:SI 1 "s_register_operand" "r")
                          (match_operand:SI 2 "const_int_operand" "M")
@@ -6552,7 +6791,7 @@
 
 (define_expand "cbranchsi4"
   [(set (pc) (if_then_else
-	      (match_operator 0 "arm_comparison_operator"
+	      (match_operator 0 "expandable_comparison_operator"
 	       [(match_operand:SI 1 "s_register_operand" "")
 	        (match_operand:SI 2 "nonmemory_operand" "")])
 	      (label_ref (match_operand 3 "" ""))
@@ -6603,7 +6842,7 @@
 
 (define_expand "cbranchsf4"
   [(set (pc) (if_then_else
-	      (match_operator 0 "arm_comparison_operator"
+	      (match_operator 0 "expandable_comparison_operator"
 	       [(match_operand:SF 1 "s_register_operand" "")
 	        (match_operand:SF 2 "arm_float_compare_operand" "")])
 	      (label_ref (match_operand 3 "" ""))
@@ -6615,7 +6854,7 @@
 
 (define_expand "cbranchdf4"
   [(set (pc) (if_then_else
-	      (match_operator 0 "arm_comparison_operator"
+	      (match_operator 0 "expandable_comparison_operator"
 	       [(match_operand:DF 1 "s_register_operand" "")
 	        (match_operand:DF 2 "arm_float_compare_operand" "")])
 	      (label_ref (match_operand 3 "" ""))
@@ -6627,7 +6866,7 @@
 
 (define_expand "cbranchdi4"
   [(set (pc) (if_then_else
-	      (match_operator 0 "arm_comparison_operator"
+	      (match_operator 0 "expandable_comparison_operator"
 	       [(match_operand:DI 1 "cmpdi_operand" "")
 	        (match_operand:DI 2 "cmpdi_operand" "")])
 	      (label_ref (match_operand 3 "" ""))
@@ -7400,7 +7639,7 @@
    (set_attr "type" "branch")
    (set (attr "length")
 	(if_then_else
-	   (and (ne (symbol_ref "TARGET_THUMB2") (const_int 0))
+	   (and (match_test "TARGET_THUMB2")
 		(and (ge (minus (match_dup 0) (pc)) (const_int -250))
 		     (le (minus (match_dup 0) (pc)) (const_int 256))))
 	   (const_int 2)
@@ -7426,7 +7665,7 @@
    (set_attr "type" "branch")
    (set (attr "length")
 	(if_then_else
-	   (and (ne (symbol_ref "TARGET_THUMB2") (const_int 0))
+	   (and (match_test "TARGET_THUMB2")
 		(and (ge (minus (match_dup 0) (pc)) (const_int -250))
 		     (le (minus (match_dup 0) (pc)) (const_int 256))))
 	   (const_int 2)
@@ -7482,7 +7721,7 @@
 
 (define_expand "cstoresi4"
   [(set (match_operand:SI 0 "s_register_operand" "")
-	(match_operator:SI 1 "arm_comparison_operator"
+	(match_operator:SI 1 "expandable_comparison_operator"
 	 [(match_operand:SI 2 "s_register_operand" "")
 	  (match_operand:SI 3 "reg_or_int_operand" "")]))]
   "TARGET_32BIT || TARGET_THUMB1"
@@ -7618,7 +7857,7 @@
 
 (define_expand "cstoresf4"
   [(set (match_operand:SI 0 "s_register_operand" "")
-	(match_operator:SI 1 "arm_comparison_operator"
+	(match_operator:SI 1 "expandable_comparison_operator"
 	 [(match_operand:SF 2 "s_register_operand" "")
 	  (match_operand:SF 3 "arm_float_compare_operand" "")]))]
   "TARGET_32BIT && TARGET_HARD_FLOAT"
@@ -7628,7 +7867,7 @@
 
 (define_expand "cstoredf4"
   [(set (match_operand:SI 0 "s_register_operand" "")
-	(match_operator:SI 1 "arm_comparison_operator"
+	(match_operator:SI 1 "expandable_comparison_operator"
 	 [(match_operand:DF 2 "s_register_operand" "")
 	  (match_operand:DF 3 "arm_float_compare_operand" "")]))]
   "TARGET_32BIT && TARGET_HARD_FLOAT && !TARGET_VFP_SINGLE"
@@ -7638,7 +7877,7 @@
 
 (define_expand "cstoredi4"
   [(set (match_operand:SI 0 "s_register_operand" "")
-	(match_operator:SI 1 "arm_comparison_operator"
+	(match_operator:SI 1 "expandable_comparison_operator"
 	 [(match_operand:DI 2 "cmpdi_operand" "")
 	  (match_operand:DI 3 "cmpdi_operand" "")]))]
   "TARGET_32BIT"
@@ -7758,7 +7997,7 @@
 
 (define_expand "movsicc"
   [(set (match_operand:SI 0 "s_register_operand" "")
-	(if_then_else:SI (match_operand 1 "arm_comparison_operator" "")
+	(if_then_else:SI (match_operand 1 "expandable_comparison_operator" "")
 			 (match_operand:SI 2 "arm_not_operand" "")
 			 (match_operand:SI 3 "arm_not_operand" "")))]
   "TARGET_32BIT"
@@ -7778,7 +8017,7 @@
 
 (define_expand "movsfcc"
   [(set (match_operand:SF 0 "s_register_operand" "")
-	(if_then_else:SF (match_operand 1 "arm_comparison_operator" "")
+	(if_then_else:SF (match_operand 1 "expandable_comparison_operator" "")
 			 (match_operand:SF 2 "s_register_operand" "")
 			 (match_operand:SF 3 "nonmemory_operand" "")))]
   "TARGET_32BIT && TARGET_HARD_FLOAT"
@@ -7804,7 +8043,7 @@
 
 (define_expand "movdfcc"
   [(set (match_operand:DF 0 "s_register_operand" "")
-	(if_then_else:DF (match_operand 1 "arm_comparison_operator" "")
+	(if_then_else:DF (match_operand 1 "expandable_comparison_operator" "")
 			 (match_operand:DF 2 "s_register_operand" "")
 			 (match_operand:DF 3 "arm_float_add_operand" "")))]
   "TARGET_32BIT && TARGET_HARD_FLOAT && (TARGET_FPA || TARGET_VFP_DOUBLE)"
@@ -7885,7 +8124,7 @@
   [(set_attr "predicable" "yes")
    (set (attr "length")
 	(if_then_else
-	   (and (ne (symbol_ref "TARGET_THUMB2") (const_int 0))
+	   (and (match_test "TARGET_THUMB2")
 		(and (ge (minus (match_dup 0) (pc)) (const_int -2044))
 		     (le (minus (match_dup 0) (pc)) (const_int 2048))))
 	   (const_int 2)
@@ -8980,40 +9219,85 @@
    (set_attr "length" "8,12")]
 )
 
-;; ??? Is it worth using these conditional patterns in Thumb-2 mode?
 (define_insn "*cmp_ite0"
   [(set (match_operand 6 "dominant_cc_register" "")
 	(compare
 	 (if_then_else:SI
 	  (match_operator 4 "arm_comparison_operator"
-	   [(match_operand:SI 0 "s_register_operand" "r,r,r,r")
-	    (match_operand:SI 1 "arm_add_operand" "rI,L,rI,L")])
+	   [(match_operand:SI 0 "s_register_operand"
+	        "l,l,l,r,r,r,r,r,r")
+	    (match_operand:SI 1 "arm_add_operand"
+	        "lPy,lPy,lPy,rI,L,rI,L,rI,L")])
 	  (match_operator:SI 5 "arm_comparison_operator"
-	   [(match_operand:SI 2 "s_register_operand" "r,r,r,r")
-	    (match_operand:SI 3 "arm_add_operand" "rI,rI,L,L")])
+	   [(match_operand:SI 2 "s_register_operand"
+	        "l,r,r,l,l,r,r,r,r")
+	    (match_operand:SI 3 "arm_add_operand"
+	        "lPy,rI,L,lPy,lPy,rI,rI,L,L")])
 	  (const_int 0))
 	 (const_int 0)))]
-  "TARGET_ARM"
+  "TARGET_32BIT"
   "*
   {
-    static const char * const opcodes[4][2] =
+    static const char * const cmp1[NUM_OF_COND_CMP][2] =
     {
-      {\"cmp\\t%2, %3\;cmp%d5\\t%0, %1\",
-       \"cmp\\t%0, %1\;cmp%d4\\t%2, %3\"},
-      {\"cmp\\t%2, %3\;cmn%d5\\t%0, #%n1\",
-       \"cmn\\t%0, #%n1\;cmp%d4\\t%2, %3\"},
-      {\"cmn\\t%2, #%n3\;cmp%d5\\t%0, %1\",
-       \"cmp\\t%0, %1\;cmn%d4\\t%2, #%n3\"},
-      {\"cmn\\t%2, #%n3\;cmn%d5\\t%0, #%n1\",
-       \"cmn\\t%0, #%n1\;cmn%d4\\t%2, #%n3\"}
+      {\"cmp%d5\\t%0, %1\",
+       \"cmp%d4\\t%2, %3\"},
+      {\"cmn%d5\\t%0, #%n1\",
+       \"cmp%d4\\t%2, %3\"},
+      {\"cmp%d5\\t%0, %1\",
+       \"cmn%d4\\t%2, #%n3\"},
+      {\"cmn%d5\\t%0, #%n1\",
+       \"cmn%d4\\t%2, #%n3\"}
     };
+    static const char * const cmp2[NUM_OF_COND_CMP][2] =
+    {
+      {\"cmp\\t%2, %3\",
+       \"cmp\\t%0, %1\"},
+      {\"cmp\\t%2, %3\",
+       \"cmn\\t%0, #%n1\"},
+      {\"cmn\\t%2, #%n3\",
+       \"cmp\\t%0, %1\"},
+      {\"cmn\\t%2, #%n3\",
+       \"cmn\\t%0, #%n1\"}
+    };
+    static const char * const ite[2] =
+    {
+      \"it\\t%d5\",
+      \"it\\t%d4\"
+    };
+    static const int cmp_idx[9] = {CMP_CMP, CMP_CMP, CMP_CMN,
+                                   CMP_CMP, CMN_CMP, CMP_CMP,
+                                   CMN_CMP, CMP_CMN, CMN_CMN};
     int swap =
       comparison_dominates_p (GET_CODE (operands[5]), GET_CODE (operands[4]));
 
-    return opcodes[which_alternative][swap];
+    output_asm_insn (cmp2[cmp_idx[which_alternative]][swap], operands);
+    if (TARGET_THUMB2) {
+      output_asm_insn (ite[swap], operands);
+    }
+    output_asm_insn (cmp1[cmp_idx[which_alternative]][swap], operands);
+    return \"\";
   }"
   [(set_attr "conds" "set")
-   (set_attr "length" "8")]
+   (set_attr "arch" "t2,t2,t2,t2,t2,any,any,any,any")
+   (set_attr_alternative "length"
+      [(const_int 6)
+       (const_int 8)
+       (const_int 8)
+       (const_int 8)
+       (const_int 8)
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))])]
 )
 
 (define_insn "*cmp_ite1"
@@ -9021,35 +9305,81 @@
 	(compare
 	 (if_then_else:SI
 	  (match_operator 4 "arm_comparison_operator"
-	   [(match_operand:SI 0 "s_register_operand" "r,r,r,r")
-	    (match_operand:SI 1 "arm_add_operand" "rI,L,rI,L")])
+	   [(match_operand:SI 0 "s_register_operand"
+	        "l,l,l,r,r,r,r,r,r")
+	    (match_operand:SI 1 "arm_add_operand"
+	        "lPy,lPy,lPy,rI,L,rI,L,rI,L")])
 	  (match_operator:SI 5 "arm_comparison_operator"
-	   [(match_operand:SI 2 "s_register_operand" "r,r,r,r")
-	    (match_operand:SI 3 "arm_add_operand" "rI,rI,L,L")])
+	   [(match_operand:SI 2 "s_register_operand"
+	        "l,r,r,l,l,r,r,r,r")
+	    (match_operand:SI 3 "arm_add_operand"
+	        "lPy,rI,L,lPy,lPy,rI,rI,L,L")])
 	  (const_int 1))
 	 (const_int 0)))]
-  "TARGET_ARM"
+  "TARGET_32BIT"
   "*
   {
-    static const char * const opcodes[4][2] =
+    static const char * const cmp1[NUM_OF_COND_CMP][2] =
     {
-      {\"cmp\\t%0, %1\;cmp%d4\\t%2, %3\",
-       \"cmp\\t%2, %3\;cmp%D5\\t%0, %1\"},
-      {\"cmn\\t%0, #%n1\;cmp%d4\\t%2, %3\",
-       \"cmp\\t%2, %3\;cmn%D5\\t%0, #%n1\"},
-      {\"cmp\\t%0, %1\;cmn%d4\\t%2, #%n3\",
-       \"cmn\\t%2, #%n3\;cmp%D5\\t%0, %1\"},
-      {\"cmn\\t%0, #%n1\;cmn%d4\\t%2, #%n3\",
-       \"cmn\\t%2, #%n3\;cmn%D5\\t%0, #%n1\"}
+      {\"cmp\\t%0, %1\",
+       \"cmp\\t%2, %3\"},
+      {\"cmn\\t%0, #%n1\",
+       \"cmp\\t%2, %3\"},
+      {\"cmp\\t%0, %1\",
+       \"cmn\\t%2, #%n3\"},
+      {\"cmn\\t%0, #%n1\",
+       \"cmn\\t%2, #%n3\"}
     };
+    static const char * const cmp2[NUM_OF_COND_CMP][2] =
+    {
+      {\"cmp%d4\\t%2, %3\",
+       \"cmp%D5\\t%0, %1\"},
+      {\"cmp%d4\\t%2, %3\",
+       \"cmn%D5\\t%0, #%n1\"},
+      {\"cmn%d4\\t%2, #%n3\",
+       \"cmp%D5\\t%0, %1\"},
+      {\"cmn%d4\\t%2, #%n3\",
+       \"cmn%D5\\t%0, #%n1\"}
+    };
+    static const char * const ite[2] =
+    {
+      \"it\\t%d4\",
+      \"it\\t%D5\"
+    };
+    static const int cmp_idx[9] = {CMP_CMP, CMP_CMP, CMP_CMN,
+                                   CMP_CMP, CMN_CMP, CMP_CMP,
+                                   CMN_CMP, CMP_CMN, CMN_CMN};
     int swap =
       comparison_dominates_p (GET_CODE (operands[5]),
 			      reverse_condition (GET_CODE (operands[4])));
 
-    return opcodes[which_alternative][swap];
+    output_asm_insn (cmp1[cmp_idx[which_alternative]][swap], operands);
+    if (TARGET_THUMB2) {
+      output_asm_insn (ite[swap], operands);
+    }
+    output_asm_insn (cmp2[cmp_idx[which_alternative]][swap], operands);
+    return \"\";
   }"
   [(set_attr "conds" "set")
-   (set_attr "length" "8")]
+   (set_attr "arch" "t2,t2,t2,t2,t2,any,any,any,any")
+   (set_attr_alternative "length"
+      [(const_int 6)
+       (const_int 8)
+       (const_int 8)
+       (const_int 8)
+       (const_int 8)
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))])]
 )
 
 (define_insn "*cmp_and"
@@ -9057,34 +9387,80 @@
 	(compare
 	 (and:SI
 	  (match_operator 4 "arm_comparison_operator"
-	   [(match_operand:SI 0 "s_register_operand" "r,r,r,r")
-	    (match_operand:SI 1 "arm_add_operand" "rI,L,rI,L")])
+	   [(match_operand:SI 0 "s_register_operand" 
+	        "l,l,l,r,r,r,r,r,r")
+	    (match_operand:SI 1 "arm_add_operand" 
+	        "lPy,lPy,lPy,rI,L,rI,L,rI,L")])
 	  (match_operator:SI 5 "arm_comparison_operator"
-	   [(match_operand:SI 2 "s_register_operand" "r,r,r,r")
-	    (match_operand:SI 3 "arm_add_operand" "rI,rI,L,L")]))
+	   [(match_operand:SI 2 "s_register_operand" 
+	        "l,r,r,l,l,r,r,r,r")
+	    (match_operand:SI 3 "arm_add_operand" 
+	        "lPy,rI,L,lPy,lPy,rI,rI,L,L")]))
 	 (const_int 0)))]
-  "TARGET_ARM"
+  "TARGET_32BIT"
   "*
   {
-    static const char *const opcodes[4][2] =
+    static const char *const cmp1[NUM_OF_COND_CMP][2] =
     {
-      {\"cmp\\t%2, %3\;cmp%d5\\t%0, %1\",
-       \"cmp\\t%0, %1\;cmp%d4\\t%2, %3\"},
-      {\"cmp\\t%2, %3\;cmn%d5\\t%0, #%n1\",
-       \"cmn\\t%0, #%n1\;cmp%d4\\t%2, %3\"},
-      {\"cmn\\t%2, #%n3\;cmp%d5\\t%0, %1\",
-       \"cmp\\t%0, %1\;cmn%d4\\t%2, #%n3\"},
-      {\"cmn\\t%2, #%n3\;cmn%d5\\t%0, #%n1\",
-       \"cmn\\t%0, #%n1\;cmn%d4\\t%2, #%n3\"}
+      {\"cmp%d5\\t%0, %1\",
+       \"cmp%d4\\t%2, %3\"},
+      {\"cmn%d5\\t%0, #%n1\",
+       \"cmp%d4\\t%2, %3\"},
+      {\"cmp%d5\\t%0, %1\",
+       \"cmn%d4\\t%2, #%n3\"},
+      {\"cmn%d5\\t%0, #%n1\",
+       \"cmn%d4\\t%2, #%n3\"}
     };
+    static const char *const cmp2[NUM_OF_COND_CMP][2] =
+    {
+      {\"cmp\\t%2, %3\",
+       \"cmp\\t%0, %1\"},
+      {\"cmp\\t%2, %3\",
+       \"cmn\\t%0, #%n1\"},
+      {\"cmn\\t%2, #%n3\",
+       \"cmp\\t%0, %1\"},
+      {\"cmn\\t%2, #%n3\",
+       \"cmn\\t%0, #%n1\"}
+    };
+    static const char *const ite[2] =
+    {
+      \"it\\t%d5\",
+      \"it\\t%d4\"
+    };
+    static const int cmp_idx[9] = {CMP_CMP, CMP_CMP, CMP_CMN,
+                                   CMP_CMP, CMN_CMP, CMP_CMP,
+                                   CMN_CMP, CMP_CMN, CMN_CMN};
     int swap =
       comparison_dominates_p (GET_CODE (operands[5]), GET_CODE (operands[4]));
 
-    return opcodes[which_alternative][swap];
+    output_asm_insn (cmp2[cmp_idx[which_alternative]][swap], operands);
+    if (TARGET_THUMB2) {
+      output_asm_insn (ite[swap], operands);
+    }
+    output_asm_insn (cmp1[cmp_idx[which_alternative]][swap], operands);
+    return \"\";
   }"
   [(set_attr "conds" "set")
    (set_attr "predicable" "no")
-   (set_attr "length" "8")]
+   (set_attr "arch" "t2,t2,t2,t2,t2,any,any,any,any")
+   (set_attr_alternative "length"
+      [(const_int 6)
+       (const_int 8)
+       (const_int 8)
+       (const_int 8)
+       (const_int 8)
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))])]
 )
 
 (define_insn "*cmp_ior"
@@ -9092,34 +9468,80 @@
 	(compare
 	 (ior:SI
 	  (match_operator 4 "arm_comparison_operator"
-	   [(match_operand:SI 0 "s_register_operand" "r,r,r,r")
-	    (match_operand:SI 1 "arm_add_operand" "rI,L,rI,L")])
+	   [(match_operand:SI 0 "s_register_operand"
+	        "l,l,l,r,r,r,r,r,r")
+	    (match_operand:SI 1 "arm_add_operand"
+	        "lPy,lPy,lPy,rI,L,rI,L,rI,L")])
 	  (match_operator:SI 5 "arm_comparison_operator"
-	   [(match_operand:SI 2 "s_register_operand" "r,r,r,r")
-	    (match_operand:SI 3 "arm_add_operand" "rI,rI,L,L")]))
+	   [(match_operand:SI 2 "s_register_operand"
+	        "l,r,r,l,l,r,r,r,r")
+	    (match_operand:SI 3 "arm_add_operand"
+	        "lPy,rI,L,lPy,lPy,rI,rI,L,L")]))
 	 (const_int 0)))]
-  "TARGET_ARM"
+  "TARGET_32BIT"
   "*
-{
-  static const char *const opcodes[4][2] =
   {
-    {\"cmp\\t%0, %1\;cmp%D4\\t%2, %3\",
-     \"cmp\\t%2, %3\;cmp%D5\\t%0, %1\"},
-    {\"cmn\\t%0, #%n1\;cmp%D4\\t%2, %3\",
-     \"cmp\\t%2, %3\;cmn%D5\\t%0, #%n1\"},
-    {\"cmp\\t%0, %1\;cmn%D4\\t%2, #%n3\",
-     \"cmn\\t%2, #%n3\;cmp%D5\\t%0, %1\"},
-    {\"cmn\\t%0, #%n1\;cmn%D4\\t%2, #%n3\",
-     \"cmn\\t%2, #%n3\;cmn%D5\\t%0, #%n1\"}
-  };
-  int swap =
-    comparison_dominates_p (GET_CODE (operands[5]), GET_CODE (operands[4]));
+    static const char *const cmp1[NUM_OF_COND_CMP][2] =
+    {
+      {\"cmp\\t%0, %1\",
+       \"cmp\\t%2, %3\"},
+      {\"cmn\\t%0, #%n1\",
+       \"cmp\\t%2, %3\"},
+      {\"cmp\\t%0, %1\",
+       \"cmn\\t%2, #%n3\"},
+      {\"cmn\\t%0, #%n1\",
+       \"cmn\\t%2, #%n3\"}
+    };
+    static const char *const cmp2[NUM_OF_COND_CMP][2] =
+    {
+      {\"cmp%D4\\t%2, %3\",
+       \"cmp%D5\\t%0, %1\"},
+      {\"cmp%D4\\t%2, %3\",
+       \"cmn%D5\\t%0, #%n1\"},
+      {\"cmn%D4\\t%2, #%n3\",
+       \"cmp%D5\\t%0, %1\"},
+      {\"cmn%D4\\t%2, #%n3\",
+       \"cmn%D5\\t%0, #%n1\"}
+    };
+    static const char *const ite[2] =
+    {
+      \"it\\t%D4\",
+      \"it\\t%D5\"
+    };
+    static const int cmp_idx[9] = {CMP_CMP, CMP_CMP, CMP_CMN,
+                                   CMP_CMP, CMN_CMP, CMP_CMP,
+                                   CMN_CMP, CMP_CMN, CMN_CMN};
+    int swap =
+      comparison_dominates_p (GET_CODE (operands[5]), GET_CODE (operands[4]));
 
-  return opcodes[which_alternative][swap];
-}
-"
+    output_asm_insn (cmp1[cmp_idx[which_alternative]][swap], operands);
+    if (TARGET_THUMB2) {
+      output_asm_insn (ite[swap], operands);
+    }
+    output_asm_insn (cmp2[cmp_idx[which_alternative]][swap], operands);
+    return \"\";
+  }
+  "
   [(set_attr "conds" "set")
-   (set_attr "length" "8")]
+   (set_attr "arch" "t2,t2,t2,t2,t2,any,any,any,any")
+   (set_attr_alternative "length"
+      [(const_int 6)
+       (const_int 8)
+       (const_int 8)
+       (const_int 8)
+       (const_int 8)
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))
+       (if_then_else (eq_attr "is_thumb" "no")
+           (const_int 8)
+           (const_int 10))])]
 )
 
 (define_insn_and_split "*ior_scc_scc"
@@ -9131,11 +9553,11 @@
 		 [(match_operand:SI 4 "s_register_operand" "r")
 		  (match_operand:SI 5 "arm_add_operand" "rIL")])))
    (clobber (reg:CC CC_REGNUM))]
-  "TARGET_ARM
+  "TARGET_32BIT
    && (arm_select_dominance_cc_mode (operands[3], operands[6], DOM_CC_X_OR_Y)
        != CCmode)"
   "#"
-  "TARGET_ARM && reload_completed"
+  "TARGET_32BIT && reload_completed"
   [(set (match_dup 7)
 	(compare
 	 (ior:SI
@@ -9164,9 +9586,9 @@
    (set (match_operand:SI 7 "s_register_operand" "=r")
 	(ior:SI (match_op_dup 3 [(match_dup 1) (match_dup 2)])
 		(match_op_dup 6 [(match_dup 4) (match_dup 5)])))]
-  "TARGET_ARM"
+  "TARGET_32BIT"
   "#"
-  "TARGET_ARM && reload_completed"
+  "TARGET_32BIT && reload_completed"
   [(set (match_dup 0)
 	(compare
 	 (ior:SI
@@ -9187,11 +9609,11 @@
 		 [(match_operand:SI 4 "s_register_operand" "r")
 		  (match_operand:SI 5 "arm_add_operand" "rIL")])))
    (clobber (reg:CC CC_REGNUM))]
-  "TARGET_ARM
+  "TARGET_32BIT
    && (arm_select_dominance_cc_mode (operands[3], operands[6], DOM_CC_X_AND_Y)
        != CCmode)"
   "#"
-  "TARGET_ARM && reload_completed
+  "TARGET_32BIT && reload_completed
    && (arm_select_dominance_cc_mode (operands[3], operands[6], DOM_CC_X_AND_Y)
        != CCmode)"
   [(set (match_dup 7)
@@ -9222,9 +9644,9 @@
    (set (match_operand:SI 7 "s_register_operand" "=r")
 	(and:SI (match_op_dup 3 [(match_dup 1) (match_dup 2)])
 		(match_op_dup 6 [(match_dup 4) (match_dup 5)])))]
-  "TARGET_ARM"
+  "TARGET_32BIT"
   "#"
-  "TARGET_ARM && reload_completed"
+  "TARGET_32BIT && reload_completed"
   [(set (match_dup 0)
 	(compare
 	 (and:SI
@@ -9249,11 +9671,11 @@
 		 [(match_operand:SI 4 "s_register_operand" "r,r,r")
 		  (match_operand:SI 5 "arm_add_operand" "rIL,rIL,rIL")])))
    (clobber (reg:CC CC_REGNUM))]
-  "TARGET_ARM
+  "TARGET_32BIT
    && (arm_select_dominance_cc_mode (operands[3], operands[6], DOM_CC_X_AND_Y)
        == CCmode)"
   "#"
-  "TARGET_ARM && reload_completed"
+  "TARGET_32BIT && reload_completed"
   [(parallel [(set (match_dup 0)
 		   (match_op_dup 3 [(match_dup 1) (match_dup 2)]))
 	      (clobber (reg:CC CC_REGNUM))])
@@ -10385,14 +10807,16 @@
        In Thumb mode always use push, and the assembler will pick
        something appropriate.  */
     if (num_saves == 1 && TARGET_ARM)
-      output_asm_insn (\"str\\t%1, [%m0, #-4]!\", operands);
+      output_asm_insn (\"str%?\\t%1, [%m0, #-4]!\", operands);
     else
       {
 	int i;
 	char pattern[100];
 
 	if (TARGET_ARM)
-	    strcpy (pattern, \"stmfd\\t%m0!, {%1\");
+	    strcpy (pattern, \"stm%(fd%)\\t%m0!, {%1\");
+	else if (TARGET_THUMB2)
+	    strcpy (pattern, \"push%?\\t{%1\");
 	else
 	    strcpy (pattern, \"push\\t{%1\");
 
@@ -10435,7 +10859,7 @@
   {
     char pattern[100];
 
-    sprintf (pattern, \"sfmfd\\t%%1, %d, [%%m0]!\", XVECLEN (operands[2], 0));
+    sprintf (pattern, \"sfm%%(fd%%)\\t%%1, %d, [%%m0]!\", XVECLEN (operands[2], 0));
     output_asm_insn (pattern, operands);
     return \"\";
   }"

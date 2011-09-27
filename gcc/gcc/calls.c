@@ -1756,7 +1756,8 @@ load_register_parameters (struct arg_data *args, int num_actuals,
 	  if (GET_CODE (reg) == PARALLEL)
 	    use_group_regs (call_fusage, reg);
 	  else if (nregs == -1)
-	    use_reg (call_fusage, reg);
+	    use_reg_mode (call_fusage, reg,
+			  TYPE_MODE (TREE_TYPE (args[i].tree_value)));
 	  else if (nregs > 0)
 	    use_regs (call_fusage, REGNO (reg), nregs);
 	}
@@ -2815,10 +2816,10 @@ expand_call (tree exp, rtx target, int ignore)
 	      }
 
 	  if (args[i].stack)
-	    call_fusage = gen_rtx_EXPR_LIST (VOIDmode,
-					     gen_rtx_USE (VOIDmode,
-							  args[i].stack),
-					     call_fusage);
+	    call_fusage
+	      = gen_rtx_EXPR_LIST (TYPE_MODE (TREE_TYPE (args[i].tree_value)),
+				   gen_rtx_USE (VOIDmode, args[i].stack),
+				   call_fusage);
 	}
 
       /* If we have a parm that is passed in registers but not in memory
@@ -3576,20 +3577,29 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
       argvec[count].partial
 	= targetm.calls.arg_partial_bytes (args_so_far, mode, NULL_TREE, 1);
 
-      locate_and_pad_parm (mode, NULL_TREE,
-#ifdef STACK_PARMS_IN_REG_PARM_AREA
-			   1,
-#else
-			   argvec[count].reg != 0,
-#endif
-			   argvec[count].partial,
-			   NULL_TREE, &args_size, &argvec[count].locate);
-
-      gcc_assert (!argvec[count].locate.size.var);
-
-      if (argvec[count].reg == 0 || argvec[count].partial != 0
+      if (argvec[count].reg == 0
+	  || argvec[count].partial != 0
 	  || reg_parm_stack_space > 0)
-	args_size.constant += argvec[count].locate.size.constant;
+	{
+	  locate_and_pad_parm (mode, NULL_TREE,
+#ifdef STACK_PARMS_IN_REG_PARM_AREA
+			       1,
+#else
+			       argvec[count].reg != 0,
+#endif
+			       argvec[count].partial,
+			       NULL_TREE, &args_size, &argvec[count].locate);
+	  args_size.constant += argvec[count].locate.size.constant;
+	  gcc_assert (!argvec[count].locate.size.var);
+	}
+#ifdef BLOCK_REG_PADDING
+      else
+	/* The argument is passed entirely in registers.  See at which
+	   end it should be padded.  */
+	argvec[count].locate.where_pad =
+	  BLOCK_REG_PADDING (mode, NULL_TREE,
+			     GET_MODE_SIZE (mode) <= UNITS_PER_WORD);
+#endif
 
       targetm.calls.function_arg_advance (args_so_far, mode, (tree) 0, true);
     }

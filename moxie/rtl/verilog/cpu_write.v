@@ -36,14 +36,18 @@ module cpu_write (/*AUTOARG*/
   output [0:0] register_write_enable_o;
   output [31:0] result_o;
   
-  reg [3:0] register_write_index_o;
-  reg [0:0] register_write_enable_o;
-  reg [31:0] result_o;
+  wire [3:0] register_write_index_o = register_write_index_i;
+  wire [0:0] register_write_enable_o = register_write_enable_i;
+  wire [31:0] result_o = result_i;
 
-  always @ (posedge clk_i) begin
-    register_write_enable_o <= register_write_enable_i;
-    register_write_index_o <= register_write_index_i;
-    result_o <= result_i;
-  end
+  // reg [3:0] 	register_write_index_o;
+  // reg [0:0] 	register_write_enable_o;
+  // reg [31:0] 	register_write_index_o;
+  
+  // always @ (posedge clk_i) begin
+  //   register_write_enable_o <= register_write_enable_i;
+  //   register_write_index_o <= register_write_index_i;
+  //   result_o <= result_i;
+  // end
   
 endmodule // cpu_write

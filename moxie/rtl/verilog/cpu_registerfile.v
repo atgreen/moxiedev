@@ -1,6 +1,6 @@
 // cpu_registerfile.v - moxie register file
 //
-// Copyright (c) 2010  Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011  Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -58,25 +58,25 @@ module cpu_registerfile (/*AUTOARG*/
   reg [31:0] register_r13;
 
   
-  // always @ (posedge rst_i) begin
-  //   $display ("REGRESET");
-  //   register_fp <= 32'b00000000000000000000000000000000;
-  //   register_sp <= 32'b00000000000000000000000000000000;
-  //   register_r0 <= 32'b00000000000000000000000000000000;
-  //   register_r1 <= 32'b00000000000000000000000000000000;
-  //   register_r2 <= 32'b00000000000000000000000000000000;
-  //   register_r3 <= 32'b00000000000000000000000000000000;
-  //   register_r4 <= 32'b00000000000000000000000000000000;
-  //   register_r5 <= 32'b00000000000000000000000000000000;
-  //   register_r6 <= 32'b00000000000000000000000000000000;
-  //   register_r7 <= 32'b00000000000000000000000000000000;
-  //   register_r8 <= 32'b00000000000000000000000000000000;
-  //   register_r9 <= 32'b00000000000000000000000000000000;
-  //   register_r10 <= 32'b00000000000000000000000000000000;
-  //   register_r11 <= 32'b00000000000000000000000000000000;
-  //   register_r12 <= 32'b00000000000000000000000000000000;
-  //   register_r13 <= 32'b00000000000000000000000000000000;
-  // end
+  always @ (posedge rst_i) begin
+    $display ("REGRESET");
+     register_fp <= 32'b00000000000000000000000000000000;
+     register_sp <= 32'b00000000000000000000000000000000;
+     register_r0 <= 32'b00000000000000000000000000000000;
+     register_r1 <= 32'b00000000000000000000000000000000;
+     register_r2 <= 32'b00000000000000000000000000000000;
+     register_r3 <= 32'b00000000000000000000000000000000;
+     register_r4 <= 32'b00000000000000000000000000000000;
+     register_r5 <= 32'b00000000000000000000000000000000;
+     register_r6 <= 32'b00000000000000000000000000000000;
+     register_r7 <= 32'b00000000000000000000000000000000;
+     register_r8 <= 32'b00000000000000000000000000000000;
+     register_r9 <= 32'b00000000000000000000000000000000;
+     register_r10 <= 32'b00000000000000000000000000000000;
+     register_r11 <= 32'b00000000000000000000000000000000;
+     register_r12 <= 32'b00000000000000000000000000000000;
+     register_r13 <= 32'b00000000000000000000000000000000;
+   end
 
   always @ (posedge clk_i) begin
     if (write_enable_i)
@@ -119,8 +119,8 @@ module cpu_registerfile (/*AUTOARG*/
     end
   end
 
-  always @ (posedge read_enable_i) begin
-    if (!rst_i)
+  always @ (posedge clk_i) begin
+    if (read_enable_i & !rst_i)
       begin
 	case (reg_read_index1_i)
 	  4'b0000:

@@ -58,10 +58,13 @@ module moxie (/*AUTOARG*/
   wire [31:0] dx_operand;
   wire [0:0]  dx_register_write_enable;
   wire [5:0]  dx_op;
-  wire [0:0]  xr_register_write_enable;
+  wire [0:0]  xw_register_write_enable;
+  wire [0:0]  wr_register_write_enable;
   wire [3:0]  dx_register_write_index;
-  wire [3:0]  xr_register_write_index;
-  wire [31:0] xr_result;
+  wire [3:0]  xw_register_write_index;
+  wire [31:0] xw_result;
+  wire [3:0]  wr_register_write_index;
+  wire [31:0] wr_result;
   wire [3:0]  dx_regA;
   wire [3:0]  dx_regB;
   wire [3:0]  dx_regC;
@@ -81,6 +84,7 @@ module moxie (/*AUTOARG*/
       $dumpvars(1,stage_fetch); 
       $dumpvars(1,stage_decode); 
       $dumpvars(1,stage_execute); 
+      $dumpvars(1,stage_write);
       $dumpvars(1,regs);
       $display("-- BEGINNING --");
     end
@@ -92,12 +96,12 @@ module moxie (/*AUTOARG*/
 			 // Inputs
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
-			 .write_enable_i (xr_register_write_enable), 
+			 .write_enable_i (wr_register_write_enable), 
 			 .read_enable_i (dr_A_read_enable | dr_B_read_enable),
-			 .reg_write_index_i (xr_register_write_index),
+			 .reg_write_index_i (wr_register_write_index),
 			 .reg_read_index1_i (dr_reg_index1), 
 			 .reg_read_index2_i (dr_reg_index2), 
-			 .value_i (xr_result));
+			 .value_i (wr_result));
 
   always @(posedge clk_i)
     if (rst_i) begin
@@ -135,8 +139,8 @@ module moxie (/*AUTOARG*/
 			   .register_write_enable_o (dx_register_write_enable),
 			   .register_write_index_o (dx_register_write_index),
 			   .operand_o (dx_operand),
-			   .regA_o (dr_reg_index1),
-			   .regB_o (dr_reg_index2),
+			   .riA_o (dr_reg_index1),
+			   .riB_o (dr_reg_index2),
 			   .op_o (dx_op));
     
   cpu_execute stage_execute (// Inputs
@@ -149,19 +153,31 @@ module moxie (/*AUTOARG*/
 			     .regB_i (rx_reg_value2),
 			     .register_write_index_i (dx_register_write_index),
 			     // Outputs
-			     .register_write_enable_o (xr_register_write_enable),
-			     .register_write_index_o (xr_register_write_index),
-			     .result_o (xr_result));
-  
+			     .register_write_enable_o (xw_register_write_enable),
+			     .register_write_index_o (xw_register_write_index),
+			     .result_o (xw_result));
 
-  assign hazard_war = (dr_A_read_enable & (xr_register_write_enable & (dr_reg_index1 == xr_register_write_index))) |  (dr_B_read_enable & (xr_register_write_enable & (dr_reg_index2 == xr_register_write_index)));
+  cpu_write stage_write (  // Inputs
+			   .rst_i (rst_i),
+			   .clk_i (clk_i),
+			   .register_write_index_i (xw_register_write_index),
+			   .register_write_enable_i (xw_register_write_enable),
+			   .result_i (xw_result),
+			   // Outputs
+			   .register_write_index_o (wr_register_write_index),
+			   .register_write_enable_o (wr_register_write_enable),
+			   .result_o (wr_result));
+
+  assign hazard_war = 0;
+
+  // (dr_A_read_enable & (xr_register_write_enable & (dr_reg_index1 == xr_register_write_index))) |  (dr_B_read_enable & (xr_register_write_enable & (dr_reg_index2 == xr_register_write_index)));
     
   always @ (posedge clk_i) begin
     if (!rst_i & hazard_war)
       begin
-	if (dr_A_read_enable & (dr_reg_index1 == xr_register_write_index))
+	if (dr_A_read_enable & (dr_reg_index1 == xw_register_write_index))
 	  $display("HAZARD! register1 0x%x", dr_reg_index1);
-	else if (dr_B_read_enable & (dr_reg_index2 == xr_register_write_index))
+	else if (dr_B_read_enable & (dr_reg_index2 == xw_register_write_index))
 	  $display("HAZARD! register2 0x%x", dr_reg_index2);
       end
   end

@@ -1,6 +1,6 @@
 // cpu_execute.v - The moxie execute stage
 //
-// Copyright (c) 2010 Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011 Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -143,7 +143,10 @@ module cpu_execute (/*AUTOARG*/
 	    end
 	  `OP_INC:
 	    begin
-	      $display ("Executing OP_INC");
+	      $display ("EXECUTE OP_INC: 0x%x", operand_i);
+	      result_o <= regA_i + operand_i;
+	      register_write_enable_o <= 1;
+	      register_write_index_o <= register_write_index_i;
 	    end
 	  `OP_JMP:
 	    begin

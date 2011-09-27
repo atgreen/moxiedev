@@ -1,9 +1,23 @@
 .text
 	xor	$r0, $r0
+	xor	$r1, $r1
+	xor	$r2, $r2
+	xor	$r3, $r3
+	xor	$r4, $r4
 	inc	$r0, 0x1
+	inc	$r1, 0x1
+	inc	$r2, 0x1
+	inc	$r3, 0x1
+	inc	$r4, 0x1
 	inc	$r0, 0x1
+	inc	$r1, 0x1
+	inc	$r2, 0x1
+	inc	$r3, 0x1
+	inc	$r4, 0x1
 	inc	$r0, 0x1
-	inc	$r0, 0x1
-	inc	$r0, 0x1
+	inc	$r1, 0x1
+	inc	$r2, 0x1
+	inc	$r3, 0x1
+	inc	$r4, 0x1
 	
 	

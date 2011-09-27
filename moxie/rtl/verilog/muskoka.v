@@ -82,14 +82,14 @@ module muskoka (/*AUTOARG*/
 	    .wbs_0_stb_o (wb2br_stb),
 	    .wbs_0_ack_i (bootrom_ack_o));
   
-  bootrom rom (.wb_dat_i (bootrom_dat_i),
-	       .wb_dat_o (bootrom_dat_o),
-	       .wb_adr_i (bootrom_adr_o),
-	       .wb_sel_i (bootrom_sel_i),
-	       .wb_we_i (bootrom_we_i),
-	       .wb_cyc_i (bootrom_cyc_i),
-	       .wb_stb_i (bootrom_stb_i),
-	       .wb_ack_o (bootrom_ack_o));
+  bootrom rom (.wb_dat_i (wb2br_dat),
+	       .wb_dat_o (br2wb_dat),
+	       .wb_adr_i (wb2br_adr),
+	       .wb_sel_i (wb2br_sel),
+	       .wb_we_i (wb2br_we),
+	       .wb_cyc_i (wb2br_cyc),
+	       .wb_stb_i (wb2br_stb),
+	       .wb_ack_o (br2wb_ack));
   
   moxie core (.rst_i (rst_i),
 	      .clk_i (clk_i),

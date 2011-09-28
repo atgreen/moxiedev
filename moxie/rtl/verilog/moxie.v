@@ -71,10 +71,10 @@ module moxie (/*AUTOARG*/
  
   wire [31:0] rx_reg_value1;
   wire [31:0] rx_reg_value2;
-  wire [0:0]  dr_A_read_enable;
-  wire [0:0]  dr_B_read_enable;
-  wire [3:0]  dr_reg_index1;
-  wire [3:0]  dr_reg_index2;
+  wire [3:0]  dx_reg_index1;
+  wire [3:0]  dx_reg_index2;
+  wire [3:0]  xr_reg_index1;
+  wire [3:0]  xr_reg_index2;
 
   wire [0:0] hazard_war;
 
@@ -97,10 +97,9 @@ module moxie (/*AUTOARG*/
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
 			 .write_enable_i (wr_register_write_enable), 
-			 .read_enable_i (dr_A_read_enable | dr_B_read_enable),
 			 .reg_write_index_i (wr_register_write_index),
-			 .reg_read_index1_i (dr_reg_index1), 
-			 .reg_read_index2_i (dr_reg_index2), 
+			 .reg_read_index1_i (xr_reg_index1), 
+			 .reg_read_index2_i (xr_reg_index2), 
 			 .value_i (wr_result));
 
   always @(posedge clk_i)
@@ -134,13 +133,11 @@ module moxie (/*AUTOARG*/
 			   .valid_i		(fd_valid),
 			   .stall_i             (hazard_war),
 			   // Outputs
-			   .register_A_read_enable_o (dr_A_read_enable),
-			   .register_B_read_enable_o (dr_B_read_enable),
 			   .register_write_enable_o (dx_register_write_enable),
 			   .register_write_index_o (dx_register_write_index),
 			   .operand_o (dx_operand),
-			   .riA_o (dr_reg_index1),
-			   .riB_o (dr_reg_index2),
+			   .riA_o (dx_reg_index1),
+			   .riB_o (dx_reg_index2),
 			   .op_o (dx_op));
     
   cpu_execute stage_execute (// Inputs
@@ -149,6 +146,10 @@ module moxie (/*AUTOARG*/
 			     .stall_i        (hazard_war),
 			     .op_i           (dx_op),
 			     .operand_i		(dx_operand[31:0]),
+			     .riA_i (dx_reg_index1),
+			     .riB_i (dx_reg_index2),
+			     .riA_o (xr_reg_index1),
+			     .riB_o (xr_reg_index2),
 			     .regA_i (rx_reg_value1),
 			     .regB_i (rx_reg_value2),
 			     .register_write_index_i (dx_register_write_index),
@@ -175,10 +176,7 @@ module moxie (/*AUTOARG*/
   always @ (posedge clk_i) begin
     if (!rst_i & hazard_war)
       begin
-	if (dr_A_read_enable & (dr_reg_index1 == xw_register_write_index))
-	  $display("HAZARD! register1 0x%x", dr_reg_index1);
-	else if (dr_B_read_enable & (dr_reg_index2 == xw_register_write_index))
-	  $display("HAZARD! register2 0x%x", dr_reg_index2);
+
       end
   end
 

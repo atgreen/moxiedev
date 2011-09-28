@@ -21,10 +21,11 @@
 
 module cpu_execute (/*AUTOARG*/
   // Outputs
-  register_write_index_o, register_write_enable_o, result_o,
+  register_write_index_o, register_write_enable_o, result_o, riA_o,
+  riB_o,
   // Inputs
-  rst_i, clk_i, stall_i, regA_i, regB_i, register_write_index_i,
-  operand_i, op_i
+  rst_i, clk_i, stall_i, riA_i, riB_i, regA_i, regB_i,
+  register_write_index_i, operand_i, op_i
   );
 
   // --- Clock and Reset ------------------------------------------
@@ -33,7 +34,9 @@ module cpu_execute (/*AUTOARG*/
   // --- Pipeline interlocking ------------------------------------
   input  stall_i;
     
-  // --- Instructions ---------------------------------------------
+  // --- Inputs ---------------------------------------------------
+  input [3:0] riA_i;
+  input [3:0] riB_i;
   input [31:0] regA_i;
   input [31:0] regB_i;
   input [3:0]  register_write_index_i;
@@ -44,11 +47,16 @@ module cpu_execute (/*AUTOARG*/
   output [3:0] register_write_index_o;
   output [0:0] register_write_enable_o;
   output [31:0] result_o;
+  output [3:0] riA_o;
+  output [3:0] riB_o;
 
   reg [3:0] 	register_write_index_o;
   reg [0:0] 	register_write_enable_o;
   reg [31:0] 	result_o;
 
+  assign riA_o = riA_i;
+  assign riB_o = riB_o;
+  
   always @(posedge clk_i)
     if (! rst_i)
       if (stall_i)

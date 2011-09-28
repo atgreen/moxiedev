@@ -201,6 +201,7 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00011010:
 	      begin
 		op_o <= `OP_JMPA;
+		operand_o <= operand_i;
 	      end
 	    8'b00011011:
 	      begin

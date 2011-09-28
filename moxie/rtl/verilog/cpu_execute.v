@@ -22,7 +22,7 @@
 module cpu_execute (/*AUTOARG*/
   // Outputs
   register_write_index_o, register_write_enable_o, result_o, riA_o,
-  riB_o,
+  riB_o, branch_flag_o, branch_target_o,
   // Inputs
   rst_i, clk_i, stall_i, riA_i, riB_i, regA_i, regB_i,
   register_write_index_i, operand_i, op_i
@@ -50,12 +50,30 @@ module cpu_execute (/*AUTOARG*/
   output [3:0] riA_o;
   output [3:0] riB_o;
 
-  reg [3:0] 	register_write_index_o;
+  output       branch_flag_o;
+  output [31:0] branch_target_o;
+
+  reg [0:0] 	branch_flag_o;
+  reg [31:0] 	branch_target_o;
+
+  reg [3:0]    register_write_index_o;
   reg [0:0] 	register_write_enable_o;
   reg [31:0] 	result_o;
 
   assign riA_o = riA_i;
   assign riB_o = riB_o;
+
+  always @(posedge rst_i)
+    begin
+      branch_flag_o <= 0;
+      register_write_enable_o <= 0;
+    end
+  
+  always @(posedge clk_i)
+    if (op_i == `OP_JMPA)
+      branch_flag_o <= 1;
+    else
+      branch_flag_o <= 0;
   
   always @(posedge clk_i)
     if (! rst_i)
@@ -68,11 +86,15 @@ module cpu_execute (/*AUTOARG*/
 	case (op_i)
 	  `OP_ADD_L:
 	    begin
-	      $display ("Executing OP_ADD_L");
+	      result_o <= regA_i + regB_i;
+	      register_write_enable_o <= 1;
+	      register_write_index_o <= register_write_index_i;
 	    end
 	  `OP_AND:
 	    begin
-	      $display ("Executing OP_AND");
+	      result_o <= regA_i & regB_i;
+	      register_write_enable_o <= 1;
+	      register_write_index_o <= register_write_index_i;
 	    end
 	  `OP_ASHL:
 	    begin
@@ -158,11 +180,11 @@ module cpu_execute (/*AUTOARG*/
 	    end
 	  `OP_JMP:
 	    begin
-	      $display ("Executing OP_JMP");
+	      branch_target_o <= regA_i;
 	    end
 	  `OP_JMPA:
 	    begin
-	      $display ("Executing OP_JMPA");
+	      branch_target_o <= operand_i;
 	    end
 	  `OP_JSR:
 	    begin
@@ -233,7 +255,9 @@ module cpu_execute (/*AUTOARG*/
 	    end
 	  `OP_MOV:
 	    begin
-	      $display ("Executing OP_MOV");
+	      result_o <= regB_i;
+	      register_write_enable_o <= 1;
+	      register_write_index_o <= register_write_index_i;
 	    end
 	  `OP_MUL_L:
 	    begin
@@ -245,7 +269,6 @@ module cpu_execute (/*AUTOARG*/
 	    end
 	  `OP_NOP:
 	    begin
-	      $display ("EXECUTE OP_NOP");
 	      register_write_enable_o <= 0;
 	    end
 	  `OP_NOT:
@@ -254,7 +277,9 @@ module cpu_execute (/*AUTOARG*/
 	    end
 	  `OP_OR:
 	    begin
-	      $display ("Executing OP_OR");
+	      result_o <= regA_i | regB_i;
+	      register_write_enable_o <= 1;
+	      register_write_index_o <= register_write_index_i;
 	    end
 	  `OP_POP:
 	    begin
@@ -310,7 +335,6 @@ module cpu_execute (/*AUTOARG*/
 	    end
 	  `OP_SUB_L:
 	    begin
-	      $display ("EXECUTE OP_SUB");
 	      result_o <= regA_i - regB_i;
 	      register_write_enable_o <= 1;
 	      register_write_index_o <= register_write_index_i;
@@ -329,7 +353,6 @@ module cpu_execute (/*AUTOARG*/
 	    end
 	  `OP_XOR:
 	    begin
-	      $display ("EXECUTE OP_XOR");
 	      result_o <= regA_i ^ regB_i;
 	      register_write_enable_o <= 1;
 	      register_write_index_o <= register_write_index_i;

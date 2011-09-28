@@ -68,6 +68,9 @@ module moxie (/*AUTOARG*/
   wire [3:0]  dx_regA;
   wire [3:0]  dx_regB;
   wire [3:0]  dx_regC;
+
+  wire [0:0]  xf_branch_flag;
+  wire [31:0] xf_branch_target;
  
   wire [31:0] rx_reg_value1;
   wire [31:0] rx_reg_value2;
@@ -122,6 +125,8 @@ module moxie (/*AUTOARG*/
 			 // Inputs
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
+			 .branch_flag_i (xf_branch_flag),
+			 .branch_target_i (xf_branch_target),
 			 .stall_i               (hazard_war),
 			 .imem_data_i           (wb_dat_i[31:0]));
     
@@ -152,6 +157,8 @@ module moxie (/*AUTOARG*/
 			     .riB_o (xr_reg_index2),
 			     .regA_i (rx_reg_value1),
 			     .regB_i (rx_reg_value2),
+			     .branch_flag_o (xf_branch_flag),
+			     .branch_target_o (xf_branch_target),
 			     .register_write_index_i (dx_register_write_index),
 			     // Outputs
 			     .register_write_enable_o (xw_register_write_enable),

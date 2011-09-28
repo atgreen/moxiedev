@@ -24,7 +24,7 @@ module cpu_fetch (/*AUTOARG*/
   // Outputs
   imem_address_o, opcode, valid, operand,
   // Inputs
-  rst_i, clk_i, imem_data_i, stall_i
+  rst_i, clk_i, imem_data_i, branch_flag_i, branch_target_i, stall_i
   );
   
   // --- Clock and Reset ------------------------------------------
@@ -34,6 +34,10 @@ module cpu_fetch (/*AUTOARG*/
   output [31:0] imem_address_o;
   input  [31:0] imem_data_i;
 
+  // --- Branch controls ------------------------------------------
+  input 	branch_flag_i;
+  input [31:0]	branch_target_i;
+  
   // --- Pipeline interlock ---------------------------------------
   input stall_i;
   
@@ -48,7 +52,7 @@ module cpu_fetch (/*AUTOARG*/
   reg [31:0] 	PC; /* For testing only.  */
 
   wire [0:0] 	valid, empty, full;
-  reg 		wren, rden;
+  reg 		wren, rden, flush_ififo;
   reg  [31:0] 	wrdata;
   wire [15:0] opcode;
   wire [31:0] operand;
@@ -66,32 +70,39 @@ module cpu_fetch (/*AUTOARG*/
 		   .empty_o		(empty),
 		   .full_o		(full),
 		   // Inputs
-		   .rst_i		(rst_i),
+		   .rst_i		(rst_i | flush_ififo),
 		   .clk_i		(clk_i),
 		   .write_en_i		(wren),
 		   .read_en_i		(rden),
 		   .data_i	(wrdata[31:0]));
   
-  // --- Test fetch -----------------------------------------------
   always @(posedge clk_i) begin
     if (rst_i) begin
        PC <= #1 `BOOT_ADDRESS;
     end else begin 
        if (! stall_i) begin
-	  if (! full) begin
+	 if (branch_flag_i) begin
+	   PC <= branch_target_i;
+	   wren <= 0;
+	   rden <= 0;
+	   flush_ififo <= 1;
+	 end else begin
+	   flush_ififo <= 0;
+	   if (! full) begin
 	     wren <= 1;
-//	     wrdata <= { MEM[PC], MEM[PC+1], MEM[PC+2], MEM[PC+3] };
 	     wrdata <= imem_data_i;
 	     PC <= PC+4;
-	  end else begin
+	   end else begin
 	     wren <= 0;
-	  end
-	  rden <= 1;
+	   end
+	   rden <= 1;
+	 end
        end else begin
-	  wren <= 0;
-	  rden <= 0;
+	 flush_ififo <= 0;
+	 wren <= 0;
+	 rden <= 0;
        end      
     end // else: !if(rst_i)
   end
-
+  
 endmodule // cpu_fetch

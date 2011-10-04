@@ -1,7 +1,7 @@
 #!/usr/bin/sbcl --script
 
 ;;; --------------------------------------------------------------------
-;;; GtkWave Process Filter to Disassemble Moxie Opcodes
+;;; GTKWave Process Filter to Disassemble Moxie Opcodes
 ;;;
 ;;; Copyright (c) 2011 Anthony Green.  All Rights Reserved.
 ;;; DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
@@ -206,7 +206,7 @@
 		 ( ;; Handle Form 2 opcodes
 		  (eql (logand n #b0100000000000000) 0)
 		  (moxie-disassemble n (logand (ash n -12) 3) *form2-opcodes*))
-		 ( ;; Handle Form 2 opcodes
+		 ( ;; Handle Form 3 opcodes
 		  t
 		  (moxie-disassemble n (logand (ash n -10) 15) *form3-opcodes*)))))
      (finish-output)))

@@ -1,6 +1,6 @@
 #!/usr/bin/sbcl --script
 
-;;; --------------------------------------------------------
+;;; --------------------------------------------------------------------
 ;;; GtkWave Process Filter to Disassemble Moxie Opcodes
 ;;;
 ;;; Copyright (c) 2011 Anthony Green.  All Rights Reserved.
@@ -20,7 +20,7 @@
 ;;; Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ;;; 02110-1301, USA.
 ;;; 
-;;; --------------------------------------------------------
+;;; --------------------------------------------------------------------
 
 ;; Return the name of the register identified by INDEX.
 (defun regname (index)
@@ -32,52 +32,52 @@
 ;; ------------------------------------------------------
 ;; Disassemble the different instruction format types
 
-(defun moxie-narg (opcode instr)
-  opcode)
+(defun moxie-narg (name instr)
+  name)
 
-(defun moxie-f1-a4 (opcode instr)
-  (format nil "~A ~A __" opcode 
+(defun moxie-f1-a4 (name instr)
+  (format nil "~A ~A __" name 
 	  (regname (logand (ash instr -4) #xf))))
 
-(defun moxie-f1-4a (opcode instr)
-  (format nil "~A __ ~A" opcode
+(defun moxie-f1-4a (name instr)
+  (format nil "~A __ ~A" name
 	  (regname (logand (ash instr -4) #xf))))
 
-(defun moxie-f1-ab (opcode instr)
-  (format nil "~A ~A ~A" opcode 
+(defun moxie-f1-ab (name instr)
+  (format nil "~A ~A ~A" name 
 	  (regname (logand (ash instr -4) #xf))
 	  (regname (logand instr #xf))))
 
-(defun moxie-f1-m (opcode instr)
-  opcode)
+(defun moxie-f1-m (name instr)
+  name)
 
-(defun moxie-f1-abi (opcode instr)
-  (format nil "~A ~A (~A)" opcode 
+(defun moxie-f1-abi (name instr)
+  (format nil "~A ~A (~A)" name 
 	  (regname (logand (ash instr -4) #xf))
 	  (regname (logand instr #xf))))
 
-(defun moxie-f1-aib (opcode instr)
-  (format nil "~A (~A) ~A" opcode 
+(defun moxie-f1-aib (name instr)
+  (format nil "~A (~A) ~A" name 
 	  (regname (logand (ash instr -4) #xf))
 	  (regname (logand instr #xf))))
 
-(defun moxie-f1-abi4 (opcode instr)
-  (format nil "~A ~A __(~A)" opcode 
+(defun moxie-f1-abi4 (name instr)
+  (format nil "~A ~A __(~A)" name 
 	  (regname (logand (ash instr -4) #xf))
 	  (regname (logand instr #xf))))
 
-(defun moxie-f1-aib4 (opcode instr)
-  (format nil "~A __(~A) ~A" opcode 
+(defun moxie-f1-aib4 (name instr)
+  (format nil "~A __(~A) ~A" name 
 	  (regname (logand (ash instr -4) #xf))
 	  (regname (logand instr #xf))))
 
-(defun moxie-f2-a8v (opcode instr)
-  (format nil "~A ~A ~A" opcode 
+(defun moxie-f2-a8v (name instr)
+  (format nil "~A ~A ~A" name 
 	  (regname (logand (ash instr -8) #xf))
 	  (logand instr #xf)))
 
-(defun moxie-f3-pcrel (opcode instr)
-  opcode)
+(defun moxie-f3-pcrel (name instr)
+  name)
 
 ;; ------------------------------------------------------
 ;; Populate the three opcode tables
@@ -187,12 +187,12 @@
 ;; Loop forever, reading opcodes from stdin and writing
 ;; disassembled instructions to stdout.
 
-(defmacro disassemble (opcode insn table)
+(defmacro moxie-disassemble (opcode insn table)
   `(format t "~A~%"
 	   (let ((insn-spec (gethash ,insn ,table)))
 	     (funcall (cdr insn-spec)
 		      (car insn-spec)
-		      opcode)))
+		      ,opcode))))
 
 (loop
    (let* ((s (read-line))
@@ -202,12 +202,12 @@
 	 (progn 
 	   (cond ( ;; Handle Form 1 opcodes
 		  (eql (logand n #b1000000000000000) 0) 
-		  (disassemble n (ash n -8) *form1-opcodes))
+		  (moxie-disassemble n (ash n -8) *form1-opcodes*))
 		 ( ;; Handle Form 2 opcodes
 		  (eql (logand n #b0100000000000000) 0)
-		  (disassemble n (logand (ash n -12) 3) *form2-opcodes*))
+		  (moxie-disassemble n (logand (ash n -12) 3) *form2-opcodes*))
 		 ( ;; Handle Form 2 opcodes
 		  t
-		  (disassemble n (logand (ash n -10) 15) *form3-opcodes*)))))
+		  (moxie-disassemble n (logand (ash n -10) 15) *form3-opcodes*)))))
      (finish-output)))
                                                                                 

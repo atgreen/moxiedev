@@ -1,4 +1,5 @@
 .text
+	ldi.l	$sp, 0x4000000+4096
 	xor	$r0, $r0 # Zero out $r0
 	mov	$r1, $r0
 	mov	$r2, $r0

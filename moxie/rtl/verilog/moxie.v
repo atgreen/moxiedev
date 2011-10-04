@@ -19,29 +19,43 @@
 
 module moxie (/*AUTOARG*/
   // Outputs
-  wb_dat_o, wb_adr_o, wb_cyc_o, wb_stb_o,
+  wb_I_dat_o, wb_I_adr_o, wb_I_cyc_o, wb_I_stb_o, wb_D_dat_o,
+  wb_D_adr_o, wb_D_cyc_o, wb_D_stb_o,
   // Inputs
-  rst_i, clk_i, wb_dat_i, wb_sel_i, wb_we_i, wb_ack_i
+  rst_i, clk_i, wb_I_dat_i, wb_I_sel_i, wb_I_we_i, wb_I_ack_i,
+  wb_D_dat_i, wb_D_sel_i, wb_D_we_i, wb_D_ack_i
   );
    
   // --- Clock and Reset ------------------------------------------
   input  rst_i, clk_i;
   reg 	 rst;
 
-  // --- Wishbone Interconnect ------------------------------------
-  input [31:0]  wb_dat_i;
-  output [31:0] wb_dat_o;
-  output [31:0]  wb_adr_o;
-  input [1:0]   wb_sel_i;
-  input         wb_we_i;
-  output        wb_cyc_o;
-  output        wb_stb_o;
-  input         wb_ack_i;
+  // --- Wishbone Interconnect for INSTRUCTION Memory -------------
+  input [31:0]  wb_I_dat_i;
+  output [31:0] wb_I_dat_o;
+  output [31:0]  wb_I_adr_o;
+  input [1:0]   wb_I_sel_i;
+  input         wb_I_we_i;
+  output        wb_I_cyc_o;
+  output        wb_I_stb_o;
+  input         wb_I_ack_i;
+
+  // --- Wishbone Interconnect for DATA Memory --------------------
+  input [31:0]  wb_D_dat_i;
+  output [31:0] wb_D_dat_o;
+  output [31:0]  wb_D_adr_o;
+  input [1:0]   wb_D_sel_i;
+  input         wb_D_we_i;
+  output        wb_D_cyc_o;
+  output        wb_D_stb_o;
+  input         wb_D_ack_i;
 
   /*AUTOREG*/
   // Beginning of automatic regs (for this module's undeclared outputs)
-  reg [31:0]		wb_dat_o;
-  reg			wb_stb_o;
+  reg [31:0]		wb_D_dat_o;
+  reg			wb_D_stb_o;
+  reg [31:0]		wb_I_dat_o;
+  reg			wb_I_stb_o;
   // End of automatics
 
   // --- Wires to connect the 5 pipeline stages -------------------
@@ -109,26 +123,29 @@ module moxie (/*AUTOARG*/
     if (rst_i) begin
       /* AUTORESET */
       // Beginning of autoreset for uninitialized flops
-      wb_stb_o <= 1'h0;
+      wb_I_stb_o <= 1'h0;
+      wb_D_stb_o <= 1'h0;
       // End of automatics
     end else begin
-      wb_stb_o <= #1 (wb_stb_o & !wb_ack_i) | (!wb_stb_o);
+      wb_I_stb_o <= #1 (wb_I_stb_o & !wb_I_ack_i) | (!wb_I_stb_o);
+      wb_D_stb_o <= #1 (wb_D_stb_o & !wb_D_ack_i) | (!wb_D_stb_o);
     end
 
-  assign wb_cyc_o = wb_stb_o;
+  assign wb_I_cyc_o = wb_I_stb_o;
+  assign wb_D_cyc_o = wb_D_stb_o;
   
   cpu_fetch stage_fetch (// Outputs
 			 .opcode		(fd_opcode[15:0]),
 			 .valid		(fd_valid),
 			 .operand		(fd_operand[31:0]),
-			 .imem_address_o        (wb_adr_o[31:0]),
+			 .imem_address_o        (wb_I_adr_o[31:0]),
 			 // Inputs
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
 			 .branch_flag_i (xf_branch_flag),
 			 .branch_target_i (xf_branch_target),
 			 .stall_i               (hazard_war),
-			 .imem_data_i           (wb_dat_i[31:0]));
+			 .imem_data_i           (wb_I_dat_i[31:0]));
     
   cpu_decode stage_decode (// Inputs
 			   .rst_i			(rst_i),

@@ -19,11 +19,11 @@
 
 module moxie (/*AUTOARG*/
   // Outputs
-  wb_I_dat_o, wb_I_adr_o, wb_I_cyc_o, wb_I_stb_o, wb_D_dat_o,
-  wb_D_adr_o, wb_D_cyc_o, wb_D_stb_o,
+  wb_I_dat_o, wb_I_adr_o, wb_I_we_o, wb_I_cyc_o, wb_I_stb_o,
+  wb_D_dat_o, wb_D_adr_o, wb_D_we_o, wb_D_cyc_o, wb_D_stb_o,
   // Inputs
-  rst_i, clk_i, wb_I_dat_i, wb_I_sel_i, wb_I_we_i, wb_I_ack_i,
-  wb_D_dat_i, wb_D_sel_i, wb_D_we_i, wb_D_ack_i
+  rst_i, clk_i, wb_I_dat_i, wb_I_sel_i, wb_I_ack_i, wb_D_dat_i,
+  wb_D_sel_i, wb_D_ack_i
   );
    
   // --- Clock and Reset ------------------------------------------
@@ -33,9 +33,9 @@ module moxie (/*AUTOARG*/
   // --- Wishbone Interconnect for INSTRUCTION Memory -------------
   input [31:0]  wb_I_dat_i;
   output [31:0] wb_I_dat_o;
-  output [31:0]  wb_I_adr_o;
+  output [31:0] wb_I_adr_o;
   input [1:0]   wb_I_sel_i;
-  input         wb_I_we_i;
+  output        wb_I_we_o;
   output        wb_I_cyc_o;
   output        wb_I_stb_o;
   input         wb_I_ack_i;
@@ -43,20 +43,12 @@ module moxie (/*AUTOARG*/
   // --- Wishbone Interconnect for DATA Memory --------------------
   input [31:0]  wb_D_dat_i;
   output [31:0] wb_D_dat_o;
-  output [31:0]  wb_D_adr_o;
+  output [31:0] wb_D_adr_o;
   input [1:0]   wb_D_sel_i;
-  input         wb_D_we_i;
+  output        wb_D_we_o;
   output        wb_D_cyc_o;
   output        wb_D_stb_o;
   input         wb_D_ack_i;
-
-  /*AUTOREG*/
-  // Beginning of automatic regs (for this module's undeclared outputs)
-  reg [31:0]		wb_D_dat_o;
-  reg			wb_D_stb_o;
-  reg [31:0]		wb_I_dat_o;
-  reg			wb_I_stb_o;
-  // End of automatics
 
   // --- Wires to connect the 5 pipeline stages -------------------
   //
@@ -73,9 +65,11 @@ module moxie (/*AUTOARG*/
   wire [0:0]  dx_register_write_enable;
   wire [5:0]  dx_op;
   wire [0:0]  xw_register_write_enable;
+  wire [0:0]  xw_memory_write_enable;
   wire [0:0]  wr_register_write_enable;
   wire [3:0]  dx_register_write_index;
   wire [3:0]  xw_register_write_index;
+  wire [31:0] xw_memory_write_address;
   wire [31:0] xw_result;
   wire [3:0]  wr_register_write_index;
   wire [31:0] wr_result;
@@ -94,6 +88,9 @@ module moxie (/*AUTOARG*/
   wire [3:0]  xr_reg_index2;
 
   wire [0:0] hazard_war;
+
+  reg [0:0]  wb_I_stb_o;
+  reg [0:0]  wb_D_stb_o;
 
   // synthesis translate_off 
   initial
@@ -180,17 +177,24 @@ module moxie (/*AUTOARG*/
 			     // Outputs
 			     .register_write_enable_o (xw_register_write_enable),
 			     .register_write_index_o (xw_register_write_index),
-			     .result_o (xw_result));
-
+			     .result_o (xw_result),
+			     .memory_write_address_o (xw_memory_write_address),
+			     .memory_write_enable_o (xw_memory_write_enable));
+  
   cpu_write stage_write (  // Inputs
 			   .rst_i (rst_i),
 			   .clk_i (clk_i),
 			   .register_write_index_i (xw_register_write_index),
 			   .register_write_enable_i (xw_register_write_enable),
+			   .memory_write_enable_i (xw_memory_write_enable),
+			   .memory_write_address_i (xw_memory_write_address),
 			   .result_i (xw_result),
 			   // Outputs
 			   .register_write_index_o (wr_register_write_index),
 			   .register_write_enable_o (wr_register_write_enable),
+			   .memory_write_address_o (wb_D_adr_o),
+			   .memory_write_value_o (wb_D_dat_o),
+			   .memory_write_enable_o (wb_D_we_o),
 			   .result_o (wr_result));
 
   assign hazard_war = 0;

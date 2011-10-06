@@ -127,10 +127,12 @@ module cpu_decode (/*AUTOARG*/
 	      begin
 		op_o <= `OP_LDA_L;
 		register_write_enable_o <= 1;
+		operand_o <= operand_i;
 	      end
 	    8'b00001001:
 	      begin
 		op_o <= `OP_STA_L;
+		operand_o <= operand_i;	
 	      end
 	    8'b00001010:
 	      begin

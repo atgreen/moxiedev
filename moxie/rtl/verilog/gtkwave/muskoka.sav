@@ -1,0 +1,69 @@
+[timestart] 0
+[size] 1680 993
+[pos] -1 -1
+*-14.000000 86580 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] sim.
+[treeopen] sim.soc.
+[treeopen] sim.soc.core.
+@28
+sim.soc.core.stage_fetch.rst_i
+sim.soc.core.stage_fetch.clk_i
+@200
+-
+@800200
+-FETCH UNIT
+@22
+sim.soc.core.stage_fetch.PC[31:0]
+@4022
+^>1 gtkwave/gtkwave-opcodes.lisp
+sim.soc.core.stage_fetch.opcode[15:0]
+@1000200
+-FETCH UNIT
+@c00200
+-DECODE UNIT
+@2022
+^1 gtkwave/gtkwave-ops.txt
+sim.soc.core.stage_decode.op_o[5:0]
+@1401200
+-DECODE UNIT
+@800200
+-EXECUTE UNIT
+@c02022
+^1 gtkwave/gtkwave-ops.txt
+sim.soc.core.stage_execute.op_i[5:0]
+@28
+(0)sim.soc.core.stage_execute.op_i[5:0]
+(1)sim.soc.core.stage_execute.op_i[5:0]
+(2)sim.soc.core.stage_execute.op_i[5:0]
+(3)sim.soc.core.stage_execute.op_i[5:0]
+(4)sim.soc.core.stage_execute.op_i[5:0]
+(5)sim.soc.core.stage_execute.op_i[5:0]
+@1401200
+-group_end
+@2022
+^2 gtkwave/gtkwave-regs.txt
+sim.soc.core.stage_execute.riA_i[3:0]
+^2 gtkwave/gtkwave-regs.txt
+sim.soc.core.stage_execute.riB_i[3:0]
+@22
+sim.soc.core.stage_execute.operand_i[31:0]
+sim.soc.core.stage_execute.result_o[31:0]
+@1000200
+-EXECUTE UNIT
+@800200
+-WRITE UNIT
+@22
+sim.soc.core.stage_write.result_i[31:0]
+@28
+sim.soc.core.stage_write.register_write_enable_o
+@2022
+^2 gtkwave/gtkwave-regs.txt
+sim.soc.core.stage_write.register_write_index_i[3:0]
+@28
+sim.soc.core.stage_write.memory_write_enable_o
+@22
+sim.soc.core.stage_write.memory_write_address_o[31:0]
+@1000200
+-WRITE UNIT
+[pattern_trace] 1
+[pattern_trace] 0

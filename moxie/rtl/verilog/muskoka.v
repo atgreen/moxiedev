@@ -31,7 +31,7 @@ module muskoka (/*AUTOARG*/
   wire [31:0] mx2iw_dat;
   wire [31:0] mx2iw_adr;
   wire [1:0]  iw2mx_sel;
-  wire 	      iw2mx_we;
+  wire 	      mx2iw_we;
   wire 	      mx2iw_cyc;
   wire        mx2iw_stb;
   wire 	      iw2mx_ack;
@@ -40,7 +40,7 @@ module muskoka (/*AUTOARG*/
   wire [31:0] mx2dw_dat;
   wire [31:0] mx2dw_adr;
   wire [1:0]  dw2mx_sel;
-  wire 	      dw2mx_we;
+  wire 	      mx2dw_we;
   wire 	      mx2dw_cyc;
   wire        mx2dw_stb;
   wire 	      dw2mx_ack;
@@ -65,13 +65,15 @@ module muskoka (/*AUTOARG*/
   wire        dw2tr_stb;
   wire 	      tr2dw_ack;
 
-  // synthesis translate_off 
+  // synthesis translate_off
   initial
     begin
       $dumpvars(1,insn_intercon);
       $dumpvars(1,data_intercon);
       $dumpvars(1,rom);
+      $dumpvars(1,ram);
     end
+  // synthesis translate_on
 
   // slave 0 - bootrom @ 0x1000 for 512 bytes
   // slave 1 - testram @ 0x4000000 for 4096 bytes
@@ -90,7 +92,7 @@ module muskoka (/*AUTOARG*/
   insn_intercon (.wbm_dat_o (iw2mx_dat),
 		 .wbm_adr_i (mx2iw_adr),
 		 .wbm_sel_i (iw2mx_sel),
-		 .wbm_we_i (iw2mx_we),
+		 .wbm_we_i (mx2iw_we),
 		 .wbm_cyc_i (mx2iw_cyc),
 		 .wbm_stb_i (mx2iw_stb),
 		 .wbm_ack_o (iw2mx_ack),
@@ -115,7 +117,7 @@ module muskoka (/*AUTOARG*/
   data_intercon (.wbm_dat_o (dw2mx_dat),
 		 .wbm_adr_i (mx2dw_adr),
 		 .wbm_sel_i (dw2mx_sel),
-		 .wbm_we_i (dw2mx_we),
+		 .wbm_we_i (mx2dw_we),
 		 .wbm_cyc_i (mx2dw_cyc),
 		 .wbm_stb_i (mx2dw_stb),
 		 .wbm_ack_o (dw2mx_ack),
@@ -153,7 +155,7 @@ module muskoka (/*AUTOARG*/
 	      .wb_I_dat_o (mx2iw_dat),
 	      .wb_I_adr_o (mx2iw_adr),
 	      .wb_I_sel_i (iw2mx_sel),
-	      .wb_I_we_i (iw2mx_we),
+	      .wb_I_we_o (mx2iw_we),
 	      .wb_I_cyc_o (mx2iw_cyc),
 	      .wb_I_stb_o (mx2iw_stb),
 	      .wb_I_ack_i (iw2mx_ack) ,
@@ -162,7 +164,7 @@ module muskoka (/*AUTOARG*/
 	      .wb_D_dat_o (mx2dw_dat),
 	      .wb_D_adr_o (mx2dw_adr),
 	      .wb_D_sel_i (dw2mx_sel),
-	      .wb_D_we_i (dw2mx_we),
+	      .wb_D_we_o (mx2dw_we),
 	      .wb_D_cyc_o (mx2dw_cyc),
 	      .wb_D_stb_o (mx2dw_stb),
 	      .wb_D_ack_i (dw2mx_ack));

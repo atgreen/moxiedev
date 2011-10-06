@@ -68,6 +68,7 @@ set_global_assignment -name VERILOG_FILE cpu_execute.v
 set_global_assignment -name VERILOG_FILE cpu_registerfile.v
 set_global_assignment -name VERILOG_FILE wb_intercon.v
 set_global_assignment -name VERILOG_FILE bootrom.v
+set_global_assignment -name VERILOG_FILE testram.v
 set_global_assignment -name VERILOG_FILE moxie.v
 set_global_assignment -name VERILOG_FILE altera_sdram/sdram.v
 set_global_assignment -name VERILOG_FILE altera_sdram/sdram_controller.v

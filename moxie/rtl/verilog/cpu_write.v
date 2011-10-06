@@ -20,9 +20,10 @@
 module cpu_write (/*AUTOARG*/
   // Outputs
   register_write_index_o, register_write_enable_o, result_o,
+  memory_write_enable_o, memory_write_address_o, memory_write_value_o,
   // Inputs
   rst_i, clk_i, register_write_index_i, register_write_enable_i,
-  result_i
+  memory_write_enable_i, memory_write_address_i, result_i
   );
   
   // --- Clock and Reset ------------------------------------------
@@ -30,6 +31,8 @@ module cpu_write (/*AUTOARG*/
   
   input [3:0] register_write_index_i;
   input [0:0] register_write_enable_i;
+  input [0:0] memory_write_enable_i;
+  input [31:0] memory_write_address_i;
   input [31:0] result_i;
 
   output [3:0] register_write_index_o;
@@ -40,14 +43,24 @@ module cpu_write (/*AUTOARG*/
   wire [0:0] register_write_enable_o = register_write_enable_i;
   wire [31:0] result_o = result_i;
 
-  // reg [3:0] 	register_write_index_o;
-  // reg [0:0] 	register_write_enable_o;
-  // reg [31:0] 	register_write_index_o;
-  
-  // always @ (posedge clk_i) begin
-  //   register_write_enable_o <= register_write_enable_i;
-  //   register_write_index_o <= register_write_index_i;
-  //   result_o <= result_i;
-  // end
-  
+  output [0:0]   memory_write_enable_o;
+  output [31:0]  memory_write_address_o;
+  output [31:0]  memory_write_value_o;
+
+  reg [0:0]   memory_write_enable_o;
+  reg [31:0]  memory_write_address_o;
+  reg [31:0]  memory_write_value_o;
+
+  always @(posedge clk_i) begin
+    if (! rst_i)
+      begin
+	memory_write_enable_o <= memory_write_enable_i;
+	if (memory_write_enable_i)
+	  begin
+	    memory_write_value_o <= result_i;
+	    memory_write_address_o <= memory_write_address_i;
+	  end
+      end
+  end
+
 endmodule // cpu_write

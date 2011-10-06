@@ -210,7 +210,7 @@ module cpu_execute (/*AUTOARG*/
 	    end
 	  `OP_LDA_L: 
 	    begin
-	      memory_address_o <= operand_i;
+	      memory_write_address_o <= operand_i;
 	    end
 	  `OP_LDA_S:
 	    begin

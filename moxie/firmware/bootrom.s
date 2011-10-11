@@ -10,6 +10,7 @@ loop:	inc	$r0, 0x1 # Increment $r0
 	inc	$r2, 0x1
 	inc	$r3, 0x1 
 	inc	$r4, 0x1
+	nop
 	sta.l	0x4000000, $r4
 	lda.l   $r5, 0x4000000
 	jmpa	loop+0x1000 # Offset hack

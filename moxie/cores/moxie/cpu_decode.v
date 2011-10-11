@@ -78,10 +78,10 @@ module cpu_decode (/*AUTOARG*/
       end
     else
       begin
-	if (stall_i)
+	if (stall_i | !valid_i)
 	  begin
-	    $display ("DECODE STALL");
-	    //	  op_o <= `OP_NOP;
+	    register_write_enable_o <= 0;
+	    op_o <= `OP_NOP;
 	  end
 	else begin
 	  register_write_index_o <= riA;

@@ -25,6 +25,13 @@ module sim (/*AUTOARG*/
   reg         clk;
   reg         rst;
 
+  // synthesis translate_off 
+  initial
+    begin
+      $dumpvars(1,soc);
+    end
+  // synthesis translate_on 
+
   muskoka soc (.clk_i (clk),
 	       .rst_i (rst));
 

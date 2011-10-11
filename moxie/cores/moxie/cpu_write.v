@@ -19,48 +19,41 @@
 
 module cpu_write (/*AUTOARG*/
   // Outputs
-  register_write_index_o, register_write_enable_o, result_o,
-  memory_write_enable_o, memory_write_address_o, memory_write_value_o,
+  register_write_index_o, register_we_o, result_o,
   // Inputs
-  rst_i, clk_i, register_write_index_i, register_write_enable_i,
-  memory_write_enable_i, memory_write_address_i, result_i
+  rst_i, clk_i, register_write_index_i, register_we_i, memory_we_i,
+  loadp_i, memory_address_i, result_i
   );
   
   // --- Clock and Reset ------------------------------------------
   input  rst_i, clk_i;
   
   input [3:0] register_write_index_i;
-  input [0:0] register_write_enable_i;
-  input [0:0] memory_write_enable_i;
-  input [31:0] memory_write_address_i;
+  input [0:0] register_we_i;
+  input [0:0] memory_we_i;
+  input [0:0] loadp_i;
+  input [31:0] memory_address_i;
   input [31:0] result_i;
 
   output [3:0] register_write_index_o;
-  output [0:0] register_write_enable_o;
+  output [0:0] register_we_o;
   output [31:0] result_o;
+
+  wire [31:0] 	data;
   
   wire [3:0] register_write_index_o = register_write_index_i;
-  wire [0:0] register_write_enable_o = register_write_enable_i;
-  wire [31:0] result_o = result_i;
+  wire [0:0] register_we_o = register_we_i;
 
-  output [0:0]   memory_write_enable_o;
-  output [31:0]  memory_write_address_o;
-  output [31:0]  memory_write_value_o;
+  // loadp_i is high if we are loading memory from cache
+  wire [31:0] result_o = loadp_i ? data : result_i;
 
-  reg [0:0]   memory_write_enable_o;
-  reg [31:0]  memory_write_address_o;
-  reg [31:0]  memory_write_value_o;
-
-  always @(posedge clk_i) begin
-    if (! rst_i)
-      begin
-	memory_write_enable_o <= memory_write_enable_i;
-	if (memory_write_enable_i)
-	  begin
-	    memory_write_value_o <= result_i;
-	    memory_write_address_o <= memory_write_address_i;
-	  end
-      end
-  end
-
+  // The data cache. Fake. Never stalls.  Note that we can do a single
+  // cycle memory-to-memory transfer.
+  dcache cache (.clk_i (clk_i),
+		.rst_i (rst_i),
+		.we_i (memory_we_i),
+		.address_i (memory_address_i),
+		.data_i (result_o),
+		.data_o (data));
+  
 endmodule // cpu_write

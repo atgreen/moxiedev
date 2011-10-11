@@ -65,11 +65,12 @@ module moxie (/*AUTOARG*/
   wire [0:0]  dx_register_write_enable;
   wire [5:0]  dx_op;
   wire [0:0]  xw_register_write_enable;
-  wire [0:0]  xw_memory_write_enable;
+  wire [0:0]  xw_loadp;
+  wire [0:0]  xw_memory_we;
   wire [0:0]  wr_register_write_enable;
   wire [3:0]  dx_register_write_index;
   wire [3:0]  xw_register_write_index;
-  wire [31:0] xw_memory_write_address;
+  wire [31:0] xw_memory_address;
   wire [31:0] xw_result;
   wire [3:0]  wr_register_write_index;
   wire [31:0] wr_result;
@@ -90,15 +91,16 @@ module moxie (/*AUTOARG*/
   wire [0:0] hazard_war;
 
   reg [0:0]  wb_I_stb_o;
-  reg [0:0]  wb_D_stb_o;
 
   // synthesis translate_off 
   initial
     begin
       $dumpvars(1,stage_fetch); 
+      $dumpvars(1,stage_fetch.ififo); 
       $dumpvars(1,stage_decode); 
       $dumpvars(1,stage_execute); 
       $dumpvars(1,stage_write);
+      $dumpvars(1,stage_write.cache);
       $dumpvars(1,regs);
       $display("-- BEGINNING --");
     end
@@ -121,15 +123,12 @@ module moxie (/*AUTOARG*/
       /* AUTORESET */
       // Beginning of autoreset for uninitialized flops
       wb_I_stb_o <= 1'h0;
-      wb_D_stb_o <= 1'h0;
       // End of automatics
     end else begin
-      wb_I_stb_o <= #1 (wb_I_stb_o & !wb_I_ack_i) | (!wb_I_stb_o);
-      wb_D_stb_o <= #1 (wb_D_stb_o & !wb_D_ack_i) | (!wb_D_stb_o);
+      wb_I_stb_o <= (wb_I_stb_o & !wb_I_ack_i) | (!wb_I_stb_o);
     end
 
   assign wb_I_cyc_o = wb_I_stb_o;
-  assign wb_D_cyc_o = wb_D_stb_o;
   
   cpu_fetch stage_fetch (// Outputs
 			 .opcode		(fd_opcode[15:0]),
@@ -178,23 +177,22 @@ module moxie (/*AUTOARG*/
 			     .register_write_enable_o (xw_register_write_enable),
 			     .register_write_index_o (xw_register_write_index),
 			     .result_o (xw_result),
-			     .memory_write_address_o (xw_memory_write_address),
-			     .memory_write_enable_o (xw_memory_write_enable));
+			     .memory_address_o (xw_memory_address),
+			     .memory_read_enable_o (xw_loadp),
+			     .memory_write_enable_o (xw_memory_we));
   
   cpu_write stage_write (  // Inputs
 			   .rst_i (rst_i),
 			   .clk_i (clk_i),
 			   .register_write_index_i (xw_register_write_index),
-			   .register_write_enable_i (xw_register_write_enable),
-			   .memory_write_enable_i (xw_memory_write_enable),
-			   .memory_write_address_i (xw_memory_write_address),
+			   .register_we_i (xw_register_write_enable),
+			   .loadp_i (xw_loadp),
+			   .memory_we_i (xw_memory_we),
+			   .memory_address_i (xw_memory_address),
 			   .result_i (xw_result),
 			   // Outputs
 			   .register_write_index_o (wr_register_write_index),
-			   .register_write_enable_o (wr_register_write_enable),
-			   .memory_write_address_o (wb_D_adr_o),
-			   .memory_write_value_o (wb_D_dat_o),
-			   .memory_write_enable_o (wb_D_we_o),
+			   .register_we_o (wr_register_write_enable),
 			   .result_o (wr_result));
 
   assign hazard_war = 0;

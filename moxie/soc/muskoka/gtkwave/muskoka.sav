@@ -1,10 +1,11 @@
-[timestart] 0
+[timestart] 1427860
 [size] 1680 993
 [pos] -1 -1
 *-14.000000 86580 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] sim.
 [treeopen] sim.soc.
 [treeopen] sim.soc.core.
+[treeopen] sim.soc.core.stage_write.
 @28
 sim.soc.core.stage_fetch.rst_i
 sim.soc.core.stage_fetch.clk_i
@@ -15,21 +16,43 @@ sim.soc.core.stage_fetch.clk_i
 @22
 sim.soc.core.stage_fetch.PC[31:0]
 @4022
-^>1 gtkwave/gtkwave-opcodes.lisp
+^>1 ../gtkwave/gtkwave-opcodes.lisp
 sim.soc.core.stage_fetch.opcode[15:0]
+@c00200
+-INSTRUCTION FIFO
+@28
+sim.soc.core.stage_fetch.ififo.buffer_empty
+sim.soc.core.stage_fetch.ififo.buffer_full
+@24
+sim.soc.core.stage_fetch.ififo.ptr_gap[2:0]
+sim.soc.core.stage_fetch.ififo.read_ptr[1:0]
+sim.soc.core.stage_fetch.ififo.write_ptr[1:0]
+@28
+sim.soc.core.stage_fetch.ififo.valid_o
+sim.soc.core.stage_fetch.ififo.can_read_16
+sim.soc.core.stage_fetch.ififo.can_read_48
+sim.soc.core.stage_fetch.ififo.write_en_i
+sim.soc.core.stage_fetch.ififo.can_write_32
+@4022
+^>1 ../gtkwave/gtkwave-opcodes.lisp
+sim.soc.core.stage_fetch.ififo.opcode_o[15:0]
+@22
+sim.soc.core.stage_fetch.ififo.operand_o[31:0]
+@1401200
+-INSTRUCTION FIFO
 @1000200
 -FETCH UNIT
-@c00200
+@800200
 -DECODE UNIT
 @2022
-^1 gtkwave/gtkwave-ops.txt
+^1 ../gtkwave/gtkwave-ops.txt
 sim.soc.core.stage_decode.op_o[5:0]
-@1401200
+@1000200
 -DECODE UNIT
 @800200
 -EXECUTE UNIT
 @c02022
-^1 gtkwave/gtkwave-ops.txt
+^1 ../gtkwave/gtkwave-ops.txt
 sim.soc.core.stage_execute.op_i[5:0]
 @28
 (0)sim.soc.core.stage_execute.op_i[5:0]
@@ -41,9 +64,9 @@ sim.soc.core.stage_execute.op_i[5:0]
 @1401200
 -group_end
 @2022
-^2 gtkwave/gtkwave-regs.txt
+^2 ../gtkwave/gtkwave-regs.txt
 sim.soc.core.stage_execute.riA_i[3:0]
-^2 gtkwave/gtkwave-regs.txt
+^2 ../gtkwave/gtkwave-regs.txt
 sim.soc.core.stage_execute.riB_i[3:0]
 @22
 sim.soc.core.stage_execute.operand_i[31:0]
@@ -54,15 +77,17 @@ sim.soc.core.stage_execute.result_o[31:0]
 -WRITE UNIT
 @22
 sim.soc.core.stage_write.result_i[31:0]
-@28
-sim.soc.core.stage_write.register_write_enable_o
 @2022
-^2 gtkwave/gtkwave-regs.txt
+^2 ../gtkwave/gtkwave-regs.txt
 sim.soc.core.stage_write.register_write_index_i[3:0]
-@28
-sim.soc.core.stage_write.memory_write_enable_o
 @22
-sim.soc.core.stage_write.memory_write_address_o[31:0]
+sim.soc.core.stage_write.cache.address_i[31:0]
+@28
+sim.soc.core.stage_write.cache.we_i
+@22
+sim.soc.core.stage_write.cache.data_i[31:0]
+@23
+sim.soc.core.stage_write.cache.data_o[31:0]
 @1000200
 -WRITE UNIT
 [pattern_trace] 1

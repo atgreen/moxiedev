@@ -1,6 +1,6 @@
 // cpu_ififo.v - The instruction FIFO unit
 //
-// Copyright (c) 2010 Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011 Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -57,38 +57,42 @@ module cpu_ififo (/*AUTOARG*/
 
   assign empty_o = buffer_empty;
 
-    
   // This is a rediculous bit of logic.  We should try to recode the
   // moxie instructions so that we can determine the length with less
   // logic.
   function [0:0] is_long_insn;
     input [7:0] op;
-    is_long_insn = ((op == 8'b00001111)    // beq
-		    || (op == 8'b00010101) // bge
-		    || (op == 8'b00010111) // bgeu
-		    || (op == 8'b00010010) // bgt
-		    || (op == 8'b00010100) // bgtu
-		    || (op == 8'b00010110) // ble
-		    || (op == 8'b00011000) // bleu
-		    || (op == 8'b00010001) // blt
-		    || (op == 8'b00010011) // bltu
-		    || (op == 8'b00010000) // bne
-		    || (op == 8'b00011010) // jmpa
-		    || (op == 8'b00000011) // jsra
-		    || (op == 8'b00011101) // lda.b
-		    || (op == 8'b00001000) // lda.l
-		    || (op == 8'b00010011) // lda.s
-		    || (op == 8'b00000001) // ldi.l
-		    || (op == 8'b00011011) // ldi.b
-		    || (op == 8'b00100000) // ldi.s
-		    || (op == 8'b00110110) // ldo.b
-		    || (op == 8'b00001100) // ldo.l
-		    || (op == 8'b00111000) // ldo.s
-		    || (op == 8'b00001001) // sta.b
-		    || (op == 8'b00100100) // sta.s
-		    || (op == 8'b00110111) // sto.b
-		    || (op == 8'b00001101) // sto.l
-		    || (op == 8'b00111001)); // sto.s
+    is_long_insn = ((op == 8'h01) //  ldi.l
+		    || (op == 8'h03) // jsra
+		    || (op == 8'h08) // lda.l
+		    || (op == 8'h09) // sta.l
+		    || (op == 8'h0c) // ldo.l
+		    || (op == 8'h0d) // sto.l
+		    || (op == 8'h1a) // jmpa
+		    || (op == 8'h1b) // ldi.b
+		    || (op == 8'h1d) // lda.b
+		    || (op == 8'h1f) // sta.b
+		    || (op == 8'h20) // ldi.s
+		    || (op == 8'h22) // lda.s
+		    || (op == 8'h24) // sta.s
+		    || (op == 8'h25) // jmp
+		    || (op == 8'h30) // swi
+		    || (op == 8'h36) // ldo.b
+		    || (op == 8'h37) // sto.b
+		    || (op == 8'h38) // ldo.s
+		    || (op == 8'h39) // sto.s
+		    // Easy optimization.. all insns with two high bits on
+		    // are 48-bits long.
+		    || (op == 8'hc0) // beq
+		    || (op == 8'hc4) // bne
+		    || (op == 8'hc8) // blt
+		    || (op == 8'hcc) // bgt
+		    || (op == 8'hd0) // bltu
+		    || (op == 8'hd4) // bgtu
+		    || (op == 8'hd8) // bge
+		    || (op == 8'hdc) // ble
+		    || (op == 8'he0) // bgeu
+		    || (op == 8'he4)); // bleu
   endfunction
 
   always @(posedge clk_i or posedge rst_i)
@@ -103,11 +107,15 @@ module cpu_ififo (/*AUTOARG*/
     end else begin
       // $display ("A %x buffer[read_ptr] = 0x%x", read_ptr, buffer[read_ptr][15:8]);
       // $display ("A BUFFER = 0x%x%x%x%x", buffer[0], buffer[1], buffer[2], buffer[3]);
+      // $display ("A buffer_empty = %x", buffer_empty);
       // $display ("A ptr_gap = 0x%x", ptr_gap);
+      // $display ("A 0x%x", !is_long_insn(buffer[read_ptr][15:8]));
+      // $display ("A 0x%x", buffer[read_ptr][15:8]);
       if (buffer_empty ? !is_long_insn(data_i[31:24]) : !is_long_insn(buffer[read_ptr][15:8])) begin
-	// $display ("B");
+	// This is a 16-bit instruction (either from input or from buffer).
+	//	$display ("B");
 	if (write_en_i && (!read_en_i) && (can_write_32)) begin
-	  // $display ("Z");
+	  //	  $display ("Z");
 	  buffer[write_ptr] <= data_i[31:16];
 	  buffer[(write_ptr+1)%4] <= data_i[15:0];
 	  write_ptr <= (write_ptr + 2) % 4;
@@ -124,7 +132,7 @@ module cpu_ififo (/*AUTOARG*/
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	end
 	else if (write_en_i && read_en_i && buffer_empty) begin
-	  // $display ("X");
+	  //	   $display ("X");
 	  opcode_o <= data_i[31:16];
 	  buffer[0] <= data_i[15:0];
 	  write_ptr <= 1;
@@ -134,7 +142,7 @@ module cpu_ififo (/*AUTOARG*/
 	  valid_o <= 1;
 	end
 	else if (write_en_i && read_en_i && buffer_full) begin
-	  // $display ("W- ERROR");
+	  //	   $display ("W- ERROR");
 	  opcode_o <= buffer[read_ptr];
 	  valid_o <= 1;
 	  read_ptr <= (read_ptr + 1) % 4;
@@ -142,7 +150,7 @@ module cpu_ififo (/*AUTOARG*/
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	end
 	else if (write_en_i && read_en_i && (can_write_32) && (can_read_16)) begin
-	  // $display ("V");
+	  //	   $display ("V");
 	  buffer[write_ptr] <= data_i[31:16];
 	  buffer[(write_ptr+1)%4] <= data_i[15:0];
 	  write_ptr <= (write_ptr + 2) % 4;
@@ -157,12 +165,12 @@ module cpu_ififo (/*AUTOARG*/
 	else begin
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	  // #1 $display ("U - ERROR %x %x %x %x %x %x", write_en_i, read_en_i, write_ptr, read_ptr, ptr
-	    // _gap, full_o);
+	  // _gap, full_o);
 	end
       end else begin
 	// $display ("C w %x r %x w32 %x", write_en_i, read_en_i, can_write_32);
 	if (write_en_i && (!read_en_i) && (can_write_32)) begin
-	  // $display ("D");
+	  //	   $display ("D");
 	  buffer[write_ptr] <= data_i[31:16];
 	  buffer[write_ptr+1] <= data_i[15:0];
 	  write_ptr <= write_ptr + 2;
@@ -170,7 +178,7 @@ module cpu_ififo (/*AUTOARG*/
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	end
 	else if ((!write_en_i) && read_en_i && (can_read_48)) begin
-	  // $display ("E");
+	  //	   $display ("E");
 	  opcode_o <= buffer[read_ptr];
 	  operand_o[31:16] <= buffer[read_ptr+1];
 	  operand_o[15:0] <= buffer[read_ptr+2];
@@ -178,20 +186,22 @@ module cpu_ififo (/*AUTOARG*/
 	  read_ptr <= read_ptr + 3;
 	  ptr_gap = ptr_gap - 3;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
+	  //	  #1 $display ("eee... opcode_o = %x, %x", opcode_o, is_long_insn(opcode_o));
+	  //	  #1 $display ("eee... buffer = 0x%x%x%x%x", buffer[read_ptr], buffer[read_ptr+1], buffer[read_ptr+2], buffer[read_ptr+3]);
 	end
 	else if (write_en_i && read_en_i && buffer_empty) begin
-	  // $display ("F data = 0x%x", data_i);
+	  //	   $display ("F data = 0x%x", data_i);
 	  buffer[write_ptr] <= data_i[31:16];
 	  buffer[write_ptr+1] <= data_i[15:0];
 	  write_ptr <= write_ptr + 2;
 	  valid_o <= 0;
 	  ptr_gap = ptr_gap + 2;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
-	  // #1 $display ("f... buffer = 0x%x%x%x%x", buffer[read_ptr], buffer[read_ptr+1], buffer[read_
+	  //	  // #1 $display ("f... buffer = 0x%x%x%x%x", buffer[read_ptr], buffer[read_ptr+1], buffer[read_
 	    // ptr+2], buffer[read_ptr+3]);
 	end
 	else if (write_en_i && read_en_i && buffer_full) begin
-	  // $display ("G");
+	  //	   $display ("G");
 	  opcode_o <= buffer[read_ptr];
 	  operand_o[31:16] <= buffer[read_ptr+1];
 	  operand_o[15:0] <= buffer[read_ptr+2];
@@ -201,7 +211,7 @@ module cpu_ififo (/*AUTOARG*/
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	end
 	else if (write_en_i && read_en_i && (can_write_32) && (can_read_48)) begin
-	  // $display ("H");
+	  //	   $display ("H");
 	  buffer[write_ptr] <= data_i[31:16];
 	  buffer[write_ptr+1] <= data_i[15:0];
 	  write_ptr <= write_ptr + 2;
@@ -214,7 +224,7 @@ module cpu_ififo (/*AUTOARG*/
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	end
 	else if (write_en_i && read_en_i && (ptr_gap == 2)) begin
-	  // $display ("I");
+	  //	   $display ("I");
 	  buffer[(write_ptr)%4] <= data_i[31:16];
 	  buffer[(write_ptr+1)%4] <= data_i[15:0];
 	  write_ptr <= (write_ptr + 2) % 4;
@@ -231,7 +241,8 @@ module cpu_ififo (/*AUTOARG*/
 	  // #1 $display ("0x%x 0x%x 0x%x 0x%x", write_ptr, write_ptr+1, write_ptr+2, write_ptr+3);
 	end
 	else if (write_en_i && read_en_i && (ptr_gap == 1)) begin
-	  // $display ("J data = 0x%x", data_i);
+	  //	  $display ("J data = 0x%x, read_ptr = 0x%x", data_i, read_ptr);
+	  //	  $display ("i... rbuffer[0x%x] = 0x%x%x%x%x", read_ptr, buffer[read_ptr], buffer[(read_ptr+1)%4], buffer[(read_ptr+2)%4], buffer[(read_ptr+3)%4]);
 	  opcode_o <= buffer[read_ptr];
 	  operand_o[31:16] <= data_i[31:16];
 	  operand_o[15:0] <= data_i[15:0];
@@ -243,7 +254,7 @@ module cpu_ififo (/*AUTOARG*/
 	  //	    +1)%4], buffer[(read_ptr+2)%4], buffer[(read_ptr+3)%4]);
 	end 
 	else if (write_en_i && read_en_i && (ptr_gap == 3)) begin
-	  // $display ("K data = 0x%x", data_i);
+	  //	   $display ("K data = 0x%x", data_i);
 	  buffer[write_ptr] <= data_i[31:16];
 	  buffer[write_ptr+1] <= data_i[15:0];
 	  write_ptr <= write_ptr + 2;

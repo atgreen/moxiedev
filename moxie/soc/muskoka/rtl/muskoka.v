@@ -26,6 +26,9 @@ module muskoka (/*AUTOARG*/
   input  rst_i, clk_i;
   reg 	 rst;
 
+  // Always zero
+  wire [0:0] zero = 0;
+  
   // Moxie/Wishbone interface
   wire [31:0] iw2mx_dat;
   wire [31:0] mx2iw_dat;
@@ -68,6 +71,7 @@ module muskoka (/*AUTOARG*/
   // synthesis translate_off
   initial
     begin
+      $dumpvars(1,core);
       $dumpvars(1,insn_intercon);
       $dumpvars(1,data_intercon);
       $dumpvars(1,rom);
@@ -98,12 +102,17 @@ module muskoka (/*AUTOARG*/
 		 .wbm_ack_o (iw2mx_ack),
 		 
 		 .wbs_0_dat_o (br2iw_dat),
-		 .wbs_0_adr_i (iw2br_adr),
+		 .wbs_0_adr_o (iw2br_adr),
 		 .wbs_0_sel_o (iw2br_sel),
 		 .wbs_0_we_o (iw2br_we),
 		 .wbs_0_cyc_o (iw2br_cyc),
 		 .wbs_0_stb_o (iw2br_stb),
-		 .wbs_0_ack_i (br2iw_ack));
+		 .wbs_0_ack_i (br2iw_ack),
+
+		 .wbs_1_ack_i (zero),
+		 .wbs_2_ack_i (zero),
+		 .wbs_3_ack_i (zero));
+
     
   wb_intercon #(.slave_0_mask (32'b1111_1111_1111_1111_1111_0000_0000_0000),
 	        .slave_0_addr (32'b0000_0100_0000_0000_0000_0000_0000_0000),
@@ -115,6 +124,7 @@ module muskoka (/*AUTOARG*/
 	        .slave_3_addr (32'b1111_1111_1111_1111_1111_1111_1111_1111))
 
   data_intercon (.wbm_dat_o (dw2mx_dat),
+		 .wbm_dat_i (mx2dw_dat),
 		 .wbm_adr_i (mx2dw_adr),
 		 .wbm_sel_i (dw2mx_sel),
 		 .wbm_we_i (mx2dw_we),
@@ -122,13 +132,18 @@ module muskoka (/*AUTOARG*/
 		 .wbm_stb_i (mx2dw_stb),
 		 .wbm_ack_o (dw2mx_ack),
 		 
-		 .wbs_0_dat_o (tr2dw_dat),
-		 .wbs_0_adr_i (dw2tr_adr),
+		 .wbs_0_dat_o (dw2tr_dat),
+		 .wbs_0_dat_i (tr2dw_dat),
+		 .wbs_0_adr_o (dw2tr_adr),
 		 .wbs_0_sel_o (dw2tr_sel),
 		 .wbs_0_we_o (dw2tr_we),
 		 .wbs_0_cyc_o (dw2tr_cyc),
 		 .wbs_0_stb_o (dw2tr_stb),
-		 .wbs_0_ack_i (tr2dw_ack));
+		 .wbs_0_ack_i (tr2dw_ack),
+
+		 .wbs_1_ack_i (zero),
+		 .wbs_2_ack_i (zero),
+		 .wbs_3_ack_i (zero));
   
   bootrom rom (.wb_dat_i (iw2br_dat),
 	       .wb_dat_o (br2iw_dat),

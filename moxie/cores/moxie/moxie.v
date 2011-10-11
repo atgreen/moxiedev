@@ -71,9 +71,10 @@ module moxie (/*AUTOARG*/
   wire [3:0]  dx_register_write_index;
   wire [3:0]  xw_register_write_index;
   wire [31:0] xw_memory_address;
-  wire [31:0] xw_result;
+  wire [31:0] xw_reg_result;
+  wire [31:0] xw_mem_result;
   wire [3:0]  wr_register_write_index;
-  wire [31:0] wr_result;
+  wire [31:0] wr_reg_result;
   wire [3:0]  dx_regA;
   wire [3:0]  dx_regB;
   wire [3:0]  dx_regC;
@@ -116,7 +117,7 @@ module moxie (/*AUTOARG*/
 			 .reg_write_index_i (wr_register_write_index),
 			 .reg_read_index1_i (xr_reg_index1), 
 			 .reg_read_index2_i (xr_reg_index2), 
-			 .value_i (wr_result));
+			 .value_i (wr_reg_result));
 
   always @(posedge clk_i)
     if (rst_i) begin
@@ -176,7 +177,8 @@ module moxie (/*AUTOARG*/
 			     // Outputs
 			     .register_write_enable_o (xw_register_write_enable),
 			     .register_write_index_o (xw_register_write_index),
-			     .result_o (xw_result),
+			     .reg_result_o (xw_reg_result),
+			     .mem_result_o (xw_mem_result),
 			     .memory_address_o (xw_memory_address),
 			     .memory_read_enable_o (xw_loadp),
 			     .memory_write_enable_o (xw_memory_we));
@@ -189,11 +191,12 @@ module moxie (/*AUTOARG*/
 			   .loadp_i (xw_loadp),
 			   .memory_we_i (xw_memory_we),
 			   .memory_address_i (xw_memory_address),
-			   .result_i (xw_result),
+			   .reg_result_i (xw_reg_result),
+			   .mem_result_i (xw_mem_result),
 			   // Outputs
 			   .register_write_index_o (wr_register_write_index),
 			   .register_we_o (wr_register_write_enable),
-			   .result_o (wr_result));
+			   .reg_result_o (wr_reg_result));
 
   assign hazard_war = 0;
 

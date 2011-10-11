@@ -5,7 +5,8 @@
 	mov	$r2, $r0
 	mov	$r3, $r0
 	mov	$r4, $r0
-loop:	inc	$r0, 0x1 # Increment $r0
+loop:	push	$sp, $r0
+	inc	$r0, 0x1 # Increment $r0
 	inc	$r1, 0x1
 	inc	$r2, 0x1
 	inc	$r3, 0x1 

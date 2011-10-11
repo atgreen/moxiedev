@@ -1,4 +1,4 @@
-[timestart] 1427860
+[timestart] 1972780
 [size] 1680 993
 [pos] -1 -1
 *-14.000000 86580 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
@@ -70,24 +70,24 @@ sim.soc.core.stage_execute.riA_i[3:0]
 sim.soc.core.stage_execute.riB_i[3:0]
 @22
 sim.soc.core.stage_execute.operand_i[31:0]
-sim.soc.core.stage_execute.result_o[31:0]
 @1000200
 -EXECUTE UNIT
 @800200
 -WRITE UNIT
-@22
-sim.soc.core.stage_write.result_i[31:0]
 @2022
 ^2 ../gtkwave/gtkwave-regs.txt
 sim.soc.core.stage_write.register_write_index_i[3:0]
-@22
-sim.soc.core.stage_write.cache.address_i[31:0]
 @28
-sim.soc.core.stage_write.cache.we_i
+sim.soc.core.stage_write.memory_we_i
 @22
-sim.soc.core.stage_write.cache.data_i[31:0]
-@23
-sim.soc.core.stage_write.cache.data_o[31:0]
+sim.soc.core.stage_write.memory_address_i[31:0]
+sim.soc.core.stage_write.mem_result_i[31:0]
+sim.soc.core.stage_write.reg_result_i[31:0]
+@28
+sim.soc.core.stage_write.register_we_i
+@2023
+^2 ../gtkwave/gtkwave-regs.txt
+sim.soc.core.stage_write.register_write_index_i[3:0]
 @1000200
 -WRITE UNIT
 [pattern_trace] 1

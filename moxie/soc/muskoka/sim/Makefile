@@ -1,7 +1,8 @@
 MSOURCES = sim.v testram.v \
 	$(wildcard ../rtl/*.v) \
 	$(wildcard ../../../cores/moxie/*.v) \
-	$(wildcard ../../../cores/wishbone/*.v)
+	$(wildcard ../../../cores/wishbone/*.v) \
+	$(wildcard ../../../cores/uart16550/rtl/verilog/*.v) 
 
 PROJECT = muskoka
 
@@ -12,7 +13,8 @@ bootrom.vh: ../../../firmware/bootrom.s
 	moxie-elf-objcopy -O verilog bootrom.x bootrom.vh
 
 a.out: $(MSOURCES) bootrom.vh
-	iverilog -I../../../cores/moxie $(MSOURCES)
+	iverilog -I../../../cores/moxie \
+		 -I../../../cores/uart16550/rtl/verilog $(MSOURCES)
 
 clean: 
 	-rm -f a.out *.vh *.x *.vcd *~

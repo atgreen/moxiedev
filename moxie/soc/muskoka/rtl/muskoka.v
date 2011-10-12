@@ -18,6 +18,8 @@
 // 02110-1301, USA.
 
 module muskoka (/*AUTOARG*/
+  // Outputs
+  uart_txd_o,
   // Inputs
   rst_i, clk_i
   );
@@ -25,6 +27,9 @@ module muskoka (/*AUTOARG*/
   // --- Clock and Reset ------------------------------------------
   input  rst_i, clk_i;
   reg 	 rst;
+
+  // --- UART -----------------------------------------------------
+  output  uart_txd_o;
 
   // Always zero
   wire [0:0] zero = 0;
@@ -58,16 +63,6 @@ module muskoka (/*AUTOARG*/
   wire        iw2br_stb;
   wire 	      br2iw_ack;
 
-  // Testram/Wishbone interface
-  wire [31:0] dw2tr_dat;
-  wire [31:0] tr2dw_dat;
-  wire [31:0] dw2tr_adr;
-  wire [1:0]  dw2tr_sel;
-  wire 	      dw2tr_we;
-  wire 	      dw2tr_cyc;
-  wire        dw2tr_stb;
-  wire 	      tr2dw_ack;
-
   // synthesis translate_off
   initial
     begin
@@ -75,12 +70,11 @@ module muskoka (/*AUTOARG*/
       $dumpvars(1,insn_intercon);
       $dumpvars(1,data_intercon);
       $dumpvars(1,rom);
-      $dumpvars(1,ram);
     end
   // synthesis translate_on
 
   // slave 0 - bootrom @ 0x1000 for 512 bytes
-  // slave 1 - testram @ 0x4000000 for 4096 bytes
+  // slave 1 - unused
   // slave 2 - unused
   // slave 3 - unused
   
@@ -132,18 +126,27 @@ module muskoka (/*AUTOARG*/
 		 .wbm_stb_i (mx2dw_stb),
 		 .wbm_ack_o (dw2mx_ack),
 		 
-		 .wbs_0_dat_o (dw2tr_dat),
-		 .wbs_0_dat_i (tr2dw_dat),
-		 .wbs_0_adr_o (dw2tr_adr),
-		 .wbs_0_sel_o (dw2tr_sel),
-		 .wbs_0_we_o (dw2tr_we),
-		 .wbs_0_cyc_o (dw2tr_cyc),
-		 .wbs_0_stb_o (dw2tr_stb),
-		 .wbs_0_ack_i (tr2dw_ack),
+		 .wbs_0_dat_o (dw2ua_dat),
+		 .wbs_0_dat_i (ua2dw_dat),
+		 .wbs_0_adr_o (dw2ua_adr),
+		 .wbs_0_sel_o (dw2ua_sel),
+		 .wbs_0_we_o (dw2ua_we),
+		 .wbs_0_cyc_o (dw2ua_cyc),
+		 .wbs_0_stb_o (dw2ua_stb),
+		 .wbs_0_ack_i (ua2dw_ack),
 
 		 .wbs_1_ack_i (zero),
 		 .wbs_2_ack_i (zero),
 		 .wbs_3_ack_i (zero));
+
+  uart_top uart (.wb_dat_i (dw2ua_dat),
+		 .wb_dat_o (ua2dw_dat),
+		 .wb_adr_i (dw2ua_adr),
+		 .wb_sel_i (dw2ua_sel),
+		 .wb_we_i (dw2ua_we),
+		 .wb_cyc_i (dw2ua_cyc),
+		 .wb_stb_i (dw2ua_stb),
+		 .wb_ack_o (ua2dw_ack));
   
   bootrom rom (.wb_dat_i (iw2br_dat),
 	       .wb_dat_o (br2iw_dat),
@@ -154,15 +157,6 @@ module muskoka (/*AUTOARG*/
 	       .wb_stb_i (iw2br_stb),
 	       .wb_ack_o (br2iw_ack));
 
-  testram ram (.wb_dat_i (dw2tr_dat),
-	       .wb_dat_o (tr2dw_dat),
-	       .wb_adr_i (dw2tr_adr),
-	       .wb_sel_i (dw2tr_sel),
-	       .wb_we_i (dw2tr_we),
-	       .wb_cyc_i (dw2tr_cyc),
-	       .wb_stb_i (dw2tr_stb),
-	       .wb_ack_o (tr2dw_ack));
-    
   moxie core (.rst_i (rst_i),
 	      .clk_i (clk_i),
 

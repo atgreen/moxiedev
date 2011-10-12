@@ -57,20 +57,26 @@ set_location_assignment -to imem_data_i[13] PIN_W12
 set_location_assignment -to imem_data_i[14] PIN_AC9
 set_location_assignment -to imem_data_i[15] PIN_AC10
 
-# Create timing assignments
-create_base_clock -fmax "50 MHz" -target PIN_N2 clk_i
+# UART
+set_location_assignment -to uart_txd_i PIN_B25 
 
-set_global_assignment -name VERILOG_FILE muskoka.v
-set_global_assignment -name VERILOG_FILE cpu_fetch.v
-set_global_assignment -name VERILOG_FILE cpu_ififo.v
-set_global_assignment -name VERILOG_FILE cpu_decode.v
-set_global_assignment -name VERILOG_FILE cpu_execute.v
-set_global_assignment -name VERILOG_FILE cpu_registerfile.v
-set_global_assignment -name VERILOG_FILE wb_intercon.v
-set_global_assignment -name VERILOG_FILE bootrom.v
-set_global_assignment -name VERILOG_FILE testram.v
-set_global_assignment -name VERILOG_FILE moxie.v
-set_global_assignment -name VERILOG_FILE altera_sdram/sdram.v
-set_global_assignment -name VERILOG_FILE altera_sdram/sdram_controller.v
+# Create timing assignments
+create_base_clock -fmax "50 MHz" -target PIN_N2 clk50_i
+
+set_global_assignment -name VERILOG_FILE muskoka_de2.v
+set_global_assignment -name VERILOG_FILE pll.v
+set_global_assignment -name VERILOG_FILE ../../rtl/muskoka.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/moxie/cpu_fetch.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/moxie/cpu_ififo.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/moxie/cpu_decode.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/moxie/cpu_execute.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/moxie/cpu_write.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/moxie/cpu_registerfile.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/moxie/dcache.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/moxie/bootrom.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/moxie/moxie.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/wishbone/wb_intercon.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/altera_sdram/sdram.v
+set_global_assignment -name VERILOG_FILE ../../../../cores/altera_sdram/sdram_controller.v
 
 project_close

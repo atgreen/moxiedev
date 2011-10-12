@@ -81,4 +81,3 @@
 `define OP_UMOD_L 6'b111101
 `define OP_XOR    6'b111110
 
-

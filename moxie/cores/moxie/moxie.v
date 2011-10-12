@@ -79,6 +79,10 @@ module moxie (/*AUTOARG*/
   wire [3:0]  dx_regB;
   wire [3:0]  dx_regC;
 
+  // Stack and frame pointers
+  wire [31:0] rx_sp;
+  wire [31:0] rx_fp;
+
   wire [0:0]  xf_branch_flag;
   wire [31:0] xf_branch_target;
  
@@ -88,6 +92,8 @@ module moxie (/*AUTOARG*/
   wire [3:0]  dx_reg_index2;
   wire [3:0]  xr_reg_index1;
   wire [3:0]  xr_reg_index2;
+
+  wire [0:0]  stall_x;
 
   wire [0:0] hazard_war;
 
@@ -116,7 +122,9 @@ module moxie (/*AUTOARG*/
 			 .write_enable_i (wr_register_write_enable), 
 			 .reg_write_index_i (wr_register_write_index),
 			 .reg_read_index1_i (xr_reg_index1), 
-			 .reg_read_index2_i (xr_reg_index2), 
+			 .reg_read_index2_i (xr_reg_index2),
+			 .sp_o (rx_sp),
+			 .fp_o (rx_fp),
 			 .value_i (wr_reg_result));
 
   always @(posedge clk_i)
@@ -141,7 +149,7 @@ module moxie (/*AUTOARG*/
 			 .clk_i			(clk_i),
 			 .branch_flag_i (xf_branch_flag),
 			 .branch_target_i (xf_branch_target),
-			 .stall_i               (hazard_war),
+			 .stall_i               (hazard_war | stall_x),
 			 .imem_data_i           (wb_I_dat_i[31:0]));
     
   cpu_decode stage_decode (// Inputs
@@ -150,7 +158,7 @@ module moxie (/*AUTOARG*/
 			   .opcode_i		(fd_opcode[15:0]),
 			   .operand_i		(fd_operand[31:0]),
 			   .valid_i		(fd_valid),
-			   .stall_i             (hazard_war),
+			   .stall_i             (hazard_war | stall_x),
 			   // Outputs
 			   .register_write_enable_o (dx_register_write_enable),
 			   .register_write_index_o (dx_register_write_index),
@@ -163,6 +171,7 @@ module moxie (/*AUTOARG*/
 			     .rst_i			(rst_i),
 			     .clk_i			(clk_i),
 			     .stall_i        (hazard_war),
+			     .stall_o        (stall_x),
 			     .op_i           (dx_op),
 			     .operand_i		(dx_operand[31:0]),
 			     .riA_i (dx_reg_index1),
@@ -181,7 +190,9 @@ module moxie (/*AUTOARG*/
 			     .mem_result_o (xw_mem_result),
 			     .memory_address_o (xw_memory_address),
 			     .memory_read_enable_o (xw_loadp),
-			     .memory_write_enable_o (xw_memory_we));
+			     .memory_write_enable_o (xw_memory_we),
+			     .sp_i (rx_sp),
+			     .fp_i (rx_fp));
   
   cpu_write stage_write (  // Inputs
 			   .rst_i (rst_i),

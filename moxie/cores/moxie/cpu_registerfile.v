@@ -19,10 +19,10 @@
 
 module cpu_registerfile (/*AUTOARG*/
   // Outputs
-  value1_o, value2_o,
+  value1_o, value2_o, sp_o, fp_o,
   // Inputs
-  rst_i, clk_i, write_enable_i, reg_write_index_i,
-  reg_read_index1_i, reg_read_index2_i, value_i
+  rst_i, clk_i, write_enable_i, reg_write_index_i, reg_read_index1_i,
+  reg_read_index2_i, value_i
   );
    
   // --- Clock and Reset ------------------------------------------
@@ -35,12 +35,18 @@ module cpu_registerfile (/*AUTOARG*/
   input [31:0] value_i;
   output [31:0] value1_o;
   output [31:0] value2_o;
+
+  output [31:0] sp_o;
+  output [31:0] fp_o;
   
   wire [31:0] value1_o = registers[reg_read_index1_i];
   wire [31:0] value2_o = registers[reg_read_index2_i];
 
   reg [31:0] registers[0:15];
 
+  assign fp_o = registers[0];
+  assign sp_o = registers[1];
+  
   always @ (posedge rst_i or posedge clk_i) begin
     if (rst_i) begin
       registers[0] <= 32'b00000000000000000000000000000000;

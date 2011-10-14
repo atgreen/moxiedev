@@ -17,10 +17,8 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 // 02110-1301, USA.
 
-// Set the boot address upon system reset
-`define BOOT_ADDRESS 32'h00001000 
-
-module cpu_fetch (/*AUTOARG*/
+module cpu_fetch #(parameter BOOT_ADDRESS = 32'h00001000
+		   )(/*AUTOARG*/
   // Outputs
   imem_address_o, opcode, valid, operand,
   // Inputs
@@ -49,17 +47,18 @@ module cpu_fetch (/*AUTOARG*/
   // --- Test memory.  Let's just read from an internal array.  */
   //  reg [7:0] 	MEM [0:128000];
   reg [7:0] 	MEM [0:32000];
-  reg [31:0] 	PC; /* For testing only.  */
+  reg [31:0] 	fetchPC; /* For testing only.  */
 
   wire [0:0] 	valid, empty, full;
   reg 		wren, rden, flush_ififo;
   reg  [31:0] 	wrdata;
+  reg [0:0] 	newPC_p;
   wire [15:0] opcode;
   wire [31:0] operand;
 
   wire [31:0]  imem_address_o;
   
-  assign imem_address_o = PC;
+  assign imem_address_o = fetchPC;
   
   // The instruction FIFO
   cpu_ififo ififo (
@@ -72,26 +71,31 @@ module cpu_fetch (/*AUTOARG*/
 		   // Inputs
 		   .rst_i		(rst_i | flush_ififo),
 		   .clk_i		(clk_i),
+		   .PC_i                (fetchPC),
+		   .newPC_p_i           (newPC_p),
 		   .write_en_i		(wren),
 		   .read_en_i		(rden),
 		   .data_i	(wrdata[31:0]));
   
   always @(posedge clk_i) begin
     if (rst_i) begin
-       PC <= #1 `BOOT_ADDRESS;
+      fetchPC <= #1 BOOT_ADDRESS;
+      newPC_p <= #1 1;
     end else begin 
        if (! stall_i) begin
 	 if (branch_flag_i) begin
-	   PC <= branch_target_i;
+	   fetchPC <= branch_target_i;
+	   newPC_p <= 1;
 	   wren <= 0;
 	   rden <= 0;
 	   flush_ififo <= 1;
 	 end else begin
+	   newPC_p <= 0;
 	   flush_ififo <= 0;
 	   if (! full) begin
 	     wren <= 1;
 	     wrdata <= imem_data_i;
-	     PC <= PC+4;
+	     fetchPC <= fetchPC+4;
 	   end else begin
 	     wren <= 0;
 	   end

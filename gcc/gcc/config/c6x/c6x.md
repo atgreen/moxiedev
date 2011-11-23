@@ -166,6 +166,17 @@
   "n,y"
   (const_string "n"))
 
+;; This describes the relationship between operands and register files.
+;; For example, "sxs" means that operands 0 and 2 determine the side of
+;; the machine, and operand 1 can optionally use the cross path.  "dt" and
+;; "td" are used to describe loads and stores.
+;; Used for register renaming in loops for improving modulo scheduling.
+(define_attr "op_pattern"
+  "unknown,dt,td,sx,sxs,ssx"
+  (cond [(eq_attr "type" "load") (const_string "td")
+	 (eq_attr "type" "store") (const_string "dt")]
+	(const_string "unknown")))
+
 (define_attr "has_shadow"
   "n,y"
   (const_string "n"))
@@ -567,6 +578,7 @@
    %|%.\\tadda%D2\\t%$\\t%1, %2, %0"
   [(set_attr "units" "d")
    (set_attr "cross" "y,n")
+   (set_attr "op_pattern" "unknown")
    (set_attr "predicable" "no")])
 
 ;; Move instruction patterns
@@ -599,6 +611,7 @@
   [(set_attr "type" "*,*,*,*,*,*,load,load,load,load,store,store,store,store")
    (set_attr "units62" "dls,dls,ls,ls,s,s,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr")
    (set_attr "units64" "dls,dls,ls,ls,dl,s,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr")
+   (set_attr "op_pattern" "sx,sx,sx,sx,*,*,*,*,*,*,*,*,*,*")
    (set_attr "addr_regfile" "*,*,*,*,*,*,a,b,b,a,a,b,b,a")
    (set_attr "dest_regfile" "*,*,*,*,*,*,a,a,b,b,a,a,b,b")
    (set_attr "cross" "n,n,y,y,n,n,n,y,n,y,n,y,n,y")])
@@ -631,6 +644,7 @@
   [(set_attr "type" "*,*,*,*,*,*,*,*,*,load,load,load,load,store,store,store,store")
    (set_attr "units62" "dls,dls,ls,ls,s,s,d,d,*,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr")
    (set_attr "units64" "dls,dls,ls,ls,dl,s,d,d,*,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr,d_addr")
+   (set_attr "op_pattern" "sx,sx,sx,sx,*,*,*,*,*,*,*,*,*,*,*,*,*")
    (set_attr "addr_regfile" "*,*,*,*,*,*,*,*,*,a,b,b,a,a,b,b,a")
    (set_attr "dest_regfile" "*,*,*,*,*,*,*,*,*,a,a,b,b,a,a,b,b")
    (set_attr "cross" "n,n,y,y,n,n,y,n,*,n,y,n,y,n,y,n,y")
@@ -855,7 +869,7 @@
 
 (define_insn "<ext_name><mode>si2"
  [(set (match_operand:SI 0 "register_operand" "=a,b,a,?a, b,?b")
-       (any_ext: SI (match_operand:QIHIM 1 "nonimmediate_operand" "a,b,Q, R, R, Q")))]
+       (any_ext:SI (match_operand:QIHIM 1 "nonimmediate_operand" "a,b,Q, R, R, Q")))]
   ""
  "@
   %|%.\\text<u>\\t%$\\t%1, <ext_shift>, <ext_shift>, %0
@@ -1389,6 +1403,106 @@
     DONE;
   }"
 )
+
+;; -------------------------------------------------------------------------
+;; Doloop
+;; -------------------------------------------------------------------------
+
+; operand 0 is the loop count pseudo register
+; operand 1 is the number of loop iterations or 0 if it is unknown
+; operand 2 is the maximum number of loop iterations
+; operand 3 is the number of levels of enclosed loops
+; operand 4 is the label to jump to at the top of the loop
+(define_expand "doloop_end"
+  [(parallel [(set (pc) (if_then_else
+			  (ne (match_operand:SI 0 "" "")
+			      (const_int 1))
+			  (label_ref (match_operand 4 "" ""))
+			  (pc)))
+	      (set (match_dup 0)
+		   (plus:SI (match_dup 0)
+			    (const_int -1)))
+	      (clobber (match_scratch:SI 5 ""))])]
+  "TARGET_INSNS_64PLUS && optimize"
+{
+  /* The loop optimizer doesn't check the predicates... */
+  if (GET_MODE (operands[0]) != SImode)
+    FAIL;
+})
+
+(define_insn "mvilc"
+  [(set (reg:SI REG_ILC)
+	(unspec [(match_operand:SI 0 "register_operand" "a,b")] UNSPEC_MVILC))]
+  "TARGET_INSNS_64PLUS"
+  "%|%.\\tmvc\\t%$\\t%0, ILC"
+  [(set_attr "predicable" "no")
+   (set_attr "cross" "y,n")
+   (set_attr "units" "s")
+   (set_attr "dest_regfile" "b")
+   (set_attr "type" "mvilc")])
+  
+(define_insn "sploop"
+  [(unspec_volatile [(match_operand:SI 0 "const_int_operand" "i")
+		     (reg:SI REG_ILC)]
+		    UNSPECV_SPLOOP)]
+  "TARGET_INSNS_64PLUS"
+  "%|%.\\tsploop\t%0"
+  [(set_attr "predicable" "no")
+   (set_attr "type" "sploop")])
+  
+(define_insn "spkernel"
+  [(set (pc)
+	(if_then_else
+	 (ne (unspec_volatile:SI
+	      [(match_operand:SI 0 "const_int_operand" "i")
+	       (match_operand:SI 1 "const_int_operand" "i")]
+	      UNSPECV_SPKERNEL)
+	     (const_int 1))
+	 (label_ref (match_operand 2 "" ""))
+	 (pc)))]
+  "TARGET_INSNS_64PLUS"
+  "%|%.\\tspkernel\t%0, %1"
+  [(set_attr "predicable" "no")
+   (set_attr "type" "spkernel")])
+  
+(define_insn "loop_end"
+  [(set (pc)
+	(if_then_else (ne (match_operand:SI 3 "nonimmediate_operand" "0,0,0,*r")
+			  (const_int 1))
+		      (label_ref (match_operand 1 "" ""))
+		      (pc)))
+   (set (match_operand:SI 0 "nonimmediate_operand" "=AB,*r,m,m")
+	(plus:SI (match_dup 3)
+		 (const_int -1)))
+   (clobber (match_scratch:SI 2 "=X,&AB,&AB,&AB"))]
+  "TARGET_INSNS_64PLUS && optimize"
+  "#"
+  [(set_attr "type" "spkernel")])
+
+(define_split
+  [(set (pc)
+	(if_then_else (ne (match_operand:SI 3 "nonimmediate_operand" "")
+			  (const_int 1))
+		      (label_ref (match_operand 1 "" ""))
+		      (pc)))
+   (set (match_operand:SI 0 "memory_operand" "")
+	(plus:SI (match_dup 3)
+		 (const_int -1)))
+   (clobber (match_scratch 2))]
+  ""
+  [(set (match_dup 2) (plus:SI (match_dup 3) (const_int -1)))
+   (set (match_dup 0) (match_dup 2))
+   (set (pc)
+	(if_then_else (ne (match_dup 2) (const_int 0))
+		      (label_ref (match_dup 1))
+		      (pc)))]
+{
+  if (!REG_P (operands[3]))
+    {
+      emit_move_insn (operands[2], operands[3]);
+      operands[3] = operands[2];
+    }
+})
 
 ;; -------------------------------------------------------------------------
 ;; Delayed-branch real jumps and shadows

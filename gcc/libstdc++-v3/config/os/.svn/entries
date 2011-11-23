@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/config/os
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-30T08:57:52.037256Z
-178286
-paolo
+2011-10-14T06:57:55.947344Z
+179961
+ktietz
 
 
 
@@ -53,6 +53,9 @@ dir
 bionic
 dir
 
+mingw32-w64
+dir
+
 djgpp
 dir
 
@@ -65,9 +68,9 @@ dir
 irix
 dir
 
-solaris
+generic
 dir
 
-generic
+solaris
 dir
 

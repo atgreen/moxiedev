@@ -610,8 +610,8 @@ iso_fortran_env_symbol;
 #undef NAMED_DERIVED_TYPE
 
 #define NAMED_INTCST(a,b,c,d) a,
-#define NAMED_REALCST(a,b,c) a,
-#define NAMED_CMPXCST(a,b,c) a,
+#define NAMED_REALCST(a,b,c,d) a,
+#define NAMED_CMPXCST(a,b,c,d) a,
 #define NAMED_LOGCST(a,b,c) a,
 #define NAMED_CHARKNDCST(a,b,c) a,
 #define NAMED_CHARCST(a,b,c) a,
@@ -2581,8 +2581,8 @@ gfc_symtree* gfc_find_symtree_in_proc (const char *, gfc_namespace *);
 int gfc_find_symbol (const char *, gfc_namespace *, int, gfc_symbol **);
 int gfc_find_sym_tree (const char *, gfc_namespace *, int, gfc_symtree **);
 int gfc_get_symbol (const char *, gfc_namespace *, gfc_symbol **);
-gfc_try verify_c_interop (gfc_typespec *);
-gfc_try verify_c_interop_param (gfc_symbol *);
+gfc_try gfc_verify_c_interop (gfc_typespec *);
+gfc_try gfc_verify_c_interop_param (gfc_symbol *);
 gfc_try verify_bind_c_sym (gfc_symbol *, gfc_typespec *, int, gfc_common_head *);
 gfc_try verify_bind_c_derived_type (gfc_symbol *);
 gfc_try verify_com_block_vars_c_interop (gfc_common_head *);
@@ -2630,6 +2630,7 @@ gfc_try gfc_check_symbol_typed (gfc_symbol*, gfc_namespace*, bool, locus);
 gfc_namespace* gfc_find_proc_namespace (gfc_namespace*);
 
 bool gfc_is_associate_pointer (gfc_symbol*);
+gfc_symbol * gfc_find_dt_in_generic (gfc_symbol *);
 
 /* intrinsic.c -- true if working in an init-expr, false otherwise.  */
 extern bool gfc_init_expr_flag;
@@ -2831,7 +2832,7 @@ void gfc_procedure_use (gfc_symbol *, gfc_actual_arglist **, locus *);
 void gfc_ppc_use (gfc_component *, gfc_actual_arglist **, locus *);
 gfc_symbol *gfc_search_interface (gfc_interface *, int,
 				  gfc_actual_arglist **);
-gfc_try gfc_extend_expr (gfc_expr *, bool *);
+match gfc_extend_expr (gfc_expr *);
 void gfc_free_formal_arglist (gfc_formal_arglist *);
 gfc_try gfc_extend_assign (gfc_code *, gfc_namespace *);
 gfc_try gfc_add_interface (gfc_symbol *);
@@ -2874,11 +2875,17 @@ match gfc_match_rvalue (gfc_expr **);
 match gfc_match_varspec (gfc_expr*, int, bool, bool);
 int gfc_check_digit (char, int);
 bool gfc_is_function_return_value (gfc_symbol *, gfc_namespace *);
+gfc_try gfc_convert_to_structure_constructor (gfc_expr *, gfc_symbol *,
+					      gfc_expr **,
+					      gfc_actual_arglist **, bool);
 
 /* trans.c */
 void gfc_generate_code (gfc_namespace *);
 void gfc_generate_module_code (gfc_namespace *);
 void gfc_init_coarray_decl (bool);
+
+/* trans-intrinsic.c */
+bool gfc_inline_intrinsic_function_p (gfc_expr *);
 
 /* bbt.c */
 typedef int (*compare_fn) (void *, void *);

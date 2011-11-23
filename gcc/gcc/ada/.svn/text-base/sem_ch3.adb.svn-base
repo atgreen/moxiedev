@@ -706,11 +706,9 @@ package body Sem_Ch3 is
      (Related_Nod : Node_Id;
       N           : Node_Id) return Entity_Id
    is
-      Loc                 : constant Source_Ptr := Sloc (Related_Nod);
       Anon_Type           : Entity_Id;
       Anon_Scope          : Entity_Id;
       Desig_Type          : Entity_Id;
-      Decl                : Entity_Id;
       Enclosing_Prot_Type : Entity_Id := Empty;
 
    begin
@@ -889,7 +887,7 @@ package body Sem_Ch3 is
       --  proper Master for the created tasks.
 
       if Nkind (Related_Nod) = N_Object_Declaration
-         and then Expander_Active
+        and then Expander_Active
       then
          if Is_Interface (Desig_Type)
            and then Is_Limited_Record (Desig_Type)
@@ -901,28 +899,9 @@ package body Sem_Ch3 is
 
          elsif Has_Task (Desig_Type)
            and then Comes_From_Source (Related_Nod)
-           and then not Restriction_Active (No_Task_Hierarchy)
          then
-            if not Has_Master_Entity (Current_Scope) then
-               Decl :=
-                 Make_Object_Declaration (Loc,
-                   Defining_Identifier =>
-                     Make_Defining_Identifier (Loc, Name_uMaster),
-                   Constant_Present    => True,
-                   Object_Definition   =>
-                     New_Reference_To (RTE (RE_Master_Id), Loc),
-                   Expression          =>
-                     Make_Explicit_Dereference (Loc,
-                       New_Reference_To (RTE (RE_Current_Master), Loc)));
-
-               Insert_Before (Related_Nod, Decl);
-               Analyze (Decl);
-
-               Set_Master_Id (Anon_Type, Defining_Identifier (Decl));
-               Set_Has_Master_Entity (Current_Scope);
-            else
-               Build_Master_Renaming (Related_Nod, Anon_Type);
-            end if;
+            Build_Master_Entity (Defining_Identifier (Related_Nod));
+            Build_Master_Renaming (Anon_Type);
          end if;
       end if;
 
@@ -9026,7 +9005,7 @@ package body Sem_Ch3 is
          --  The partial view of T may have been a private extension, for
          --  which inherited functions dispatching on result are abstract.
          --  If the full view is a null extension, there is no need for
-         --  overriding in Ada2005, but wrappers need to be built for them
+         --  overriding in Ada 2005, but wrappers need to be built for them
          --  (see exp_ch3, Build_Controlling_Function_Wrappers).
 
          if Is_Null_Extension (T)
@@ -13339,18 +13318,18 @@ package body Sem_Ch3 is
 
       --  Check for case of a derived subprogram for the instantiation of a
       --  formal derived tagged type, if so mark the subprogram as dispatching
-      --  and inherit the dispatching attributes of the parent subprogram. The
+      --  and inherit the dispatching attributes of the actual subprogram. The
       --  derived subprogram is effectively renaming of the actual subprogram,
       --  so it needs to have the same attributes as the actual.
 
       if Present (Actual_Subp)
-        and then Is_Dispatching_Operation (Parent_Subp)
+        and then Is_Dispatching_Operation (Actual_Subp)
       then
          Set_Is_Dispatching_Operation (New_Subp);
 
-         if Present (DTC_Entity (Parent_Subp)) then
-            Set_DTC_Entity (New_Subp, DTC_Entity (Parent_Subp));
-            Set_DT_Position (New_Subp, DT_Position (Parent_Subp));
+         if Present (DTC_Entity (Actual_Subp)) then
+            Set_DTC_Entity (New_Subp, DTC_Entity (Actual_Subp));
+            Set_DT_Position (New_Subp, DT_Position (Actual_Subp));
          end if;
       end if;
 
@@ -16199,19 +16178,41 @@ package body Sem_Ch3 is
       elsif not Comes_From_Source (Original_Comp) then
          return True;
 
-      --  If we are in the body of an instantiation, the component is visible
-      --  even when the parent type (possibly defined in an enclosing unit or
-      --  in a parent unit) might not.
-
-      elsif In_Instance_Body then
-         return True;
-
       --  Discriminants are always visible
 
       elsif Ekind (Original_Comp) = E_Discriminant
         and then not Has_Unknown_Discriminants (Original_Scope)
       then
          return True;
+
+      --  If we are in the body of an instantiation, the component is visible
+      --  if the parent type is non-private, or in  an enclosing scope. The
+      --  scope stack is not present when analyzing an instance body, so we
+      --  must inspect the chain of scopes explicitly.
+
+      elsif In_Instance_Body then
+         if not Is_Private_Type (Scope (C)) then
+            return True;
+
+         else
+            declare
+               S : Entity_Id;
+
+            begin
+               S := Current_Scope;
+               while Present (S)
+                 and then S /= Standard_Standard
+               loop
+                  if S = Type_Scope then
+                     return True;
+                  end if;
+
+                  S := Scope (S);
+               end loop;
+
+               return False;
+            end;
+         end if;
 
       --  If the component has been declared in an ancestor which is currently
       --  a private type, then it is not visible. The same applies if the
@@ -16908,6 +16909,36 @@ package body Sem_Ch3 is
 
          when N_Attribute_Reference =>
             return Attribute_Name (Original_Node (Exp)) = Name_Input;
+
+         --  For a conditional expression, all dependent expressions must be
+         --  legal constructs.
+
+         when N_Conditional_Expression =>
+            declare
+               Then_Expr : constant Node_Id :=
+                             Next (First (Expressions (Original_Node (Exp))));
+               Else_Expr : constant Node_Id := Next (Then_Expr);
+            begin
+               return OK_For_Limited_Init_In_05 (Typ, Then_Expr)
+                 and then OK_For_Limited_Init_In_05 (Typ, Else_Expr);
+            end;
+
+         when N_Case_Expression =>
+            declare
+               Alt : Node_Id;
+
+            begin
+               Alt := First (Alternatives (Original_Node (Exp)));
+               while Present (Alt) loop
+                  if not OK_For_Limited_Init_In_05 (Typ, Expression (Alt)) then
+                     return False;
+                  end if;
+
+                  Next (Alt);
+               end loop;
+
+               return True;
+            end;
 
          when others =>
             return False;
@@ -18287,7 +18318,7 @@ package body Sem_Ch3 is
 
                --  Look up tree to find an appropriate insertion point. We
                --  can't just use insert_actions because later processing
-               --  depends on the insertion node. Prior to Ada2012 the
+               --  depends on the insertion node. Prior to Ada 2012 the
                --  insertion point could only be a declaration or a loop, but
                --  quantified expressions can appear within any context in an
                --  expression, and the insertion point can be any statement,
@@ -19561,17 +19592,16 @@ package body Sem_Ch3 is
    --  do not know the exact end points at the time of the declaration. This
    --  is true for three reasons:
 
-   --     A size clause may affect the fudging of the end-points
-   --     A small clause may affect the values of the end-points
-   --     We try to include the end-points if it does not affect the size
+   --     A size clause may affect the fudging of the end-points.
+   --     A small clause may affect the values of the end-points.
+   --     We try to include the end-points if it does not affect the size.
 
-   --  This means that the actual end-points must be established at the point
-   --  when the type is frozen. Meanwhile, we first narrow the range as
-   --  permitted (so that it will fit if necessary in a small specified size),
-   --  and then build a range subtree with these narrowed bounds.
-
-   --  Set_Fixed_Range constructs the range from real literal values, and sets
-   --  the range as the Scalar_Range of the given fixed-point type entity.
+   --  This means that the actual end-points must be established at the
+   --  point when the type is frozen. Meanwhile, we first narrow the range
+   --  as permitted (so that it will fit if necessary in a small specified
+   --  size), and then build a range subtree with these narrowed bounds.
+   --  Set_Fixed_Range constructs the range from real literal values, and
+   --  sets the range as the Scalar_Range of the given fixed-point type entity.
 
    --  The parent of this range is set to point to the entity so that it is
    --  properly hooked into the tree (unlike normal Scalar_Range entries for
@@ -19596,6 +19626,12 @@ package body Sem_Ch3 is
    begin
       Set_Scalar_Range (E, S);
       Set_Parent (S, E);
+
+      --  Before the freeze point, the bounds of a fixed point are universal
+      --  and carry the corresponding type.
+
+      Set_Etype (Low_Bound (S),  Universal_Real);
+      Set_Etype (High_Bound (S), Universal_Real);
    end Set_Fixed_Range;
 
    ----------------------------------
@@ -19792,7 +19828,6 @@ package body Sem_Ch3 is
       --  Complete both implicit base and declared first subtype entities
 
       Set_Etype          (Implicit_Base, Base_Typ);
-      Set_Scalar_Range   (Implicit_Base, Scalar_Range   (Base_Typ));
       Set_Size_Info      (Implicit_Base,                (Base_Typ));
       Set_RM_Size        (Implicit_Base, RM_Size        (Base_Typ));
       Set_First_Rep_Item (Implicit_Base, First_Rep_Item (Base_Typ));
@@ -19800,80 +19835,64 @@ package body Sem_Ch3 is
       Set_Ekind          (T, E_Signed_Integer_Subtype);
       Set_Etype          (T, Implicit_Base);
 
-      --  In formal verification mode, override partially the decisions above
-      --  to restrict base type's range to the minimum allowed by RM 3.5.4,
-      --  namely the smallest symmetric range around zero with a possible extra
-      --  negative value that contains the subtype range. Keep Size, RM_Size
-      --  and First_Rep_Item info, which should not be relied upon in formal
-      --  verification.
+      --  In formal verification mode, restrict the base type's range to the
+      --  minimum allowed by RM 3.5.4, namely the smallest symmetric range
+      --  around zero with a possible extra negative value that contains the
+      --  subtype range. Keep Size, RM_Size and First_Rep_Item info, which
+      --  should not be relied upon in formal verification.
 
-      if Alfa_Mode then
+      if Strict_Alfa_Mode then
+         declare
+            Sym_Hi_Val : Uint;
+            Sym_Lo_Val : Uint;
+            Dloc       : constant Source_Ptr := Sloc (Def);
+            Lbound     : Node_Id;
+            Ubound     : Node_Id;
+            Bounds     : Node_Id;
 
-         --  If the range of the type is already symmetric with a possible
-         --  extra negative value, leave it this way.
+         begin
+            --  If the subtype range is empty, the smallest base type range
+            --  is the symmetric range around zero containing Lo_Val and
+            --  Hi_Val.
 
-         if UI_Le (Lo_Val, Hi_Val)
-           and then (UI_Eq (Lo_Val, UI_Negate (Hi_Val))
-                      or else
-                        UI_Eq (Lo_Val, UI_Sub (UI_Negate (Hi_Val), Uint_1)))
-         then
-            null;
-
-         else
-            declare
-               Sym_Hi_Val : Uint;
-               Sym_Lo_Val : Uint;
-               Decl       : Node_Id;
-               Dloc       : constant Source_Ptr := Sloc (Def);
-               Lbound     : Node_Id;
-               Ubound     : Node_Id;
-
-            begin
-               --  If the subtype range is empty, the smallest base type range
-               --  is the symmetric range around zero containing Lo_Val and
-               --  Hi_Val.
-
-               if UI_Gt (Lo_Val, Hi_Val) then
-                  Sym_Hi_Val := UI_Max (UI_Abs (Lo_Val), UI_Abs (Hi_Val));
-                  Sym_Lo_Val := UI_Negate (Sym_Hi_Val);
+            if UI_Gt (Lo_Val, Hi_Val) then
+               Sym_Hi_Val := UI_Max (UI_Abs (Lo_Val), UI_Abs (Hi_Val));
+               Sym_Lo_Val := UI_Negate (Sym_Hi_Val);
 
                --  Otherwise, if the subtype range is not empty and Hi_Val has
                --  the largest absolute value, Hi_Val is non negative and the
                --  smallest base type range is the symmetric range around zero
                --  containing Hi_Val.
 
-               elsif UI_Le (UI_Abs (Lo_Val), UI_Abs (Hi_Val)) then
-                  Sym_Hi_Val := Hi_Val;
-                  Sym_Lo_Val := UI_Negate (Hi_Val);
+            elsif UI_Le (UI_Abs (Lo_Val), UI_Abs (Hi_Val)) then
+               Sym_Hi_Val := Hi_Val;
+               Sym_Lo_Val := UI_Negate (Hi_Val);
 
                --  Otherwise, the subtype range is not empty, Lo_Val has the
                --  strictly largest absolute value, Lo_Val is negative and the
                --  smallest base type range is the symmetric range around zero
                --  with an extra negative value Lo_Val.
 
-               else
-                  Sym_Lo_Val := Lo_Val;
-                  Sym_Hi_Val := UI_Sub (UI_Negate (Lo_Val), Uint_1);
-               end if;
+            else
+               Sym_Lo_Val := Lo_Val;
+               Sym_Hi_Val := UI_Sub (UI_Negate (Lo_Val), Uint_1);
+            end if;
 
-               Lbound := Make_Integer_Literal (Dloc, Sym_Lo_Val);
-               Ubound := Make_Integer_Literal (Dloc, Sym_Hi_Val);
-               Set_Is_Static_Expression (Lbound);
-               Set_Is_Static_Expression (Ubound);
+            Lbound := Make_Integer_Literal (Dloc, Sym_Lo_Val);
+            Ubound := Make_Integer_Literal (Dloc, Sym_Hi_Val);
+            Set_Is_Static_Expression (Lbound);
+            Set_Is_Static_Expression (Ubound);
+            Analyze_And_Resolve (Lbound, Any_Integer);
+            Analyze_And_Resolve (Ubound, Any_Integer);
 
-               Decl := Make_Full_Type_Declaration (Dloc,
-                 Defining_Identifier => Implicit_Base,
-                 Type_Definition     =>
-                   Make_Signed_Integer_Type_Definition (Dloc,
-                     Low_Bound  => Lbound,
-                     High_Bound => Ubound));
+            Bounds := Make_Range (Dloc, Lbound, Ubound);
+            Set_Etype (Bounds, Base_Typ);
 
-               Analyze (Decl);
-               Set_Etype (Implicit_Base, Base_Type (Implicit_Base));
-               Set_Etype (T, Base_Type (Implicit_Base));
-               Insert_Before (Parent (Def), Decl);
-            end;
-         end if;
+            Set_Scalar_Range (Implicit_Base, Bounds);
+         end;
+
+      else
+         Set_Scalar_Range (Implicit_Base, Scalar_Range (Base_Typ));
       end if;
 
       Set_Size_Info      (T,                (Implicit_Base));

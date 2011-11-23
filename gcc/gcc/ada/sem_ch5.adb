@@ -2068,7 +2068,7 @@ package body Sem_Ch5 is
                   Set_Parent (D_Copy, Parent (DS));
                   Pre_Analyze_Range (D_Copy);
 
-                  --  Ada2012: If the domain of iteration is a function call,
+                  --  Ada 2012: If the domain of iteration is a function call,
                   --  it is the new iterator form.
 
                   --  We have also implemented the shorter form : for X in S
@@ -2302,8 +2302,9 @@ package body Sem_Ch5 is
       Typ : Entity_Id;
 
    begin
-      --  In semantics and Alfa modes, introduce loop variable so that loop
-      --  body can be properly analyzed. Otherwise this is one after expansion.
+      --  In semantics/Alfa modes, we won't be further expanding the loop, so
+      --  introduce loop variable so that loop body can be properly analyzed.
+      --  Otherwise this happens after expansion.
 
       if Operating_Mode = Check_Semantics
         or else Alfa_Mode
@@ -2428,8 +2429,17 @@ package body Sem_Ch5 is
             --  The type of the loop variable is the Iterator_Element aspect of
             --  the container type.
 
-            Set_Etype (Def_Id,
-              Entity (Find_Aspect (Typ, Aspect_Iterator_Element)));
+            declare
+               Element : constant Entity_Id :=
+                           Find_Aspect (Typ, Aspect_Iterator_Element);
+            begin
+               if No (Element) then
+                  Error_Msg_NE ("cannot iterate over&", N, Typ);
+                  return;
+               else
+                  Set_Etype (Def_Id, Entity (Element));
+               end if;
+            end;
 
          else
             --  For an iteration of the form IN, the name must denote an
@@ -2439,12 +2449,17 @@ package body Sem_Ch5 is
             if Is_Entity_Name (Original_Node (Name (N)))
               and then not Is_Iterator (Typ)
             then
-               Error_Msg_N
-                 ("name must be an iterator, not a container", Name (N));
+               if No (Find_Aspect (Typ, Aspect_Iterator_Element)) then
+                  Error_Msg_NE
+                    ("cannot iterate over&", Name (N), Typ);
+               else
+                  Error_Msg_N
+                    ("name must be an iterator, not a container", Name (N));
+               end if;
 
                Error_Msg_NE
-                 ("\to iterate directly over a container, write `of &`",
-                    Name (N), Original_Node (Name (N)));
+                 ("\to iterate directly over the elements of a container, " &
+                   "write `of &`", Name (N), Original_Node (Name (N)));
             end if;
 
             --  The result type of Iterate function is the classwide type of

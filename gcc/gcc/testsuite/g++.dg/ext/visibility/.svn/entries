@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/ext/visibility
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-12-08T21:37:51.471949Z
-167607
-froydnj
+2011-11-11T04:29:04.399061Z
+181280
+jason
 
 
 
@@ -536,6 +536,40 @@ nathan
 
 556
 
+fvisibility-inlines-hidden-4.C
+file
+
+
+
+
+2011-11-12T11:42:27.786097Z
+bc5e3935f9fd3f5f54ca89ee581b2c03
+2011-10-28T02:18:00.854135Z
+180589
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+755
+
 visibility-3.C
 file
 
@@ -841,6 +875,40 @@ mmitchel
 
 
 285
+
+template7.C
+file
+
+
+
+
+2011-11-12T11:42:27.786097Z
+b9c473338c01a3d603ac21bdb245de64
+2011-11-07T04:40:14.999441Z
+181069
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+454
 
 overload-1.C
 file
@@ -1392,11 +1460,11 @@ file
 
 
 
-2011-06-04T18:03:48.504104Z
-b058b32dbb9e51c2e9661b90da006572
-2010-12-08T21:37:51.471949Z
-167607
-froydnj
+2011-11-12T11:42:27.787097Z
+8b91389dac71153d2357cd7f35a7cb0d
+2011-11-11T04:29:04.399061Z
+181280
+jason
 
 
 
@@ -1418,7 +1486,7 @@ froydnj
 
 
 
-665
+521
 
 fvisibility-inlines-hidden-3.C
 file
@@ -1930,6 +1998,40 @@ jules
 
 1091
 
+template8.C
+file
+
+
+
+
+2011-11-12T11:42:27.787097Z
+db72d12d4b84a371d752b985fdf77e3a
+2011-11-07T17:51:40.880574Z
+181102
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+534
+
 assign1.C
 file
 
@@ -2133,6 +2235,40 @@ jason
 
 
 567
+
+warn5.C
+file
+
+
+
+
+2011-11-12T11:42:27.787097Z
+40de40133f2bc2f79491601ee0e6ed42
+2011-09-28T23:14:04.535855Z
+179323
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+240
 
 fvisibility.C
 file

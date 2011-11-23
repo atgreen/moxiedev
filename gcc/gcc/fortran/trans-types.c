@@ -298,8 +298,8 @@ get_int_kind_from_minimal_width (int size)
 /* Generate the CInteropKind_t objects for the C interoperable
    kinds.  */
 
-static
-void init_c_interop_kinds (void)
+void
+gfc_init_c_interop_kinds (void)
 {
   int i;
 
@@ -316,11 +316,11 @@ void init_c_interop_kinds (void)
   strncpy (c_interop_kinds_table[a].name, b, strlen(b) + 1); \
   c_interop_kinds_table[a].f90_type = BT_INTEGER; \
   c_interop_kinds_table[a].value = c;
-#define NAMED_REALCST(a,b,c) \
+#define NAMED_REALCST(a,b,c,d) \
   strncpy (c_interop_kinds_table[a].name, b, strlen(b) + 1); \
   c_interop_kinds_table[a].f90_type = BT_REAL; \
   c_interop_kinds_table[a].value = c;
-#define NAMED_CMPXCST(a,b,c) \
+#define NAMED_CMPXCST(a,b,c,d) \
   strncpy (c_interop_kinds_table[a].name, b, strlen(b) + 1); \
   c_interop_kinds_table[a].f90_type = BT_COMPLEX; \
   c_interop_kinds_table[a].value = c;
@@ -584,10 +584,8 @@ gfc_init_kinds (void)
   /* Choose atomic kinds to match C's int.  */
   gfc_atomic_int_kind = gfc_c_int_kind;
   gfc_atomic_logical_kind = gfc_c_int_kind;
-
-  /* initialize the C interoperable kinds  */
-  init_c_interop_kinds();
 }
+
 
 /* Make sure that a valid kind is present.  Returns an index into the
    associated kinds array, -1 if the kind is not present.  */
@@ -1256,7 +1254,7 @@ gfc_build_array_type (tree type, gfc_array_spec * as,
 
   for (n = as->rank; n < as->rank + as->corank; n++)
     {
-      if (as->lower[n] == NULL)
+      if (as->type != AS_DEFERRED && as->lower[n] == NULL)
         lbound[n] = gfc_index_one_node;
       else
         lbound[n] = gfc_conv_array_bound (as->lower[n]);
@@ -1378,7 +1376,7 @@ gfc_get_dtype (tree type)
   if (size && INTEGER_CST_P (size))
     {
       if (tree_int_cst_lt (gfc_max_array_element_size, size))
-	internal_error ("Array element size too big");
+	gfc_fatal_error ("Array element size too big at %C");
 
       i += TREE_INT_CST_LOW (size) << GFC_DTYPE_SIZE_SHIFT;
     }
@@ -2259,6 +2257,10 @@ gfc_get_derived_type (gfc_symbol * derived)
   gfc_dt_list *dt;
   gfc_namespace *ns;
 
+  if (derived && derived->attr.flavor == FL_PROCEDURE
+      && derived->attr.generic)
+    derived = gfc_find_dt_in_generic (derived);
+
   gcc_assert (derived && derived->attr.flavor == FL_DERIVED);
 
   /* See if it's one of the iso_c_binding derived types.  */
@@ -2791,18 +2793,29 @@ gfc_type_for_size (unsigned bits, int unsignedp)
       if (bits == TYPE_PRECISION (intTI_type_node))
 	return intTI_type_node;
 #endif
+
+      if (bits <= TYPE_PRECISION (intQI_type_node))
+	return intQI_type_node;
+      if (bits <= TYPE_PRECISION (intHI_type_node))
+	return intHI_type_node;
+      if (bits <= TYPE_PRECISION (intSI_type_node))
+	return intSI_type_node;
+      if (bits <= TYPE_PRECISION (intDI_type_node))
+	return intDI_type_node;
+      if (bits <= TYPE_PRECISION (intTI_type_node))
+	return intTI_type_node;
     }
   else
     {
-      if (bits == TYPE_PRECISION (unsigned_intQI_type_node))
+      if (bits <= TYPE_PRECISION (unsigned_intQI_type_node))
         return unsigned_intQI_type_node;
-      if (bits == TYPE_PRECISION (unsigned_intHI_type_node))
+      if (bits <= TYPE_PRECISION (unsigned_intHI_type_node))
 	return unsigned_intHI_type_node;
-      if (bits == TYPE_PRECISION (unsigned_intSI_type_node))
+      if (bits <= TYPE_PRECISION (unsigned_intSI_type_node))
 	return unsigned_intSI_type_node;
-      if (bits == TYPE_PRECISION (unsigned_intDI_type_node))
+      if (bits <= TYPE_PRECISION (unsigned_intDI_type_node))
 	return unsigned_intDI_type_node;
-      if (bits == TYPE_PRECISION (unsigned_intTI_type_node))
+      if (bits <= TYPE_PRECISION (unsigned_intTI_type_node))
 	return unsigned_intTI_type_node;
     }
 
@@ -2823,7 +2836,10 @@ gfc_type_for_mode (enum machine_mode mode, int unsignedp)
   else if (GET_MODE_CLASS (mode) == MODE_COMPLEX_FLOAT)
     base = gfc_complex_types;
   else if (SCALAR_INT_MODE_P (mode))
-    return gfc_type_for_size (GET_MODE_PRECISION (mode), unsignedp);
+    {
+      tree type = gfc_type_for_size (GET_MODE_PRECISION (mode), unsignedp);
+      return type != NULL_TREE && mode == TYPE_MODE (type) ? type : NULL_TREE;
+    }
   else if (VECTOR_MODE_P (mode))
     {
       enum machine_mode inner_mode = GET_MODE_INNER (mode);

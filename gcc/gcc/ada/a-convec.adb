@@ -432,6 +432,20 @@ package body Ada.Containers.Vectors is
          Count);
    end Append;
 
+   ------------
+   -- Assign --
+   ------------
+
+   procedure Assign (Target : in out Vector; Source : Vector) is
+   begin
+      if Target'Address = Source'Address then
+         return;
+      end if;
+
+      Target.Clear;
+      Target.Append (Source);
+   end Assign;
+
    --------------
    -- Capacity --
    --------------
@@ -470,6 +484,34 @@ package body Ada.Containers.Vectors is
    begin
       return Find_Index (Container, Item) /= No_Index;
    end Contains;
+
+   ----------
+   -- Copy --
+   ----------
+
+   function Copy
+     (Source   : Vector;
+      Capacity : Count_Type := 0) return Vector
+   is
+      C : Count_Type;
+
+   begin
+      if Capacity = 0 then
+         C := Source.Length;
+
+      elsif Capacity >= Source.Length then
+         C := Capacity;
+
+      else
+         raise Capacity_Error
+           with "Requested capacity is less than Source length";
+      end if;
+
+      return Target : Vector do
+         Target.Reserve_Capacity (C);
+         Target.Assign (Source);
+      end return;
+   end Copy;
 
    ------------
    -- Delete --
@@ -802,7 +844,7 @@ package body Ada.Containers.Vectors is
       if Is_Empty (Object.Container.all) then
          return No_Element;
       else
-         return Cursor'(Object.Container, Index_Type'First);
+         return (Object.Container, Index_Type'First);
       end if;
    end First;
 
@@ -867,16 +909,26 @@ package body Ada.Containers.Vectors is
          J : Index_Type'Base;
 
       begin
-         if Target.Last < Index_Type'First then
-            Move (Target => Target, Source => Source);
+
+         --  The semantics of Merge changed slightly per AI05-0021. It was
+         --  originally the case that if Target and Source denoted the same
+         --  container object, then the GNAT implementation of Merge did
+         --  nothing. However, it was argued that RM05 did not precisely
+         --  specify the semantics for this corner case. The decision of the
+         --  ARG was that if Target and Source denote the same non-empty
+         --  container object, then Program_Error is raised.
+
+         if Source.Last < Index_Type'First then  -- Source is empty
             return;
          end if;
 
          if Target'Address = Source'Address then
-            return;
+            raise Program_Error with
+              "Target and Source denote same non-empty container";
          end if;
 
-         if Source.Last < Index_Type'First then
+         if Target.Last < Index_Type'First then  -- Target is empty
+            Move (Target => Target, Source => Source);
             return;
          end if;
 
@@ -1517,7 +1569,7 @@ package body Ada.Containers.Vectors is
 
       Insert (Container, Index, New_Item);
 
-      Position := Cursor'(Container'Unchecked_Access, Index);
+      Position := (Container'Unchecked_Access, Index);
    end Insert;
 
    procedure Insert
@@ -1600,7 +1652,7 @@ package body Ada.Containers.Vectors is
 
       Insert (Container, Index, New_Item, Count);
 
-      Position := Cursor'(Container'Unchecked_Access, Index);
+      Position := (Container'Unchecked_Access, Index);
    end Insert;
 
    procedure Insert
@@ -2017,7 +2069,7 @@ package body Ada.Containers.Vectors is
 
       Insert_Space (Container, Index, Count => Count);
 
-      Position := Cursor'(Container'Unchecked_Access, Index);
+      Position := (Container'Unchecked_Access, Index);
    end Insert_Space;
 
    --------------
@@ -2093,7 +2145,7 @@ package body Ada.Containers.Vectors is
       if Is_Empty (Object.Container.all) then
          return No_Element;
       else
-         return Cursor'(Object.Container, Object.Container.Last);
+         return (Object.Container, Object.Container.Last);
       end if;
    end Last;
 
@@ -2204,24 +2256,18 @@ package body Ada.Containers.Vectors is
 
    function Next (Object : Iterator; Position : Cursor) return Cursor is
    begin
-      if Position.Index = Object.Container.Last then
-         return  No_Element;
-      else
+      if Position.Index < Object.Container.Last then
          return (Object.Container, Position.Index + 1);
+      else
+         return No_Element;
       end if;
    end Next;
-
-   ----------
-   -- Next --
-   ----------
 
    procedure Next (Position : in out Cursor) is
    begin
       if Position.Container = null then
          return;
-      end if;
-
-      if Position.Index < Position.Container.Last then
+      elsif Position.Index < Position.Container.Last then
          Position.Index := Position.Index + 1;
       else
          Position := No_Element;
@@ -2253,30 +2299,15 @@ package body Ada.Containers.Vectors is
    -- Previous --
    --------------
 
-   procedure Previous (Position : in out Cursor) is
-   begin
-      if Position.Container = null then
-         return;
-      end if;
-
-      if Position.Index > Index_Type'First then
-         Position.Index := Position.Index - 1;
-      else
-         Position := No_Element;
-      end if;
-   end Previous;
-
    function Previous (Position : Cursor) return Cursor is
    begin
       if Position.Container = null then
          return No_Element;
-      end if;
-
-      if Position.Index > Index_Type'First then
+      elsif Position.Index > Index_Type'First then
          return (Position.Container, Position.Index - 1);
+      else
+         return No_Element;
       end if;
-
-      return No_Element;
    end Previous;
 
    function Previous (Object : Iterator; Position : Cursor) return Cursor is
@@ -2285,6 +2316,17 @@ package body Ada.Containers.Vectors is
          return (Object.Container, Position.Index - 1);
       else
          return No_Element;
+      end if;
+   end Previous;
+
+   procedure Previous (Position : in out Cursor) is
+   begin
+      if Position.Container = null then
+         return;
+      elsif Position.Index > Index_Type'First then
+         Position.Index := Position.Index - 1;
+      else
+         Position := No_Element;
       end if;
    end Previous;
 
@@ -2416,7 +2458,7 @@ package body Ada.Containers.Vectors is
       return Constant_Reference_Type
    is
    begin
-      if (Position) > Container.Last then
+      if Position > Container.Last then
          raise Constraint_Error with "Index is out of range";
       else
          return (Element => Container.Elements.EA (Position)'Access);
@@ -3019,7 +3061,7 @@ package body Ada.Containers.Vectors is
       if Index not in Index_Type'First .. Container.Last then
          return No_Element;
       else
-         return Cursor'(Container'Unchecked_Access, Index);
+         return (Container'Unchecked_Access, Index);
       end if;
    end To_Cursor;
 

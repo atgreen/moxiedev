@@ -159,8 +159,12 @@ struct processor_costs {
   const int fchs;		/* cost of FCHS instruction.  */
   const int fsqrt;		/* cost of FSQRT instruction.  */
 				/* Specify what algorithm
-				   to use for stringops on unknown size.  */
-  struct stringop_algs memcpy[2], memset[2];
+				   to use for stringops on unknown size.
+				   First index is used to specify whether
+				   alignment is known or not.
+				   Second - to specify whether 32 or 64 bits
+				   are used.  */
+  struct stringop_algs memcpy[2][2], memset[2][2];
   const int scalar_stmt_cost;   /* Cost of any scalar operation, excluding
 				   load and store.  */
   const int scalar_load_cost;   /* Cost of scalar load.  */
@@ -2314,6 +2318,20 @@ extern void debug_dispatch_window (int);
 #define IX86_BASE_CALLCVT(FLAGS) \
 	((FLAGS) & (IX86_CALLCVT_CDECL | IX86_CALLCVT_STDCALL \
 		    | IX86_CALLCVT_FASTCALL | IX86_CALLCVT_THISCALL))
+
+#define RECIP_MASK_NONE		0x00
+#define RECIP_MASK_DIV		0x01
+#define RECIP_MASK_SQRT		0x02
+#define RECIP_MASK_VEC_DIV	0x04
+#define RECIP_MASK_VEC_SQRT	0x08
+#define RECIP_MASK_ALL	(RECIP_MASK_DIV | RECIP_MASK_SQRT \
+			 | RECIP_MASK_VEC_DIV | RECIP_MASK_VEC_SQRT)
+#define RECIP_MASK_DEFAULT (RECIP_MASK_VEC_DIV | RECIP_MASK_VEC_SQRT)
+
+#define TARGET_RECIP_DIV	((recip_mask & RECIP_MASK_DIV) != 0)
+#define TARGET_RECIP_SQRT	((recip_mask & RECIP_MASK_SQRT) != 0)
+#define TARGET_RECIP_VEC_DIV	((recip_mask & RECIP_MASK_VEC_DIV) != 0)
+#define TARGET_RECIP_VEC_SQRT	((recip_mask & RECIP_MASK_VEC_SQRT) != 0)
 
 /*
 Local variables:

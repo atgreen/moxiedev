@@ -208,7 +208,7 @@ package body Sem_Ch10 is
    -- Limited_With_Clauses --
    --------------------------
 
-   --  Limited_With clauses are the mechanism chosen for Ada05 to support
+   --  Limited_With clauses are the mechanism chosen for Ada 2005 to support
    --  mutually recursive types declared in different units. A limited_with
    --  clause that names package P in the context of unit U makes the types
    --  declared in the visible part of P available within U, but with the
@@ -5013,12 +5013,16 @@ package body Sem_Ch10 is
 
                --  Set entity of parent identifiers if the unit is a child
                --  unit. This ensures that the tree is properly formed from
-               --  semantic point of view (e.g. for ASIS queries).
+               --  semantic point of view (e.g. for ASIS queries). The unit
+               --  entities are not fully analyzed, so we need to follow unit
+               --  links in the tree.
 
                Set_Entity (Nam, Ent);
 
                Nam := Prefix (Nam);
-               Ent := Scope (Ent);
+               Ent :=
+                 Defining_Entity
+                   (Unit (Parent_Spec (Unit_Declaration_Node (Ent))));
 
                --  Set entity of last ancestor
 

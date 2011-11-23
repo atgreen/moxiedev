@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/obj-c++.dg
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-06T14:20:09.238535Z
-177510
-nicola
+2011-10-17T17:44:42.515240Z
+180101
+paolo
 
 
 
@@ -3398,6 +3398,40 @@ iains
 
 661
 
+warn6.mm
+file
+
+
+
+
+2011-11-12T11:42:32.960037Z
+677e021d0f4c6a2c24627bc9093ea7d6
+2011-10-14T09:14:26.459462Z
+179963
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+107
+
 method-21.mm
 file
 
@@ -6367,6 +6401,40 @@ nicola
 
 
 388
+
+warn7.mm
+file
+
+
+
+
+2011-11-12T11:42:32.971037Z
+cf1e5660ee1cd060f1bf1da012306d6b
+2011-10-17T17:44:42.515240Z
+180101
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+166
 
 method-22.mm
 file

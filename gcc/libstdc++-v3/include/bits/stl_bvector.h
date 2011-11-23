@@ -57,7 +57,9 @@
 #ifndef _STL_BVECTOR_H
 #define _STL_BVECTOR_H 1
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
 #include <initializer_list>
+#endif
 
 namespace std _GLIBCXX_VISIBILITY(default)
 {
@@ -838,7 +840,8 @@ template<typename _Alloc>
     iterator
     erase(iterator __first, iterator __last)
     {
-      _M_erase_at_end(std::copy(__last, end(), __first));
+      if (__first != __last)
+	_M_erase_at_end(std::copy(__last, end(), __first));
       return __first;
     }
 
@@ -1072,7 +1075,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     : public __hash_base<size_t, _GLIBCXX_STD_C::vector<bool, _Alloc>>
     {
       size_t
-      operator()(const _GLIBCXX_STD_C::vector<bool, _Alloc>& __b) const;
+      operator()(const _GLIBCXX_STD_C::vector<bool, _Alloc>&) const noexcept;
     };
 
 _GLIBCXX_END_NAMESPACE_VERSION

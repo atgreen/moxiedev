@@ -903,6 +903,14 @@ ideas of what it is for.  People use it as if it specified where to
 install part of GCC@.  Perhaps they make this assumption because
 installing GCC creates the directory.
 
+@item --with-native-system-header-dir=@var{dirname}
+Specifies that @var{dirname} is the directory that contains native system
+header files, rather than @file{/usr/include}.  This option is most useful
+if you are creating a compiler that should be isolated from the system
+as much as possible.  It is most commonly used with the
+@option{--with-sysroot} option and will cause GCC to search
+@var{dirname} inside the system root specified by that option.
+
 @item --enable-shared[=@var{package}[,@dots{}]]
 Build shared versions of libraries, if shared libraries are supported on
 the target platform.  Unlike GCC 2.95.x and earlier, shared libraries
@@ -1199,6 +1207,11 @@ of the arguments depend on the target.
 @item --with-mode=@var{mode}
 Specify if the compiler should default to @option{-marm} or @option{-mthumb}.
 This option is only supported on ARM targets.
+
+@item --with-stack-offset=@var{num}
+This option sets the default for the -mstack-offset=@var{num} option,
+and will thus generally also control the setting of this option for
+libraries.  This option is only supported on Epiphany targets.
 
 @item --with-fpmath=@var{isa}
 This options sets @option{-mfpmath=sse} by default and specifies the default
@@ -1736,6 +1749,10 @@ target libraries (which runs on the build system) and the compiler newly
 installed with @code{make install}; it does not affect the compiler which is
 used to build GCC itself.
 
+If you specify the @option{--with-native-system-header-dir=@var{dirname}}
+option then the compiler will search that directory within @var{dirname} for
+native system headers rather than the default @file{/usr/include}.
+
 @item --with-build-sysroot
 @itemx --with-build-sysroot=@var{dir}
 Tells GCC to consider @var{dir} as the system root (see
@@ -1749,6 +1766,10 @@ which you are installing GCC and your target libraries.
 This option affects the system root for the compiler used to build
 target libraries (which runs on the build system); it does not affect
 the compiler which is used to build GCC itself.
+
+If you specify the @option{--with-native-system-header-dir=@var{dirname}}
+option then the compiler will search that directory within @var{dirname} for
+native system headers rather than the default @file{/usr/include}.
 
 @item --with-headers
 @itemx --with-headers=@var{dir}
@@ -3299,6 +3320,13 @@ and includes all the necessary compilation tools and libraries.
 @html
 <hr />
 @end html
+@heading @anchor{epiphany-x-elf}epiphany-*-elf
+Adapteva Epiphany.
+This configuration is intended for embedded systems.
+
+@html
+<hr />
+@end html
 @heading @anchor{x-x-freebsd}*-*-freebsd*
 
 Support for FreeBSD 1 was discontinued in GCC 3.2.  Support for
@@ -4448,7 +4476,7 @@ both 64-bit x86-64 and 32-bit x86 code (via the @option{-m32} switch).
 @html
 <hr />
 @end html
-@heading @anchor{x86-64-x-solaris2.10}x86_64-*-solaris2.1[0-9]*
+@heading @anchor{x86-64-x-solaris210}x86_64-*-solaris2.1[0-9]*
 
 GCC also supports the x86-64 architecture implemented by the AMD64
 processor (@samp{amd64-*-*} is an alias for @samp{x86_64-*-*}) on

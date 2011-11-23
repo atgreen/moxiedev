@@ -435,6 +435,9 @@ struct GTY(()) rtl_data {
      function where currently compiled version of it is nothrow.  */
   bool nothrow;
 
+  /* True if we performed shrink-wrapping for the current function.  */
+  bool shrink_wrapped;
+
   /* Like regs_ever_live, but 1 if a reg is set or clobbered from an
      asm.  Unlike regs_ever_live, elements of this array corresponding
      to eliminable regs (like the frame pointer) are set if an asm
@@ -749,6 +752,10 @@ extern void used_types_insert (tree);
 
 extern int get_next_funcdef_no (void);
 extern int get_last_funcdef_no (void);
+
+#ifdef HAVE_simple_return
+extern bool requires_stack_frame_p (rtx, HARD_REG_SET, HARD_REG_SET);
+#endif                        
 
 /* In predict.c */
 extern bool optimize_function_for_size_p (struct function *);

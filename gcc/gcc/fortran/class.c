@@ -188,7 +188,7 @@ gfc_build_class_symbol (gfc_typespec *ts, symbol_attribute *attr,
     /* Class container has already been built.  */
     return SUCCESS;
 
-  attr->class_ok = attr->dummy || attr->pointer  || attr->allocatable;
+  attr->class_ok = attr->dummy || attr->pointer || attr->allocatable;
   
   if (!attr->class_ok)
     /* We can not build the class container yet.  */
@@ -288,6 +288,10 @@ static void
 add_proc_comp (gfc_symbol *vtype, const char *name, gfc_typebound_proc *tb)
 {
   gfc_component *c;
+
+  if (tb->non_overridable)
+    return;
+  
   c = gfc_find_component (vtype, name, true, true);
 
   if (c == NULL)
@@ -424,7 +428,7 @@ gfc_find_derived_vtab (gfc_symbol *derived)
 	{
 	  gfc_get_symbol (name, ns, &vtab);
 	  vtab->ts.type = BT_DERIVED;
-	  if (gfc_add_flavor (&vtab->attr, FL_VARIABLE, NULL,
+	  if (gfc_add_flavor (&vtab->attr, FL_PARAMETER, NULL,
 	                      &gfc_current_locus) == FAILURE)
 	    goto cleanup;
 	  vtab->attr.target = 1;
@@ -518,7 +522,7 @@ gfc_find_derived_vtab (gfc_symbol *derived)
 		  def_init->attr.target = 1;
 		  def_init->attr.save = SAVE_IMPLICIT;
 		  def_init->attr.access = ACCESS_PUBLIC;
-		  def_init->attr.flavor = FL_VARIABLE;
+		  def_init->attr.flavor = FL_PARAMETER;
 		  gfc_set_sym_referenced (def_init);
 		  def_init->ts.type = BT_DERIVED;
 		  def_init->ts.u.derived = derived;
@@ -548,6 +552,7 @@ gfc_find_derived_vtab (gfc_symbol *derived)
 		  gfc_get_symbol (name, sub_ns, &copy);
 		  sub_ns->proc_name = copy;
 		  copy->attr.flavor = FL_PROCEDURE;
+		  copy->attr.subroutine = 1;
 		  copy->attr.if_source = IFSRC_DECL;
 		  if (ns->proc_name->attr.flavor == FL_MODULE)
 		    copy->module = ns->proc_name->name;

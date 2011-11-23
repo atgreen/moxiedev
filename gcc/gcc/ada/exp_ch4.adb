@@ -591,8 +591,7 @@ package body Exp_Ch4 is
                --  1) Get access to the allocated object
 
                Rewrite (N,
-                 Make_Explicit_Dereference (Loc,
-                   Relocate_Node (N)));
+                 Make_Explicit_Dereference (Loc, Relocate_Node (N)));
                Set_Etype (N, Etyp);
                Set_Analyzed (N);
 
@@ -765,7 +764,7 @@ package body Exp_Ch4 is
    --  Start of processing for Expand_Allocator_Expression
 
    begin
-      --  In the case of an Ada2012 allocator whose initial value comes from a
+      --  In the case of an Ada 2012 allocator whose initial value comes from a
       --  function call, pass "the accessibility level determined by the point
       --  of call" (AI05-0234) to the function. Conceptually, this belongs in
       --  Expand_Call but it couldn't be done there (because the Etype of the
@@ -2615,12 +2614,7 @@ package body Exp_Ch4 is
       --  Result of the concatenation (of type Ityp)
 
       Actions : constant List_Id := New_List;
-      --  Collect actions to be inserted if Save_Space is False
-
-      Save_Space : Boolean;
-      pragma Warnings (Off, Save_Space);
-      --  Set to True if we are saving generated code space by calling routines
-      --  in packages System.Concat_n.
+      --  Collect actions to be inserted
 
       Known_Non_Null_Operand_Seen : Boolean;
       --  Set True during generation of the assignments of operands into
@@ -3526,23 +3520,28 @@ package body Exp_Ch4 is
       end if;
 
       --  Set the storage pool and find the appropriate version of Allocate to
-      --  call.
+      --  call. Do not overwrite the storage pool if it is already set, which
+      --  can happen for build-in-place function returns (see
+      --  Exp_Ch4.Expand_N_Extended_Return_Statement).
 
-      Pool := Associated_Storage_Pool (Root_Type (PtrT));
-      Set_Storage_Pool (N, Pool);
+      if No (Storage_Pool (N)) then
+         Pool := Associated_Storage_Pool (Root_Type (PtrT));
 
-      if Present (Pool) then
-         if Is_RTE (Pool, RE_SS_Pool) then
-            if VM_Target = No_VM then
-               Set_Procedure_To_Call (N, RTE (RE_SS_Allocate));
+         if Present (Pool) then
+            Set_Storage_Pool (N, Pool);
+
+            if Is_RTE (Pool, RE_SS_Pool) then
+               if VM_Target = No_VM then
+                  Set_Procedure_To_Call (N, RTE (RE_SS_Allocate));
+               end if;
+
+            elsif Is_Class_Wide_Type (Etype (Pool)) then
+               Set_Procedure_To_Call (N, RTE (RE_Allocate_Any));
+
+            else
+               Set_Procedure_To_Call (N,
+                 Find_Prim_Op (Etype (Pool), Name_Allocate));
             end if;
-
-         elsif Is_Class_Wide_Type (Etype (Pool)) then
-            Set_Procedure_To_Call (N, RTE (RE_Allocate_Any));
-
-         else
-            Set_Procedure_To_Call (N,
-              Find_Prim_Op (Etype (Pool), Name_Allocate));
          end if;
       end if;
 
@@ -4467,6 +4466,15 @@ package body Exp_Ch4 is
       --  Insert explicit dereference call for the checked storage pool case
 
       Insert_Dereference_Action (Prefix (N));
+
+      --  If the type is an Atomic type for which Atomic_Sync is enabled, then
+      --  we set the atomic sync flag.
+
+      if Is_Atomic (Etype (N))
+        and then not Atomic_Synchronization_Disabled (Etype (N))
+      then
+         Activate_Atomic_Synchronization (N);
+      end if;
    end Expand_N_Explicit_Dereference;
 
    --------------------------------------
@@ -5240,6 +5248,7 @@ package body Exp_Ch4 is
       Typ : constant Entity_Id  := Etype (N);
       P   : constant Node_Id    := Prefix (N);
       T   : constant Entity_Id  := Etype (P);
+      Atp : Entity_Id;
 
    begin
       --  A special optimization, if we have an indexed component that is
@@ -5285,6 +5294,9 @@ package body Exp_Ch4 is
       if Is_Access_Type (T) then
          Insert_Explicit_Dereference (P);
          Analyze_And_Resolve (P, Designated_Type (T));
+         Atp := Designated_Type (T);
+      else
+         Atp := T;
       end if;
 
       --  Generate index and validity checks
@@ -5293,6 +5305,17 @@ package body Exp_Ch4 is
 
       if Validity_Checks_On and then Validity_Check_Subscripts then
          Apply_Subscript_Validity_Checks (N);
+      end if;
+
+      --  If selecting from an array with atomic components, and atomic sync
+      --  is not suppressed for this array type, set atomic sync flag.
+
+      if (Has_Atomic_Components (Atp)
+           and then not Atomic_Synchronization_Disabled (Atp))
+        or else (Is_Atomic (Typ)
+                  and then not Atomic_Synchronization_Disabled (Typ))
+      then
+         Activate_Atomic_Synchronization (N);
       end if;
 
       --  All done for the non-packed case
@@ -5574,26 +5597,10 @@ package body Exp_Ch4 is
          Expand_Boolean_Operator (N);
 
       elsif Is_Boolean_Type (Etype (N)) then
-
-         --  Replace AND by AND THEN if Short_Circuit_And_Or active and the
-         --  type is standard Boolean (do not mess with AND that uses a non-
-         --  standard Boolean type, because something strange is going on).
-
-         if Short_Circuit_And_Or and then Typ = Standard_Boolean then
-            Rewrite (N,
-              Make_And_Then (Sloc (N),
-                Left_Opnd  => Relocate_Node (Left_Opnd (N)),
-                Right_Opnd => Relocate_Node (Right_Opnd (N))));
-            Analyze_And_Resolve (N, Typ);
-
-         --  Otherwise, adjust conditions
-
-         else
-            Adjust_Condition (Left_Opnd (N));
-            Adjust_Condition (Right_Opnd (N));
-            Set_Etype (N, Standard_Boolean);
-            Adjust_Result_Type (N, Typ);
-         end if;
+         Adjust_Condition (Left_Opnd (N));
+         Adjust_Condition (Right_Opnd (N));
+         Set_Etype (N, Standard_Boolean);
+         Adjust_Result_Type (N, Typ);
 
       elsif Is_Intrinsic_Subprogram (Entity (N)) then
          Expand_Intrinsic_Call (N, Entity (N));
@@ -7530,26 +7537,10 @@ package body Exp_Ch4 is
          Expand_Boolean_Operator (N);
 
       elsif Is_Boolean_Type (Etype (N)) then
-
-         --  Replace OR by OR ELSE if Short_Circuit_And_Or active and the type
-         --  is standard Boolean (do not mess with AND that uses a non-standard
-         --  Boolean type, because something strange is going on).
-
-         if Short_Circuit_And_Or and then Typ = Standard_Boolean then
-            Rewrite (N,
-              Make_Or_Else (Sloc (N),
-                Left_Opnd  => Relocate_Node (Left_Opnd (N)),
-                Right_Opnd => Relocate_Node (Right_Opnd (N))));
-            Analyze_And_Resolve (N, Typ);
-
-         --  Otherwise, adjust conditions
-
-         else
-            Adjust_Condition (Left_Opnd (N));
-            Adjust_Condition (Right_Opnd (N));
-            Set_Etype (N, Standard_Boolean);
-            Adjust_Result_Type (N, Typ);
-         end if;
+         Adjust_Condition (Left_Opnd (N));
+         Adjust_Condition (Right_Opnd (N));
+         Set_Etype (N, Standard_Boolean);
+         Adjust_Result_Type (N, Typ);
 
       elsif Is_Intrinsic_Subprogram (Entity (N)) then
          Expand_Intrinsic_Call (N, Entity (N));
@@ -7896,9 +7887,6 @@ package body Exp_Ch4 is
    -- Expand_N_Selected_Component --
    ---------------------------------
 
-   --  If the selector is a discriminant of a concurrent object, rewrite the
-   --  prefix to denote the corresponding record type.
-
    procedure Expand_N_Selected_Component (N : Node_Id) is
       Loc   : constant Source_Ptr := Sloc (N);
       Par   : constant Node_Id    := Parent (N);
@@ -8201,6 +8189,46 @@ package body Exp_Ch4 is
 
          Rewrite (N, New_N);
          Analyze (N);
+      end if;
+
+      --  Set Atomic_Sync_Required if necessary for atomic component
+
+      if Nkind (N) = N_Selected_Component then
+         declare
+            E   : constant Entity_Id := Entity (Selector_Name (N));
+            Set : Boolean;
+
+         begin
+            --  If component is atomic, but type is not, setting depends on
+            --  disable/enable state for the component.
+
+            if Is_Atomic (E) and then not Is_Atomic (Etype (E)) then
+               Set := not Atomic_Synchronization_Disabled (E);
+
+            --  If component is not atomic, but its type is atomic, setting
+            --  depends on disable/enable state for the type.
+
+            elsif not Is_Atomic (E) and then Is_Atomic (Etype (E)) then
+               Set := not Atomic_Synchronization_Disabled (Etype (E));
+
+            --  If both component and type are atomic, we disable if either
+            --  component or its type have sync disabled.
+
+            elsif Is_Atomic (E) and then Is_Atomic (Etype (E)) then
+               Set := (not Atomic_Synchronization_Disabled (E))
+                        and then
+                      (not Atomic_Synchronization_Disabled (Etype (E)));
+
+            else
+               Set := False;
+            end if;
+
+            --  Set flag if required
+
+            if Set then
+               Activate_Atomic_Synchronization (N);
+            end if;
+         end;
       end if;
    end Expand_N_Selected_Component;
 

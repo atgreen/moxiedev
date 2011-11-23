@@ -11,10 +11,6 @@ AC_CONFIG_HEADER(config.h)
 # exported.  Only used at the end of this file.
 ### am handles this now?  ORIGINAL_LD_FOR_MULTILIBS=$LD
 
-# For libtool versioning info, format is CURRENT:REVISION:AGE
-libtool_VERSION=6:17:0
-AC_SUBST(libtool_VERSION)
-
 # Find the rest of the source tree framework.
 AM_ENABLE_MULTILIB(, ..)
 
@@ -178,6 +174,9 @@ AC_CHECK_HEADERS(sys/sysinfo.h)
 GLIBCXX_CHECK_GET_NPROCS
 AC_CHECK_HEADERS(unistd.h)
 GLIBCXX_CHECK_SC_NPROCESSORS_ONLN
+GLIBCXX_CHECK_SC_NPROC_ONLN
+GLIBCXX_CHECK_PTHREADS_NUM_PROCESSORS_NP
+GLIBCXX_CHECK_SYSCTL_HW_NCPU
 
 # Check for available headers.
 AC_CHECK_HEADERS([endian.h execinfo.h float.h fp.h ieeefp.h inttypes.h \
@@ -305,14 +304,14 @@ fi
 # Check for _Unwind_GetIPInfo.
 GCC_CHECK_UNWIND_GETIPINFO
 
-
 GCC_LINUX_FUTEX([AC_DEFINE(HAVE_LINUX_FUTEX, 1, [Define if futex syscall is available.])])
 
 GCC_HEADER_STDINT(include/gstdint.h)
 
-# This depends on GLIBCXX CHECK_LINKER_FEATURES, but without it assumes no.
 GLIBCXX_ENABLE_SYMVERS([yes])
-GLIBCXX_ENABLE_VISIBILITY([yes])
+AC_SUBST(libtool_VERSION)
+
+GLIBCXX_ENABLE_LIBSTDCXX_VISIBILITY([yes])
 
 ac_ldbl_compat=no
 case "$target" in

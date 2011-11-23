@@ -1,7 +1,7 @@
 /* Top level of GCC compilers (cc1, cc1plus, etc.)
    Copyright (C) 1987, 1988, 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-   Free Software Foundation, Inc.
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+   2011  Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -1174,9 +1174,11 @@ init_optimization_passes (void)
   p = &all_lowering_passes;
   NEXT_PASS (pass_warn_unused_result);
   NEXT_PASS (pass_diagnose_omp_blocks);
+  NEXT_PASS (pass_diagnose_tm_blocks);
   NEXT_PASS (pass_mudflap_1);
   NEXT_PASS (pass_lower_omp);
   NEXT_PASS (pass_lower_cf);
+  NEXT_PASS (pass_lower_tm);
   NEXT_PASS (pass_refactor_eh);
   NEXT_PASS (pass_lower_eh);
   NEXT_PASS (pass_build_cfg);
@@ -1241,6 +1243,7 @@ init_optimization_passes (void)
     }
   NEXT_PASS (pass_ipa_increase_alignment);
   NEXT_PASS (pass_ipa_matrix_reorg);
+  NEXT_PASS (pass_ipa_tm);
   NEXT_PASS (pass_ipa_lower_emutls);
   *p = NULL;
 
@@ -1321,6 +1324,7 @@ init_optimization_passes (void)
       NEXT_PASS (pass_forwprop);
       NEXT_PASS (pass_phiopt);
       NEXT_PASS (pass_object_sizes);
+      NEXT_PASS (pass_strlen);
       NEXT_PASS (pass_ccp);
       NEXT_PASS (pass_copy_prop);
       NEXT_PASS (pass_cse_sincos);
@@ -1354,7 +1358,6 @@ init_optimization_passes (void)
 	  NEXT_PASS (pass_vectorize);
 	    {
 	      struct opt_pass **p = &pass_vectorize.pass.sub;
-	      NEXT_PASS (pass_lower_vector_ssa);
 	      NEXT_PASS (pass_dce_loop);
 	    }
           NEXT_PASS (pass_predcom);
@@ -1366,6 +1369,7 @@ init_optimization_passes (void)
 	  NEXT_PASS (pass_lim);
 	  NEXT_PASS (pass_tree_loop_done);
 	}
+      NEXT_PASS (pass_lower_vector_ssa);
       NEXT_PASS (pass_cse_reciprocals);
       NEXT_PASS (pass_reassoc);
       NEXT_PASS (pass_vrp);
@@ -1398,6 +1402,13 @@ init_optimization_passes (void)
       NEXT_PASS (pass_rename_ssa_copies);
       NEXT_PASS (pass_uncprop);
       NEXT_PASS (pass_local_pure_const);
+    }
+  NEXT_PASS (pass_tm_init);
+    {
+      struct opt_pass **p = &pass_tm_init.pass.sub;
+      NEXT_PASS (pass_tm_mark);
+      NEXT_PASS (pass_tm_memopt);
+      NEXT_PASS (pass_tm_edges);
     }
   NEXT_PASS (pass_lower_complex_O0);
   NEXT_PASS (pass_cleanup_eh);

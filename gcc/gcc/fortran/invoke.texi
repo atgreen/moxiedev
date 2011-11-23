@@ -164,7 +164,7 @@ and warnings}.
 @item Code Generation Options
 @xref{Code Gen Options,,Options for code generation conventions}.
 @gccoptlist{-fno-automatic  -ff2c  -fno-underscoring @gol
--fwhole-file -fsecond-underscore @gol
+-fno-whole-file -fsecond-underscore @gol
 -fbounds-check -fcheck-array-temporaries  -fmax-array-constructor =@var{n} @gol
 -fcheck=@var{<all|array-temps|bounds|do|mem|pointer|recursion>} @gol
 -fcoarray=@var{<none|single|lib>} -fmax-stack-var-size=@var{n} @gol
@@ -368,9 +368,10 @@ extensions, and may be useful for old non-standard programs.  The
 conformance to the Fortran 95, Fortran 2003 and Fortran 2008 standards,
 respectively; errors are given for all extensions beyond the relevant
 language standard, and warnings are given for the Fortran 77 features
-that are permitted but obsolescent in later standards. @samp{-std=f2008tr}
+that are permitted but obsolescent in later standards. @samp{-std=f2008ts}
 allows the Fortran 2008 standard including the additions of the 
-technical report (TR) 29113.
+Technical Specification (TS) 29113 on Further Interoperability of Fortran
+with C.
 
 @end table
 
@@ -458,7 +459,7 @@ let the compiler know the current working directory at the time of
 preprocessing. When this option is enabled, the preprocessor will emit,
 after the initial linemarker, a second linemarker with the current
 working directory followed by two slashes. GCC will use this directory,
-when it's present in the preprocessed input, as the directory emitted
+when it is present in the preprocessed input, as the directory emitted
 as the current working directory in some debugging information formats.
 This option is implicitly enabled if debugging information is enabled,
 but this can be inhibited with the negated form
@@ -658,7 +659,7 @@ messages produced.
 @item -fsyntax-only
 @opindex @code{fsyntax-only}
 @cindex syntax checking
-Check the code for syntax errors, but don't actually compile it.  This
+Check the code for syntax errors, but do not actually compile it.  This
 will generate module files for each module present in the code, but no
 other output file.
 
@@ -1087,10 +1088,10 @@ really useful for use by the gfortran testsuite.
 @opindex @code{fsign-zero}
 When enabled, floating point numbers of value zero with the sign bit set
 are written as negative number in formatted output and treated as
-negative in the @code{SIGN} intrinsic.  @code{fno-sign-zero} does not
-print the negative sign of zero values and regards zero as positive
-number in the @code{SIGN} intrinsic for compatibility with F77.
-Default behavior is to show the negative sign.
+negative in the @code{SIGN} intrinsic.  @option{-fno-sign-zero} does not
+print the negative sign of zero values (or values rounded to zero for I/O)
+and regards zero as positive number in the @code{SIGN} intrinsic for
+compatibility with Fortran 77. The default is @option{-fsign-zero}.
 @end table
 
 @node Code Gen Options
@@ -1225,18 +1226,21 @@ in the source, even if the names as seen by the linker are mangled to
 prevent accidental linking between procedures with incompatible
 interfaces.
 
-@item -fwhole-file
-@opindex @code{fwhole-file}
-By default, GNU Fortran parses, resolves and translates each procedure
-in a file separately.  Using this option modifies this such that the
-whole file is parsed and placed in a single front-end tree.  During
-resolution, in addition to all the usual checks and fixups, references
+@item -fno-whole-file
+@opindex @code{fno-whole-file}
+This flag causes the compiler to resolve and translate each procedure in
+a file separately. 
+
+By default, the whole file is parsed and placed in a single front-end tree.
+During resolution, in addition to all the usual checks and fixups, references
 to external procedures that are in the same file effect resolution of
-that procedure, if not already done, and a check of the interfaces. The
+that procedure, if not already done, and a check of the interfaces.  The
 dependences are resolved by changing the order in which the file is
 translated into the backend tree.  Thus, a procedure that is referenced
 is translated before the reference and the duplication of backend tree
 declarations eliminated.
+
+The @option{-fno-whole-file} option is deprecated and may lead to wrong code.
 
 @item -fsecond-underscore
 @opindex @code{fsecond-underscore}
@@ -1390,7 +1394,7 @@ The default value for @var{n} is 32768.
 @opindex @code{fstack-arrays}
 Adding this option will make the fortran compiler put all local arrays,
 even those of unknown size onto stack memory.  If your program uses very
-large local arrays it's possible that you'll have to extend your runtime
+large local arrays it is possible that you will have to extend your runtime
 limits for stack memory on some operating systems. This flag is enabled
 by default at optimization level @option{-Ofast}.
 
@@ -1477,6 +1481,10 @@ and @code{COMPLEX} variables with a quiet NaN. For a signalling NaN
 use @option{-finit-real=snan}; note, however, that compile-time
 optimizations may convert them into quiet NaN and that trapping
 needs to be enabled (e.g. via @option{-ffpe-trap}).
+
+Finally, note that enabling any of the @option{-finit-*} options will
+silence warnings that would have been emitted by @option{-Wuninitialized}
+for the affected local variables.
 
 @item -falign-commons
 @opindex @code{falign-commons}

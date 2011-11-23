@@ -1,7 +1,7 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/arm/neon
 svn://gcc.gnu.org/svn/gcc
 
@@ -1012,40 +1012,6 @@ sandra
 
 637
 
-vget_highu32.c
-file
-
-
-
-
-2010-07-08T15:17:43.961117Z
-bb5efa2d6685be776bf7a46a19267dcf
-2010-05-24T19:36:31.991947Z
-159794
-sandra
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-466
-
 vmulf32.c
 file
 
@@ -1113,6 +1079,40 @@ sandra
 
 
 597
+
+vget_highu32.c
+file
+
+
+
+
+2010-07-08T15:17:43.961117Z
+bb5efa2d6685be776bf7a46a19267dcf
+2010-05-24T19:36:31.991947Z
+159794
+sandra
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+466
 
 vld3_lanes32.c
 file

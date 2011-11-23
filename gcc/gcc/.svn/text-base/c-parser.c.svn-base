@@ -195,6 +195,9 @@ typedef struct GTY(()) c_parser {
      undesirable to bind an identifier to an Objective-C class, even
      if a class with that name exists.  */
   BOOL_BITFIELD objc_need_raw_identifier : 1;
+  /* Nonzero if we're processing a __transaction statement.  The value
+     is 1 | TM_STMT_ATTR_*.  */
+  unsigned int in_transaction : 4;
   /* True if we are in a context where the Objective-C "Property attribute"
      keywords are valid.  */
   BOOL_BITFIELD objc_property_attr_context : 1;
@@ -650,6 +653,7 @@ c_token_starts_declspecs (c_token *token)
 	case RID_FRACT:
 	case RID_ACCUM:
 	case RID_SAT:
+	case RID_ALIGNAS:
 	  return true;
 	default:
 	  return false;
@@ -1120,6 +1124,7 @@ static struct c_typespec c_parser_enum_specifier (c_parser *);
 static struct c_typespec c_parser_struct_or_union_specifier (c_parser *);
 static tree c_parser_struct_declaration (c_parser *);
 static struct c_typespec c_parser_typeof_specifier (c_parser *);
+static tree c_parser_alignas_specifier (c_parser *);
 static struct c_declarator *c_parser_declarator (c_parser *, bool, c_dtr_syn,
 						 bool *);
 static struct c_declarator *c_parser_direct_declarator (c_parser *, bool,
@@ -1169,6 +1174,9 @@ static struct c_expr c_parser_postfix_expression_after_paren_type (c_parser *,
 static struct c_expr c_parser_postfix_expression_after_primary (c_parser *,
 								location_t loc,
 								struct c_expr);
+static tree c_parser_transaction (c_parser *, enum rid);
+static struct c_expr c_parser_transaction_expression (c_parser *, enum rid);
+static tree c_parser_transaction_cancel (c_parser *);
 static struct c_expr c_parser_expression (c_parser *);
 static struct c_expr c_parser_expression_conv (c_parser *);
 static VEC(tree,gc) *c_parser_expr_list (c_parser *, bool, bool,
@@ -1890,9 +1898,11 @@ c_parser_static_assert_declaration_no_semi (c_parser *parser)
      type-specifier declaration-specifiers[opt]
      type-qualifier declaration-specifiers[opt]
      function-specifier declaration-specifiers[opt]
+     alignment-specifier declaration-specifiers[opt]
 
    Function specifiers (inline) are from C99, and are currently
-   handled as storage class specifiers, as is __thread.
+   handled as storage class specifiers, as is __thread.  Alignment
+   specifiers are from C1X.
 
    C90 6.5.1, C99 6.7.1:
    storage-class-specifier:
@@ -1991,6 +2001,7 @@ c_parser_declspecs (c_parser *parser, struct c_declspecs *specs,
     {
       struct c_typespec t;
       tree attrs;
+      tree align;
       location_t loc = c_parser_peek_token (parser)->location;
 
       /* If we cannot accept a type, exit if the next token must start
@@ -2168,6 +2179,10 @@ c_parser_declspecs (c_parser *parser, struct c_declspecs *specs,
 	    goto out;
 	  attrs = c_parser_attributes (parser);
 	  declspecs_add_attrs (specs, attrs);
+	  break;
+	case RID_ALIGNAS:
+	  align = c_parser_alignas_specifier (parser);
+	  declspecs_add_alignas (specs, align);
 	  break;
 	default:
 	  goto out;
@@ -2751,6 +2766,45 @@ c_parser_typeof_specifier (c_parser *parser)
   return ret;
 }
 
+/* Parse an alignment-specifier.
+
+   C1X 6.7.5:
+
+   alignment-specifier:
+     _Alignas ( type-name )
+     _Alignas ( constant-expression )
+*/
+
+static tree
+c_parser_alignas_specifier (c_parser * parser)
+{
+  tree ret = error_mark_node;
+  location_t loc = c_parser_peek_token (parser)->location;
+  gcc_assert (c_parser_next_token_is_keyword (parser, RID_ALIGNAS));
+  c_parser_consume_token (parser);
+  if (!flag_isoc1x)
+    {
+      if (flag_isoc99)
+	pedwarn (loc, OPT_pedantic,
+		 "ISO C99 does not support %<_Alignas%>");
+      else
+	pedwarn (loc, OPT_pedantic,
+		 "ISO C90 does not support %<_Alignas%>");
+    }
+  if (!c_parser_require (parser, CPP_OPEN_PAREN, "expected %<(%>"))
+    return ret;
+  if (c_parser_next_tokens_start_typename (parser, cla_prefer_id))
+    {
+      struct c_type_name *type = c_parser_type_name (parser);
+      if (type != NULL)
+	ret = c_alignof (loc, groktypename (type, NULL, NULL));
+    }
+  else
+    ret = c_parser_expr_no_commas (parser, NULL).value;
+  c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, "expected %<)%>");
+  return ret;
+}
+
 /* Parse a declarator, possibly an abstract declarator (C90 6.5.4,
    6.5.5, C99 6.7.5, 6.7.6).  If TYPE_SEEN_P then a typedef name may
    be redeclared; otherwise it may not.  KIND indicates which kind of
@@ -3159,10 +3213,19 @@ c_parser_parms_list_declarator (c_parser *parser, tree attrs, tree expr)
   if (c_parser_next_token_is (parser, CPP_ELLIPSIS))
     {
       struct c_arg_info *ret = build_arg_info ();
-      /* Suppress -Wold-style-definition for this case.  */
-      ret->types = error_mark_node;
-      error_at (c_parser_peek_token (parser)->location,
-		"ISO C requires a named argument before %<...%>");
+
+      if (flag_allow_parameterless_variadic_functions)
+        {
+          /* F (...) is allowed.  */
+          ret->types = NULL_TREE;
+        }
+      else
+        {
+          /* Suppress -Wold-style-definition for this case.  */
+          ret->types = error_mark_node;
+          error_at (c_parser_peek_token (parser)->location,
+                    "ISO C requires a named argument before %<...%>");
+        }
       c_parser_consume_token (parser);
       if (c_parser_next_token_is (parser, CPP_CLOSE_PAREN))
 	{
@@ -3356,6 +3419,66 @@ c_parser_simple_asm_expr (c_parser *parser)
   return str;
 }
 
+static tree
+c_parser_attribute_any_word (c_parser *parser)
+{
+  tree attr_name = NULL_TREE;
+
+  if (c_parser_next_token_is (parser, CPP_KEYWORD))
+    {
+      /* ??? See comment above about what keywords are accepted here.  */
+      bool ok;
+      switch (c_parser_peek_token (parser)->keyword)
+	{
+	case RID_STATIC:
+	case RID_UNSIGNED:
+	case RID_LONG:
+	case RID_INT128:
+	case RID_CONST:
+	case RID_EXTERN:
+	case RID_REGISTER:
+	case RID_TYPEDEF:
+	case RID_SHORT:
+	case RID_INLINE:
+	case RID_NORETURN:
+	case RID_VOLATILE:
+	case RID_SIGNED:
+	case RID_AUTO:
+	case RID_RESTRICT:
+	case RID_COMPLEX:
+	case RID_THREAD:
+	case RID_INT:
+	case RID_CHAR:
+	case RID_FLOAT:
+	case RID_DOUBLE:
+	case RID_VOID:
+	case RID_DFLOAT32:
+	case RID_DFLOAT64:
+	case RID_DFLOAT128:
+	case RID_BOOL:
+	case RID_FRACT:
+	case RID_ACCUM:
+	case RID_SAT:
+	case RID_TRANSACTION_ATOMIC:
+	case RID_TRANSACTION_CANCEL:
+	  ok = true;
+	  break;
+	default:
+	  ok = false;
+	  break;
+	}
+      if (!ok)
+	return NULL_TREE;
+
+      /* Accept __attribute__((__const)) as __attribute__((const)) etc.  */
+      attr_name = ridpointers[(int) c_parser_peek_token (parser)->keyword];
+    }
+  else if (c_parser_next_token_is (parser, CPP_NAME))
+    attr_name = c_parser_peek_token (parser)->value;
+
+  return attr_name;
+}
+
 /* Parse (possibly empty) attributes.  This is a GNU extension.
 
    attributes:
@@ -3416,57 +3539,10 @@ c_parser_attributes (c_parser *parser)
 	      c_parser_consume_token (parser);
 	      continue;
 	    }
-	  if (c_parser_next_token_is (parser, CPP_KEYWORD))
-	    {
-	      /* ??? See comment above about what keywords are
-		 accepted here.  */
-	      bool ok;
-	      switch (c_parser_peek_token (parser)->keyword)
-		{
-		case RID_STATIC:
-		case RID_UNSIGNED:
-		case RID_LONG:
-		case RID_INT128:
-		case RID_CONST:
-		case RID_EXTERN:
-		case RID_REGISTER:
-		case RID_TYPEDEF:
-		case RID_SHORT:
-		case RID_INLINE:
-		case RID_NORETURN:
-		case RID_VOLATILE:
-		case RID_SIGNED:
-		case RID_AUTO:
-		case RID_RESTRICT:
-		case RID_COMPLEX:
-		case RID_THREAD:
-		case RID_INT:
-		case RID_CHAR:
-		case RID_FLOAT:
-		case RID_DOUBLE:
-		case RID_VOID:
-		case RID_DFLOAT32:
-		case RID_DFLOAT64:
-		case RID_DFLOAT128:
-		case RID_BOOL:
-		case RID_FRACT:
-		case RID_ACCUM:
-		case RID_SAT:
-		  ok = true;
-		  break;
-		default:
-		  ok = false;
-		  break;
-		}
-	      if (!ok)
-		break;
-	      /* Accept __attribute__((__const)) as __attribute__((const))
-		 etc.  */
-	      attr_name
-		= ridpointers[(int) c_parser_peek_token (parser)->keyword];
-	    }
-	  else
-	    attr_name = c_parser_peek_token (parser)->value;
+
+	  attr_name = c_parser_attribute_any_word (parser);
+	  if (attr_name == NULL)
+	    break;
 	  c_parser_consume_token (parser);
 	  if (c_parser_next_token_is_not (parser, CPP_OPEN_PAREN))
 	    {
@@ -4337,7 +4413,14 @@ c_parser_label (c_parser *parser)
      atomic-directive expression-statement
 
    ordered-construct:
-     ordered-directive structured-block  */
+     ordered-directive structured-block
+
+   Transactional Memory:
+
+   statement:
+     transaction-statement
+     transaction-cancel-statement
+*/
 
 static void
 c_parser_statement (c_parser *parser)
@@ -4428,6 +4511,14 @@ c_parser_statement_after_labels (c_parser *parser)
 	case RID_ASM:
 	  stmt = c_parser_asm_statement (parser);
 	  break;
+	case RID_TRANSACTION_ATOMIC:
+	case RID_TRANSACTION_RELAXED:
+	  stmt = c_parser_transaction (parser,
+	      c_parser_peek_token (parser)->keyword);
+	  break;
+	case RID_TRANSACTION_CANCEL:
+	  stmt = c_parser_transaction_cancel (parser);
+	  goto expect_semicolon;
 	case RID_AT_THROW:
 	  gcc_assert (c_dialect_objc ());
 	  c_parser_consume_token (parser);
@@ -5750,8 +5841,15 @@ c_parser_cast_expression (c_parser *parser, struct c_expr *after)
      __alignof__ ( type-name )
      && identifier
 
+   (C1X permits _Alignof with type names only.)
+
    unary-operator: one of
      __extension__ __real__ __imag__
+
+   Transactional Memory:
+
+   unary-expression:
+     transaction-expression
 
    In addition, the GNU syntax treats ++ and -- as unary operators, so
    they may be applied to cast expressions with errors for non-lvalues
@@ -5860,6 +5958,10 @@ c_parser_unary_expression (c_parser *parser)
 	  op = c_parser_cast_expression (parser, NULL);
 	  op = default_function_array_conversion (exp_loc, op);
 	  return parser_build_unary_op (op_loc, IMAGPART_EXPR, op);
+	case RID_TRANSACTION_ATOMIC:
+	case RID_TRANSACTION_RELAXED:
+	  return c_parser_transaction_expression (parser,
+	      c_parser_peek_token (parser)->keyword);
 	default:
 	  return c_parser_postfix_expression (parser);
 	}
@@ -5933,7 +6035,21 @@ c_parser_alignof_expression (c_parser *parser)
 {
   struct c_expr expr;
   location_t loc = c_parser_peek_token (parser)->location;
+  tree alignof_spelling = c_parser_peek_token (parser)->value;
   gcc_assert (c_parser_next_token_is_keyword (parser, RID_ALIGNOF));
+  /* A diagnostic is not required for the use of this identifier in
+     the implementation namespace; only diagnose it for the C1X
+     spelling because of existing code using the other spellings.  */
+  if (!flag_isoc1x
+      && strcmp (IDENTIFIER_POINTER (alignof_spelling), "_Alignof") == 0)
+    {
+      if (flag_isoc99)
+	pedwarn (loc, OPT_pedantic, "ISO C99 does not support %qE",
+		 alignof_spelling);
+      else
+	pedwarn (loc, OPT_pedantic, "ISO C90 does not support %qE",
+		 alignof_spelling);
+    }
   c_parser_consume_token (parser);
   c_inhibit_evaluation_warnings++;
   in_alignof++;
@@ -5982,12 +6098,60 @@ c_parser_alignof_expression (c_parser *parser)
       mark_exp_read (expr.value);
       c_inhibit_evaluation_warnings--;
       in_alignof--;
+      pedwarn (loc, OPT_pedantic, "ISO C does not allow %<%E (expression)%>",
+	       alignof_spelling);
       ret.value = c_alignof_expr (loc, expr.value);
       ret.original_code = ERROR_MARK;
       ret.original_type = NULL;
       return ret;
     }
 }
+
+/* Helper function to read arguments of builtins which are interfaces
+   for the middle-end nodes like COMPLEX_EXPR, VEC_PERM_EXPR and
+   others.  The name of the builtin is passed using BNAME parameter.
+   Function returns true if there were no errors while parsing and
+   stores the arguments in CEXPR_LIST.  */
+static bool
+c_parser_get_builtin_args (c_parser *parser, const char *bname,
+			   VEC(c_expr_t,gc) **ret_cexpr_list)
+{
+  location_t loc = c_parser_peek_token (parser)->location;
+  VEC (c_expr_t,gc) *cexpr_list;
+  c_expr_t expr;
+
+  *ret_cexpr_list = NULL;
+  if (c_parser_next_token_is_not (parser, CPP_OPEN_PAREN))
+    {
+      error_at (loc, "cannot take address of %qs", bname);
+      return false;
+    }
+
+  c_parser_consume_token (parser);
+
+  if (c_parser_next_token_is (parser, CPP_CLOSE_PAREN))
+    {
+      c_parser_consume_token (parser);
+      return true;
+    }
+
+  expr = c_parser_expr_no_commas (parser, NULL);
+  cexpr_list = VEC_alloc (c_expr_t, gc, 1);
+  C_EXPR_APPEND (cexpr_list, expr);
+  while (c_parser_next_token_is (parser, CPP_COMMA))
+    {
+      c_parser_consume_token (parser);
+      expr = c_parser_expr_no_commas (parser, NULL);
+      C_EXPR_APPEND (cexpr_list, expr);
+    }
+
+  if (!c_parser_require (parser, CPP_CLOSE_PAREN, "expected %<)%>"))
+    return false;
+
+  *ret_cexpr_list = cexpr_list;
+  return true;
+}
+
 
 /* Parse a postfix expression (C90 6.3.1-6.3.2, C99 6.5.1-6.5.2).
 
@@ -6027,6 +6191,10 @@ c_parser_alignof_expression (c_parser *parser)
 			     assignment-expression )
      __builtin_types_compatible_p ( type-name , type-name )
      __builtin_complex ( assignment-expression , assignment-expression )
+     __builtin_shuffle ( assignment-expression , assignment-expression )
+     __builtin_shuffle ( assignment-expression , 
+			 assignment-expression ,
+			 assignment-expression, )
 
    offsetof-member-designator:
      identifier
@@ -6047,7 +6215,7 @@ c_parser_alignof_expression (c_parser *parser)
 static struct c_expr
 c_parser_postfix_expression (c_parser *parser)
 {
-  struct c_expr expr, e1, e2, e3;
+  struct c_expr expr, e1;
   struct c_type_name *t1, *t2;
   location_t loc = c_parser_peek_token (parser)->location;;
   expr.original_code = ERROR_MARK;
@@ -6329,49 +6497,48 @@ c_parser_postfix_expression (c_parser *parser)
 	      c_parser_error (parser, "expected identifier");
 	    c_parser_skip_until_found (parser, CPP_CLOSE_PAREN,
 				       "expected %<)%>");
-	    expr.value = fold_offsetof (offsetof_ref, NULL_TREE);
+	    expr.value = fold_offsetof (offsetof_ref);
 	  }
 	  break;
 	case RID_CHOOSE_EXPR:
-	  c_parser_consume_token (parser);
-	  if (!c_parser_require (parser, CPP_OPEN_PAREN, "expected %<(%>"))
-	    {
-	      expr.value = error_mark_node;
-	      break;
-	    }
-	  loc = c_parser_peek_token (parser)->location;
-	  e1 = c_parser_expr_no_commas (parser, NULL);
-	  if (!c_parser_require (parser, CPP_COMMA, "expected %<,%>"))
-	    {
-	      c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
-	      expr.value = error_mark_node;
-	      break;
-	    }
-	  e2 = c_parser_expr_no_commas (parser, NULL);
-	  if (!c_parser_require (parser, CPP_COMMA, "expected %<,%>"))
-	    {
-	      c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
-	      expr.value = error_mark_node;
-	      break;
-	    }
-	  e3 = c_parser_expr_no_commas (parser, NULL);
-	  c_parser_skip_until_found (parser, CPP_CLOSE_PAREN,
-				     "expected %<)%>");
 	  {
+	    VEC (c_expr_t, gc) *cexpr_list;
+	    c_expr_t *e1_p, *e2_p, *e3_p;
 	    tree c;
 
-	    c = e1.value;
-	    mark_exp_read (e2.value);
-	    mark_exp_read (e3.value);
+	    c_parser_consume_token (parser);
+	    if (!c_parser_get_builtin_args (parser,
+					    "__builtin_choose_expr",
+					    &cexpr_list))
+	      {
+		expr.value = error_mark_node;
+		break;
+	      }
+
+	    if (VEC_length (c_expr_t, cexpr_list) != 3)
+	      {
+		error_at (loc, "wrong number of arguments to "
+			       "%<__builtin_choose_expr%>");
+		expr.value = error_mark_node;
+		break;
+	      }
+
+	    e1_p = VEC_index (c_expr_t, cexpr_list, 0);
+	    e2_p = VEC_index (c_expr_t, cexpr_list, 1);
+	    e3_p = VEC_index (c_expr_t, cexpr_list, 2);
+
+	    c = e1_p->value;
+	    mark_exp_read (e2_p->value);
+	    mark_exp_read (e3_p->value);
 	    if (TREE_CODE (c) != INTEGER_CST
 		|| !INTEGRAL_TYPE_P (TREE_TYPE (c)))
 	      error_at (loc,
 			"first argument to %<__builtin_choose_expr%> not"
 			" a constant");
 	    constant_expression_warning (c);
-	    expr = integer_zerop (c) ? e3 : e2;
+	    expr = integer_zerop (c) ? *e3_p : *e2_p;
+	    break;
 	  }
-	  break;
 	case RID_TYPES_COMPATIBLE_P:
 	  c_parser_consume_token (parser);
 	  if (!c_parser_require (parser, CPP_OPEN_PAREN, "expected %<(%>"))
@@ -6410,57 +6577,99 @@ c_parser_postfix_expression (c_parser *parser)
 	  }
 	  break;
 	case RID_BUILTIN_COMPLEX:
-	  c_parser_consume_token (parser);
-	  if (!c_parser_require (parser, CPP_OPEN_PAREN, "expected %<(%>"))
-	    {
-	      expr.value = error_mark_node;
-	      break;
-	    }
-	  loc = c_parser_peek_token (parser)->location;
-	  e1 = c_parser_expr_no_commas (parser, NULL);
-	  if (!c_parser_require (parser, CPP_COMMA, "expected %<,%>"))
-	    {
-	      c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
-	      expr.value = error_mark_node;
-	      break;
-	    }
-	  e2 = c_parser_expr_no_commas (parser, NULL);
-	  c_parser_skip_until_found (parser, CPP_CLOSE_PAREN,
-				     "expected %<)%>");
-	  mark_exp_read (e1.value);
-	  if (TREE_CODE (e1.value) == EXCESS_PRECISION_EXPR)
-	    e1.value = convert (TREE_TYPE (e1.value),
-				TREE_OPERAND (e1.value, 0));
-	  mark_exp_read (e2.value);
-	  if (TREE_CODE (e2.value) == EXCESS_PRECISION_EXPR)
-	    e2.value = convert (TREE_TYPE (e2.value),
-				TREE_OPERAND (e2.value, 0));
-	  if (!SCALAR_FLOAT_TYPE_P (TREE_TYPE (e1.value))
-	      || DECIMAL_FLOAT_TYPE_P (TREE_TYPE (e1.value))
-	      || !SCALAR_FLOAT_TYPE_P (TREE_TYPE (e2.value))
-	      || DECIMAL_FLOAT_TYPE_P (TREE_TYPE (e2.value)))
-	    {
-	      error_at (loc, "%<__builtin_complex%> operand "
-			"not of real binary floating-point type");
-	      expr.value = error_mark_node;
-	      break;
-	    }
-	  if (TYPE_MAIN_VARIANT (TREE_TYPE (e1.value))
-	      != TYPE_MAIN_VARIANT (TREE_TYPE (e2.value)))
-	    {
-	      error_at (loc,
-			"%<__builtin_complex%> operands of different types");
-	      expr.value = error_mark_node;
-	      break;
-	    }
-	  if (!flag_isoc99)
-	    pedwarn (loc, OPT_pedantic,
-		     "ISO C90 does not support complex types");
-	  expr.value = build2 (COMPLEX_EXPR,
-			       build_complex_type (TYPE_MAIN_VARIANT
-						   (TREE_TYPE (e1.value))),
-			       e1.value, e2.value);
-	  break;
+	  {
+	    VEC(c_expr_t, gc) *cexpr_list;
+	    c_expr_t *e1_p, *e2_p;
+
+	    c_parser_consume_token (parser);
+	    if (!c_parser_get_builtin_args (parser,
+					    "__builtin_complex",
+					    &cexpr_list))
+	      {
+		expr.value = error_mark_node;
+		break;
+	      }
+
+	    if (VEC_length (c_expr_t, cexpr_list) != 2)
+	      {
+		error_at (loc, "wrong number of arguments to "
+			       "%<__builtin_complex%>");
+		expr.value = error_mark_node;
+		break;
+	      }
+
+	    e1_p = VEC_index (c_expr_t, cexpr_list, 0);
+	    e2_p = VEC_index (c_expr_t, cexpr_list, 1);
+
+	    mark_exp_read (e1_p->value);
+	    if (TREE_CODE (e1_p->value) == EXCESS_PRECISION_EXPR)
+	      e1_p->value = convert (TREE_TYPE (e1_p->value),
+				     TREE_OPERAND (e1_p->value, 0));
+	    mark_exp_read (e2_p->value);
+	    if (TREE_CODE (e2_p->value) == EXCESS_PRECISION_EXPR)
+	      e2_p->value = convert (TREE_TYPE (e2_p->value),
+				     TREE_OPERAND (e2_p->value, 0));
+	    if (!SCALAR_FLOAT_TYPE_P (TREE_TYPE (e1_p->value))
+		|| DECIMAL_FLOAT_TYPE_P (TREE_TYPE (e1_p->value))
+		|| !SCALAR_FLOAT_TYPE_P (TREE_TYPE (e2_p->value))
+		|| DECIMAL_FLOAT_TYPE_P (TREE_TYPE (e2_p->value)))
+	      {
+		error_at (loc, "%<__builtin_complex%> operand "
+			  "not of real binary floating-point type");
+		expr.value = error_mark_node;
+		break;
+	      }
+	    if (TYPE_MAIN_VARIANT (TREE_TYPE (e1_p->value))
+		!= TYPE_MAIN_VARIANT (TREE_TYPE (e2_p->value)))
+	      {
+		error_at (loc,
+			  "%<__builtin_complex%> operands of different types");
+		expr.value = error_mark_node;
+		break;
+	      }
+	    if (!flag_isoc99)
+	      pedwarn (loc, OPT_pedantic,
+		       "ISO C90 does not support complex types");
+	    expr.value = build2 (COMPLEX_EXPR,
+				 build_complex_type
+				   (TYPE_MAIN_VARIANT
+				     (TREE_TYPE (e1_p->value))),
+				 e1_p->value, e2_p->value);
+	    break;
+	  }
+	case RID_BUILTIN_SHUFFLE:
+	  {
+	    VEC(c_expr_t,gc) *cexpr_list;
+
+	    c_parser_consume_token (parser);
+	    if (!c_parser_get_builtin_args (parser,
+					    "__builtin_shuffle",
+					    &cexpr_list))
+	      {
+		expr.value = error_mark_node;
+		break;
+	      }
+
+	    if (VEC_length (c_expr_t, cexpr_list) == 2)
+	      expr.value =
+		c_build_vec_perm_expr
+		  (loc, VEC_index (c_expr_t, cexpr_list, 0)->value,
+		   NULL_TREE, VEC_index (c_expr_t, cexpr_list, 1)->value);
+
+	    else if (VEC_length (c_expr_t, cexpr_list) == 3)
+	      expr.value =
+		c_build_vec_perm_expr
+		  (loc, VEC_index (c_expr_t, cexpr_list, 0)->value,
+		   VEC_index (c_expr_t, cexpr_list, 1)->value,
+		   VEC_index (c_expr_t, cexpr_list, 2)->value);
+	    else
+	      {
+		error_at (loc, "wrong number of arguments to "
+			       "%<__builtin_shuffle%>");
+		expr.value = error_mark_node;
+	      }
+	    break;
+	  }
 	case RID_AT_SELECTOR:
 	  gcc_assert (c_dialect_objc ());
 	  c_parser_consume_token (parser);
@@ -10369,6 +10578,217 @@ c_parser_omp_threadprivate (c_parser *parser)
   c_parser_skip_to_pragma_eol (parser);
 }
 
+/* Parse a transaction attribute (GCC Extension).
+
+   transaction-attribute:
+     attributes
+     [ [ any-word ] ]
+
+   The transactional memory language description is written for C++,
+   and uses the C++0x attribute syntax.  For compatibility, allow the
+   bracket style for transactions in C as well.  */
+
+static tree
+c_parser_transaction_attributes (c_parser *parser)
+{
+  tree attr_name, attr = NULL;
+
+  if (c_parser_next_token_is_keyword (parser, RID_ATTRIBUTE))
+    return c_parser_attributes (parser);
+
+  if (!c_parser_next_token_is (parser, CPP_OPEN_SQUARE))
+    return NULL_TREE;
+  c_parser_consume_token (parser);
+  if (!c_parser_require (parser, CPP_OPEN_SQUARE, "expected %<[%>"))
+    goto error1;
+
+  attr_name = c_parser_attribute_any_word (parser);
+  if (attr_name)
+    {
+      c_parser_consume_token (parser);
+      attr = build_tree_list (attr_name, NULL_TREE);
+    }
+  else
+    c_parser_error (parser, "expected identifier");
+
+  c_parser_skip_until_found (parser, CPP_CLOSE_SQUARE, "expected %<]%>");
+ error1:
+  c_parser_skip_until_found (parser, CPP_CLOSE_SQUARE, "expected %<]%>");
+  return attr;
+}
+
+/* Parse a __transaction_atomic or __transaction_relaxed statement
+   (GCC Extension).
+
+   transaction-statement:
+     __transaction_atomic transaction-attribute[opt] compound-statement
+     __transaction_relaxed compound-statement
+
+   Note that the only valid attribute is: "outer".
+*/
+
+static tree
+c_parser_transaction (c_parser *parser, enum rid keyword)
+{
+  unsigned int old_in = parser->in_transaction;
+  unsigned int this_in = 1, new_in;
+  location_t loc = c_parser_peek_token (parser)->location;
+  tree stmt, attrs;
+
+  gcc_assert ((keyword == RID_TRANSACTION_ATOMIC
+      || keyword == RID_TRANSACTION_RELAXED)
+      && c_parser_next_token_is_keyword (parser, keyword));
+  c_parser_consume_token (parser);
+
+  if (keyword == RID_TRANSACTION_RELAXED)
+    this_in |= TM_STMT_ATTR_RELAXED;
+  else
+    {
+      attrs = c_parser_transaction_attributes (parser);
+      if (attrs)
+	this_in |= parse_tm_stmt_attr (attrs, TM_STMT_ATTR_OUTER);
+    }
+
+  /* Keep track if we're in the lexical scope of an outer transaction.  */
+  new_in = this_in | (old_in & TM_STMT_ATTR_OUTER);
+
+  parser->in_transaction = new_in;
+  stmt = c_parser_compound_statement (parser);
+  parser->in_transaction = old_in;
+
+  if (flag_tm)
+    stmt = c_finish_transaction (loc, stmt, this_in);
+  else
+    error_at (loc, (keyword == RID_TRANSACTION_ATOMIC ?
+	"%<__transaction_atomic%> without transactional memory support enabled"
+	: "%<__transaction_relaxed %> "
+	"without transactional memory support enabled"));
+
+  return stmt;
+}
+
+/* Parse a __transaction_atomic or __transaction_relaxed expression
+   (GCC Extension).
+
+   transaction-expression:
+     __transaction_atomic ( expression )
+     __transaction_relaxed ( expression )
+*/
+
+static struct c_expr
+c_parser_transaction_expression (c_parser *parser, enum rid keyword)
+{
+  struct c_expr ret;
+  unsigned int old_in = parser->in_transaction;
+  unsigned int this_in = 1;
+  location_t loc = c_parser_peek_token (parser)->location;
+  tree attrs;
+
+  gcc_assert ((keyword == RID_TRANSACTION_ATOMIC
+      || keyword == RID_TRANSACTION_RELAXED)
+      && c_parser_next_token_is_keyword (parser, keyword));
+  c_parser_consume_token (parser);
+
+  if (keyword == RID_TRANSACTION_RELAXED)
+    this_in |= TM_STMT_ATTR_RELAXED;
+  else
+    {
+      attrs = c_parser_transaction_attributes (parser);
+      if (attrs)
+	this_in |= parse_tm_stmt_attr (attrs, 0);
+    }
+
+  parser->in_transaction = this_in;
+  if (c_parser_require (parser, CPP_OPEN_PAREN, "expected %<(%>"))
+    {
+      tree expr = c_parser_expression (parser).value;
+      ret.original_type = TREE_TYPE (expr);
+      ret.value = build1 (TRANSACTION_EXPR, ret.original_type, expr);
+      if (this_in & TM_STMT_ATTR_RELAXED)
+	TRANSACTION_EXPR_RELAXED (ret.value) = 1;
+      SET_EXPR_LOCATION (ret.value, loc);
+      ret.original_code = TRANSACTION_EXPR;
+      if (!c_parser_require (parser, CPP_CLOSE_PAREN, "expected %<)%>"))
+	{
+	  c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
+	  goto error;
+	}
+    }
+  else
+    {
+     error:
+      ret.value = error_mark_node;
+      ret.original_code = ERROR_MARK;
+      ret.original_type = NULL;
+    }
+  parser->in_transaction = old_in;
+
+  if (!flag_tm)
+    error_at (loc, (keyword == RID_TRANSACTION_ATOMIC ?
+	"%<__transaction_atomic%> without transactional memory support enabled"
+	: "%<__transaction_relaxed %> "
+	"without transactional memory support enabled"));
+
+  return ret;
+}
+
+/* Parse a __transaction_cancel statement (GCC Extension).
+
+   transaction-cancel-statement:
+     __transaction_cancel transaction-attribute[opt] ;
+
+   Note that the only valid attribute is "outer".
+*/
+
+static tree
+c_parser_transaction_cancel(c_parser *parser)
+{
+  location_t loc = c_parser_peek_token (parser)->location;
+  tree attrs;
+  bool is_outer = false;
+
+  gcc_assert (c_parser_next_token_is_keyword (parser, RID_TRANSACTION_CANCEL));
+  c_parser_consume_token (parser);
+
+  attrs = c_parser_transaction_attributes (parser);
+  if (attrs)
+    is_outer = (parse_tm_stmt_attr (attrs, TM_STMT_ATTR_OUTER) != 0);
+
+  if (!flag_tm)
+    {
+      error_at (loc, "%<__transaction_cancel%> without "
+		"transactional memory support enabled");
+      goto ret_error;
+    }
+  else if (parser->in_transaction & TM_STMT_ATTR_RELAXED)
+    {
+      error_at (loc, "%<__transaction_cancel%> within a "
+		"%<__transaction_relaxed%>");
+      goto ret_error;
+    }
+  else if (is_outer)
+    {
+      if ((parser->in_transaction & TM_STMT_ATTR_OUTER) == 0
+	  && !is_tm_may_cancel_outer (current_function_decl))
+	{
+	  error_at (loc, "outer %<__transaction_cancel%> not "
+		    "within outer %<__transaction_atomic%>");
+	  error_at (loc, "  or a %<transaction_may_cancel_outer%> function");
+	  goto ret_error;
+	}
+    }
+  else if (parser->in_transaction == 0)
+    {
+      error_at (loc, "%<__transaction_cancel%> not within "
+		"%<__transaction_atomic%>");
+      goto ret_error;
+    }
+
+  return add_stmt (build_tm_abort_call (loc, is_outer));
+
+ ret_error:
+  return build1 (NOP_EXPR, void_type_node, error_mark_node);
+}
 
 /* Parse a single source file.  */
 

@@ -1,0 +1,73 @@
+#!/bin/bash
+#
+# quartus-jtagd Startup script for Altera Quartus jtagd
+#
+# Author:       Anthony Green <green@moxielogic.com>
+#               inspired by
+#		http://aalonso.wordpress.com/2009/07/02/altera-quartus-2-on-fedora-11/
+#
+# chkconfig:	- 90 01
+#
+# description:  The quartus-jtagd service manages JTAG connectivity to FPGA target devices.
+# processname:  jtagd
+#
+
+# source function library
+. /etc/rc.d/init.d/functions
+
+RETVAL=0
+pidfile=${PIDFILE-/var/run/quartus-jtagd.pid}
+lockfile=${LOCKFILE-/var/lock/subsys/quartus-jtagd}
+PROG="jtagd"
+JTAGD=/opt/altera/quartus/bin/jtagd
+
+start() {
+	echo -n $"Starting $PROG server: "
+	$JTAGD && success || failure
+	RETVAL=$?
+	echo
+	pidofproc $PROG >> $PID_FILE
+        [ $RETVAL -eq 0 ] && touch $lockfile
+}
+
+stop() {
+       local pid
+       pidfileofproc $JTAGD >> pid
+       if [ -n $pid]; then
+       	  echo -n $"Stopping $PROG server: "
+	  killproc $JTAGD && success || failure
+	  [ $RETVAL -eq 0 ] && rm -f $lockfile
+	else
+	  failure $"Stopping $PROG"
+        fi
+	RETVAL=$?
+	echo
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop) 
+	stop
+	;;
+  restart)
+	restart
+	;;
+  condrestart)
+	[ -f "$lockfile" ] && restart
+	;;
+  status)
+	status -p "${pidfile}" $JTAGD
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|status|restart|condrestart}"
+	exit 1
+esac
+
+exit $RETVAL

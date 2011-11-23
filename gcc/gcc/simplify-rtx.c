@@ -2431,9 +2431,7 @@ simplify_binary_operation_1 (enum rtx_code code, enum machine_mode mode,
     case IOR:
       if (trueop1 == CONST0_RTX (mode))
 	return op0;
-      if (CONST_INT_P (trueop1)
-	  && ((UINTVAL (trueop1) & GET_MODE_MASK (mode))
-	      == GET_MODE_MASK (mode)))
+      if (INTEGRAL_MODE_P (mode) && trueop1 == CONSTM1_RTX (mode))
 	return op1;
       if (rtx_equal_p (trueop0, trueop1) && ! side_effects_p (op0))
 	return op0;
@@ -2573,9 +2571,7 @@ simplify_binary_operation_1 (enum rtx_code code, enum machine_mode mode,
     case XOR:
       if (trueop1 == CONST0_RTX (mode))
 	return op0;
-      if (CONST_INT_P (trueop1)
-	  && ((UINTVAL (trueop1) & GET_MODE_MASK (mode))
-	      == GET_MODE_MASK (mode)))
+      if (INTEGRAL_MODE_P (mode) && trueop1 == CONSTM1_RTX (mode))
 	return simplify_gen_unary (NOT, mode, op0, mode);
       if (rtx_equal_p (trueop0, trueop1)
 	  && ! side_effects_p (op0)
@@ -2721,6 +2717,8 @@ simplify_binary_operation_1 (enum rtx_code code, enum machine_mode mode,
     case AND:
       if (trueop1 == CONST0_RTX (mode) && ! side_effects_p (op0))
 	return trueop1;
+      if (INTEGRAL_MODE_P (mode) && trueop1 == CONSTM1_RTX (mode))
+	return op0;
       if (HWI_COMPUTABLE_MODE_P (mode))
 	{
 	  HOST_WIDE_INT nzop0 = nonzero_bits (trueop0, mode);
@@ -4354,10 +4352,20 @@ simplify_relational_operation_1 (enum rtx_code code, enum machine_mode mode,
     {
       rtx x = XEXP (op0, 0);
       rtx c = XEXP (op0, 1);
+      enum rtx_code invcode = op0code == PLUS ? MINUS : PLUS;
+      rtx tem = simplify_gen_binary (invcode, cmp_mode, op1, c);
 
-      c = simplify_gen_binary (op0code == PLUS ? MINUS : PLUS,
-			       cmp_mode, op1, c);
-      return simplify_gen_relational (code, mode, cmp_mode, x, c);
+      /* Detect an infinite recursive condition, where we oscillate at this
+	 simplification case between:
+	    A + B == C  <--->  C - B == A,
+	 where A, B, and C are all constants with non-simplifiable expressions,
+	 usually SYMBOL_REFs.  */
+      if (GET_CODE (tem) == invcode
+	  && CONSTANT_P (x)
+	  && rtx_equal_p (c, XEXP (tem, 1)))
+	return NULL_RTX;
+
+      return simplify_gen_relational (code, mode, cmp_mode, x, tem);
     }
 
   /* (ne:SI (zero_extract:SI FOO (const_int 1) BAR) (const_int 0))) is

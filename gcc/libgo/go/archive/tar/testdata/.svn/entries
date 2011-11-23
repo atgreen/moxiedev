@@ -1,14 +1,14 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/archive/tar/testdata
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-11-10T23:10:04.178483Z
-154084
+2011-10-26T23:57:58.673671Z
+180552
 ian
 
 
@@ -100,10 +100,10 @@ file
 
 
 
-2011-06-04T18:38:23.214104Z
-eb76564a10939dea1c1e822f3d13615c
-2009-11-10T23:10:04.178483Z
-154084
+2011-11-12T11:41:53.573496Z
+88712af2a004429d7101fd0c710baa8f
+2011-10-26T23:57:58.673671Z
+180552
 ian
 has-props
 
@@ -126,7 +126,7 @@ has-props
 
 
 
-3072
+3584
 
 small.txt
 file

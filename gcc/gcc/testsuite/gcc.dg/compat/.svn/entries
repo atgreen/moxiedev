@@ -1,7 +1,7 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/compat
 svn://gcc.gnu.org/svn/gcc
 
@@ -468,40 +468,6 @@ jason
 
 1464
 
-struct-by-value-13_y.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-78fadeec3eeb928b95005b0681000904
-2004-01-19T19:17:50.000000Z
-76170
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-706
-
 scalar-by-value-3_y.c
 file
 
@@ -569,6 +535,40 @@ janis
 
 
 843
+
+struct-by-value-13_y.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+78fadeec3eeb928b95005b0681000904
+2004-01-19T19:17:50.000000Z
+76170
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+706
 
 scalar-by-value-5_y.c
 file

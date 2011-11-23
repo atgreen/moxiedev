@@ -33,6 +33,15 @@
 ;; A list of integer modes that are up to one word long
 (define_mode_iterator QHSI [QI HI SI])
 
+;; A list of integer modes that are less than a word
+(define_mode_iterator NARROW [QI HI])
+
+;; A list of all the integer modes upto 64bit
+(define_mode_iterator QHSD [QI HI SI DI])
+
+;; A list of the 32bit and 64bit integer modes
+(define_mode_iterator SIDI [SI DI])
+
 ;; Integer element sizes implemented by IWMMXT.
 (define_mode_iterator VMMX [V2SI V4HI V8QI])
 
@@ -390,16 +399,23 @@
 (define_mode_attr qhs_zextenddi_cond [(SI "") (HI "&& arm_arch6") (QI "")])
 (define_mode_attr qhs_sextenddi_cond [(SI "") (HI "&& arm_arch6")
 				      (QI "&& arm_arch6")])
-(define_mode_attr qhs_extenddi_op [(SI "s_register_operand")
+(define_mode_attr qhs_zextenddi_op [(SI "s_register_operand")
 				   (HI "nonimmediate_operand")
 				   (QI "nonimmediate_operand")])
-(define_mode_attr qhs_extenddi_cstr [(SI "r") (HI "rm") (QI "rm")])
+(define_mode_attr qhs_extenddi_op [(SI "s_register_operand")
+				   (HI "nonimmediate_operand")
+				   (QI "arm_reg_or_extendqisi_mem_op")])
+(define_mode_attr qhs_extenddi_cstr [(SI "r") (HI "rm") (QI "rUq")])
+(define_mode_attr qhs_zextenddi_cstr [(SI "r") (HI "rm") (QI "rm")])
 
 ;; Mode attributes used for fixed-point support.
 (define_mode_attr qaddsub_suf [(V4UQQ "8") (V2UHQ "16") (UQQ "8") (UHQ "16")
 			       (V2UHA "16") (UHA "16")
 			       (V4QQ "8") (V2HQ "16") (QQ "8") (HQ "16")
 			       (V2HA "16") (HA "16") (SQ "") (SA "")])
+
+;; Mode attribute for vshll.
+(define_mode_attr V_innermode [(V8QI "QI") (V4HI "HI") (V2SI "SI")])
 
 ;;----------------------------------------------------------------------------
 ;; Code attributes

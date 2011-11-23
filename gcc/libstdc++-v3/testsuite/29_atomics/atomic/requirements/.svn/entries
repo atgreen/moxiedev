@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/29_atomics/atomic/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-12-21T19:00:34.247142Z
-155377
-bkoz
+2011-11-06T14:55:48.748380Z
+181031
+amacleod
 
 
 

@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/libgomp/config
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-08T15:39:35.456178Z
-177568
-ro
+2011-10-10T19:27:31.749125Z
+179771
+doko
 
 
 
@@ -27,9 +27,6 @@ ro
 138bc75d-0d04-0410-961f-82ee72b054a4
 
 linux
-dir
-
-posix95
 dir
 
 posix

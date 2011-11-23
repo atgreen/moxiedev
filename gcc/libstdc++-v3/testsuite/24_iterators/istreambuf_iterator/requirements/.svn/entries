@@ -1,14 +1,14 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/24_iterators/istreambuf_iterator/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-09-08T22:42:21.714781Z
-178713
+2011-10-06T14:43:26.801224Z
+179616
 paolo
 
 
@@ -134,11 +134,11 @@ file
 
 
 
-2009-04-24T17:50:19.000000Z
-05b6ce823416d87af091311e944a2a19
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2011-11-12T11:40:47.247273Z
+d53746799da07d488ee12a805012d8b0
+2011-10-06T14:43:26.801224Z
+179616
+paolo
 
 
 
@@ -160,5 +160,5 @@ jakub
 
 
 
-1321
+1402
 

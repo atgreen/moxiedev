@@ -308,6 +308,7 @@ mark_stmt_if_obviously_necessary (gimple stmt, bool aggressive)
 	    case BUILT_IN_MALLOC:
 	    case BUILT_IN_CALLOC:
 	    case BUILT_IN_ALLOCA:
+	    case BUILT_IN_ALLOCA_WITH_ALIGN:
 	      return;
 
 	    default:;
@@ -348,6 +349,12 @@ mark_stmt_if_obviously_necessary (gimple stmt, bool aggressive)
     case GIMPLE_SWITCH:
       if (! aggressive)
 	mark_stmt_necessary (stmt, true);
+      break;
+
+    case GIMPLE_ASSIGN:
+      if (TREE_CODE (gimple_assign_lhs (stmt)) == SSA_NAME
+	  && TREE_CLOBBER_P (gimple_assign_rhs1 (stmt)))
+	return;
       break;
 
     default:
@@ -639,6 +646,7 @@ mark_all_reaching_defs_necessary_1 (ao_ref *ref ATTRIBUTE_UNUSED,
 	  case BUILT_IN_MALLOC:
 	  case BUILT_IN_CALLOC:
 	  case BUILT_IN_ALLOCA:
+	  case BUILT_IN_ALLOCA_WITH_ALIGN:
 	  case BUILT_IN_FREE:
 	    return false;
 
@@ -890,6 +898,8 @@ propagate_necessity (struct edge_list *el)
 		      || DECL_FUNCTION_CODE (callee) == BUILT_IN_FREE
 		      || DECL_FUNCTION_CODE (callee) == BUILT_IN_VA_END
 		      || DECL_FUNCTION_CODE (callee) == BUILT_IN_ALLOCA
+		      || (DECL_FUNCTION_CODE (callee)
+			  == BUILT_IN_ALLOCA_WITH_ALIGN)
 		      || DECL_FUNCTION_CODE (callee) == BUILT_IN_STACK_SAVE
 		      || DECL_FUNCTION_CODE (callee) == BUILT_IN_STACK_RESTORE
 		      || DECL_FUNCTION_CODE (callee) == BUILT_IN_ASSUME_ALIGNED))
@@ -913,19 +923,17 @@ propagate_necessity (struct edge_list *el)
 	  else if (gimple_assign_single_p (stmt))
 	    {
 	      tree rhs;
-	      bool rhs_aliased = false;
 	      /* If this is a load mark things necessary.  */
 	      rhs = gimple_assign_rhs1 (stmt);
 	      if (TREE_CODE (rhs) != SSA_NAME
-		  && !is_gimple_min_invariant (rhs))
+		  && !is_gimple_min_invariant (rhs)
+		  && TREE_CODE (rhs) != CONSTRUCTOR)
 		{
 		  if (!ref_may_be_aliased (rhs))
 		    mark_aliased_reaching_defs_necessary (stmt, rhs);
 		  else
-		    rhs_aliased = true;
+		    mark_all_reaching_defs_necessary (stmt);
 		}
-	      if (rhs_aliased)
-		mark_all_reaching_defs_necessary (stmt);
 	    }
 	  else if (gimple_code (stmt) == GIMPLE_RETURN)
 	    {
@@ -933,7 +941,8 @@ propagate_necessity (struct edge_list *el)
 	      /* A return statement may perform a load.  */
 	      if (rhs
 		  && TREE_CODE (rhs) != SSA_NAME
-		  && !is_gimple_min_invariant (rhs))
+		  && !is_gimple_min_invariant (rhs)
+		  && TREE_CODE (rhs) != CONSTRUCTOR)
 		{
 		  if (!ref_may_be_aliased (rhs))
 		    mark_aliased_reaching_defs_necessary (stmt, rhs);
@@ -951,6 +960,7 @@ propagate_necessity (struct edge_list *el)
 		  tree op = TREE_VALUE (gimple_asm_input_op (stmt, i));
 		  if (TREE_CODE (op) != SSA_NAME
 		      && !is_gimple_min_invariant (op)
+		      && TREE_CODE (op) != CONSTRUCTOR
 		      && !ref_may_be_aliased (op))
 		    mark_aliased_reaching_defs_necessary (stmt, op);
 		}
@@ -978,18 +988,36 @@ propagate_necessity (struct edge_list *el)
     }
 }
 
+/* Replace all uses of NAME by underlying variable and mark it
+   for renaming.  */
+
+void
+mark_virtual_operand_for_renaming (tree name)
+{
+  bool used = false;
+  imm_use_iterator iter;
+  use_operand_p use_p;
+  gimple stmt;
+  tree name_var;
+
+  name_var = SSA_NAME_VAR (name);
+  FOR_EACH_IMM_USE_STMT (stmt, iter, name)
+    {
+      FOR_EACH_IMM_USE_ON_STMT (use_p, iter)
+        SET_USE (use_p, name_var);
+      update_stmt (stmt);
+      used = true;
+    }
+  if (used)
+    mark_sym_for_renaming (name_var);
+}
+
 /* Replace all uses of result of PHI by underlying variable and mark it
    for renaming.  */
 
 void
 mark_virtual_phi_result_for_renaming (gimple phi)
 {
-  bool used = false;
-  imm_use_iterator iter;
-  use_operand_p use_p;
-  gimple stmt;
-  tree result_ssa, result_var;
-
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
       fprintf (dump_file, "Marking result for renaming : ");
@@ -997,18 +1025,9 @@ mark_virtual_phi_result_for_renaming (gimple phi)
       fprintf (dump_file, "\n");
     }
 
-  result_ssa = gimple_phi_result (phi);
-  result_var = SSA_NAME_VAR (result_ssa);
-  FOR_EACH_IMM_USE_STMT (stmt, iter, result_ssa)
-    {
-      FOR_EACH_IMM_USE_ON_STMT (use_p, iter)
-        SET_USE (use_p, result_var);
-      update_stmt (stmt);
-      used = true;
-    }
-  if (used)
-    mark_sym_for_renaming (result_var);
+  mark_virtual_operand_for_renaming (gimple_phi_result (phi));
 }
+
 
 /* Remove dead PHI nodes from block BB.  */
 

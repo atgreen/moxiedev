@@ -817,10 +817,11 @@ package Einfo is
 --       Present in access types. This field points to the type that is
 --       directly designated by the access type. In the case of an access
 --       type to an incomplete type, this field references the incomplete
---       type. Note that in the semantic processing, what is useful in
---       nearly all cases is the full type designated by the access type.
---       The function Designated_Type obtains this full type in the case of
---       access to an incomplete type.
+--       type. Directly_Designated_Type is typically used in implementing the
+--       static semantics of the language; in implementing dynamic semantics,
+--       we typically want the full view of the designated type. The function
+--       Designated_Type obtains this full type in the case of access to an
+--       incomplete type.
 
 --    Discard_Names (Flag88)
 --       Present in types and exception entities. Set if pragma Discard_Names
@@ -2474,11 +2475,11 @@ package Einfo is
 --    Is_Local_Anonymous_Access (Flag194)
 --       Present in access types. Set for an anonymous access type to indicate
 --       that the type is created for a record component with an access
---       definition, an array component, or (pre-Ada2012) a stand-alone object.
+--       definition, an array component, or (pre-Ada 2012) a standalone object.
 --       Such anonymous types have an accessibility level equal to that of the
 --       declaration in which they appear, unlike the anonymous access types
 --       that are created for access parameters, access discriminants, and
---       (as of Ada2012) stand-alone objects.
+--       (as of Ada 2012) stand-alone objects.
 
 --    Is_Machine_Code_Subprogram (Flag137)
 --       Present in subprogram entities. Set to indicate that the subprogram

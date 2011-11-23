@@ -85,7 +85,7 @@ static int cond_exec_changed_p;
 
 /* Forward references.  */
 static int count_bb_insns (const_basic_block);
-static bool cheap_bb_rtx_cost_p (const_basic_block, int);
+static bool cheap_bb_rtx_cost_p (const_basic_block, int, int);
 static rtx first_active_insn (basic_block);
 static rtx last_active_insn (basic_block, int);
 static rtx find_active_insn_before (basic_block, rtx);
@@ -131,20 +131,31 @@ count_bb_insns (const_basic_block bb)
 
 /* Determine whether the total insn_rtx_cost on non-jump insns in
    basic block BB is less than MAX_COST.  This function returns
-   false if the cost of any instruction could not be estimated.  */
+   false if the cost of any instruction could not be estimated. 
+
+   The cost of the non-jump insns in BB is scaled by REG_BR_PROB_BASE
+   as those insns are being speculated.  MAX_COST is scaled with SCALE
+   plus a small fudge factor.  */
 
 static bool
-cheap_bb_rtx_cost_p (const_basic_block bb, int max_cost)
+cheap_bb_rtx_cost_p (const_basic_block bb, int scale, int max_cost)
 {
   int count = 0;
   rtx insn = BB_HEAD (bb);
   bool speed = optimize_bb_for_speed_p (bb);
 
+  /* Our branch probability/scaling factors are just estimates and don't
+     account for cases where we can get speculation for free and other
+     secondary benefits.  So we fudge the scale factor to make speculating
+     appear a little more profitable.  */
+  scale += REG_BR_PROB_BASE / 8;
+  max_cost *= scale;
+
   while (1)
     {
       if (NONJUMP_INSN_P (insn))
 	{
-	  int cost = insn_rtx_cost (PATTERN (insn), speed);
+	  int cost = insn_rtx_cost (PATTERN (insn), speed) * REG_BR_PROB_BASE;
 	  if (cost == 0)
 	    return false;
 
@@ -1519,9 +1530,9 @@ noce_try_cmove_arith (struct noce_if_info *if_info)
     }
 
   /* ??? We could handle this if we knew that a load from A or B could
-     not fault.  This is also true if we've already loaded
+     not trap or fault.  This is also true if we've already loaded
      from the address along the path from ENTRY.  */
-  else if (may_trap_p (a) || may_trap_p (b))
+  else if (may_trap_or_fault_p (a) || may_trap_or_fault_p (b))
     return FALSE;
 
   /* if (test) x = a + b; else x = c - d;
@@ -2316,13 +2327,13 @@ noce_get_condition (rtx jump, rtx *earliest, bool then_else_reversed)
 static int
 noce_operand_ok (const_rtx op)
 {
+  if (side_effects_p (op))
+    return FALSE;
+
   /* We special-case memories, so handle any of them with
      no address side effects.  */
   if (MEM_P (op))
     return ! side_effects_p (XEXP (op, 0));
-
-  if (side_effects_p (op))
-    return FALSE;
 
   return ! may_trap_p (op);
 }
@@ -3796,8 +3807,8 @@ find_if_case_1 (basic_block test_bb, edge then_edge, edge else_edge)
   basic_block then_bb = then_edge->dest;
   basic_block else_bb = else_edge->dest;
   basic_block new_bb;
+  int then_bb_index, then_prob;
   rtx else_target = NULL_RTX;
-  int then_bb_index;
 
   /* If we are partitioning hot/cold basic blocks, we don't want to
      mess up unconditional or indirect jumps that cross between hot
@@ -3840,8 +3851,14 @@ find_if_case_1 (basic_block test_bb, edge then_edge, edge else_edge)
 	     "\nIF-CASE-1 found, start %d, then %d\n",
 	     test_bb->index, then_bb->index);
 
-  /* THEN is small.  */
-  if (! cheap_bb_rtx_cost_p (then_bb,
+  if (then_edge->probability)
+    then_prob = REG_BR_PROB_BASE - then_edge->probability;
+  else
+    then_prob = REG_BR_PROB_BASE / 2;
+
+  /* We're speculating from the THEN path, we want to make sure the cost
+     of speculation is within reason.  */
+  if (! cheap_bb_rtx_cost_p (then_bb, then_prob,
 	COSTS_N_INSNS (BRANCH_COST (optimize_bb_for_speed_p (then_edge->src),
 				    predictable_edge_p (then_edge)))))
     return FALSE;
@@ -3910,7 +3927,7 @@ find_if_case_2 (basic_block test_bb, edge then_edge, edge else_edge)
   basic_block then_bb = then_edge->dest;
   basic_block else_bb = else_edge->dest;
   edge else_succ;
-  rtx note;
+  int then_prob, else_prob;
 
   /* If we are partitioning hot/cold basic blocks, we don't want to
      mess up unconditional or indirect jumps that cross between hot
@@ -3949,9 +3966,19 @@ find_if_case_2 (basic_block test_bb, edge then_edge, edge else_edge)
   if (then_bb->index < NUM_FIXED_BLOCKS)
     return FALSE;
 
+  if (else_edge->probability)
+    {
+      else_prob = else_edge->probability;
+      then_prob = REG_BR_PROB_BASE - else_prob;
+    }
+  else
+    {
+      else_prob = REG_BR_PROB_BASE / 2;
+      then_prob = REG_BR_PROB_BASE / 2;
+    }
+
   /* ELSE is predicted or SUCC(ELSE) postdominates THEN.  */
-  note = find_reg_note (BB_END (test_bb), REG_BR_PROB, NULL_RTX);
-  if (note && INTVAL (XEXP (note, 0)) >= REG_BR_PROB_BASE / 2)
+  if (else_prob > then_prob)
     ;
   else if (else_succ->dest->index < NUM_FIXED_BLOCKS
 	   || dominated_by_p (CDI_POST_DOMINATORS, then_bb,
@@ -3966,8 +3993,9 @@ find_if_case_2 (basic_block test_bb, edge then_edge, edge else_edge)
 	     "\nIF-CASE-2 found, start %d, else %d\n",
 	     test_bb->index, else_bb->index);
 
-  /* ELSE is small.  */
-  if (! cheap_bb_rtx_cost_p (else_bb,
+  /* We're speculating from the ELSE path, we want to make sure the cost
+     of speculation is within reason.  */
+  if (! cheap_bb_rtx_cost_p (else_bb, else_prob,
 	COSTS_N_INSNS (BRANCH_COST (optimize_bb_for_speed_p (else_edge->src),
 				    predictable_edge_p (else_edge)))))
     return FALSE;
@@ -4138,6 +4166,66 @@ dead_or_predicable (basic_block test_bb, basic_block merge_bb,
       FOR_BB_INSNS (merge_bb, insn)
 	if (NONDEBUG_INSN_P (insn))
 	  df_simulate_find_defs (insn, merge_set);
+
+#ifdef HAVE_simple_return
+      /* If shrink-wrapping, disable this optimization when test_bb is
+	 the first basic block and merge_bb exits.  The idea is to not
+	 move code setting up a return register as that may clobber a
+	 register used to pass function parameters, which then must be
+	 saved in caller-saved regs.  A caller-saved reg requires the
+	 prologue, killing a shrink-wrap opportunity.  */
+      if ((flag_shrink_wrap && HAVE_simple_return && !epilogue_completed)
+	  && ENTRY_BLOCK_PTR->next_bb == test_bb
+	  && single_succ_p (new_dest)
+	  && single_succ (new_dest) == EXIT_BLOCK_PTR
+	  && bitmap_intersect_p (df_get_live_in (new_dest), merge_set))
+	{
+	  regset return_regs;
+	  unsigned int i;
+
+	  return_regs = BITMAP_ALLOC (&reg_obstack);
+
+	  /* Start off with the intersection of regs used to pass
+	     params and regs used to return values.  */
+	  for (i = 0; i < FIRST_PSEUDO_REGISTER; i++)
+	    if (FUNCTION_ARG_REGNO_P (i)
+		&& targetm.calls.function_value_regno_p (i))
+	      bitmap_set_bit (return_regs, INCOMING_REGNO (i));
+
+	  bitmap_and_into (return_regs, df_get_live_out (ENTRY_BLOCK_PTR));
+	  bitmap_and_into (return_regs, df_get_live_in (EXIT_BLOCK_PTR));
+	  if (!bitmap_empty_p (return_regs))
+	    {
+	      FOR_BB_INSNS_REVERSE (new_dest, insn)
+		if (NONDEBUG_INSN_P (insn))
+		  {
+		    df_ref *def_rec;
+		    unsigned int uid = INSN_UID (insn);
+
+		    /* If this insn sets any reg in return_regs..  */
+		    for (def_rec = DF_INSN_UID_DEFS (uid); *def_rec; def_rec++)
+		      {
+			df_ref def = *def_rec;
+			unsigned r = DF_REF_REGNO (def);
+
+			if (bitmap_bit_p (return_regs, r))
+			  break;
+		      }
+		    /* ..then add all reg uses to the set of regs
+		       we're interested in.  */
+		    if (*def_rec)
+		      df_simulate_uses (insn, return_regs);
+		  }
+	      if (bitmap_intersect_p (merge_set, return_regs))
+		{
+		  BITMAP_FREE (return_regs);
+		  BITMAP_FREE (merge_set);
+		  return FALSE;
+		}
+	    }
+	  BITMAP_FREE (return_regs);
+	}
+#endif
     }
 
  no_body:

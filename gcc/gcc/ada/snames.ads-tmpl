@@ -361,10 +361,12 @@ package Snames is
    Name_Debug_Policy                   : constant Name_Id := N + $; -- GNAT
    Name_Detect_Blocking                : constant Name_Id := N + $; -- Ada 05
    Name_Default_Storage_Pool           : constant Name_Id := N + $; -- Ada 12
+   Name_Disable_Atomic_Synchronization : constant Name_Id := N + $; -- GNAT
    Name_Discard_Names                  : constant Name_Id := N + $;
    Name_Dispatching_Domain             : constant Name_Id := N + $; -- Ada 12
    Name_Elaboration_Checks             : constant Name_Id := N + $; -- GNAT
    Name_Eliminate                      : constant Name_Id := N + $; -- GNAT
+   Name_Enable_Atomic_Synchronization  : constant Name_Id := N + $; -- GNAT
    Name_Extend_System                  : constant Name_Id := N + $; -- GNAT
    Name_Extensions_Allowed             : constant Name_Id := N + $; -- GNAT
    Name_External_Name_Casing           : constant Name_Id := N + $; -- GNAT
@@ -909,13 +911,10 @@ package Snames is
 
    --  Names of recognized locking policy identifiers
 
-   --  Note: policies are identified by the first character of the
-   --  name (e.g. C for Ceiling_Locking). If new policy names are added,
-   --  the first character must be distinct.
-
    First_Locking_Policy_Name           : constant Name_Id := N + $;
    Name_Ceiling_Locking                : constant Name_Id := N + $;
    Name_Inheritance_Locking            : constant Name_Id := N + $;
+   Name_Concurrent_Readers_Locking     : constant Name_Id := N + $; -- GNAT
    Last_Locking_Policy_Name            : constant Name_Id := N + $;
 
    --  Names of recognized queuing policy identifiers
@@ -944,10 +943,14 @@ package Snames is
 
    --  Names of recognized checks for pragma Suppress
 
+   --  Note: the name Atomic_Synchronization can only be specified internally
+   --  as a result of using pragma Enable/Disable_Atomic_Synchronization.
+
    First_Check_Name                    : constant Name_Id := N + $;
    Name_Access_Check                   : constant Name_Id := N + $;
    Name_Accessibility_Check            : constant Name_Id := N + $;
    Name_Alignment_Check                : constant Name_Id := N + $; -- GNAT
+   Name_Atomic_Synchronization         : constant Name_Id := N + $; -- GNAT
    Name_Discriminant_Check             : constant Name_Id := N + $;
    Name_Division_Check                 : constant Name_Id := N + $;
    Name_Elaboration_Check              : constant Name_Id := N + $;
@@ -1500,7 +1503,8 @@ package Snames is
 
    type Locking_Policy_Id is (
       Locking_Policy_Inheritance_Locking,
-      Locking_Policy_Ceiling_Locking);
+      Locking_Policy_Ceiling_Locking,
+      Locking_Policy_Concurrent_Readers_Locking);
 
    ---------------------------
    -- Pragma ID Definitions --
@@ -1534,10 +1538,12 @@ package Snames is
       Pragma_Debug_Policy,
       Pragma_Detect_Blocking,
       Pragma_Default_Storage_Pool,
+      Pragma_Disable_Atomic_Synchronization,
       Pragma_Discard_Names,
       Pragma_Dispatching_Domain,
       Pragma_Elaboration_Checks,
       Pragma_Eliminate,
+      Pragma_Enable_Atomic_Synchronization,
       Pragma_Extend_System,
       Pragma_Extensions_Allowed,
       Pragma_External_Name_Casing,

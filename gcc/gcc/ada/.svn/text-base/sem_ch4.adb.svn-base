@@ -3114,63 +3114,61 @@ package body Sem_Ch4 is
 
          if Present (Next_Actual (Act2)) then
             return;
-
-         elsif     Op_Name = Name_Op_Add
-           or else Op_Name = Name_Op_Subtract
-           or else Op_Name = Name_Op_Multiply
-           or else Op_Name = Name_Op_Divide
-           or else Op_Name = Name_Op_Mod
-           or else Op_Name = Name_Op_Rem
-           or else Op_Name = Name_Op_Expon
-         then
-            Find_Arithmetic_Types (Act1, Act2, Op_Id, N);
-
-         elsif     Op_Name =  Name_Op_And
-           or else Op_Name = Name_Op_Or
-           or else Op_Name = Name_Op_Xor
-         then
-            Find_Boolean_Types (Act1, Act2, Op_Id, N);
-
-         elsif     Op_Name = Name_Op_Lt
-           or else Op_Name = Name_Op_Le
-           or else Op_Name = Name_Op_Gt
-           or else Op_Name = Name_Op_Ge
-         then
-            Find_Comparison_Types (Act1, Act2, Op_Id,  N);
-
-         elsif     Op_Name = Name_Op_Eq
-           or else Op_Name = Name_Op_Ne
-         then
-            Find_Equality_Types (Act1, Act2, Op_Id,  N);
-
-         elsif     Op_Name = Name_Op_Concat then
-            Find_Concatenation_Types (Act1, Act2, Op_Id, N);
-
-         --  Is this else null correct, or should it be an abort???
-
-         else
-            null;
          end if;
+
+         --  Otherwise action depends on operator
+
+         case Op_Name is
+            when Name_Op_Add      |
+                 Name_Op_Subtract |
+                 Name_Op_Multiply |
+                 Name_Op_Divide   |
+                 Name_Op_Mod      |
+                 Name_Op_Rem      |
+                 Name_Op_Expon    =>
+               Find_Arithmetic_Types (Act1, Act2, Op_Id, N);
+
+            when Name_Op_And      |
+                 Name_Op_Or       |
+                 Name_Op_Xor      =>
+               Find_Boolean_Types (Act1, Act2, Op_Id, N);
+
+            when Name_Op_Lt       |
+                 Name_Op_Le       |
+                 Name_Op_Gt       |
+                 Name_Op_Ge       =>
+               Find_Comparison_Types (Act1, Act2, Op_Id,  N);
+
+            when Name_Op_Eq       |
+                 Name_Op_Ne       =>
+               Find_Equality_Types (Act1, Act2, Op_Id,  N);
+
+            when Name_Op_Concat   =>
+               Find_Concatenation_Types (Act1, Act2, Op_Id, N);
+
+            --  Is this when others, or should it be an abort???
+
+            when others           =>
+               null;
+         end case;
 
       --  Unary operator case
 
       else
-         if Op_Name = Name_Op_Subtract or else
-            Op_Name = Name_Op_Add      or else
-            Op_Name = Name_Op_Abs
-         then
-            Find_Unary_Types (Act1, Op_Id, N);
+         case Op_Name is
+            when Name_Op_Subtract |
+                 Name_Op_Add      |
+                 Name_Op_Abs      =>
+               Find_Unary_Types (Act1, Op_Id, N);
 
-         elsif
-            Op_Name = Name_Op_Not
-         then
-            Find_Negation_Types (Act1, Op_Id, N);
+            when Name_Op_Not      =>
+               Find_Negation_Types (Act1, Op_Id, N);
 
-         --  Is this else null correct, or should it be an abort???
+            --  Is this when others correct, or should it be an abort???
 
-         else
-            null;
-         end if;
+            when others           =>
+               null;
+         end case;
       end if;
    end Analyze_Operator_Call;
 
@@ -3434,8 +3432,8 @@ package body Sem_Ch4 is
       --  of the high bound.
 
       procedure Check_Universal_Expression (N : Node_Id);
-      --  In Ada83, reject bounds of a universal range that are not
-      --  literals or entity names.
+      --  In Ada83, reject bounds of a universal range that are not literals or
+      --  entity names.
 
       -----------------------
       -- Check_Common_Type --
@@ -4124,6 +4122,11 @@ package body Sem_Ch4 is
                then
                   Set_Entity_With_Style_Check (Sel, Comp);
                   Generate_Reference (Comp, Sel);
+
+                  --  The selector is not overloadable, so we have a candidate
+                  --  interpretation.
+
+                  Has_Candidate := True;
 
                else
                   goto Next_Comp;
@@ -5543,9 +5546,15 @@ package body Sem_Ch4 is
          end if;
 
          if T1 /= Standard_Void_Type
-           and then not Is_Limited_Type (T1)
-           and then not Is_Limited_Composite (T1)
            and then Has_Compatible_Type (R, T1)
+           and then
+             ((not Is_Limited_Type (T1)
+                and then not Is_Limited_Composite (T1))
+
+               or else
+                 (Is_Array_Type (T1)
+                   and then not Is_Limited_Type (Component_Type (T1))
+                   and then Available_Full_View_Of_Component (T1)))
          then
             if Found
               and then Base_Type (T1) /= Base_Type (T_F)
@@ -6418,38 +6427,20 @@ package body Sem_Ch4 is
       Func      : Entity_Id;
       Func_Name : Node_Id;
       Indexing  : Node_Id;
-      Is_Var    : Boolean;
-      Ritem     : Node_Id;
 
    begin
 
-      --  Check whether type has a specified indexing aspect.
+      --  Check whether type has a specified indexing aspect
 
       Func_Name := Empty;
-      Is_Var := False;
 
-      Ritem := First_Rep_Item (Etype (Prefix));
-      while Present (Ritem) loop
-         if Nkind (Ritem) = N_Aspect_Specification then
+      if Is_Variable (Prefix) then
+         Func_Name := Find_Aspect (Etype (Prefix), Aspect_Variable_Indexing);
+      end if;
 
-            --  Prefer Variable_Indexing, but will settle for Constant.
-
-            if Get_Aspect_Id (Chars (Identifier (Ritem))) =
-                                                 Aspect_Constant_Indexing
-            then
-               Func_Name := Expression (Ritem);
-
-            elsif Get_Aspect_Id (Chars (Identifier (Ritem))) =
-                                                 Aspect_Variable_Indexing
-            then
-               Func_Name :=  Expression (Ritem);
-               Is_Var := True;
-               exit;
-            end if;
-         end if;
-
-         Next_Rep_Item (Ritem);
-      end loop;
+      if No (Func_Name) then
+         Func_Name := Find_Aspect (Etype (Prefix), Aspect_Constant_Indexing);
+      end if;
 
       --  If aspect does not exist the expression is illegal. Error is
       --  diagnosed in caller.
@@ -6467,12 +6458,6 @@ package body Sem_Ch4 is
          else
             return False;
          end if;
-      end if;
-
-      if Is_Var
-        and then not Is_Variable (Prefix)
-      then
-         Error_Msg_N ("Variable indexing cannot be applied to a constant", N);
       end if;
 
       if not Is_Overloaded (Func_Name) then
@@ -6517,11 +6502,11 @@ package body Sem_Ch4 is
                Analyze_One_Call (N, It.Nam, False, Success);
                if Success then
                   Set_Etype (Name (N), It.Typ);
+                  Set_Entity (Name (N), It.Nam);
 
-                  --  Add implicit dereference interpretation.
+                  --  Add implicit dereference interpretation
 
                   Disc := First_Discriminant (Etype (It.Nam));
-
                   while Present (Disc) loop
                      if Has_Implicit_Dereference (Disc) then
                         Add_One_Interp
@@ -6531,10 +6516,19 @@ package body Sem_Ch4 is
 
                      Next_Discriminant (Disc);
                   end loop;
+
+                  exit;
                end if;
                Get_Next_Interp (I, It);
             end loop;
          end;
+      end if;
+
+      if Etype (N) = Any_Type then
+         Error_Msg_NE ("container cannot be indexed with&", N, Etype (Expr));
+         Rewrite (N, New_Occurrence_Of (Any_Id, Loc));
+      else
+         Analyze (N);
       end if;
 
       return True;
@@ -6854,7 +6848,8 @@ package body Sem_Ch4 is
          First_Actual := First (Parameter_Associations (Call_Node));
 
          --  For cross-reference purposes, treat the new node as being in
-         --  the source if the original one is.
+         --  the source if the original one is. Set entity and type, even
+         --  though they may be overwritten during resolution if overloaded.
 
          Set_Comes_From_Source (Subprog, Comes_From_Source (N));
          Set_Comes_From_Source (Call_Node, Comes_From_Source (N));
@@ -6863,6 +6858,7 @@ package body Sem_Ch4 is
            and then not Inside_A_Generic
          then
             Set_Entity (Selector_Name (N), Entity (Subprog));
+            Set_Etype  (Selector_Name (N), Etype (Entity (Subprog)));
          end if;
 
          --  If need be, rewrite first actual as an explicit dereference

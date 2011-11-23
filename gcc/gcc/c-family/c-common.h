@@ -43,8 +43,7 @@ never after.
 #include "diagnostic-core.h"
 
 /* Usage of TREE_LANG_FLAG_?:
-   0: TREE_NEGATED_INT (in INTEGER_CST).
-      IDENTIFIER_MARKED (used by search routines).
+   0: IDENTIFIER_MARKED (used by search routines).
       DECL_PRETTY_FUNCTION_P (in VAR_DECL)
       C_MAYBE_CONST_EXPR_INT_OPERANDS (in C_MAYBE_CONST_EXPR, for C)
    1: C_DECLARED_LABEL_FLAG (in LABEL_DECL)
@@ -103,13 +102,19 @@ enum rid
   /* C extensions */
   RID_ASM,       RID_TYPEOF,   RID_ALIGNOF,  RID_ATTRIBUTE,  RID_VA_ARG,
   RID_EXTENSION, RID_IMAGPART, RID_REALPART, RID_LABEL,      RID_CHOOSE_EXPR,
-  RID_TYPES_COMPATIBLE_P,      RID_BUILTIN_COMPLEX,
+  RID_TYPES_COMPATIBLE_P,      RID_BUILTIN_COMPLEX,	     RID_BUILTIN_SHUFFLE,
   RID_DFLOAT32, RID_DFLOAT64, RID_DFLOAT128,
   RID_FRACT, RID_ACCUM,
+
+  /* C1X */
+  RID_ALIGNAS,
 
   /* This means to warn that this is a C++ keyword, and then treat it
      as a normal identifier.  */
   RID_CXX_COMPAT_WARN,
+
+  /* GNU transactional memory extension */
+  RID_TRANSACTION_ATOMIC, RID_TRANSACTION_RELAXED, RID_TRANSACTION_CANCEL,
 
   /* Too many ways of getting the name of a function as a string */
   RID_FUNCTION_NAME, RID_PRETTY_FUNCTION_NAME, RID_C99_FUNCTION_NAME,
@@ -129,12 +134,13 @@ enum rid
   RID_CONSTCAST, RID_DYNCAST, RID_REINTCAST, RID_STATCAST,
 
   /* C++ extensions */
+  RID_BASES,                  RID_DIRECT_BASES,
   RID_HAS_NOTHROW_ASSIGN,      RID_HAS_NOTHROW_CONSTRUCTOR,
   RID_HAS_NOTHROW_COPY,        RID_HAS_TRIVIAL_ASSIGN,
   RID_HAS_TRIVIAL_CONSTRUCTOR, RID_HAS_TRIVIAL_COPY,
   RID_HAS_TRIVIAL_DESTRUCTOR,  RID_HAS_VIRTUAL_DESTRUCTOR,
   RID_IS_ABSTRACT,             RID_IS_BASE_OF,
-  RID_IS_CONVERTIBLE_TO,       RID_IS_CLASS,
+  RID_IS_CLASS,                RID_IS_CONVERTIBLE_TO,
   RID_IS_EMPTY,                RID_IS_ENUM,
   RID_IS_LITERAL_TYPE,         RID_IS_POD,
   RID_IS_POLYMORPHIC,          RID_IS_STD_LAYOUT,
@@ -643,11 +649,12 @@ extern int flag_use_repository;
 /* The supported C++ dialects.  */
 
 enum cxx_dialect {
-  /* C++98  */
+  /* C++98 with TC1  */
   cxx98,
-  /* Experimental features that are likely to become part of
-     C++0x.  */
-  cxx0x
+  cxx03 = cxx98,
+  /* C++11  */
+  cxx0x,
+  cxx11 = cxx0x
 };
 
 /* The C++ dialect being used. C++98 is the default.  */
@@ -723,6 +730,7 @@ extern void finish_fname_decls (void);
 extern const char *fname_as_string (int);
 extern tree fname_decl (location_t, unsigned, tree);
 
+extern int check_user_alignment (const_tree, bool);
 extern void check_function_arguments (const_tree, int, tree *);
 extern void check_function_arguments_recurse (void (*)
 					      (void *, tree,
@@ -955,7 +963,8 @@ extern bool c_dump_tree (void *, tree);
 
 extern void verify_sequence_points (tree);
 
-extern tree fold_offsetof (tree, tree);
+extern tree fold_offsetof_1 (tree);
+extern tree fold_offsetof (tree);
 
 /* Places where an lvalue, or modifiable lvalue, may be required.
    Used to select diagnostic messages in lvalue_error and
@@ -1066,5 +1075,50 @@ c_tree_chain_next (tree t)
     return TREE_CHAIN (t);
   return NULL;
 }
+
+/* Mask used by tm_stmt_attr.  */
+#define TM_STMT_ATTR_OUTER	2
+#define TM_STMT_ATTR_ATOMIC	4
+#define TM_STMT_ATTR_RELAXED	8
+
+extern int parse_tm_stmt_attr (tree, int);
+
+/* Mask used by tm_attr_to_mask and tm_mask_to_attr.  Note that these
+   are ordered specifically such that more restrictive attributes are
+   at lower bit positions.  This fact is known by the C++ tm attribute
+   inheritance code such that least bit extraction (mask & -mask) results
+   in the most restrictive attribute.  */
+#define TM_ATTR_SAFE			1
+#define TM_ATTR_CALLABLE		2
+#define TM_ATTR_PURE			4
+#define TM_ATTR_IRREVOCABLE		8
+#define TM_ATTR_MAY_CANCEL_OUTER	16
+
+extern int tm_attr_to_mask (tree);
+extern tree tm_mask_to_attr (int);
+extern tree find_tm_attribute (tree);
+
+/* A suffix-identifier value doublet that represents user-defined literals
+   for C++-0x.  */
+struct GTY(()) tree_userdef_literal {
+  struct tree_base base;
+  tree suffix_id;
+  tree value;
+  tree num_string;
+};
+
+#define USERDEF_LITERAL_SUFFIX_ID(NODE) \
+  (((struct tree_userdef_literal *)USERDEF_LITERAL_CHECK (NODE))->suffix_id)
+
+#define USERDEF_LITERAL_VALUE(NODE) \
+  (((struct tree_userdef_literal *)USERDEF_LITERAL_CHECK (NODE))->value)
+
+#define USERDEF_LITERAL_NUM_STRING(NODE) \
+  (((struct tree_userdef_literal *)USERDEF_LITERAL_CHECK (NODE))->num_string)
+
+#define USERDEF_LITERAL_TYPE(NODE) \
+  (TREE_TYPE (USERDEF_LITERAL_VALUE (NODE)))
+
+extern tree build_userdef_literal (tree suffix_id, tree value, tree num_string);
 
 #endif /* ! GCC_C_COMMON_H */

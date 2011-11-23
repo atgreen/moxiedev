@@ -141,6 +141,9 @@ static const char *flag_random_seed;
    user has specified a particular random seed.  */
 unsigned local_tick;
 
+/* Random number for this compilation */
+HOST_WIDE_INT random_seed;
+
 /* -f flags.  */
 
 /* Generate code for GNU or NeXT Objective-C runtime environment.  */
@@ -251,7 +254,7 @@ announce_function (tree decl)
     }
 }
 
-/* Initialize local_tick with the time of day, or -1 if
+/* Initialize local_tick with a random number or -1 if
    flag_random_seed is set.  */
 
 static void
@@ -259,7 +262,17 @@ init_local_tick (void)
 {
   if (!flag_random_seed)
     {
-      /* Get some more or less random data.  */
+      /* Try urandom first. Time of day is too likely to collide. 
+	 In case of any error we just use the local tick. */
+
+      int fd = open ("/dev/urandom", O_RDONLY);
+      if (fd >= 0)
+        {
+          read (fd, &random_seed, sizeof (random_seed));
+          close (fd);
+        }
+
+      /* Now get the tick anyways  */
 #ifdef HAVE_GETTIMEOFDAY
       {
 	struct timeval tv;
@@ -286,24 +299,28 @@ init_local_tick (void)
 static void
 init_random_seed (void)
 {
-  unsigned HOST_WIDE_INT value;
-  static char random_seed[HOST_BITS_PER_WIDE_INT / 4 + 3];
+  if (flag_random_seed)
+    {
+      char *endp;
 
-  value = local_tick ^ getpid ();
-
-  sprintf (random_seed, HOST_WIDE_INT_PRINT_HEX, value);
-  flag_random_seed = random_seed;
+      /* When the driver passed in a hex number don't crc it again */
+      random_seed = strtoul (flag_random_seed, &endp, 0);
+      if (!(endp > flag_random_seed && *endp == 0))
+        random_seed = crc32_string (0, flag_random_seed);
+    }
+  else if (!random_seed)
+    random_seed = local_tick ^ getpid ();  /* Old racey fallback method */
 }
 
-/* Obtain the random_seed string.  Unless NOINIT, initialize it if
+/* Obtain the random_seed.  Unless NOINIT, initialize it if
    it's not provided in the command line.  */
 
-const char *
+HOST_WIDE_INT
 get_random_seed (bool noinit)
 {
   if (!flag_random_seed && !noinit)
     init_random_seed ();
-  return flag_random_seed;
+  return random_seed;
 }
 
 /* Modify the random_seed string to VAL.  Return its previous
@@ -569,40 +586,46 @@ compile_file (void)
       return;
     }
 
-  varpool_assemble_pending_decls ();
-  finish_aliases_2 ();
+  /* Compilation unit is finalized.  When producing non-fat LTO object, we are
+     basically finished.  */
+  if (in_lto_p || !flag_lto || flag_fat_lto_objects)
+    {
+      varpool_assemble_pending_decls ();
+      finish_aliases_2 ();
 
-  /* Likewise for mudflap static object registrations.  */
-  if (flag_mudflap)
-    mudflap_finish_file ();
+      /* Likewise for mudflap static object registrations.  */
+      if (flag_mudflap)
+	mudflap_finish_file ();
 
-  output_shared_constant_pool ();
-  output_object_blocks ();
+      output_shared_constant_pool ();
+      output_object_blocks ();
+  finish_tm_clone_pairs ();
 
-  /* Write out any pending weak symbol declarations.  */
-  weak_finish ();
+      /* Write out any pending weak symbol declarations.  */
+      weak_finish ();
 
-  /* This must be at the end before unwind and debug info.
-     Some target ports emit PIC setup thunks here.  */
-  targetm.asm_out.code_end ();
+      /* This must be at the end before unwind and debug info.
+	 Some target ports emit PIC setup thunks here.  */
+      targetm.asm_out.code_end ();
 
-  /* Do dbx symbols.  */
-  timevar_push (TV_SYMOUT);
+      /* Do dbx symbols.  */
+      timevar_push (TV_SYMOUT);
 
-#if defined DWARF2_DEBUGGING_INFO || defined DWARF2_UNWIND_INFO
-  if (dwarf2out_do_frame ())
-    dwarf2out_frame_finish ();
-#endif
+    #if defined DWARF2_DEBUGGING_INFO || defined DWARF2_UNWIND_INFO
+      if (dwarf2out_do_frame ())
+	dwarf2out_frame_finish ();
+    #endif
 
-  (*debug_hooks->finish) (main_input_filename);
-  timevar_pop (TV_SYMOUT);
+      (*debug_hooks->finish) (main_input_filename);
+      timevar_pop (TV_SYMOUT);
 
-  /* Output some stuff at end of file if nec.  */
+      /* Output some stuff at end of file if nec.  */
 
-  dw2_output_indirect_constants ();
+      dw2_output_indirect_constants ();
 
-  /* Flush any pending external directives.  */
-  process_pending_assemble_externals ();
+      /* Flush any pending external directives.  */
+      process_pending_assemble_externals ();
+   }
 
   /* Emit LTO marker if LTO info has been previously emitted.  This is
      used by collect2 to determine whether an object file contains IL.
@@ -623,6 +646,23 @@ compile_file (void)
 			 (unsigned HOST_WIDE_INT) 1,
 			 (unsigned HOST_WIDE_INT) 1);
 #endif
+      /* Let linker plugin know that this is a slim object and must be LTOed
+         even when user did not ask for it.  */
+      if (!flag_fat_lto_objects)
+        {
+#if defined ASM_OUTPUT_ALIGNED_DECL_COMMON
+	  ASM_OUTPUT_ALIGNED_DECL_COMMON (asm_out_file, NULL_TREE,
+					  "__gnu_lto_slim",
+					  (unsigned HOST_WIDE_INT) 1, 8);
+#elif defined ASM_OUTPUT_ALIGNED_COMMON
+	  ASM_OUTPUT_ALIGNED_COMMON (asm_out_file, "__gnu_lto_slim",
+				     (unsigned HOST_WIDE_INT) 1, 8);
+#else
+	  ASM_OUTPUT_COMMON (asm_out_file, "__gnu_lto_slim",
+			     (unsigned HOST_WIDE_INT) 1,
+			     (unsigned HOST_WIDE_INT) 1);
+#endif
+        }
     }
 
   /* Attach a special .ident directive to the end of the file to identify
@@ -1132,6 +1172,9 @@ general_init (const char *argv0)
      can give warnings and errors.  */
   diagnostic_initialize (global_dc, N_OPTS);
   diagnostic_starter (global_dc) = default_tree_diagnostic_starter;
+  /* By default print macro expansion contexts in the diagnostic
+     finalizer -- for tokens resulting from macro macro expansion.  */
+  diagnostic_finalizer (global_dc) = virt_loc_aware_diagnostic_finalizer;
   /* Set a default printer.  Language specific initializations will
      override it later.  */
   pp_format_decoder (global_dc->printer) = &default_tree_printer;
@@ -1174,6 +1217,7 @@ general_init (const char *argv0)
   line_table = ggc_alloc_line_maps ();
   linemap_init (line_table);
   line_table->reallocator = realloc_for_line_map;
+  line_table->round_alloc_size = ggc_round_alloc_size;
   init_ttree ();
 
   /* Initialize register usage now so switches may override.  */
@@ -1785,6 +1829,7 @@ target_reinit (void)
 void
 dump_memory_report (bool final)
 {
+  dump_line_table_statistics ();
   ggc_print_statistics ();
   stringpool_statistics ();
   dump_tree_statistics ();

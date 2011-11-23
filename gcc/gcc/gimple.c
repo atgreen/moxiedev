@@ -215,9 +215,10 @@ gimple_call_reset_alias_info (gimple s)
     pt_solution_reset (gimple_call_clobber_set (s));
 }
 
-/* Helper for gimple_build_call, gimple_build_call_vec and
-   gimple_build_call_from_tree.  Build the basic components of a
-   GIMPLE_CALL statement to function FN with NARGS arguments.  */
+/* Helper for gimple_build_call, gimple_build_call_valist,
+   gimple_build_call_vec and gimple_build_call_from_tree.  Build the basic
+   components of a GIMPLE_CALL statement to function FN with NARGS
+   arguments.  */
 
 static inline gimple
 gimple_build_call_1 (tree fn, unsigned nargs)
@@ -267,6 +268,26 @@ gimple_build_call (tree fn, unsigned nargs, ...)
   for (i = 0; i < nargs; i++)
     gimple_call_set_arg (call, i, va_arg (ap, tree));
   va_end (ap);
+
+  return call;
+}
+
+
+/* Build a GIMPLE_CALL statement to function FN.  NARGS is the number of
+   arguments.  AP contains the arguments.  */
+
+gimple
+gimple_build_call_valist (tree fn, unsigned nargs, va_list ap)
+{
+  gimple call;
+  unsigned i;
+
+  gcc_assert (TREE_CODE (fn) == FUNCTION_DECL || is_gimple_call_addr (fn));
+
+  call = gimple_build_call_1 (fn, nargs);
+
+  for (i = 0; i < nargs; i++)
+    gimple_call_set_arg (call, i, va_arg (ap, tree));
 
   return call;
 }
@@ -353,7 +374,8 @@ gimple_build_call_from_tree (tree t)
   gimple_call_set_return_slot_opt (call, CALL_EXPR_RETURN_SLOT_OPT (t));
   if (fndecl
       && DECL_BUILT_IN_CLASS (fndecl) == BUILT_IN_NORMAL
-      && DECL_FUNCTION_CODE (fndecl) == BUILT_IN_ALLOCA)
+      && (DECL_FUNCTION_CODE (fndecl) == BUILT_IN_ALLOCA
+	  || DECL_FUNCTION_CODE (fndecl) == BUILT_IN_ALLOCA_WITH_ALIGN))
     gimple_call_set_alloca_for_var (call, CALL_ALLOCA_FOR_VAR_P (t));
   else
     gimple_call_set_from_thunk (call, CALL_FROM_THUNK_P (t));
@@ -718,6 +740,17 @@ gimple_build_eh_must_not_throw (tree decl)
   gcc_assert (flags_from_decl_or_type (decl) & ECF_NORETURN);
   gimple_eh_must_not_throw_set_fndecl (p, decl);
 
+  return p;
+}
+
+/* Build a GIMPLE_EH_ELSE statement.  */
+
+gimple
+gimple_build_eh_else (gimple_seq n_body, gimple_seq e_body)
+{
+  gimple p = gimple_alloc (GIMPLE_EH_ELSE, 0);
+  gimple_eh_else_set_n_body (p, n_body);
+  gimple_eh_else_set_e_body (p, e_body);
   return p;
 }
 
@@ -1124,6 +1157,17 @@ gimple_build_omp_atomic_store (tree val)
   return p;
 }
 
+/* Build a GIMPLE_TRANSACTION statement.  */
+
+gimple
+gimple_build_transaction (gimple_seq body, tree label)
+{
+  gimple p = gimple_alloc (GIMPLE_TRANSACTION, 0);
+  gimple_transaction_set_body (p, body);
+  gimple_transaction_set_label (p, label);
+  return p;
+}
+
 /* Build a GIMPLE_PREDICT statement.  PREDICT is one of the predictors from
    predict.def, OUTCOME is NOT_TAKEN or TAKEN.  */
 
@@ -1297,9 +1341,11 @@ gimple_seq_copy (gimple_seq src)
 /* Walk all the statements in the sequence SEQ calling walk_gimple_stmt
    on each one.  WI is as in walk_gimple_stmt.
 
-   If walk_gimple_stmt returns non-NULL, the walk is stopped, the
-   value is stored in WI->CALLBACK_RESULT and the statement that
-   produced the value is returned.
+   If walk_gimple_stmt returns non-NULL, the walk is stopped, and the
+   value is stored in WI->CALLBACK_RESULT.  Also, the statement that
+   produced the value is returned if this statement has not been
+   removed by a callback (wi->removed_stmt).  If the statement has
+   been removed, NULL is returned.
 
    Otherwise, all the statements are walked and NULL returned.  */
 
@@ -1309,7 +1355,7 @@ walk_gimple_seq (gimple_seq seq, walk_stmt_fn callback_stmt,
 {
   gimple_stmt_iterator gsi;
 
-  for (gsi = gsi_start (seq); !gsi_end_p (gsi); gsi_next (&gsi))
+  for (gsi = gsi_start (seq); !gsi_end_p (gsi); )
     {
       tree ret = walk_gimple_stmt (&gsi, callback_stmt, callback_op, wi);
       if (ret)
@@ -1318,8 +1364,12 @@ walk_gimple_seq (gimple_seq seq, walk_stmt_fn callback_stmt,
 	     to hold it.  */
 	  gcc_assert (wi);
 	  wi->callback_result = ret;
-	  return gsi_stmt (gsi);
+
+	  return wi->removed_stmt ? NULL : gsi_stmt (gsi);
 	}
+
+      if (!wi->removed_stmt)
+	gsi_next (&gsi);
     }
 
   if (wi)
@@ -1449,7 +1499,9 @@ walk_gimple_op (gimple stmt, walk_tree_fn callback_op,
 	{
           /* If the RHS has more than 1 operand, it is not appropriate
              for the memory.  */
-	  wi->val_only = !is_gimple_mem_rhs (gimple_assign_rhs1 (stmt))
+	  wi->val_only = !(is_gimple_mem_rhs (gimple_assign_rhs1 (stmt))
+			   || TREE_CODE (gimple_assign_rhs1 (stmt))
+			      == CONSTRUCTOR)
                          || !gimple_assign_single_p (stmt);
 	  wi->is_lhs = true;
 	}
@@ -1658,6 +1710,13 @@ walk_gimple_op (gimple stmt, walk_tree_fn callback_op,
 	return ret;
       break;
 
+    case GIMPLE_TRANSACTION:
+      ret = walk_tree (gimple_transaction_label_ptr (stmt), callback_op,
+		       wi, pset);
+      if (ret)
+	return ret;
+      break;
+
       /* Tuples that do not have operands.  */
     case GIMPLE_NOP:
     case GIMPLE_RESX:
@@ -1708,10 +1767,13 @@ walk_gimple_stmt (gimple_stmt_iterator *gsi, walk_stmt_fn callback_stmt,
   gimple stmt = gsi_stmt (*gsi);
 
   if (wi)
-    wi->gsi = *gsi;
+    {
+      wi->gsi = *gsi;
+      wi->removed_stmt = false;
 
-  if (wi && wi->want_locations && gimple_has_location (stmt))
-    input_location = gimple_location (stmt);
+      if (wi->want_locations && gimple_has_location (stmt))
+	input_location = gimple_location (stmt);
+    }
 
   ret = NULL;
 
@@ -1727,6 +1789,9 @@ walk_gimple_stmt (gimple_stmt_iterator *gsi, walk_stmt_fn callback_stmt,
       /* If CALLBACK_STMT did not handle operands, it should not have
 	 a value to return.  */
       gcc_assert (tree_ret == NULL);
+
+      if (wi && wi->removed_stmt)
+	return NULL;
 
       /* Re-read stmt in case the callback changed it.  */
       stmt = gsi_stmt (*gsi);
@@ -1764,6 +1829,17 @@ walk_gimple_stmt (gimple_stmt_iterator *gsi, walk_stmt_fn callback_stmt,
 	return wi->callback_result;
       break;
 
+    case GIMPLE_EH_ELSE:
+      ret = walk_gimple_seq (gimple_eh_else_n_body (stmt),
+			     callback_stmt, callback_op, wi);
+      if (ret)
+	return wi->callback_result;
+      ret = walk_gimple_seq (gimple_eh_else_e_body (stmt),
+			     callback_stmt, callback_op, wi);
+      if (ret)
+	return wi->callback_result;
+      break;
+
     case GIMPLE_TRY:
       ret = walk_gimple_seq (gimple_try_eval (stmt), callback_stmt, callback_op,
 	                     wi);
@@ -1791,8 +1867,8 @@ walk_gimple_stmt (gimple_stmt_iterator *gsi, walk_stmt_fn callback_stmt,
     case GIMPLE_OMP_TASK:
     case GIMPLE_OMP_SECTIONS:
     case GIMPLE_OMP_SINGLE:
-      ret = walk_gimple_seq (gimple_omp_body (stmt), callback_stmt, callback_op,
-	                     wi);
+      ret = walk_gimple_seq (gimple_omp_body (stmt), callback_stmt,
+			     callback_op, wi);
       if (ret)
 	return wi->callback_result;
       break;
@@ -1800,6 +1876,13 @@ walk_gimple_stmt (gimple_stmt_iterator *gsi, walk_stmt_fn callback_stmt,
     case GIMPLE_WITH_CLEANUP_EXPR:
       ret = walk_gimple_seq (gimple_wce_cleanup (stmt), callback_stmt,
 			     callback_op, wi);
+      if (ret)
+	return wi->callback_result;
+      break;
+
+    case GIMPLE_TRANSACTION:
+      ret = walk_gimple_seq (gimple_transaction_body (stmt),
+			     callback_stmt, callback_op, wi);
       if (ret)
 	return wi->callback_result;
       break;
@@ -2230,6 +2313,13 @@ gimple_copy (gimple stmt)
 	  gimple_eh_filter_set_types (copy, t);
 	  break;
 
+	case GIMPLE_EH_ELSE:
+	  new_seq = gimple_seq_copy (gimple_eh_else_n_body (stmt));
+	  gimple_eh_else_set_n_body (copy, new_seq);
+	  new_seq = gimple_seq_copy (gimple_eh_else_e_body (stmt));
+	  gimple_eh_else_set_e_body (copy, new_seq);
+	  break;
+
 	case GIMPLE_TRY:
 	  new_seq = gimple_seq_copy (gimple_try_eval (stmt));
 	  gimple_try_set_eval (copy, new_seq);
@@ -2305,6 +2395,11 @@ gimple_copy (gimple stmt)
 	  gimple_omp_set_body (copy, new_seq);
 	  break;
 
+	case GIMPLE_TRANSACTION:
+	  new_seq = gimple_seq_copy (gimple_transaction_body (stmt));
+	  gimple_transaction_set_body (copy, new_seq);
+	  break;
+
 	case GIMPLE_WITH_CLEANUP_EXPR:
 	  new_seq = gimple_seq_copy (gimple_wce_cleanup (stmt));
 	  gimple_wce_set_cleanup (copy, new_seq);
@@ -2362,8 +2457,6 @@ gimple_set_modified (gimple s, bool modifiedp)
 bool
 gimple_has_side_effects (const_gimple s)
 {
-  unsigned i;
-
   if (is_gimple_debug (s))
     return false;
 
@@ -2379,46 +2472,14 @@ gimple_has_side_effects (const_gimple s)
 
   if (is_gimple_call (s))
     {
-      unsigned nargs = gimple_call_num_args (s);
-      tree fn;
+      int flags = gimple_call_flags (s);
 
-      if (!(gimple_call_flags (s) & (ECF_CONST | ECF_PURE)))
-        return true;
-      else if (gimple_call_flags (s) & ECF_LOOPING_CONST_OR_PURE)
-	/* An infinite loop is considered a side effect.  */
+      /* An infinite loop is considered a side effect.  */
+      if (!(flags & (ECF_CONST | ECF_PURE))
+	  || (flags & ECF_LOOPING_CONST_OR_PURE))
 	return true;
 
-      if (gimple_call_lhs (s)
-          && TREE_SIDE_EFFECTS (gimple_call_lhs (s)))
-	{
-	  gcc_checking_assert (gimple_has_volatile_ops (s));
-	  return true;
-	}
-
-      fn = gimple_call_fn (s);
-      if (fn && TREE_SIDE_EFFECTS (fn))
-        return true;
-
-      for (i = 0; i < nargs; i++)
-        if (TREE_SIDE_EFFECTS (gimple_call_arg (s, i)))
-	  {
-	    gcc_checking_assert (gimple_has_volatile_ops (s));
-	    return true;
-	  }
-
       return false;
-    }
-  else
-    {
-      for (i = 0; i < gimple_num_ops (s); i++)
-	{
-	  tree op = gimple_op (s, i);
-	  if (op && TREE_SIDE_EFFECTS (op))
-	    {
-	      gcc_checking_assert (gimple_has_volatile_ops (s));
-	      return true;
-	    }
-	}
     }
 
   return false;
@@ -2617,6 +2678,7 @@ get_gimple_rhs_num_ops (enum tree_code code)
       || (SYM) == DOT_PROD_EXPR						    \
       || (SYM) == REALIGN_LOAD_EXPR					    \
       || (SYM) == VEC_COND_EXPR						    \
+      || (SYM) == VEC_PERM_EXPR                                             \
       || (SYM) == FMA_EXPR) ? GIMPLE_TERNARY_RHS			    \
    : ((SYM) == CONSTRUCTOR						    \
       || (SYM) == OBJ_TYPE_REF						    \
@@ -2759,37 +2821,6 @@ is_gimple_address (const_tree t)
     }
 }
 
-/* Strip out all handled components that produce invariant
-   offsets.  */
-
-static const_tree
-strip_invariant_refs (const_tree op)
-{
-  while (handled_component_p (op))
-    {
-      switch (TREE_CODE (op))
-	{
-	case ARRAY_REF:
-	case ARRAY_RANGE_REF:
-	  if (!is_gimple_constant (TREE_OPERAND (op, 1))
-	      || TREE_OPERAND (op, 2) != NULL_TREE
-	      || TREE_OPERAND (op, 3) != NULL_TREE)
-	    return NULL;
-	  break;
-
-	case COMPONENT_REF:
-	  if (TREE_OPERAND (op, 2) != NULL_TREE)
-	    return NULL;
-	  break;
-
-	default:;
-	}
-      op = TREE_OPERAND (op, 0);
-    }
-
-  return op;
-}
-
 /* Return true if T is a gimple invariant address.  */
 
 bool
@@ -2827,8 +2858,18 @@ is_gimple_ip_invariant_address (const_tree t)
     return false;
 
   op = strip_invariant_refs (TREE_OPERAND (t, 0));
+  if (!op)
+    return false;
 
-  return op && (CONSTANT_CLASS_P (op) || decl_address_ip_invariant_p (op));
+  if (TREE_CODE (op) == MEM_REF)
+    {
+      const_tree op0 = TREE_OPERAND (op, 0);
+      return (TREE_CODE (op0) == ADDR_EXPR
+	      && (CONSTANT_CLASS_P (TREE_OPERAND (op0, 0))
+		  || decl_address_ip_invariant_p (TREE_OPERAND (op0, 0))));
+    }
+
+  return CONSTANT_CLASS_P (op) || decl_address_ip_invariant_p (op);
 }
 
 /* Return true if T is a GIMPLE minimal invariant.  It's a restricted
@@ -3050,21 +3091,6 @@ is_gimple_mem_ref_addr (tree t)
 	  || (TREE_CODE (t) == ADDR_EXPR
 	      && (CONSTANT_CLASS_P (TREE_OPERAND (t, 0))
 		  || decl_address_invariant_p (TREE_OPERAND (t, 0)))));
-}
-
-/* If T makes a function call, return the corresponding CALL_EXPR operand.
-   Otherwise, return NULL_TREE.  */
-
-tree
-get_call_expr_in (tree t)
-{
-  if (TREE_CODE (t) == MODIFY_EXPR)
-    t = TREE_OPERAND (t, 1);
-  if (TREE_CODE (t) == WITH_SIZE_EXPR)
-    t = TREE_OPERAND (t, 0);
-  if (TREE_CODE (t) == CALL_EXPR)
-    return t;
-  return NULL_TREE;
 }
 
 
@@ -5290,9 +5316,24 @@ walk_stmt_load_store_addr_ops (gimple stmt, void *data,
 	       || gimple_code (stmt) == GIMPLE_COND))
     {
       for (i = 0; i < gimple_num_ops (stmt); ++i)
-	if (gimple_op (stmt, i)
-	    && TREE_CODE (gimple_op (stmt, i)) == ADDR_EXPR)
-	  ret |= visit_addr (stmt, TREE_OPERAND (gimple_op (stmt, i), 0), data);
+	{
+	  tree op = gimple_op (stmt, i);
+	  if (op == NULL_TREE)
+	    ;
+	  else if (TREE_CODE (op) == ADDR_EXPR)
+	    ret |= visit_addr (stmt, TREE_OPERAND (op, 0), data);
+	  /* COND_EXPR and VCOND_EXPR rhs1 argument is a comparison
+	     tree with two operands.  */
+	  else if (i == 1 && COMPARISON_CLASS_P (op))
+	    {
+	      if (TREE_CODE (TREE_OPERAND (op, 0)) == ADDR_EXPR)
+		ret |= visit_addr (stmt, TREE_OPERAND (TREE_OPERAND (op, 0),
+						       0), data);
+	      if (TREE_CODE (TREE_OPERAND (op, 1)) == ADDR_EXPR)
+		ret |= visit_addr (stmt, TREE_OPERAND (TREE_OPERAND (op, 1),
+						       0), data);
+	    }
+	}
     }
   else if (is_gimple_call (stmt))
     {

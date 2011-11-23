@@ -1213,27 +1213,24 @@
 
 ; ??? Check Thumb-2 split length
 (define_insn_and_split "*arm_subsi3_insn"
-  [(set (match_operand:SI           0 "s_register_operand" "=r,r,rk,r,r")
-	(minus:SI (match_operand:SI 1 "reg_or_int_operand" "rI,r,k,?n,r")
-		  (match_operand:SI 2 "reg_or_int_operand" "r,rI,r, r,?n")))]
+  [(set (match_operand:SI           0 "s_register_operand" "=r,r,rk,r")
+	(minus:SI (match_operand:SI 1 "reg_or_int_operand" "rI,r,k,?n")
+		  (match_operand:SI 2 "reg_or_int_operand" "r,rI,r, r")))]
   "TARGET_32BIT"
   "@
    rsb%?\\t%0, %2, %1
    sub%?\\t%0, %1, %2
    sub%?\\t%0, %1, %2
-   #
    #"
-  "&& ((GET_CODE (operands[1]) == CONST_INT
-       	&& !const_ok_for_arm (INTVAL (operands[1])))
-       || (GET_CODE (operands[2]) == CONST_INT
-	   && !const_ok_for_arm (INTVAL (operands[2]))))"
+  "&& (GET_CODE (operands[1]) == CONST_INT
+       && !const_ok_for_arm (INTVAL (operands[1])))"
   [(clobber (const_int 0))]
   "
   arm_split_constant (MINUS, SImode, curr_insn,
                       INTVAL (operands[1]), operands[0], operands[2], 0);
   DONE;
   "
-  [(set_attr "length" "4,4,4,16,16")
+  [(set_attr "length" "4,4,4,16")
    (set_attr "predicable" "yes")]
 )
 
@@ -4389,8 +4386,8 @@
 
 (define_insn "zero_extend<mode>di2"
   [(set (match_operand:DI 0 "s_register_operand" "=r")
-        (zero_extend:DI (match_operand:QHSI 1 "<qhs_extenddi_op>"
-					    "<qhs_extenddi_cstr>")))]
+        (zero_extend:DI (match_operand:QHSI 1 "<qhs_zextenddi_op>"
+					    "<qhs_zextenddi_cstr>")))]
   "TARGET_32BIT <qhs_zextenddi_cond>"
   "#"
   [(set_attr "length" "8")

@@ -86,16 +86,6 @@ get_bc_label (enum bc_t bc)
 {
   tree label = bc_label[bc];
 
-  if (label == NULL_TREE)
-    {
-      if (bc == bc_break)
-	error ("break statement not within loop or switch");
-      else
-	error ("continue statement not within loop or switch");
-
-      return NULL_TREE;
-    }
-
   /* Mark the label used for finish_bc_block.  */
   TREE_USED (label) = 1;
   return label;
@@ -579,7 +569,8 @@ cp_gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
 
 	else if ((is_gimple_lvalue (op1) || INDIRECT_REF_P (op1)
 		  || (TREE_CODE (op1) == CONSTRUCTOR
-		      && CONSTRUCTOR_NELTS (op1) == 0)
+		      && CONSTRUCTOR_NELTS (op1) == 0
+		      && !TREE_CLOBBER_P (op1))
 		  || (TREE_CODE (op1) == CALL_EXPR
 		      && !CALL_EXPR_RETURN_SLOT_OPT (op1)))
 		 && is_really_empty_class (TREE_TYPE (op0)))

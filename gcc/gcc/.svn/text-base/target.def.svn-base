@@ -456,7 +456,7 @@ DEFHOOK
 (output_addr_const_extra,
  "",
  bool, (FILE *file, rtx x),
- default_asm_output_addr_const_extra)
+ hook_bool_FILEptr_rtx_false)
 
 /* ??? The TARGET_PRINT_OPERAND* hooks are part of the asm_out struct,
    even though that is not reflected in the macro name to override their
@@ -985,18 +985,13 @@ DEFHOOK
  bool, (const_tree type, bool is_packed),
  default_builtin_vector_alignment_reachable)
 
-/* Target builtin that implements vector permute.  */
+/* Return true if a vector created for vec_perm_const is valid.
+   A NULL indicates that all constants are valid permutations.  */
 DEFHOOK
-(builtin_vec_perm,
+(vec_perm_const_ok,
  "",
- tree, (tree type, tree *mask_element_type), NULL)
-
-/* Return true if a vector created for builtin_vec_perm is valid.  */
-DEFHOOK
-(builtin_vec_perm_ok,
- "",
- bool, (tree vec_type, tree mask),
- hook_bool_tree_tree_true)
+ bool, (enum machine_mode, const unsigned char *sel),
+ NULL)
 
 /* Return true if the target supports misaligned store/load of a
    specific factor denoted in the third parameter.  The last parameter
@@ -1007,6 +1002,24 @@ DEFHOOK
  bool,
  (enum machine_mode mode, const_tree type, int misalignment, bool is_packed),
  default_builtin_support_vector_misalignment)
+
+/* Return the builtin decl needed to load a vector of TYPE.  */
+DEFHOOK
+(builtin_tm_load,
+ "This hook should return the built-in decl needed to load a vector of the "
+ "given type within a transaction.",
+ tree,
+ (tree),
+ default_builtin_tm_load_store)
+
+/* Return the builtin decl needed to store a vector of TYPE.  */
+DEFHOOK
+(builtin_tm_store,
+ "This hook should return the built-in decl needed to store a vector of the "
+ "given type within a transaction.",
+ tree,
+ (tree),
+ default_builtin_tm_load_store)
 
 /* Returns the preferred mode for SIMD operations for the specified
    scalar mode.  */
@@ -1025,6 +1038,14 @@ DEFHOOK
  unsigned int,
  (void),
  default_autovectorize_vector_sizes)
+
+/* Target builtin that implements vector gather operation.  */
+DEFHOOK
+(builtin_gather,
+ "",
+ tree,
+ (const_tree mem_vectype, const_tree index_type, int scale),
+ NULL)
 
 HOOK_VECTOR_END (vectorize)
 
@@ -1546,7 +1567,7 @@ DEFHOOK
 DEFHOOK
 (subset_p,
  "",
- bool, (addr_space_t superset, addr_space_t subset),
+ bool, (addr_space_t subset, addr_space_t superset),
  default_addr_space_subset_p)
 
 /* Function to convert an rtl expression from one address space to another.  */

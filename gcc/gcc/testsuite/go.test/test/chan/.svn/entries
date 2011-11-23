@@ -1,14 +1,14 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/go.test/test/chan
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-09-21T23:05:39.964752Z
-179063
+2011-10-26T23:57:58.673671Z
+180552
 ian
 
 
@@ -134,10 +134,10 @@ file
 
 
 
-2011-06-04T17:55:35.964104Z
-012fbb4e2a2b6ce53ab19021e22479e1
-2010-09-11T00:47:55.335584Z
-164210
+2011-11-12T11:42:07.620332Z
+1dd5dd170c5db03b5b3b2ba662ed9a90
+2011-10-26T23:57:58.673671Z
+180552
 ian
 
 
@@ -160,7 +160,7 @@ ian
 
 
 
-3689
+3948
 
 goroutines.go
 file

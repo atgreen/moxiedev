@@ -605,6 +605,10 @@ package Sinfo is
    --    Since the back end is expected to ignore generic templates, this is
    --    harmless.
 
+   --  Atomic_Sync_Required (Flag14-Sem)
+   --    This flag is set on a node for which atomic synchronization is
+   --    required for the corresponding reference or modification.
+
    --  At_End_Proc (Node1)
    --    This field is present in an N_Handled_Sequence_Of_Statements node.
    --    It contains an identifier reference for the cleanup procedure to be
@@ -1917,6 +1921,7 @@ package Sinfo is
       --  Associated_Node (Node4-Sem)
       --  Original_Discriminant (Node2-Sem)
       --  Redundant_Use (Flag13-Sem)
+      --  Atomic_Sync_Required (Flag14-Sem)
       --  Has_Private_View (Flag11-Sem) (set in generic units)
       --  plus fields for expression
 
@@ -2191,7 +2196,8 @@ package Sinfo is
       --------------------------------
 
       --  SUBTYPE_DECLARATION ::=
-      --    subtype DEFINING_IDENTIFIER is [NULL_EXCLUSION] SUBTYPE_INDICATION;
+      --    subtype DEFINING_IDENTIFIER is [NULL_EXCLUSION] SUBTYPE_INDICATION
+      --      [ASPECT_SPECIFICATIONS];
 
       --  The subtype indication field is set to Empty for subtypes
       --  declared in package Standard (Positive, Natural).
@@ -3167,6 +3173,7 @@ package Sinfo is
       --  Sloc points to ALL
       --  Prefix (Node3)
       --  Actual_Designated_Subtype (Node4-Sem)
+      --  Atomic_Sync_Required (Flag14-Sem)
       --  plus fields for expression
 
       -------------------------------
@@ -3189,6 +3196,7 @@ package Sinfo is
       --  Sloc contains a copy of the Sloc value of the Prefix
       --  Prefix (Node3)
       --  Expressions (List1)
+      --  Atomic_Sync_Required (Flag14-Sem)
       --  plus fields for expression
 
       --  Note: if any of the subscripts requires a range check, then the
@@ -3232,6 +3240,7 @@ package Sinfo is
       --  Associated_Node (Node4-Sem)
       --  Do_Discriminant_Check (Flag13-Sem)
       --  Is_In_Discriminant_Check (Flag11-Sem)
+      --  Atomic_Sync_Required (Flag14-Sem)
       --  plus fields for expression
 
       --------------------------
@@ -6981,8 +6990,9 @@ package Sinfo is
       --  Selector_Name (Node2)
       --  Entity (Node4-Sem)
       --  Associated_Node (Node4-Sem)
-      --  Redundant_Use (Flag13-Sem)
       --  Has_Private_View (Flag11-Sem) set in generic units.
+      --  Redundant_Use (Flag13-Sem)
+      --  Atomic_Sync_Required (Flag14-Sem)
       --  plus fields for expression
 
       -----------------------------
@@ -7299,6 +7309,11 @@ package Sinfo is
       --  nodes for the 'Access and related attributes. Logically it would make
       --  more sense to call it an Expression field, but then we would have to
       --  special case the treatment of the N_Reference node.
+
+      --  Note: evaluating a N_Reference node is guaranteed to yield a non-null
+      --  value at run time. Therefore, it is valid to set Is_Known_Non_Null on
+      --  a temporary initialized to a N_Reference node in order to eliminate
+      --  superfluous access checks.
 
       --  Sprint syntax: prefix'reference
 
@@ -8119,6 +8134,9 @@ package Sinfo is
 
    function Ancestor_Part
      (N : Node_Id) return Node_Id;    -- Node3
+
+   function Atomic_Sync_Required
+     (N : Node_Id) return Boolean;    -- Flag14
 
    function Array_Aggregate
      (N : Node_Id) return Node_Id;    -- Node3
@@ -9094,6 +9112,9 @@ package Sinfo is
 
    procedure Set_Ancestor_Part
      (N : Node_Id; Val : Node_Id);            -- Node3
+
+   procedure Set_Atomic_Sync_Required
+     (N : Node_Id; Val : Boolean := True);    -- Flag14
 
    procedure Set_Array_Aggregate
      (N : Node_Id; Val : Node_Id);            -- Node3
@@ -11763,6 +11784,7 @@ package Sinfo is
    pragma Inline (All_Present);
    pragma Inline (Alternatives);
    pragma Inline (Ancestor_Part);
+   pragma Inline (Atomic_Sync_Required);
    pragma Inline (Array_Aggregate);
    pragma Inline (Aspect_Rep_Item);
    pragma Inline (Assignment_OK);
@@ -12085,6 +12107,7 @@ package Sinfo is
    pragma Inline (Set_All_Present);
    pragma Inline (Set_Alternatives);
    pragma Inline (Set_Ancestor_Part);
+   pragma Inline (Set_Atomic_Sync_Required);
    pragma Inline (Set_Array_Aggregate);
    pragma Inline (Set_Aspect_Rep_Item);
    pragma Inline (Set_Assignment_OK);

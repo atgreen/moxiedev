@@ -1660,6 +1660,12 @@ implicit_conversion (tree to, tree from, tree expr, bool c_cast_p,
       || expr == error_mark_node)
     return NULL;
 
+  /* Other flags only apply to the primary function in overload
+     resolution, or after we've chosen one.  */
+  flags &= (LOOKUP_ONLYCONVERTING|LOOKUP_NO_CONVERSION|LOOKUP_COPY_PARM
+	    |LOOKUP_NO_TEMP_BIND|LOOKUP_NO_RVAL_BIND|LOOKUP_PREFER_RVALUE
+	    |LOOKUP_NO_NARROWING|LOOKUP_PROTECT);
+
   if (TREE_CODE (to) == REFERENCE_TYPE)
     conv = reference_binding (to, from, expr, c_cast_p, flags);
   else
@@ -1716,15 +1722,13 @@ implicit_conversion (tree to, tree from, tree expr, bool c_cast_p,
       && (flags & LOOKUP_NO_CONVERSION) == 0)
     {
       struct z_candidate *cand;
-      int convflags = (flags & (LOOKUP_NO_TEMP_BIND|LOOKUP_ONLYCONVERTING
-				|LOOKUP_NO_NARROWING));
 
       if (CLASS_TYPE_P (to)
 	  && BRACE_ENCLOSED_INITIALIZER_P (expr)
 	  && !CLASSTYPE_NON_AGGREGATE (complete_type (to)))
 	return build_aggr_conv (to, expr, flags);
 
-      cand = build_user_type_conversion_1 (to, expr, convflags);
+      cand = build_user_type_conversion_1 (to, expr, flags);
       if (cand)
 	conv = cand->second_conv;
 
@@ -2578,6 +2582,21 @@ add_builtin_candidate (struct z_candidate **candidates, enum tree_code code,
 	  || MAYBE_CLASS_TYPE_P (type1)
 	  || TREE_CODE (type1) == ENUMERAL_TYPE))
     {
+      if (TYPE_PTR_P (type1) || TYPE_PTR_TO_MEMBER_P (type1))
+	{
+	  tree cptype = composite_pointer_type (type1, type2,
+						error_mark_node,
+						error_mark_node,
+						CPO_CONVERSION,
+						tf_none);
+	  if (cptype != error_mark_node)
+	    {
+	      build_builtin_candidate
+		(candidates, fnname, cptype, cptype, args, argtypes, flags);
+	      return;
+	    }
+	}
+
       build_builtin_candidate
 	(candidates, fnname, type1, type1, args, argtypes, flags);
       build_builtin_candidate
@@ -3806,6 +3825,9 @@ build_new_function_call (tree fn, VEC(tree,gc) **args, bool koenig_p,
       if (*args == NULL)
 	return error_mark_node;
     }
+
+  if (flag_tm)
+    tm_malloc_replacement (fn);
 
   /* If this function was found without using argument dependent
      lookup, then we want to ignore any undeclared friend
@@ -5204,6 +5226,7 @@ build_new_op_1 (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
     case POSTDECREMENT_EXPR:
     case REALPART_EXPR:
     case IMAGPART_EXPR:
+    case ABS_EXPR:
       return cp_build_unary_op (code, arg1, candidates != 0, complain);
 
     case ARRAY_REF:
@@ -5510,10 +5533,9 @@ build_temp (tree expr, tree type, int flags,
 static void
 conversion_null_warnings (tree totype, tree expr, tree fn, int argnum)
 {
-  tree t = non_reference (totype);
-
   /* Issue warnings about peculiar, but valid, uses of NULL.  */
-  if (expr == null_node && TREE_CODE (t) != BOOLEAN_TYPE && ARITHMETIC_TYPE_P (t))
+  if (expr == null_node && TREE_CODE (totype) != BOOLEAN_TYPE
+      && ARITHMETIC_TYPE_P (totype))
     {
       if (fn)
 	warning_at (input_location, OPT_Wconversion_null,
@@ -5521,11 +5543,12 @@ conversion_null_warnings (tree totype, tree expr, tree fn, int argnum)
 		    argnum, fn);
       else
 	warning_at (input_location, OPT_Wconversion_null,
-		    "converting to non-pointer type %qT from NULL", t);
+		    "converting to non-pointer type %qT from NULL", totype);
     }
 
   /* Issue warnings if "false" is converted to a NULL pointer */
-  else if (expr == boolean_false_node && POINTER_TYPE_P (t))
+  else if (TREE_CODE (TREE_TYPE (expr)) == BOOLEAN_TYPE
+	   && TYPE_PTR_P (totype))
     {
       if (fn)
 	warning_at (input_location, OPT_Wconversion_null,
@@ -5533,7 +5556,7 @@ conversion_null_warnings (tree totype, tree expr, tree fn, int argnum)
 		    "of %qD", argnum, fn);
       else
 	warning_at (input_location, OPT_Wconversion_null,
-		    "converting %<false%> to pointer type %qT", t);
+		    "converting %<false%> to pointer type %qT", totype);
     }
 }
 
@@ -5636,10 +5659,14 @@ convert_like_real (conversion *convs, tree expr, tree fn, int argnum,
 	    && CONSTRUCTOR_NELTS (expr) == 0
 	    && TYPE_HAS_DEFAULT_CONSTRUCTOR (totype))
 	  {
+	    bool direct = CONSTRUCTOR_IS_DIRECT_INIT (expr);
 	    expr = build_value_init (totype, complain);
 	    expr = get_target_expr_sfinae (expr, complain);
 	    if (expr != error_mark_node)
-	      TARGET_EXPR_LIST_INIT_P (expr) = true;
+	      {
+		TARGET_EXPR_LIST_INIT_P (expr) = true;
+		TARGET_EXPR_DIRECT_INIT_P (expr) = direct;
+	      }
 	    return expr;
 	  }
 
@@ -5699,7 +5726,7 @@ convert_like_real (conversion *convs, tree expr, tree fn, int argnum,
 	 leave it as an lvalue.  */
       if (inner >= 0)
         {   
-          expr = decl_constant_value (expr);
+          expr = decl_constant_value_safe (expr);
           if (expr == null_node && INTEGRAL_OR_UNSCOPED_ENUMERATION_TYPE_P (totype))
             /* If __null has been converted to an integer type, we do not
                want to warn about uses of EXPR as an integer, rather than
@@ -7860,18 +7887,25 @@ compare_ics (conversion *ics1, conversion *ics2)
      types to which the references refer are the same type except for
      top-level cv-qualifiers, and the type to which the reference
      initialized by S2 refers is more cv-qualified than the type to
-     which the reference initialized by S1 refers */
+     which the reference initialized by S1 refers.
+
+     DR 1328 [over.match.best]: the context is an initialization by
+     conversion function for direct reference binding (13.3.1.6) of a
+     reference to function type, the return type of F1 is the same kind of
+     reference (i.e. lvalue or rvalue) as the reference being initialized,
+     and the return type of F2 is not.  */
 
   if (ref_conv1 && ref_conv2)
     {
-      if (!ref_conv1->this_p && !ref_conv2->this_p)
+      if (!ref_conv1->this_p && !ref_conv2->this_p
+	  && (ref_conv1->rvaluedness_matches_p
+	      != ref_conv2->rvaluedness_matches_p)
+	  && (same_type_p (ref_conv1->type, ref_conv2->type)
+	      || (TYPE_REF_IS_RVALUE (ref_conv1->type)
+		  != TYPE_REF_IS_RVALUE (ref_conv2->type))))
 	{
-	  if (ref_conv1->rvaluedness_matches_p
-	      > ref_conv2->rvaluedness_matches_p)
-	    return 1;
-	  if (ref_conv2->rvaluedness_matches_p
-	      > ref_conv1->rvaluedness_matches_p)
-	    return -1;
+	  return (ref_conv1->rvaluedness_matches_p
+		  - ref_conv2->rvaluedness_matches_p);
 	}
 
       if (same_type_ignoring_top_level_qualifiers_p (to_type1, to_type2))
@@ -8075,6 +8109,22 @@ joust (struct z_candidate *cand1, struct z_candidate *cand2, bool warn)
   if (winner)
     return winner;
 
+  /* DR 495 moved this tiebreaker above the template ones.  */
+  /* or, if not that,
+     the  context  is  an  initialization by user-defined conversion (see
+     _dcl.init_  and  _over.match.user_)  and  the  standard   conversion
+     sequence  from  the return type of F1 to the destination type (i.e.,
+     the type of the entity being initialized)  is  a  better  conversion
+     sequence  than the standard conversion sequence from the return type
+     of F2 to the destination type.  */
+
+  if (cand1->second_conv)
+    {
+      winner = compare_ics (cand1->second_conv, cand2->second_conv);
+      if (winner)
+	return winner;
+    }
+
   /* or, if not that,
      F1 is a non-template function and F2 is a template function
      specialization.  */
@@ -8099,21 +8149,6 @@ joust (struct z_candidate *cand1, struct z_candidate *cand2, bool warn)
 	    templates.   add_function_candidate() will not have
 	    counted the "this" argument for constructors.  */
 	 cand1->num_convs + DECL_CONSTRUCTOR_P (cand1->fn));
-      if (winner)
-	return winner;
-    }
-
-  /* or, if not that,
-     the  context  is  an  initialization by user-defined conversion (see
-     _dcl.init_  and  _over.match.user_)  and  the  standard   conversion
-     sequence  from  the return type of F1 to the destination type (i.e.,
-     the type of the entity being initialized)  is  a  better  conversion
-     sequence  than the standard conversion sequence from the return type
-     of F2 to the destination type.  */
-
-  if (cand1->second_conv)
-    {
-      winner = compare_ics (cand1->second_conv, cand2->second_conv);
       if (winner)
 	return winner;
     }
@@ -8387,13 +8422,19 @@ perform_implicit_conversion_flags (tree type, tree expr, tsubst_flags_t complain
 	}
       expr = error_mark_node;
     }
-  else if (processing_template_decl)
+  else if (processing_template_decl
+	   /* As a kludge, we always perform conversions between scalar
+	      types, as IMPLICIT_CONV_EXPR confuses c_finish_omp_for.  */
+	   && !(SCALAR_TYPE_P (type) && SCALAR_TYPE_P (TREE_TYPE (expr))))
     {
       /* In a template, we are only concerned about determining the
 	 type of non-dependent expressions, so we do not have to
-	 perform the actual conversion.  */
-      if (TREE_TYPE (expr) != type)
-	expr = build_nop (type, expr);
+	 perform the actual conversion.  But for initializers, we
+	 need to be able to perform it at instantiation
+	 (or fold_non_dependent_expr) time.  */
+      expr = build1 (IMPLICIT_CONV_EXPR, type, expr);
+      if (!(flags & LOOKUP_ONLYCONVERTING))
+	IMPLICIT_CONV_EXPR_DIRECT_INIT (expr) = true;
     }
   else
     expr = convert_like (conv, expr, complain);
@@ -8466,6 +8507,44 @@ perform_direct_initialization_if_possible (tree type,
   return expr;
 }
 
+/* When initializing a reference that lasts longer than a full-expression,
+   this special rule applies:
+
+     [class.temporary]
+
+     The temporary to which the reference is bound or the temporary
+     that is the complete object to which the reference is bound
+     persists for the lifetime of the reference.
+
+     The temporaries created during the evaluation of the expression
+     initializing the reference, except the temporary to which the
+     reference is bound, are destroyed at the end of the
+     full-expression in which they are created.
+
+   In that case, we store the converted expression into a new
+   VAR_DECL in a new scope.
+
+   However, we want to be careful not to create temporaries when
+   they are not required.  For example, given:
+
+     struct B {};
+     struct D : public B {};
+     D f();
+     const B& b = f();
+
+   there is no need to copy the return value from "f"; we can just
+   extend its lifetime.  Similarly, given:
+
+     struct S {};
+     struct T { operator S(); };
+     T t;
+     const S& s = t;
+
+  we can extend the lifetime of the return value of the conversion
+  operator.
+
+  The next several functions are involved in this lifetime extension.  */
+
 /* DECL is a VAR_DECL whose type is a REFERENCE_TYPE.  The reference
    is being bound to a temporary.  Create and return a new VAR_DECL
    with the indicated TYPE; this variable will store the value to
@@ -8483,6 +8562,7 @@ make_temporary_var_for_ref_to_temp (tree decl, tree type)
   if (TREE_STATIC (decl))
     {
       /* Namespace-scope or local static; give it a mangled name.  */
+      /* FIXME share comdat with decl?  */
       tree name;
 
       TREE_STATIC (var) = 1;
@@ -8504,8 +8584,9 @@ make_temporary_var_for_ref_to_temp (tree decl, tree type)
    cleanup for the new variable is returned through CLEANUP, and the
    code to initialize the new variable is returned through INITP.  */
 
-tree
-set_up_extended_ref_temp (tree decl, tree expr, tree *cleanup, tree *initp)
+static tree
+set_up_extended_ref_temp (tree decl, tree expr, VEC(tree,gc) **cleanups,
+			  tree *initp)
 {
   tree init;
   tree type;
@@ -8525,6 +8606,18 @@ set_up_extended_ref_temp (tree decl, tree expr, tree *cleanup, tree *initp)
      VAR.  */
   if (TREE_CODE (expr) != TARGET_EXPR)
     expr = get_target_expr (expr);
+
+  if (TREE_CODE (decl) == FIELD_DECL
+      && extra_warnings && !TREE_NO_WARNING (decl))
+    {
+      warning (OPT_Wextra, "a temporary bound to %qD only persists "
+	       "until the constructor exits", decl);
+      TREE_NO_WARNING (decl) = true;
+    }
+
+  /* Recursively extend temps in this initializer.  */
+  TARGET_EXPR_INITIAL (expr)
+    = extend_ref_init_temps (decl, TARGET_EXPR_INITIAL (expr), cleanups);
 
   /* If the initializer is constant, put it in DECL_INITIAL so we get
      static initialization and use in constant expressions.  */
@@ -8559,7 +8652,11 @@ set_up_extended_ref_temp (tree decl, tree expr, tree *cleanup, tree *initp)
       if (TREE_STATIC (var))
 	init = add_stmt_to_compound (init, register_dtor_fn (var));
       else
-	*cleanup = cxx_maybe_build_cleanup (var, tf_warning_or_error);
+	{
+	  tree cleanup = cxx_maybe_build_cleanup (var, tf_warning_or_error);
+	  if (cleanup)
+	    VEC_safe_push (tree, gc, *cleanups, cleanup);
+	}
 
       /* We must be careful to destroy the temporary only
 	 after its initialization has taken place.  If the
@@ -8593,18 +8690,10 @@ set_up_extended_ref_temp (tree decl, tree expr, tree *cleanup, tree *initp)
 }
 
 /* Convert EXPR to the indicated reference TYPE, in a way suitable for
-   initializing a variable of that TYPE.  If DECL is non-NULL, it is
-   the VAR_DECL being initialized with the EXPR.  (In that case, the
-   type of DECL will be TYPE.)  If DECL is non-NULL, then CLEANUP must
-   also be non-NULL, and with *CLEANUP initialized to NULL.  Upon
-   return, if *CLEANUP is no longer NULL, it will be an expression
-   that should be pushed as a cleanup after the returned expression
-   is used to initialize DECL.
-
-   Return the converted expression.  */
+   initializing a variable of that TYPE.  */
 
 tree
-initialize_reference (tree type, tree expr, tree decl, tree *cleanup,
+initialize_reference (tree type, tree expr,
 		      int flags, tsubst_flags_t complain)
 {
   conversion *conv;
@@ -8638,103 +8727,77 @@ initialize_reference (tree type, tree expr, tree decl, tree *cleanup,
       return error_mark_node;
     }
 
-  /* If DECL is non-NULL, then this special rule applies:
-
-       [class.temporary]
-
-       The temporary to which the reference is bound or the temporary
-       that is the complete object to which the reference is bound
-       persists for the lifetime of the reference.
-
-       The temporaries created during the evaluation of the expression
-       initializing the reference, except the temporary to which the
-       reference is bound, are destroyed at the end of the
-       full-expression in which they are created.
-
-     In that case, we store the converted expression into a new
-     VAR_DECL in a new scope.
-
-     However, we want to be careful not to create temporaries when
-     they are not required.  For example, given:
-
-       struct B {};
-       struct D : public B {};
-       D f();
-       const B& b = f();
-
-     there is no need to copy the return value from "f"; we can just
-     extend its lifetime.  Similarly, given:
-
-       struct S {};
-       struct T { operator S(); };
-       T t;
-       const S& s = t;
-
-    we can extend the lifetime of the return value of the conversion
-    operator.  */
   gcc_assert (conv->kind == ck_ref_bind);
-  if (decl)
-    {
-      tree var;
-      tree base_conv_type;
 
-      gcc_assert (complain == tf_warning_or_error);
-
-      /* Skip over the REF_BIND.  */
-      conv = conv->u.next;
-      /* If the next conversion is a BASE_CONV, skip that too -- but
-	 remember that the conversion was required.  */
-      if (conv->kind == ck_base)
-	{
-	  base_conv_type = conv->type;
-	  conv = conv->u.next;
-	}
-      else
-	base_conv_type = NULL_TREE;
-      /* Perform the remainder of the conversion.  */
-      expr = convert_like_real (conv, expr,
-				/*fn=*/NULL_TREE, /*argnum=*/0,
-				/*inner=*/-1,
-				/*issue_conversion_warnings=*/true,
-				/*c_cast_p=*/false,
-				complain);
-      if (error_operand_p (expr))
-	expr = error_mark_node;
-      else
-	{
-	  if (!lvalue_or_rvalue_with_address_p (expr))
-	    {
-	      tree init;
-	      var = set_up_extended_ref_temp (decl, expr, cleanup, &init);
-	      /* Use its address to initialize the reference variable.  */
-	      expr = build_address (var);
-	      if (base_conv_type)
-		expr = convert_to_base (expr,
-					build_pointer_type (base_conv_type),
-					/*check_access=*/true,
-					/*nonnull=*/true, complain);
-	      if (init)
-		expr = build2 (COMPOUND_EXPR, TREE_TYPE (expr), init, expr);
-	    }
-	  else
-	    /* Take the address of EXPR.  */
-	    expr = cp_build_addr_expr (expr, complain);
-	  /* If a BASE_CONV was required, perform it now.  */
-	  if (base_conv_type)
-	    expr = (perform_implicit_conversion
-		    (build_pointer_type (base_conv_type), expr,
-		     complain));
-	  expr = build_nop (type, expr);
-	}
-    }
-  else
-    /* Perform the conversion.  */
-    expr = convert_like (conv, expr, complain);
+  /* Perform the conversion.  */
+  expr = convert_like (conv, expr, complain);
 
   /* Free all the conversions we allocated.  */
   obstack_free (&conversion_obstack, p);
 
   return expr;
+}
+
+/* Subroutine of extend_ref_init_temps.  Possibly extend one initializer,
+   which is bound either to a reference or a std::initializer_list.  */
+
+static tree
+extend_ref_init_temps_1 (tree decl, tree init, VEC(tree,gc) **cleanups)
+{
+  tree sub = init;
+  tree *p;
+  STRIP_NOPS (sub);
+  if (TREE_CODE (sub) != ADDR_EXPR)
+    return init;
+  /* Deal with binding to a subobject.  */
+  for (p = &TREE_OPERAND (sub, 0); TREE_CODE (*p) == COMPONENT_REF; )
+    p = &TREE_OPERAND (*p, 0);
+  if (TREE_CODE (*p) == TARGET_EXPR)
+    {
+      tree subinit = NULL_TREE;
+      *p = set_up_extended_ref_temp (decl, *p, cleanups, &subinit);
+      if (subinit)
+	init = build2 (COMPOUND_EXPR, TREE_TYPE (init), subinit, init);
+    }
+  return init;
+}
+
+/* INIT is part of the initializer for DECL.  If there are any
+   reference or initializer lists being initialized, extend their
+   lifetime to match that of DECL.  */
+
+tree
+extend_ref_init_temps (tree decl, tree init, VEC(tree,gc) **cleanups)
+{
+  tree type = TREE_TYPE (init);
+  if (processing_template_decl)
+    return init;
+  if (TREE_CODE (type) == REFERENCE_TYPE)
+    init = extend_ref_init_temps_1 (decl, init, cleanups);
+  else if (is_std_init_list (type))
+    {
+      /* The temporary array underlying a std::initializer_list
+	 is handled like a reference temporary.  */
+      tree ctor = init;
+      if (TREE_CODE (ctor) == TARGET_EXPR)
+	ctor = TARGET_EXPR_INITIAL (ctor);
+      if (TREE_CODE (ctor) == CONSTRUCTOR)
+	{
+	  tree array = CONSTRUCTOR_ELT (ctor, 0)->value;
+	  array = extend_ref_init_temps_1 (decl, array, cleanups);
+	  CONSTRUCTOR_ELT (ctor, 0)->value = array;
+	}
+    }
+  else if (TREE_CODE (init) == CONSTRUCTOR)
+    {
+      unsigned i;
+      constructor_elt *p;
+      VEC(constructor_elt,gc) *elts = CONSTRUCTOR_ELTS (init);
+      FOR_EACH_VEC_ELT (constructor_elt, elts, i, p)
+	p->value = extend_ref_init_temps (decl, p->value, cleanups);
+    }
+
+  return init;
 }
 
 /* Returns true iff TYPE is some variant of std::initializer_list.  */

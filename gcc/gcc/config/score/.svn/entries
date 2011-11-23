@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config/score
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-18T12:37:53.216826Z
-177852
-rsandifo
+2011-11-02T14:33:56.985593Z
+180771
+ro
 
 
 
@@ -25,74 +25,6 @@ rsandifo
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-t-score-elf
-file
-
-
-
-
-2011-08-24T20:12:33.643797Z
-c9c50eab4eaedc21950ab47701db9766
-2011-07-01T07:51:38.372683Z
-175747
-liqin
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1144
-
-crti.asm
-file
-
-
-
-
-2011-06-04T18:05:30.986104Z
-9cbc9dca877cd0273bcb8a73ef55d89b
-2011-03-11T05:59:07.619193Z
-170864
-liqin
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3351
 
 score.h
 file
@@ -229,40 +161,6 @@ amylaar
 
 
 2823
-
-crtn.asm
-file
-
-
-
-
-2011-06-04T18:05:30.988104Z
-72000b91cbdf2f229eafc40fba68c4f9
-2011-03-11T05:59:07.619193Z
-170864
-liqin
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1573
 
 score-protos.h
 file

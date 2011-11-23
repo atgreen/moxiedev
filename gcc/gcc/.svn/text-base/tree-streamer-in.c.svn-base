@@ -130,7 +130,10 @@ unpack_ts_base_value_fields (struct bitpack_d *bp, tree expr)
   TREE_PROTECTED (expr) = (unsigned) bp_unpack_value (bp, 1);
   TREE_DEPRECATED (expr) = (unsigned) bp_unpack_value (bp, 1);
   if (TYPE_P (expr))
-    TYPE_SATURATING (expr) = (unsigned) bp_unpack_value (bp, 1);
+    {
+      TYPE_SATURATING (expr) = (unsigned) bp_unpack_value (bp, 1);
+      TYPE_ADDR_SPACE (expr) = (unsigned) bp_unpack_value (bp, 8);
+    }
   else if (TREE_CODE (expr) == SSA_NAME)
     SSA_NAME_IS_DEFAULT_DEF (expr) = (unsigned) bp_unpack_value (bp, 1);
   else
@@ -1049,7 +1052,7 @@ streamer_get_builtin_tree (struct lto_input_block *ib, struct data_in *data_in)
     {
       if (fcode >= END_BUILTINS)
 	fatal_error ("machine independent builtin code out of range");
-      result = built_in_decls[fcode];
+      result = builtin_decl_explicit (fcode);
       gcc_assert (result);
     }
   else if (fclass == BUILT_IN_MD)

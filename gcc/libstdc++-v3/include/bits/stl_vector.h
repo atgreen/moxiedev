@@ -60,7 +60,9 @@
 #include <bits/stl_iterator_base_funcs.h>
 #include <bits/functexcept.h>
 #include <bits/concept_check.h>
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
 #include <initializer_list>
+#endif
 
 namespace std _GLIBCXX_VISIBILITY(default)
 {
@@ -70,7 +72,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   template<typename _Tp, typename _Alloc>
     struct _Vector_base
     {
-      typedef typename _Alloc::template rebind<_Tp>::other _Tp_alloc_type;
+      typedef typename __gnu_cxx::__alloc_traits<_Alloc>::template
+        rebind<_Tp>::other _Tp_alloc_type;
       typedef typename __gnu_cxx::__alloc_traits<_Tp_alloc_type>::pointer
        	pointer;
 
@@ -211,11 +214,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       
       typedef _Vector_base<_Tp, _Alloc>			 _Base;
       typedef typename _Base::_Tp_alloc_type		 _Tp_alloc_type;
+      typedef __gnu_cxx::__alloc_traits<_Tp_alloc_type>  _Alloc_traits;
 
     public:
       typedef _Tp					 value_type;
       typedef typename _Base::pointer                    pointer;
-      typedef __gnu_cxx::__alloc_traits<_Tp_alloc_type>  _Alloc_traits;
       typedef typename _Alloc_traits::const_pointer      const_pointer;
       typedef typename _Alloc_traits::reference          reference;
       typedef typename _Alloc_traits::const_reference    const_reference;
@@ -643,7 +646,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       /**  Returns the size() of the largest possible %vector.  */
       size_type
       max_size() const _GLIBCXX_NOEXCEPT
-      { return _M_get_Tp_allocator().max_size(); }
+      { return _Alloc_traits::max_size(_M_get_Tp_allocator()); }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
       /**

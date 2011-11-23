@@ -585,13 +585,162 @@
 ;; SImode signed integer comparisons
 ;; -------------------------------------------------------------------------
 
-(define_insn ""
+;; Various patterns to generate the TST #imm, R0 instruction.
+;; Although this adds some pressure on the R0 register, it can potentially
+;; result in faster code, even if the operand has to be moved to R0 first.
+;; This is because on SH4 TST #imm, R0 and MOV Rm, Rn are both MT group 
+;; instructions and thus will be executed in parallel.  On SH4A TST #imm, R0
+;; is an EX group instruction but still can be executed in parallel with the
+;; MT group MOV Rm, Rn instruction.
+
+;; Usual TST #imm, R0 patterns for SI, HI and QI
+;; This is usually used for bit patterns other than contiguous bits 
+;; and single bits.
+
+(define_insn "tstsi_t"
   [(set (reg:SI T_REG)
-	(eq:SI (and:SI (match_operand:SI 0 "arith_reg_operand" "z,r")
+	(eq:SI (and:SI (match_operand:SI 0 "logical_operand" "%z,r")
 		       (match_operand:SI 1 "logical_operand" "K08,r"))
 	       (const_int 0)))]
   "TARGET_SH1"
   "tst	%1,%0"
+  [(set_attr "type" "mt_group")])
+
+(define_insn "tsthi_t"
+  [(set (reg:SI T_REG)
+	(eq:SI (subreg:SI (and:HI (match_operand:HI 0 "logical_operand" "%z")
+				  (match_operand 1 "const_int_operand")) 0)
+	       (const_int 0)))]
+  "TARGET_SH1
+   && CONST_OK_FOR_K08 (INTVAL (operands[1]))"
+  "tst	%1,%0"
+  [(set_attr "type" "mt_group")])
+
+(define_insn "tstqi_t"
+  [(set (reg:SI T_REG)
+	(eq:SI (subreg:SI (and:QI (match_operand:QI 0 "logical_operand" "%z")
+				  (match_operand 1 "const_int_operand")) 0)
+	       (const_int 0)))]
+  "TARGET_SH1
+   && (CONST_OK_FOR_K08 (INTVAL (operands[1])) 
+       || CONST_OK_FOR_I08 (INTVAL (operands[1])))"
+{
+  operands[1] = GEN_INT (INTVAL (operands[1]) & 255);
+  return "tst	%1,%0";
+}
+  [(set_attr "type" "mt_group")])
+
+;; Test low QI subreg against zero.
+;; This avoids unecessary zero extension before the test.
+
+(define_insn "tstqi_t_zero"
+  [(set (reg:SI T_REG)
+	(eq:SI (match_operand:QI 0 "logical_operand" "z") (const_int 0)))]
+  "TARGET_SH1"
+  "tst	#255,%0"
+  [(set_attr "type" "mt_group")])
+
+;; Extract LSB, negate and store in T bit.
+
+(define_insn "tstsi_t_and_not"
+  [(set (reg:SI T_REG)
+	 (and:SI (not:SI (match_operand:SI 0 "logical_operand" "z"))
+		 (const_int 1)))]
+  "TARGET_SH1"
+  "tst	#1,%0"
+  [(set_attr "type" "mt_group")])
+
+;; Extract contiguous bits and compare them against zero.
+
+(define_insn "tstsi_t_zero_extract_eq"
+  [(set (reg:SI T_REG)
+	(eq:SI (zero_extract:SI (match_operand 0 "logical_operand" "z")
+		(match_operand:SI 1 "const_int_operand")
+		(match_operand:SI 2 "const_int_operand"))
+         (const_int 0)))]
+  "TARGET_SH1
+   && CONST_OK_FOR_K08 (ZERO_EXTRACT_ANDMASK (operands[1], operands[2]))"
+{
+  operands[1] = GEN_INT (ZERO_EXTRACT_ANDMASK (operands[1], operands[2]));
+  return "tst	%1,%0";
+}
+  [(set_attr "type" "mt_group")])
+
+;; This split is required when testing bits in a QI subreg.
+
+(define_split
+  [(set (reg:SI T_REG)
+   (eq:SI (if_then_else:SI (zero_extract:SI
+			    (match_operand 0 "logical_operand" "")
+			    (match_operand 1 "const_int_operand")
+			    (match_operand 2 "const_int_operand"))
+			   (match_operand 3 "const_int_operand")
+			   (const_int 0))
+	  (const_int 0)))]
+  "TARGET_SH1
+   && ZERO_EXTRACT_ANDMASK (operands[1], operands[2]) == INTVAL (operands[3])
+   && CONST_OK_FOR_K08 (INTVAL (operands[3]))"
+  [(set (reg:SI T_REG) (eq:SI (and:SI (match_dup 0) (match_dup 3))
+			      (const_int 0)))]
+  "
+{
+  if (GET_MODE (operands[0]) == QImode)
+    operands[0] = simplify_gen_subreg (SImode, operands[0], QImode, 0);
+}")
+
+;; Extract single bit, negate and store it in the T bit.
+;; Not used for SH4A.
+
+(define_insn "tstsi_t_zero_extract_xor"
+  [(set (reg:SI T_REG)
+	(zero_extract:SI (xor:SI (match_operand:SI 0 "logical_operand" "z")
+			  (match_operand:SI 3 "const_int_operand"))
+			 (match_operand:SI 1 "const_int_operand")
+			 (match_operand:SI 2 "const_int_operand")))]
+  "TARGET_SH1
+   && ZERO_EXTRACT_ANDMASK (operands[1], operands[2]) == INTVAL (operands[3])
+   && CONST_OK_FOR_K08 (INTVAL (operands[3]))"
+  "tst	%3,%0"
+  [(set_attr "type" "mt_group")])
+
+;; Extract single bit, negate and store it in the T bit.
+;; Used for SH4A little endian.
+
+(define_insn "tstsi_t_zero_extract_subreg_xor_little"
+  [(set (reg:SI T_REG)
+	(zero_extract:SI
+	 (subreg:QI (xor:SI (match_operand:SI 0 "logical_operand" "z")
+			    (match_operand:SI 3 "const_int_operand")) 0)
+	 (match_operand:SI 1 "const_int_operand")
+	 (match_operand:SI 2 "const_int_operand")))]
+  "TARGET_SH1 && TARGET_LITTLE_ENDIAN
+   && ZERO_EXTRACT_ANDMASK (operands[1], operands[2])
+      == (INTVAL (operands[3]) & 255)
+   && CONST_OK_FOR_K08 (INTVAL (operands[3]) & 255)"
+{
+  operands[3] = GEN_INT (INTVAL (operands[3]) & 255);
+  return "tst	%3,%0";
+}
+  [(set_attr "type" "mt_group")])
+
+;; Extract single bit, negate and store it in the T bit.
+;; Used for SH4A big endian.
+
+(define_insn "tstsi_t_zero_extract_subreg_xor_big"
+  [(set (reg:SI T_REG)
+	(zero_extract:SI
+	 (subreg:QI (xor:SI (match_operand:SI 0 "logical_operand" "z")
+			    (match_operand:SI 3 "const_int_operand")) 3)
+	 (match_operand:SI 1 "const_int_operand")
+	 (match_operand:SI 2 "const_int_operand")))]
+  "TARGET_SH1 && ! TARGET_LITTLE_ENDIAN
+   && ZERO_EXTRACT_ANDMASK (operands[1], operands[2])
+      == (INTVAL (operands[3]) & 255)
+   && CONST_OK_FOR_K08 (INTVAL (operands[3]) & 255)"
+{
+  operands[3] = GEN_INT (INTVAL (operands[3]) & 255);
+  return "tst	%3,%0";
+}
   [(set_attr "type" "mt_group")])
 
 ;; ??? Perhaps should only accept reg/constant if the register is reg 0.
@@ -1157,7 +1306,7 @@
    && (arith_reg_operand (operands[1], SImode)
        || (immediate_operand (operands[1], SImode)
 	   && satisfies_constraint_I08 (operands[1])))"
-  "bt 0f\;mov %1,%0\\n0:"
+  "bt	0f\;mov	%1,%0\\n0:"
   [(set_attr "type" "mt_group,arith") ;; poor approximation
    (set_attr "length" "4")])
 
@@ -1170,7 +1319,7 @@
    && (arith_reg_operand (operands[1], SImode)
        || (immediate_operand (operands[1], SImode)
 	   && satisfies_constraint_I08 (operands[1])))"
-  "bf 0f\;mov %1,%0\\n0:"
+  "bf	0f\;mov	%1,%0\\n0:"
   [(set_attr "type" "mt_group,arith") ;; poor approximation
    (set_attr "length" "4")])
 
@@ -3015,9 +3164,9 @@ label:
 ;; -------------------------------------------------------------------------
 
 (define_insn "*andsi3_compact"
-  [(set (match_operand:SI 0 "arith_reg_dest" "=r,z")
+  [(set (match_operand:SI 0 "arith_reg_dest" "=z,r")
 	(and:SI (match_operand:SI 1 "arith_reg_operand" "%0,0")
-		(match_operand:SI 2 "logical_operand" "r,K08")))]
+		(match_operand:SI 2 "logical_operand" "K08,r")))]
   "TARGET_SH1"
   "and	%2,%0"
   [(set_attr "type" "arith")])
@@ -4282,28 +4431,39 @@ label:
   "sub	r63, %1, %0"
   [(set_attr "type" "arith_media")])
 
+
+
+;; Don't expand immediately because otherwise neg:DI (abs:DI) will not be
+;; combined.
 (define_expand "negdi2"
-  [(set (match_operand:DI 0 "arith_reg_operand" "")
-	(neg:DI (match_operand:DI 1 "arith_reg_operand" "")))]
+  [(set (match_operand:DI 0 "arith_reg_dest" "")
+	(neg:DI (match_operand:DI 1 "arith_reg_operand" "")))
+   (clobber (reg:SI T_REG))]
   ""
+  "")
+
+(define_insn_and_split "*negdi2"
+  [(set (match_operand:DI 0 "arith_reg_dest" "=r")
+	(neg:DI (match_operand:DI 1 "arith_reg_operand" "r")))]
+  "TARGET_SH1"
+  "#"
+  "TARGET_SH1"
+  [(const_int 0)]
   "
 {
-  if (TARGET_SH1)
-    {
-      int low_word = (TARGET_LITTLE_ENDIAN ? 0 : 1);
-      int high_word = (TARGET_LITTLE_ENDIAN ? 1 : 0);
+  int low_word = (TARGET_LITTLE_ENDIAN ? 0 : 1);
+  int high_word = (TARGET_LITTLE_ENDIAN ? 1 : 0);
 
-      rtx low_src = operand_subword (operands[1], low_word, 0, DImode);
-      rtx high_src = operand_subword (operands[1], high_word, 0, DImode);
+  rtx low_src = operand_subword (operands[1], low_word, 0, DImode);
+  rtx high_src = operand_subword (operands[1], high_word, 0, DImode);
 
-      rtx low_dst = operand_subword (operands[0], low_word, 1, DImode);
-      rtx high_dst = operand_subword (operands[0], high_word, 1, DImode);
+  rtx low_dst = operand_subword (operands[0], low_word, 1, DImode);
+  rtx high_dst = operand_subword (operands[0], high_word, 1, DImode);
 
-      emit_insn (gen_clrt ());
-      emit_insn (gen_negc (low_dst, low_src));
-      emit_insn (gen_negc (high_dst, high_src));
-      DONE;
-    }
+  emit_insn (gen_clrt ());
+  emit_insn (gen_negc (low_dst, low_src));
+  emit_insn (gen_negc (high_dst, high_src));
+  DONE;
 }")
 
 (define_insn "negsi2"
@@ -4326,27 +4486,77 @@ label:
 		(const_int -1)))]
   "TARGET_SHMEDIA" "")
 
-/* The SH4 202 can do zero-offset branches without pipeline stalls.
-   This can be used as some kind of conditional execution, which is useful
-   for abs.  */
-(define_split
+(define_expand "abssi2"
   [(set (match_operand:SI 0 "arith_reg_dest" "")
-	(plus:SI (xor:SI (neg:SI (reg:SI T_REG))
-			 (match_operand:SI 1 "arith_reg_operand" ""))
-		 (reg:SI T_REG)))]
-  "TARGET_HARD_SH4"
-  [(const_int 0)]
-  "emit_insn (gen_movsi_i (operands[0], operands[1]));
-   emit_insn (gen_cneg (operands[0], operands[0], operands[0]));
-   DONE;")
+  	(abs:SI (match_operand:SI 1 "arith_reg_operand" "")))
+   (clobber (reg:SI T_REG))]
+  ""
+  "")
 
-(define_insn "cneg"
+(define_insn_and_split "*abssi2"
   [(set (match_operand:SI 0 "arith_reg_dest" "=r")
-	(if_then_else:SI (eq:SI (reg:SI T_REG) (const_int 0))
-		      (match_operand:SI 1 "arith_reg_operand" "0")
-		      (neg:SI (match_operand:SI 2 "arith_reg_operand" "r"))))]
+  	(abs:SI (match_operand:SI 1 "arith_reg_operand" "r")))]
+  "TARGET_SH1"
+  "#"
+  "TARGET_SH1"
+  [(const_int 0)]
+  "
+{
+  emit_insn (gen_cmpgesi_t (operands[1], const0_rtx));
+  emit_insn (gen_negsi_cond (operands[0], operands[1], operands[1],
+		 const1_rtx));
+  DONE;
+}")
+
+(define_insn_and_split "*negabssi2"
+  [(set (match_operand:SI 0 "arith_reg_dest" "=r")
+  	(neg:SI (abs:SI (match_operand:SI 1 "arith_reg_operand" "r"))))]
+  "TARGET_SH1"
+  "#"
+  "TARGET_SH1"
+  [(const_int 0)]
+  "
+{
+  emit_insn (gen_cmpgesi_t (operands[1], const0_rtx));
+  emit_insn (gen_negsi_cond (operands[0], operands[1], operands[1],
+		 const0_rtx));
+  DONE;
+}")
+
+
+;; The SH4 202 can do zero-offset branches without pipeline stalls.
+;; This can be used as some kind of conditional execution, which is useful
+;; for abs.
+;; Actually the instruction scheduling should decide whether to use a
+;; zero-offset branch or not for any generic case involving a single
+;; instruction on SH4 202.
+
+(define_insn_and_split "negsi_cond"
+  [(set (match_operand:SI 0 "arith_reg_dest" "=r,r")
+	(if_then_else:SI (eq:SI (reg:SI T_REG)
+			  (match_operand:SI 3 "const_int_operand" "M,N"))
+	 (match_operand:SI 1 "arith_reg_operand" "0,0")
+	 (neg:SI (match_operand:SI 2 "arith_reg_operand" "r,r"))))]
   "TARGET_HARD_SH4"
-  "bf 0f\;neg %2,%0\\n0:"
+  "@
+	bt\\t0f\;neg\\t%2,%0\\n0:
+	bf\\t0f\;neg\\t%2,%0\\n0:"
+  "!TARGET_HARD_SH4"
+  [(const_int 0)]
+  "
+{
+  rtx skip_neg_label = gen_label_rtx ();
+
+  emit_insn (gen_movsi (operands[0], operands[1]));
+
+  emit_jump_insn (INTVAL (operands[3])
+		  ? gen_branch_true (skip_neg_label)
+		  : gen_branch_false (skip_neg_label));
+
+  emit_label_after (skip_neg_label,
+		    emit_insn (gen_negsi2 (operands[0], operands[1])));
+  DONE;
+}"
   [(set_attr "type" "arith") ;; poor approximation
    (set_attr "length" "4")])
 

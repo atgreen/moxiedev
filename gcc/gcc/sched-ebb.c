@@ -66,7 +66,6 @@ static int rank (rtx, rtx);
 static int ebb_contributes_to_priority (rtx, rtx);
 static basic_block earliest_block_with_similiar_load (basic_block, rtx);
 static void add_deps_for_risky_insns (rtx, rtx);
-static basic_block schedule_ebb (rtx, rtx);
 static void debug_ebb_dependencies (rtx, rtx);
 
 static void ebb_add_remove_insn (rtx, int);
@@ -432,32 +431,23 @@ add_deps_for_risky_insns (rtx head, rtx tail)
 		 rank.  */
 	      if (! sched_insns_conditions_mutex_p (insn, prev))
 		{
-		  dep_def _dep, *dep = &_dep;
-
-		  init_dep (dep, prev, insn, REG_DEP_ANTI);
-
-		  if (!(current_sched_info->flags & USE_DEPS_LIST))
+		  if ((current_sched_info->flags & DO_SPECULATION)
+		      && (spec_info->mask & BEGIN_CONTROL))
 		    {
-		      enum DEPS_ADJUST_RESULT res;
+		      dep_def _dep, *dep = &_dep;
 
-		      res = sd_add_or_update_dep (dep, false);
+		      init_dep (dep, prev, insn, REG_DEP_ANTI);
 
-		      /* We can't change an existing dependency with
-			 DEP_ANTI.  */
-		      gcc_assert (res != DEP_CHANGED);
+		      if (current_sched_info->flags & USE_DEPS_LIST)
+			{
+			  DEP_STATUS (dep) = set_dep_weak (DEP_ANTI, BEGIN_CONTROL,
+							   MAX_DEP_WEAK);
+
+			}
+		      sd_add_or_update_dep (dep, false);
 		    }
 		  else
-		    {
-		      if ((current_sched_info->flags & DO_SPECULATION)
-			  && (spec_info->mask & BEGIN_CONTROL))
-			DEP_STATUS (dep) = set_dep_weak (DEP_ANTI, BEGIN_CONTROL,
-							 MAX_DEP_WEAK);
-
-		      sd_add_or_update_dep (dep, false);
-
-		      /* Dep_status could have been changed.
-			 No assertion here.  */
-		    }
+		    add_dependence (insn, prev, REG_DEP_CONTROL);
 		}
 
 	      break;
@@ -476,14 +466,35 @@ add_deps_for_risky_insns (rtx head, rtx tail)
     }
 }
 
-/* Schedule a single extended basic block, defined by the boundaries HEAD
-   and TAIL.  */
+/* Schedule a single extended basic block, defined by the boundaries
+   HEAD and TAIL.
 
-static basic_block
-schedule_ebb (rtx head, rtx tail)
+   We change our expectations about scheduler behaviour depending on
+   whether MODULO_SCHEDULING is true.  If it is, we expect that the
+   caller has already called set_modulo_params and created delay pairs
+   as appropriate.  If the modulo schedule failed, we return
+   NULL_RTX.  */
+
+basic_block
+schedule_ebb (rtx head, rtx tail, bool modulo_scheduling)
 {
   basic_block first_bb, target_bb;
   struct deps_desc tmp_deps;
+  bool success;
+
+  /* Blah.  We should fix the rest of the code not to get confused by
+     a note or two.  */
+  while (head != tail)
+    {
+      if (NOTE_P (head) || DEBUG_INSN_P (head))
+	head = NEXT_INSN (head);
+      else if (NOTE_P (tail) || DEBUG_INSN_P (tail))
+	tail = PREV_INSN (tail);
+      else if (LABEL_P (head))
+	head = NEXT_INSN (head);
+      else
+	break;
+    }
 
   first_bb = BLOCK_FOR_INSN (head);
   last_bb = BLOCK_FOR_INSN (tail);
@@ -530,7 +541,9 @@ schedule_ebb (rtx head, rtx tail)
 
   /* Make ready list big enough to hold all the instructions from the ebb.  */
   sched_extend_ready_list (rgn_n_insns);
-  schedule_block (&target_bb);
+  success = schedule_block (&target_bb);
+  gcc_assert (success || modulo_scheduling);
+
   /* Free ready list.  */
   sched_finish_ready_list ();
 
@@ -538,7 +551,7 @@ schedule_ebb (rtx head, rtx tail)
      so we may made some of them empty.  Can't assert (b == last_bb).  */
 
   /* Sanity check: verify that all region insns were scheduled.  */
-  gcc_assert (sched_rgn_n_insns == rgn_n_insns);
+  gcc_assert (modulo_scheduling || sched_rgn_n_insns == rgn_n_insns);
 
   /* Free dependencies.  */
   sched_free_deps (current_sched_info->head, current_sched_info->tail, true);
@@ -555,29 +568,14 @@ schedule_ebb (rtx head, rtx tail)
       delete_basic_block (last_bb->next_bb);
     }
 
-  return last_bb;
+  return success ? last_bb : NULL;
 }
 
-/* The one entry point in this file.  */
-
+/* Perform initializations before running schedule_ebbs or a single
+   schedule_ebb.  */
 void
-schedule_ebbs (void)
+schedule_ebbs_init (void)
 {
-  basic_block bb;
-  int probability_cutoff;
-  rtx tail;
-
-  if (profile_info && flag_branch_probabilities)
-    probability_cutoff = PARAM_VALUE (TRACER_MIN_BRANCH_PROBABILITY_FEEDBACK);
-  else
-    probability_cutoff = PARAM_VALUE (TRACER_MIN_BRANCH_PROBABILITY);
-  probability_cutoff = REG_BR_PROB_BASE / 100 * probability_cutoff;
-
-  /* Taking care of this degenerate case makes the rest of
-     this code simpler.  */
-  if (n_basic_blocks == NUM_FIXED_BLOCKS)
-    return;
-
   /* Setup infos.  */
   {
     memcpy (&ebb_common_sched_info, &haifa_common_sched_info,
@@ -599,6 +597,43 @@ schedule_ebbs (void)
   /* Initialize DONT_CALC_DEPS and ebb-{start, end} markers.  */
   bitmap_initialize (&dont_calc_deps, 0);
   bitmap_clear (&dont_calc_deps);
+}
+
+/* Perform cleanups after scheduling using schedules_ebbs or schedule_ebb.  */
+void
+schedule_ebbs_finish (void)
+{
+  bitmap_clear (&dont_calc_deps);
+
+  /* Reposition the prologue and epilogue notes in case we moved the
+     prologue/epilogue insns.  */
+  if (reload_completed)
+    reposition_prologue_and_epilogue_notes ();
+
+  haifa_sched_finish ();
+}
+
+/* The main entry point in this file.  */
+
+void
+schedule_ebbs (void)
+{
+  basic_block bb;
+  int probability_cutoff;
+  rtx tail;
+
+  /* Taking care of this degenerate case makes the rest of
+     this code simpler.  */
+  if (n_basic_blocks == NUM_FIXED_BLOCKS)
+    return;
+
+  if (profile_info && flag_branch_probabilities)
+    probability_cutoff = PARAM_VALUE (TRACER_MIN_BRANCH_PROBABILITY_FEEDBACK);
+  else
+    probability_cutoff = PARAM_VALUE (TRACER_MIN_BRANCH_PROBABILITY);
+  probability_cutoff = REG_BR_PROB_BASE / 100 * probability_cutoff;
+
+  schedule_ebbs_init ();
 
   /* Schedule every region in the subroutine.  */
   FOR_EACH_BB (bb)
@@ -625,30 +660,9 @@ schedule_ebbs (void)
 	  bb = bb->next_bb;
 	}
 
-      /* Blah.  We should fix the rest of the code not to get confused by
-	 a note or two.  */
-      while (head != tail)
-	{
-	  if (NOTE_P (head) || DEBUG_INSN_P (head))
-	    head = NEXT_INSN (head);
-	  else if (NOTE_P (tail) || DEBUG_INSN_P (tail))
-	    tail = PREV_INSN (tail);
-	  else if (LABEL_P (head))
-	    head = NEXT_INSN (head);
-	  else
-	    break;
-	}
-
-      bb = schedule_ebb (head, tail);
+      bb = schedule_ebb (head, tail, false);
     }
-  bitmap_clear (&dont_calc_deps);
-
-  /* Reposition the prologue and epilogue notes in case we moved the
-     prologue/epilogue insns.  */
-  if (reload_completed)
-    reposition_prologue_and_epilogue_notes ();
-
-  haifa_sched_finish ();
+  schedule_ebbs_finish ();
 }
 
 /* INSN has been added to/removed from current ebb.  */

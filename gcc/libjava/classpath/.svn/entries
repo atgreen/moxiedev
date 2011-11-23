@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-31T16:15:26.317084Z
-178383
-jakub
+2011-09-29T11:37:47.532049Z
+179343
+jbeulich
 has-props
 
 
@@ -566,11 +566,11 @@ file
 
 
 
-2011-06-04T18:38:18.994104Z
-b494eb5cbce7845c2d434e71f4d37ec3
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
+2011-11-12T11:40:51.103228Z
+fbf7e7a0d4875beb538dc7862c5dfa98
+2011-09-29T11:37:47.532049Z
+179343
+jbeulich
 
 
 
@@ -592,7 +592,7 @@ gandalf
 
 
 
-254834
+255004
 
 HACKING
 file

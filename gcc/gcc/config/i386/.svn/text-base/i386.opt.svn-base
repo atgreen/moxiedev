@@ -31,6 +31,15 @@ HOST_WIDE_INT ix86_isa_flags = TARGET_64BIT_DEFAULT | TARGET_SUBTARGET_ISA_DEFAU
 Variable
 HOST_WIDE_INT ix86_isa_flags_explicit
 
+TargetVariable
+int recip_mask = RECIP_MASK_DEFAULT
+
+Variable
+int recip_mask_explicit
+
+TargetSave
+int x_recip_mask_explicit
+
 ;; Definitions to add to the cl_target_option structure
 ;; -march= processor
 TargetSave
@@ -315,6 +324,9 @@ Enum(stringop_alg) String(loop) Value(loop)
 EnumValue
 Enum(stringop_alg) String(unrolled_loop) Value(unrolled_loop)
 
+EnumValue
+Enum(stringop_alg) String(sse_loop) Value(sse_loop)
+
 mtls-dialect=
 Target RejectNegative Joined Var(ix86_tls_dialect) Enum(tls_dialect) Init(TLS_DIALECT_GNU)
 Use given thread-local storage dialect
@@ -372,6 +384,10 @@ Return 8-byte vectors in memory
 mrecip
 Target Report Mask(RECIP) Save
 Generate reciprocals instead of divss and sqrtss.
+
+mrecip=
+Target Report RejectNegative Joined Var(ix86_recip_name)
+Control generation of reciprocal estimates.
 
 mcld
 Target Report Mask(CLD) Save

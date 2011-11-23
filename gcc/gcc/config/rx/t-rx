@@ -20,15 +20,10 @@
 
 # Enable multilibs:
 
-MULTILIB_OPTIONS    = m64bit-doubles  nofpu        mbig-endian-data 
-MULTILIB_DIRNAMES   =  64-bit-double  no-fpu-libs   big-endian-data 
+MULTILIB_OPTIONS    = m64bit-doubles  nofpu        mbig-endian-data  mpid
+MULTILIB_DIRNAMES   =  64-bit-double  no-fpu-libs   big-endian-data   pid
 
 MULTILIB_MATCHES    = nofpu=mnofpu  nofpu=mcpu?rx200
 
 MULTILIB_EXCEPTIONS =
 MULTILIB_EXTRA_OPTS = 
-
-LIBGCC = stmp-multilib
-INSTALL_LIBGCC = install-multilib
-
-EXTRA_MULTILIB_PARTS = crtbegin.o crtend.o

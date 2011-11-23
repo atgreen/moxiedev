@@ -38,6 +38,8 @@ pragma Elaborate_All (Ada.Containers.Red_Black_Trees.Generic_Keys);
 with Ada.Containers.Red_Black_Trees.Generic_Set_Operations;
 pragma Elaborate_All (Ada.Containers.Red_Black_Trees.Generic_Set_Operations);
 
+with System; use type System.Address;
+
 package body Ada.Containers.Ordered_Sets is
 
    type Iterator is new
@@ -281,6 +283,20 @@ package body Ada.Containers.Ordered_Sets is
       Adjust (Container.Tree);
    end Adjust;
 
+   ------------
+   -- Assign --
+   ------------
+
+   procedure Assign (Target : in out Set; Source : Set) is
+   begin
+      if Target'Address = Source'Address then
+         return;
+      end if;
+
+      Target.Clear;
+      Target.Union (Source);
+   end Assign;
+
    -------------
    -- Ceiling --
    -------------
@@ -288,13 +304,9 @@ package body Ada.Containers.Ordered_Sets is
    function Ceiling (Container : Set; Item : Element_Type) return Cursor is
       Node : constant Node_Access :=
                Element_Keys.Ceiling (Container.Tree, Item);
-
    begin
-      if Node = null then
-         return No_Element;
-      end if;
-
-      return Cursor'(Container'Unrestricted_Access, Node);
+      return (if Node = null then No_Element
+              else Cursor'(Container'Unrestricted_Access, Node));
    end Ceiling;
 
    -----------
@@ -328,6 +340,17 @@ package body Ada.Containers.Ordered_Sets is
    begin
       return Find (Container, Item) /= No_Element;
    end Contains;
+
+   ----------
+   -- Copy --
+   ----------
+
+   function Copy (Source : Set) return Set is
+   begin
+      return Target : Set do
+         Target.Assign (Source);
+      end return;
+   end Copy;
 
    ---------------
    -- Copy_Node --
@@ -385,7 +408,6 @@ package body Ada.Containers.Ordered_Sets is
    procedure Delete_First (Container : in out Set) is
       Tree : Tree_Type renames Container.Tree;
       X    : Node_Access := Tree.First;
-
    begin
       if X /= null then
          Tree_Operations.Delete_Node_Sans_Free (Tree, X);
@@ -400,7 +422,6 @@ package body Ada.Containers.Ordered_Sets is
    procedure Delete_Last (Container : in out Set) is
       Tree : Tree_Type renames Container.Tree;
       X    : Node_Access := Tree.Last;
-
    begin
       if X /= null then
          Tree_Operations.Delete_Node_Sans_Free (Tree, X);
@@ -446,13 +467,7 @@ package body Ada.Containers.Ordered_Sets is
 
    function Equivalent_Elements (Left, Right : Element_Type) return Boolean is
    begin
-      if Left < Right
-        or else Right < Left
-      then
-         return False;
-      else
-         return True;
-      end if;
+      return (if Left < Right or else Right < Left then False else True);
    end Equivalent_Elements;
 
    ---------------------
@@ -472,13 +487,9 @@ package body Ada.Containers.Ordered_Sets is
 
       function Is_Equivalent_Node_Node (L, R : Node_Access) return Boolean is
       begin
-         if L.Element < R.Element then
-            return False;
-         elsif R.Element < L.Element then
-            return False;
-         else
-            return True;
-         end if;
+         return (if L.Element < R.Element then False
+                 elsif R.Element < L.Element then False
+                 else True);
       end Is_Equivalent_Node_Node;
 
    --  Start of processing for Equivalent_Sets
@@ -508,13 +519,9 @@ package body Ada.Containers.Ordered_Sets is
    function Find (Container : Set; Item : Element_Type) return Cursor is
       Node : constant Node_Access :=
                Element_Keys.Find (Container.Tree, Item);
-
    begin
-      if Node = null then
-         return No_Element;
-      end if;
-
-      return Cursor'(Container'Unrestricted_Access, Node);
+      return (if Node = null then No_Element
+              else Cursor'(Container'Unrestricted_Access, Node));
    end Find;
 
    -----------
@@ -523,23 +530,16 @@ package body Ada.Containers.Ordered_Sets is
 
    function First (Container : Set) return Cursor is
    begin
-      if Container.Tree.First = null then
-         return No_Element;
-      end if;
-
-      return Cursor'(Container'Unrestricted_Access, Container.Tree.First);
+      return
+        (if Container.Tree.First = null then No_Element
+         else Cursor'(Container'Unrestricted_Access, Container.Tree.First));
    end First;
 
    function First (Object : Iterator) return Cursor is
    begin
-      if Object.Container = null then
-         return No_Element;
-      else
-         return
-           Cursor'(
-             Object.Container.all'Unrestricted_Access,
-             Object.Container.Tree.First);
-      end if;
+      return (if Object.Container = null then No_Element
+              else Cursor'(Object.Container.all'Unrestricted_Access,
+                           Object.Container.Tree.First));
    end First;
 
    -------------------
@@ -562,13 +562,9 @@ package body Ada.Containers.Ordered_Sets is
    function Floor (Container : Set; Item : Element_Type) return Cursor is
       Node : constant Node_Access :=
                Element_Keys.Floor (Container.Tree, Item);
-
    begin
-      if Node = null then
-         return No_Element;
-      end if;
-
-      return Cursor'(Container'Unrestricted_Access, Node);
+      return (if Node = null then No_Element
+              else Cursor'(Container'Unrestricted_Access, Node));
    end Floor;
 
    ----------
@@ -578,13 +574,11 @@ package body Ada.Containers.Ordered_Sets is
    procedure Free (X : in out Node_Access) is
       procedure Deallocate is
          new Ada.Unchecked_Deallocation (Node_Type, Node_Access);
-
    begin
       if X /= null then
          X.Parent := X;
-         X.Left := X;
-         X.Right := X;
-
+         X.Left   := X;
+         X.Right  := X;
          Deallocate (X);
       end if;
    end Free;
@@ -627,13 +621,9 @@ package body Ada.Containers.Ordered_Sets is
       function Ceiling (Container : Set; Key : Key_Type) return Cursor is
          Node : constant Node_Access :=
                   Key_Keys.Ceiling (Container.Tree, Key);
-
       begin
-         if Node = null then
-            return No_Element;
-         end if;
-
-         return Cursor'(Container'Unrestricted_Access, Node);
+         return (if Node = null then No_Element
+                 else Cursor'(Container'Unrestricted_Access, Node));
       end Ceiling;
 
       --------------
@@ -683,13 +673,7 @@ package body Ada.Containers.Ordered_Sets is
 
       function Equivalent_Keys (Left, Right : Key_Type) return Boolean is
       begin
-         if Left < Right
-           or else Right < Left
-         then
-            return False;
-         else
-            return True;
-         end if;
+         return (if Left < Right or else Right < Left then False else True);
       end Equivalent_Keys;
 
       -------------
@@ -698,7 +682,6 @@ package body Ada.Containers.Ordered_Sets is
 
       procedure Exclude (Container : in out Set; Key : Key_Type) is
          X : Node_Access := Key_Keys.Find (Container.Tree, Key);
-
       begin
          if X /= null then
             Delete_Node_Sans_Free (Container.Tree, X);
@@ -712,13 +695,9 @@ package body Ada.Containers.Ordered_Sets is
 
       function Find (Container : Set; Key : Key_Type) return Cursor is
          Node : constant Node_Access := Key_Keys.Find (Container.Tree, Key);
-
       begin
-         if Node = null then
-            return No_Element;
-         end if;
-
-         return Cursor'(Container'Unrestricted_Access, Node);
+         return (if Node = null then No_Element
+                 else Cursor'(Container'Unrestricted_Access, Node));
       end Find;
 
       -----------
@@ -727,13 +706,9 @@ package body Ada.Containers.Ordered_Sets is
 
       function Floor (Container : Set; Key : Key_Type) return Cursor is
          Node : constant Node_Access := Key_Keys.Floor (Container.Tree, Key);
-
       begin
-         if Node = null then
-            return No_Element;
-         end if;
-
-         return Cursor'(Container'Unrestricted_Access, Node);
+         return (if Node = null then No_Element
+                 else Cursor'(Container'Unrestricted_Access, Node));
       end Floor;
 
       -------------------------
@@ -859,6 +834,50 @@ package body Ada.Containers.Ordered_Sets is
 
          raise Program_Error with "key was modified";
       end Update_Element_Preserving_Key;
+
+      function Reference_Preserving_Key
+        (Container : aliased in out Set;
+         Key       : Key_Type) return Constant_Reference_Type
+      is
+         Position : constant Cursor := Find (Container, Key);
+
+      begin
+         if Position.Container = null then
+            raise Constraint_Error with "Position cursor has no element";
+         end if;
+
+         return (Element => Position.Node.Element'Access);
+      end Reference_Preserving_Key;
+
+      function Reference_Preserving_Key
+        (Container : aliased in out Set;
+         Key       : Key_Type) return Reference_Type
+      is
+         Position : constant Cursor := Find (Container, Key);
+
+      begin
+         if Position.Container = null then
+            raise Constraint_Error with "Position cursor has no element";
+         end if;
+
+         return (Element => Position.Node.Element'Access);
+      end Reference_Preserving_Key;
+
+      procedure Read
+        (Stream : not null access Root_Stream_Type'Class;
+         Item   : out Reference_Type)
+      is
+      begin
+         raise Program_Error with "attempt to stream reference";
+      end Read;
+
+      procedure Write
+        (Stream : not null access Root_Stream_Type'Class;
+         Item   : Reference_Type)
+      is
+      begin
+         raise Program_Error with "attempt to stream reference";
+      end Write;
 
    end Generic_Keys;
 
@@ -1170,22 +1189,16 @@ package body Ada.Containers.Ordered_Sets is
 
    function Last (Container : Set) return Cursor is
    begin
-      if Container.Tree.Last = null then
-         return No_Element;
-      else
-         return Cursor'(Container'Unrestricted_Access, Container.Tree.Last);
-      end if;
+      return
+        (if Container.Tree.Last = null then No_Element
+         else Cursor'(Container'Unrestricted_Access, Container.Tree.Last));
    end Last;
 
    function Last (Object : Iterator) return Cursor is
    begin
-      if Object.Container = null then
-         return No_Element;
-      else
-         return Cursor'(
-           Object.Container.all'Unrestricted_Access,
-                        Object.Container.Tree.Last);
-      end if;
+      return (if Object.Container = null then No_Element
+              else Cursor'(Object.Container.all'Unrestricted_Access,
+                           Object.Container.Tree.Last));
    end Last;
 
    ------------------
@@ -1223,8 +1236,7 @@ package body Ada.Containers.Ordered_Sets is
    -- Move --
    ----------
 
-   procedure Move is
-      new Tree_Operations.Generic_Move (Clear);
+   procedure Move is new Tree_Operations.Generic_Move (Clear);
 
    procedure Move (Target : in out Set; Source : in out Set) is
    begin
@@ -1247,13 +1259,9 @@ package body Ada.Containers.Ordered_Sets is
       declare
          Node : constant Node_Access :=
                   Tree_Operations.Next (Position.Node);
-
       begin
-         if Node = null then
-            return No_Element;
-         end if;
-
-         return Cursor'(Position.Container, Node);
+         return (if Node = null then No_Element
+                 else Cursor'(Position.Container, Node));
       end;
    end Next;
 
@@ -1303,11 +1311,8 @@ package body Ada.Containers.Ordered_Sets is
          Node : constant Node_Access :=
                   Tree_Operations.Previous (Position.Node);
       begin
-         if Node = null then
-            return No_Element;
-         else
-            return Cursor'(Position.Container, Node);
-         end if;
+         return (if Node = null then No_Element
+                 else Cursor'(Position.Container, Node));
       end;
    end Previous;
 
@@ -1385,11 +1390,9 @@ package body Ada.Containers.Ordered_Sets is
         (Stream : not null access Root_Stream_Type'Class) return Node_Access
       is
          Node : Node_Access := new Node_Type;
-
       begin
          Element_Type'Read (Stream, Node.Element);
          return Node;
-
       exception
          when others =>
             Free (Node);
@@ -1408,14 +1411,6 @@ package body Ada.Containers.Ordered_Sets is
    is
    begin
       raise Program_Error with "attempt to stream set cursor";
-   end Read;
-
-   procedure Read
-     (Stream : not null access Root_Stream_Type'Class;
-      Item   : out Reference_Type)
-   is
-   begin
-      raise Program_Error with "attempt to stream reference";
    end Read;
 
    procedure Read
@@ -1441,18 +1436,6 @@ package body Ada.Containers.Ordered_Sets is
 
       return (Element => Position.Node.Element'Access);
    end Constant_Reference;
-
-   function Reference (Container : Set; Position : Cursor)
-   return Reference_Type
-   is
-      pragma Unreferenced (Container);
-   begin
-      if Position.Container = null then
-         raise Constraint_Error with "Position cursor has no element";
-      end if;
-
-      return (Element => Position.Node.Element'Access);
-   end Reference;
 
    -------------
    -- Replace --
@@ -1508,11 +1491,10 @@ package body Ada.Containers.Ordered_Sets is
       function New_Node return Node_Access is
       begin
          Node.Element := Item;
-         Node.Color := Red;
-         Node.Parent := null;
-         Node.Right := null;
-         Node.Left := null;
-
+         Node.Color   := Red;
+         Node.Parent  := null;
+         Node.Right   := null;
+         Node.Left    := null;
          return Node;
       end New_Node;
 
@@ -1523,9 +1505,7 @@ package body Ada.Containers.Ordered_Sets is
       --  Start of processing for Replace_Element
 
    begin
-      if Item < Node.Element
-        or else Node.Element < Item
-      then
+      if Item < Node.Element or else Node.Element < Item then
          null;
 
       else
@@ -1767,14 +1747,6 @@ package body Ada.Containers.Ordered_Sets is
    is
    begin
       raise Program_Error with "attempt to stream set cursor";
-   end Write;
-
-   procedure Write
-     (Stream : not null access Root_Stream_Type'Class;
-      Item   : Reference_Type)
-   is
-   begin
-      raise Program_Error with "attempt to stream reference";
    end Write;
 
    procedure Write

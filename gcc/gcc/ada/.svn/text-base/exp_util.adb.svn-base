@@ -160,6 +160,76 @@ package body Exp_Util is
    --  or body. Flag Nested_Constructs should be set when any nested packages
    --  declared in L must be processed.
 
+   -------------------------------------
+   -- Activate_Atomic_Synchronization --
+   -------------------------------------
+
+   procedure Activate_Atomic_Synchronization (N : Node_Id) is
+      Msg_Node : Node_Id;
+
+   begin
+      case Nkind (Parent (N)) is
+
+         --  Check for cases of appearing in the prefix of a construct where
+         --  we don't need atomic synchronization for this kind of usage.
+
+         when
+              --  Nothing to do if we are the prefix of an attribute, since we
+              --  do not want an atomic sync operation for things like 'Size.
+
+              N_Attribute_Reference |
+
+              --  The N_Reference node is like an attribute
+
+              N_Reference           |
+
+              --  Nothing to do for a reference to a component (or components)
+              --  of a composite object. Only reads and updates of the object
+              --  as a whole require atomic synchronization (RM C.6 (15)).
+
+              N_Indexed_Component   |
+              N_Selected_Component  |
+              N_Slice               =>
+
+            --  For all the above cases, nothing to do if we are the prefix
+
+            if Prefix (Parent (N)) = N then
+               return;
+            end if;
+
+         when others => null;
+      end case;
+
+      --  Go ahead and set the flag
+
+      Set_Atomic_Sync_Required (N);
+
+      --  Generate info message if requested
+
+      if Warn_On_Atomic_Synchronization then
+         case Nkind (N) is
+            when N_Identifier =>
+               Msg_Node := N;
+
+            when N_Selected_Component | N_Expanded_Name =>
+               Msg_Node := Selector_Name (N);
+
+            when N_Explicit_Dereference | N_Indexed_Component =>
+               Msg_Node := Empty;
+
+            when others =>
+               pragma Assert (False);
+               return;
+         end case;
+
+         if Present (Msg_Node) then
+            Error_Msg_N ("?info: atomic synchronization set for &", Msg_Node);
+         else
+            Error_Msg_N ("?info: atomic synchronization set", N);
+         end if;
+      end if;
+   end Activate_Atomic_Synchronization;
+
    ----------------------
    -- Adjust_Condition --
    ----------------------
@@ -1689,6 +1759,100 @@ package body Exp_Util is
           and then not Restriction_Active (No_Local_Allocators);
    end Entry_Names_OK;
 
+   -------------------
+   -- Evaluate_Name --
+   -------------------
+
+   procedure Evaluate_Name (Nam : Node_Id) is
+      K : constant Node_Kind := Nkind (Nam);
+
+   begin
+      --  For an explicit dereference, we simply force the evaluation of the
+      --  name expression. The dereference provides a value that is the address
+      --  for the renamed object, and it is precisely this value that we want
+      --  to preserve.
+
+      if K = N_Explicit_Dereference then
+         Force_Evaluation (Prefix (Nam));
+
+      --  For a selected component, we simply evaluate the prefix
+
+      elsif K = N_Selected_Component then
+         Evaluate_Name (Prefix (Nam));
+
+      --  For an indexed component, or an attribute reference, we evaluate the
+      --  prefix, which is itself a name, recursively, and then force the
+      --  evaluation of all the subscripts (or attribute expressions).
+
+      elsif Nkind_In (K, N_Indexed_Component, N_Attribute_Reference) then
+         Evaluate_Name (Prefix (Nam));
+
+         declare
+            E : Node_Id;
+
+         begin
+            E := First (Expressions (Nam));
+            while Present (E) loop
+               Force_Evaluation (E);
+
+               if Original_Node (E) /= E then
+                  Set_Do_Range_Check (E, Do_Range_Check (Original_Node (E)));
+               end if;
+
+               Next (E);
+            end loop;
+         end;
+
+      --  For a slice, we evaluate the prefix, as for the indexed component
+      --  case and then, if there is a range present, either directly or as the
+      --  constraint of a discrete subtype indication, we evaluate the two
+      --  bounds of this range.
+
+      elsif K = N_Slice then
+         Evaluate_Name (Prefix (Nam));
+
+         declare
+            DR     : constant Node_Id := Discrete_Range (Nam);
+            Constr : Node_Id;
+            Rexpr  : Node_Id;
+
+         begin
+            if Nkind (DR) = N_Range then
+               Force_Evaluation (Low_Bound (DR));
+               Force_Evaluation (High_Bound (DR));
+
+            elsif Nkind (DR) = N_Subtype_Indication then
+               Constr := Constraint (DR);
+
+               if Nkind (Constr) = N_Range_Constraint then
+                  Rexpr := Range_Expression (Constr);
+
+                  Force_Evaluation (Low_Bound (Rexpr));
+                  Force_Evaluation (High_Bound (Rexpr));
+               end if;
+            end if;
+         end;
+
+      --  For a type conversion, the expression of the conversion must be the
+      --  name of an object, and we simply need to evaluate this name.
+
+      elsif K = N_Type_Conversion then
+         Evaluate_Name (Expression (Nam));
+
+      --  For a function call, we evaluate the call
+
+      elsif K = N_Function_Call then
+         Force_Evaluation (Nam);
+
+      --  The remaining cases are direct name, operator symbol and character
+      --  literal. In all these cases, we do nothing, since we want to
+      --  reevaluate each time the renamed object is used.
+
+      else
+         return;
+      end if;
+   end Evaluate_Name;
+
    ---------------------
    -- Evolve_And_Then --
    ---------------------
@@ -1921,11 +2085,11 @@ package body Exp_Util is
       then
          null;
 
-      --  In Ada95 nothing to be done if the type of the expression is limited,
+      --  In Ada 95 nothing to be done if the type of the expression is limited
       --  because in this case the expression cannot be copied, and its use can
       --  only be by reference.
 
-      --  In Ada2005, the context can be an object declaration whose expression
+      --  In Ada 2005 the context can be an object declaration whose expression
       --  is a function that returns in place. If the nominal subtype has
       --  unknown discriminants, the call still provides constraints on the
       --  object, and we have to create an actual subtype from it.
@@ -4203,9 +4367,14 @@ package body Exp_Util is
          return True;
       end if;
 
-      --  Case of component reference
+      --  Case of indexed component reference: test whether prefix is unaligned
 
-      if Nkind (N) = N_Selected_Component then
+      if Nkind (N) = N_Indexed_Component then
+         return Is_Possibly_Unaligned_Object (Prefix (N));
+
+      --  Case of selected component reference
+
+      elsif Nkind (N) = N_Selected_Component then
          declare
             P : constant Node_Id   := Prefix (N);
             C : constant Entity_Id := Entity (Selector_Name (N));
@@ -5846,11 +6015,11 @@ package body Exp_Util is
       Exp_Type     : constant Entity_Id      := Etype (Exp);
       Svg_Suppress : constant Suppress_Array := Scope_Suppress;
       Def_Id       : Entity_Id;
+      E            : Node_Id;
+      New_Exp      : Node_Id;
+      Ptr_Typ_Decl : Node_Id;
       Ref_Type     : Entity_Id;
       Res          : Node_Id;
-      Ptr_Typ_Decl : Node_Id;
-      New_Exp      : Node_Id;
-      E            : Node_Id;
 
       function Side_Effect_Free (N : Node_Id) return Boolean;
       --  Determines if the tree N represents an expression that is known not
@@ -5912,30 +6081,77 @@ package body Exp_Util is
          --  We do NOT exclude dereferences of access-to-constant types because
          --  we handle them as constant view of variables.
 
-         --  Exception is an access to an entity that is a constant or an
-         --  in-parameter.
-
          elsif Nkind (Prefix (N)) = N_Explicit_Dereference
            and then Variable_Ref
          then
-            declare
-               DDT : constant Entity_Id :=
-                       Designated_Type (Etype (Prefix (Prefix (N))));
-            begin
-               return Ekind_In (DDT, E_Constant, E_In_Parameter);
-            end;
+            return False;
 
-         --  The following test is the simplest way of solving a complex
-         --  problem uncovered by BB08-010: Side effect on loop bound that
-         --  is a subcomponent of a global variable:
+         --  Note: The following test is the simplest way of solving a complex
+         --  problem uncovered by the following test (Side effect on loop bound
+         --  that is a subcomponent of a global variable:
 
-         --    If a loop bound is a subcomponent of a global variable, a
-         --    modification of that variable within the loop may incorrectly
-         --    affect the execution of the loop.
+         --    with Text_Io; use Text_Io;
+         --    procedure Tloop is
+         --      type X is
+         --        record
+         --          V : Natural := 4;
+         --          S : String (1..5) := (others => 'a');
+         --        end record;
+         --      X1 : X;
 
-         elsif not
-           (Nkind (Parent (Parent (N))) /= N_Loop_Parameter_Specification
-              or else not Within_In_Parameter (Prefix (N)))
+         --      procedure Modi;
+
+         --      generic
+         --        with procedure Action;
+         --      procedure Loop_G (Arg : X; Msg : String)
+
+         --      procedure Loop_G (Arg : X; Msg : String) is
+         --      begin
+         --        Put_Line ("begin loop_g " & Msg & " will loop till: "
+         --                  & Natural'Image (Arg.V));
+         --        for Index in 1 .. Arg.V loop
+         --          Text_Io.Put_Line
+         --            (Natural'Image (Index) & " " & Arg.S (Index));
+         --          if Index > 2 then
+         --            Modi;
+         --          end if;
+         --        end loop;
+         --        Put_Line ("end loop_g " & Msg);
+         --      end;
+
+         --      procedure Loop1 is new Loop_G (Modi);
+         --      procedure Modi is
+         --      begin
+         --        X1.V := 1;
+         --        Loop1 (X1, "from modi");
+         --      end;
+         --
+         --    begin
+         --      Loop1 (X1, "initial");
+         --    end;
+
+         --  The output of the above program should be:
+
+         --    begin loop_g initial will loop till:  4
+         --     1 a
+         --     2 a
+         --     3 a
+         --    begin loop_g from modi will loop till:  1
+         --     1 a
+         --    end loop_g from modi
+         --     4 a
+         --    begin loop_g from modi will loop till:  1
+         --     1 a
+         --    end loop_g from modi
+         --    end loop_g initial
+
+         --  If a loop bound is a subcomponent of a global variable, a
+         --  modification of that variable within the loop may incorrectly
+         --  affect the execution of the loop.
+
+         elsif Nkind (Parent (Parent (N))) = N_Loop_Parameter_Specification
+           and then Within_In_Parameter (Prefix (N))
+           and then Variable_Ref
          then
             return False;
 
@@ -6038,7 +6254,7 @@ package body Exp_Util is
 
             --  A binary operator is side effect free if and both operands are
             --  side effect free. For this purpose binary operators include
-            --  membership tests and short circuit forms
+            --  membership tests and short circuit forms.
 
             when N_Binary_Op | N_Membership_Test | N_Short_Circuit =>
                return Side_Effect_Free (Left_Opnd  (N))
@@ -6406,6 +6622,15 @@ package body Exp_Util is
       --  Otherwise we generate a reference to the value
 
       else
+         --  An expression which is in Alfa mode is considered side effect free
+         --  if the resulting value is captured by a variable or a constant.
+
+         if Alfa_Mode
+           and then Nkind (Parent (Exp)) = N_Object_Declaration
+         then
+            return;
+         end if;
+
          --  Special processing for function calls that return a limited type.
          --  We need to build a declaration that will enable build-in-place
          --  expansion of the call. This is not done if the context is already
@@ -6414,10 +6639,10 @@ package body Exp_Util is
          --  This is relevant only in Ada 2005 mode. In Ada 95 programs we have
          --  to accommodate functions returning limited objects by reference.
 
-         if Nkind (Exp) = N_Function_Call
+         if Ada_Version >= Ada_2005
+           and then Nkind (Exp) = N_Function_Call
            and then Is_Immutably_Limited_Type (Etype (Exp))
            and then Nkind (Parent (Exp)) /= N_Object_Declaration
-           and then Ada_Version >= Ada_2005
          then
             declare
                Obj  : constant Entity_Id := Make_Temporary (Loc, 'F', Exp);
@@ -6437,32 +6662,62 @@ package body Exp_Util is
             end;
          end if;
 
-         Ref_Type := Make_Temporary (Loc, 'A');
-
-         Ptr_Typ_Decl :=
-           Make_Full_Type_Declaration (Loc,
-             Defining_Identifier => Ref_Type,
-             Type_Definition =>
-               Make_Access_To_Object_Definition (Loc,
-                 All_Present => True,
-                 Subtype_Indication =>
-                   New_Reference_To (Exp_Type, Loc)));
-
-         E := Exp;
-         Insert_Action (Exp, Ptr_Typ_Decl);
-
          Def_Id := Make_Temporary (Loc, 'R', Exp);
          Set_Etype (Def_Id, Exp_Type);
 
-         Res :=
-           Make_Explicit_Dereference (Loc,
-             Prefix => New_Reference_To (Def_Id, Loc));
+         --  The regular expansion of functions with side effects involves the
+         --  generation of an access type to capture the return value found on
+         --  the secondary stack. Since Alfa (and why) cannot process access
+         --  types, use a different approach which ignores the secondary stack
+         --  and "copies" the returned object.
 
+         if Alfa_Mode then
+            Res := New_Reference_To (Def_Id, Loc);
+            Ref_Type := Exp_Type;
+
+         --  Regular expansion utilizing an access type and 'reference
+
+         else
+            Res :=
+              Make_Explicit_Dereference (Loc,
+                Prefix => New_Reference_To (Def_Id, Loc));
+
+            --  Generate:
+            --    type Ann is access all <Exp_Type>;
+
+            Ref_Type := Make_Temporary (Loc, 'A');
+
+            Ptr_Typ_Decl :=
+              Make_Full_Type_Declaration (Loc,
+                Defining_Identifier => Ref_Type,
+                Type_Definition     =>
+                  Make_Access_To_Object_Definition (Loc,
+                    All_Present        => True,
+                    Subtype_Indication =>
+                      New_Reference_To (Exp_Type, Loc)));
+
+            Insert_Action (Exp, Ptr_Typ_Decl);
+         end if;
+
+         E := Exp;
          if Nkind (E) = N_Explicit_Dereference then
             New_Exp := Relocate_Node (Prefix (E));
          else
             E := Relocate_Node (E);
-            New_Exp := Make_Reference (Loc, E);
+
+            --  Do not generate a 'reference in Alfa mode since the access type
+            --  is not created in the first place.
+
+            if Alfa_Mode then
+               New_Exp := E;
+
+            --  Otherwise generate reference, marking the value as non-null
+            --  since we know it cannot be null and we don't want a check.
+
+            else
+               New_Exp := Make_Reference (Loc, E);
+               Set_Is_Known_Non_Null (Def_Id);
+            end if;
          end if;
 
          if Is_Delayed_Aggregate (E) then

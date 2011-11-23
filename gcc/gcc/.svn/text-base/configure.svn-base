@@ -618,12 +618,9 @@ xm_include_list
 xm_file_list
 tm_p_include_list
 tm_p_file_list
-libgcc_tm_include_list
-libgcc_tm_file_list
 tm_defines
 tm_include_list
 tm_file_list
-thread_file
 common_out_object_file
 common_out_file
 out_object_file
@@ -645,7 +642,6 @@ gcc_config_arguments
 float_h_file
 extra_programs
 extra_passes
-extra_parts
 extra_objs
 extra_headers_list
 user_headers_inc_next_post
@@ -671,7 +667,6 @@ all_gtfiles
 all_compilers
 srcdir
 subdirs
-slibdir
 dollar
 gcc_tooldir
 enable_lto
@@ -728,7 +723,7 @@ LIBINTL
 USE_NLS
 extra_opt_files
 extra_modes_file
-gthread_flags
+NATIVE_SYSTEM_HEADER_DIR
 objext
 manext
 LIBICONV_DEP
@@ -776,6 +771,7 @@ valgrind_path_defines
 valgrind_path
 TREEBROWSER
 nocommon_flag
+noexception_flags
 warn_cxxflags
 warn_cflags
 c_strict_warn
@@ -886,6 +882,7 @@ enable_tls
 enable_objc_gc
 with_dwarf2
 enable_shared
+with_native_system_header_dir
 with_build_sysroot
 with_sysroot
 with_specs
@@ -916,7 +913,6 @@ with_gc
 with_system_zlib
 enable_maintainer_mode
 enable_version_specific_runtime_libs
-with_slibdir
 enable_plugin
 enable_libquadmath_support
 with_linker_hash_style
@@ -1651,6 +1647,9 @@ Optional Packages:
   --with-as               arrange to use the specified as (full pathname)
   --with-stabs            arrange to use stabs instead of host debug format
   --with-dwarf2           force the default debug format to be DWARF 2
+  --with-native-system-header-dir=dir
+                          use dir as the directory to look for standard
+                          system header files in.  Defaults to /usr/include.
   --with-build-sysroot=sysroot
                           use sysroot as the system root during the build
   --with-sysroot[=DIR]    search for usr/lib, usr/include, et al, within DIR
@@ -1669,7 +1668,6 @@ Optional Packages:
   --with-gc={page,zone}   choose the garbage collection mechanism to use with
                           the compiler
   --with-system-zlib      use installed libz
-  --with-slibdir=DIR      shared libraries in DIR [LIBDIR]
   --with-linker-hash-style={sysv,gnu,both}
                           specify the linker hash style
 
@@ -6397,11 +6395,12 @@ fi
 # * 'long long'
 # * variadic macros
 # * overlong strings
+# * C++11 narrowing conversions in { }
 # So, we only use -pedantic if we can disable those warnings.
 
 loose_warn=
 save_CFLAGS="$CFLAGS"
-for option in -W -Wall -Wwrite-strings -Wcast-qual; do
+for option in -W -Wall -Wno-narrowing -Wwrite-strings -Wcast-qual; do
   as_acx_Woption=`$as_echo "acx_cv_prog_cc_warning_$option" | $as_tr_sh`
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC supports $option" >&5
@@ -6613,6 +6612,47 @@ if test "x$GCC" = "xyes"; then
   warn_cxxflags='$(GCC_WARN_CXXFLAGS)'
 fi
 
+
+
+# Disable exceptions and RTTI if building with g++
+noexception_flags=
+save_CFLAGS="$CFLAGS"
+for option in -fno-exceptions -fno-rtti; do
+  as_acx_Woption=`$as_echo "acx_cv_prog_cc_warning_$option" | $as_tr_sh`
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC supports $option" >&5
+$as_echo_n "checking whether $CC supports $option... " >&6; }
+if { as_var=$as_acx_Woption; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+  CFLAGS="$option"
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  eval "$as_acx_Woption=yes"
+else
+  eval "$as_acx_Woption=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+fi
+eval ac_res=\$$as_acx_Woption
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+  if test `eval 'as_val=${'$as_acx_Woption'};$as_echo "$as_val"'` = yes; then :
+  noexception_flags="$noexception_flags${noexception_flags:+ }$option"
+fi
+  done
+CFLAGS="$save_CFLAGS"
 
 
 # Enable expensive internal checks
@@ -7152,6 +7192,22 @@ fi
 
 
 
+# Check whether --with-native-system-header-dir was given.
+if test "${with_native_system_header_dir+set}" = set; then :
+  withval=$with_native_system_header_dir;
+ case ${with_native_system_header_dir} in
+ yes|no) as_fn_error "bad value ${withval} given for --with-native-system-header-dir" "$LINENO" 5 ;;
+ /* | [A-Za-z]:[\\/]*) ;;
+ *) as_fn_error "--with-native-system-header-dir argument ${withval} must be an absolute directory" "$LINENO" 5 ;;
+ esac
+ configured_native_system_header_dir="${withval}"
+
+else
+  configured_native_system_header_dir=
+fi
+
+
+
 # Check whether --with-build-sysroot was given.
 if test "${with_build_sysroot+set}" = set; then :
   withval=$with_build_sysroot; if test x"$withval" != x ; then
@@ -7541,17 +7597,7 @@ else
   RANLIB="$ac_cv_prog_RANLIB"
 fi
 
-case "${host}" in
-*-*-darwin*)
-  # By default, the Darwin ranlib will not treat common symbols as
-  # definitions when  building the archive table of contents.  Other
-  # ranlibs do that; pass an option to the Darwin ranlib that makes
-  # it behave similarly.
-  ranlib_flags="-c"
-  ;;
-*)
-  ranlib_flags=""
-esac
+ranlib_flags=""
 
 
 # Find a good install program.  We prefer a C program (faster),
@@ -9001,7 +9047,7 @@ fi
 for ac_func in times clock kill getrlimit setrlimit atoll atoq \
 	sysconf strsignal getrusage nl_langinfo \
 	gettimeofday mbstowcs wcswidth mmap setlocale \
-	clearerr_unlocked feof_unlocked   ferror_unlocked fflush_unlocked fgetc_unlocked fgets_unlocked   fileno_unlocked fprintf_unlocked fputc_unlocked fputs_unlocked   fread_unlocked fwrite_unlocked getchar_unlocked getc_unlocked   putchar_unlocked putc_unlocked
+	clearerr_unlocked feof_unlocked   ferror_unlocked fflush_unlocked fgetc_unlocked fgets_unlocked   fileno_unlocked fprintf_unlocked fputc_unlocked fputs_unlocked   fread_unlocked fwrite_unlocked getchar_unlocked getc_unlocked   putchar_unlocked putc_unlocked madvise
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -10394,8 +10440,10 @@ $as_echo "#define HAVE_LANGINFO_CODESET 1" >>confdefs.h
 # We will need to find libiberty.h and ansidecl.h
 saved_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -I${srcdir} -I${srcdir}/../include"
+saved_CXXFLAGS="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS -I${srcdir} -I${srcdir}/../include"
 for ac_func in getenv atol asprintf sbrk abort atof getcwd getwd \
-	strsignal strstr strverscmp \
+	strsignal strstr stpcpy strverscmp \
 	errno snprintf vsnprintf vasprintf malloc realloc calloc \
 	free basename getopt clock getpagesize clearerr_unlocked feof_unlocked   ferror_unlocked fflush_unlocked fgetc_unlocked fgets_unlocked   fileno_unlocked fprintf_unlocked fputc_unlocked fputs_unlocked   fread_unlocked fwrite_unlocked getchar_unlocked getc_unlocked   putchar_unlocked putc_unlocked
 do
@@ -10698,6 +10746,127 @@ fi
 done
 
 
+# g++ on Solaris 10+ defines _XOPEN_SOURCE=600, which hides the madvise()
+# prototype.
+if test "$ENABLE_BUILD_WITH_CXX" = "yes"; then :
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+   for ac_func in madvise
+do
+  ac_tr_decl=`$as_echo "HAVE_DECL_$ac_func" | $as_tr_cpp`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $ac_func is declared" >&5
+$as_echo_n "checking whether $ac_func is declared... " >&6; }
+if { as_var=gcc_cv_have_decl_$ac_func; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#undef $ac_tr_decl
+#define $ac_tr_decl 1
+
+     #include "ansidecl.h"
+     #include "system.h"
+
+
+int
+main ()
+{
+#ifndef $ac_func
+char *(*pfn) = (char *(*)) $ac_func ;
+#endif
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  eval "gcc_cv_have_decl_$ac_func=yes"
+else
+  eval "gcc_cv_have_decl_$ac_func=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+
+if eval "test \"`echo '$gcc_cv_have_decl_'$ac_func`\" = yes"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; } ; cat >>confdefs.h <<_ACEOF
+#define $ac_tr_decl 1
+_ACEOF
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; } ; cat >>confdefs.h <<_ACEOF
+#define $ac_tr_decl 0
+_ACEOF
+
+fi
+
+done
+
+   ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+else
+  for ac_func in madvise
+do
+  ac_tr_decl=`$as_echo "HAVE_DECL_$ac_func" | $as_tr_cpp`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $ac_func is declared" >&5
+$as_echo_n "checking whether $ac_func is declared... " >&6; }
+if { as_var=gcc_cv_have_decl_$ac_func; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#undef $ac_tr_decl
+#define $ac_tr_decl 1
+
+     #include "ansidecl.h"
+     #include "system.h"
+
+
+int
+main ()
+{
+#ifndef $ac_func
+char *(*pfn) = (char *(*)) $ac_func ;
+#endif
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  eval "gcc_cv_have_decl_$ac_func=yes"
+else
+  eval "gcc_cv_have_decl_$ac_func=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+
+if eval "test \"`echo '$gcc_cv_have_decl_'$ac_func`\" = yes"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; } ; cat >>confdefs.h <<_ACEOF
+#define $ac_tr_decl 1
+_ACEOF
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; } ; cat >>confdefs.h <<_ACEOF
+#define $ac_tr_decl 0
+_ACEOF
+
+fi
+
+done
+
+
+fi
+
 # More time-related stuff.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for struct tms" >&5
 $as_echo_n "checking for struct tms... " >&6; }
@@ -10774,8 +10943,9 @@ $as_echo "#define HAVE_CLOCK_T 1" >>confdefs.h
 
 fi
 
-# Restore CFLAGS from before the gcc_AC_NEED_DECLARATIONS tests.
+# Restore CFLAGS, CXXFLAGS from before the gcc_AC_NEED_DECLARATIONS tests.
 CFLAGS="$saved_CFLAGS"
+CXXFLAGS="$saved_CXXFLAGS"
 
 # Check whether --enable-initfini-array was given.
 if test "${enable_initfini_array+set}" = set; then :
@@ -11145,6 +11315,12 @@ if test "$host_xm_file" != "$build_xm_file"; then
 	fi
 fi
 
+if test -n "$configured_native_system_header_dir"; then
+  native_system_header_dir=$configured_native_system_header_dir
+fi
+NATIVE_SYSTEM_HEADER_DIR="$native_system_header_dir"
+
+
 case ${host} in
   powerpc*-*-darwin*)
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether mcontext_t fields have underscores" >&5
@@ -11207,19 +11383,6 @@ if test x${thread_file} = x; then
   # so use file chosen by default logic above
   thread_file=${target_thread_file}
 fi
-
-# Make gthr-default.h if we have a thread file.
-gthread_flags=
-if test $thread_file != single; then
-  echo "#include \"gthr-${thread_file}.h\"" > gthr-default.h-t
-  if diff gthr-default.h-t gthr-default.h 2>/dev/null; then
-    rm -f gthr-default.h-t
-  else
-    mv -f gthr-default.h-t gthr-default.h
-  fi
-  gthread_flags=-DHAVE_GTHR_DEFAULT
-fi
-
 
 # --------
 # UNSORTED
@@ -11640,13 +11803,6 @@ for f in $tm_file; do
        tm_include_list="${tm_include_list} config/$f"
        ;;
   esac
-done
-
-libgcc_tm_file_list=
-libgcc_tm_include_list=
-for f in $libgcc_tm_file; do
-  libgcc_tm_file_list="${libgcc_tm_file_list} \$(srcdir)/../libgcc/config/$f"
-  libgcc_tm_include_list="${libgcc_tm_include_list} ../libgcc/config/$f"
 done
 
 tm_p_file_list=
@@ -17921,7 +18077,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 17924 "configure"
+#line 18080 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -18027,7 +18183,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 18030 "configure"
+#line 18186 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -23568,6 +23724,14 @@ elif test x$gcc_cv_ld != x; then
 	gcc_cv_ld_static_option="-noso"
 	gcc_cv_ld_dynamic_option="-so_archive"
         ;;
+      # HP-UX ld uses -a flags to select between shared and archive.
+      *-*-hpux*)
+	if test x"$gnu_ld" = xno; then
+	  gcc_cv_ld_static_dynamic=yes
+	  gcc_cv_ld_static_option="-aarchive_shared"
+	  gcc_cv_ld_dynamic_option="-adefault"
+	fi
+	;;
       # IRIX 6 ld supports -Bstatic/-Bdynamic.
       mips-sgi-irix6*)
         gcc_cv_ld_static_dynamic=yes
@@ -24043,6 +24207,44 @@ if test $gcc_cv_as_sparc_offsetable_lo10 = yes; then
 $as_echo "#define HAVE_AS_OFFSETABLE_LO10 1" >>confdefs.h
 
 fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking assembler for FMAF, HPC, and VIS 3.0 instructions" >&5
+$as_echo_n "checking assembler for FMAF, HPC, and VIS 3.0 instructions... " >&6; }
+if test "${gcc_cv_as_sparc_fmaf+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  gcc_cv_as_sparc_fmaf=no
+  if test x$gcc_cv_as != x; then
+    $as_echo '.text
+       .register %g2, #scratch
+       .register %g3, #scratch
+       .align 4
+       fmaddd %f0, %f2, %f4, %f6
+       addxccc %g1, %g2, %g3
+       fsrl32 %f2, %f4, %f8
+       fnaddd %f10, %f12, %f14' > conftest.s
+    if { ac_try='$gcc_cv_as $gcc_cv_as_flags -xarch=v9d -o conftest.o conftest.s >&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+    then
+	gcc_cv_as_sparc_fmaf=yes
+    else
+      echo "configure: failed program was" >&5
+      cat conftest.s >&5
+    fi
+    rm -f conftest.o conftest.s
+  fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gcc_cv_as_sparc_fmaf" >&5
+$as_echo "$gcc_cv_as_sparc_fmaf" >&6; }
+if test $gcc_cv_as_sparc_fmaf = yes; then
+
+$as_echo "#define HAVE_AS_FMAF_HPC_VIS3 1" >>confdefs.h
+
+fi
     ;;
 
   i[34567]86-*-* | x86_64-*-*)
@@ -24196,6 +24398,44 @@ $as_echo "$as_me: WARNING: LTO for $target requires binutils >= 2.20.1, but vers
 	      ;;
 	  esac
 	fi
+	# Test if the assembler supports the section flag 'e' for specifying
+	# an excluded section.
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking assembler for .section with e" >&5
+$as_echo_n "checking assembler for .section with e... " >&6; }
+if test "${gcc_cv_as_section_has_e+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  gcc_cv_as_section_has_e=no
+    if test $in_tree_gas = yes; then
+    if test $gcc_cv_gas_vers -ge `expr \( \( 2 \* 1000 \) + 22 \) \* 1000 + 51`
+  then gcc_cv_as_section_has_e=yes
+fi
+  elif test x$gcc_cv_as != x; then
+    $as_echo '.section foo1,"e"
+.byte 0,0,0,0' > conftest.s
+    if { ac_try='$gcc_cv_as $gcc_cv_as_flags  -o conftest.o conftest.s >&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+    then
+	gcc_cv_as_section_has_e=yes
+    else
+      echo "configure: failed program was" >&5
+      cat conftest.s >&5
+    fi
+    rm -f conftest.o conftest.s
+  fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gcc_cv_as_section_has_e" >&5
+$as_echo "$gcc_cv_as_section_has_e" >&6; }
+
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_GAS_SECTION_EXCLUDE `if test $gcc_cv_as_section_has_e = yes; then echo 1; else echo 0; fi`
+_ACEOF
+
 	;;
     esac
 
@@ -26325,14 +26565,14 @@ if test x$host != x$target || test "x$TARGET_SYSTEM_ROOT" != x; then
   elif test "x$with_sysroot" = x; then
     target_header_dir="${exec_prefix}/${target_noncanonical}/sys-include"
   elif test "x$with_build_sysroot" != "x"; then
-    target_header_dir="${with_build_sysroot}/usr/include"
+    target_header_dir="${with_build_sysroot}${native_system_header_dir}"
   elif test "x$with_sysroot" = xyes; then
-    target_header_dir="${exec_prefix}/${target_noncanonical}/sys-root/usr/include"
+    target_header_dir="${exec_prefix}/${target_noncanonical}/sys-root${native_system_header_dir}"
   else
-    target_header_dir="${with_sysroot}/usr/include"
+    target_header_dir="${with_sysroot}${native_system_header_dir}"
   fi
 else
-  target_header_dir=/usr/include
+  target_header_dir=${native_system_header_dir}
 fi
 
 # Test for stack protector support in target C library.
@@ -26399,6 +26639,7 @@ fi
 $as_echo_n "checking sys/sdt.h in the target C library... " >&6; }
 have_sys_sdt_h=no
 if test -f $target_header_dir/sys/sdt.h; then
+  have_sys_sdt_h=yes
 
 $as_echo "#define HAVE_SYS_SDT_H 1" >>confdefs.h
 
@@ -26721,27 +26962,7 @@ if test "${enable_version_specific_runtime_libs+set}" = set; then :
 fi
 
 
-
-# Check whether --with-slibdir was given.
-if test "${with_slibdir+set}" = set; then :
-  withval=$with_slibdir; slibdir="$with_slibdir"
-else
-  if test "${enable_version_specific_runtime_libs+set}" = set; then
-  slibdir='$(libsubdir)'
-elif test "$host" != "$target"; then
-  slibdir='$(build_tooldir)/lib'
-else
-  slibdir='$(libdir)'
-fi
-fi
-
-
-
 # Substitute configuration variables
-
-
-
-
 
 
 

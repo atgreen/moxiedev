@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/vector/capacity
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-06-07T16:11:36.936157Z
-174756
-paolo
+2011-11-09T21:14:03.484830Z
+181235
+redi
 
 
 
@@ -266,6 +266,40 @@ paolo
 
 
 1180
+
+shrink_to_fit2.cc
+file
+
+
+
+
+2011-11-12T11:40:49.195250Z
+aed7d3614735c4d6579cbbd58fbe480d
+2011-11-09T21:14:03.484830Z
+181235
+redi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1732
 
 reserve
 dir

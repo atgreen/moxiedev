@@ -93,9 +93,10 @@ static GTY(()) int label_num = 1;
 
 /* We record floating-point CONST_DOUBLEs in each floating-point mode for
    the values of 0, 1, and 2.  For the integer entries and VOIDmode, we
-   record a copy of const[012]_rtx.  */
+   record a copy of const[012]_rtx and constm1_rtx.  CONSTM1_RTX
+   is set only for MODE_INT and MODE_VECTOR_INT modes.  */
 
-rtx const_tiny_rtx[3][(int) MAX_MACHINE_MODE];
+rtx const_tiny_rtx[4][(int) MAX_MACHINE_MODE];
 
 rtx const_true_rtx;
 
@@ -1693,6 +1694,12 @@ set_mem_attributes_minus_bitpos (rtx ref, tree t, int objectp,
 	  && TREE_READONLY (base)
 	  && (TREE_STATIC (base) || DECL_EXTERNAL (base))
 	  && !TREE_THIS_VOLATILE (base))
+	MEM_READONLY_P (ref) = 1;
+
+      /* Mark static const strings readonly as well.  */
+      if (base && TREE_CODE (base) == STRING_CST
+	  && TREE_READONLY (base)
+	  && TREE_STATIC (base))
 	MEM_READONLY_P (ref) = 1;
 
       /* If this expression uses it's parent's alias set, mark it such
@@ -3323,21 +3330,6 @@ next_label (rtx insn)
   return insn;
 }
 
-/* Return the last CODE_LABEL before the insn INSN, or 0 if there is none.  */
-
-rtx
-prev_label (rtx insn)
-{
-  while (insn)
-    {
-      insn = PREV_INSN (insn);
-      if (insn == 0 || LABEL_P (insn))
-	break;
-    }
-
-  return insn;
-}
-
 /* Return the last label to mark the same position as LABEL.  Return LABEL
    itself if it is null or any return rtx.  */
 
@@ -3603,6 +3595,7 @@ try_split (rtx pat, rtx trial, int last)
 
 	case REG_NORETURN:
 	case REG_SETJMP:
+	case REG_TM:
 	  for (insn = insn_last; insn != NULL_RTX; insn = PREV_INSN (insn))
 	    {
 	      if (CALL_P (insn))
@@ -5514,6 +5507,8 @@ gen_rtx_CONST_VECTOR (enum machine_mode mode, rtvec v)
 	return CONST0_RTX (mode);
       else if (x == CONST1_RTX (inner))
 	return CONST1_RTX (mode);
+      else if (x == CONSTM1_RTX (inner))
+	return CONSTM1_RTX (mode);
     }
 
   return gen_rtx_raw_CONST_VECTOR (mode, v);
@@ -5674,7 +5669,7 @@ init_emit_once (void)
   dconsthalf = dconst1;
   SET_REAL_EXP (&dconsthalf, REAL_EXP (&dconsthalf) - 1);
 
-  for (i = 0; i < (int) ARRAY_SIZE (const_tiny_rtx); i++)
+  for (i = 0; i < 3; i++)
     {
       const REAL_VALUE_TYPE *const r =
 	(i == 0 ? &dconst0 : i == 1 ? &dconst1 : &dconst2);
@@ -5704,6 +5699,13 @@ init_emit_once (void)
 	const_tiny_rtx[i][(int) mode] = GEN_INT (i);
     }
 
+  const_tiny_rtx[3][(int) VOIDmode] = constm1_rtx;
+
+  for (mode = GET_CLASS_NARROWEST_MODE (MODE_INT);
+       mode != VOIDmode;
+       mode = GET_MODE_WIDER_MODE (mode))
+    const_tiny_rtx[3][(int) mode] = constm1_rtx;
+
   for (mode = GET_CLASS_NARROWEST_MODE (MODE_COMPLEX_INT);
        mode != VOIDmode;
        mode = GET_MODE_WIDER_MODE (mode))
@@ -5726,6 +5728,7 @@ init_emit_once (void)
     {
       const_tiny_rtx[0][(int) mode] = gen_const_vector (mode, 0);
       const_tiny_rtx[1][(int) mode] = gen_const_vector (mode, 1);
+      const_tiny_rtx[3][(int) mode] = gen_const_vector (mode, 3);
     }
 
   for (mode = GET_CLASS_NARROWEST_MODE (MODE_VECTOR_FLOAT);

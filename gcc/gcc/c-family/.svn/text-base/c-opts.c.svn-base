@@ -110,7 +110,7 @@ static size_t include_cursor;
 
 static void handle_OPT_d (const char *);
 static void set_std_cxx98 (int);
-static void set_std_cxx0x (int);
+static void set_std_cxx11 (int);
 static void set_std_c89 (int, int);
 static void set_std_c99 (int);
 static void set_std_c1x (int);
@@ -406,6 +406,7 @@ c_common_handle_option (size_t scode, const char *arg, int value,
 	  warn_reorder = value;
           warn_cxx0x_compat = value;
           warn_delnonvdtor = value;
+	  warn_narrowing = value;
 	}
 
       cpp_opts->warn_trigraphs = value;
@@ -434,6 +435,10 @@ c_common_handle_option (size_t scode, const char *arg, int value,
       if (warn_jump_misses_init == -1 && value)
 	warn_jump_misses_init = value;
       cpp_opts->warn_cxx_operator_names = value;
+      break;
+
+    case OPT_Wc__0x_compat:
+      warn_narrowing = value;
       break;
 
     case OPT_Wdeprecated:
@@ -628,6 +633,22 @@ c_common_handle_option (size_t scode, const char *arg, int value,
       cpp_opts->preprocessed = value;
       break;
 
+    case OPT_fdebug_cpp:
+      cpp_opts->debug = 1;
+      break;
+
+    case OPT_ftrack_macro_expansion:
+      if (value)
+	value = 2;
+      /* Fall Through.  */
+
+    case OPT_ftrack_macro_expansion_:
+      if (arg && *arg != '\0')
+	cpp_opts->track_macro_expansion = value;
+      else
+	cpp_opts->track_macro_expansion = 2;
+      break;
+
     case OPT_frepo:
       flag_use_repository = value;
       if (value)
@@ -759,10 +780,10 @@ c_common_handle_option (size_t scode, const char *arg, int value,
 	set_std_cxx98 (code == OPT_std_c__98 /* ISO */);
       break;
 
-    case OPT_std_c__0x:
-    case OPT_std_gnu__0x:
+    case OPT_std_c__11:
+    case OPT_std_gnu__11:
       if (!preprocessing_asm_p)
-	set_std_cxx0x (code == OPT_std_c__0x /* ISO */);
+	set_std_cxx11 (code == OPT_std_c__11 /* ISO */);
       break;
 
     case OPT_std_c90:
@@ -981,10 +1002,17 @@ c_common_post_options (const char **pfilename)
   if (warn_implicit_function_declaration == -1)
     warn_implicit_function_declaration = flag_isoc99;
 
-  /* If we're allowing C++0x constructs, don't warn about C++0x
-     compatibility problems.  */
   if (cxx_dialect == cxx0x)
-    warn_cxx0x_compat = 0;
+    {
+      /* If we're allowing C++0x constructs, don't warn about C++98
+	 identifiers which are keywords in C++0x.  */
+      warn_cxx0x_compat = 0;
+
+      if (warn_narrowing == -1)
+	warn_narrowing = 1;
+    }
+  else if (warn_narrowing == -1)
+    warn_narrowing = 0;
 
   if (flag_preprocess_only)
     {
@@ -1485,18 +1513,18 @@ set_std_cxx98 (int iso)
   cxx_dialect = cxx98;
 }
 
-/* Set the C++ 0x working draft "standard" (without GNU extensions if ISO).  */
+/* Set the C++ 2011 standard (without GNU extensions if ISO).  */
 static void
-set_std_cxx0x (int iso)
+set_std_cxx11 (int iso)
 {
-  cpp_set_lang (parse_in, iso ? CLK_CXX0X: CLK_GNUCXX0X);
+  cpp_set_lang (parse_in, iso ? CLK_CXX11: CLK_GNUCXX11);
   flag_no_gnu_keywords = iso;
   flag_no_nonansi_builtin = iso;
   flag_iso = iso;
-  /* C++0x includes the C99 standard library.  */
+  /* C++11 includes the C99 standard library.  */
   flag_isoc94 = 1;
   flag_isoc99 = 1;
-  cxx_dialect = cxx0x;
+  cxx_dialect = cxx11;
 }
 
 /* Args to -d specify what to dump.  Silently ignore

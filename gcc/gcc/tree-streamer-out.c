@@ -31,14 +31,15 @@ along with GCC; see the file COPYING3.  If not see
 /* Output the STRING constant to the string
    table in OB.  Then put the index onto the INDEX_STREAM.  */
 
-static void
-write_string_cst (struct output_block *ob,
-		   struct lto_output_stream *index_stream,
-		   tree string)
+void
+streamer_write_string_cst (struct output_block *ob,
+			   struct lto_output_stream *index_stream,
+			   tree string)
 {
   streamer_write_string_with_length (ob, index_stream,
-				     TREE_STRING_POINTER (string),
-				     TREE_STRING_LENGTH (string),
+				     string ? TREE_STRING_POINTER (string)
+					    : NULL,
+				     string ? TREE_STRING_LENGTH (string) : 0,
 				     true);
 }
 
@@ -99,7 +100,10 @@ pack_ts_base_value_fields (struct bitpack_d *bp, tree expr)
   bp_pack_value (bp, TREE_PROTECTED (expr), 1);
   bp_pack_value (bp, TREE_DEPRECATED (expr), 1);
   if (TYPE_P (expr))
-    bp_pack_value (bp, TYPE_SATURATING (expr), 1);
+    {
+      bp_pack_value (bp, TYPE_SATURATING (expr), 1);
+      bp_pack_value (bp, TYPE_ADDR_SPACE (expr), 8);
+    }
   else if (TREE_CODE (expr) == SSA_NAME)
     bp_pack_value (bp, SSA_NAME_IS_DEFAULT_DEF (expr), 1);
   else
@@ -866,7 +870,7 @@ streamer_write_tree_header (struct output_block *ob, tree expr)
   /* The text in strings and identifiers are completely emitted in
      the header.  */
   if (CODE_CONTAINS_STRUCT (code, TS_STRING))
-    write_string_cst (ob, ob->main_stream, expr);
+    streamer_write_string_cst (ob, ob->main_stream, expr);
   else if (CODE_CONTAINS_STRUCT (code, TS_IDENTIFIER))
     write_identifier (ob, ob->main_stream, expr);
   else if (CODE_CONTAINS_STRUCT (code, TS_VEC))

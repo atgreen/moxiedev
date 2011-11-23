@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-09-23T14:35:05.244193Z
-179119
-jakub
+2011-11-20T22:26:14.921917Z
+181537
+uros
 
 
 
@@ -81,6 +81,9 @@ sparc
 dir
 
 sh
+dir
+
+epiphany
 dir
 
 bfin

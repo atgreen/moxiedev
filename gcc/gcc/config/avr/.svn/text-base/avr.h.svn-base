@@ -54,6 +54,9 @@ struct base_arch_s {
   /* Default start of data section address for architecture.  */
   int default_data_section_start;
 
+  /* Number of 64k segments in the flash.  */
+  int n_segments;
+
   const char *const macro;
   
   /* Architecture name.  */
@@ -131,6 +134,8 @@ extern const struct base_arch_s avr_arch_types[];
 #define AVR_HAVE_MUL (avr_current_arch->have_mul)
 #define AVR_HAVE_MOVW (avr_current_arch->have_movw_lpmx)
 #define AVR_HAVE_LPMX (avr_current_arch->have_movw_lpmx)
+#define AVR_HAVE_ELPM (avr_current_arch->have_elpm)
+#define AVR_HAVE_ELPMX (avr_current_arch->have_elpmx)
 #define AVR_HAVE_RAMPZ (avr_current_arch->have_elpm)
 #define AVR_HAVE_EIJMP_EICALL (avr_current_arch->have_eijmp_eicall)
 #define AVR_HAVE_8BIT_SP (avr_current_device->short_sp || TARGET_TINY_STACK)
@@ -308,21 +313,13 @@ enum reg_class {
 
 #define REGNO_REG_CLASS(R) avr_regno_reg_class(R)
 
-#define BASE_REG_CLASS (reload_completed ? BASE_POINTER_REGS : POINTER_REGS)
+#define MODE_CODE_BASE_REG_CLASS(mode, as, outer_code, index_code)   \
+  avr_mode_code_base_reg_class (mode, as, outer_code, index_code)
 
 #define INDEX_REG_CLASS NO_REGS
 
-#define REGNO_OK_FOR_BASE_P(r) (((r) < FIRST_PSEUDO_REGISTER		\
-				 && ((r) == REG_X			\
-				     || (r) == REG_Y			\
-				     || (r) == REG_Z			\
-				     || (r) == ARG_POINTER_REGNUM))	\
-				|| (reg_renumber			\
-				    && (reg_renumber[r] == REG_X	\
-					|| reg_renumber[r] == REG_Y	\
-					|| reg_renumber[r] == REG_Z	\
-					|| (reg_renumber[r]		\
-					    == ARG_POINTER_REGNUM))))
+#define REGNO_MODE_CODE_OK_FOR_BASE_P(num, mode, as, outer_code, index_code) \
+  avr_regno_mode_code_ok_for_base_p (num, mode, as, outer_code, index_code)
 
 #define REGNO_OK_FOR_INDEX_P(NUM) 0
 
@@ -332,7 +329,7 @@ enum reg_class {
 
 #define STACK_GROWS_DOWNWARD
 
-#define STARTING_FRAME_OFFSET 1
+#define STARTING_FRAME_OFFSET avr_starting_frame_offset()
 
 #define STACK_POINTER_OFFSET 1
 
@@ -381,61 +378,37 @@ typedef struct avr_args {
 
 #define MAX_REGS_PER_ADDRESS 1
 
-#define REG_OK_FOR_BASE_NOSTRICT_P(X) \
-  (REGNO (X) >= FIRST_PSEUDO_REGISTER || REG_OK_FOR_BASE_STRICT_P(X))
+#define LEGITIMIZE_RELOAD_ADDRESS(X,MODE,OPNUM,TYPE,IND_L,WIN)          \
+  do {                                                                  \
+    rtx new_x = avr_legitimize_reload_address (&(X), MODE, OPNUM, TYPE, \
+                                               ADDR_TYPE (TYPE),        \
+                                               IND_L, make_memloc);     \
+    if (new_x)                                                          \
+      {                                                                 \
+        X = new_x;                                                      \
+        goto WIN;                                                       \
+      }                                                                 \
+  } while (0)
 
-#define REG_OK_FOR_BASE_STRICT_P(X) REGNO_OK_FOR_BASE_P (REGNO (X))
-
-/* LEGITIMIZE_RELOAD_ADDRESS will allow register R26/27 to be used, where it
-   is no worse than normal base pointers R28/29 and R30/31. For example:
-   If base offset is greater than 63 bytes or for R++ or --R addressing.  */
-   
-#define LEGITIMIZE_RELOAD_ADDRESS(X, MODE, OPNUM, TYPE, IND_LEVELS, WIN)    \
-do {									    \
-  if (1&&(GET_CODE (X) == POST_INC || GET_CODE (X) == PRE_DEC))	    \
-    {									    \
-      push_reload (XEXP (X,0), XEXP (X,0), &XEXP (X,0), &XEXP (X,0),	    \
-	           POINTER_REGS, GET_MODE (X),GET_MODE (X) , 0, 0,	    \
-		   OPNUM, RELOAD_OTHER);				    \
-      goto WIN;								    \
-    }									    \
-  if (GET_CODE (X) == PLUS						    \
-      && REG_P (XEXP (X, 0))						    \
-      && (reg_equiv_constant (REGNO (XEXP (X, 0))) == 0)		    \
-      && GET_CODE (XEXP (X, 1)) == CONST_INT				    \
-      && INTVAL (XEXP (X, 1)) >= 1)					    \
-    {									    \
-      int fit = INTVAL (XEXP (X, 1)) <= (64 - GET_MODE_SIZE (MODE));	    \
-      if (fit)								    \
-	{								    \
-          if (reg_equiv_address (REGNO (XEXP (X, 0))) != 0)		    \
-	    {								    \
-	      int regno = REGNO (XEXP (X, 0));				    \
-	      rtx mem = make_memloc (X, regno);				    \
-	      push_reload (XEXP (mem,0), NULL, &XEXP (mem,0), NULL,         \
-		           POINTER_REGS, Pmode, VOIDmode, 0, 0,		    \
-		           1, ADDR_TYPE (TYPE));			    \
-	      push_reload (mem, NULL_RTX, &XEXP (X, 0), NULL,		    \
-		           BASE_POINTER_REGS, GET_MODE (X), VOIDmode, 0, 0, \
-		           OPNUM, TYPE);				    \
-	      goto WIN;							    \
-	    }								    \
-	}								    \
-      else if (! (frame_pointer_needed && XEXP (X,0) == frame_pointer_rtx)) \
-	{								    \
-	  push_reload (X, NULL_RTX, &X, NULL,				    \
-		       POINTER_REGS, GET_MODE (X), VOIDmode, 0, 0,	    \
-		       OPNUM, TYPE);					    \
-          goto WIN;							    \
-	}								    \
-    }									    \
-} while(0)
-
-#define BRANCH_COST(speed_p, predictable_p) 0
+#define BRANCH_COST(speed_p, predictable_p) avr_branch_cost
 
 #define SLOW_BYTE_ACCESS 0
 
 #define NO_FUNCTION_CSE
+
+
+#define ADDR_SPACE_PGM  1
+#define ADDR_SPACE_PGM1 2
+#define ADDR_SPACE_PGM2 3
+#define ADDR_SPACE_PGM3 4
+#define ADDR_SPACE_PGM4 5
+#define ADDR_SPACE_PGM5 6
+#define ADDR_SPACE_PGMX 7
+
+#define REGISTER_TARGET_PRAGMAS()                                       \
+  do {                                                                  \
+    avr_register_target_pragmas();                                      \
+  } while (0)
 
 #define TEXT_SECTION_ASM_OP "\t.text"
 
@@ -499,8 +472,6 @@ do {									    \
 #define PRINT_OPERAND_PUNCT_VALID_P(CODE) ((CODE) == '~' || (CODE) == '!')
 
 #define PRINT_OPERAND_ADDRESS(STREAM, X) print_operand_address(STREAM, X)
-
-#define ASSEMBLER_DIALECT AVR_HAVE_MOVW
 
 #define ASM_OUTPUT_REG_PUSH(STREAM, REGNO)	\
 {						\
@@ -683,3 +654,7 @@ struct GTY(()) machine_function
 /* AVR does not round pushes, but the existance of this macro is
    required in order for pushes to be generated.  */
 #define PUSH_ROUNDING(X)	(X)
+
+#define ACCUMULATE_OUTGOING_ARGS avr_accumulate_outgoing_args()
+
+#define INIT_EXPANDERS avr_init_expanders()

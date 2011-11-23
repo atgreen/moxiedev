@@ -1,14 +1,14 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-09-22T04:47:32.825291Z
-179076
+2011-11-02T17:53:20.617469Z
+180784
 ian
 
 
@@ -27,9 +27,6 @@ ian
 138bc75d-0d04-0410-961f-82ee72b054a4
 
 http
-dir
-
-netchan
 dir
 
 syslog
@@ -83,25 +80,25 @@ dir
 big
 dir
 
-asn1
+url
 dir
 
-url
+asn1
 dir
 
 tabwriter
 dir
 
-html
-dir
-
 bufio
 dir
 
-expvar
+html
 dir
 
 utf16
+dir
+
+expvar
 dir
 
 gob
@@ -114,9 +111,6 @@ sync
 dir
 
 testing
-dir
-
-try
 dir
 
 crypto
@@ -200,7 +194,7 @@ dir
 flag
 dir
 
-ebnf
+syscall
 dir
 
 template

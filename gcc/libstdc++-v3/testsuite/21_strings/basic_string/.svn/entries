@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-06-01T14:16:19.338740Z
-174525
-paolo
+2011-11-17T16:35:11.375370Z
+181445
+jason
 
 
 
@@ -27,6 +27,9 @@ paolo
 138bc75d-0d04-0410-961f-82ee72b054a4
 
 find
+dir
+
+modifiers
 dir
 
 pthread18185.cc
@@ -189,40 +192,6 @@ jakub
 
 1756
 
-range_access.cc
-file
-
-
-
-
-2010-07-30T08:37:54.580087Z
-a77dc06bb45c550bd14ab9e997242cb2
-2010-07-27T17:27:06.727889Z
-162578
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1066
-
 rfind
 dir
 
@@ -242,6 +211,9 @@ element_access
 dir
 
 replace
+dir
+
+range_access
 dir
 
 operators

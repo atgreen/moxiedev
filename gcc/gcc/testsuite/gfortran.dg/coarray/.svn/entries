@@ -1,15 +1,15 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gfortran.dg/coarray
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-08-25T15:59:40.279912Z
-178068
-burnus
+2011-10-18T15:23:04.539874Z
+180153
+mikael
 
 
 
@@ -467,4 +467,38 @@ burnus
 
 
 856
+
+subobject_1.f90
+file
+
+
+
+
+2011-11-12T11:42:11.381288Z
+5cc09f3405f5d0672ba5e15fc93dbfbf
+2011-10-18T15:23:04.539874Z
+180153
+mikael
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1323
 

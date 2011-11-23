@@ -289,6 +289,14 @@ package System.OS_Interface is
    PTHREAD_SCOPE_PROCESS : constant := 0;
    PTHREAD_SCOPE_SYSTEM  : constant := 2;
 
+   --  Read/Write lock not supported on freebsd. To add support both types
+   --  pthread_rwlock_t and pthread_rwlockattr_t must properly be defined
+   --  with the associated routines pthread_rwlock_[init/destroy] and
+   --  pthread_rwlock_[rdlock/wrlock/unlock].
+
+   subtype pthread_rwlock_t     is pthread_mutex_t;
+   subtype pthread_rwlockattr_t is pthread_mutexattr_t;
+
    -----------
    -- Stack --
    -----------
@@ -637,7 +645,10 @@ private
 
    type clockid_t is new int;
    CLOCK_REALTIME  : constant clockid_t := 0;
-   CLOCK_MONOTONIC : constant clockid_t := 4;
+   CLOCK_MONOTONIC : constant clockid_t := 0;
+   --  On FreeBSD, pthread_cond_timedwait assumes a CLOCK_REALTIME time by
+   --  default (unless pthread_condattr_setclock is used to set an alternate
+   --  clock).
 
    type pthread_t           is new System.Address;
    type pthread_attr_t      is new System.Address;

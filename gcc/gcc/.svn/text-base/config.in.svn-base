@@ -266,6 +266,12 @@
 #endif
 
 
+/* Define if your assembler supports FMAF, HPC, and VIS 3.0 instructions. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_AS_FMAF_HPC_VIS3
+#endif
+
+
 /* Define if your assembler supports fprnd. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_AS_FPRND
@@ -747,6 +753,13 @@
 #endif
 
 
+/* Define to 1 if we found a declaration for 'madvise', otherwise define to 0.
+   */
+#ifndef USED_FOR_TARGET
+#undef HAVE_DECL_MADVISE
+#endif
+
+
 /* Define to 1 if we found a declaration for 'malloc', otherwise define to 0.
    */
 #ifndef USED_FOR_TARGET
@@ -799,6 +812,13 @@
    0. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_DECL_SNPRINTF
+#endif
+
+
+/* Define to 1 if we found a declaration for 'stpcpy', otherwise define to 0.
+   */
+#ifndef USED_FOR_TARGET
+#undef HAVE_DECL_STPCPY
 #endif
 
 
@@ -1009,6 +1029,12 @@
 #endif
 
 
+/* Define if your assembler supports specifying the section flag e. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_GAS_SECTION_EXCLUDE
+#endif
+
+
 /* Define 0/1 if your assembler supports marking sections with SHF_MERGE flag.
    */
 #ifndef USED_FOR_TARGET
@@ -1044,12 +1070,6 @@
 /* Define to 1 if you have the `getc_unlocked' function. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_GETC_UNLOCKED
-#endif
-
-
-/* Define if _Unwind_GetIPInfo is available. */
-#ifndef USED_FOR_TARGET
-#undef HAVE_GETIPINFO
 #endif
 
 
@@ -1267,6 +1287,12 @@
 /* Define to the level of your linker's plugin support. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_LTO_PLUGIN
+#endif
+
+
+/* Define to 1 if you have the `madvise' function. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_MADVISE
 #endif
 
 

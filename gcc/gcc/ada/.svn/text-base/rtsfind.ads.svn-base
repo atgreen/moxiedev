@@ -1349,6 +1349,7 @@ package Rtsfind is
      RE_Allocate_Any,                    -- System.Storage_Pools
      RE_Deallocate_Any,                  -- System.Storage_Pools
      RE_Root_Storage_Pool,               -- System.Storage_Pools
+     RE_Root_Storage_Pool_Ptr,           -- System.Storage_Pools
 
      RE_Allocate_Any_Controlled,         -- System.Storage_Pools.Subpools
      RE_Deallocate_Any_Controlled,       -- System.Storage_Pools.Subpools
@@ -1653,6 +1654,7 @@ package Rtsfind is
      RE_Initialize_Protection,           -- System.Tasking.Protected_Objects
      RE_Finalize_Protection,             -- System.Tasking.Protected_Objects
      RE_Lock,                            -- System.Tasking.Protected_Objects
+     RE_Lock_Read_Only,                  -- System.Tasking.Protected_Objects
      RE_Get_Ceiling,                     -- System.Tasking.Protected_Objects
      RE_Set_Ceiling,                     -- System.Tasking.Protected_Objects
      RE_Unlock,                          -- System.Tasking.Protected_Objects
@@ -2544,6 +2546,7 @@ package Rtsfind is
      RE_Allocate_Any                     => System_Storage_Pools,
      RE_Deallocate_Any                   => System_Storage_Pools,
      RE_Root_Storage_Pool                => System_Storage_Pools,
+     RE_Root_Storage_Pool_Ptr            => System_Storage_Pools,
 
      RE_Allocate_Any_Controlled          => System_Storage_Pools_Subpools,
      RE_Deallocate_Any_Controlled        => System_Storage_Pools_Subpools,
@@ -2883,6 +2886,7 @@ package Rtsfind is
      RE_Initialize_Protection            => System_Tasking_Protected_Objects,
      RE_Finalize_Protection              => System_Tasking_Protected_Objects,
      RE_Lock                             => System_Tasking_Protected_Objects,
+     RE_Lock_Read_Only                   => System_Tasking_Protected_Objects,
      RE_Get_Ceiling                      => System_Tasking_Protected_Objects,
      RE_Set_Ceiling                      => System_Tasking_Protected_Objects,
      RE_Unlock                           => System_Tasking_Protected_Objects,

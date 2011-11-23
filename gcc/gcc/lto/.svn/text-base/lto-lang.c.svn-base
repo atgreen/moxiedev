@@ -499,9 +499,7 @@ def_builtin_1 (enum built_in_function fncode, const char *name,
     add_builtin_function (libname, libtype, fncode, fnclass,
 			  NULL, fnattrs);
 
-  built_in_decls[(int) fncode] = decl;
-  if (implicit_p)
-    implicit_built_in_decls[(int) fncode] = decl;
+  set_builtin_decl (fncode, decl, implicit_p);
 }
 
 
@@ -693,8 +691,6 @@ lto_post_options (const char **pfilename ATTRIBUTE_UNUSED)
   /* Excess precision other than "fast" requires front-end
      support.  */
   flag_excess_precision_cmdline = EXCESS_PRECISION_FAST;
-
-  lto_read_all_file_options ();
 
   /* Initialize the compiler back end.  */
   return false;

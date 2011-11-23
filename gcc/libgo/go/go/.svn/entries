@@ -1,14 +1,14 @@
 10
 
 dir
-179164
+181550
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/go
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-09-22T04:47:32.825291Z
-179076
+2011-10-26T23:57:58.673671Z
+180552
 ian
 
 
@@ -35,13 +35,7 @@ dir
 printer
 dir
 
-types
-dir
-
 doc
-dir
-
-typechecker
 dir
 
 ast

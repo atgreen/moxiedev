@@ -213,10 +213,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       _Hashtable(const _Hashtable&);
 
-      _Hashtable(_Hashtable&&)
-      noexcept(__and_<is_nothrow_copy_constructible<_Equal>,
-	              is_nothrow_copy_constructible<_H1>>::value);
- 
+      _Hashtable(_Hashtable&&);
+
       _Hashtable&
       operator=(const _Hashtable& __ht)
       {
@@ -376,14 +374,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	_M_insert_bucket(_Arg&&, size_type,
 			 typename _Hashtable::_Hash_code_type);
 
-      template<typename _Arg>
-	std::pair<iterator, bool>
-	_M_insert(_Arg&&, std::true_type);
-
-      template<typename _Arg>
-	iterator
-	_M_insert(_Arg&&, std::false_type);
-
       typedef typename std::conditional<__unique_keys,
 					std::pair<iterator, bool>,
 					iterator>::type
@@ -395,38 +385,38 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 				   >::type
 	_Insert_Conv_Type;
 
+    protected:
+      template<typename _Arg>
+	std::pair<iterator, bool>
+	_M_insert(_Arg&&, std::true_type);
+
+      template<typename _Arg>
+	iterator
+	_M_insert(_Arg&&, std::false_type);
+
     public:
       // Insert and erase
       _Insert_Return_Type
       insert(const value_type& __v)
-      { return _M_insert(__v, std::integral_constant<bool, __unique_keys>()); }
+      { return _M_insert(__v, integral_constant<bool, __unique_keys>()); }
 
       iterator
       insert(const_iterator, const value_type& __v)
       { return _Insert_Conv_Type()(insert(__v)); }
 
-      _Insert_Return_Type
-      insert(value_type&& __v)
-      { return _M_insert(std::move(__v),
-			 std::integral_constant<bool, __unique_keys>()); }
-
-      iterator
-      insert(const_iterator, value_type&& __v)
-      { return _Insert_Conv_Type()(insert(std::move(__v))); }
-
       template<typename _Pair, typename = typename
-	       std::enable_if<!__constant_iterators
-			      && std::is_convertible<_Pair,
-						     value_type>::value>::type>
+	std::enable_if<__and_<integral_constant<bool, !__constant_iterators>,
+			      std::is_convertible<_Pair,
+						  value_type>>::value>::type>
 	_Insert_Return_Type
 	insert(_Pair&& __v)
 	{ return _M_insert(std::forward<_Pair>(__v),
-			   std::integral_constant<bool, __unique_keys>()); }
+			   integral_constant<bool, __unique_keys>()); }
 
       template<typename _Pair, typename = typename
-	       std::enable_if<!__constant_iterators
-			      && std::is_convertible<_Pair,
-						     value_type>::value>::type>
+        std::enable_if<__and_<integral_constant<bool, !__constant_iterators>,
+			      std::is_convertible<_Pair,
+						  value_type>>::value>::type>
 	iterator
 	insert(const_iterator, _Pair&& __v)
 	{ return _Insert_Conv_Type()(insert(std::forward<_Pair>(__v))); }
@@ -441,6 +431,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       iterator
       erase(const_iterator);
+
+      // LWG 2059.
+      iterator
+      erase(iterator __it)
+      { return erase(const_iterator(__it)); }
 
       size_type
       erase(const key_type&);
@@ -878,7 +873,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     }
 
   // Find the node whose key compares equal to k, beginning the search
-  // at p (usually the head of a bucket).  Return nil if no node is found.
+  // at p (usually the head of a bucket).  Return nullptr if no node is found.
   template<typename _Key, typename _Value,
 	   typename _Allocator, typename _ExtractKey, typename _Equal,
 	   typename _H1, typename _H2, typename _Hash, typename _RehashPolicy,
@@ -894,7 +889,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       for (; __p; __p = __p->_M_next)
 	if (this->_M_compare(__k, __code, __p))
 	  return __p;
-      return false;
+      return nullptr;
     }
 
   // Insert v in bucket n (assumes no element with its key already present).

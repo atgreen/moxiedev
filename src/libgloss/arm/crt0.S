@@ -34,6 +34,16 @@
 \name:
 .endm
 #endif
+
+.macro indirect_call reg
+#ifdef HAVE_CALL_INDIRECT
+	blx \reg
+#else
+	mov	lr, pc
+	mov	pc, \reg
+#endif
+.endm
+
 	.align 	0
 
 	FUNC_START	_mainCRTStartup
@@ -76,6 +86,17 @@
 	AngelSWIAsm	AngelSWI_ARM
 #endif
 	ldr	r0, .LC0	/*  point at values read */
+
+	ldr     r1, [r0, #0]
+	cmp     r1, #0
+	bne     .LC32
+	/* If the heap base value [r0, #0] is 0 then the heap base is actually 
+	   at the end of program data (i.e. __end__). See:
+           http://infocenter.arm.com/help/topic/com.arm.doc.dui0471-/Bacbefaa.html
+	   for more information.  */
+	ldr     r1, .LC31
+	str     r1, [r0, #0]
+.LC32:	
 	ldr	r1, [r0, #8]
 	ldr	r2, [r0, #12]
 	/*  We skip setting sp/sl if 0 returned from semihosting. 
@@ -213,22 +234,12 @@ __change_mode:
 	ldr	r3, .Lhwinit
 	cmp	r3, #0
 	beq	.LC24
-#if defined(__thumb__) || defined(__thumb2__)
-	blx   r3
-#else
-	mov	lr, pc
-	mov	pc, r3
-#endif
+	indirect_call r3
 .LC24:	
 	ldr	r3, .Lswinit
 	cmp	r3, #0
 	beq	.LC25
-#if defined(__thumb__) || defined(__thumb2__)
-	blx   r3
-#else
-	mov	lr, pc
-	mov	pc, r3
-#endif
+	indirect_call r3
 
 .LC25:	
 	movs	r0, #0		/*  no arguments  */
@@ -437,6 +448,8 @@ change_back:
 .LC30:
 	.word	CommandLine
 	.word	255
+.LC31:
+	.word	__end__
 
 /*  Workspace for Angel calls.  */
 	.data

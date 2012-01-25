@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/objc.dg/property
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ nicola
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-property-neg-1.m
-file
-
-
-
-
-2010-11-22T19:14:55.124784Z
-c90cdef75b55e198dab6313f5e862ca2
-2010-10-30T11:22:46.467614Z
-166087
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-363
 
 dotsyntax-deprecated-1.m
 file
@@ -93,6 +59,40 @@ nicola
 
 
 976
+
+property-neg-1.m
+file
+
+
+
+
+2010-11-22T19:14:55.124784Z
+c90cdef75b55e198dab6313f5e862ca2
+2010-10-30T11:22:46.467614Z
+166087
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+363
 
 property-neg-3.m
 file
@@ -1080,40 +1080,6 @@ nicola
 
 1396
 
-at-property-10.m
-file
-
-
-
-
-2010-11-22T19:14:55.130784Z
-d447564a14c98686522e0cfc3b8cbbf7
-2010-11-15T18:46:42.617570Z
-166763
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1735
-
 synthesize-2.m
 file
 
@@ -1148,17 +1114,17 @@ iains
 
 1124
 
-at-property-12.m
+at-property-10.m
 file
 
 
 
 
-2010-11-22T19:14:55.131799Z
-c13f51499cc098460ca1bf4de378d8a9
-2010-11-04T18:19:54.642316Z
-166321
-iains
+2010-11-22T19:14:55.130784Z
+d447564a14c98686522e0cfc3b8cbbf7
+2010-11-15T18:46:42.617570Z
+166763
+nicola
 
 
 
@@ -1180,7 +1146,7 @@ iains
 
 
 
-876
+1735
 
 synthesize-4.m
 file
@@ -1216,17 +1182,17 @@ nicola
 
 1257
 
-synthesize-6.m
+at-property-12.m
 file
 
 
 
 
 2010-11-22T19:14:55.131799Z
-ded74ad5c3f6b8dc812f1f3a02377bea
-2010-11-08T22:04:03.652444Z
-166456
-nicola
+c13f51499cc098460ca1bf4de378d8a9
+2010-11-04T18:19:54.642316Z
+166321
+iains
 
 
 
@@ -1248,7 +1214,7 @@ nicola
 
 
 
-987
+876
 
 at-property-14.m
 file
@@ -1284,16 +1250,16 @@ nicola
 
 1055
 
-synthesize-8.m
+synthesize-6.m
 file
 
 
 
 
-2010-11-22T19:14:55.132799Z
-9ba2b66f63ce98cbb427462ea2bd3467
-2010-11-11T18:58:43.630287Z
-166612
+2010-11-22T19:14:55.131799Z
+ded74ad5c3f6b8dc812f1f3a02377bea
+2010-11-08T22:04:03.652444Z
+166456
 nicola
 
 
@@ -1316,7 +1282,7 @@ nicola
 
 
 
-2355
+987
 
 at-property-16.m
 file
@@ -1352,16 +1318,16 @@ nicola
 
 2715
 
-at-property-18.m
+synthesize-8.m
 file
 
 
 
 
 2010-11-22T19:14:55.132799Z
-a19ca1e6a1741f11a4485e0100afe888
-2010-11-14T11:11:18.849974Z
-166730
+9ba2b66f63ce98cbb427462ea2bd3467
+2010-11-11T18:58:43.630287Z
+166612
 nicola
 
 
@@ -1384,7 +1350,7 @@ nicola
 
 
 
-2698
+2355
 
 dotsyntax-20.m
 file
@@ -1419,6 +1385,40 @@ nicola
 
 
 1342
+
+at-property-18.m
+file
+
+
+
+
+2010-11-22T19:14:55.132799Z
+a19ca1e6a1741f11a4485e0100afe888
+2010-11-14T11:11:18.849974Z
+166730
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2698
 
 dotsyntax-22.m
 file
@@ -1862,40 +1862,6 @@ nicola
 
 1754
 
-dotsyntax-16.m
-file
-
-
-
-
-2010-11-22T19:14:55.134793Z
-9051b360a0bdb368580d59c8bb913e71
-2010-11-15T23:12:49.409277Z
-166779
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1597
-
 fsf-property-named-ivar.m
 file
 
@@ -1930,14 +1896,14 @@ iains
 
 1285
 
-dotsyntax-18.m
+dotsyntax-16.m
 file
 
 
 
 
-2010-11-22T19:14:55.135792Z
-183ce73cd72915e34d49c74a9e70b887
+2010-11-22T19:14:55.134793Z
+9051b360a0bdb368580d59c8bb913e71
 2010-11-15T23:12:49.409277Z
 166779
 nicola
@@ -1962,41 +1928,7 @@ nicola
 
 
 
-1939
-
-dynamic-2.m
-file
-
-
-
-
-2010-11-22T19:14:55.135792Z
-3219cd54a38ec821b895f52e9fbc5102
-2010-11-03T23:52:18.522054Z
-166287
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-846
+1597
 
 at-property-deprecated-2.m
 file
@@ -2032,16 +1964,16 @@ nicola
 
 568
 
-synthesize-11.m
+dynamic-2.m
 file
 
 
 
 
 2010-11-22T19:14:55.135792Z
-029150c8e28059cbfd752ff7b0930798
-2010-11-14T11:11:18.849974Z
-166730
+3219cd54a38ec821b895f52e9fbc5102
+2010-11-03T23:52:18.522054Z
+166287
 nicola
 
 
@@ -2064,7 +1996,41 @@ nicola
 
 
 
-1224
+846
+
+dotsyntax-18.m
+file
+
+
+
+
+2010-11-22T19:14:55.135792Z
+183ce73cd72915e34d49c74a9e70b887
+2010-11-15T23:12:49.409277Z
+166779
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1939
 
 at-property-1.m
 file
@@ -2099,6 +2065,40 @@ nicola
 
 
 974
+
+synthesize-11.m
+file
+
+
+
+
+2010-11-22T19:14:55.135792Z
+029150c8e28059cbfd752ff7b0930798
+2010-11-14T11:11:18.849974Z
+166730
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1224
 
 dynamic-4.m
 file

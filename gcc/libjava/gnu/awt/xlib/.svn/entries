@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/awt/xlib
 svn://gcc.gnu.org/svn/gcc
 
@@ -638,40 +638,6 @@ tromey
 
 817
 
-XGraphics$XRaster.h
-file
-
-
-
-
-2009-04-24T17:48:55.000000Z
-5c35300a87a5397de75039f48380e0bd
-2007-01-11T00:15:27.668888Z
-120655
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1046
-
 XOffScreenImage.h
 file
 
@@ -705,6 +671,40 @@ tromey
 
 
 2648
+
+XGraphics$XRaster.h
+file
+
+
+
+
+2009-04-24T17:48:55.000000Z
+5c35300a87a5397de75039f48380e0bd
+2007-01-11T00:15:27.668888Z
+120655
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1046
 
 XGraphicsDevice.h
 file
@@ -774,40 +774,6 @@ doko
 
 12782
 
-XGraphicsConfiguration.java
-file
-
-
-
-
-2009-04-24T17:48:55.000000Z
-838dc3b8da79378e46009b988830f30a
-2005-09-23T21:31:04.000000Z
-104586
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-16124
-
 XFontPeer.h
 file
 
@@ -841,6 +807,40 @@ doko
 
 
 2613
+
+XGraphicsConfiguration.java
+file
+
+
+
+
+2009-04-24T17:48:55.000000Z
+838dc3b8da79378e46009b988830f30a
+2005-09-23T21:31:04.000000Z
+104586
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+16124
 
 XEventQueue.h
 file
@@ -876,40 +876,6 @@ tromey
 
 901
 
-XCanvasPeer.h
-file
-
-
-
-
-2009-04-24T17:48:55.000000Z
-83e21b0dd9aa7408ffa7b76d609da640
-2007-08-04T10:53:49.941399Z
-127204
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5288
-
 XFontMetrics.java
 file
 
@@ -944,17 +910,17 @@ rolfwr
 
 836
 
-XGraphicsConfiguration$FontMetricsCache$PerDisplayCache$CacheEntry.h
+XCanvasPeer.h
 file
 
 
 
 
 2009-04-24T17:48:55.000000Z
-f0ee41e21e268d8598bc5387314161c8
-2007-01-11T00:15:27.668888Z
-120655
-tromey
+83e21b0dd9aa7408ffa7b76d609da640
+2007-08-04T10:53:49.941399Z
+127204
+doko
 
 
 
@@ -976,7 +942,7 @@ tromey
 
 
 
-1350
+5288
 
 XFontMetrics.h
 file
@@ -1012,17 +978,17 @@ tromey
 
 1038
 
-XFramePeer.java
+XGraphicsConfiguration$FontMetricsCache$PerDisplayCache$CacheEntry.h
 file
 
 
 
 
 2009-04-24T17:48:55.000000Z
-cfc80a87f2d6a967594f714343db836c
-2007-08-04T10:53:49.941399Z
-127204
-doko
+f0ee41e21e268d8598bc5387314161c8
+2007-01-11T00:15:27.668888Z
+120655
+tromey
 
 
 
@@ -1044,7 +1010,7 @@ doko
 
 
 
-5688
+1350
 
 XGraphics.h
 file
@@ -1079,4 +1045,38 @@ tromey
 
 
 2630
+
+XFramePeer.java
+file
+
+
+
+
+2009-04-24T17:48:55.000000Z
+cfc80a87f2d6a967594f714343db836c
+2007-08-04T10:53:49.941399Z
+127204
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5688
 

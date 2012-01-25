@@ -563,10 +563,13 @@ store_bit_field_1 (rtx str_rtx, unsigned HOST_WIDE_INT bitsize,
 	  /* If the remaining chunk doesn't have full wordsize we have
 	     to make sure that for big endian machines the higher order
 	     bits are used.  */
-	  if (new_bitsize < BITS_PER_WORD && BYTES_BIG_ENDIAN)
-	    value_word = extract_bit_field (value_word, new_bitsize, 0,
-					    true, false, NULL_RTX,
-					    BLKmode, word_mode);
+	  if (new_bitsize < BITS_PER_WORD && BYTES_BIG_ENDIAN && !backwards)
+	    value_word = simplify_expand_binop (word_mode, lshr_optab,
+						value_word,
+						GEN_INT (BITS_PER_WORD
+							 - new_bitsize),
+						NULL_RTX, true,
+						OPTAB_LIB_WIDEN);
 
 	  if (!store_bit_field_1 (op0, new_bitsize,
 				  bitnum + bit_offset,
@@ -2948,6 +2951,7 @@ expand_mult_const (enum machine_mode mode, rtx op0, HOST_WIDE_INT val,
 	   && !optimize)
 	  ? target : 0;
       rtx accum_target = optimize ? 0 : accum;
+      rtx accum_inner;
 
       switch (alg->op[opno])
 	{
@@ -3013,16 +3017,18 @@ expand_mult_const (enum machine_mode mode, rtx op0, HOST_WIDE_INT val,
 	 that.  */
 
       tem = op0, nmode = mode;
+      accum_inner = accum;
       if (GET_CODE (accum) == SUBREG)
 	{
-	  nmode = GET_MODE (SUBREG_REG (accum));
+	  accum_inner = SUBREG_REG (accum);
+	  nmode = GET_MODE (accum_inner);
 	  tem = gen_lowpart (nmode, op0);
 	}
 
       insn = get_last_insn ();
-      set_unique_reg_note (insn, REG_EQUAL,
-			   gen_rtx_MULT (nmode, tem,
-					 GEN_INT (val_so_far)));
+      set_dst_reg_note (insn, REG_EQUAL,
+			gen_rtx_MULT (nmode, tem, GEN_INT (val_so_far)),
+			accum_inner);
     }
 
   if (variant == negate_variant)
@@ -3832,7 +3838,7 @@ expand_divmod (int rem_flag, enum tree_code code, enum machine_mode mode,
   rtx quotient = 0, remainder = 0;
   rtx last;
   int size;
-  rtx insn, set;
+  rtx insn;
   optab optab1, optab2;
   int op1_is_constant, op1_is_pow2 = 0;
   int max_cost, extra_cost;
@@ -4136,12 +4142,10 @@ expand_divmod (int rem_flag, enum tree_code code, enum machine_mode mode,
 		  break;
 
 		insn = get_last_insn ();
-		if (insn != last
-		    && (set = single_set (insn)) != 0
-		    && SET_DEST (set) == quotient)
-		  set_unique_reg_note (insn,
-				       REG_EQUAL,
-				       gen_rtx_UDIV (compute_mode, op0, op1));
+		if (insn != last)
+		  set_dst_reg_note (insn, REG_EQUAL,
+				    gen_rtx_UDIV (compute_mode, op0, op1),
+				    quotient);
 	      }
 	    else		/* TRUNC_DIV, signed */
 	      {
@@ -4220,18 +4224,14 @@ expand_divmod (int rem_flag, enum tree_code code, enum machine_mode mode,
 		      {
 			insn = get_last_insn ();
 			if (insn != last
-			    && (set = single_set (insn)) != 0
-			    && SET_DEST (set) == quotient
 			    && abs_d < ((unsigned HOST_WIDE_INT) 1
 					<< (HOST_BITS_PER_WIDE_INT - 1)))
-			  set_unique_reg_note (insn,
-					       REG_EQUAL,
-					       gen_rtx_DIV (compute_mode,
-							    op0,
-							    GEN_INT
-							    (trunc_int_for_mode
-							     (abs_d,
-							      compute_mode))));
+			  set_dst_reg_note (insn, REG_EQUAL,
+					    gen_rtx_DIV (compute_mode, op0,
+							 gen_int_mode
+							   (abs_d,
+							    compute_mode)),
+					    quotient);
 
 			quotient = expand_unop (compute_mode, neg_optab,
 						quotient, quotient, 0);
@@ -4318,12 +4318,10 @@ expand_divmod (int rem_flag, enum tree_code code, enum machine_mode mode,
 		  break;
 
 		insn = get_last_insn ();
-		if (insn != last
-		    && (set = single_set (insn)) != 0
-		    && SET_DEST (set) == quotient)
-		  set_unique_reg_note (insn,
-				       REG_EQUAL,
-				       gen_rtx_DIV (compute_mode, op0, op1));
+		if (insn != last)
+		  set_dst_reg_note (insn, REG_EQUAL,
+				    gen_rtx_DIV (compute_mode, op0, op1),
+				    quotient);
 	      }
 	    break;
 	  }
@@ -4741,11 +4739,10 @@ expand_divmod (int rem_flag, enum tree_code code, enum machine_mode mode,
 				    NULL_RTX, 1);
 
 	    insn = get_last_insn ();
-	    set_unique_reg_note (insn,
-				 REG_EQUAL,
-				 gen_rtx_fmt_ee (unsignedp ? UDIV : DIV,
-						 compute_mode,
-						 op0, op1));
+	    set_dst_reg_note (insn, REG_EQUAL,
+			      gen_rtx_fmt_ee (unsignedp ? UDIV : DIV,
+					      compute_mode, op0, op1),
+			      quotient);
 	  }
 	break;
 

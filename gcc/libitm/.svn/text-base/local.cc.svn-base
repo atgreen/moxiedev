@@ -1,4 +1,4 @@
-/* Copyright (C) 2008, 2009, 2011 Free Software Foundation, Inc.
+/* Copyright (C) 2008, 2009, 2011, 2012 Free Software Foundation, Inc.
    Contributed by Richard Henderson <rth@redhat.com>.
 
    This file is part of the GNU Transactional Memory Library (libitm).
@@ -26,67 +26,42 @@
 
 namespace GTM HIDDEN {
 
-struct gtm_undolog_entry
-{
-  void *addr;
-  size_t len;
-  char saved[];
-};
-
-
-void
-gtm_thread::commit_undolog ()
-{
-  size_t i, n = undolog.size();
-
-  if (n > 0)
-    {
-      for (i = 0; i < n; ++i)
-	free (undolog[i]);
-      this->undolog.clear();
-    }
-}
-
-void
-gtm_thread::rollback_undolog (size_t until_size)
+// This function needs to be noinline because we need to prevent that it gets
+// inlined into another function that calls further functions. This could
+// break our assumption that we only call memcpy and thus only need to
+// additionally protect the memcpy stack (see the hack in mask_stack_bottom()).
+// Even if that isn't an issue because those other calls don't happen during
+// copying, we still need mask_stack_bottom() to be called "close" to the
+// memcpy in terms of stack frames, so just ensure that for now using the
+// noinline.
+void __attribute__((noinline))
+gtm_undolog::rollback (gtm_thread* tx, size_t until_size)
 {
   size_t i, n = undolog.size();
+  void *top = mask_stack_top(tx);
+  void *bot = mask_stack_bottom(tx);
 
   if (n > 0)
     {
       for (i = n; i-- > until_size; )
 	{
-	  gtm_undolog_entry *u = *undolog.pop();
-	  if (u)
-	    {
-	      memcpy (u->addr, u->saved, u->len);
-	      free (u);
-	    }
+          void *ptr = (void *) undolog[i--];
+          size_t len = undolog[i];
+          size_t words = (len + sizeof(gtm_word) - 1) / sizeof(gtm_word);
+          i -= words;
+          // Filter out any updates that overlap the libitm stack.  We don't
+          // bother filtering out just the overlapping bytes because we don't
+          // merge writes and thus any overlapping write is either bogus or
+          // would restore data on stack frames that are not in use anymore.
+          // FIXME The memcpy can/will end up as another call but we
+          // calculated BOT based on the current function.  Can we inline or
+          // reimplement this without too much trouble due to unaligned calls
+          // and still have good performance, so that we can remove the hack
+          // in mask_stack_bottom()?
+          if (likely(ptr > top || (uint8_t*)ptr + len <= bot))
+            __builtin_memcpy (ptr, &undolog[i], len);
 	}
-    }
-}
-
-/* Forget any references to PTR in the local log.  */
-
-void
-gtm_thread::drop_references_undolog (const void *ptr, size_t len)
-{
-  size_t i, n = undolog.size();
-
-  if (n > 0)
-    {
-      for (i = n; i > 0; i--)
-	{
-	  gtm_undolog_entry *u = undolog[i];
-	  /* ?? Do we need such granularity, or can we get away with
-	     just comparing PTR and LEN. ??  */
-	  if ((const char *)u->addr >= (const char *)ptr
-	      && ((const char *)u->addr + u->len <= (const char *)ptr + len))
-	    {
-	      free (u);
-	      undolog[i] = NULL;
-	    }
-	}
+      undolog.set_size(until_size);
     }
 }
 
@@ -94,16 +69,7 @@ void ITM_REGPARM
 GTM_LB (const void *ptr, size_t len)
 {
   gtm_thread *tx = gtm_thr();
-  gtm_undolog_entry *undo;
-
-  undo = (gtm_undolog_entry *)
-      xmalloc (sizeof (struct gtm_undolog_entry) + len);
-  undo->addr = (void *) ptr;
-  undo->len = len;
-
-  tx->undolog.push()[0] = undo;
-
-  memcpy (undo->saved, ptr, len);
+  tx->undolog.log(ptr, len);
 }
 
 } // namespace GTM

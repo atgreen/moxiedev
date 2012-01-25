@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libgcc/config/epiphany
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ amylaar
 
 2444
 
-crtrunc.S
-file
-
-
-
-
-2011-11-12T11:41:40.757646Z
-8963070fc33c455a1b26bdbf34029eaf
-2011-11-05T20:48:23.466738Z
-181016
-amylaar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1100
-
 epiphany-asm.h
 file
 
@@ -127,6 +93,40 @@ amylaar
 
 
 1829
+
+crtrunc.S
+file
+
+
+
+
+2011-11-12T11:41:40.757646Z
+8963070fc33c455a1b26bdbf34029eaf
+2011-11-05T20:48:23.466738Z
+181016
+amylaar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1100
 
 divsi3.c
 file
@@ -162,9 +162,6 @@ amylaar
 
 2722
 
-ieee-754
-dir
-
 umodsi3.S
 file
 
@@ -199,39 +196,8 @@ amylaar
 
 2150
 
-umodsi3-float.S
-file
-
-
-
-
-2011-11-12T11:41:40.758646Z
-fcd9fac8dbc5861cc1abc26bd025c411
-2011-11-05T20:48:23.466738Z
-181016
-amylaar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2138
+ieee-754
+dir
 
 udivsi3.S
 file
@@ -266,6 +232,40 @@ amylaar
 
 
 2162
+
+umodsi3-float.S
+file
+
+
+
+
+2011-11-12T11:41:40.758646Z
+fcd9fac8dbc5861cc1abc26bd025c411
+2011-11-05T20:48:23.466738Z
+181016
+amylaar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2138
 
 udivsi3-float.S
 file
@@ -335,40 +335,6 @@ amylaar
 
 1089
 
-crtm1reg-r63.S
-file
-
-
-
-
-2011-11-12T11:41:40.759646Z
-3246cdbc2f1613e15bfca12ca03e3f96
-2011-11-05T20:48:23.466738Z
-181016
-amylaar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1089
-
 mulsi3.c
 file
 
@@ -402,6 +368,40 @@ amylaar
 
 
 1220
+
+crtm1reg-r63.S
+file
+
+
+
+
+2011-11-12T11:41:40.759646Z
+3246cdbc2f1613e15bfca12ca03e3f96
+2011-11-05T20:48:23.466738Z
+181016
+amylaar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1089
 
 modsi3.S
 file
@@ -437,40 +437,6 @@ amylaar
 
 2270
 
-crti.S
-file
-
-
-
-
-2011-11-12T11:41:40.759646Z
-892285edfeed9f524869694c4dba4c12
-2011-11-05T20:48:23.466738Z
-181016
-amylaar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1180
-
 divsi3.S
 file
 
@@ -504,6 +470,40 @@ amylaar
 
 
 2212
+
+crti.S
+file
+
+
+
+
+2011-11-12T11:41:40.759646Z
+892285edfeed9f524869694c4dba4c12
+2011-11-05T20:48:23.466738Z
+181016
+amylaar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1180
 
 modsi3-float.S
 file

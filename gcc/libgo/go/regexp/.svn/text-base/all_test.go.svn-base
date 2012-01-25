@@ -5,7 +5,6 @@
 package regexp
 
 import (
-	"os"
 	"strings"
 	"testing"
 )
@@ -33,7 +32,7 @@ var good_re = []string{
 /*
 type stringError struct {
 	re  string
-	err os.Error
+	err error
 }
 
 var bad_re = []stringError{
@@ -53,10 +52,10 @@ var bad_re = []stringError{
 }
 */
 
-func compileTest(t *testing.T, expr string, error os.Error) *Regexp {
+func compileTest(t *testing.T, expr string, error error) *Regexp {
 	re, err := Compile(expr)
 	if err != error {
-		t.Error("compiling `", expr, "`; unexpected error: ", err.String())
+		t.Error("compiling `", expr, "`; unexpected error: ", err.Error())
 	}
 	return re
 }
@@ -325,8 +324,7 @@ func BenchmarkLiteral(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		if !re.MatchString(x) {
-			println("no match!")
-			break
+			b.Fatalf("no match!")
 		}
 	}
 }
@@ -338,8 +336,7 @@ func BenchmarkNotLiteral(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		if !re.MatchString(x) {
-			println("no match!")
-			break
+			b.Fatalf("no match!")
 		}
 	}
 }
@@ -351,8 +348,7 @@ func BenchmarkMatchClass(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		if !re.MatchString(x) {
-			println("no match!")
-			break
+			b.Fatalf("no match!")
 		}
 	}
 }
@@ -366,8 +362,7 @@ func BenchmarkMatchClass_InRange(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		if !re.MatchString(x) {
-			println("no match!")
-			break
+			b.Fatalf("no match!")
 		}
 	}
 }

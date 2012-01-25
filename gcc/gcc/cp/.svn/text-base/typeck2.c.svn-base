@@ -428,15 +428,20 @@ cxx_incomplete_type_diagnostic (const_tree value, const_tree type,
 
     case OFFSET_TYPE:
     bad_member:
-      if (DECL_FUNCTION_MEMBER_P (TREE_OPERAND (value, 1))
-	  && ! flag_ms_extensions)
-	emit_diagnostic (diag_kind, input_location, 0,
-			 "invalid use of member function "
-			 "(did you forget the %<()%> ?)");
-      else
-	emit_diagnostic (diag_kind, input_location, 0,
-			 "invalid use of member "
-			 "(did you forget the %<&%> ?)");
+      {
+	tree member = TREE_OPERAND (value, 1);
+	if (is_overloaded_fn (member))
+	  member = get_first_fn (member);
+	if (DECL_FUNCTION_MEMBER_P (member)
+	    && ! flag_ms_extensions)
+	  emit_diagnostic (diag_kind, input_location, 0,
+			   "invalid use of member function "
+			   "(did you forget the %<()%> ?)");
+	else
+	  emit_diagnostic (diag_kind, input_location, 0,
+			   "invalid use of member "
+			   "(did you forget the %<&%> ?)");
+      }
       break;
 
     case TEMPLATE_TYPE_PARM:
@@ -713,8 +718,14 @@ store_init_value (tree decl, tree init, VEC(tree,gc)** cleanups, int flags)
       value = fold_non_dependent_expr (value);
       value = maybe_constant_init (value);
       if (DECL_DECLARED_CONSTEXPR_P (decl))
-	/* Diagnose a non-constant initializer for constexpr.  */
-	value = cxx_constant_value (value);
+	{
+	  /* Diagnose a non-constant initializer for constexpr.  */
+	  if (processing_template_decl
+	      && !require_potential_constant_expression (value))
+	    value = error_mark_node;
+	  else
+	    value = cxx_constant_value (value);
+	}
       const_init = (reduced_constant_expression_p (value)
 		    || error_operand_p (value));
       DECL_INITIALIZED_BY_CONSTANT_EXPRESSION_P (decl) = const_init;
@@ -897,7 +908,11 @@ digest_init_r (tree type, tree init, bool nested, int flags,
 		}
 	    }
 
-	  TREE_TYPE (init) = type;
+	  if (type != TREE_TYPE (init))
+	    {
+	      init = copy_node (init);
+	      TREE_TYPE (init) = type;
+	    }
 	  if (TYPE_DOMAIN (type) != 0 && TREE_CONSTANT (TYPE_SIZE (type)))
 	    {
 	      int size = TREE_INT_CST_LOW (TYPE_SIZE (type));
@@ -1653,7 +1668,7 @@ build_functional_cast (tree exp, tree parms, tsubst_flags_t complain)
     {
       if (complain & tf_error)
 	error ("invalid use of %<auto%>");
-      type = error_mark_node;
+      return error_mark_node;
     }
 
   if (processing_template_decl)

@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/obj-c++.dg/property
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ nicola
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-synthesize-7.mm
-file
-
-
-
-
-2010-11-22T19:14:58.183054Z
-4f3eeaf37c954e5518b294f41379ebd7
-2010-11-08T22:38:04.636772Z
-166457
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1463
 
 at-property-15.mm
 file
@@ -93,6 +59,40 @@ nicola
 
 
 630
+
+synthesize-7.mm
+file
+
+
+
+
+2010-11-22T19:14:58.183054Z
+4f3eeaf37c954e5518b294f41379ebd7
+2010-11-08T22:38:04.636772Z
+166457
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1463
 
 at-property-25.mm
 file
@@ -162,16 +162,16 @@ nicola
 
 1296
 
-at-property-19.mm
+dotsyntax-21.mm
 file
 
 
 
 
-2010-11-22T19:14:58.184044Z
-90db711d07cb40e0e86da5a538b8d6af
-2010-11-08T21:47:59.255160Z
-166455
+2011-06-04T18:04:06.141104Z
+2a895e16da791f76f17b1641ab174e11
+2010-11-29T20:43:35.386720Z
+167269
 nicola
 
 
@@ -194,7 +194,7 @@ nicola
 
 
 
-1386
+2083
 
 fsf-property-method-access.mm
 file
@@ -230,16 +230,16 @@ iains
 
 1518
 
-dotsyntax-21.mm
+at-property-19.mm
 file
 
 
 
 
-2011-06-04T18:04:06.141104Z
-2a895e16da791f76f17b1641ab174e11
-2010-11-29T20:43:35.386720Z
-167269
+2010-11-22T19:14:58.184044Z
+90db711d07cb40e0e86da5a538b8d6af
+2010-11-08T21:47:59.255160Z
+166455
 nicola
 
 
@@ -262,7 +262,7 @@ nicola
 
 
 
-2083
+1386
 
 at-property-29.mm
 file
@@ -332,40 +332,6 @@ nicola
 
 1687
 
-dotsyntax-19.mm
-file
-
-
-
-
-2010-11-22T19:14:58.185075Z
-eb58d1400102d41ae00928f61acf1e1e
-2010-11-15T23:12:49.409277Z
-166779
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2361
-
 dynamic-3.mm
 file
 
@@ -399,6 +365,40 @@ nicola
 
 
 994
+
+dotsyntax-19.mm
+file
+
+
+
+
+2010-11-22T19:14:58.185075Z
+eb58d1400102d41ae00928f61acf1e1e
+2010-11-15T23:12:49.409277Z
+166779
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2361
 
 at-property-3.mm
 file
@@ -434,40 +434,6 @@ nicola
 
 459
 
-property-neg-1.mm
-file
-
-
-
-
-2010-11-22T19:14:58.185075Z
-c90cdef75b55e198dab6313f5e862ca2
-2010-10-30T11:22:46.467614Z
-166087
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-363
-
 dotsyntax-deprecated-1.mm
 file
 
@@ -501,6 +467,40 @@ nicola
 
 
 976
+
+property-neg-1.mm
+file
+
+
+
+
+2010-11-22T19:14:58.185075Z
+c90cdef75b55e198dab6313f5e862ca2
+2010-10-30T11:22:46.467614Z
+166087
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+363
 
 at-property-7.mm
 file
@@ -1046,16 +1046,16 @@ nicola
 
 1614
 
-dynamic-2.mm
+at-property-deprecated-2.mm
 file
 
 
 
 
 2011-06-04T18:04:06.143104Z
-82ab39ae9987cffaa32feb4f728bb869
-2011-01-12T09:46:56.142275Z
-168699
+8fa9289b5f1c9ec31a2121903fd8b4ac
+2010-12-29T12:22:09.707721Z
+168315
 nicola
 
 
@@ -1078,7 +1078,7 @@ nicola
 
 
 
-849
+568
 
 dotsyntax-18.mm
 file
@@ -1114,16 +1114,16 @@ nicola
 
 1939
 
-at-property-deprecated-2.mm
+dynamic-2.mm
 file
 
 
 
 
 2011-06-04T18:04:06.143104Z
-8fa9289b5f1c9ec31a2121903fd8b4ac
-2010-12-29T12:22:09.707721Z
-168315
+82ab39ae9987cffaa32feb4f728bb869
+2011-01-12T09:46:56.142275Z
+168699
 nicola
 
 
@@ -1146,7 +1146,7 @@ nicola
 
 
 
-568
+849
 
 at-property-2.mm
 file
@@ -1386,17 +1386,17 @@ nicola
 
 1253
 
-synthesize-5.mm
+property.exp
 file
 
 
 
 
-2010-11-22T19:14:58.190064Z
-0c64478f4593722c5b0965494c85211a
-2010-11-08T22:04:03.652444Z
-166456
-nicola
+2011-06-04T18:04:06.144104Z
+bf9998049173722889fe11554d739264
+2011-02-10T11:34:09.841747Z
+170001
+iains
 
 
 
@@ -1418,7 +1418,7 @@ nicola
 
 
 
-594
+1465
 
 at-property-13.mm
 file
@@ -1454,17 +1454,17 @@ iains
 
 1847
 
-property.exp
+synthesize-5.mm
 file
 
 
 
 
-2011-06-04T18:04:06.144104Z
-bf9998049173722889fe11554d739264
-2011-02-10T11:34:09.841747Z
-170001
-iains
+2010-11-22T19:14:58.190064Z
+0c64478f4593722c5b0965494c85211a
+2010-11-08T22:04:03.652444Z
+166456
+nicola
 
 
 
@@ -1486,7 +1486,7 @@ iains
 
 
 
-1465
+594
 
 at-property-23.mm
 file
@@ -1522,40 +1522,6 @@ nicola
 
 581
 
-synthesize-9.mm
-file
-
-
-
-
-2011-06-04T18:04:06.144104Z
-63b97d880267a113412eb59c5be9b596
-2011-01-12T09:46:56.142275Z
-168699
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2279
-
 at-property-17.mm
 file
 
@@ -1589,6 +1555,40 @@ nicola
 
 
 1653
+
+synthesize-9.mm
+file
+
+
+
+
+2011-06-04T18:04:06.144104Z
+63b97d880267a113412eb59c5be9b596
+2011-01-12T09:46:56.142275Z
+168699
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2279
 
 at-property-27.mm
 file
@@ -1658,16 +1658,16 @@ nicola
 
 922
 
-at-property-deprecated-1.mm
+property-1.mm
 file
 
 
 
 
-2011-06-04T18:04:06.145104Z
-04cdfbecf5b1dd0ef4201ccbfc7fd77a
-2010-12-29T12:22:09.707721Z
-168315
+2011-06-11T04:08:12.673913Z
+3a0b152e1f99f0f581b04649efadd6f5
+2011-06-06T22:46:58.006232Z
+174727
 nicola
 
 
@@ -1690,41 +1690,7 @@ nicola
 
 
 
-761
-
-dotsyntax-17.mm
-file
-
-
-
-
-2010-11-22T19:14:58.192043Z
-a4de94c1a4f24eb2b0725f0fc9a853d8
-2010-11-15T23:12:49.409277Z
-166779
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1795
+606
 
 dynamic-1.mm
 file
@@ -1760,16 +1726,16 @@ nicola
 
 564
 
-property-1.mm
+dotsyntax-17.mm
 file
 
 
 
 
-2011-06-11T04:08:12.673913Z
-3a0b152e1f99f0f581b04649efadd6f5
-2011-06-06T22:46:58.006232Z
-174727
+2010-11-22T19:14:58.192043Z
+a4de94c1a4f24eb2b0725f0fc9a853d8
+2010-11-15T23:12:49.409277Z
+166779
 nicola
 
 
@@ -1792,7 +1758,41 @@ nicola
 
 
 
-606
+1795
+
+at-property-deprecated-1.mm
+file
+
+
+
+
+2011-06-04T18:04:06.145104Z
+04cdfbecf5b1dd0ef4201ccbfc7fd77a
+2010-12-29T12:22:09.707721Z
+168315
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+761
 
 cxx-property-2.mm
 file
@@ -1828,40 +1828,6 @@ nicola
 
 601
 
-synthesize-11.mm
-file
-
-
-
-
-2011-06-04T18:04:06.145104Z
-1b8e500613c1b6487f7560468d6a390d
-2011-01-12T09:46:56.142275Z
-168699
-nicola
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1224
-
 at-property-1.mm
 file
 
@@ -1895,6 +1861,40 @@ nicola
 
 
 780
+
+synthesize-11.mm
+file
+
+
+
+
+2011-06-04T18:04:06.145104Z
+1b8e500613c1b6487f7560468d6a390d
+2011-01-12T09:46:56.142275Z
+168699
+nicola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1224
 
 dynamic-5.mm
 file
@@ -1998,40 +1998,6 @@ nicola
 
 342
 
-at-property-9.mm
-file
-
-
-
-
-2010-11-22T19:14:58.194043Z
-9368e6a634029a5e9ce7424299109150
-2010-11-05T10:03:54.882256Z
-166352
-iains
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-999
-
 dotsyntax-2.mm
 file
 
@@ -2065,6 +2031,40 @@ iains
 
 
 1433
+
+at-property-9.mm
+file
+
+
+
+
+2010-11-22T19:14:58.194043Z
+9368e6a634029a5e9ce7424299109150
+2010-11-05T10:03:54.882256Z
+166352
+iains
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+999
 
 property-neg-7.mm
 file

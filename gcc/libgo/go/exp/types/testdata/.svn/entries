@@ -1,14 +1,14 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/exp/types/testdata
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-10-26T23:57:58.673671Z
-180552
+2011-12-02T19:34:41.353395Z
+181938
 ian
 
 
@@ -25,6 +25,40 @@ ian
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+test0.src
+file
+
+
+
+
+2012-01-20T20:49:49.353555Z
+58c03b72c3745b45cd0064a81d6110dd
+2011-12-02T19:34:41.353395Z
+181938
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2277
 
 exports.go
 file

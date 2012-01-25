@@ -7,7 +7,8 @@ package zip
 import (
 	"bytes"
 	"io/ioutil"
-	"rand"
+	"math/rand"
+	"os"
 	"testing"
 )
 
@@ -17,20 +18,39 @@ type WriteTest struct {
 	Name   string
 	Data   []byte
 	Method uint16
-	Mode   uint32
+	Mode   os.FileMode
 }
 
 var writeTests = []WriteTest{
-	WriteTest{
+	{
 		Name:   "foo",
 		Data:   []byte("Rabbits, guinea pigs, gophers, marsupial rats, and quolls."),
 		Method: Store,
+		Mode:   0666,
 	},
-	WriteTest{
+	{
 		Name:   "bar",
 		Data:   nil, // large data set in the test
 		Method: Deflate,
-		Mode:   0x81ed,
+		Mode:   0644,
+	},
+	{
+		Name:   "setuid",
+		Data:   []byte("setuid file"),
+		Method: Deflate,
+		Mode:   0755 | os.ModeSetuid,
+	},
+	{
+		Name:   "setgid",
+		Data:   []byte("setgid file"),
+		Method: Deflate,
+		Mode:   0755 | os.ModeSetgid,
+	},
+	{
+		Name:   "setgid",
+		Data:   []byte("setgid file"),
+		Method: Deflate,
+		Mode:   0755 | os.ModeSetgid,
 	},
 }
 

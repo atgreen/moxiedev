@@ -332,12 +332,6 @@ enum optab_index
   OTI_vec_set,
   /* Extract specified field of vector operand.  */
   OTI_vec_extract,
-  /* Extract even/odd fields of vector operands.  */
-  OTI_vec_extract_even,
-  OTI_vec_extract_odd,
-  /* Interleave fields of vector operands.  */
-  OTI_vec_interleave_high,
-  OTI_vec_interleave_low,
   /* Initialize vector operand.  */
   OTI_vec_init,
   /* Whole vector shift. The shift amount is in bits.  */
@@ -562,10 +556,6 @@ enum optab_index
 
 #define vec_set_optab (&optab_table[OTI_vec_set])
 #define vec_extract_optab (&optab_table[OTI_vec_extract])
-#define vec_extract_even_optab (&optab_table[OTI_vec_extract_even])
-#define vec_extract_odd_optab (&optab_table[OTI_vec_extract_odd])
-#define vec_interleave_high_optab (&optab_table[OTI_vec_interleave_high])
-#define vec_interleave_low_optab (&optab_table[OTI_vec_interleave_low])
 #define vec_init_optab (&optab_table[OTI_vec_init])
 #define vec_shl_optab (&optab_table[OTI_vec_shl])
 #define vec_shr_optab (&optab_table[OTI_vec_shr])
@@ -869,6 +859,10 @@ extern rtx expand_ternary_op (enum machine_mode mode, optab ternary_optab,
 extern rtx expand_binop (enum machine_mode, optab, rtx, rtx, rtx, int,
 			 enum optab_methods);
 
+extern rtx simplify_expand_binop (enum machine_mode mode, optab binoptab,
+				  rtx op0, rtx op1, rtx target, int unsignedp,
+				  enum optab_methods methods);
+
 extern bool force_expand_binop (enum machine_mode, optab, rtx, rtx, rtx, int,
 				enum optab_methods);
 
@@ -1007,9 +1001,6 @@ extern rtx expand_vec_shift_expr (sepops, rtx);
 
 /* Return tree if target supports vector operations for VEC_PERM_EXPR.  */
 extern bool can_vec_perm_p (enum machine_mode, bool, const unsigned char *);
-
-/* Return true if target supports vector operations using VEC_PERM_EXPR.  */
-extern bool can_vec_perm_for_code_p (enum tree_code, enum machine_mode, rtx *);
 
 /* Generate code for VEC_PERM_EXPR.  */
 extern rtx expand_vec_perm (enum machine_mode, rtx, rtx, rtx, rtx);

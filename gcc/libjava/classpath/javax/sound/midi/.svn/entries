@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/sound/midi
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ gandalf
 
 2704
 
-InvalidMidiDataException.java
-file
-
-
-
-
-2011-06-04T18:37:59.313104Z
-288bb7efc36fffb1ee0bffe43a14c8e1
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2359
-
 MidiDevice.java
 file
 
@@ -128,14 +94,14 @@ gandalf
 
 5930
 
-Track.java
+InvalidMidiDataException.java
 file
 
 
 
 
-2011-06-04T18:37:59.314104Z
-26eef1d53352301d46c2bf3a64607e7d
+2011-06-04T18:37:59.313104Z
+288bb7efc36fffb1ee0bffe43a14c8e1
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -160,41 +126,7 @@ gandalf
 
 
 
-4426
-
-ShortMessage.java
-file
-
-
-
-
-2011-06-04T18:37:59.314104Z
-7bad20a6e8c5d272199da844bb400e79
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8962
+2359
 
 Receiver.java
 file
@@ -230,6 +162,74 @@ gandalf
 
 2506
 
+ShortMessage.java
+file
+
+
+
+
+2011-06-04T18:37:59.314104Z
+7bad20a6e8c5d272199da844bb400e79
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8962
+
+Track.java
+file
+
+
+
+
+2011-06-04T18:37:59.314104Z
+26eef1d53352301d46c2bf3a64607e7d
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4426
+
 MidiUnavailableException.java
 file
 
@@ -263,40 +263,6 @@ gandalf
 
 
 2360
-
-Instrument.java
-file
-
-
-
-
-2011-06-04T18:37:59.315104Z
-4c9be0350d65cf608aac1733e4ca1efb
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2639
 
 Sequence.java
 file
@@ -332,6 +298,40 @@ gandalf
 
 6941
 
+Instrument.java
+file
+
+
+
+
+2011-06-04T18:37:59.315104Z
+4c9be0350d65cf608aac1733e4ca1efb
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2639
+
 VoiceStatus.java
 file
 
@@ -366,6 +366,9 @@ gandalf
 
 2471
 
+spi
+dir
+
 MidiChannel.java
 file
 
@@ -399,9 +402,6 @@ gandalf
 
 
 6072
-
-spi
-dir
 
 Transmitter.java
 file

@@ -513,6 +513,8 @@ struct cgraph_node * cgraph_clone_node (struct cgraph_node *, tree, gcov_type,
 					int, bool, VEC(cgraph_edge_p,heap) *,
 					bool);
 struct cgraph_node *cgraph_create_function_alias (tree, tree);
+void cgraph_call_node_duplication_hooks (struct cgraph_node *node1,
+					 struct cgraph_node *node2);
 
 void cgraph_redirect_edge_callee (struct cgraph_edge *, struct cgraph_node *);
 void cgraph_make_edge_direct (struct cgraph_edge *, struct cgraph_node *);
@@ -578,10 +580,10 @@ struct cgraph_node * cgraph_copy_node_for_versioning (struct cgraph_node *,
 struct cgraph_node *cgraph_function_versioning (struct cgraph_node *,
 						VEC(cgraph_edge_p,heap)*,
 						VEC(ipa_replace_map_p,gc)*,
-						bitmap, bitmap, basic_block,
-						const char *);
-void tree_function_versioning (tree, tree, VEC (ipa_replace_map_p,gc)*, bool, bitmap,
-			       bitmap, basic_block);
+						bitmap, bool, bitmap,
+						basic_block, const char *);
+void tree_function_versioning (tree, tree, VEC (ipa_replace_map_p,gc)*,
+			       bool, bitmap, bool, bitmap, basic_block);
 void record_references_in_initializer (tree, bool);
 bool cgraph_process_new_functions (void);
 void cgraph_process_same_body_aliases (void);
@@ -733,7 +735,7 @@ cgraph_first_defined_function (void)
   return NULL;
 }
 
-/* Return next reachable static variable with initializer after NODE.  */
+/* Return next function with body defined after NODE.  */
 static inline struct cgraph_node *
 cgraph_next_defined_function (struct cgraph_node *node)
 {

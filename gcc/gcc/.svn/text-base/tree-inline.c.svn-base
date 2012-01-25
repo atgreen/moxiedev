@@ -1,6 +1,6 @@
 /* Tree inlining.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
+   2012 Free Software Foundation, Inc.
    Contributed by Alexandre Oliva <aoliva@redhat.com>
 
 This file is part of GCC.
@@ -2809,9 +2809,8 @@ declare_return_variable (copy_body_data *id, tree return_slot, tree modify_dest,
   else
     caller_type = TREE_TYPE (TREE_TYPE (callee));
 
-  /* We don't need to do anything for functions that don't return
-     anything.  */
-  if (!result || VOID_TYPE_P (callee_type))
+  /* We don't need to do anything for functions that don't return anything.  */
+  if (VOID_TYPE_P (callee_type))
     return NULL_TREE;
 
   /* If there was a return slot, then the return value is the
@@ -3399,10 +3398,6 @@ estimate_operator_cost (enum tree_code code, eni_weights *weights,
     case VEC_PACK_TRUNC_EXPR:
     case VEC_PACK_SAT_EXPR:
     case VEC_PACK_FIX_TRUNC_EXPR:
-    case VEC_EXTRACT_EVEN_EXPR:
-    case VEC_EXTRACT_ODD_EXPR:
-    case VEC_INTERLEAVE_HIGH_EXPR:
-    case VEC_INTERLEAVE_LOW_EXPR:
     case VEC_WIDEN_LSHIFT_HI_EXPR:
     case VEC_WIDEN_LSHIFT_LO_EXPR:
 
@@ -3482,6 +3477,9 @@ estimate_num_insns (gimple stmt, eni_weights *weights)
 	 likely be a real store, so the cost of the GIMPLE_ASSIGN is the cost
 	 of moving something into "a", which we compute using the function
 	 estimate_move_cost.  */
+      if (gimple_clobber_p (stmt))
+	return 0;	/* ={v} {CLOBBER} stmt expands to nothing.  */
+
       lhs = gimple_assign_lhs (stmt);
       rhs = gimple_assign_rhs1 (stmt);
 
@@ -4215,12 +4213,6 @@ optimize_inline_calls (tree fn)
   int last = n_basic_blocks;
   struct gimplify_ctx gctx;
   bool inlined_p = false;
-
-  /* There is no point in performing inlining if errors have already
-     occurred -- and we might crash if we try to inline invalid
-     code.  */
-  if (seen_error ())
-    return 0;
 
   /* Clear out ID.  */
   memset (&id, 0, sizeof (id));
@@ -5047,6 +5039,7 @@ update_clone_info (copy_body_data * id)
 
    If non-NULL ARGS_TO_SKIP determine function parameters to remove
    from new version.
+   If SKIP_RETURN is true, the new version will return void.
    If non-NULL BLOCK_TO_COPY determine what basic blocks to copy.
    If non_NULL NEW_ENTRY determine new entry BB of the clone.
 */
@@ -5054,7 +5047,8 @@ void
 tree_function_versioning (tree old_decl, tree new_decl,
 			  VEC(ipa_replace_map_p,gc)* tree_map,
 			  bool update_clones, bitmap args_to_skip,
-			  bitmap blocks_to_copy, basic_block new_entry)
+			  bool skip_return, bitmap blocks_to_copy,
+			  basic_block new_entry)
 {
   struct cgraph_node *old_version_node;
   struct cgraph_node *new_version_node;
@@ -5207,7 +5201,18 @@ tree_function_versioning (tree old_decl, tree new_decl,
     /* Add local vars.  */
     add_local_variables (DECL_STRUCT_FUNCTION (old_decl), cfun, &id, false);
 
-  if (DECL_RESULT (old_decl) != NULL_TREE)
+  if (DECL_RESULT (old_decl) == NULL_TREE)
+    ;
+  else if (skip_return && !VOID_TYPE_P (TREE_TYPE (DECL_RESULT (old_decl))))
+    {
+      DECL_RESULT (new_decl)
+	= build_decl (DECL_SOURCE_LOCATION (DECL_RESULT (old_decl)),
+		      RESULT_DECL, NULL_TREE, void_type_node);
+      DECL_CONTEXT (DECL_RESULT (new_decl)) = new_decl;
+      cfun->returns_struct = 0;
+      cfun->returns_pcc_struct = 0;
+    }
+  else
     {
       tree old_name;
       DECL_RESULT (new_decl) = remap_decl (DECL_RESULT (old_decl), &id);

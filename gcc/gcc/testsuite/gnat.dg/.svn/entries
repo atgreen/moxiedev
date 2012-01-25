@@ -1,14 +1,14 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gnat.dg
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-11-20T10:03:11.687239Z
-181526
+2012-01-11T18:50:54.094175Z
+183104
 ebotcazou
 
 
@@ -502,40 +502,6 @@ ebotcazou
 
 333
 
-notnot.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-210a12989054c999f3b84ea7db7a0319
-2008-05-22T09:24:10.583747Z
-135753
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-201
-
 allocator_maxalign1.adb
 file
 
@@ -570,16 +536,16 @@ hainque
 
 964
 
-renaming2.adb
+notnot.adb
 file
 
 
 
 
 2009-04-24T17:46:10.000000Z
-3afb13f37cfc3455f0f0be64d053892f
-2007-08-16T13:29:34.868652Z
-127554
+210a12989054c999f3b84ea7db7a0319
+2008-05-22T09:24:10.583747Z
+135753
 charlet
 
 
@@ -602,7 +568,7 @@ charlet
 
 
 
-1705
+201
 
 tree_static_use.adb
 file
@@ -638,17 +604,17 @@ hainque
 
 164
 
-return2_pkg.ads
+renaming2.adb
 file
 
 
 
 
-2010-11-22T19:14:28.042785Z
-dbd9fc4ca7e3e25386565a257fe60527
-2010-09-25T21:34:45.738307Z
-164622
-ebotcazou
+2009-04-24T17:46:10.000000Z
+3afb13f37cfc3455f0f0be64d053892f
+2007-08-16T13:29:34.868652Z
+127554
+charlet
 
 
 
@@ -670,7 +636,7 @@ ebotcazou
 
 
 
-133
+1705
 
 test_nested_subtype_byref.adb
 file
@@ -706,16 +672,16 @@ hainque
 
 150
 
-cond_expr2.ads
+return2_pkg.ads
 file
 
 
 
 
-2011-09-25T18:02:29.690897Z
-480774e6dc12415e74150ad52fe66697
-2011-09-11T19:14:51.757188Z
-178766
+2010-11-22T19:14:28.042785Z
+dbd9fc4ca7e3e25386565a257fe60527
+2010-09-25T21:34:45.738307Z
+164622
 ebotcazou
 
 
@@ -738,7 +704,7 @@ ebotcazou
 
 
 
-82
+133
 
 taft_type1_pkg2.ads
 file
@@ -774,17 +740,17 @@ ebotcazou
 
 138
 
-modular2.adb
+cond_expr2.ads
 file
 
 
 
 
-2009-04-24T17:46:10.000000Z
-43ac56994fb5b895bb69ac13691c37cc
-2008-05-26T09:46:06.883255Z
-135910
-charlet
+2011-09-25T18:02:29.690897Z
+480774e6dc12415e74150ad52fe66697
+2011-09-11T19:14:51.757188Z
+178766
+ebotcazou
 
 
 
@@ -806,7 +772,7 @@ charlet
 
 
 
-113
+82
 
 interface_conv.adb
 file
@@ -841,6 +807,40 @@ charlet
 
 
 381
+
+modular2.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+43ac56994fb5b895bb69ac13691c37cc
+2008-05-26T09:46:06.883255Z
+135910
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+113
 
 nested_proc1.adb
 file
@@ -910,6 +910,40 @@ ebotcazou
 
 714
 
+elim1.ads
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+2dc2b121b14a0c39e69e6f0e7fab34ce
+2007-08-16T13:51:43.540052Z
+127555
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+111
+
 test_self.adb
 file
 
@@ -944,17 +978,17 @@ charlet
 
 259
 
-elim1.ads
+array19.adb
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-2dc2b121b14a0c39e69e6f0e7fab34ce
-2007-08-16T13:51:43.540052Z
-127555
-charlet
+2012-01-20T20:50:37.461324Z
+8e6f4519047fd61695664a5981aafdae
+2012-01-11T18:50:54.094175Z
+183104
+ebotcazou
 
 
 
@@ -976,7 +1010,7 @@ charlet
 
 
 
-111
+565
 
 object_overflow.adb
 file
@@ -1419,6 +1453,40 @@ ebotcazou
 
 
 72
+
+array19.ads
+file
+
+
+
+
+2012-01-20T20:50:37.461324Z
+8c91b3963d7c03efeb57bcfd50f0ad54
+2012-01-11T18:50:54.094175Z
+183104
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+58
 
 range_check2.adb
 file
@@ -2236,40 +2304,6 @@ charlet
 
 199
 
-loop_optimization8.adb
-file
-
-
-
-
-2010-11-22T19:14:28.043784Z
-431a26b9cebad600d25e60703c60f590
-2010-10-25T17:26:04.322841Z
-165925
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-597
-
 aggr7.adb
 file
 
@@ -2304,50 +2338,16 @@ charlet
 
 813
 
-test_oalign.adb
+loop_optimization8.adb
 file
 
 
 
 
-2009-04-24T17:46:10.000000Z
-f0b92173bca8a520b8b467032cc3bf27
-2007-08-31T07:17:34.549242Z
-127957
-hainque
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-339
-
-loop_boolean.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-5c63f1a5018a20c715a0d6e4ee36a5f2
-2008-11-09T09:50:02.270573Z
-141714
+2010-11-22T19:14:28.043784Z
+431a26b9cebad600d25e60703c60f590
+2010-10-25T17:26:04.322841Z
+165925
 ebotcazou
 
 
@@ -2370,7 +2370,7 @@ ebotcazou
 
 
 
-276
+597
 
 discr22.adb
 file
@@ -2406,16 +2406,50 @@ ebotcazou
 
 404
 
-oconst4.ads
+loop_boolean.adb
 file
 
 
 
 
-2009-06-03T04:09:29.000000Z
-83b4b846482fc181641d38bd7904dab0
-2009-06-01T14:42:56.012881Z
-148045
+2009-04-24T17:46:09.000000Z
+5c63f1a5018a20c715a0d6e4ee36a5f2
+2008-11-09T09:50:02.270573Z
+141714
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+276
+
+test_oalign.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+f0b92173bca8a520b8b467032cc3bf27
+2007-08-31T07:17:34.549242Z
+127957
 hainque
 
 
@@ -2438,7 +2472,7 @@ hainque
 
 
 
-1375
+339
 
 unchecked_convert1.adb
 file
@@ -2474,17 +2508,17 @@ ebotcazou
 
 655
 
-addr2_p.adb
+oconst4.ads
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-87b883a0706741ad3f7d6c6221d18b83
-2007-08-16T08:06:48.088863Z
-127533
-charlet
+2009-06-03T04:09:29.000000Z
+83b4b846482fc181641d38bd7904dab0
+2009-06-01T14:42:56.012881Z
+148045
+hainque
 
 
 
@@ -2506,7 +2540,7 @@ charlet
 
 
 
-248
+1375
 
 oalign1.ads
 file
@@ -2541,6 +2575,40 @@ hainque
 
 
 108
+
+addr2_p.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+87b883a0706741ad3f7d6c6221d18b83
+2007-08-16T08:06:48.088863Z
+127533
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+248
 
 constant3.adb
 file
@@ -2610,40 +2678,6 @@ ebotcazou
 
 739
 
-pack15.adb
-file
-
-
-
-
-2010-07-08T15:17:56.317096Z
-ab25f811e73618aab926d8f4ba2a61d3
-2010-04-25T09:22:35.334223Z
-158701
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-134
-
 controlled_record.ads
 file
 
@@ -2678,6 +2712,74 @@ ebotcazou
 
 329
 
+pack15.adb
+file
+
+
+
+
+2010-07-08T15:17:56.317096Z
+ab25f811e73618aab926d8f4ba2a61d3
+2010-04-25T09:22:35.334223Z
+158701
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+134
+
+vect4.adb
+file
+
+
+
+
+2012-01-20T20:50:37.461324Z
+0a269f463e7e08d04f0f1792110cbf96
+2011-12-13T11:26:14.472520Z
+182276
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2971
+
 opt20.ads
 file
 
@@ -2711,40 +2813,6 @@ ebotcazou
 
 
 168
-
-vect4.adb
-file
-
-
-
-
-2011-11-12T11:42:16.534228Z
-354d3b7ca4eb394d63cc53482076f65f
-2011-10-12T22:00:14.864746Z
-179868
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2172
 
 test_prio_p.adb
 file
@@ -2916,40 +2984,6 @@ ebotcazou
 
 252
 
-discr16_g.ads
-file
-
-
-
-
-2009-06-30T20:34:05.000000Z
-dd8e3ae6f7fc6c44f012e1d2baea2b9d
-2009-06-30T17:26:32.532675Z
-149112
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-289
-
 return3.adb
 file
 
@@ -2984,16 +3018,16 @@ ebotcazou
 
 162
 
-tail_call_p.adb
+discr16_g.ads
 file
 
 
 
 
-2009-04-24T17:46:10.000000Z
-2c3433e64317388648d32acc1e97bb27
-2007-02-18T13:52:46.986466Z
-122095
+2009-06-30T20:34:05.000000Z
+dd8e3ae6f7fc6c44f012e1d2baea2b9d
+2009-06-30T17:26:32.532675Z
+149112
 ebotcazou
 
 
@@ -3016,7 +3050,7 @@ ebotcazou
 
 
 
-698
+289
 
 rep_clause1.adb
 file
@@ -3052,16 +3086,16 @@ ebotcazou
 
 2453
 
-pack15.ads
+tail_call_p.adb
 file
 
 
 
 
-2010-07-08T15:17:56.317096Z
-f530cbcfbe867a10394c7d140d7cf8c8
-2010-04-25T09:22:35.334223Z
-158701
+2009-04-24T17:46:10.000000Z
+2c3433e64317388648d32acc1e97bb27
+2007-02-18T13:52:46.986466Z
+122095
 ebotcazou
 
 
@@ -3084,41 +3118,7 @@ ebotcazou
 
 
 
-383
-
-ice_types.ads
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-2a21b6d5350d0f9ff8c2cf5d0e6f8f1f
-2006-10-31T18:20:42.966598Z
-118332
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-150
+698
 
 array7.adb
 file
@@ -3154,16 +3154,50 @@ ro
 
 538
 
-vect4.ads
+ice_types.ads
 file
 
 
 
 
-2011-11-12T11:42:16.534228Z
-3e2ed3966263233f9b9f72840d311c3c
-2011-10-12T22:00:14.864746Z
-179868
+2009-04-24T17:46:09.000000Z
+2a21b6d5350d0f9ff8c2cf5d0e6f8f1f
+2006-10-31T18:20:42.966598Z
+118332
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+150
+
+pack15.ads
+file
+
+
+
+
+2010-07-08T15:17:56.317096Z
+f530cbcfbe867a10394c7d140d7cf8c8
+2010-04-25T09:22:35.334223Z
+158701
 ebotcazou
 
 
@@ -3186,7 +3220,7 @@ ebotcazou
 
 
 
-1432
+383
 
 lto6_pkg.ads
 file
@@ -3222,6 +3256,40 @@ ebotcazou
 
 235
 
+vect4.ads
+file
+
+
+
+
+2012-01-20T20:50:37.461324Z
+0bcd9a9778dcd4ec304c93629d369ac9
+2011-12-13T11:26:14.472520Z
+182276
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1753
+
 inline_scope.adb
 file
 
@@ -3255,74 +3323,6 @@ ebotcazou
 
 
 362
-
-test_prio_p.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-fbbeb7061e44a07d4ea62a50cb25e2b1
-2006-10-31T18:20:42.966598Z
-118332
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-479
-
-concat_length.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-3e7f9a04f4a3706e783661ca30556322
-2008-04-24T13:24:11.061612Z
-134627
-hainque
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-317
 
 discr31.adb
 file
@@ -3358,16 +3358,50 @@ jamborm
 
 226
 
-sort2.adb
+concat_length.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+3e7f9a04f4a3706e783661ca30556322
+2008-04-24T13:24:11.061612Z
+134627
+hainque
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+317
+
+test_prio_p.ads
 file
 
 
 
 
 2009-04-24T17:46:10.000000Z
-b8eb8b7feeea1677a72807b2c341edfb
-2007-06-11T16:04:46.634880Z
-125622
+fbbeb7061e44a07d4ea62a50cb25e2b1
+2006-10-31T18:20:42.966598Z
+118332
 charlet
 
 
@@ -3390,7 +3424,7 @@ charlet
 
 
 
-155
+479
 
 iface1.ads
 file
@@ -3426,17 +3460,17 @@ charlet
 
 408
 
-aliasing3.adb
+sort2.adb
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-cc39a398a9b01a3e0e8dafcf6c4eb529
-2009-02-10T22:52:51.216043Z
-144084
-ebotcazou
+2009-04-24T17:46:10.000000Z
+b8eb8b7feeea1677a72807b2c341edfb
+2007-06-11T16:04:46.634880Z
+125622
+charlet
 
 
 
@@ -3458,7 +3492,7 @@ ebotcazou
 
 
 
-162
+155
 
 mutable1.adb
 file
@@ -3494,6 +3528,40 @@ charlet
 
 668
 
+aliasing3.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+cc39a398a9b01a3e0e8dafcf6c4eb529
+2009-02-10T22:52:51.216043Z
+144084
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+162
+
 addr1.ads
 file
 
@@ -3527,40 +3595,6 @@ charlet
 
 
 71
-
-in_out_parameter3.adb
-file
-
-
-
-
-2010-11-22T19:14:28.043784Z
-ad89e1da831369fbad29c8ebf625be88
-2010-10-25T10:35:07.227748Z
-165914
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-726
 
 test_ext1.adb
 file
@@ -3596,17 +3630,17 @@ charlet
 
 117
 
-nested_controlled_alloc.adb
+in_out_parameter3.adb
 file
 
 
 
 
-2009-04-24T17:46:10.000000Z
-9c4c48ff55ba4415ea76799d8934a2b4
-2006-10-31T18:20:42.966598Z
-118332
-charlet
+2010-11-22T19:14:28.043784Z
+ad89e1da831369fbad29c8ebf625be88
+2010-10-25T10:35:07.227748Z
+165914
+ebotcazou
 
 
 
@@ -3628,7 +3662,7 @@ charlet
 
 
 
-1021
+726
 
 fixedpnt.adb
 file
@@ -3664,51 +3698,17 @@ charlet
 
 186
 
-atomic6_pkg.ads
-file
-
-
-
-
-2011-11-12T11:42:16.535228Z
-3a730714e4c3a60b9772fac2b31dd88a
-2011-11-10T19:45:17.175323Z
-181267
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-600
-
-tail_call_p.ads
+nested_controlled_alloc.adb
 file
 
 
 
 
 2009-04-24T17:46:10.000000Z
-52209e09e8cd97ac35966eef199b30cd
-2007-02-18T13:52:46.986466Z
-122095
-ebotcazou
+9c4c48ff55ba4415ea76799d8934a2b4
+2006-10-31T18:20:42.966598Z
+118332
+charlet
 
 
 
@@ -3730,41 +3730,7 @@ ebotcazou
 
 
 
-217
-
-decl_ctx_def.ads
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-11735efa0b9cef4f67d8e3f4899d5dcb
-2008-07-17T14:18:27.279275Z
-137923
-hainque
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-48
+1021
 
 stack_check2.adb
 file
@@ -3800,16 +3766,16 @@ ebotcazou
 
 818
 
-array7.ads
+decl_ctx_def.ads
 file
 
 
 
 
-2009-09-27T03:29:55.000000Z
-d3c3ea85a2d542a334f54886bc6d0e68
-2009-09-25T09:14:09.497472Z
-152164
+2009-04-24T17:46:09.000000Z
+11735efa0b9cef4f67d8e3f4899d5dcb
+2008-07-17T14:18:27.279275Z
+137923
 hainque
 
 
@@ -3832,18 +3798,18 @@ hainque
 
 
 
-484
+48
 
-loop_optimization5_pkg.ads
+tail_call_p.ads
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-6dc5530e73376854f2082dcd8867d643
-2008-10-11T19:48:47.087093Z
-141065
+2009-04-24T17:46:10.000000Z
+52209e09e8cd97ac35966eef199b30cd
+2007-02-18T13:52:46.986466Z
+122095
 ebotcazou
 
 
@@ -3866,7 +3832,41 @@ ebotcazou
 
 
 
-191
+217
+
+atomic6_pkg.ads
+file
+
+
+
+
+2011-11-12T11:42:16.535228Z
+3a730714e4c3a60b9772fac2b31dd88a
+2011-11-10T19:45:17.175323Z
+181267
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+600
 
 opt4.adb
 file
@@ -3902,16 +3902,16 @@ ebotcazou
 
 303
 
-atomic6_8.adb
+loop_optimization5_pkg.ads
 file
 
 
 
 
-2011-11-12T11:42:16.536228Z
-96816dec08048210b6d940c311159bb1
-2011-11-10T19:45:17.175323Z
-181267
+2009-04-24T17:46:09.000000Z
+6dc5530e73376854f2082dcd8867d643
+2008-10-11T19:48:47.087093Z
+141065
 ebotcazou
 
 
@@ -3934,7 +3934,41 @@ ebotcazou
 
 
 
-1476
+191
+
+array7.ads
+file
+
+
+
+
+2009-09-27T03:29:55.000000Z
+d3c3ea85a2d542a334f54886bc6d0e68
+2009-09-25T09:14:09.497472Z
+152164
+hainque
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+484
 
 discr31.ads
 file
@@ -3969,6 +4003,40 @@ jamborm
 
 
 370
+
+atomic6_8.adb
+file
+
+
+
+
+2011-11-12T11:42:16.536228Z
+96816dec08048210b6d940c311159bb1
+2011-11-10T19:45:17.175323Z
+181267
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1476
 
 controlled5.adb
 file
@@ -4174,40 +4242,6 @@ charlet
 
 70
 
-vect6_pkg.ads
-file
-
-
-
-
-2011-11-12T11:42:16.536228Z
-1b28ce97d55ffbd965e8314b2aa44651
-2011-10-12T22:00:14.864746Z
-179868
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-165
-
 overflow_sum2.adb
 file
 
@@ -4242,16 +4276,16 @@ ebotcazou
 
 902
 
-sizetype3.ads
+vect6_pkg.ads
 file
 
 
 
 
-2010-07-08T15:17:56.318101Z
-47f6910eb7fa169903a162929f5a8e2a
-2010-05-08T11:02:08.768731Z
-159180
+2011-11-12T11:42:16.536228Z
+1b28ce97d55ffbd965e8314b2aa44651
+2011-10-12T22:00:14.864746Z
+179868
 ebotcazou
 
 
@@ -4274,7 +4308,7 @@ ebotcazou
 
 
 
-188
+165
 
 gnat_malloc.adb
 file
@@ -4309,6 +4343,40 @@ charlet
 
 
 422
+
+sizetype3.ads
+file
+
+
+
+
+2010-07-08T15:17:56.318101Z
+47f6910eb7fa169903a162929f5a8e2a
+2010-05-08T11:02:08.768731Z
+159180
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+188
 
 array12.adb
 file
@@ -6254,10 +6322,10 @@ file
 
 
 
-2011-11-12T11:42:16.537228Z
-2d8d83a3004f5b45cfaae7ed78926266
-2011-10-12T22:00:14.864746Z
-179868
+2012-01-20T20:50:37.462324Z
+eeefd0e4be4d4fb746bdba639e0a25c4
+2011-12-13T11:26:14.472520Z
+182276
 ebotcazou
 
 
@@ -6280,7 +6348,7 @@ ebotcazou
 
 
 
-2172
+2971
 
 iface2.adb
 file
@@ -6866,10 +6934,10 @@ file
 
 
 
-2011-11-12T11:42:16.537228Z
-f74ee234ac9b07e4541e6f4533f2c1d3
-2011-10-12T22:00:14.864746Z
-179868
+2012-01-20T20:50:37.462324Z
+ece925b63f6cdfec1a7ac8d94451e0d8
+2011-12-13T11:26:14.472520Z
+182276
 ebotcazou
 
 
@@ -6892,7 +6960,41 @@ ebotcazou
 
 
 
-1475
+1796
+
+opt23_pkg.adb
+file
+
+
+
+
+2012-01-20T20:50:37.462324Z
+e0301b15cf2e9bc078759684a522d752
+2012-01-11T18:47:28.389436Z
+183102
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+156
 
 discr32.adb
 file
@@ -7267,6 +7369,40 @@ ebotcazou
 
 
 482
+
+opt23_pkg.ads
+file
+
+
+
+
+2012-01-20T20:50:37.462324Z
+c21a773710a23fa9af8f0176cda27be3
+2012-01-11T18:47:28.389436Z
+183102
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+654
 
 discr23_pkg.ads
 file
@@ -8764,40 +8900,6 @@ hainque
 
 396
 
-lto9_pkg1.ads
-file
-
-
-
-
-2010-07-08T15:17:56.322096Z
-35b2c2e360a4b96be6d9389f1aed15f6
-2010-05-15T19:05:06.868991Z
-159438
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-623
-
 slice8_pkg1.ads
 file
 
@@ -8831,6 +8933,40 @@ ebotcazou
 
 
 99
+
+lto9_pkg1.ads
+file
+
+
+
+
+2010-07-08T15:17:56.322096Z
+35b2c2e360a4b96be6d9389f1aed15f6
+2010-05-15T19:05:06.868991Z
+159438
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+623
 
 discr8.adb
 file
@@ -8866,40 +9002,6 @@ ebotcazou
 
 636
 
-boolean_subtype2.ads
-file
-
-
-
-
-2011-06-04T17:56:00.361124Z
-c279a5d66778f4639b2ebd244e1d3c54
-2011-05-30T13:12:23.181797Z
-174435
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-186
-
 atomic1.adb
 file
 
@@ -8933,6 +9035,40 @@ ro
 
 
 426
+
+boolean_subtype2.ads
+file
+
+
+
+
+2011-06-04T17:56:00.361124Z
+c279a5d66778f4639b2ebd244e1d3c54
+2011-05-30T13:12:23.181797Z
+174435
+rguenth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+186
 
 ancestor_type.ads
 file
@@ -8968,40 +9104,6 @@ sam
 
 200
 
-loop_optimization2.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-f541e6bfbb5ebc32c8c88b9475f024d2
-2008-05-18T22:36:30.377653Z
-135514
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1253
-
 aggr1.adb
 file
 
@@ -9035,6 +9137,40 @@ charlet
 
 
 1228
+
+loop_optimization2.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+f541e6bfbb5ebc32c8c88b9475f024d2
+2008-05-18T22:36:30.377653Z
+135514
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1253
 
 slice2.ads
 file
@@ -9206,40 +9342,6 @@ ebotcazou
 
 182
 
-aggr9.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-d7604b4d2f401c17008d23ef48c7da56
-2008-06-27T09:16:45.111277Z
-137173
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-162
-
 tf_interface_1.adb
 file
 
@@ -9273,6 +9375,40 @@ charlet
 
 
 199
+
+aggr9.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+d7604b4d2f401c17008d23ef48c7da56
+2008-06-27T09:16:45.111277Z
+137173
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+162
 
 discr24.adb
 file
@@ -9308,40 +9444,6 @@ ebotcazou
 
 1192
 
-oconst6.ads
-file
-
-
-
-
-2009-06-03T04:09:29.000000Z
-736e6da3ba29f65b23041cc0858f53f6
-2009-06-01T14:42:56.012881Z
-148045
-hainque
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-313
-
 unchecked_convert3.adb
 file
 
@@ -9375,6 +9477,40 @@ ebotcazou
 
 
 355
+
+oconst6.ads
+file
+
+
+
+
+2009-06-03T04:09:29.000000Z
+736e6da3ba29f65b23041cc0858f53f6
+2009-06-01T14:42:56.012881Z
+148045
+hainque
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+313
 
 discr8.ads
 file
@@ -9552,10 +9688,10 @@ file
 
 
 
-2011-11-12T11:42:16.539228Z
-752bb3830b26cc4b66db453ded9752d2
-2011-10-12T22:00:14.864746Z
-179868
+2012-01-20T20:50:37.462324Z
+465906a8c0865d062012b849da9100af
+2011-12-13T11:26:14.472520Z
+182276
 ebotcazou
 
 
@@ -9578,7 +9714,7 @@ ebotcazou
 
 
 
-2172
+2971
 
 bit_packed_array4.ads
 file
@@ -9648,40 +9784,6 @@ ebotcazou
 
 153
 
-tf_interface_1.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-2788f52faca4b05138e22d7b94c5580f
-2008-05-22T09:24:10.583747Z
-135753
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-655
-
 aggr9.ads
 file
 
@@ -9715,6 +9817,40 @@ ebotcazou
 
 
 89
+
+tf_interface_1.ads
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+2788f52faca4b05138e22d7b94c5580f
+2008-05-22T09:24:10.583747Z
+135753
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+655
 
 warn4.adb
 file
@@ -9852,40 +9988,6 @@ ebotcazou
 
 781
 
-array1.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-4384340b82a3264f85bd960f81292b76
-2007-06-06T10:54:25.331020Z
-125480
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-656
-
 discr8_pkg1.ads
 file
 
@@ -9919,6 +10021,40 @@ ebotcazou
 
 
 203
+
+array1.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+4384340b82a3264f85bd960f81292b76
+2007-06-06T10:54:25.331020Z
+125480
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+656
 
 gnatg.adb
 file
@@ -10056,16 +10192,16 @@ charlet
 
 134
 
-lto7_pkg.ads
+slice6_pkg.ads
 file
 
 
 
 
-2010-07-08T15:17:56.323096Z
-6fb9886e3bb21e4004f336b12517c277
-2010-05-10T21:52:45.821080Z
-159247
+2009-09-08T03:18:03.000000Z
+673ed883883d274dbbce6f4b4343e8c7
+2009-08-20T15:19:16.387355Z
+150965
 ebotcazou
 
 
@@ -10088,7 +10224,7 @@ ebotcazou
 
 
 
-390
+402
 
 array9.adb
 file
@@ -10124,16 +10260,16 @@ ebotcazou
 
 309
 
-slice6_pkg.ads
+lto7_pkg.ads
 file
 
 
 
 
-2009-09-08T03:18:03.000000Z
-673ed883883d274dbbce6f4b4343e8c7
-2009-08-20T15:19:16.387355Z
-150965
+2010-07-08T15:17:56.323096Z
+6fb9886e3bb21e4004f336b12517c277
+2010-05-10T21:52:45.821080Z
+159247
 ebotcazou
 
 
@@ -10156,7 +10292,7 @@ ebotcazou
 
 
 
-402
+390
 
 vect6.ads
 file
@@ -10164,10 +10300,10 @@ file
 
 
 
-2011-11-12T11:42:16.539228Z
-b41e8fd338a4b0da5fcf80ef3871bfa7
-2011-10-12T22:00:14.864746Z
-179868
+2012-01-20T20:50:37.462324Z
+0c03f3c793b9df575c5e06c9602e6bc0
+2011-12-13T11:26:14.472520Z
+182276
 ebotcazou
 
 
@@ -10190,7 +10326,7 @@ ebotcazou
 
 
 
-1538
+1859
 
 spipaterr.adb
 file
@@ -10294,40 +10430,6 @@ ebotcazou
 
 95
 
-array1.ads
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-2ba96fdcf6eb85d783b1a3431a416086
-2007-06-06T10:54:25.331020Z
-125480
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-151
-
 test_raise_from_pure.adb
 file
 
@@ -10361,6 +10463,40 @@ ebotcazou
 
 
 335
+
+array1.ads
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+2ba96fdcf6eb85d783b1a3431a416086
+2007-06-06T10:54:25.331020Z
+125480
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+151
 
 test_image.adb
 file
@@ -10464,17 +10600,17 @@ charlet
 
 559
 
-opt6.adb
+debug1.ads
 file
 
 
 
 
-2010-11-22T19:14:28.045784Z
-e5e7ff61479fbeb7973786d07f72ba84
-2010-10-06T14:25:04.163608Z
-165030
-ebotcazou
+2009-04-24T17:46:09.000000Z
+f7f0e097ef2b08042951719eb78231a0
+2007-04-06T09:44:51.240197Z
+123612
+charlet
 
 
 
@@ -10496,7 +10632,7 @@ ebotcazou
 
 
 
-600
+502
 
 derived_aggregate.adb
 file
@@ -10532,17 +10668,17 @@ ebotcazou
 
 666
 
-debug1.ads
+opt6.adb
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-f7f0e097ef2b08042951719eb78231a0
-2007-04-06T09:44:51.240197Z
-123612
-charlet
+2010-11-22T19:14:28.045784Z
+e5e7ff61479fbeb7973786d07f72ba84
+2010-10-06T14:25:04.163608Z
+165030
+ebotcazou
 
 
 
@@ -10564,7 +10700,7 @@ charlet
 
 
 
-502
+600
 
 address_conversion.adb
 file
@@ -10600,40 +10736,6 @@ ebotcazou
 
 452
 
-generic_dispatch_p.ads
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-ee2b6ca79560241f2072641970442abe
-2006-10-31T18:20:42.966598Z
-118332
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-525
-
 aggr9_pkg.ads
 file
 
@@ -10667,6 +10769,40 @@ ebotcazou
 
 
 231
+
+generic_dispatch_p.ads
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+ee2b6ca79560241f2072641970442abe
+2006-10-31T18:20:42.966598Z
+118332
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+525
 
 decl_ctx_use.adb
 file
@@ -11008,40 +11144,6 @@ charlet
 
 318
 
-timer_cancel.adb
-file
-
-
-
-
-2009-10-08T17:29:51.000000Z
-05fa839286b374c31e02e0dadd7a3457
-2009-10-06T07:20:53.430942Z
-152487
-sam
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-844
-
 profile_warning.adb
 file
 
@@ -11076,17 +11178,17 @@ charlet
 
 59
 
-array_bounds_test.adb
+timer_cancel.adb
 file
 
 
 
 
-2010-02-03T11:41:33.430479Z
-4e4a2cd2383fcedd1f7f9e094a9733f7
-2010-01-25T16:25:29.611781Z
-156216
-charlet
+2009-10-08T17:29:51.000000Z
+05fa839286b374c31e02e0dadd7a3457
+2009-10-06T07:20:53.430942Z
+152487
+sam
 
 
 
@@ -11108,7 +11210,7 @@ charlet
 
 
 
-397
+844
 
 align_check.adb
 file
@@ -11144,17 +11246,17 @@ charlet
 
 523
 
-rep_clause5_pkg.ads
+array_bounds_test.adb
 file
 
 
 
 
-2010-07-08T15:17:56.323096Z
-843d45d1aea7940fa2fa7298a2450388
-2010-04-18T15:47:10.864773Z
-158488
-ebotcazou
+2010-02-03T11:41:33.430479Z
+4e4a2cd2383fcedd1f7f9e094a9733f7
+2010-01-25T16:25:29.611781Z
+156216
+charlet
 
 
 
@@ -11176,7 +11278,7 @@ ebotcazou
 
 
 
-7321
+397
 
 test_ifaces.adb
 file
@@ -11212,17 +11314,17 @@ charlet
 
 215
 
-ifaces.adb
+rep_clause5_pkg.ads
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-a13dcdcaaf629d0a05ce4f001f14eab5
-2007-06-07T11:04:02.900413Z
-125527
-charlet
+2010-07-08T15:17:56.323096Z
+843d45d1aea7940fa2fa7298a2450388
+2010-04-18T15:47:10.864773Z
+158488
+ebotcazou
 
 
 
@@ -11244,7 +11346,7 @@ charlet
 
 
 
-157
+7321
 
 debug2_pkg.ads
 file
@@ -11279,6 +11381,40 @@ ebotcazou
 
 
 404
+
+ifaces.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+a13dcdcaaf629d0a05ce4f001f14eab5
+2007-06-07T11:04:02.900413Z
+125527
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+157
 
 old_errors.ads
 file
@@ -11348,40 +11484,6 @@ charlet
 
 293
 
-alignment3.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-11503f47ea295354ab10fc127a67f7a3
-2007-04-06T09:44:51.240197Z
-123612
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-883
-
 volatile2.adb
 file
 
@@ -11415,6 +11517,40 @@ charlet
 
 
 472
+
+alignment3.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+11503f47ea295354ab10fc127a67f7a3
+2007-04-06T09:44:51.240197Z
+123612
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+883
 
 pack5.adb
 file
@@ -11620,40 +11756,6 @@ ebotcazou
 
 344
 
-lto9_pkg2.adb
-file
-
-
-
-
-2010-07-08T15:17:56.323096Z
-4a3327c5e6fa8f7f8c90fa8f42043563
-2010-05-15T19:05:06.868991Z
-159438
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-249
-
 raise_ce.adb
 file
 
@@ -11688,16 +11790,16 @@ hainque
 
 60
 
-discr16.adb
+lto9_pkg2.adb
 file
 
 
 
 
-2009-06-30T20:34:05.000000Z
-fd91bd92442d466df323be7328ca9a1a
-2009-06-30T17:26:32.532675Z
-149112
+2010-07-08T15:17:56.323096Z
+4a3327c5e6fa8f7f8c90fa8f42043563
+2010-05-15T19:05:06.868991Z
+159438
 ebotcazou
 
 
@@ -11720,7 +11822,7 @@ ebotcazou
 
 
 
-404
+249
 
 ifaces.ads
 file
@@ -11755,6 +11857,40 @@ charlet
 
 
 401
+
+discr16.adb
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+fd91bd92442d466df323be7328ca9a1a
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+404
 
 source_ref1.adb
 file
@@ -11858,16 +11994,16 @@ charlet
 
 199
 
-lto4.adb
+slice3.adb
 file
 
 
 
 
-2010-07-08T15:17:56.324107Z
-2acb4cc31994f1569a3db6ac6613928d
-2010-05-08T17:31:23.972383Z
-159191
+2009-04-24T17:46:10.000000Z
+fd66cccd1fac713f451b7b6a07a75b57
+2008-01-13T00:17:45.061576Z
+131498
 ebotcazou
 
 
@@ -11890,7 +12026,7 @@ ebotcazou
 
 
 
-281
+517
 
 volatile2.ads
 file
@@ -11926,50 +12062,16 @@ charlet
 
 267
 
-slice3.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-fd66cccd1fac713f451b7b6a07a75b57
-2008-01-13T00:17:45.061576Z
-131498
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-517
-
-aggr14.adb
+lto4.adb
 file
 
 
 
 
 2010-07-08T15:17:56.324107Z
-39ad802de54289b4e7e12f0f1649b5fd
-2010-04-12T10:00:13.113602Z
-158219
+2acb4cc31994f1569a3db6ac6613928d
+2010-05-08T17:31:23.972383Z
+159191
 ebotcazou
 
 
@@ -11992,7 +12094,41 @@ ebotcazou
 
 
 
-91
+281
+
+test_fixed_io.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+ea9dea61a57ca41114625d62606397e9
+2007-06-06T10:54:25.331020Z
+125480
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+852
 
 unc_memfree.adb
 file
@@ -12028,17 +12164,17 @@ hainque
 
 865
 
-test_fixed_io.adb
+aggr14.adb
 file
 
 
 
 
-2009-04-24T17:46:10.000000Z
-ea9dea61a57ca41114625d62606397e9
-2007-06-06T10:54:25.331020Z
-125480
-charlet
+2010-07-08T15:17:56.324107Z
+39ad802de54289b4e7e12f0f1649b5fd
+2010-04-12T10:00:13.113602Z
+158219
+ebotcazou
 
 
 
@@ -12060,7 +12196,7 @@ charlet
 
 
 
-852
+91
 
 pointer_discr1_pkg1.ads
 file
@@ -12130,40 +12266,6 @@ charlet
 
 320
 
-lto9_pkg2.ads
-file
-
-
-
-
-2010-07-08T15:17:56.324107Z
-da098733ad0c559d77d5e016d5cc3120
-2010-05-15T19:05:06.868991Z
-159438
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-482
-
 slice8_pkg2.ads
 file
 
@@ -12197,6 +12299,40 @@ ebotcazou
 
 
 457
+
+lto9_pkg2.ads
+file
+
+
+
+
+2010-07-08T15:17:56.324107Z
+da098733ad0c559d77d5e016d5cc3120
+2010-05-15T19:05:06.868991Z
+159438
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+482
 
 discr9.adb
 file
@@ -12232,40 +12368,6 @@ ebotcazou
 
 188
 
-constant2_pkg2.adb
-file
-
-
-
-
-2010-11-22T19:14:28.045784Z
-a6968b39f4440beda38a5993d299e7ca
-2010-09-19T13:48:51.873639Z
-164416
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-184
-
 atomic2.adb
 file
 
@@ -12300,16 +12402,16 @@ ebotcazou
 
 214
 
-pointer_variable_bounds_q.ads
+constant2_pkg2.adb
 file
 
 
 
 
-2009-04-24T17:46:10.000000Z
-987f8477372658bd5b7cfcef6f80d3f7
-2006-12-04T07:47:32.823350Z
-119481
+2010-11-22T19:14:28.045784Z
+a6968b39f4440beda38a5993d299e7ca
+2010-09-19T13:48:51.873639Z
+164416
 ebotcazou
 
 
@@ -12332,7 +12434,7 @@ ebotcazou
 
 
 
-165
+184
 
 dg.exp
 file
@@ -12368,6 +12470,40 @@ nickc
 
 1097
 
+pointer_variable_bounds_q.ads
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+987f8477372658bd5b7cfcef6f80d3f7
+2006-12-04T07:47:32.823350Z
+119481
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+165
+
 task_stack_align.adb
 file
 
@@ -12401,74 +12537,6 @@ hainque
 
 
 704
-
-sync_iface_test.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-8156f147fe428f54705e52707eba49c8
-2008-07-31T13:45:32.116240Z
-138410
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-414
-
-aggr2.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-bb3499d51eeb2df7cbe1a4c20ce23e71
-2007-04-06T09:44:51.240197Z
-123612
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-310
 
 loop_optimization3.adb
 file
@@ -12504,6 +12572,74 @@ ebotcazou
 
 315
 
+aggr2.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+bb3499d51eeb2df7cbe1a4c20ce23e71
+2007-04-06T09:44:51.240197Z
+123612
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+310
+
+sync_iface_test.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+8156f147fe428f54705e52707eba49c8
+2008-07-31T13:45:32.116240Z
+138410
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+414
+
 lto4.ads
 file
 
@@ -12537,40 +12673,6 @@ ebotcazou
 
 
 581
-
-release_unc_maxalign.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-937e634810359d92f37cab588f19e1c0
-2007-11-16T08:52:51.247571Z
-130221
-hainque
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-428
 
 derived_type2.adb
 file
@@ -12606,51 +12708,17 @@ ebotcazou
 
 633
 
-prot2.adb
-file
-
-
-
-
-2010-07-08T15:17:56.325101Z
-efabe4dc5e80da45356f8c53aa9a3889
-2010-05-30T12:01:55.672627Z
-160049
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-396
-
-type_conv.adb
+release_unc_maxalign.adb
 file
 
 
 
 
 2009-04-24T17:46:10.000000Z
-31ad6228e741b3e512054cc8faf2149f
-2006-10-31T18:20:42.966598Z
-118332
-charlet
+937e634810359d92f37cab588f19e1c0
+2007-11-16T08:52:51.247571Z
+130221
+hainque
 
 
 
@@ -12672,7 +12740,7 @@ charlet
 
 
 
-275
+428
 
 discr1.ads
 file
@@ -12708,6 +12776,74 @@ charlet
 
 466
 
+type_conv.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+31ad6228e741b3e512054cc8faf2149f
+2006-10-31T18:20:42.966598Z
+118332
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+275
+
+prot2.adb
+file
+
+
+
+
+2010-07-08T15:17:56.325101Z
+efabe4dc5e80da45356f8c53aa9a3889
+2010-05-30T12:01:55.672627Z
+160049
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+396
+
 nested_agg_bitfield_constructor.adb
 file
 
@@ -12742,16 +12878,16 @@ hainque
 
 693
 
-array17_pkg.ads
+opt23.adb
 file
 
 
 
 
-2011-11-12T11:42:16.540228Z
-6fcee6cf0cfc2db1664e1f0be3469c6c
-2011-09-26T09:03:52.157521Z
-179186
+2012-01-20T20:50:37.462324Z
+30fee785d603a7e3c1aa612047dd4d5b
+2012-01-11T18:47:28.389436Z
+183102
 ebotcazou
 
 
@@ -12774,41 +12910,7 @@ ebotcazou
 
 
 
-180
-
-test_8bitlong_overflow.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-ca3f15cafad22642073dd93c60dba647
-2008-11-07T09:56:33.307250Z
-141668
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-513
+355
 
 bit_packed_array5.adb
 file
@@ -12844,6 +12946,74 @@ ebotcazou
 
 453
 
+test_8bitlong_overflow.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+ca3f15cafad22642073dd93c60dba647
+2008-11-07T09:56:33.307250Z
+141668
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+513
+
+array17_pkg.ads
+file
+
+
+
+
+2011-11-12T11:42:16.540228Z
+6fcee6cf0cfc2db1664e1f0be3469c6c
+2011-09-26T09:03:52.157521Z
+179186
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+180
+
 opt15_pkg.adb
 file
 
@@ -12877,40 +13047,6 @@ ebotcazou
 
 
 184
-
-deferred_const3_pkg.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-e2c1bf8583ed2261f12ac6c532974d59
-2008-08-01T12:39:57.692697Z
-138513
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-342
 
 self1.adb
 file
@@ -12946,16 +13082,16 @@ charlet
 
 480
 
-discr25.adb
+deferred_const3_pkg.adb
 file
 
 
 
 
-2010-11-22T19:14:28.046784Z
-60d6e016146d36fc6144aa8477a2abf7
-2010-10-20T11:02:40.809904Z
-165716
+2009-04-24T17:46:09.000000Z
+e2c1bf8583ed2261f12ac6c532974d59
+2008-08-01T12:39:57.692697Z
+138513
 ebotcazou
 
 
@@ -12978,7 +13114,7 @@ ebotcazou
 
 
 
-140
+342
 
 dynamic_bound.adb
 file
@@ -13013,6 +13149,40 @@ ebotcazou
 
 
 529
+
+discr25.adb
+file
+
+
+
+
+2010-11-22T19:14:28.046784Z
+60d6e016146d36fc6144aa8477a2abf7
+2010-10-20T11:02:40.809904Z
+165716
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+140
 
 unchecked_convert4.adb
 file
@@ -13082,40 +13252,6 @@ ebotcazou
 
 475
 
-constant2_pkg2.ads
-file
-
-
-
-
-2010-11-22T19:14:28.046784Z
-319f9f69706ba3a38cf72d73014d5faf
-2010-09-19T13:48:51.873639Z
-164416
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-108
-
 pack10.adb
 file
 
@@ -13149,6 +13285,40 @@ ebotcazou
 
 
 507
+
+constant2_pkg2.ads
+file
+
+
+
+
+2010-11-22T19:14:28.046784Z
+319f9f69706ba3a38cf72d73014d5faf
+2010-09-19T13:48:51.873639Z
+164416
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+108
 
 g_tables.adb
 file
@@ -13286,40 +13456,6 @@ charlet
 
 320
 
-parent_ltd_with-child_full_view.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-293e12b916ea19a7bbc88500925891d7
-2008-04-08T07:22:13.810248Z
-134085
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-303
-
 nested_subtype_byref.adb
 file
 
@@ -13353,6 +13489,40 @@ hainque
 
 
 398
+
+parent_ltd_with-child_full_view.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+293e12b916ea19a7bbc88500925891d7
+2008-04-08T07:22:13.810248Z
+134085
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+303
 
 volatile_aggregate.adb
 file
@@ -13422,6 +13592,40 @@ ebotcazou
 
 50
 
+dynamic_elab1.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+7635564cbd3cb96c2e2dc2b186296557
+2008-04-18T18:18:53.881199Z
+134442
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+271
+
 discr11_pkg.ads
 file
 
@@ -13456,16 +13660,16 @@ ebotcazou
 
 213
 
-dynamic_elab1.adb
+opt23.ads
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-7635564cbd3cb96c2e2dc2b186296557
-2008-04-18T18:18:53.881199Z
-134442
+2012-01-20T20:50:37.463324Z
+fe88c2e88522622eee48946650b9e14b
+2012-01-11T18:47:28.389436Z
+183102
 ebotcazou
 
 
@@ -13488,7 +13692,7 @@ ebotcazou
 
 
 
-271
+97
 
 bit_packed_array5.ads
 file
@@ -13592,40 +13796,6 @@ ebotcazou
 
 356
 
-warn5.adb
-file
-
-
-
-
-2010-01-06T00:59:16.693645Z
-d846163ab9d1eddc6ee895f33de07419
-2009-12-29T16:12:03.385805Z
-155505
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-824
-
 discr15_pkg.ads
 file
 
@@ -13660,17 +13830,17 @@ ebotcazou
 
 436
 
-curr_task.adb
+warn5.adb
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-5c0530439a349a686e1ffa7d60c5bdb5
-2006-10-31T18:20:42.966598Z
-118332
-charlet
+2010-01-06T00:59:16.693645Z
+d846163ab9d1eddc6ee895f33de07419
+2009-12-29T16:12:03.385805Z
+155505
+ebotcazou
 
 
 
@@ -13692,7 +13862,7 @@ charlet
 
 
 
-2246
+824
 
 noreturn1.adb
 file
@@ -13727,6 +13897,40 @@ uros
 
 
 330
+
+curr_task.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+5c0530439a349a686e1ffa7d60c5bdb5
+2006-10-31T18:20:42.966598Z
+118332
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2246
 
 addr4.adb
 file
@@ -13898,40 +14102,6 @@ charlet
 
 120
 
-parent_ltd_with-child_full_view.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-9e65a6cba9bd713df5c37595ec0489c4
-2008-04-08T07:22:13.810248Z
-134085
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-349
-
 nested_subtype_byref.ads
 file
 
@@ -13965,6 +14135,40 @@ hainque
 
 
 58
+
+parent_ltd_with-child_full_view.ads
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+9e65a6cba9bd713df5c37595ec0489c4
+2008-04-08T07:22:13.810248Z
+134085
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+349
 
 rep_clause4.adb
 file
@@ -14000,40 +14204,6 @@ ebotcazou
 
 615
 
-test_prio.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-b4e70eb01cbbf275c2544c0afbbaa999
-2006-11-05T10:19:18.829092Z
-118494
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-418
-
 debug2.adb
 file
 
@@ -14068,16 +14238,16 @@ ebotcazou
 
 599
 
-dynamic_elab1.ads
+test_prio.adb
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-d19a973a4e684acb20581bc20038f182
-2008-04-18T18:18:53.881199Z
-134442
+2009-04-24T17:46:10.000000Z
+b4e70eb01cbbf275c2544c0afbbaa999
+2006-11-05T10:19:18.829092Z
+118494
 ebotcazou
 
 
@@ -14100,7 +14270,7 @@ ebotcazou
 
 
 
-198
+418
 
 aggr16_pkg.ads
 file
@@ -14135,6 +14305,40 @@ ebotcazou
 
 
 433
+
+dynamic_elab1.ads
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+d19a973a4e684acb20581bc20038f182
+2008-04-18T18:18:53.881199Z
+134442
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+198
 
 noreturn1.ads
 file
@@ -14374,40 +14578,6 @@ ebotcazou
 
 263
 
-opt7.adb
-file
-
-
-
-
-2010-11-22T19:14:28.046784Z
-ac2da3489d2247617d3df12fd395a327
-2010-10-24T20:50:20.663409Z
-165905
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1292
-
 debug2.ads
 file
 
@@ -14441,6 +14611,40 @@ ebotcazou
 
 
 52
+
+opt7.adb
+file
+
+
+
+
+2010-11-22T19:14:28.046784Z
+ac2da3489d2247617d3df12fd395a327
+2010-10-24T20:50:20.663409Z
+165905
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1292
 
 capture_value.adb
 file
@@ -14476,40 +14680,6 @@ charlet
 
 245
 
-test_direct_io.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-b5f8d0a87710ce4a42c293c869f556a9
-2008-02-27T12:12:14.496229Z
-132708
-sam
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-243
-
 discr28_pkg.ads
 file
 
@@ -14543,6 +14713,40 @@ ebotcazou
 
 
 71
+
+test_direct_io.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+b5f8d0a87710ce4a42c293c869f556a9
+2008-02-27T12:12:14.496229Z
+132708
+sam
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+243
 
 enum2_pkg.ads
 file
@@ -14578,40 +14782,6 @@ ebotcazou
 
 237
 
-opt7.ads
-file
-
-
-
-
-2010-11-22T19:14:28.047784Z
-7f6c911467618d85923b78ae448bb785
-2010-10-24T20:50:20.663409Z
-165905
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-303
-
 test_call.adb
 file
 
@@ -14645,6 +14815,40 @@ charlet
 
 
 599
+
+opt7.ads
+file
+
+
+
+
+2010-11-22T19:14:28.047784Z
+7f6c911467618d85923b78ae448bb785
+2010-10-24T20:50:20.663409Z
+165905
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+303
 
 interface2.adb
 file
@@ -14918,40 +15122,6 @@ charlet
 
 670
 
-alignment4.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-f2d6c1b47ec321a0b4da82a9ce3a2538
-2008-05-03T19:35:01.212706Z
-134916
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-284
-
 volatile3.adb
 file
 
@@ -14985,6 +15155,40 @@ hainque
 
 
 285
+
+alignment4.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+f2d6c1b47ec321a0b4da82a9ce3a2538
+2008-05-03T19:35:01.212706Z
+134916
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+284
 
 div_no_warning.adb
 file
@@ -15156,40 +15360,6 @@ ebotcazou
 
 271
 
-overriding_ops.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-736e3c4d05fbbe73e747e11bf252f2cf
-2006-10-31T18:20:42.966598Z
-118332
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-407
-
 deferred_const4.adb
 file
 
@@ -15224,17 +15394,17 @@ ebotcazou
 
 174
 
-opt7_pkg.ads
+overriding_ops.ads
 file
 
 
 
 
-2010-11-22T19:14:28.047784Z
-81951fc84d3d36131be8aca4f80c113b
-2010-10-24T20:50:20.663409Z
-165905
-ebotcazou
+2009-04-24T17:46:10.000000Z
+736e3c4d05fbbe73e747e11bf252f2cf
+2006-10-31T18:20:42.966598Z
+118332
+charlet
 
 
 
@@ -15256,7 +15426,7 @@ ebotcazou
 
 
 
-68
+407
 
 slice8_pkg3.adb
 file
@@ -15292,6 +15462,40 @@ ebotcazou
 
 391
 
+opt7_pkg.ads
+file
+
+
+
+
+2010-11-22T19:14:28.047784Z
+81951fc84d3d36131be8aca4f80c113b
+2010-10-24T20:50:20.663409Z
+165905
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+68
+
 discr17.adb
 file
 
@@ -15326,40 +15530,6 @@ ebotcazou
 
 1085
 
-bip_aggregate_bug.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-faf4a0c852ea85d2eab4ec4413be5fba
-2008-08-04T10:28:30.434081Z
-138606
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1341
-
 remote_type.ads
 file
 
@@ -15393,6 +15563,40 @@ charlet
 
 
 583
+
+bip_aggregate_bug.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+faf4a0c852ea85d2eab4ec4413be5fba
+2008-08-04T10:28:30.434081Z
+138606
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1341
 
 source_ref2.adb
 file
@@ -15462,40 +15666,6 @@ charlet
 
 744
 
-lto5.adb
-file
-
-
-
-
-2010-07-08T15:17:56.325101Z
-959fb8bdf4cd1c34347ecfbab19ea60b
-2010-05-08T17:31:23.972383Z
-159191
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-113
-
 slice4.adb
 file
 
@@ -15530,17 +15700,17 @@ ebotcazou
 
 581
 
-discr2.adb
+lto5.adb
 file
 
 
 
 
-2009-04-24T17:46:09.000000Z
-d9d6cdf488f0ac773d5d24fc90e2227d
-2007-06-06T10:54:25.331020Z
-125480
-charlet
+2010-07-08T15:17:56.325101Z
+959fb8bdf4cd1c34347ecfbab19ea60b
+2010-05-08T17:31:23.972383Z
+159191
+ebotcazou
 
 
 
@@ -15562,7 +15732,7 @@ charlet
 
 
 
-372
+113
 
 aggr15.adb
 file
@@ -15598,6 +15768,40 @@ ebotcazou
 
 321
 
+discr2.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+d9d6cdf488f0ac773d5d24fc90e2227d
+2007-06-06T10:54:25.331020Z
+125480
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+372
+
 pointer_discr1_pkg2.ads
 file
 
@@ -15631,74 +15835,6 @@ ebotcazou
 
 
 259
-
-generic_dispatch.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-378515f5abe94360ef1c9648e98250ff
-2006-10-31T18:20:42.966598Z
-118332
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-236
-
-trampoline1.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-9b44f3b996bb4262650743e829b4eae6
-2008-05-25T22:42:49.756453Z
-135884
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-377
 
 deferred_const4.ads
 file
@@ -15734,16 +15870,16 @@ ebotcazou
 
 279
 
-misaligned_param.adb
+trampoline1.adb
 file
 
 
 
 
-2009-09-08T03:18:03.000000Z
-aa4311a4e25fa1344b16aef36aa3e0a3
-2009-09-02T10:43:10.023219Z
-151319
+2009-04-24T17:46:10.000000Z
+9b44f3b996bb4262650743e829b4eae6
+2008-05-25T22:42:49.756453Z
+135884
 ebotcazou
 
 
@@ -15766,19 +15902,19 @@ ebotcazou
 
 
 
-633
+377
 
-handle_raise_from_pure.adb
+generic_dispatch.adb
 file
 
 
 
 
 2009-04-24T17:46:09.000000Z
-38ab9c3d211d51b5c4444cf3869e2e08
-2008-11-13T14:43:23.028426Z
-141821
-hainque
+378515f5abe94360ef1c9648e98250ff
+2006-10-31T18:20:42.966598Z
+118332
+charlet
 
 
 
@@ -15800,7 +15936,7 @@ hainque
 
 
 
-270
+236
 
 slice8_pkg3.ads
 file
@@ -15836,6 +15972,74 @@ ebotcazou
 
 154
 
+handle_raise_from_pure.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+38ab9c3d211d51b5c4444cf3869e2e08
+2008-11-13T14:43:23.028426Z
+141821
+hainque
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+270
+
+misaligned_param.adb
+file
+
+
+
+
+2009-09-08T03:18:03.000000Z
+aa4311a4e25fa1344b16aef36aa3e0a3
+2009-09-02T10:43:10.023219Z
+151319
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+633
+
 atomic3.adb
 file
 
@@ -15869,40 +16073,6 @@ ebotcazou
 
 
 398
-
-aggr3.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-674ef7d1ee7e35c007365502de84ded5
-2007-06-07T11:04:02.900413Z
-125527
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-842
 
 loop_optimization4.adb
 file
@@ -15938,16 +16108,16 @@ ebotcazou
 
 162
 
-discr2.ads
+aggr3.adb
 file
 
 
 
 
 2009-04-24T17:46:09.000000Z
-285dda8bb5790fcd3ad43badb451a2bb
-2007-06-06T10:54:25.331020Z
-125480
+674ef7d1ee7e35c007365502de84ded5
+2007-06-07T11:04:02.900413Z
+125527
 charlet
 
 
@@ -15970,7 +16140,41 @@ charlet
 
 
 
-53
+842
+
+invalid1.adb
+file
+
+
+
+
+2011-06-04T17:56:00.364123Z
+4dada8f6dee4247635bccad95f758da5
+2011-05-17T13:53:26.591315Z
+173831
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1084
 
 aggr15.ads
 file
@@ -16006,16 +16210,50 @@ ebotcazou
 
 248
 
-invalid1.adb
+discr2.ads
 file
 
 
 
 
-2011-06-04T17:56:00.364123Z
-4dada8f6dee4247635bccad95f758da5
-2011-05-17T13:53:26.591315Z
-173831
+2009-04-24T17:46:09.000000Z
+285dda8bb5790fcd3ad43badb451a2bb
+2007-06-06T10:54:25.331020Z
+125480
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+53
+
+opt24.adb
+file
+
+
+
+
+2012-01-20T20:50:37.463324Z
+d4cc17c1ccc05a2d839bebd6ed741f7a
+2012-01-11T18:47:28.389436Z
+183102
 ebotcazou
 
 
@@ -16038,7 +16276,7 @@ ebotcazou
 
 
 
-1084
+307
 
 layered_instance.adb
 file
@@ -16108,40 +16346,6 @@ ebotcazou
 
 258
 
-unchecked_convert5.adb
-file
-
-
-
-
-2010-07-08T15:17:56.325101Z
-a5a1781a9b40c44bd5dbb95b32e2f178
-2010-04-23T16:16:50.842041Z
-158675
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-396
-
 tfren.adb
 file
 
@@ -16175,6 +16379,40 @@ charlet
 
 
 780
+
+unchecked_convert5.adb
+file
+
+
+
+
+2010-07-08T15:17:56.325101Z
+a5a1781a9b40c44bd5dbb95b32e2f178
+2010-04-23T16:16:50.842041Z
+158675
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+396
 
 pack11.adb
 file
@@ -16210,40 +16448,6 @@ ebotcazou
 
 387
 
-test_ai254.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-2e0d725861b08de7353e36e2b40f38b6
-2008-08-04T12:13:10.862534Z
-138609
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-270
-
 address_null_init.ads
 file
 
@@ -16278,17 +16482,17 @@ charlet
 
 226
 
-lto8_pkg.adb
+test_ai254.adb
 file
 
 
 
 
-2010-07-08T15:17:56.325101Z
-818b2190df101ecaf3cb8336d8297886
-2010-05-12T10:59:38.737556Z
-159309
-ebotcazou
+2009-04-24T17:46:10.000000Z
+2e0d725861b08de7353e36e2b40f38b6
+2008-08-04T12:13:10.862534Z
+138609
+charlet
 
 
 
@@ -16310,7 +16514,7 @@ ebotcazou
 
 
 
-183
+270
 
 overflow_sum.adb
 file
@@ -16346,6 +16550,40 @@ ebotcazou
 
 1822
 
+lto8_pkg.adb
+file
+
+
+
+
+2010-07-08T15:17:56.325101Z
+818b2190df101ecaf3cb8336d8297886
+2010-05-12T10:59:38.737556Z
+159309
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+183
+
 dynamic_elab2.adb
 file
 
@@ -16379,6 +16617,40 @@ ebotcazou
 
 
 271
+
+opt24.ads
+file
+
+
+
+
+2012-01-20T20:50:37.463324Z
+434a03982d16d3e68a819f426a6ec425
+2012-01-11T18:47:28.389436Z
+183102
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+97
 
 iprot_test.adb
 file
@@ -16414,17 +16686,17 @@ charlet
 
 772
 
-scalar_mode_agg_compare.adb
+discr26.ads
 file
 
 
 
 
-2009-04-24T17:46:10.000000Z
-aec2ba67acc1ad93283400e4ccba0a2a
-2006-06-24T12:47:48.460772Z
-114963
-hainque
+2011-06-04T17:56:00.365123Z
+4f054d7eae23880c7ae772192c876edf
+2011-03-23T10:04:08.899831Z
+171345
+ebotcazou
 
 
 
@@ -16446,7 +16718,7 @@ hainque
 
 
 
-571
+245
 
 hyper_flat.adb
 file
@@ -16482,17 +16754,17 @@ ebotcazou
 
 312
 
-discr26.ads
+scalar_mode_agg_compare.adb
 file
 
 
 
 
-2011-06-04T17:56:00.365123Z
-4f054d7eae23880c7ae772192c876edf
-2011-03-23T10:04:08.899831Z
-171345
-ebotcazou
+2009-04-24T17:46:10.000000Z
+aec2ba67acc1ad93283400e4ccba0a2a
+2006-06-24T12:47:48.460772Z
+114963
+hainque
 
 
 
@@ -16514,7 +16786,7 @@ ebotcazou
 
 
 
-245
+571
 
 noreturn2.adb
 file
@@ -16550,40 +16822,6 @@ ebotcazou
 
 599
 
-max_align.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-ebbd44798662a03d43697c3bec8dc4b4
-2007-11-07T09:51:46.093985Z
-129958
-hainque
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-256
-
 addr5.adb
 file
 
@@ -16617,6 +16855,40 @@ ebotcazou
 
 
 199
+
+max_align.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+ebbd44798662a03d43697c3bec8dc4b4
+2007-11-07T09:51:46.093985Z
+129958
+hainque
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+256
 
 dispatch2_p.adb
 file
@@ -16652,40 +16924,6 @@ charlet
 
 152
 
-array3.adb
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-ce95a40ed45efc9a52f92f6d4700acb5
-2007-08-16T13:58:54.047595Z
-127556
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1110
-
 discr8_pkg3.ads
 file
 
@@ -16719,6 +16957,40 @@ ebotcazou
 
 
 73
+
+array3.adb
+file
+
+
+
+
+2009-04-24T17:46:09.000000Z
+ce95a40ed45efc9a52f92f6d4700acb5
+2007-08-16T13:58:54.047595Z
+127556
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1110
 
 loop_optimization3_pkg.adb
 file
@@ -16788,40 +17060,6 @@ ebotcazou
 
 1017
 
-lto8_pkg.ads
-file
-
-
-
-
-2010-07-08T15:17:56.326112Z
-658306954b7721ebbe3d58bef398bb54
-2010-05-12T10:59:38.737556Z
-159309
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-480
-
 slice7_pkg.ads
 file
 
@@ -16855,6 +17093,40 @@ ebotcazou
 
 
 149
+
+lto8_pkg.ads
+file
+
+
+
+
+2010-07-08T15:17:56.326112Z
+658306954b7721ebbe3d58bef398bb54
+2010-05-12T10:59:38.737556Z
+159309
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+480
 
 debug3.adb
 file
@@ -16958,40 +17230,6 @@ ebotcazou
 
 166
 
-dispatch2_p.ads
-file
-
-
-
-
-2009-04-24T17:46:09.000000Z
-636ded24b317e36ac4ad221b0a525709
-2007-08-16T13:29:34.868652Z
-127554
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-260
-
 empty_vector_length.adb
 file
 
@@ -17026,16 +17264,16 @@ hainque
 
 395
 
-named_test.adb
+dispatch2_p.ads
 file
 
 
 
 
-2009-04-24T17:46:10.000000Z
-9415013a8f3e34d127ab642035fa8305
-2007-04-06T09:44:51.240197Z
-123612
+2009-04-24T17:46:09.000000Z
+636ded24b317e36ac4ad221b0a525709
+2007-08-16T13:29:34.868652Z
+127554
 charlet
 
 
@@ -17058,7 +17296,7 @@ charlet
 
 
 
-559
+260
 
 thin_pointer1.adb
 file
@@ -17094,6 +17332,40 @@ ebotcazou
 
 234
 
+named_test.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+9415013a8f3e34d127ab642035fa8305
+2007-04-06T09:44:51.240197Z
+123612
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+559
+
 loop_optimization3_pkg.ads
 file
 
@@ -17127,40 +17399,6 @@ ebotcazou
 
 
 107
-
-atomic6_4.adb
-file
-
-
-
-
-2011-11-12T11:42:16.540228Z
-7da30a8d82c3677ad938532149908aa5
-2011-11-10T19:45:17.175323Z
-181267
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1613
 
 no_final.adb
 file
@@ -17196,16 +17434,16 @@ charlet
 
 564
 
-rep_clause5.ads
+atomic6_4.adb
 file
 
 
 
 
-2010-07-08T15:17:56.326112Z
-46f3ac56081a27e35da2755e49fc4346
-2010-04-18T15:47:10.864773Z
-158488
+2011-11-12T11:42:16.540228Z
+7da30a8d82c3677ad938532149908aa5
+2011-11-10T19:45:17.175323Z
+181267
 ebotcazou
 
 
@@ -17228,7 +17466,7 @@ ebotcazou
 
 
 
-243
+1613
 
 loop_optimization7_pkg.ads
 file
@@ -17264,6 +17502,40 @@ ebotcazou
 
 171
 
+rep_clause5.ads
+file
+
+
+
+
+2010-07-08T15:17:56.326112Z
+46f3ac56081a27e35da2755e49fc4346
+2010-04-18T15:47:10.864773Z
+158488
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+243
+
 addr_slice.adb
 file
 
@@ -17298,16 +17570,16 @@ charlet
 
 408
 
-opt8.adb
+debug3.ads
 file
 
 
 
 
-2010-11-22T19:14:28.047784Z
-9df643a09a85f1f88656c303fed9ef56
-2010-11-03T17:33:31.974363Z
-166260
+2011-06-04T17:56:00.365123Z
+a886032c55852c4ea79971d1f377b057
+2011-04-02T09:20:38.306299Z
+171887
 ebotcazou
 
 
@@ -17330,7 +17602,7 @@ ebotcazou
 
 
 
-1350
+50
 
 self_aggregate_with_pointer.adb
 file
@@ -17366,16 +17638,16 @@ ebotcazou
 
 484
 
-debug3.ads
+opt8.adb
 file
 
 
 
 
-2011-06-04T17:56:00.365123Z
-a886032c55852c4ea79971d1f377b057
-2011-04-02T09:20:38.306299Z
-171887
+2010-11-22T19:14:28.047784Z
+9df643a09a85f1f88656c303fed9ef56
+2010-11-03T17:33:31.974363Z
+166260
 ebotcazou
 
 
@@ -17398,7 +17670,7 @@ ebotcazou
 
 
 
-50
+1350
 
 c_words.adb
 file
@@ -19542,6 +19814,40 @@ ebotcazou
 
 50
 
+array18_pkg.ads
+file
+
+
+
+
+2012-01-20T20:50:37.463324Z
+30e126d464fe57826fd3f60b97c954fb
+2012-01-09T21:08:53.803801Z
+183033
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+132
+
 discr_range_check.adb
 file
 
@@ -19786,10 +20092,10 @@ file
 
 
 
-2011-11-12T11:42:16.541228Z
-2e3fd4ed71ef3bd341ee843448cb00ee
-2011-10-12T22:00:14.864746Z
-179868
+2012-01-20T20:50:37.463324Z
+daa02288d2d697bbcd7c54b53bebf2c5
+2011-12-13T11:26:14.472520Z
+182276
 ebotcazou
 
 
@@ -19812,7 +20118,7 @@ ebotcazou
 
 
 
-2072
+2821
 
 case_optimization1.ads
 file
@@ -20432,10 +20738,10 @@ file
 
 
 
-2011-11-12T11:42:16.541228Z
-6cff632da026d380ef3445d0eb06839c
-2011-10-12T22:00:14.864746Z
-179868
+2012-01-20T20:50:37.464324Z
+0717701347aab30e21961df79e6703b1
+2011-12-13T11:26:14.472520Z
+182276
 ebotcazou
 
 
@@ -20458,7 +20764,7 @@ ebotcazou
 
 
 
-1302
+1558
 
 aligned_vla.adb
 file
@@ -23498,10 +23804,10 @@ file
 
 
 
-2011-11-12T11:42:16.543228Z
-59d06f75a5ed8c1e33cc510e34efcc03
-2011-10-12T22:00:14.864746Z
-179868
+2012-01-20T20:50:37.464324Z
+0b5bf4dcd54b453bf4b610e99ac63c0e
+2011-12-13T11:26:14.472520Z
+182276
 ebotcazou
 
 
@@ -23524,7 +23830,7 @@ ebotcazou
 
 
 
-2072
+2821
 
 lto5_pkg.adb
 file
@@ -24246,10 +24552,10 @@ file
 
 
 
-2011-11-12T11:42:16.543228Z
-e4be4971181b5e54da8cfc82e981c42e
-2011-10-12T22:00:14.864746Z
-179868
+2012-01-20T20:50:37.464324Z
+53cb8d8d9568f464e3c9b0238adc3420
+2011-12-13T11:26:14.472520Z
+182276
 ebotcazou
 
 
@@ -24272,7 +24578,7 @@ ebotcazou
 
 
 
-1343
+1599
 
 lto5_pkg.ads
 file
@@ -26008,6 +26314,40 @@ sam
 
 197
 
+array18.adb
+file
+
+
+
+
+2012-01-20T20:50:37.465324Z
+1151267bc651bcf21cf79463b597390b
+2012-01-09T21:08:53.803801Z
+183033
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+125
+
 import1.adb
 file
 
@@ -27578,10 +27918,10 @@ file
 
 
 
-2011-11-12T11:42:16.544228Z
-54996248fc8148e7e1981de6bb4b59eb
-2011-10-12T22:00:14.864746Z
-179868
+2012-01-20T20:50:37.465324Z
+e3ca7a5c98fd564b28f2d7cd131fc90a
+2011-12-13T11:26:14.472520Z
+182276
 ebotcazou
 
 
@@ -27604,7 +27944,7 @@ ebotcazou
 
 
 
-2072
+2821
 
 bit_packed_array1.ads
 file
@@ -28326,10 +28666,10 @@ file
 
 
 
-2011-11-12T11:42:16.544228Z
-e1cbb8ce3cbaa83a2db6608a149ca91a
-2011-10-12T22:00:14.864746Z
-179868
+2012-01-20T20:50:37.465324Z
+e57271ecb5d8ebf22ebf2b41b2b146cb
+2011-12-13T11:26:14.472520Z
+182276
 ebotcazou
 
 
@@ -28352,7 +28692,7 @@ ebotcazou
 
 
 
-1408
+1664
 
 iface_test.adb
 file

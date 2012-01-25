@@ -1,15 +1,15 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libdecnumber
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-04-20T18:19:03.661624Z
-172785
-meyering
+2011-12-20T16:54:12.212608Z
+182546
+schwab
 has-props
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2010-11-22T19:14:07.528049Z
-fb74c8bdc995fcb773d5a6489922cd2a
-2010-09-10T11:39:49.326480Z
-164167
-ktietz
+2012-01-20T20:50:27.375372Z
+249eecbcf863bedf848e5da40e948d11
+2011-12-20T16:54:12.212608Z
+182546
+schwab
 has-props
 
 
@@ -58,7 +58,7 @@ has-props
 
 
 
-185620
+185956
 
 Makefile.in
 file
@@ -505,40 +505,6 @@ hjl
 
 2943
 
-decNumberLocal.h
-file
-
-
-
-
-2009-04-24T17:46:15.000000Z
-9c18bda6bf3156d5b644ab4bb5f5d926
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-33143
-
 decQuadSymbols.h
 file
 
@@ -572,6 +538,40 @@ janis
 
 
 3244
+
+decNumberLocal.h
+file
+
+
+
+
+2009-04-24T17:46:15.000000Z
+9c18bda6bf3156d5b644ab4bb5f5d926
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+33143
 
 decDouble.c
 file
@@ -879,40 +879,6 @@ ian
 
 11292
 
-ChangeLog
-file
-
-
-
-
-2011-06-04T17:54:53.312104Z
-d9fceb0fb6b2abce36d9651489647436
-2011-04-20T18:19:03.661624Z
-172785
-meyering
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-18369
-
 decQuad.c
 file
 
@@ -946,6 +912,40 @@ jakub
 
 
 5855
+
+ChangeLog
+file
+
+
+
+
+2012-01-20T20:50:27.375372Z
+d609774eaa3895b29569fc3ef5f478e5
+2011-12-20T16:54:12.212608Z
+182546
+schwab
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+18529
 
 decPacked.h
 file
@@ -981,40 +981,6 @@ jakub
 
 2699
 
-decQuad.h
-file
-
-
-
-
-2009-04-24T17:46:15.000000Z
-e2f09e0d85bc79841672d1519fbe28c7
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-10611
-
 decSingleSymbols.h
 file
 
@@ -1048,6 +1014,40 @@ janis
 
 
 890
+
+decQuad.h
+file
+
+
+
+
+2009-04-24T17:46:15.000000Z
+e2f09e0d85bc79841672d1519fbe28c7
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+10611
 
 dconfig.h
 file

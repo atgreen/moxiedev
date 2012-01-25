@@ -9,15 +9,14 @@ import (
 	"compress/bzip2"
 	"fmt"
 	"io"
-	old "old/regexp"
+	"math/rand"
 	"os"
 	"path/filepath"
-	"rand"
 	"regexp/syntax"
 	"strconv"
 	"strings"
 	"testing"
-	"utf8"
+	"unicode/utf8"
 )
 
 // TestRE2 tests this package's regexp API against test cases
@@ -104,7 +103,7 @@ func testRE2(t *testing.T, file string) {
 	for {
 		line, err := r.ReadString('\n')
 		if err != nil {
-			if err == os.EOF {
+			if err == io.EOF {
 				break
 			}
 			t.Fatalf("%s:%d: %v", file, lineno, err)
@@ -141,7 +140,7 @@ func testRE2(t *testing.T, file string) {
 			}
 			re, err = tryCompile(q)
 			if err != nil {
-				if err.String() == "error parsing regexp: invalid escape sequence: `\\C`" {
+				if err.Error() == "error parsing regexp: invalid escape sequence: `\\C`" {
 					// We don't and likely never will support \C; keep going.
 					continue
 				}
@@ -275,7 +274,7 @@ func isSingleBytes(s string) bool {
 	return true
 }
 
-func tryCompile(s string) (re *Regexp, err os.Error) {
+func tryCompile(s string) (re *Regexp, err error) {
 	// Protect against panic during Compile.
 	defer func() {
 		if r := recover(); r != nil {
@@ -370,7 +369,7 @@ Reading:
 		lineno++
 		line, err := b.ReadString('\n')
 		if err != nil {
-			if err != os.EOF {
+			if err != io.EOF {
 				t.Errorf("%s:%d: %v", file, lineno, err)
 			}
 			break Reading
@@ -629,7 +628,7 @@ func parseFowlerResult(s string) (ok, compiled, matched bool, pos []int) {
 			return
 		}
 		var v = -1
-		var err os.Error
+		var err error
 		if s[:i] != "?" {
 			v, err = strconv.Atoi(s[:i])
 			if err != nil {
@@ -674,19 +673,7 @@ func benchmark(b *testing.B, re string, n int) {
 	b.SetBytes(int64(n))
 	for i := 0; i < b.N; i++ {
 		if r.Match(t) {
-			panic("match!")
-		}
-	}
-}
-
-func benchold(b *testing.B, re string, n int) {
-	r := old.MustCompile(re)
-	t := makeText(n)
-	b.ResetTimer()
-	b.SetBytes(int64(n))
-	for i := 0; i < b.N; i++ {
-		if r.Match(t) {
-			panic("match!")
+			b.Fatal("match!")
 		}
 	}
 }
@@ -700,35 +687,23 @@ const (
 		"(N)(O)(P)(Q)(R)(S)(T)(U)(V)(W)(X)(Y)(Z)$"
 )
 
-func BenchmarkMatchEasy0_1K(b *testing.B)       { benchmark(b, easy0, 1<<10) }
-func BenchmarkMatchEasy0_1K_Old(b *testing.B)   { benchold(b, easy0, 1<<10) }
-func BenchmarkMatchEasy0_1M(b *testing.B)       { benchmark(b, easy0, 1<<20) }
-func BenchmarkMatchEasy0_1M_Old(b *testing.B)   { benchold(b, easy0, 1<<20) }
-func BenchmarkMatchEasy0_32K(b *testing.B)      { benchmark(b, easy0, 32<<10) }
-func BenchmarkMatchEasy0_32K_Old(b *testing.B)  { benchold(b, easy0, 32<<10) }
-func BenchmarkMatchEasy0_32M(b *testing.B)      { benchmark(b, easy0, 32<<20) }
-func BenchmarkMatchEasy0_32M_Old(b *testing.B)  { benchold(b, easy0, 32<<20) }
-func BenchmarkMatchEasy1_1K(b *testing.B)       { benchmark(b, easy1, 1<<10) }
-func BenchmarkMatchEasy1_1K_Old(b *testing.B)   { benchold(b, easy1, 1<<10) }
-func BenchmarkMatchEasy1_1M(b *testing.B)       { benchmark(b, easy1, 1<<20) }
-func BenchmarkMatchEasy1_1M_Old(b *testing.B)   { benchold(b, easy1, 1<<20) }
-func BenchmarkMatchEasy1_32K(b *testing.B)      { benchmark(b, easy1, 32<<10) }
-func BenchmarkMatchEasy1_32K_Old(b *testing.B)  { benchold(b, easy1, 32<<10) }
-func BenchmarkMatchEasy1_32M(b *testing.B)      { benchmark(b, easy1, 32<<20) }
-func BenchmarkMatchEasy1_32M_Old(b *testing.B)  { benchold(b, easy1, 32<<20) }
-func BenchmarkMatchMedium_1K(b *testing.B)      { benchmark(b, medium, 1<<10) }
-func BenchmarkMatchMedium_1K_Old(b *testing.B)  { benchold(b, medium, 1<<10) }
-func BenchmarkMatchMedium_1M(b *testing.B)      { benchmark(b, medium, 1<<20) }
-func BenchmarkMatchMedium_1M_Old(b *testing.B)  { benchold(b, medium, 1<<20) }
-func BenchmarkMatchMedium_32K(b *testing.B)     { benchmark(b, medium, 32<<10) }
-func BenchmarkMatchMedium_32K_Old(b *testing.B) { benchold(b, medium, 32<<10) }
-func BenchmarkMatchMedium_32M(b *testing.B)     { benchmark(b, medium, 32<<20) }
-func BenchmarkMatchMedium_32M_Old(b *testing.B) { benchold(b, medium, 32<<20) }
-func BenchmarkMatchHard_1K(b *testing.B)        { benchmark(b, hard, 1<<10) }
-func BenchmarkMatchHard_1K_Old(b *testing.B)    { benchold(b, hard, 1<<10) }
-func BenchmarkMatchHard_1M(b *testing.B)        { benchmark(b, hard, 1<<20) }
-func BenchmarkMatchHard_1M_Old(b *testing.B)    { benchold(b, hard, 1<<20) }
-func BenchmarkMatchHard_32K(b *testing.B)       { benchmark(b, hard, 32<<10) }
-func BenchmarkMatchHard_32K_Old(b *testing.B)   { benchold(b, hard, 32<<10) }
-func BenchmarkMatchHard_32M(b *testing.B)       { benchmark(b, hard, 32<<20) }
-func BenchmarkMatchHard_32M_Old(b *testing.B)   { benchold(b, hard, 32<<20) }
+func BenchmarkMatchEasy0_32(b *testing.B)   { benchmark(b, easy0, 32<<0) }
+func BenchmarkMatchEasy0_1K(b *testing.B)   { benchmark(b, easy0, 1<<10) }
+func BenchmarkMatchEasy0_32K(b *testing.B)  { benchmark(b, easy0, 32<<10) }
+func BenchmarkMatchEasy0_1M(b *testing.B)   { benchmark(b, easy0, 1<<20) }
+func BenchmarkMatchEasy0_32M(b *testing.B)  { benchmark(b, easy0, 32<<20) }
+func BenchmarkMatchEasy1_32(b *testing.B)   { benchmark(b, easy1, 32<<0) }
+func BenchmarkMatchEasy1_1K(b *testing.B)   { benchmark(b, easy1, 1<<10) }
+func BenchmarkMatchEasy1_32K(b *testing.B)  { benchmark(b, easy1, 32<<10) }
+func BenchmarkMatchEasy1_1M(b *testing.B)   { benchmark(b, easy1, 1<<20) }
+func BenchmarkMatchEasy1_32M(b *testing.B)  { benchmark(b, easy1, 32<<20) }
+func BenchmarkMatchMedium_32(b *testing.B)  { benchmark(b, medium, 1<<0) }
+func BenchmarkMatchMedium_1K(b *testing.B)  { benchmark(b, medium, 1<<10) }
+func BenchmarkMatchMedium_32K(b *testing.B) { benchmark(b, medium, 32<<10) }
+func BenchmarkMatchMedium_1M(b *testing.B)  { benchmark(b, medium, 1<<20) }
+func BenchmarkMatchMedium_32M(b *testing.B) { benchmark(b, medium, 32<<20) }
+func BenchmarkMatchHard_32(b *testing.B)    { benchmark(b, hard, 32<<0) }
+func BenchmarkMatchHard_1K(b *testing.B)    { benchmark(b, hard, 1<<10) }
+func BenchmarkMatchHard_32K(b *testing.B)   { benchmark(b, hard, 32<<10) }
+func BenchmarkMatchHard_1M(b *testing.B)    { benchmark(b, hard, 1<<20) }
+func BenchmarkMatchHard_32M(b *testing.B)   { benchmark(b, hard, 32<<20) }

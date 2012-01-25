@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/vector/debug
 svn://gcc.gnu.org/svn/gcc
 
@@ -28,40 +28,6 @@ redi
 
 invalidation
 dir
-
-assign1_neg.cc
-file
-
-
-
-
-2010-11-22T19:18:30.029783Z
-6909e9b72d8721b116f2e4dfd05ea257
-2010-09-03T18:10:46.246406Z
-163837
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-984
 
 construct1_neg.cc
 file
@@ -97,14 +63,14 @@ paolo
 
 987
 
-assign2_neg.cc
+assign1_neg.cc
 file
 
 
 
 
 2010-11-22T19:18:30.029783Z
-d701021ffd65fdc85201d1b7eb8a0ba0
+6909e9b72d8721b116f2e4dfd05ea257
 2010-09-03T18:10:46.246406Z
 163837
 paolo
@@ -165,14 +131,14 @@ paolo
 
 987
 
-assign3_neg.cc
+assign2_neg.cc
 file
 
 
 
 
-2010-11-22T19:18:30.030784Z
-ef7f2b12e5449d5f0c455c1efe7c9a64
+2010-11-22T19:18:30.029783Z
+d701021ffd65fdc85201d1b7eb8a0ba0
 2010-09-03T18:10:46.246406Z
 163837
 paolo
@@ -233,14 +199,14 @@ paolo
 
 987
 
-assign4_neg.cc
+assign3_neg.cc
 file
 
 
 
 
-2010-11-22T19:18:30.031784Z
-b9da58538f337e8d706074b4b175dcef
+2010-11-22T19:18:30.030784Z
+ef7f2b12e5449d5f0c455c1efe7c9a64
 2010-09-03T18:10:46.246406Z
 163837
 paolo
@@ -265,7 +231,7 @@ paolo
 
 
 
-966
+984
 
 construct4_neg.cc
 file
@@ -300,6 +266,40 @@ paolo
 
 
 969
+
+assign4_neg.cc
+file
+
+
+
+
+2010-11-22T19:18:30.031784Z
+b9da58538f337e8d706074b4b175dcef
+2010-09-03T18:10:46.246406Z
+163837
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+966
 
 shrink_to_fit.cc
 file

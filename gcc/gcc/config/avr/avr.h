@@ -23,7 +23,8 @@ along with GCC; see the file COPYING3.  If not see
 
 /* Names to predefine in the preprocessor for this target machine.  */
 
-struct base_arch_s {
+struct base_arch_s
+{
   /* Assembler only.  */
   int asm_only;
 
@@ -53,6 +54,10 @@ struct base_arch_s {
   
   /* Default start of data section address for architecture.  */
   int default_data_section_start;
+
+  /* Offset between SFR address and RAM address:
+     SFR-address = RAM-address - sfr_offset  */
+  int sfr_offset;
 
   /* Number of 64k segments in the flash.  */
   int n_segments;
@@ -127,6 +132,40 @@ extern const struct base_arch_s *avr_current_arch;
 extern const struct mcu_type_s *avr_current_device;
 extern const struct mcu_type_s avr_mcu_types[];
 extern const struct base_arch_s avr_arch_types[];
+
+typedef struct
+{
+  /* Id of the address space as used in c_register_addr_space */
+  unsigned char id;
+
+  /* Flavour of memory: 0 = RAM, 1 = Flash */
+  int memory_class;
+
+  /* Width of pointer (in bytes) */
+  int pointer_size;
+
+  /* Name of the address space as visible to the user */
+  const char *name;
+
+  /* Segment (i.e. 64k memory chunk) number.  */
+  int segment;
+} avr_addrspace_t;
+
+extern const avr_addrspace_t avr_addrspace[];
+
+/* Known address spaces */
+
+enum
+  {
+    ADDR_SPACE_RAM,
+    ADDR_SPACE_PGM,
+    ADDR_SPACE_PGM1,
+    ADDR_SPACE_PGM2,
+    ADDR_SPACE_PGM3,
+    ADDR_SPACE_PGM4,
+    ADDR_SPACE_PGM5,
+    ADDR_SPACE_PGMX
+  };
 
 #define TARGET_CPU_CPP_BUILTINS()	avr_cpu_cpp_builtins (pfile)
 
@@ -396,15 +435,6 @@ typedef struct avr_args {
 
 #define NO_FUNCTION_CSE
 
-
-#define ADDR_SPACE_PGM  1
-#define ADDR_SPACE_PGM1 2
-#define ADDR_SPACE_PGM2 3
-#define ADDR_SPACE_PGM3 4
-#define ADDR_SPACE_PGM4 5
-#define ADDR_SPACE_PGM5 6
-#define ADDR_SPACE_PGMX 7
-
 #define REGISTER_TARGET_PRAGMAS()                                       \
   do {                                                                  \
     avr_register_target_pragmas();                                      \
@@ -466,12 +496,6 @@ typedef struct avr_args {
     "__SP_L__","__SP_H__","argL","argH"}
 
 #define FINAL_PRESCAN_INSN(insn, operand, nop) final_prescan_insn (insn, operand,nop)
-
-#define PRINT_OPERAND(STREAM, X, CODE) print_operand (STREAM, X, CODE)
-
-#define PRINT_OPERAND_PUNCT_VALID_P(CODE) ((CODE) == '~' || (CODE) == '!')
-
-#define PRINT_OPERAND_ADDRESS(STREAM, X) print_operand_address(STREAM, X)
 
 #define ASM_OUTPUT_REG_PUSH(STREAM, REGNO)	\
 {						\

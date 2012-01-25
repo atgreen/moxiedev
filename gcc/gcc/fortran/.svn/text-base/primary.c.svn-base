@@ -1,5 +1,6 @@
 /* Primary expression subroutines
-   Copyright (C) 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+   2011, 2012
    Free Software Foundation, Inc.
    Contributed by Andy Vaught
 
@@ -223,6 +224,9 @@ match_integer_constant (gfc_expr **result, int signflag)
     kind = gfc_default_integer_kind;
   if (kind == -1)
     return MATCH_ERROR;
+
+  if (kind == 4 && gfc_option.flag_integer4_kind == 8)
+    kind = 8;
 
   if (gfc_validate_kind (BT_INTEGER, kind, true) < 0)
     {
@@ -636,6 +640,26 @@ done:
 	  goto cleanup;
 	}
       kind = gfc_default_double_kind;
+
+      if (kind == 4)
+	{
+	  if (gfc_option.flag_real4_kind == 8)
+	    kind = 8;
+	  if (gfc_option.flag_real4_kind == 10)
+	    kind = 10;
+	  if (gfc_option.flag_real4_kind == 16)
+	    kind = 16;
+	}
+
+      if (kind == 8)
+	{
+	  if (gfc_option.flag_real8_kind == 4)
+	    kind = 4;
+	  if (gfc_option.flag_real8_kind == 10)
+	    kind = 10;
+	  if (gfc_option.flag_real8_kind == 16)
+	    kind = 16;
+	}
       break;
 
     case 'q':
@@ -665,6 +689,26 @@ done:
     default:
       if (kind == -2)
 	kind = gfc_default_real_kind;
+
+      if (kind == 4)
+	{
+	  if (gfc_option.flag_real4_kind == 8)
+	    kind = 8;
+	  if (gfc_option.flag_real4_kind == 10)
+	    kind = 10;
+	  if (gfc_option.flag_real4_kind == 16)
+	    kind = 16;
+	}
+
+      if (kind == 8)
+	{
+	  if (gfc_option.flag_real8_kind == 4)
+	    kind = 4;
+	  if (gfc_option.flag_real8_kind == 10)
+	    kind = 10;
+	  if (gfc_option.flag_real8_kind == 16)
+	    kind = 16;
+	}
 
       if (gfc_validate_kind (BT_REAL, kind, true) < 0)
 	{
@@ -1789,13 +1833,17 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
 
   if (gfc_peek_ascii_char () == '[')
     {
-      if (sym->attr.dimension)
+      if ((sym->ts.type != BT_CLASS && sym->attr.dimension)
+	  || (sym->ts.type == BT_CLASS && CLASS_DATA (sym)
+	      && CLASS_DATA (sym)->attr.dimension))
 	{
 	  gfc_error ("Array section designator, e.g. '(:)', is required "
 		     "besides the coarray designator '[...]' at %C");
 	  return MATCH_ERROR;
 	}
-      if (!sym->attr.codimension)
+      if ((sym->ts.type != BT_CLASS && !sym->attr.codimension)
+	  || (sym->ts.type == BT_CLASS && CLASS_DATA (sym)
+	      && !CLASS_DATA (sym)->attr.codimension))
 	{
 	  gfc_error ("Coarray designator at %C but '%s' is not a coarray",
 		     sym->name);
@@ -1817,7 +1865,8 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
 	  && !(gfc_matching_procptr_assignment
 	       && sym->attr.flavor == FL_PROCEDURE))
       || (sym->ts.type == BT_CLASS && sym->attr.class_ok
-	  && CLASS_DATA (sym)->attr.dimension))
+	  && (CLASS_DATA (sym)->attr.dimension
+	      || CLASS_DATA (sym)->attr.codimension)))
     {
       /* In EQUIVALENCE, we don't know yet whether we are seeing
 	 an array, character variable or array of character
@@ -1827,7 +1876,7 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
 
       m = gfc_match_array_ref (&tail->u.ar, equiv_flag ? NULL : sym->as,
 			       equiv_flag,
-			       sym->ts.type == BT_CLASS
+			       sym->ts.type == BT_CLASS && CLASS_DATA (sym)
 			       ? (CLASS_DATA (sym)->as
 				  ? CLASS_DATA (sym)->as->corank : 0)
 			       : (sym->as ? sym->as->corank : 0));
@@ -2890,10 +2939,28 @@ gfc_match_rvalue (gfc_expr **result)
 	  && gfc_get_default_type (sym->name, sym->ns)->type == BT_DERIVED)
 	gfc_set_default_type (sym, 0, sym->ns);
 
-      /* If the symbol has a dimension attribute, the expression is a
+      /* If the symbol has a (co)dimension attribute, the expression is a
 	 variable.  */
 
-      if (sym->attr.dimension)
+      if (sym->attr.dimension || sym->attr.codimension)
+	{
+	  if (gfc_add_flavor (&sym->attr, FL_VARIABLE,
+			      sym->name, NULL) == FAILURE)
+	    {
+	      m = MATCH_ERROR;
+	      break;
+	    }
+
+	  e = gfc_get_expr ();
+	  e->symtree = symtree;
+	  e->expr_type = EXPR_VARIABLE;
+	  m = gfc_match_varspec (e, 0, false, true);
+	  break;
+	}
+
+      if (sym->ts.type == BT_CLASS && sym->attr.class_ok
+	  && (CLASS_DATA (sym)->attr.dimension
+	      || CLASS_DATA (sym)->attr.codimension))
 	{
 	  if (gfc_add_flavor (&sym->attr, FL_VARIABLE,
 			      sym->name, NULL) == FAILURE)

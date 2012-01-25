@@ -8,16 +8,17 @@
 package types
 
 import (
-	"big"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"io"
+	"math/big"
 	"os"
 	"path/filepath"
 	"runtime"
-	"scanner"
 	"strconv"
+	"text/scanner"
 )
 
 const trace = false // set to true for debugging
@@ -58,7 +59,7 @@ func findPkg(path string) (filename, id string) {
 	// try extensions
 	for _, ext := range pkgExts {
 		filename = noext + ext
-		if f, err := os.Stat(filename); err == nil && f.IsRegular() {
+		if f, err := os.Stat(filename); err == nil && !f.IsDir() {
 			return
 		}
 	}
@@ -71,7 +72,7 @@ func findPkg(path string) (filename, id string) {
 // object/archive file and populates its scope with the results.
 type gcParser struct {
 	scanner scanner.Scanner
-	tok     int                    // current token
+	tok     rune                   // current token
 	lit     string                 // literal string; only valid for Ident, Int, String tokens
 	id      string                 // package id of imported package
 	imports map[string]*ast.Object // package id -> package object
@@ -80,7 +81,7 @@ type gcParser struct {
 func (p *gcParser) init(filename, id string, src io.Reader, imports map[string]*ast.Object) {
 	p.scanner.Init(src)
 	p.scanner.Error = func(_ *scanner.Scanner, msg string) { p.error(msg) }
-	p.scanner.Mode = scanner.ScanIdents | scanner.ScanInts | scanner.ScanStrings | scanner.ScanComments | scanner.SkipComments
+	p.scanner.Mode = scanner.ScanIdents | scanner.ScanInts | scanner.ScanChars | scanner.ScanStrings | scanner.ScanComments | scanner.SkipComments
 	p.scanner.Whitespace = 1<<'\t' | 1<<' '
 	p.scanner.Filename = filename // for good error messages
 	p.next()
@@ -102,7 +103,7 @@ func (p *gcParser) next() {
 }
 
 // GcImporter implements the ast.Importer signature.
-func GcImporter(imports map[string]*ast.Object, path string) (pkg *ast.Object, err os.Error) {
+func GcImporter(imports map[string]*ast.Object, path string) (pkg *ast.Object, err error) {
 	if path == "unsafe" {
 		return Unsafe, nil
 	}
@@ -118,7 +119,7 @@ func GcImporter(imports map[string]*ast.Object, path string) (pkg *ast.Object, e
 
 	filename, id := findPkg(path)
 	if filename == "" {
-		err = os.NewError("can't find import: " + id)
+		err = errors.New("can't find import: " + id)
 		return
 	}
 
@@ -144,18 +145,14 @@ func GcImporter(imports map[string]*ast.Object, path string) (pkg *ast.Object, e
 
 // Declare inserts a named object of the given kind in scope.
 func (p *gcParser) declare(scope *ast.Scope, kind ast.ObjKind, name string) *ast.Object {
-	// a type may have been declared before - if it exists
-	// already in the respective package scope, return that
-	// type
-	if kind == ast.Typ {
-		if obj := scope.Lookup(name); obj != nil {
-			assert(obj.Kind == ast.Typ)
-			return obj
-		}
+	// the object may have been imported before - if it exists
+	// already in the respective package scope, return that object
+	if obj := scope.Lookup(name); obj != nil {
+		assert(obj.Kind == kind)
+		return obj
 	}
 
-	// any other object must be a newly declared object -
-	// create it and insert it into the package scope
+	// otherwise create a new object and insert it into the package scope
 	obj := ast.NewObj(kind, name)
 	if scope.Insert(obj) != nil {
 		p.errorf("already declared: %v %s", kind, obj.Name)
@@ -176,29 +173,30 @@ func (p *gcParser) declare(scope *ast.Scope, kind ast.ObjKind, name string) *ast
 // Internal errors are boxed as importErrors.
 type importError struct {
 	pos scanner.Position
-	err os.Error
+	err error
 }
 
-func (e importError) String() string {
+func (e importError) Error() string {
 	return fmt.Sprintf("import error %s (byte offset = %d): %s", e.pos, e.pos.Offset, e.err)
 }
 
 func (p *gcParser) error(err interface{}) {
 	if s, ok := err.(string); ok {
-		err = os.NewError(s)
+		err = errors.New(s)
 	}
-	// panic with a runtime.Error if err is not an os.Error
-	panic(importError{p.scanner.Pos(), err.(os.Error)})
+	// panic with a runtime.Error if err is not an error
+	panic(importError{p.scanner.Pos(), err.(error)})
 }
 
 func (p *gcParser) errorf(format string, args ...interface{}) {
 	p.error(fmt.Sprintf(format, args...))
 }
 
-func (p *gcParser) expect(tok int) string {
+func (p *gcParser) expect(tok rune) string {
 	lit := p.lit
 	if p.tok != tok {
-		p.errorf("expected %q, got %q (%q)", scanner.TokenString(tok), scanner.TokenString(p.tok), lit)
+		panic(1)
+		p.errorf("expected %s, got %s (%s)", scanner.TokenString(tok), scanner.TokenString(p.tok), lit)
 	}
 	p.next()
 	return lit
@@ -207,7 +205,7 @@ func (p *gcParser) expect(tok int) string {
 func (p *gcParser) expectSpecial(tok string) {
 	sep := 'x' // not white space
 	i := 0
-	for i < len(tok) && p.tok == int(tok[i]) && sep > ' ' {
+	for i < len(tok) && p.tok == rune(tok[i]) && sep > ' ' {
 		sep = p.scanner.Peek() // if sep <= ' ', there is white space before the next token
 		p.next()
 		i++
@@ -289,9 +287,10 @@ func (p *gcParser) parseExportedName() (*ast.Object, string) {
 // BasicType = identifier .
 //
 func (p *gcParser) parseBasicType() Type {
-	obj := Universe.Lookup(p.expect(scanner.Ident))
+	id := p.expect(scanner.Ident)
+	obj := Universe.Lookup(id)
 	if obj == nil || obj.Kind != ast.Typ {
-		p.errorf("not a basic type: %s", obj.Name)
+		p.errorf("not a basic type: %s", id)
 	}
 	return obj.Type.(Type)
 }
@@ -303,7 +302,7 @@ func (p *gcParser) parseArrayType() Type {
 	lit := p.expect(scanner.Int)
 	p.expect(']')
 	elt := p.parseType()
-	n, err := strconv.Atoui64(lit)
+	n, err := strconv.ParseUint(lit, 10, 64)
 	if err != nil {
 		p.error(err)
 	}
@@ -321,7 +320,7 @@ func (p *gcParser) parseMapType() Type {
 	return &Map{Key: key, Elt: elt}
 }
 
-// Name = identifier | "?" .
+// Name = identifier | "?" | ExportedName  .
 //
 func (p *gcParser) parseName() (name string) {
 	switch p.tok {
@@ -331,6 +330,9 @@ func (p *gcParser) parseName() (name string) {
 	case '?':
 		// anonymous
 		p.next()
+	case '@':
+		// exported name prefixed with package path
+		_, name = p.parseExportedName()
 	default:
 		p.error("name expected")
 	}
@@ -617,10 +619,11 @@ func (p *gcParser) parseNumber() Const {
 		// exponent (base 2)
 		p.next()
 		sign, val = p.parseInt()
-		exp, err := strconv.Atoui(val)
+		exp64, err := strconv.ParseUint(val, 10, 0)
 		if err != nil {
 			p.error(err)
 		}
+		exp := uint(exp64)
 		if sign == "-" {
 			denom := big.NewInt(1)
 			denom.Lsh(denom, exp)
@@ -639,6 +642,7 @@ func (p *gcParser) parseNumber() Const {
 // Literal     = bool_lit | int_lit | float_lit | complex_lit | string_lit .
 // bool_lit    = "true" | "false" .
 // complex_lit = "(" float_lit "+" float_lit ")" .
+// rune_lit = "(" int_lit "+" int_lit ")" .
 // string_lit  = `"` { unicode_char } `"` .
 //
 func (p *gcParser) parseConstDecl() {
@@ -668,21 +672,33 @@ func (p *gcParser) parseConstDecl() {
 			typ = Float64.Underlying
 		}
 	case '(':
-		// complex_lit
+		// complex_lit or rune_lit
 		p.next()
+		if p.tok == scanner.Char {
+			p.next()
+			p.expect('+')
+			p.parseNumber()
+			p.expect(')')
+			// TODO: x = ...
+			break
+		}
 		re := p.parseNumber()
 		p.expect('+')
 		im := p.parseNumber()
 		p.expect(')')
 		x = Const{cmplx{re.val.(*big.Rat), im.val.(*big.Rat)}}
 		typ = Complex128.Underlying
+	case scanner.Char:
+		// TODO: x = ...
+		p.next()
 	case scanner.String:
 		// string_lit
 		x = MakeConst(token.STRING, p.lit)
 		p.next()
 		typ = String.Underlying
 	default:
-		p.error("expected literal")
+		println(p.tok)
+		p.errorf("expected literal got %s", scanner.TokenString(p.tok))
 	}
 	if obj.Type == nil {
 		obj.Type = typ
@@ -745,7 +761,7 @@ func (p *gcParser) parseFuncDecl() {
 	}
 }
 
-// MethodDecl = "func" Receiver identifier Signature .
+// MethodDecl = "func" Receiver Name Signature .
 // Receiver   = "(" ( identifier | "?" ) [ "*" ] ExportedName ")" [ FuncBody ].
 //
 func (p *gcParser) parseMethodDecl() {
@@ -753,7 +769,7 @@ func (p *gcParser) parseMethodDecl() {
 	p.expect('(')
 	p.parseParameter() // receiver
 	p.expect(')')
-	p.expect(scanner.Ident)
+	p.parseName() // unexported method names in imports are qualified with their package.
 	p.parseSignature()
 	if p.tok == '{' {
 		p.parseFuncBody()

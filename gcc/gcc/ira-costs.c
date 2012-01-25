@@ -1391,7 +1391,7 @@ print_allocno_costs (FILE *f)
       if ((bb = ALLOCNO_LOOP_TREE_NODE (a)->bb) != NULL)
 	fprintf (f, "b%d", bb->index);
       else
-	fprintf (f, "l%d", ALLOCNO_LOOP_TREE_NODE (a)->loop->num);
+	fprintf (f, "l%d", ALLOCNO_LOOP_TREE_NODE (a)->loop_num);
       fprintf (f, ") costs:");
       for (k = 0; k < cost_classes_ptr->num; k++)
 	{
@@ -1693,7 +1693,14 @@ find_costs_and_classes (FILE *dump_file)
 	      else if (i_costs[k] == best_cost)
 		best = ira_reg_class_subunion[best][rclass];
 	      if (pass == flag_expensive_optimizations
-		  && i_costs[k] < i_mem_cost
+		  /* We still prefer registers to memory even at this
+		     stage if their costs are the same.  We will make
+		     a final decision during assigning hard registers
+		     when we have all info including more accurate
+		     costs which might be affected by assigning hard
+		     registers to other pseudos because the pseudos
+		     involved in moves can be coalesced.  */
+		  && i_costs[k] <= i_mem_cost
 		  && (reg_class_size[reg_class_subunion[alt_class][rclass]]
 		      > reg_class_size[alt_class]))
 		alt_class = reg_class_subunion[alt_class][rclass];
@@ -1782,7 +1789,7 @@ find_costs_and_classes (FILE *dump_file)
 		    fprintf (dump_file, "b%d", bb->index);
 		  else
 		    fprintf (dump_file, "l%d",
-			     ALLOCNO_LOOP_TREE_NODE (a)->loop->num);
+			     ALLOCNO_LOOP_TREE_NODE (a)->loop_num);
 		  fprintf (dump_file, ") best %s, allocno %s\n",
 			   reg_class_names[best],
 			   reg_class_names[regno_aclass[i]]);

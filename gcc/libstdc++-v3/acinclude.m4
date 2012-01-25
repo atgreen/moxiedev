@@ -631,7 +631,7 @@ AC_DEFUN([GLIBCXX_CONFIGURE_TESTSUITE], [
 
 
 dnl
-dnl Does any necessary configuration of the documentation directory.
+dnl Does any necessary configuration for docbook in the docs directory.
 dnl
 dnl XSLTPROC must be set before this
 dnl
@@ -642,7 +642,7 @@ dnl  XSL_STYLE_DIR
 dnl
 AC_DEFUN([GLIBCXX_CONFIGURE_DOCBOOK], [
 
-AC_MSG_CHECKING([for stylesheets used in generation of documentation])
+AC_MSG_CHECKING([for docbook stylesheets for documentation creation])
 glibcxx_stylesheets=no
 if test x${XSLTPROC} = xyes && echo '<title/>' | xsltproc --noout --nonet --xinclude http://docbook.sourceforge.net/release/xsl-ns/current/xhtml-1_1/docbook.xsl - 2>/dev/null; then
   glibcxx_stylesheets=yes
@@ -669,6 +669,18 @@ if test x"$glibcxx_local_stylesheets" = x"yes"; then
 else
   glibcxx_stylesheets=no
 fi
+
+# Check for epub3 dependencies.
+AC_MSG_CHECKING([for epub3 stylesheets for documentation creation])
+glibcxx_epub_stylesheets=no
+if test x"$glibcxx_local_stylesheets" = x"yes"; then
+   if test -f "$XSL_STYLE_DIR/epub3/chunk.xsl"; then
+      glibcxx_epub_stylesheets=yes
+   fi
+fi
+AC_MSG_RESULT($glibcxx_epub_stylesheets)
+AM_CONDITIONAL(BUILD_EPUB, test x"$glibcxx_epub_stylesheets" = x"yes")
+
 ])
 
 
@@ -2683,12 +2695,6 @@ dnl
 dnl Note:
 dnl libgomp and libgfortran use a link test, see CHECK_SYNC_FETCH_AND_ADD.
 dnl
-dnl Defines:
-dnl  _GLIBCXX_ATOMIC_BUILTINS_1
-dnl  _GLIBCXX_ATOMIC_BUILTINS_2
-dnl  _GLIBCXX_ATOMIC_BUILTINS_4
-dnl  _GLIBCXX_ATOMIC_BUILTINS_8
-dnl
 AC_DEFUN([GLIBCXX_ENABLE_ATOMIC_BUILTINS], [
   AC_LANG_SAVE
   AC_LANG_CPLUSPLUS
@@ -2729,10 +2735,6 @@ AC_DEFUN([GLIBCXX_ENABLE_ATOMIC_BUILTINS], [
       [glibcxx_cv_atomic_bool=yes],
       [glibcxx_cv_atomic_bool=no])
   ])
-  if test $glibcxx_cv_atomic_bool = yes; then
-    AC_DEFINE(_GLIBCXX_ATOMIC_BUILTINS_1, 1,
-      [Define if builtin atomic operations for bool are supported on this host.])
-  fi
   AC_MSG_RESULT($glibcxx_cv_atomic_bool)
 
   AC_MSG_CHECKING([for atomic builtins for short])
@@ -2751,10 +2753,6 @@ AC_DEFUN([GLIBCXX_ENABLE_ATOMIC_BUILTINS], [
       [glibcxx_cv_atomic_short=yes],
       [glibcxx_cv_atomic_short=no])
   ])
-  if test $glibcxx_cv_atomic_short = yes; then
-    AC_DEFINE(_GLIBCXX_ATOMIC_BUILTINS_2, 1,
-      [Define if builtin atomic operations for short are supported on this host.])
-  fi
   AC_MSG_RESULT($glibcxx_cv_atomic_short)
 
   AC_MSG_CHECKING([for atomic builtins for int])
@@ -2773,10 +2771,6 @@ AC_DEFUN([GLIBCXX_ENABLE_ATOMIC_BUILTINS], [
       [glibcxx_cv_atomic_int=yes],
       [glibcxx_cv_atomic_int=no])
   ])
-  if test $glibcxx_cv_atomic_int = yes; then
-    AC_DEFINE(_GLIBCXX_ATOMIC_BUILTINS_4, 1,
-      [Define if builtin atomic operations for int are supported on this host.])
-  fi
   AC_MSG_RESULT($glibcxx_cv_atomic_int)
 
   AC_MSG_CHECKING([for atomic builtins for long long])
@@ -2795,10 +2789,6 @@ AC_DEFUN([GLIBCXX_ENABLE_ATOMIC_BUILTINS], [
       [glibcxx_cv_atomic_long_long=yes],
       [glibcxx_cv_atomic_long_long=no])
   ])
-  if test $glibcxx_cv_atomic_long_long = yes; then
-    AC_DEFINE(_GLIBCXX_ATOMIC_BUILTINS_8, 1,
-      [Define if builtin atomic operations for long long are supported on this host.])
-  fi
   AC_MSG_RESULT($glibcxx_cv_atomic_long_long)
 
   else
@@ -2832,8 +2822,6 @@ EOF
       if grep __sync_ conftest.s >/dev/null 2>&1 ; then
 	glibcxx_cv_atomic_bool=no
       else
-      AC_DEFINE(_GLIBCXX_ATOMIC_BUILTINS_1, 1,
-      [Define if builtin atomic operations for bool are supported on this host.])
 	glibcxx_cv_atomic_bool=yes
       fi
     fi
@@ -2862,8 +2850,6 @@ EOF
       if grep __sync_ conftest.s >/dev/null 2>&1 ; then
 	glibcxx_cv_atomic_short=no
       else
-      AC_DEFINE(_GLIBCXX_ATOMIC_BUILTINS_2, 1,
-      [Define if builtin atomic operations for short are supported on this host.])
 	glibcxx_cv_atomic_short=yes
       fi
     fi
@@ -2893,8 +2879,6 @@ EOF
       if grep __sync_ conftest.s >/dev/null 2>&1 ; then
 	glibcxx_cv_atomic_int=no
       else
-      AC_DEFINE(_GLIBCXX_ATOMIC_BUILTINS_4, 1,
-	[Define if builtin atomic operations for int are supported on this host.])
 	glibcxx_cv_atomic_int=yes
       fi
     fi
@@ -2923,8 +2907,6 @@ EOF
       if grep __sync_ conftest.s >/dev/null 2>&1 ; then
 	glibcxx_cv_atomic_long_long=no
       else
-      AC_DEFINE(_GLIBCXX_ATOMIC_BUILTINS_8, 1,
-      [Define if builtin atomic operations for long long are supported on this host.])
 	glibcxx_cv_atomic_long_long=yes
       fi
     fi
@@ -2938,6 +2920,8 @@ EOF
 
   # Set atomicity_dir to builtins if either of above tests pass.
   if test $glibcxx_cv_atomic_int = yes || test $glibcxx_cv_atomic_bool = yes ; then
+    AC_DEFINE(_GLIBCXX_ATOMIC_BUILTINS, 1,
+    [Define if the compiler supports C++11 atomics.])
     atomicity_dir=cpu/generic/atomicity_builtins
   fi
 

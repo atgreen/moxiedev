@@ -1,15 +1,15 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/config/abi/pre
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-11-08T11:13:41.614128Z
-181154
-aldyh
+2012-01-09T23:39:22.787832Z
+183043
+bkoz
 
 
 
@@ -66,11 +66,11 @@ file
 
 
 
-2011-11-12T11:40:49.924242Z
-2b62c7bd61779bdfe4a768627e2fcaf1
-2011-11-08T11:13:41.614128Z
-181154
-aldyh
+2012-01-20T20:50:14.701433Z
+564f67256deff1e89faebf6af76e9112
+2012-01-09T23:39:22.787832Z
+183043
+bkoz
 
 
 
@@ -92,7 +92,7 @@ aldyh
 
 
 
-9681
+10016
 
 none.ver
 file

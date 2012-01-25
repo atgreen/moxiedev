@@ -373,18 +373,12 @@ AM_CONDITIONAL(BUILD_MAN,
 	       test $ac_cv_prog_DOXYGEN = "yes" &&
 	       test $ac_cv_prog_DOT = "yes")
 
-# Check for pdf/epub dependencies.
+# Check for pdf dependencies.
 AC_CHECK_PROG([DBLATEX], dblatex, yes, no)
 AC_CHECK_PROG([PDFLATEX], pdflatex, yes, no)
 AM_CONDITIONAL(BUILD_PDF,
 	       test $ac_cv_prog_DBLATEX = "yes" &&
 	       test $ac_cv_prog_PDFLATEX = "yes")
-
-AC_CHECK_PROG([RUBY], ruby, yes, no)
-AC_CHECK_PROG([DBTOEPUB], dbtoepub, yes, no)
-AM_CONDITIONAL(BUILD_EPUB,
-	       test $ac_cv_prog_RUBY = "yes" &&
-	       test $ac_cv_prog_DBTOEPUB = "yes")
 
 
 # Propagate the target-specific source directories through the build chain.

@@ -1,14 +1,14 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gnat.dg/specs
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-11-04T10:27:02.041126Z
-180931
+2011-12-19T19:17:10.981803Z
+182491
 ebotcazou
 
 
@@ -128,40 +128,6 @@ ebotcazou
 
 166
 
-static_initializer5_pkg.ads
-file
-
-
-
-
-2010-11-22T19:14:27.687034Z
-e94b6ea5e07d9380ae10002aa76ade27
-2010-11-09T11:59:55.327654Z
-166484
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-392
-
 size_attribute1_pkg2.adb
 file
 
@@ -195,6 +161,40 @@ ebotcazou
 
 
 137
+
+static_initializer5_pkg.ads
+file
+
+
+
+
+2010-11-22T19:14:27.687034Z
+e94b6ea5e07d9380ae10002aa76ade27
+2010-11-09T11:59:55.327654Z
+166484
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+392
 
 root.ads
 file
@@ -1114,16 +1114,16 @@ sam
 
 149
 
-controlled1_pkg.ads
+elab3.ads
 file
 
 
 
 
-2010-07-08T15:17:55.757092Z
-35e62ffa257f41034e151ee57cc28411
-2010-05-19T17:53:58.959710Z
-159592
+2012-01-20T20:50:37.414324Z
+d08fc5bb90c077df2b13f07719bffddf
+2011-12-11T11:05:58.996293Z
+182203
 ebotcazou
 
 
@@ -1146,7 +1146,7 @@ ebotcazou
 
 
 
-128
+295
 
 universal_fixed.ads
 file
@@ -1182,6 +1182,40 @@ charlet
 
 264
 
+controlled1_pkg.ads
+file
+
+
+
+
+2010-07-08T15:17:55.757092Z
+35e62ffa257f41034e151ee57cc28411
+2010-05-19T17:53:58.959710Z
+159592
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+128
+
 gen_interface.ads
 file
 
@@ -1192,6 +1226,40 @@ file
 b605c919a473b8d6808dd232aa7eaf49
 2006-10-31T18:20:42.966598Z
 118332
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+186
+
+iface_eq_test.ads
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+e79713b5757a3f8a05926964d5c26b04
+2008-05-28T12:38:31.775024Z
+136073
 charlet
 
 
@@ -1250,17 +1318,17 @@ ebotcazou
 
 90
 
-iface_eq_test.ads
+root-level_1-level_2.ads
 file
 
 
 
 
-2009-04-24T17:46:10.000000Z
-e79713b5757a3f8a05926964d5c26b04
-2008-05-28T12:38:31.775024Z
-136073
-charlet
+2009-06-10T05:24:40.000000Z
+c5aaf1c5c584144ac3187967c0d6f312
+2009-06-03T10:52:40.939638Z
+148125
+ebotcazou
 
 
 
@@ -1282,7 +1350,7 @@ charlet
 
 
 
-186
+226
 
 discr_private.ads
 file
@@ -1318,40 +1386,6 @@ ebotcazou
 
 1141
 
-root-level_1-level_2.ads
-file
-
-
-
-
-2009-06-10T05:24:40.000000Z
-c5aaf1c5c584144ac3187967c0d6f312
-2009-06-03T10:52:40.939638Z
-148125
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-226
-
 alignment1.ads
 file
 
@@ -1385,40 +1419,6 @@ ebotcazou
 
 
 187
-
-pack2.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-b6d3470289ff1f9bba31adf32cdc40e8
-2007-04-06T09:44:51.240197Z
-123612
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-201
 
 alignment2.ads
 file
@@ -1454,17 +1454,17 @@ ebotcazou
 
 1037
 
-pack3.ads
+pack2.ads
 file
 
 
 
 
 2009-04-24T17:46:10.000000Z
-387f38475eb4b6a5a9545b44704157cb
-2008-06-09T09:41:16.006502Z
-136583
-ebotcazou
+b6d3470289ff1f9bba31adf32cdc40e8
+2007-04-06T09:44:51.240197Z
+123612
+charlet
 
 
 
@@ -1486,7 +1486,7 @@ ebotcazou
 
 
 
-856
+201
 
 warnstar.ads
 file
@@ -1522,17 +1522,17 @@ charlet
 
 222
 
-specs.exp
+pack3.ads
 file
 
 
 
 
 2009-04-24T17:46:10.000000Z
-831118b4a1af7c24bbdbbc94228410a8
-2007-08-01T16:25:11.955122Z
-127127
-nickc
+387f38475eb4b6a5a9545b44704157cb
+2008-06-09T09:41:16.006502Z
+136583
+ebotcazou
 
 
 
@@ -1554,7 +1554,7 @@ nickc
 
 
 
-1097
+856
 
 pack4.ads
 file
@@ -1589,6 +1589,40 @@ ebotcazou
 
 
 249
+
+specs.exp
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+831118b4a1af7c24bbdbbc94228410a8
+2007-08-01T16:25:11.955122Z
+127127
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1097
 
 pack5.ads
 file
@@ -1930,17 +1964,17 @@ charlet
 
 602
 
-lto3.ads
+formal_type.ads
 file
 
 
 
 
-2010-07-08T15:17:55.758091Z
-2f691a3b3a3bcab894e4f2b064865cf8
-2010-05-18T07:10:11.073569Z
-159525
-ebotcazou
+2009-04-24T17:46:10.000000Z
+1f2ca5355aa5a24e2f1dbad3c4e8ac76
+2006-10-31T18:20:42.966598Z
+118332
+charlet
 
 
 
@@ -1962,7 +1996,7 @@ ebotcazou
 
 
 
-192
+439
 
 delta_small.ads
 file
@@ -1998,17 +2032,17 @@ sam
 
 216
 
-formal_type.ads
+lto3.ads
 file
 
 
 
 
-2009-04-24T17:46:10.000000Z
-1f2ca5355aa5a24e2f1dbad3c4e8ac76
-2006-10-31T18:20:42.966598Z
-118332
-charlet
+2010-07-08T15:17:55.758091Z
+2f691a3b3a3bcab894e4f2b064865cf8
+2010-05-18T07:10:11.073569Z
+159525
+ebotcazou
 
 
 
@@ -2030,7 +2064,7 @@ charlet
 
 
 
-439
+192
 
 unchecked_union1.ads
 file
@@ -2303,6 +2337,40 @@ charlet
 
 
 981
+
+loop_optimization1.ads
+file
+
+
+
+
+2012-01-20T20:50:37.414324Z
+dd066b85e801f4e3550fdee77334f998
+2011-12-19T19:17:10.981803Z
+182491
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+333
 
 aggr1.ads
 file
@@ -2950,6 +3018,40 @@ ebotcazou
 
 290
 
+loop_optimization1_pkg.adb
+file
+
+
+
+
+2012-01-20T20:50:37.414324Z
+cc38a51523f96eaa100d950103f52c89
+2011-12-19T19:17:10.981803Z
+182491
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+355
+
 lto3_pkg1.adb
 file
 
@@ -3493,6 +3595,40 @@ charlet
 
 
 542
+
+loop_optimization1_pkg.ads
+file
+
+
+
+
+2012-01-20T20:50:37.415324Z
+635f7313448c217e0d17ffe13868fa3f
+2011-12-19T19:17:10.981803Z
+182491
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+302
 
 gnati.ads
 file

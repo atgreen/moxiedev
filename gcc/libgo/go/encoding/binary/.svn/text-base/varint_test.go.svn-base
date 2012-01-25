@@ -6,7 +6,7 @@ package binary
 
 import (
 	"bytes"
-	"os"
+	"io"
 	"testing"
 )
 
@@ -131,13 +131,13 @@ func TestBufferTooSmall(t *testing.T) {
 		}
 
 		x, err := ReadUvarint(bytes.NewBuffer(buf))
-		if x != 0 || err != os.EOF {
+		if x != 0 || err != io.EOF {
 			t.Errorf("ReadUvarint(%v): got x = %d, err = %s", buf, x, err)
 		}
 	}
 }
 
-func testOverflow(t *testing.T, buf []byte, n0 int, err0 os.Error) {
+func testOverflow(t *testing.T, buf []byte, n0 int, err0 error) {
 	x, n := Uvarint(buf)
 	if x != 0 || n != n0 {
 		t.Errorf("Uvarint(%v): got x = %d, n = %d; want 0, %d", buf, x, n, n0)
@@ -165,6 +165,7 @@ func TestNonCanonicalZero(t *testing.T) {
 
 func BenchmarkPutUvarint32(b *testing.B) {
 	buf := make([]byte, MaxVarintLen32)
+	b.SetBytes(4)
 	for i := 0; i < b.N; i++ {
 		for j := uint(0); j < MaxVarintLen32; j++ {
 			PutUvarint(buf, 1<<(j*7))
@@ -174,6 +175,7 @@ func BenchmarkPutUvarint32(b *testing.B) {
 
 func BenchmarkPutUvarint64(b *testing.B) {
 	buf := make([]byte, MaxVarintLen64)
+	b.SetBytes(8)
 	for i := 0; i < b.N; i++ {
 		for j := uint(0); j < MaxVarintLen64; j++ {
 			PutUvarint(buf, 1<<(j*7))

@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/tic6x
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,9 +162,6 @@ bernds
 
 1668
 
-builtins
-dir
-
 fpdiv.c
 file
 
@@ -199,39 +196,8 @@ bernds
 
 288
 
-ffssi.c
-file
-
-
-
-
-2011-08-24T20:09:37.066376Z
-f914e8e604fad0a96e99fb396ea883ad
-2011-07-15T09:43:05.424639Z
-176310
-bernds
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-263
+builtins
+dir
 
 rotdi16-scan.c
 file
@@ -266,6 +232,40 @@ bernds
 
 
 340
+
+ffssi.c
+file
+
+
+
+
+2011-08-24T20:09:37.066376Z
+f914e8e604fad0a96e99fb396ea883ad
+2011-07-15T09:43:05.424639Z
+176310
+bernds
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+263
 
 fpdiv-lib.c
 file
@@ -369,40 +369,6 @@ bernds
 
 582
 
-abi-align-1.c
-file
-
-
-
-
-2011-08-24T20:09:37.067376Z
-49f9474b045dc89977e3c1095dd3d397
-2011-07-15T09:43:05.424639Z
-176310
-bernds
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-301
-
 fpcmp-finite.c
 file
 
@@ -437,14 +403,14 @@ bernds
 
 380
 
-bswapl.c
+abi-align-1.c
 file
 
 
 
 
-2011-08-24T20:09:37.068376Z
-cb59fa93f6ec7ffdc7c45b9ffe016270
+2011-08-24T20:09:37.067376Z
+49f9474b045dc89977e3c1095dd3d397
 2011-07-15T09:43:05.424639Z
 176310
 bernds
@@ -469,7 +435,7 @@ bernds
 
 
 
-231
+301
 
 rotdi16.c
 file
@@ -504,6 +470,40 @@ bernds
 
 
 242
+
+bswapl.c
+file
+
+
+
+
+2011-08-24T20:09:37.068376Z
+cb59fa93f6ec7ffdc7c45b9ffe016270
+2011-07-15T09:43:05.424639Z
+176310
+bernds
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+231
 
 ffsdi.c
 file

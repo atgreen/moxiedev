@@ -1,14 +1,14 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util/uses_allocator
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-06-20T11:05:45.244863Z
-175204
+2011-11-21T10:47:37.331956Z
+181555
 paolo
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2011-08-24T20:08:31.265592Z
-aa7823853e0616a3ba09aa6e853fc9c8
-2011-06-20T11:05:45.244863Z
-175204
+2012-01-20T20:50:14.399435Z
+7e89ea9641d299e744f4f9bfc2ad796b
+2011-11-21T10:47:37.331956Z
+181555
 paolo
 
 

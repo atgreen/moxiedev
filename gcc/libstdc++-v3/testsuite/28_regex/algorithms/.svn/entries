@@ -1,15 +1,15 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/28_regex/algorithms
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-02-11T01:23:10.519381Z
-170038
-bkoz
+2011-12-30T11:40:37.117924Z
+182740
+paolo
 
 
 
@@ -25,6 +25,9 @@ bkoz
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+regex_replace
+dir
 
 02_match
 dir

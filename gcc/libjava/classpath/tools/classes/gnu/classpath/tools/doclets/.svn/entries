@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/tools/classes/gnu/classpath/tools/doclets
 svn://gcc.gnu.org/svn/gcc
 
@@ -28,40 +28,6 @@ gandalf
 
 debugdoclet
 dir
-
-DocletConfigurationException.class
-file
-
-
-
-
-2010-11-22T19:18:48.554788Z
-993b975ebfcf48a77c3ae28228a99333
-2010-10-12T15:55:12.882649Z
-165383
-gandalf
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-432
 
 AbstractDoclet$InterfaceRelation.class
 file
@@ -96,6 +62,40 @@ has-props
 
 
 663
+
+DocletConfigurationException.class
+file
+
+
+
+
+2010-11-22T19:18:48.554788Z
+993b975ebfcf48a77c3ae28228a99333
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+432
 
 AbstractDoclet$DocletOptionTag.class
 file
@@ -165,8 +165,39 @@ has-props
 
 187
 
-xmldoclet
-dir
+AbstractDoclet$DocletOptionTaglet.class
+file
+
+
+
+
+2010-11-22T19:18:48.555783Z
+1af387ae14bc54775080c5cb96145f93
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4359
 
 DocletOptionColonSeparated.class
 file
@@ -202,73 +233,8 @@ has-props
 
 1139
 
-AbstractDoclet$DocletOptionTaglet.class
-file
-
-
-
-
-2010-11-22T19:18:48.555783Z
-1af387ae14bc54775080c5cb96145f93
-2010-10-12T15:55:12.882649Z
-165383
-gandalf
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4359
-
-DocletOptionPackageWildcard.class
-file
-
-
-
-
-2010-11-22T19:18:48.557784Z
-c608d523ca816831292f92a65fe0c5fb
-2010-10-12T15:55:12.882649Z
-165383
-gandalf
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2108
+xmldoclet
+dir
 
 AbstractDoclet$UsageType.class
 file
@@ -304,6 +270,40 @@ has-props
 
 1848
 
+DocletOptionPackageWildcard.class
+file
+
+
+
+
+2010-11-22T19:18:48.557784Z
+c608d523ca816831292f92a65fe0c5fb
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2108
+
 DocletOptionString.class
 file
 
@@ -338,9 +338,6 @@ has-props
 
 776
 
-htmldoclet
-dir
-
 InvalidPackageWildcardException.class
 file
 
@@ -374,6 +371,9 @@ has-props
 
 
 437
+
+htmldoclet
+dir
 
 DocletOptionFlag.class
 file

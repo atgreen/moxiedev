@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/bitset
 svn://gcc.gnu.org/svn/gcc
 
@@ -29,19 +29,19 @@ paolo
 test
 dir
 
-operations
+hash
 dir
 
 requirements
 dir
 
-hash
-dir
-
-to_ulong
+operations
 dir
 
 debug
+dir
+
+to_ulong
 dir
 
 count
@@ -53,10 +53,10 @@ dir
 ext
 dir
 
-cons
+to_ullong
 dir
 
-to_ullong
+cons
 dir
 
 18604.cc
@@ -127,9 +127,9 @@ paolo
 
 910
 
-all
+to_string
 dir
 
-to_string
+all
 dir
 

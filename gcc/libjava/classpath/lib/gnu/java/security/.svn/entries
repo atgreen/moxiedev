@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/security
 svn://gcc.gnu.org/svn/gcc
 
@@ -100,9 +100,6 @@ has-props
 
 753
 
-key
-dir
-
 PolicyFile$1.class
 file
 
@@ -137,7 +134,13 @@ has-props
 
 2136
 
+key
+dir
+
 provider
+dir
+
+pkcs
 dir
 
 Properties.class
@@ -174,45 +177,8 @@ has-props
 
 5002
 
-pkcs
-dir
-
 jce
 dir
-
-PolicyFile.class
-file
-
-
-
-
-2010-02-03T11:42:24.245830Z
-e1375a5f949efa15feed11d42acfae8a
-2010-01-06T17:46:48.717189Z
-155678
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-12910
 
 Requires.class
 file
@@ -247,6 +213,40 @@ has-props
 
 
 601
+
+PolicyFile.class
+file
+
+
+
+
+2010-02-03T11:42:24.245830Z
+e1375a5f949efa15feed11d42acfae8a
+2010-01-06T17:46:48.717189Z
+155678
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12910
 
 x509
 dir

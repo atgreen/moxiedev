@@ -144,28 +144,31 @@ func (p *parser) declare(decl, data interface{}, scope *ast.Scope, kind ast.ObjK
 	}
 }
 
-func (p *parser) shortVarDecl(idents []*ast.Ident) {
+func (p *parser) shortVarDecl(decl *ast.AssignStmt, list []ast.Expr) {
 	// Go spec: A short variable declaration may redeclare variables
 	// provided they were originally declared in the same block with
 	// the same type, and at least one of the non-blank variables is new.
 	n := 0 // number of new variables
-	for _, ident := range idents {
-		assert(ident.Obj == nil, "identifier already declared or resolved")
-		obj := ast.NewObj(ast.Var, ident.Name)
-		// short var declarations cannot have redeclaration errors
-		// and are not global => no need to remember the respective
-		// declaration
-		ident.Obj = obj
-		if ident.Name != "_" {
-			if alt := p.topScope.Insert(obj); alt != nil {
-				ident.Obj = alt // redeclaration
-			} else {
-				n++ // new declaration
+	for _, x := range list {
+		if ident, isIdent := x.(*ast.Ident); isIdent {
+			assert(ident.Obj == nil, "identifier already declared or resolved")
+			obj := ast.NewObj(ast.Var, ident.Name)
+			// remember corresponding assignment for other tools
+			obj.Decl = decl
+			ident.Obj = obj
+			if ident.Name != "_" {
+				if alt := p.topScope.Insert(obj); alt != nil {
+					ident.Obj = alt // redeclaration
+				} else {
+					n++ // new declaration
+				}
 			}
+		} else {
+			p.errorExpected(x.Pos(), "identifier")
 		}
 	}
 	if n == 0 && p.mode&DeclarationErrors != 0 {
-		p.error(idents[0].Pos(), "no new variables on left side of :=")
+		p.error(list[0].Pos(), "no new variables on left side of :=")
 	}
 }
 
@@ -434,7 +437,9 @@ func (p *parser) parseLhsList() []ast.Expr {
 	switch p.tok {
 	case token.DEFINE:
 		// lhs of a short variable declaration
-		p.shortVarDecl(p.makeIdentList(list))
+		// but doesn't enter scope until later:
+		// caller must call p.shortVarDecl(p.makeIdentList(list))
+		// at appropriate time.
 	case token.COLON:
 		// lhs of a label declaration or a communication clause of a select
 		// statement (parseLhsList is not called when parsing the case clause
@@ -520,7 +525,7 @@ func (p *parser) makeIdentList(list []ast.Expr) []*ast.Ident {
 	for i, x := range list {
 		ident, isIdent := x.(*ast.Ident)
 		if !isIdent {
-			pos := x.(ast.Expr).Pos()
+			pos := x.Pos()
 			p.errorExpected(pos, "identifier")
 			ident = &ast.Ident{pos, "_", nil}
 		}
@@ -1129,7 +1134,7 @@ func (p *parser) parseLiteralValue(typ ast.Expr) ast.Expr {
 
 // checkExpr checks that x is an expression (and not a type).
 func (p *parser) checkExpr(x ast.Expr) ast.Expr {
-	switch t := unparen(x).(type) {
+	switch unparen(x).(type) {
 	case *ast.BadExpr:
 	case *ast.Ident:
 	case *ast.BasicLit:
@@ -1398,7 +1403,11 @@ func (p *parser) parseSimpleStmt(mode int) (ast.Stmt, bool) {
 		} else {
 			y = p.parseRhsList()
 		}
-		return &ast.AssignStmt{x, pos, tok, y}, isRange
+		as := &ast.AssignStmt{x, pos, tok, y}
+		if tok == token.DEFINE {
+			p.shortVarDecl(as, x)
+		}
+		return as, isRange
 	}
 
 	if len(x) > 1 {
@@ -1710,31 +1719,28 @@ func (p *parser) parseCommClause() *ast.CommClause {
 			comm = &ast.SendStmt{lhs[0], arrow, rhs}
 		} else {
 			// RecvStmt
-			pos := p.pos
-			tok := p.tok
-			var rhs ast.Expr
-			if tok == token.ASSIGN || tok == token.DEFINE {
+			if tok := p.tok; tok == token.ASSIGN || tok == token.DEFINE {
 				// RecvStmt with assignment
 				if len(lhs) > 2 {
 					p.errorExpected(lhs[0].Pos(), "1 or 2 expressions")
 					// continue with first two expressions
 					lhs = lhs[0:2]
 				}
+				pos := p.pos
 				p.next()
-				rhs = p.parseRhs()
+				rhs := p.parseRhs()
+				as := &ast.AssignStmt{lhs, pos, tok, []ast.Expr{rhs}}
+				if tok == token.DEFINE {
+					p.shortVarDecl(as, lhs)
+				}
+				comm = as
 			} else {
-				// rhs must be single receive operation
+				// lhs must be single receive operation
 				if len(lhs) > 1 {
 					p.errorExpected(lhs[0].Pos(), "1 expression")
 					// continue with first expression
 				}
-				rhs = lhs[0]
-				lhs = nil // there is no lhs
-			}
-			if lhs != nil {
-				comm = &ast.AssignStmt{lhs, pos, tok, []ast.Expr{rhs}}
-			} else {
-				comm = &ast.ExprStmt{rhs}
+				comm = &ast.ExprStmt{lhs[0]}
 			}
 		}
 	} else {
@@ -1909,7 +1915,7 @@ func parseImportSpec(p *parser, doc *ast.CommentGroup, _ int) ast.Spec {
 	p.expectSemi() // call before accessing p.linecomment
 
 	// collect imports
-	spec := &ast.ImportSpec{doc, ident, path, p.lineComment}
+	spec := &ast.ImportSpec{doc, ident, path, p.lineComment, token.NoPos}
 	p.imports = append(p.imports, spec)
 
 	return spec
@@ -2018,7 +2024,7 @@ func (p *parser) parseReceiver(scope *ast.Scope) *ast.FieldList {
 	// must have exactly one receiver
 	if par.NumFields() != 1 {
 		p.errorExpected(par.Opening, "exactly one receiver")
-		par.List = []*ast.Field{&ast.Field{Type: &ast.BadExpr{par.Opening, par.Closing + 1}}}
+		par.List = []*ast.Field{{Type: &ast.BadExpr{par.Opening, par.Closing + 1}}}
 		return par
 	}
 
@@ -2027,7 +2033,7 @@ func (p *parser) parseReceiver(scope *ast.Scope) *ast.FieldList {
 	base := deref(recv.Type)
 	if _, isIdent := base.(*ast.Ident); !isIdent {
 		p.errorExpected(base.Pos(), "(unqualified) identifier")
-		par.List = []*ast.Field{&ast.Field{Type: &ast.BadExpr{recv.Pos(), recv.End()}}}
+		par.List = []*ast.Field{{Type: &ast.BadExpr{recv.Pos(), recv.End()}}}
 	}
 
 	return par

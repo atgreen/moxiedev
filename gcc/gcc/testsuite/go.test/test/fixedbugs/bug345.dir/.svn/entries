@@ -1,14 +1,14 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/go.test/test/fixedbugs/bug345.dir
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-09-21T23:05:39.964752Z
-179063
+2012-01-18T05:42:41.171720Z
+183270
 ian
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2011-09-25T18:02:27.308897Z
-1d3ff6b853d5dceab89f4797d7336410
-2011-09-21T23:05:39.964752Z
-179063
+2012-01-20T20:50:32.973345Z
+b7f85a834cd2c8e997cb2e935f9b4ff2
+2012-01-18T05:42:41.171720Z
+183270
 ian
 
 
@@ -58,7 +58,7 @@ ian
 
 
 
-902
+946
 
 io.go
 file

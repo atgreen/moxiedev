@@ -10,11 +10,10 @@ import (
 	"image"
 	"image/color"
 	"io/ioutil"
-	"os"
 	"testing"
 )
 
-func diff(m0, m1 image.Image) os.Error {
+func diff(m0, m1 image.Image) error {
 	b0, b1 := m0.Bounds(), m1.Bounds()
 	if !b0.Size().Eq(b1.Size()) {
 		return fmt.Errorf("dimensions differ: %v vs %v", b0, b1)
@@ -35,7 +34,7 @@ func diff(m0, m1 image.Image) os.Error {
 	return nil
 }
 
-func encodeDecode(m image.Image) (image.Image, os.Error) {
+func encodeDecode(m image.Image) (image.Image, error) {
 	b := bytes.NewBuffer(nil)
 	err := Encode(b, m)
 	if err != nil {
@@ -126,7 +125,7 @@ func BenchmarkEncodeRGBOpaque(b *testing.B) {
 		}
 	}
 	if !img.Opaque() {
-		panic("expected image to be opaque")
+		b.Fatal("expected image to be opaque")
 	}
 	b.SetBytes(640 * 480 * 4)
 	b.StartTimer()
@@ -139,7 +138,7 @@ func BenchmarkEncodeRGBA(b *testing.B) {
 	b.StopTimer()
 	img := image.NewRGBA(image.Rect(0, 0, 640, 480))
 	if img.Opaque() {
-		panic("expected image to not be opaque")
+		b.Fatal("expected image to not be opaque")
 	}
 	b.SetBytes(640 * 480 * 4)
 	b.StartTimer()

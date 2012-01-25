@@ -13,7 +13,7 @@ import (
 )
 
 // Read makes *buffer implements io.Reader, so that we can pass one to Decode.
-func (*buffer) Read([]byte) (int, os.Error) {
+func (*buffer) Read([]byte) (int, error) {
 	panic("unimplemented")
 }
 
@@ -113,7 +113,7 @@ func BenchmarkDecode(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := Decode(r)
 		if err != nil {
-			panic(err)
+			b.Fatal("Decode:", err)
 		}
 	}
 }

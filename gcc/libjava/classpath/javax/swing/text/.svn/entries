@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/swing/text
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ gandalf
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-Style.java
-file
-
-
-
-
-2011-06-04T18:37:57.641104Z
-3b84a74ee40e3c4c429d7eeb2f7413f6
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2316
 
 ParagraphView.java
 file
@@ -94,6 +60,40 @@ gandalf
 
 14940
 
+Style.java
+file
+
+
+
+
+2011-06-04T18:37:57.641104Z
+3b84a74ee40e3c4c429d7eeb2f7413f6
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2316
+
 StringContent.java
 file
 
@@ -128,14 +128,14 @@ gandalf
 
 15803
 
-Segment.java
+AbstractDocument.java
 file
 
 
 
 
 2011-06-04T18:37:57.642104Z
-8ff49442c828b468f951c5cee3b30776
+cb322167839b58097bb305aaf3285bff
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -160,7 +160,7 @@ gandalf
 
 
 
-8376
+88199
 
 PlainDocument.java
 file
@@ -196,14 +196,14 @@ gandalf
 
 9781
 
-AbstractDocument.java
+Segment.java
 file
 
 
 
 
 2011-06-04T18:37:57.642104Z
-cb322167839b58097bb305aaf3285bff
+8ff49442c828b468f951c5cee3b30776
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -228,7 +228,7 @@ gandalf
 
 
 
-88199
+8376
 
 ElementIterator.java
 file
@@ -366,40 +366,6 @@ tromey
 
 8170
 
-TabStop.java
-file
-
-
-
-
-2011-06-04T18:37:57.644104Z
-6d1632449d95300f8d320e90c330894c
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5482
-
 NumberFormatter.java
 file
 
@@ -433,6 +399,40 @@ gandalf
 
 
 2970
+
+TabStop.java
+file
+
+
+
+
+2011-06-04T18:37:57.644104Z
+6d1632449d95300f8d320e90c330894c
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5482
 
 AttributeSet.java
 file
@@ -1080,40 +1080,6 @@ gandalf
 
 2075
 
-BadLocationException.java
-file
-
-
-
-
-2009-04-24T17:47:24.000000Z
-1cc249c53d6112ecfe1ed1d579b0285a
-2005-09-23T21:31:04.000000Z
-104586
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2716
-
 Highlighter.java
 file
 
@@ -1147,6 +1113,40 @@ gandalf
 
 
 2467
+
+BadLocationException.java
+file
+
+
+
+
+2009-04-24T17:47:24.000000Z
+1cc249c53d6112ecfe1ed1d579b0285a
+2005-09-23T21:31:04.000000Z
+104586
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2716
 
 DefaultFormatterFactory.java
 file
@@ -1355,40 +1355,6 @@ gandalf
 
 5726
 
-BoxView.java
-file
-
-
-
-
-2011-06-04T18:37:57.652104Z
-5c24e59cefde1df39b266ba7712348f1
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-35644
-
 IconView.java
 file
 
@@ -1422,6 +1388,40 @@ mark
 
 
 5987
+
+BoxView.java
+file
+
+
+
+
+2011-06-04T18:37:57.652104Z
+5c24e59cefde1df39b266ba7712348f1
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+35644
 
 html
 dir
@@ -1460,40 +1460,6 @@ gandalf
 
 4515
 
-StyleConstants.java
-file
-
-
-
-
-2011-06-04T18:37:57.653104Z
-9697af8b177d6916c5297f3a4bb4693d
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-32608
-
 ComponentView.java
 file
 
@@ -1528,14 +1494,14 @@ gandalf
 
 13668
 
-Caret.java
+StyleConstants.java
 file
 
 
 
 
-2011-06-04T18:37:57.654104Z
-f61171bb5f7614bcb1f20418a0666461
+2011-06-04T18:37:57.653104Z
+9697af8b177d6916c5297f3a4bb4693d
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -1560,7 +1526,41 @@ gandalf
 
 
 
-6519
+32608
+
+EmptyAttributeSet.java
+file
+
+
+
+
+2011-06-04T18:37:57.653104Z
+bad087de9d2646f3789042247268e1b9
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3943
 
 EditorKit.java
 file
@@ -1596,14 +1596,14 @@ gandalf
 
 3306
 
-EmptyAttributeSet.java
+Caret.java
 file
 
 
 
 
-2011-06-04T18:37:57.653104Z
-bad087de9d2646f3789042247268e1b9
+2011-06-04T18:37:57.654104Z
+f61171bb5f7614bcb1f20418a0666461
 2011-01-11T19:46:05.727579Z
 168680
 gandalf
@@ -1628,7 +1628,7 @@ gandalf
 
 
 
-3943
+6519
 
 AbstractWriter.java
 file
@@ -1698,40 +1698,6 @@ tromey
 
 2882
 
-FlowView.java
-file
-
-
-
-
-2011-06-04T18:37:57.655104Z
-5bd0e741e9edff3057865ef872c1c5cd
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-27051
-
 GapContent.java
 file
 
@@ -1765,6 +1731,40 @@ gandalf
 
 
 30028
+
+FlowView.java
+file
+
+
+
+
+2011-06-04T18:37:57.655104Z
+5bd0e741e9edff3057865ef872c1c5cd
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+27051
 
 NavigationFilter.java
 file
@@ -1936,40 +1936,6 @@ gandalf
 
 39601
 
-TableView.java
-file
-
-
-
-
-2011-06-04T18:37:57.657104Z
-24c18ece4e337a5d332515fe0b79d464
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-16243
-
 ChangedCharSetException.java
 file
 
@@ -2003,6 +1969,40 @@ tromey
 
 
 3126
+
+TableView.java
+file
+
+
+
+
+2011-06-04T18:37:57.657104Z
+24c18ece4e337a5d332515fe0b79d464
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+16243
 
 StyledEditorKit.java
 file

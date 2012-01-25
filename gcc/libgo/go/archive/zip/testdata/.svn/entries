@@ -1,14 +1,14 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/archive/zip/testdata
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-03-23T21:04:39.288757Z
-171361
+2012-01-12T01:31:45.568499Z
+183118
 ian
 
 
@@ -127,6 +127,74 @@ has-props
 
 
 440
+
+unix.zip
+file
+
+
+
+
+2012-01-20T20:49:52.372541Z
+f1dcd13397f7e578380b3fa564156b46
+2012-01-12T01:31:45.568499Z
+183118
+ian
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+620
+
+winxp.zip
+file
+
+
+
+
+2012-01-20T20:49:52.372541Z
+384be2e5e01c2618a144579f16ba024b
+2012-01-12T01:31:45.568499Z
+183118
+ian
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+412
 
 dd.zip
 file

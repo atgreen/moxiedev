@@ -1,5 +1,5 @@
 @c Copyright (C) 1988, 1989, 1992, 1993, 1994, 1996, 1998, 1999, 2000, 2001,
-@c 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+@c 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
 @c Free Software Foundation, Inc.
 
 @c This is part of the GCC manual.
@@ -1215,16 +1215,209 @@ Pragmas to control overflow and rounding behaviors are not implemented.
 Fixed-point types are supported by the DWARF2 debug information format.
 
 @node Named Address Spaces
-@section Named address spaces
-@cindex named address spaces
+@section Named Address Spaces
+@cindex Named Address Spaces
 
 As an extension, the GNU C compiler supports named address spaces as
 defined in the N1275 draft of ISO/IEC DTR 18037.  Support for named
-address spaces in GCC will evolve as the draft technical report changes.
-Calling conventions for any target might also change.  At present, only
-the SPU and M32C targets support other address spaces.  On the SPU target, for
-example, variables may be declared as belonging to another address space
-by qualifying the type with the @code{__ea} address space identifier:
+address spaces in GCC will evolve as the draft technical report
+changes.  Calling conventions for any target might also change.  At
+present, only the AVR, SPU, M32C, and RL78 targets support address
+spaces other than the generic address space.
+
+Address space identifiers may be used exactly like any other C type
+qualifier (e.g., @code{const} or @code{volatile}).  See the N1275
+document for more details.
+
+@anchor{AVR Named Address Spaces}
+@subsection AVR Named Address Spaces
+
+On the AVR target, there are several address spaces that can be used
+in order to put read-only data into the flash memory and access that
+data by means of the special instructions @code{LPM} or @code{ELPM}
+needed to read from flash.
+
+Per default, any data including read-only data is located in RAM so
+that address spaces are needed to locate read-only data in flash memory
+@emph{and} to generate the right instructions to access the data
+without using (inline) assembler code.
+
+@table @code
+@item __pgm
+@cindex @code{__pgm} AVR Named Address Spaces
+The @code{__pgm} qualifier will locate data in the
+@code{.progmem.data} section. Data will be read using the @code{LPM}
+instruction. Pointers to this address space are 16 bits wide.
+
+@item __pgm1
+@item __pgm2
+@item __pgm3
+@item __pgm4
+@item __pgm5
+@cindex @code{__pgm1} AVR Named Address Spaces
+@cindex @code{__pgm2} AVR Named Address Spaces
+@cindex @code{__pgm3} AVR Named Address Spaces
+@cindex @code{__pgm4} AVR Named Address Spaces
+@cindex @code{__pgm5} AVR Named Address Spaces
+These are 16-bit address spaces locating data in section
+@code{.progmem@var{N}.data} where @var{N} refers to
+address space @code{__pgm@var{N}}.
+The compiler will set the @code{RAMPZ} segment register approptiately 
+before reading data by means of the @code{ELPM} instruction.
+
+On devices with less 64kiB flash segments as indicated by the address
+space, the compiler will cut down the segment number to a number the
+device actually supports. Counting starts at @code{0}
+for space @code{__pgm}. For example, if you access address space
+@code{__pgm3} on an ATmega128 device with two 64@tie{}kiB flash segments,
+the compiler will generate a read from @code{__pgm1}, i.e.@: it
+will load @code{RAMPZ} with@tie{}@code{1} before reading.
+
+@item __pgmx
+@cindex @code{__pgmx} AVR Named Address Spaces
+This is a 24-bit address space that linearizes flash and RAM:
+If the high bit of the address is set, data is read from
+RAM using the lower two bytes as RAM address.
+If the high bit of the address is clear, data is read from flash
+with @code{RAMPZ} set according to the high byte of the address.
+
+Objects in this address space will be located in @code{.progmem.data}.
+@end table
+
+For each named address space supported by avr-gcc there is an equally
+named but uppercase built-in macro defined. 
+The purpose is to facilitate testing if respective address space
+support is available or not:
+
+@example
+#ifdef __PGM
+const __pgm int var = 1;
+
+int read_i (void)
+@{
+    return i;
+@}
+#else
+#include <avr/pgmspace.h> /* From avr-libc */
+
+const int var PROGMEM = 1;
+
+int read_i (void)
+@{
+    return (int) pgm_read_word (&i);
+@}
+#endif /* __PGM */
+@end example
+
+Notice that attribute @ref{AVR Variable Attributes,@code{progmem}}
+locates data in flash but
+accesses to these data will be to generic address space, i.e.@: RAM,
+so that you need special access functions like @code{pgm_read_byte}
+from @w{@uref{http://nongnu.org/avr-libc/user-manual,avr-libc}}.
+
+@b{Limitations and caveats}
+
+@itemize
+@item
+Reading across the 64@tie{}KiB section boundary of
+the @code{__pgm} or @code{__pgm@var{N}} address spaces
+will show undefined behaviour. The only address space that
+supports reading across the 64@tie{}KiB flash segment boundaries is
+@code{__pgmx}.
+
+@item
+If you use one if the @code{__pgm@var{N}} address spaces
+you will have to arrange your linker skript to locate the
+@code{.progmem@var{N}.data} sections according to your needs.
+
+@item
+Any data or pointers to the AVR address spaces spaces must
+also be qualified as @code{const}, i.e.@: as read-only data.
+This still applies if the data in one of these address
+spaces like software version number or lookup tables are intended to
+be changed after load time by, say, a boot loader. In this case
+the right qualification is @code{const} @code{volatile} so that the compiler
+must not optimize away known values or insert them
+as immediates into operands of instructions.
+
+@item
+Code like the following is not yet supported because of missing
+support in avr-binutils,
+see @w{@uref{http://sourceware.org/PR13503,PR13503}}.
+@example
+extern const __pgmx char foo;
+const __pgmx void *pfoo = &foo;
+@end example
+The code will throw an assembler warning and the high byte of
+@code{pfoo} will be initialized with @code{0}, i.e.@: the
+initialization will be as if @code{foo} was located in the first
+64@tie{}KiB chunk of flash.
+
+@item
+Address arithmetic for the @code{__pgmx} address space is carried out
+as 16-bit signed integer arithmetic. This means that in the following
+code array positions with offsets @code{idx}@tie{}>@tie{}8191 are
+inaccessible.
+
+@example
+extern const __pgmx long lookup[];
+
+long read_lookup (unsigned idx)
+@{
+    return lookup[idx];
+@}
+@end example
+
+@end itemize
+
+@b{Example}
+
+@example
+char my_read (const __pgm ** p)
+@{
+    /* p is a pointer to RAM that points to a pointer to flash.
+       The first indirection of p will read that flash pointer
+       from RAM and the second indirection reads a char from this
+       flash address.  */
+
+    return **p;
+@}
+
+/* Locate array[] in flash memory */
+const __pgm int array[] = @{ 3, 5, 7, 11, 13, 17, 19 @};
+
+int i = 1;
+
+int main (void)
+@{
+   /* Return 17 by reading from flash memory */
+   return array[array[i]];
+@}
+@end example
+
+@subsection M32C Named Address Spaces
+@cindex @code{__far} M32C Named Address Spaces
+
+On the M32C target, with the R8C and M16C cpu variants, variables
+qualified with @code{__far} are accessed using 32-bit addresses in
+order to access memory beyond the first 64@tie{}Ki bytes.  If
+@code{__far} is used with the M32CM or M32C cpu variants, it has no
+effect.
+
+@subsection RL78 Named Address Spaces
+@cindex @code{__far} RL78 Named Address Spaces
+
+On the RL78 target, variables qualified with @code{__far} are accessed
+with 32-bit pointers (20-bit addresses) rather than the default 16-bit
+addresses.  Non-far variables are assumed to appear in the topmost
+64@tie{}KiB of the address space.
+
+@subsection SPU Named Address Spaces
+@cindex @code{__ea} SPU Named Address Spaces
+
+On the SPU target variables may be declared as
+belonging to another address space by qualifying the type with the
+@code{__ea} address space identifier:
 
 @smallexample
 extern int __ea i;
@@ -1234,15 +1427,6 @@ When the variable @code{i} is accessed, the compiler will generate
 special code to access this variable.  It may use runtime library
 support, or generate special machine instructions to access that address
 space.
-
-The @code{__ea} identifier may be used exactly like any other C type
-qualifier (e.g., @code{const} or @code{volatile}).  See the N1275
-document for more details.
-
-On the M32C target, with the R8C and M16C cpu variants, variables
-qualified with @code{__far} are accessed using 32-bit addresses in
-order to access memory beyond the first 64k bytes.  If @code{__far} is
-used with the M32CM or M32C cpu variants, it has no effect.
 
 @node Zero Length
 @section Arrays of Length Zero
@@ -2553,7 +2737,7 @@ This attribute is ignored for R8C target.
 @item interrupt
 @cindex interrupt handler functions
 Use this attribute on the ARM, AVR, Epiphany, M32C, M32R/D, m68k, MeP, MIPS,
-RX and Xstormy16 ports to indicate that the specified function is an
+RL78, RX and Xstormy16 ports to indicate that the specified function is an
 interrupt handler.  The compiler will generate function entry and exit
 sequences suitable for use in an interrupt handler when this attribute
 is present.
@@ -2610,6 +2794,10 @@ void __attribute__ ((interrupt, use_shadow_register_set,
                      keep_interrupts_masked,
                      use_debug_exception_return)) v7 ();
 @end smallexample
+
+On RL78, use @code{brk_interrupt} instead of @code{interrupt} for
+handlers intended to be used with the @code{BRK} opcode (i.e.  those
+that must end with @code{RETB} instead of @code{RETI}).
 
 @item ifunc ("@var{resolver}")
 @cindex @code{ifunc} attribute
@@ -2761,13 +2949,12 @@ efficient @code{jal} instruction.
 @cindex @code{malloc} attribute
 The @code{malloc} attribute is used to tell the compiler that a function
 may be treated as if any non-@code{NULL} pointer it returns cannot
-alias any other pointer valid when the function returns.
+alias any other pointer valid when the function returns and that the memory
+has undefined content.
 This will often improve optimization.
 Standard functions with this property include @code{malloc} and
-@code{calloc}.  @code{realloc}-like functions have this property as
-long as the old pointer is never referred to (including comparing it
-to the new pointer) after the function returns a non-@code{NULL}
-value.
+@code{calloc}.  @code{realloc}-like functions do not have this
+property as the memory pointed to does not have undefined content.
 
 @item mips16/nomips16
 @cindex @code{mips16} attribute
@@ -4554,17 +4741,24 @@ The @code{dllexport} attribute is described in @ref{Function Attributes}.
 
 @end table
 
+@anchor{AVR Variable Attributes}
 @subsection AVR Variable Attributes
 
 @table @code
 @item progmem
 @cindex @code{progmem} AVR variable attribute
-The @code{progmem} attribute is used on the AVR to place data in the program
-memory address space (flash). This is accomplished by putting
-respective variables into a section whose name starts with @code{.progmem}.
+The @code{progmem} attribute is used on the AVR to place read-only
+data in the non-volatile program memory (flash). The @code{progmem}
+attribute accomplishes this by putting respective variables into a
+section whose name starts with @code{.progmem}.
 
-AVR is a Harvard architecture processor and data and reas only data
-normally resides in the data memory address space (RAM).
+This attrubute wirks similar to the @code{section} attribute
+but adds additional checking. Notice that just like the
+@code{section} attribute, @code{progmem} affects the location
+of the data but not how this data is accessed.
+
+AVR is a Harvard architecture processor and data and read-only data
+normally resides in the data memory (RAM).
 @end table
 
 @subsection Blackfin Variable Attributes
@@ -5288,8 +5482,8 @@ GCC implements three different semantics of declaring a function
 inline.  One is available with @option{-std=gnu89} or
 @option{-fgnu89-inline} or when @code{gnu_inline} attribute is present
 on all inline declarations, another when
-@option{-std=c99}, @option{-std=c1x},
-@option{-std=gnu99} or @option{-std=gnu1x}
+@option{-std=c99}, @option{-std=c11},
+@option{-std=gnu99} or @option{-std=gnu11}
 (without @option{-fgnu89-inline}), and the third
 is used when compiling C++.
 
@@ -6303,7 +6497,7 @@ a general-purpose header file that should be usable by all programs,
 including ISO C programs.  The keywords @code{asm}, @code{typeof} and
 @code{inline} are not available in programs compiled with
 @option{-ansi} or @option{-std} (although @code{inline} can be used in a
-program compiled with @option{-std=c99} or @option{-std=c1x}).  The
+program compiled with @option{-std=c99} or @option{-std=c11}).  The
 ISO C99 keyword
 @code{restrict} is only available when @option{-std=gnu99} (which will
 eventually be the default) or @option{-std=c99} (or the equivalent
@@ -7613,7 +7807,7 @@ be emitted.
 @opindex ansi
 @opindex std
 Outside strict ISO C mode (@option{-ansi}, @option{-std=c90},
-@option{-std=c99} or @option{-std=c1x}), the functions
+@option{-std=c99} or @option{-std=c11}), the functions
 @code{_exit}, @code{alloca}, @code{bcmp}, @code{bzero},
 @code{dcgettext}, @code{dgettext}, @code{dremf}, @code{dreml},
 @code{drem}, @code{exp10f}, @code{exp10l}, @code{exp10}, @code{ffsll},
@@ -7833,7 +8027,7 @@ future revisions.
 @deftypefn {Built-in Function} @var{type} __builtin_complex (@var{real}, @var{imag})
 
 The built-in function @code{__builtin_complex} is provided for use in
-implementing the ISO C1X macros @code{CMPLXF}, @code{CMPLX} and
+implementing the ISO C11 macros @code{CMPLXF}, @code{CMPLX} and
 @code{CMPLXL}.  @var{real} and @var{imag} must have the same type, a
 real binary floating-point type, and the result has the corresponding
 complex type with real and imaginary parts @var{real} and @var{imag}.
@@ -7922,7 +8116,7 @@ expressions for @var{exp}, you should use constructions such as
 
 @smallexample
 if (__builtin_expect (ptr != NULL, 1))
-  error ();
+  foo (*ptr);
 @end smallexample
 
 @noindent
@@ -8594,10 +8788,40 @@ implements
 void __builtin_avr_delay_cycles (unsigned long ticks)
 @end smallexample
 
+@noindent
 @code{ticks} is the number of ticks to delay execution. Note that this
 built-in does not take into account the effect of interrupts which
 might increase delay time. @code{ticks} must be a compile time
 integer constant; delays with a variable number of cycles are not supported.
+
+@smallexample
+     unsigned char __builtin_avr_map8 (unsigned long map, unsigned char val)
+@end smallexample
+
+@noindent
+Each bit of the result is copied from a specific bit of @code{val}.
+@code{map} is a compile time constant that represents a map composed
+of 8 nibbles (4-bit groups):
+The @var{n}-th nibble of @code{map} specifies which bit of @code{val}
+is to be moved to the @var{n}-th bit of the result.
+For example, @code{map = 0x76543210} represents identity: The MSB of
+the result is read from the 7-th bit of @code{val}, the LSB is
+read from the 0-th bit to @code{val}, etc.
+Two more examples: @code{0x01234567} reverses the bit order and
+@code{0x32107654} is equivalent to a @code{swap} instruction.
+
+@noindent
+One typical use case for this and the following built-in is adjusting input and
+output values to non-contiguous port layouts.
+
+@smallexample
+     unsigned int __builtin_avr_map16 (unsigned long long map, unsigned int val)
+@end smallexample
+
+@noindent
+Similar to the previous built-in except that it operates on @code{int}
+and thus 16 bits are involved.  Again, @code{map} must be a compile
+time constant.
 
 @node Blackfin Built-in Functions
 @subsection Blackfin Built-in Functions
@@ -10497,6 +10721,7 @@ i32 __builtin_mips_rddsp (imm0_63)
 i32 __builtin_mips_lbux (void *, i32)
 i32 __builtin_mips_lhx (void *, i32)
 i32 __builtin_mips_lwx (void *, i32)
+a64 __builtin_mips_ldx (void *, i32) [MIPS64 only]
 i32 __builtin_mips_bposge32 (void)
 a64 __builtin_mips_madd (a64, i32, i32);
 a64 __builtin_mips_maddu (a64, ui32, ui32);
@@ -14083,7 +14308,7 @@ versions earlier than 4.4.
 @cindex @code{struct}
 @cindex @code{union}
 
-As permitted by ISO C1X and for compatibility with other compilers,
+As permitted by ISO C11 and for compatibility with other compilers,
 GCC allows you to define
 a structure or union that contains, as fields, structures and unions
 without names.  For example:

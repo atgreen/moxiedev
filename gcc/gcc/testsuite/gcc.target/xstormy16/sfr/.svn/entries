@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/xstormy16/sfr
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,14 +26,14 @@ nickc
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-26_if1_sfrw_bitfield_f.c
+27_if0_sfrw_bitfield_f.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-dc25d837e9dfb63d110d3ed97952ac44
+399545481a5e90f464e00d2cdb3b624f
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -58,7 +58,7 @@ nickc
 
 
 
-937
+939
 
 25_clr_sfrw_bitfield_f.c
 file
@@ -94,14 +94,14 @@ nickc
 
 731
 
-27_if0_sfrw_bitfield_f.c
+26_if1_sfrw_bitfield_f.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-399545481a5e90f464e00d2cdb3b624f
+dc25d837e9dfb63d110d3ed97952ac44
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -126,7 +126,7 @@ nickc
 
 
 
-939
+937
 
 20_set_sfrb_bitfield_7.c
 file
@@ -196,14 +196,14 @@ nickc
 
 355
 
-13_if0_sfrb_bit_0.c
+11_clr_sfrb_bit_0.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-58a3a5242b4b599cdd94931aa3145170
+8304bc4bfc0efb7d78f65c9bc81b1a94
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -228,7 +228,7 @@ nickc
 
 
 
-539
+327
 
 12_if1_sfrb_bit_0.c
 file
@@ -264,14 +264,14 @@ nickc
 
 533
 
-11_clr_sfrb_bit_0.c
+13_if0_sfrb_bit_0.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-8304bc4bfc0efb7d78f65c9bc81b1a94
+58a3a5242b4b599cdd94931aa3145170
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -296,41 +296,7 @@ nickc
 
 
 
-327
-
-26_if1_sfrw_bitfield_3.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-909ab9c11eded8f481f574448b874a9e
-2004-12-08T11:15:24.000000Z
-91870
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-930
+539
 
 27_if0_sfrw_bitfield_3.c
 file
@@ -366,6 +332,40 @@ nickc
 
 932
 
+26_if1_sfrw_bitfield_3.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+909ab9c11eded8f481f574448b874a9e
+2004-12-08T11:15:24.000000Z
+91870
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+930
+
 14_set_sfrw_bit_0.c
 file
 
@@ -400,14 +400,14 @@ nickc
 
 336
 
-26_if1_sfrw_bitfield_7.c
+22_if1_sfrb_bitfield_0.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-38c7b7fa94a4f76f0547a4ec00ee123a
+7b3b52765647581bc3718c7325e51292
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -432,41 +432,7 @@ nickc
 
 
 
-935
-
-25_clr_sfrw_bitfield_7.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-e20255fe3b386fe8fdd70bc3b3831760
-2004-12-08T11:15:24.000000Z
-91870
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-730
+721
 
 23_if0_sfrb_bitfield_0.c
 file
@@ -502,14 +468,14 @@ nickc
 
 723
 
-22_if1_sfrb_bitfield_0.c
+25_clr_sfrw_bitfield_7.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-7b3b52765647581bc3718c7325e51292
+e20255fe3b386fe8fdd70bc3b3831760
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -534,7 +500,41 @@ nickc
 
 
 
-721
+730
+
+26_if1_sfrw_bitfield_7.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+38c7b7fa94a4f76f0547a4ec00ee123a
+2004-12-08T11:15:24.000000Z
+91870
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+935
 
 21_clr_sfrb_bitfield_0.c
 file
@@ -1182,14 +1182,14 @@ nickc
 
 327
 
-26_if1_sfrw_bitfield_0.c
+27_if0_sfrw_bitfield_0.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-8940080716d4d25d81dd66c245f4e124
+3b863fb0c295e87dae856eee933a1be6
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -1214,7 +1214,7 @@ nickc
 
 
 
-930
+932
 
 25_clr_sfrw_bitfield_0.c
 file
@@ -1250,14 +1250,14 @@ nickc
 
 730
 
-27_if0_sfrw_bitfield_0.c
+26_if1_sfrw_bitfield_0.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-3b863fb0c295e87dae856eee933a1be6
+8940080716d4d25d81dd66c245f4e124
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -1282,7 +1282,7 @@ nickc
 
 
 
-932
+930
 
 05_sfrb_to_var.c
 file
@@ -1318,40 +1318,6 @@ nickc
 
 361
 
-13_if0_sfrb_bit_3.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-ccae506883e23dac47030f4b9813239e
-2004-12-08T11:15:24.000000Z
-91870
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-539
-
 12_if1_sfrb_bit_3.c
 file
 
@@ -1386,14 +1352,14 @@ nickc
 
 533
 
-26_if1_sfrw_bitfield_8.c
+13_if0_sfrb_bit_3.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-d9288f0e6957efb8199560ad6f6ebe6c
+ccae506883e23dac47030f4b9813239e
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -1418,75 +1384,7 @@ nickc
 
 
 
-930
-
-25_clr_sfrw_bitfield_8.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-c85e51602e08f08112ca9e296ba720ea
-2004-12-08T11:15:24.000000Z
-91870
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-730
-
-14_set_sfrw_bit_3.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-e602b495c30c90e83425d6c32c6d65f3
-2004-12-08T11:15:24.000000Z
-91870
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-336
+539
 
 27_if0_sfrw_bitfield_8.c
 file
@@ -1522,14 +1420,14 @@ nickc
 
 932
 
-13_if0_sfrb_bit_7.c
+14_set_sfrw_bit_3.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-ad88b856ab339be1d5906dd344b5c7aa
+e602b495c30c90e83425d6c32c6d65f3
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -1554,16 +1452,16 @@ nickc
 
 
 
-539
+336
 
-12_if1_sfrb_bit_7.c
+25_clr_sfrw_bitfield_8.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-39377124710a1b40a06fd390006badb9
+c85e51602e08f08112ca9e296ba720ea
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -1588,7 +1486,41 @@ nickc
 
 
 
-533
+730
+
+26_if1_sfrw_bitfield_8.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+d9288f0e6957efb8199560ad6f6ebe6c
+2004-12-08T11:15:24.000000Z
+91870
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+930
 
 11_clr_sfrb_bit_7.c
 file
@@ -1624,14 +1556,14 @@ nickc
 
 327
 
-23_if0_sfrb_bitfield_3.c
+12_if1_sfrb_bit_7.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-3474925bb54a403120be07e589414fdb
+39377124710a1b40a06fd390006badb9
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -1656,7 +1588,41 @@ nickc
 
 
 
-723
+533
+
+13_if0_sfrb_bit_7.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+ad88b856ab339be1d5906dd344b5c7aa
+2004-12-08T11:15:24.000000Z
+91870
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+539
 
 22_if1_sfrb_bitfield_3.c
 file
@@ -1692,6 +1658,40 @@ nickc
 
 721
 
+23_if0_sfrb_bitfield_3.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+3474925bb54a403120be07e589414fdb
+2004-12-08T11:15:24.000000Z
+91870
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+723
+
 14_set_sfrw_bit_7.c
 file
 
@@ -1725,74 +1725,6 @@ nickc
 
 
 336
-
-17_if0_sfrw_bit_b.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-7e1613b7e3efe492f920162f142c166e
-2004-12-08T11:15:24.000000Z
-91870
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-559
-
-16_if1_sfrw_bit_b.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-82ec10ee69392fc4f5ec102ca9a25a3c
-2004-12-08T11:15:24.000000Z
-91870
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-553
 
 15_clr_sfrw_bit_b.c
 file
@@ -1828,14 +1760,14 @@ nickc
 
 337
 
-23_if0_sfrb_bitfield_7.c
+16_if1_sfrw_bit_b.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-f4fa764f634b6f3886eb9ad5fe913bb6
+82ec10ee69392fc4f5ec102ca9a25a3c
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -1860,16 +1792,16 @@ nickc
 
 
 
-723
+553
 
-22_if1_sfrb_bitfield_7.c
+17_if0_sfrw_bit_b.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-fe0d7579cb5b9bcba4a64a2c2a9b8782
+7e1613b7e3efe492f920162f142c166e
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -1894,7 +1826,7 @@ nickc
 
 
 
-721
+559
 
 21_clr_sfrb_bitfield_7.c
 file
@@ -1930,14 +1862,14 @@ nickc
 
 526
 
-17_if0_sfrw_bit_f.c
+22_if1_sfrb_bitfield_7.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-b73eb24104a2d4a38d2fd387a691a5fb
+fe0d7579cb5b9bcba4a64a2c2a9b8782
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -1962,7 +1894,75 @@ nickc
 
 
 
-559
+721
+
+23_if0_sfrb_bitfield_7.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+f4fa764f634b6f3886eb9ad5fe913bb6
+2004-12-08T11:15:24.000000Z
+91870
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+723
+
+15_clr_sfrw_bit_f.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+d03bf177922963930cb27460f412f30b
+2004-12-08T11:15:24.000000Z
+91870
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+337
 
 16_if1_sfrw_bit_f.c
 file
@@ -1998,14 +1998,82 @@ nickc
 
 553
 
-15_clr_sfrw_bit_f.c
+17_if0_sfrw_bit_f.c
 file
 
 
 
 
 2009-04-24T17:45:52.000000Z
-d03bf177922963930cb27460f412f30b
+b73eb24104a2d4a38d2fd387a691a5fb
+2004-12-08T11:15:24.000000Z
+91870
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+559
+
+16_if1_sfrw_bit_3.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+cf251273f9c45a7e34dd3bf827719a44
+2004-12-08T11:15:24.000000Z
+91870
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+553
+
+15_clr_sfrw_bit_3.c
+file
+
+
+
+
+2009-04-24T17:45:52.000000Z
+1819f8bf48c88124e88c44c5139b869b
 2004-12-08T11:15:24.000000Z
 91870
 nickc
@@ -2065,74 +2133,6 @@ nickc
 
 
 559
-
-15_clr_sfrw_bit_3.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-1819f8bf48c88124e88c44c5139b869b
-2004-12-08T11:15:24.000000Z
-91870
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-337
-
-16_if1_sfrw_bit_3.c
-file
-
-
-
-
-2009-04-24T17:45:52.000000Z
-cf251273f9c45a7e34dd3bf827719a44
-2004-12-08T11:15:24.000000Z
-91870
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-553
 
 17_if0_sfrw_bit_7.c
 file

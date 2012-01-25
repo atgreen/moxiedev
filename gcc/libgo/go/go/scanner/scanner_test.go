@@ -83,6 +83,8 @@ var tokens = [...]elt{
 		"`",
 		literal,
 	},
+	{token.STRING, "`\r`", literal},
+	{token.STRING, "`foo\r\nbar`", literal},
 
 	// Operators and delimiters
 	{token.ADD, "+", operator},
@@ -237,10 +239,18 @@ func TestScan(t *testing.T) {
 		}
 		checkPos(t, lit, pos, epos)
 		if tok != e.tok {
-			t.Errorf("bad token for %q: got %s, expected %s", lit, tok.String(), e.tok.String())
+			t.Errorf("bad token for %q: got %s, expected %s", lit, tok, e.tok)
 		}
-		if e.tok.IsLiteral() && lit != e.lit {
-			t.Errorf("bad literal for %q: got %q, expected %q", lit, lit, e.lit)
+		if e.tok.IsLiteral() {
+			// no CRs in raw string literals
+			elit := e.lit
+			if elit[0] == '`' {
+				elit = string(stripCR([]byte(elit)))
+				epos.Offset += len(e.lit) - len(lit) // correct position
+			}
+			if lit != elit {
+				t.Errorf("bad literal for %q: got %q, expected %q", lit, lit, elit)
+			}
 		}
 		if tokenclass(tok) != e.class {
 			t.Errorf("bad class for %q: got %d, expected %d", lit, tokenclass(tok), e.class)
@@ -286,7 +296,7 @@ func checkSemi(t *testing.T, line string, mode uint) {
 				}
 				checkPos(t, line, pos, semiPos)
 			} else {
-				t.Errorf("bad token for %q: got %s, expected ;", line, tok.String())
+				t.Errorf("bad token for %q: got %s, expected ;", line, tok)
 			}
 		} else if tok == token.SEMICOLON {
 			t.Errorf("bad token for %q: got ;, expected no ;", line)
@@ -509,7 +519,7 @@ func TestInit(t *testing.T) {
 	s.Scan()              // true
 	_, tok, _ := s.Scan() // {
 	if tok != token.LBRACE {
-		t.Errorf("bad token: got %s, expected %s", tok.String(), token.LBRACE)
+		t.Errorf("bad token: got %s, expected %s", tok, token.LBRACE)
 	}
 
 	// 2nd init
@@ -521,7 +531,7 @@ func TestInit(t *testing.T) {
 	}
 	_, tok, _ = s.Scan() // go
 	if tok != token.GO {
-		t.Errorf("bad token: got %s, expected %s", tok.String(), token.GO)
+		t.Errorf("bad token: got %s, expected %s", tok, token.GO)
 	}
 
 	if s.ErrorCount != 0 {

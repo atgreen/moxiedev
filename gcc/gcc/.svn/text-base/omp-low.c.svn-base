@@ -1248,7 +1248,7 @@ finalize_task_copyfn (gimple task_stmt)
   old_fn = current_function_decl;
   push_cfun (child_cfun);
   current_function_decl = child_fn;
-  bind = gimplify_body (&DECL_SAVED_TREE (child_fn), child_fn, false);
+  bind = gimplify_body (child_fn, false);
   seq = gimple_seq_alloc ();
   gimple_seq_add_stmt (&seq, bind);
   new_seq = maybe_catch_exception (seq);
@@ -5501,7 +5501,9 @@ expand_omp_atomic (struct omp_region *region)
       unsigned int align = TYPE_ALIGN_UNIT (type);
 
       /* __sync builtins require strict data alignment.  */
-      if (exact_log2 (align) >= index)
+      /* ??? Assume BIGGEST_ALIGNMENT *is* aligned.  */
+      if (exact_log2 (align) >= index
+	  || align * BITS_PER_UNIT >= BIGGEST_ALIGNMENT)
 	{
 	  /* Atomic load.  */
 	  if (loaded_val == stored_val

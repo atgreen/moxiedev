@@ -8,6 +8,7 @@ package filepath
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"runtime"
 	"sort"
@@ -146,6 +147,7 @@ func SplitList(path string) []string {
 // separating it into a directory and file name component.
 // If there is no Separator in path, Split returns an empty dir
 // and file set to path.
+// The returned values have the property that path = dir+file.
 func Split(path string) (dir, file string) {
 	vol := VolumeName(path)
 	i := len(path) - 1
@@ -182,7 +184,7 @@ func Ext(path string) string {
 // EvalSymlinks returns the path name after the evaluation of any symbolic
 // links.
 // If path is relative it will be evaluated relative to the current directory.
-func EvalSymlinks(path string) (string, os.Error) {
+func EvalSymlinks(path string) (string, error) {
 	if runtime.GOOS == "windows" {
 		// Symlinks are not supported under windows.
 		_, err := os.Lstat(path)
@@ -198,7 +200,7 @@ func EvalSymlinks(path string) (string, os.Error) {
 	var b bytes.Buffer
 	for n := 0; path != ""; n++ {
 		if n > maxIter {
-			return "", os.NewError("EvalSymlinks: too many links in " + originalPath)
+			return "", errors.New("EvalSymlinks: too many links in " + originalPath)
 		}
 
 		// find next path component, p
@@ -222,7 +224,7 @@ func EvalSymlinks(path string) (string, os.Error) {
 		if err != nil {
 			return "", err
 		}
-		if !fi.IsSymlink() {
+		if fi.Mode()&os.ModeSymlink == 0 {
 			b.WriteString(p)
 			if path != "" {
 				b.WriteRune(Separator)
@@ -247,7 +249,7 @@ func EvalSymlinks(path string) (string, os.Error) {
 // If the path is not absolute it will be joined with the current
 // working directory to turn it into an absolute path.  The absolute
 // path name for a given file is not guaranteed to be unique.
-func Abs(path string) (string, os.Error) {
+func Abs(path string) (string, error) {
 	if IsAbs(path) {
 		return Clean(path), nil
 	}
@@ -261,9 +263,11 @@ func Abs(path string) (string, os.Error) {
 // Rel returns a relative path that is lexically equivalent to targpath when
 // joined to basepath with an intervening separator. That is,
 // Join(basepath, Rel(basepath, targpath)) is equivalent to targpath itself.
+// On success, the returned path will always be relative to basepath,
+// even if basepath and targpath share no elements.
 // An error is returned if targpath can't be made relative to basepath or if
 // knowing the current working directory would be necessary to compute it.
-func Rel(basepath, targpath string) (string, os.Error) {
+func Rel(basepath, targpath string) (string, error) {
 	baseVol := VolumeName(basepath)
 	targVol := VolumeName(targpath)
 	base := Clean(basepath)
@@ -280,7 +284,7 @@ func Rel(basepath, targpath string) (string, os.Error) {
 	baseSlashed := len(base) > 0 && base[0] == Separator
 	targSlashed := len(targ) > 0 && targ[0] == Separator
 	if baseSlashed != targSlashed || baseVol != targVol {
-		return "", os.NewError("Rel: can't make " + targ + " relative to " + base)
+		return "", errors.New("Rel: can't make " + targ + " relative to " + base)
 	}
 	// Position base[b0:bi] and targ[t0:ti] at the first differing elements.
 	bl := len(base)
@@ -306,12 +310,16 @@ func Rel(basepath, targpath string) (string, os.Error) {
 		t0 = ti
 	}
 	if base[b0:bi] == ".." {
-		return "", os.NewError("Rel: can't make " + targ + " relative to " + base)
+		return "", errors.New("Rel: can't make " + targ + " relative to " + base)
 	}
 	if b0 != bl {
 		// Base elements left. Must go up before going down.
 		seps := strings.Count(base[b0:bl], string(Separator))
-		buf := make([]byte, 3+seps*3+tl-t0)
+		size := 2 + seps*3
+		if tl != t0 {
+			size += 1 + tl - t0
+		}
+		buf := make([]byte, size)
 		n := copy(buf, "..")
 		for i := 0; i < seps; i++ {
 			buf[n] = Separator
@@ -330,7 +338,7 @@ func Rel(basepath, targpath string) (string, os.Error) {
 // SkipDir is used as a return value from WalkFuncs to indicate that
 // the directory named in the call is to be skipped. It is not returned
 // as an error by any function.
-var SkipDir = os.NewError("skip this directory")
+var SkipDir = errors.New("skip this directory")
 
 // WalkFunc is the type of the function called for each file or directory
 // visited by Walk.  If there was a problem walking to the file or directory
@@ -340,19 +348,19 @@ var SkipDir = os.NewError("skip this directory")
 // sole exception is that if path is a directory and the function returns the
 // special value SkipDir, the contents of the directory are skipped
 // and processing continues as usual on the next file.
-type WalkFunc func(path string, info *os.FileInfo, err os.Error) os.Error
+type WalkFunc func(path string, info os.FileInfo, err error) error
 
 // walk recursively descends path, calling w.
-func walk(path string, info *os.FileInfo, walkFn WalkFunc) os.Error {
+func walk(path string, info os.FileInfo, walkFn WalkFunc) error {
 	err := walkFn(path, info, nil)
 	if err != nil {
-		if info.IsDirectory() && err == SkipDir {
+		if info.IsDir() && err == SkipDir {
 			return nil
 		}
 		return err
 	}
 
-	if !info.IsDirectory() {
+	if !info.IsDir() {
 		return nil
 	}
 
@@ -362,7 +370,7 @@ func walk(path string, info *os.FileInfo, walkFn WalkFunc) os.Error {
 	}
 
 	for _, fileInfo := range list {
-		if err = walk(Join(path, fileInfo.Name), fileInfo, walkFn); err != nil {
+		if err = walk(Join(path, fileInfo.Name()), fileInfo, walkFn); err != nil {
 			return err
 		}
 	}
@@ -374,7 +382,7 @@ func walk(path string, info *os.FileInfo, walkFn WalkFunc) os.Error {
 // and directories are filtered by walkFn. The files are walked in lexical
 // order, which makes the output deterministic but means that for very
 // large directories Walk can be inefficient.
-func Walk(root string, walkFn WalkFunc) os.Error {
+func Walk(root string, walkFn WalkFunc) error {
 	info, err := os.Lstat(root)
 	if err != nil {
 		return walkFn(root, nil, err)
@@ -385,7 +393,7 @@ func Walk(root string, walkFn WalkFunc) os.Error {
 // readDir reads the directory named by dirname and returns
 // a sorted list of directory entries.
 // Copied from io/ioutil to avoid the circular import.
-func readDir(dirname string) ([]*os.FileInfo, os.Error) {
+func readDir(dirname string) ([]os.FileInfo, error) {
 	f, err := os.Open(dirname)
 	if err != nil {
 		return nil, err
@@ -395,20 +403,16 @@ func readDir(dirname string) ([]*os.FileInfo, os.Error) {
 	if err != nil {
 		return nil, err
 	}
-	fi := make(fileInfoList, len(list))
-	for i := range list {
-		fi[i] = &list[i]
-	}
-	sort.Sort(fi)
-	return fi, nil
+	sort.Sort(byName(list))
+	return list, nil
 }
 
-// A dirList implements sort.Interface.
-type fileInfoList []*os.FileInfo
+// byName implements sort.Interface.
+type byName []os.FileInfo
 
-func (f fileInfoList) Len() int           { return len(f) }
-func (f fileInfoList) Less(i, j int) bool { return f[i].Name < f[j].Name }
-func (f fileInfoList) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
+func (f byName) Len() int           { return len(f) }
+func (f byName) Less(i, j int) bool { return f[i].Name() < f[j].Name() }
+func (f byName) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
 
 // Base returns the last element of path.
 // Trailing path separators are removed before extracting the last element.
@@ -422,6 +426,8 @@ func Base(path string) string {
 	for len(path) > 0 && os.IsPathSeparator(path[len(path)-1]) {
 		path = path[0 : len(path)-1]
 	}
+	// Throw away volume name
+	path = path[len(VolumeName(path)):]
 	// Find the last element
 	i := len(path) - 1
 	for i >= 0 && !os.IsPathSeparator(path[i]) {
@@ -435,4 +441,26 @@ func Base(path string) string {
 		return string(Separator)
 	}
 	return path
+}
+
+// Dir returns the all but the last element of path, typically the path's directory.
+// Trailing path separators are removed before processing.
+// If the path is empty, Dir returns ".".
+// If the path consists entirely of separators, Dir returns a single separator.
+// The returned path does not end in a separator unless it is the root directory.
+func Dir(path string) string {
+	vol := VolumeName(path)
+	i := len(path) - 1
+	for i >= len(vol) && !os.IsPathSeparator(path[i]) {
+		i--
+	}
+	dir := Clean(path[len(vol) : i+1])
+	last := len(dir) - 1
+	if last > 0 && os.IsPathSeparator(dir[last]) {
+		dir = dir[:last]
+	}
+	if dir == "" {
+		dir = "."
+	}
+	return vol + dir
 }

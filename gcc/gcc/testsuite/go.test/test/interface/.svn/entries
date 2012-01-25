@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/go.test/test/interface
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ ian
 
 957
 
-pointer.go
-file
-
-
-
-
-2011-09-25T18:02:27.651897Z
-a141cc00f5b27a7547da4670f9d795f4
-2011-09-21T23:05:39.964752Z
-179063
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-730
-
 convert.go
 file
 
@@ -162,16 +128,16 @@ ian
 
 1966
 
-returntype.go
+pointer.go
 file
 
 
 
 
-2011-06-04T17:55:36.107104Z
-08c5ec8f630cb0aad7a38d6c828cd1f6
-2010-09-11T00:47:55.335584Z
-164210
+2011-09-25T18:02:27.651897Z
+a141cc00f5b27a7547da4670f9d795f4
+2011-09-21T23:05:39.964752Z
+179063
 ian
 
 
@@ -194,7 +160,7 @@ ian
 
 
 
-564
+730
 
 explicit.go
 file
@@ -229,6 +195,40 @@ ian
 
 
 1340
+
+returntype.go
+file
+
+
+
+
+2011-06-04T17:55:36.107104Z
+08c5ec8f630cb0aad7a38d6c828cd1f6
+2010-09-11T00:47:55.335584Z
+164210
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+564
 
 struct.go
 file
@@ -298,40 +298,6 @@ ian
 
 744
 
-private1.go
-file
-
-
-
-
-2011-09-25T18:02:27.651897Z
-c30ebb074ecf7f4f3f6d9084ff2a5654
-2011-09-21T23:05:39.964752Z
-179063
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-340
-
 bigdata.go
 file
 
@@ -365,6 +331,40 @@ ian
 
 
 1523
+
+private1.go
+file
+
+
+
+
+2011-09-25T18:02:27.651897Z
+c30ebb074ecf7f4f3f6d9084ff2a5654
+2011-09-21T23:05:39.964752Z
+179063
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+340
 
 embed0.go
 file

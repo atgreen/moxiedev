@@ -403,6 +403,7 @@ merge_and_complain (struct cl_decoded_option **decoded_options,
 	case OPT_fpie:
 	case OPT_fcommon:
 	case OPT_fexceptions:
+	case OPT_fgnu_tm:
 	  /* Do what the old LTO code did - collect exactly one option
 	     setting per OPT code, we pick the first we encounter.
 	     ???  This doesn't make too much sense, but when it doesn't
@@ -555,6 +556,7 @@ run_gcc (unsigned argc, char *argv[])
 	case OPT_fpie:
 	case OPT_fcommon:
 	case OPT_fexceptions:
+	case OPT_fgnu_tm:
 	  break;
 
 	default:
@@ -811,9 +813,19 @@ cont:
 	      for (j = 1; new_argv[j] != NULL; ++j)
 		fprintf (mstream, " '%s'", new_argv[j]);
 	      fprintf (mstream, "\n");
+	      /* If we are not preserving the ltrans input files then
+	         truncate them as soon as we have processed it.  This
+		 reduces temporary disk-space usage.  */
+	      if (! debug)
+		fprintf (mstream, "\t@-touch -r %s %s.tem > /dev/null 2>&1 "
+			 "&& mv %s.tem %s\n",
+			 input_name, input_name, input_name, input_name); 
 	    }
 	  else
-	    fork_execute (CONST_CAST (char **, new_argv));
+	    {
+	      fork_execute (CONST_CAST (char **, new_argv));
+	      maybe_unlink_file (input_name);
+	    }
 
 	  output_names[i] = output_name;
 	}
@@ -851,12 +863,13 @@ cont:
 	  collect_wait (new_argv[0], pex);
 	  maybe_unlink_file (makefile);
 	  makefile = NULL;
+	  for (i = 0; i < nr; ++i)
+	    maybe_unlink_file (input_names[i]);
 	}
       for (i = 0; i < nr; ++i)
 	{
 	  fputs (output_names[i], stdout);
 	  putc ('\n', stdout);
-	  maybe_unlink_file (input_names[i]);
 	  free (input_names[i]);
 	}
       nr = 0;

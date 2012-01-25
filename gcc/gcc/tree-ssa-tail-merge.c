@@ -1,5 +1,5 @@
 /* Tail merging for gimple.
-   Copyright (C) 2011 Free Software Foundation, Inc.
+   Copyright (C) 2011, 2012 Free Software Foundation, Inc.
    Contributed by Tom de Vries (tom@codesourcery.com)
 
 This file is part of GCC.
@@ -1051,6 +1051,14 @@ gimple_equal_p (same_succ same_succ, gimple s1, gimple s2)
       if (!gimple_call_same_target_p (s1, s2))
         return false;
 
+      /* Eventually, we'll significantly complicate the CFG by adding
+	 back edges to properly model the effects of transaction restart.
+	 For the bulk of optimization this does not matter, but what we
+	 cannot recover from is tail merging blocks between two separate
+	 transactions.  Avoid that by making commit not match.  */
+      if (gimple_call_builtin_p (s1, BUILT_IN_TM_COMMIT))
+	return false;
+
       equal = true;
       for (i = 0; i < gimple_call_num_args (s1); ++i)
 	{
@@ -1063,14 +1071,18 @@ gimple_equal_p (same_succ same_succ, gimple s1, gimple s2)
 	  equal = false;
 	  break;
 	}
-      if (equal)
-	return true;
+      if (!equal)
+	return false;
 
       lhs1 = gimple_get_lhs (s1);
       lhs2 = gimple_get_lhs (s2);
-      return (lhs1 != NULL_TREE && lhs2 != NULL_TREE
-	      && TREE_CODE (lhs1) == SSA_NAME && TREE_CODE (lhs2) == SSA_NAME
-	      && vn_valueize (lhs1) == vn_valueize (lhs2));
+      if (lhs1 == NULL_TREE && lhs2 == NULL_TREE)
+	return true;
+      if (lhs1 == NULL_TREE || lhs2 == NULL_TREE)
+	return false;
+      if (TREE_CODE (lhs1) == SSA_NAME && TREE_CODE (lhs2) == SSA_NAME)
+	return vn_valueize (lhs1) == vn_valueize (lhs2);
+      return operand_equal_p (lhs1, lhs2, 0);
 
     case GIMPLE_ASSIGN:
       lhs1 = gimple_get_lhs (s1);

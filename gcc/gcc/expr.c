@@ -1,7 +1,7 @@
 /* Convert tree expression to rtl instructions, for GNU compiler.
    Copyright (C) 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
+   2012 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -123,9 +123,6 @@ struct store_by_pieces_d
   int reverse;
 };
 
-static unsigned HOST_WIDE_INT move_by_pieces_ninsns (unsigned HOST_WIDE_INT,
-						     unsigned int,
-						     unsigned int);
 static void move_by_pieces_1 (rtx (*) (rtx, ...), enum machine_mode,
 			      struct move_by_pieces_d *);
 static bool block_move_libcall_safe_for_call_parm (void);
@@ -1016,7 +1013,7 @@ move_by_pieces (rtx to, rtx from, unsigned HOST_WIDE_INT len,
 /* Return number of insns required to move L bytes by pieces.
    ALIGN (in bits) is maximum alignment we can assume.  */
 
-static unsigned HOST_WIDE_INT
+unsigned HOST_WIDE_INT
 move_by_pieces_ninsns (unsigned HOST_WIDE_INT l, unsigned int align,
 		       unsigned int max_size)
 {
@@ -3645,9 +3642,11 @@ mem_autoinc_base (rtx mem)
      (1) One or more auto-inc style memory references (aka pushes),
      (2) One or more addition/subtraction with the SP as destination,
      (3) A single move insn with the SP as destination,
-     (4) A call_pop insn.
+     (4) A call_pop insn,
+     (5) Noreturn call insns if !ACCUMULATE_OUTGOING_ARGS.
 
-   Insns in the sequence that do not modify the SP are ignored.
+   Insns in the sequence that do not modify the SP are ignored,
+   except for noreturn calls.
 
    The return value is the amount of adjustment that can be trivially
    verified, via immediate operand or auto-inc.  If the adjustment
@@ -3792,7 +3791,12 @@ fixup_args_size_notes (rtx prev, rtx last, int end_args_size)
 
       this_delta = find_args_size_adjust (insn);
       if (this_delta == 0)
-	continue;
+	{
+	  if (!CALL_P (insn)
+	      || ACCUMULATE_OUTGOING_ARGS
+	      || find_reg_note (insn, REG_NORETURN, NULL_RTX) == NULL_RTX)
+	    continue;
+	}
 
       gcc_assert (!saw_unknown);
       if (this_delta == HOST_WIDE_INT_MIN)
@@ -4544,27 +4548,6 @@ get_bit_range (unsigned HOST_WIDE_INT *bitstart,
     }
 }
 
-/* Return the alignment of the object EXP, also considering its type
-   when we do not know of explicit misalignment.
-   ???  Note that, in the general case, the type of an expression is not kept
-   consistent with misalignment information by the front-end, for
-   example when taking the address of a member of a packed structure.
-   However, in most of the cases, expressions have the alignment of
-   their type, so we optimistically fall back to the alignment of the
-   type when we cannot compute a misalignment.  */
-
-static unsigned int
-get_object_or_type_alignment (tree exp)
-{
-  unsigned HOST_WIDE_INT misalign;
-  unsigned int align = get_object_alignment_1 (exp, &misalign);
-  if (misalign != 0)
-    align = (misalign & -misalign);
-  else
-    align = MAX (TYPE_ALIGN (TREE_TYPE (exp)), align);
-  return align;
-}
-
 /* Expand an assignment that stores the value of FROM into TO.  If NONTEMPORAL
    is true, try generating a nontemporal store.  */
 
@@ -4607,7 +4590,7 @@ expand_assignment (tree to, tree from, bool nontemporal)
       if (TREE_CODE (to) == MEM_REF)
 	{
 	  addr_space_t as
-	      = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (TREE_OPERAND (to, 1))));
+	    = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (TREE_OPERAND (to, 0))));
 	  tree base = TREE_OPERAND (to, 0);
 	  address_mode = targetm.addr_space.address_mode (as);
 	  op0 = expand_expr (base, NULL_RTX, VOIDmode, EXPAND_NORMAL);
@@ -4625,7 +4608,8 @@ expand_assignment (tree to, tree from, bool nontemporal)
 	}
       else if (TREE_CODE (to) == TARGET_MEM_REF)
 	{
-	  addr_space_t as = TYPE_ADDR_SPACE (TREE_TYPE (to));
+	  addr_space_t as
+	    = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (TREE_OPERAND (to, 0))));
 	  struct mem_address addr;
 
 	  get_address_description (to, &addr);
@@ -6348,6 +6332,8 @@ store_field (rtx target, HOST_WIDE_INT bitsize, HOST_WIDE_INT bitpos,
 		|| bitpos % GET_MODE_ALIGNMENT (mode))
 	       && SLOW_UNALIGNED_ACCESS (mode, MEM_ALIGN (target)))
 	      || (bitpos % BITS_PER_UNIT != 0)))
+      || (bitsize >= 0 && mode != BLKmode
+	  && GET_MODE_BITSIZE (mode) > bitsize)
       /* If the RHS and field are a constant size and the size of the
 	 RHS isn't the same size as the bitfield, we must use bitfield
 	 operations.  */
@@ -7452,7 +7438,8 @@ expand_expr_addr_expr_1 (tree exp, rtx target, enum machine_mode tmode,
 	    }
 
 	  if (modifier != EXPAND_INITIALIZER
-	      && modifier != EXPAND_CONST_ADDRESS)
+	      && modifier != EXPAND_CONST_ADDRESS
+	      && modifier != EXPAND_SUM)
 	    result = force_operand (result, target);
 	  return result;
 	}
@@ -8665,12 +8652,6 @@ expand_expr_real_2 (sepops ops, rtx target, enum machine_mode tmode,
         return temp;
       }
 
-    case VEC_EXTRACT_EVEN_EXPR:
-    case VEC_EXTRACT_ODD_EXPR:
-    case VEC_INTERLEAVE_HIGH_EXPR:
-    case VEC_INTERLEAVE_LOW_EXPR:
-      goto binop;
-
     case VEC_LSHIFT_EXPR:
     case VEC_RSHIFT_EXPR:
       {
@@ -8736,6 +8717,23 @@ expand_expr_real_2 (sepops ops, rtx target, enum machine_mode tmode,
     case VEC_PERM_EXPR:
       expand_operands (treeop0, treeop1, target, &op0, &op1, EXPAND_NORMAL);
       op2 = expand_normal (treeop2);
+
+      /* Careful here: if the target doesn't support integral vector modes,
+	 a constant selection vector could wind up smooshed into a normal
+	 integral constant.  */
+      if (CONSTANT_P (op2) && GET_CODE (op2) != CONST_VECTOR)
+	{
+	  tree sel_type = TREE_TYPE (treeop2);
+	  enum machine_mode vmode
+	    = mode_for_vector (TYPE_MODE (TREE_TYPE (sel_type)),
+			       TYPE_VECTOR_SUBPARTS (sel_type));
+	  gcc_assert (GET_MODE_CLASS (vmode) == MODE_VECTOR_INT);
+	  op2 = simplify_subreg (vmode, op2, TYPE_MODE (sel_type), 0);
+	  gcc_assert (op2 && GET_CODE (op2) == CONST_VECTOR);
+	}
+      else
+        gcc_assert (GET_MODE_CLASS (GET_MODE (op2)) == MODE_VECTOR_INT);
+
       temp = expand_vec_perm (mode, op0, op1, op2, target);
       gcc_assert (temp);
       return temp;
@@ -9256,7 +9254,8 @@ expand_expr_real_1 (tree exp, rtx target, enum machine_mode tmode,
 
     case TARGET_MEM_REF:
       {
-	addr_space_t as = TYPE_ADDR_SPACE (TREE_TYPE (exp));
+	addr_space_t as
+	  = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (TREE_OPERAND (exp, 0))));
 	struct mem_address addr;
 	enum insn_code icode;
 	unsigned int align;
@@ -9291,7 +9290,7 @@ expand_expr_real_1 (tree exp, rtx target, enum machine_mode tmode,
     case MEM_REF:
       {
 	addr_space_t as
-	  = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (TREE_OPERAND (exp, 1))));
+	  = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (TREE_OPERAND (exp, 0))));
 	enum machine_mode address_mode;
 	tree base = TREE_OPERAND (exp, 0);
 	gimple def_stmt;
@@ -10562,15 +10561,22 @@ do_store_flag (sepops ops, rtx target, enum machine_mode mode)
      so we just call into the folder and expand its result.  */
 
   if ((code == NE || code == EQ)
-      && TREE_CODE (arg0) == BIT_AND_EXPR && integer_zerop (arg1)
-      && integer_pow2p (TREE_OPERAND (arg0, 1))
+      && integer_zerop (arg1)
       && (TYPE_PRECISION (ops->type) != 1 || TYPE_UNSIGNED (ops->type)))
     {
-      tree type = lang_hooks.types.type_for_mode (mode, unsignedp);
-      return expand_expr (fold_single_bit_test (loc,
-						code == NE ? NE_EXPR : EQ_EXPR,
-						arg0, arg1, type),
-			  target, VOIDmode, EXPAND_NORMAL);
+      gimple srcstmt = get_def_for_expr (arg0, BIT_AND_EXPR);
+      if (srcstmt
+	  && integer_pow2p (gimple_assign_rhs2 (srcstmt)))
+	{
+	  enum tree_code tcode = code == NE ? NE_EXPR : EQ_EXPR;
+	  tree type = lang_hooks.types.type_for_mode (mode, unsignedp);
+	  tree temp = fold_build2_loc (loc, BIT_AND_EXPR, TREE_TYPE (arg1),
+				       gimple_assign_rhs1 (srcstmt),
+				       gimple_assign_rhs2 (srcstmt));
+	  temp = fold_single_bit_test (loc, tcode, temp, arg1, type);
+	  if (temp)
+	    return expand_expr (temp, target, VOIDmode, EXPAND_NORMAL);
+	}
     }
 
   if (! get_subtarget (target)

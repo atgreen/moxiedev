@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/include/ext/pb_ds/detail
 svn://gcc.gnu.org/svn/gcc
 
@@ -306,10 +306,10 @@ dir
 list_update_policy
 dir
 
-left_child_next_sibling_heap_
+thin_heap_
 dir
 
-thin_heap_
+left_child_next_sibling_heap_
 dir
 
 ov_tree_map_
@@ -349,10 +349,10 @@ bkoz
 
 8731
 
-hash_fn
+splay_tree_
 dir
 
-splay_tree_
+hash_fn
 dir
 
 list_update_map_

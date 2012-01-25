@@ -1,14 +1,14 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-11-02T17:53:20.617469Z
-180784
+2012-01-13T23:35:44.954057Z
+183171
 ian
 
 
@@ -26,12 +26,6 @@ ian
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-http
-dir
-
-syslog
-dir
-
 os
 dir
 
@@ -44,7 +38,7 @@ dir
 runtime
 dir
 
-rpc
+text
 dir
 
 debug
@@ -77,34 +71,13 @@ dir
 patch
 dir
 
-big
-dir
-
-url
-dir
-
-asn1
-dir
-
-tabwriter
+html
 dir
 
 bufio
 dir
 
-html
-dir
-
-utf16
-dir
-
 expvar
-dir
-
-gob
-dir
-
-json
 dir
 
 sync
@@ -125,18 +98,6 @@ dir
 container
 dir
 
-mail
-dir
-
-smtp
-dir
-
-exec
-dir
-
-rand
-dir
-
 reflect
 dir
 
@@ -149,34 +110,19 @@ dir
 bytes
 dir
 
-utf8
-dir
-
 mime
 dir
 
 sort
 dir
 
-scanner
-dir
-
 regexp
-dir
-
-csv
-dir
-
-cmath
 dir
 
 path
 dir
 
 strconv
-dir
-
-xml
 dir
 
 go
@@ -197,7 +143,7 @@ dir
 syscall
 dir
 
-template
+errors
 dir
 
 old

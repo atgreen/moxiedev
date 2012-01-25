@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/doc/xml/images
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ has-props
 
 34785
 
-pbds_priority_queue_text_pop_mem.svg
-file
-
-
-
-
-2011-08-24T20:08:12.750654Z
-86deefa37caae7d158d1fe23e5597bd8
-2011-08-15T00:54:18.684608Z
-177757
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-56407
-
 pbds_binary_priority_queue_int_push_pop.png
 file
 
@@ -603,6 +569,40 @@ has-props
 
 
 33264
+
+pbds_priority_queue_text_pop_mem.svg
+file
+
+
+
+
+2011-08-24T20:08:12.750654Z
+86deefa37caae7d158d1fe23e5597bd8
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+56407
 
 pbds_hash_zlob_int_find.png
 file
@@ -876,18 +876,17 @@ bkoz
 
 25405
 
-pbds_tree_text_insert_trie.pdf
+pbds_cc_hash_int_subscript_insert.svg
 file
 
 
 
 
-2011-08-24T20:08:12.754654Z
-9a2fba984ddb51bc2cd59566ff2ab5bb
+2011-08-24T20:08:12.755654Z
+789751b847add92e437814589e70324c
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
-has-props
 
 
 
@@ -908,7 +907,8 @@ has-props
 
 
 
-68209
+
+43206
 
 pbds_hash_int_erase_mem.pdf
 file
@@ -944,17 +944,18 @@ has-props
 
 77175
 
-pbds_cc_hash_int_subscript_insert.svg
+pbds_tree_text_insert_trie.pdf
 file
 
 
 
 
-2011-08-24T20:08:12.755654Z
-789751b847add92e437814589e70324c
+2011-08-24T20:08:12.754654Z
+9a2fba984ddb51bc2cd59566ff2ab5bb
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
+has-props
 
 
 
@@ -975,42 +976,7 @@ bkoz
 
 
 
-
-43206
-
-pbds_multimap_text_find_small_s2p_tree.svg
-file
-
-
-
-
-2011-08-24T20:08:12.755654Z
-fd7c3b3fe8c51ea5fca6b086f365900f
-2011-08-15T00:54:18.684608Z
-177757
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-17394
+68209
 
 pbds_priority_queue_text_modify_down.svg
 file
@@ -1045,6 +1011,40 @@ bkoz
 
 
 61094
+
+pbds_multimap_text_find_small_s2p_tree.svg
+file
+
+
+
+
+2011-08-24T20:08:12.755654Z
+fd7c3b3fe8c51ea5fca6b086f365900f
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+17394
 
 pbds_tree_order_statistics.png
 file
@@ -2168,40 +2168,6 @@ has-props
 
 44599
 
-pbds_multimap_text_insert_large_s2p_hash.pdf
-file
-
-
-
-
-2011-08-24T20:08:12.769653Z
-41b5e5a33613e0e14435262ea5b6cf2e
-2011-08-15T00:54:18.684608Z
-177757
-bkoz
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-67457
-
 pbds_multimap_text_insert_mem_large_s2p_tree.svg
 file
 
@@ -2235,6 +2201,40 @@ bkoz
 
 
 18520
+
+pbds_multimap_text_insert_large_s2p_hash.pdf
+file
+
+
+
+
+2011-08-24T20:08:12.769653Z
+41b5e5a33613e0e14435262ea5b6cf2e
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+67457
 
 pbds_exception_hierarchy.svg
 file
@@ -2372,40 +2372,6 @@ bkoz
 
 39916
 
-pbds_restoring_node_invariants.png
-file
-
-
-
-
-2011-08-24T20:08:12.771653Z
-a6478c6d01aed2966888a024984955d1
-2011-07-29T22:31:30.382158Z
-176952
-bkoz
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-14432
-
 pbds_priority_queue_text_modify_up.svg
 file
 
@@ -2440,16 +2406,16 @@ bkoz
 
 61074
 
-pbds_multimap_text_insert_large_s2p_tree.pdf
+pbds_restoring_node_invariants.png
 file
 
 
 
 
-2011-08-24T20:08:12.772653Z
-840a8089e23dc711de3054f6288ec121
-2011-08-15T00:54:18.684608Z
-177757
+2011-08-24T20:08:12.771653Z
+a6478c6d01aed2966888a024984955d1
+2011-07-29T22:31:30.382158Z
+176952
 bkoz
 has-props
 
@@ -2472,7 +2438,7 @@ has-props
 
 
 
-70759
+14432
 
 pbds_multimap_text_insert_mem_small_s2p_hash.pdf
 file
@@ -2508,6 +2474,40 @@ has-props
 
 67808
 
+pbds_multimap_text_insert_large_s2p_tree.pdf
+file
+
+
+
+
+2011-08-24T20:08:12.772653Z
+840a8089e23dc711de3054f6288ec121
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+70759
+
 pbds_gp_hash_int_find.png
 file
 
@@ -2541,40 +2541,6 @@ has-props
 
 
 46447
-
-pbds_simple_list.png
-file
-
-
-
-
-2011-08-24T20:08:12.773653Z
-ce9469eb1062d69a9c87db7ca98a396f
-2011-07-29T22:31:30.382158Z
-176952
-bkoz
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4299
 
 pbds_cc_hash_int_subscript_insert.png
 file
@@ -2610,16 +2576,16 @@ has-props
 
 67625
 
-pbds_priority_queue_text_modify_down.png
+pbds_simple_list.png
 file
 
 
 
 
-2011-08-24T20:08:12.774653Z
-d78f616ccb26632c0e9504319eee3074
-2011-08-15T00:54:18.684608Z
-177757
+2011-08-24T20:08:12.773653Z
+ce9469eb1062d69a9c87db7ca98a396f
+2011-07-29T22:31:30.382158Z
+176952
 bkoz
 has-props
 
@@ -2642,7 +2608,41 @@ has-props
 
 
 
-45433
+4299
+
+pbds_priority_queue_int_push_pop.svg
+file
+
+
+
+
+2011-08-24T20:08:12.775653Z
+a5505a9a82ebb417fe60c998d2ab4e39
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+60837
 
 pbds_multimap_text_find_small_s2p_tree.png
 file
@@ -2678,17 +2678,18 @@ has-props
 
 37341
 
-pbds_priority_queue_int_push_pop.svg
+pbds_priority_queue_text_modify_down.png
 file
 
 
 
 
-2011-08-24T20:08:12.775653Z
-a5505a9a82ebb417fe60c998d2ab4e39
+2011-08-24T20:08:12.774653Z
+d78f616ccb26632c0e9504319eee3074
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
+has-props
 
 
 
@@ -2709,8 +2710,7 @@ bkoz
 
 
 
-
-60837
+45433
 
 pbds_gp_hash_int_subscript_insert.pdf
 file
@@ -2814,40 +2814,6 @@ bkoz
 
 14336
 
-pbds_tree_text_insert_vector.pdf
-file
-
-
-
-
-2011-08-24T20:08:12.777653Z
-323397c2a1ffcc343ecfb8405c8e976b
-2011-08-15T00:54:18.684608Z
-177757
-bkoz
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-68484
-
 pbds_multimap_text_insert_mem_small_s2p_tree.pdf
 file
 
@@ -2882,14 +2848,14 @@ has-props
 
 70972
 
-pbds_cc_hash_int_subscript_find.png
+pbds_tree_text_insert_vector.pdf
 file
 
 
 
 
-2011-08-24T20:08:12.778653Z
-d363fc7f17cdb6da7537617903a36e4e
+2011-08-24T20:08:12.777653Z
+323397c2a1ffcc343ecfb8405c8e976b
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
@@ -2914,7 +2880,7 @@ has-props
 
 
 
-67129
+68484
 
 pbds_container_tag_hierarchy.pdf
 file
@@ -2950,6 +2916,40 @@ has-props
 
 9605
 
+pbds_cc_hash_int_subscript_find.png
+file
+
+
+
+
+2011-08-24T20:08:12.778653Z
+d363fc7f17cdb6da7537617903a36e4e
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+67129
+
 pbds_binary_priority_queue_int_push.png
 file
 
@@ -2983,40 +2983,6 @@ has-props
 
 
 32915
-
-pbds_multimap_text_insert_large_s2p_tree.svg
-file
-
-
-
-
-2011-08-24T20:08:12.779653Z
-017006a6f72e37081f1f23657a3b0987
-2011-08-15T00:54:18.684608Z
-177757
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-17149
 
 pbds_multimap_text_insert_mem_small_s2p_hash.svg
 file
@@ -3052,18 +3018,17 @@ bkoz
 
 14660
 
-pbds_tree_text_insert_trie.png
+pbds_multimap_text_insert_large_s2p_tree.svg
 file
 
 
 
 
-2011-08-24T20:08:12.780653Z
-ff6de18c2e5f56b096c78a66a03048f2
+2011-08-24T20:08:12.779653Z
+017006a6f72e37081f1f23657a3b0987
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
-has-props
 
 
 
@@ -3084,7 +3049,8 @@ has-props
 
 
 
-28044
+
+17149
 
 pbds_hash_int_erase_mem.png
 file
@@ -3119,6 +3085,40 @@ has-props
 
 
 48012
+
+pbds_tree_text_insert_trie.png
+file
+
+
+
+
+2011-08-24T20:08:12.780653Z
+ff6de18c2e5f56b096c78a66a03048f2
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+28044
 
 pbds_rationale_null_node_updator.png
 file
@@ -3256,14 +3256,14 @@ bkoz
 
 25338
 
-pbds_tree_text_insert_node.pdf
+pbds_gp_hash_int_subscript_find.png
 file
 
 
 
 
-2011-08-24T20:08:12.783653Z
-ad788f0bc247cb7a43e25ccf0b146903
+2011-08-24T20:08:12.784653Z
+db251abcde31c9031b1feb4ec67ac1a5
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
@@ -3288,7 +3288,7 @@ has-props
 
 
 
-80772
+47232
 
 pbds_priority_queue_text_push_pop.svg
 file
@@ -3324,14 +3324,14 @@ bkoz
 
 60745
 
-pbds_gp_hash_int_subscript_find.png
+pbds_tree_text_insert_node.pdf
 file
 
 
 
 
-2011-08-24T20:08:12.784653Z
-db251abcde31c9031b1feb4ec67ac1a5
+2011-08-24T20:08:12.783653Z
+ad788f0bc247cb7a43e25ccf0b146903
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
@@ -3356,19 +3356,20 @@ has-props
 
 
 
-47232
+80772
 
-pbds_tree_text_insert_vector.svg
+pbds_multimap_text_insert_small_s2p_hash.pdf
 file
 
 
 
 
-2011-08-24T20:08:12.784653Z
-39f73fde9c5e994bec0a87ad6fb3712d
+2011-08-24T20:08:12.785653Z
+15fffc40f56a29d9ba28458ec7809f09
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
+has-props
 
 
 
@@ -3389,8 +3390,7 @@ bkoz
 
 
 
-
-19589
+67656
 
 pbds_multimap_text_insert_mem_small_s2p_tree.svg
 file
@@ -3426,18 +3426,17 @@ bkoz
 
 17491
 
-pbds_multimap_text_insert_small_s2p_hash.pdf
+pbds_tree_text_insert_vector.svg
 file
 
 
 
 
-2011-08-24T20:08:12.785653Z
-15fffc40f56a29d9ba28458ec7809f09
+2011-08-24T20:08:12.784653Z
+39f73fde9c5e994bec0a87ad6fb3712d
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
-has-props
 
 
 
@@ -3458,7 +3457,8 @@ has-props
 
 
 
-67656
+
+19589
 
 pbds_container_tag_hierarchy.svg
 file
@@ -3664,40 +3664,6 @@ has-props
 
 18245
 
-pbds_ccgp_hash_int_subscript_insert.pdf
-file
-
-
-
-
-2011-08-24T20:08:12.788653Z
-736a8f5208e5c6e53ab39475ac56abf0
-2011-08-15T00:54:18.684608Z
-177757
-bkoz
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-77608
-
 pbds_multimap_text_insert_small_s2p_tree.pdf
 file
 
@@ -3731,6 +3697,40 @@ has-props
 
 
 70738
+
+pbds_ccgp_hash_int_subscript_insert.pdf
+file
+
+
+
+
+2011-08-24T20:08:12.788653Z
+736a8f5208e5c6e53ab39475ac56abf0
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+77608
 
 pbds_cc_hash_int_find.png
 file
@@ -3766,40 +3766,6 @@ has-props
 
 66803
 
-pbds_tree_text_find.png
-file
-
-
-
-
-2011-08-24T20:08:12.789653Z
-bc8696efd6b4b80f44d0c5e37b65f68b
-2011-08-15T00:54:18.684608Z
-177757
-bkoz
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-43323
-
 pbds_priority_queue_tag_hierarchy.pdf
 file
 
@@ -3833,6 +3799,40 @@ has-props
 
 
 7842
+
+pbds_tree_text_find.png
+file
+
+
+
+
+2011-08-24T20:08:12.789653Z
+bc8696efd6b4b80f44d0c5e37b65f68b
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+43323
 
 pbds_priority_queue_text_modify_up.png
 file
@@ -4004,40 +4004,6 @@ has-props
 
 46498
 
-pbds_node_invariants.png
-file
-
-
-
-
-2011-08-24T20:08:12.792653Z
-122cef902dc34352dbca351a8684dec1
-2011-07-29T22:31:30.382158Z
-176952
-bkoz
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-16553
-
 pbds_priority_queue_int_push.pdf
 file
 
@@ -4072,17 +4038,18 @@ has-props
 
 103791
 
-pbds_ccgp_hash_int_subscript_insert.svg
+pbds_node_invariants.png
 file
 
 
 
 
-2011-08-24T20:08:12.793653Z
-d8458abbdaa19fa66c345334f970ddd9
-2011-08-15T00:54:18.684608Z
-177757
+2011-08-24T20:08:12.792653Z
+122cef902dc34352dbca351a8684dec1
+2011-07-29T22:31:30.382158Z
+176952
 bkoz
+has-props
 
 
 
@@ -4103,42 +4070,7 @@ bkoz
 
 
 
-
-29102
-
-pbds_multimap_text_insert_small_s2p_tree.svg
-file
-
-
-
-
-2011-08-24T20:08:12.793653Z
-d321411c662f34ebd976481c604baeb6
-2011-08-15T00:54:18.684608Z
-177757
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-17430
+16553
 
 pbds_pairing_priority_queue_text_push.pdf
 file
@@ -4174,6 +4106,74 @@ has-props
 
 82821
 
+pbds_multimap_text_insert_small_s2p_tree.svg
+file
+
+
+
+
+2011-08-24T20:08:12.793653Z
+d321411c662f34ebd976481c604baeb6
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+17430
+
+pbds_ccgp_hash_int_subscript_insert.svg
+file
+
+
+
+
+2011-08-24T20:08:12.793653Z
+d8458abbdaa19fa66c345334f970ddd9
+2011-08-15T00:54:18.684608Z
+177757
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+29102
+
 pbds_priority_queue_tag_hierarchy.svg
 file
 
@@ -4208,14 +4208,14 @@ bkoz
 
 5101
 
-pbds_multimap_text_insert_large_s2p_tree.png
+pbds_priority_queue_text_join.pdf
 file
 
 
 
 
-2011-08-24T20:08:12.794653Z
-d179dc44334f2a4e40e8aad28a9501f3
+2011-08-24T20:08:12.795653Z
+029d53331924827152d2d94663c0fcb0
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
@@ -4240,7 +4240,7 @@ has-props
 
 
 
-37488
+103511
 
 pbds_multimap_text_insert_mem_small_s2p_hash.png
 file
@@ -4276,14 +4276,14 @@ has-props
 
 48026
 
-pbds_priority_queue_text_join.pdf
+pbds_multimap_text_insert_large_s2p_tree.png
 file
 
 
 
 
-2011-08-24T20:08:12.795653Z
-029d53331924827152d2d94663c0fcb0
+2011-08-24T20:08:12.794653Z
+d179dc44334f2a4e40e8aad28a9501f3
 2011-08-15T00:54:18.684608Z
 177757
 bkoz
@@ -4308,7 +4308,7 @@ has-props
 
 
 
-103511
+37488
 
 pbds_gp_hash_int_subscript_insert.png
 file

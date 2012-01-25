@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build windows
+
 package winfsnotify
 
 import (
 	"os"
-	"time"
 	"testing"
+	"time"
 )
 
 func expect(t *testing.T, eventstream <-chan *Event, name string, mask uint32) {
@@ -21,7 +23,7 @@ func expect(t *testing.T, eventstream <-chan *Event, name string, mask uint32) {
 		if event.Name != name || event.Mask != mask {
 			t.Fatal("did not receive expected event")
 		}
-	case <-time.After(1e9):
+	case <-time.After(1 * time.Second):
 		t.Fatal("timed out waiting for event")
 	}
 }
@@ -40,7 +42,7 @@ func TestNotifyEvents(t *testing.T) {
 	// Add a watch for testDir
 	os.RemoveAll(testDir)
 	if err = os.Mkdir(testDir, 0777); err != nil {
-		t.Fatalf("Failed to create test directory", err)
+		t.Fatalf("Failed to create test directory: %s", err)
 	}
 	defer os.RemoveAll(testDir)
 	err = watcher.AddWatch(testDir, mask)
@@ -70,15 +72,11 @@ func TestNotifyEvents(t *testing.T) {
 	if _, err = file.WriteString("hello, world"); err != nil {
 		t.Fatalf("failed to write to test file: %s", err)
 	}
-	if err = file.Sync(); err != nil {
-		t.Fatalf("failed to sync test file: %s", err)
-	}
-	expect(t, watcher.Event, testFile, FS_MODIFY)
-	expect(t, watcher.Event, testFile, FS_MODIFY)
-
 	if err = file.Close(); err != nil {
 		t.Fatalf("failed to close test file: %s", err)
 	}
+	expect(t, watcher.Event, testFile, FS_MODIFY)
+	expect(t, watcher.Event, testFile, FS_MODIFY)
 
 	if err = os.Rename(testFile, testFile2); err != nil {
 		t.Fatalf("failed to rename test file: %s", err)
@@ -112,7 +110,7 @@ func TestNotifyClose(t *testing.T) {
 		done = true
 	}()
 
-	time.Sleep(50e6) // 50 ms
+	time.Sleep(50 * time.Millisecond)
 	if !done {
 		t.Fatal("double Close() test failed: second Close() call didn't return")
 	}

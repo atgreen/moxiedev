@@ -8,7 +8,7 @@ import (
 	"encoding/pem"
 )
 
-// Roots is a set of certificates.
+// CertPool is a set of certificates.
 type CertPool struct {
 	bySubjectKeyId map[string][]int
 	byName         map[string][]int
@@ -28,6 +28,9 @@ func NewCertPool() *CertPool {
 // given certificate. If no such certificate can be found or the signature
 // doesn't match, it returns nil.
 func (s *CertPool) findVerifiedParents(cert *Certificate) (parents []int) {
+	if s == nil {
+		return
+	}
 	var candidates []int
 
 	if len(cert.AuthorityKeyId) > 0 {
@@ -70,11 +73,11 @@ func (s *CertPool) AddCert(cert *Certificate) {
 	s.byName[name] = append(s.byName[name], n)
 }
 
-// AppendCertsFromPEM attempts to parse a series of PEM encoded root
-// certificates. It appends any certificates found to s and returns true if any
-// certificates were successfully parsed.
+// AppendCertsFromPEM attempts to parse a series of PEM encoded certificates.
+// It appends any certificates found to s and returns true if any certificates
+// were successfully parsed.
 //
-// On many Linux systems, /etc/ssl/cert.pem will contains the system wide set
+// On many Linux systems, /etc/ssl/cert.pem will contain the system wide set
 // of root CAs in a format suitable for this function.
 func (s *CertPool) AppendCertsFromPEM(pemCerts []byte) (ok bool) {
 	for len(pemCerts) > 0 {

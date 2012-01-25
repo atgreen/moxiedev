@@ -1,3 +1,7 @@
+/* Defining _XOPEN_SOURCE hides the declaration of madvise() on Solaris <
+   11 and the MADV_DONTNEED definition on IRIX 6.5.  */
+#undef _XOPEN_SOURCE
+
 #include <errno.h>
 #include <unistd.h>
 
@@ -47,7 +51,7 @@ runtime_SysAlloc(uintptr n)
 	if (dev_zero == -1) {
 		dev_zero = open("/dev/zero", O_RDONLY);
 		if (dev_zero < 0) {
-			printf("open /dev/zero: errno=%d\n", errno);
+			runtime_printf("open /dev/zero: errno=%d\n", errno);
 			exit(2);
 		}
 	}
@@ -57,8 +61,8 @@ runtime_SysAlloc(uintptr n)
 	p = runtime_mmap(nil, n, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_ANON|MAP_PRIVATE, fd, 0);
 	if (p == MAP_FAILED) {
 		if(errno == EACCES) {
-			printf("runtime: mmap: access denied\n");
-			printf("if you're running SELinux, enable execmem for this process.\n");
+			runtime_printf("runtime: mmap: access denied\n");
+			runtime_printf("if you're running SELinux, enable execmem for this process.\n");
 			exit(2);
 		}
 		return nil;
@@ -67,11 +71,11 @@ runtime_SysAlloc(uintptr n)
 }
 
 void
-runtime_SysUnused(void *v, uintptr n)
+runtime_SysUnused(void *v __attribute__ ((unused)), uintptr n __attribute__ ((unused)))
 {
-	USED(v);
-	USED(n);
-	// TODO(rsc): call madvise MADV_DONTNEED
+#ifdef MADV_DONTNEED
+	runtime_madvise(v, n, MADV_DONTNEED);
+#endif
 }
 
 void
@@ -97,7 +101,7 @@ runtime_SysReserve(void *v, uintptr n)
 	if (dev_zero == -1) {
 		dev_zero = open("/dev/zero", O_RDONLY);
 		if (dev_zero < 0) {
-			printf("open /dev/zero: errno=%d\n", errno);
+			runtime_printf("open /dev/zero: errno=%d\n", errno);
 			exit(2);
 		}
 	}
@@ -123,7 +127,7 @@ runtime_SysMap(void *v, uintptr n)
 	if (dev_zero == -1) {
 		dev_zero = open("/dev/zero", O_RDONLY);
 		if (dev_zero < 0) {
-			printf("open /dev/zero: errno=%d\n", errno);
+			runtime_printf("open /dev/zero: errno=%d\n", errno);
 			exit(2);
 		}
 	}

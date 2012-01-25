@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/java/awt/font
 svn://gcc.gnu.org/svn/gcc
 
@@ -196,40 +196,6 @@ gandalf
 
 5713
 
-TextHitInfo.java
-file
-
-
-
-
-2011-06-04T18:38:17.788104Z
-36507e9d7521c012f0708832c280fd7e
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3477
-
 NumericShaper.java
 file
 
@@ -263,6 +229,40 @@ mark
 
 
 14900
+
+TextHitInfo.java
+file
+
+
+
+
+2011-06-04T18:38:17.788104Z
+36507e9d7521c012f0708832c280fd7e
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3477
 
 GlyphVector.java
 file
@@ -434,40 +434,6 @@ gandalf
 
 3988
 
-LineMetrics.java
-file
-
-
-
-
-2011-06-04T18:38:17.790104Z
-bb47297638d4ef358b21506040aa5767
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2368
-
 package.html
 file
 
@@ -501,6 +467,40 @@ tromey
 
 
 1987
+
+LineMetrics.java
+file
+
+
+
+
+2011-06-04T18:38:17.790104Z
+bb47297638d4ef358b21506040aa5767
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2368
 
 TextLayout.java
 file

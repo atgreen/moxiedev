@@ -1,15 +1,15 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libquadmath
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-11-07T22:03:51.940756Z
-181125
-ktietz
+2011-11-21T19:22:35.046742Z
+181593
+andreast
 
 
 
@@ -69,11 +69,11 @@ file
 
 
 
-2011-06-04T17:54:56.016111Z
-60e8ea98380ff14646041337db757b38
-2011-03-21T12:24:17.864751Z
-171224
-ro
+2012-01-20T20:50:09.024461Z
+0242abdb7dfa19e572aab19a84fbb1fd
+2011-11-21T19:22:35.046742Z
+181593
+andreast
 has-props
 
 
@@ -95,7 +95,7 @@ has-props
 
 
 
-449369
+449371
 
 Makefile.in
 file
@@ -131,6 +131,40 @@ jsm28
 
 59897
 
+ChangeLog
+file
+
+
+
+
+2012-01-20T20:50:09.031461Z
+adaeb95e65802adab4b1692dc3561748
+2011-11-21T19:22:35.046742Z
+181593
+andreast
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+15170
+
 libtool-version
 file
 
@@ -164,40 +198,6 @@ burnus
 
 
 252
-
-ChangeLog
-file
-
-
-
-
-2011-11-12T11:40:21.717573Z
-e59d3e85edb09cef4ec03e041343fcc9
-2011-11-07T22:03:51.940756Z
-181125
-ktietz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-15093
 
 math
 dir
@@ -307,40 +307,6 @@ jakub
 printf
 dir
 
-libquadmath.texi
-file
-
-
-
-
-2011-06-04T17:54:56.018111Z
-64581f778af26271c0f869ad2ddef808
-2011-04-03T18:45:16.368690Z
-171914
-burnus
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-12946
-
 configure.ac
 file
 
@@ -374,6 +340,40 @@ ro
 
 
 12748
+
+libquadmath.texi
+file
+
+
+
+
+2011-06-04T17:54:56.018111Z
+64581f778af26271c0f869ad2ddef808
+2011-04-03T18:45:16.368690Z
+171914
+burnus
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12946
 
 acinclude.m4
 file

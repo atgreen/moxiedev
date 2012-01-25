@@ -1,14 +1,14 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/config/os
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-10-14T06:57:55.947344Z
-179961
+2011-12-23T17:23:38.565551Z
+182660
 ktietz
 
 
@@ -38,10 +38,10 @@ dir
 hpux
 dir
 
-mingw32
+gnu-linux
 dir
 
-gnu-linux
+mingw32
 dir
 
 tpf
@@ -53,10 +53,10 @@ dir
 bionic
 dir
 
-mingw32-w64
+djgpp
 dir
 
-djgpp
+mingw32-w64
 dir
 
 qnx

@@ -266,10 +266,25 @@ build_base_path (enum tree_code code,
   if (want_pointer)
     probe = TYPE_MAIN_VARIANT (TREE_TYPE (probe));
 
+  if (code == PLUS_EXPR
+      && !SAME_BINFO_TYPE_P (BINFO_TYPE (d_binfo), probe))
+    {
+      /* This can happen when adjust_result_of_qualified_name_lookup can't
+	 find a unique base binfo in a call to a member function.  We
+	 couldn't give the diagnostic then since we might have been calling
+	 a static member function, so we do it now.  */
+      if (complain & tf_error)
+	{
+	  tree base = lookup_base (probe, BINFO_TYPE (d_binfo),
+				   ba_unique, NULL);
+	  gcc_assert (base == error_mark_node);
+	}
+      return error_mark_node;
+    }
+
   gcc_assert ((code == MINUS_EXPR
 	       && SAME_BINFO_TYPE_P (BINFO_TYPE (binfo), probe))
-	      || (code == PLUS_EXPR
-		  && SAME_BINFO_TYPE_P (BINFO_TYPE (d_binfo), probe)));
+	      || code == PLUS_EXPR);
 
   if (binfo == d_binfo)
     /* Nothing to do.  */
@@ -318,6 +333,19 @@ build_base_path (enum tree_code code,
       return expr;
     }
 
+  /* If we're in an NSDMI, we don't have the full constructor context yet
+     that we need for converting to a virtual base, so just build a stub
+     CONVERT_EXPR and expand it later in bot_replace.  */
+  if (virtual_access && fixed_type_p < 0
+      && current_scope () != current_function_decl)
+    {
+      expr = build1 (CONVERT_EXPR, ptr_target_type, expr);
+      CONVERT_EXPR_VBASE_PATH (expr) = true;
+      if (!want_pointer)
+	expr = build_indirect_ref (EXPR_LOCATION (expr), expr, RO_NULL);
+      return expr;
+    }
+
   /* Do we need to check for a null pointer?  */
   if (want_pointer && !nonnull)
     {
@@ -338,7 +366,7 @@ build_base_path (enum tree_code code,
   /* Now that we've saved expr, build the real null test.  */
   if (null_test)
     {
-      tree zero = cp_convert (TREE_TYPE (expr), integer_zero_node);
+      tree zero = cp_convert (TREE_TYPE (expr), nullptr_node);
       null_test = fold_build2_loc (input_location, NE_EXPR, boolean_type_node,
 			       expr, zero);
     }
@@ -471,7 +499,14 @@ build_simple_base_path (tree expr, tree binfo)
     /* Is this the base field created by build_base_field?  */
     if (TREE_CODE (field) == FIELD_DECL
 	&& DECL_FIELD_IS_BASE (field)
-	&& TREE_TYPE (field) == type)
+	&& TREE_TYPE (field) == type
+	/* If we're looking for a field in the most-derived class,
+	   also check the field offset; we can have two base fields
+	   of the same type if one is an indirect virtual base and one
+	   is a direct non-virtual base.  */
+	&& (BINFO_INHERITANCE_CHAIN (d_binfo)
+	    || tree_int_cst_equal (byte_position (field),
+				   BINFO_OFFSET (binfo))))
       {
 	/* We don't use build_class_member_access_expr here, as that
 	   has unnecessary checks, and more importantly results in
@@ -546,6 +581,10 @@ convert_to_base_statically (tree expr, tree base)
   expr_type = TREE_TYPE (expr);
   if (!SAME_BINFO_TYPE_P (BINFO_TYPE (base), expr_type))
     {
+      /* If this is a non-empty base, use a COMPONENT_REF.  */
+      if (!is_empty_class (BINFO_TYPE (base)))
+	return build_simple_base_path (expr, base);
+
       /* We use fold_build2 and fold_convert below to simplify the trees
 	 provided to the optimizers.  It is not safe to call these functions
 	 when processing a template because they do not handle C++-specific
@@ -6156,6 +6195,18 @@ finish_struct (tree t, tree attributes)
 	if (DECL_PURE_VIRTUAL_P (x))
 	  VEC_safe_push (tree, gc, CLASSTYPE_PURE_VIRTUALS (t), x);
       complete_vars (t);
+      /* We need to add the target functions to the CLASSTYPE_METHOD_VEC if
+	 an enclosing scope is a template class, so that this function be
+	 found by lookup_fnfields_1 when the using declaration is not
+	 instantiated yet.  */
+      for (x = TYPE_FIELDS (t); x; x = DECL_CHAIN (x))
+	if (TREE_CODE (x) == USING_DECL)
+	  {
+	    tree fn = strip_using_decl (x);
+	    if (is_overloaded_fn (fn))
+	      for (; fn; fn = OVL_NEXT (fn))
+		add_method (t, OVL_CURRENT (fn), x);
+	  }
 
       /* Remember current #pragma pack value.  */
       TYPE_PRECISION (t) = maximum_field_alignment;
@@ -8312,6 +8363,18 @@ build_vtbl_initializer (tree binfo,
 				      build_fold_addr_expr (fn));
 		  init = abort_fndecl_addr;
 		}
+	    }
+	  /* Likewise for deleted virtuals.  */
+	  else if (DECL_DELETED_FN (fn_original))
+	    {
+	      fn = get_identifier ("__cxa_deleted_virtual");
+	      if (!get_global_value_if_present (fn, &fn))
+		fn = push_library_fn (fn, (build_function_type_list
+					   (void_type_node, NULL_TREE)),
+				      NULL_TREE);
+	      if (!TARGET_VTABLE_USES_DESCRIPTORS)
+		init = fold_convert (vfunc_ptr_type_node,
+				     build_fold_addr_expr (fn));
 	    }
 	  else
 	    {

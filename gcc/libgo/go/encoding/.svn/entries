@@ -1,14 +1,14 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/encoding
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-10-26T23:57:58.673671Z
-180552
+2012-01-13T05:11:45.877801Z
+183150
 ian
 
 
@@ -32,7 +32,13 @@ dir
 git85
 dir
 
+xml
+dir
+
 pem
+dir
+
+asn1
 dir
 
 base64
@@ -45,5 +51,14 @@ hex
 dir
 
 ascii85
+dir
+
+gob
+dir
+
+json
+dir
+
+csv
 dir
 

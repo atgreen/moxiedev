@@ -1,15 +1,15 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libitm/config
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-11-18T16:15:59.117147Z
-181481
-ro
+2012-01-13T23:45:06.557182Z
+183172
+torvald
 
 
 
@@ -29,6 +29,12 @@ ro
 linux
 dir
 
+arm
+dir
+
+powerpc
+dir
+
 posix
 dir
 
@@ -36,6 +42,9 @@ alpha
 dir
 
 x86
+dir
+
+sh
 dir
 
 generic

@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/javax/net/ssl
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,14 +502,14 @@ tromey
 
 1240
 
-SSLServerSocketFactory.h
+HandshakeCompletedListener.h
 file
 
 
 
 
 2009-04-24T17:49:26.000000Z
-e070139cfb51cd3f4a5e1fef07d4ab98
+b57de797d8c93910e2d692699346e190
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -534,7 +534,7 @@ tromey
 
 
 
-992
+722
 
 TrustManagerFactory$1.h
 file
@@ -570,14 +570,14 @@ doko
 
 641
 
-HandshakeCompletedListener.h
+SSLServerSocketFactory.h
 file
 
 
 
 
 2009-04-24T17:49:26.000000Z
-b57de797d8c93910e2d692699346e190
+e070139cfb51cd3f4a5e1fef07d4ab98
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -602,7 +602,7 @@ tromey
 
 
 
-722
+992
 
 CertPathTrustManagerParameters.h
 file
@@ -740,40 +740,6 @@ tromey
 
 1623
 
-X509TrustManager.h
-file
-
-
-
-
-2009-04-24T17:49:26.000000Z
-cb6ce9993a01441c8088032456d7477c
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1026
-
 SSLSessionBindingEvent.h
 file
 
@@ -808,14 +774,14 @@ tromey
 
 938
 
-TrivialHostnameVerifier.h
+X509TrustManager.h
 file
 
 
 
 
 2009-04-24T17:49:26.000000Z
-19ab543d06b4cddf98d589caa93b6efc
+cb6ce9993a01441c8088032456d7477c
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -840,75 +806,7 @@ tromey
 
 
 
-725
-
-SSLEngineResult$HandshakeStatus.h
-file
-
-
-
-
-2009-04-24T17:49:26.000000Z
-706d1bc8ff657e16f1a7d1bbc6df3240
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1328
-
-HttpsURLConnection.h
-file
-
-
-
-
-2009-04-24T17:49:26.000000Z
-6b39b207e6a4446ef496b6e606e8f1b0
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2229
+1026
 
 SSLSession.h
 file
@@ -944,14 +842,14 @@ tromey
 
 2047
 
-SSLContext.h
+HttpsURLConnection.h
 file
 
 
 
 
 2009-04-24T17:49:26.000000Z
-329f65ebd5a57b046afb7b96089bd49f
+6b39b207e6a4446ef496b6e606e8f1b0
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -976,7 +874,75 @@ tromey
 
 
 
-2207
+2229
+
+SSLEngineResult$HandshakeStatus.h
+file
+
+
+
+
+2009-04-24T17:49:26.000000Z
+706d1bc8ff657e16f1a7d1bbc6df3240
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1328
+
+TrivialHostnameVerifier.h
+file
+
+
+
+
+2009-04-24T17:49:26.000000Z
+19ab543d06b4cddf98d589caa93b6efc
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+725
 
 SSLSessionBindingListener.h
 file
@@ -1012,16 +978,16 @@ tromey
 
 785
 
-SSLSessionContext.h
+SSLContext.h
 file
 
 
 
 
 2009-04-24T17:49:26.000000Z
-6736d7c6a8fa98056d9db3867b87facd
-2006-10-13T22:10:15.089349Z
-117714
+329f65ebd5a57b046afb7b96089bd49f
+2006-12-12T18:41:51.528840Z
+119793
 tromey
 
 
@@ -1044,7 +1010,7 @@ tromey
 
 
 
-904
+2207
 
 SSLSocket.h
 file
@@ -1079,6 +1045,40 @@ tromey
 
 
 2078
+
+SSLSessionContext.h
+file
+
+
+
+
+2009-04-24T17:49:26.000000Z
+6736d7c6a8fa98056d9db3867b87facd
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+904
 
 SSLPermission.h
 file

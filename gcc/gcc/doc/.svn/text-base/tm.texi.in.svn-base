@@ -1,5 +1,5 @@
 @c Copyright (C) 1988,1989,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,
-@c 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+@c 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
 @c Free Software Foundation, Inc.
 @c This is part of the GCC manual.
 @c For copying conditions, see the file gcc.texi.
@@ -4906,6 +4906,8 @@ TARGET_STRUCT_VALUE_RTX, FRAME_POINTER_REGNUM, EH_USES,
 FRAME_POINTER_REGNUM, ARG_POINTER_REGNUM, and the PIC_OFFSET_TABLE_REGNUM.
 @end deftypefn
 
+@hook TARGET_SET_UP_BY_PROLOGUE
+
 @node Stack Smashing Protection
 @subsection Stack smashing protection
 @cindex stack smashing protection
@@ -5289,13 +5291,18 @@ void sincosl(long double x, long double *sin, long double *cos);
 @end defmac
 
 @defmac NEXT_OBJC_RUNTIME
-Define this macro to generate code for Objective-C message sending using
-the calling convention of the NeXT system.  This calling convention
-involves passing the object, the selector and the method arguments all
-at once to the method-lookup library function.
+Set this macro to 1 to use the "NeXT" Objective-C message sending conventions
+by default.  This calling convention involves passing the object, the selector
+and the method arguments all at once to the method-lookup library function.
+This is the usual setting when targeting Darwin/Mac OS X systems, which have
+the NeXT runtime installed.
 
-The default calling convention passes just the object and the selector
-to the lookup function, which returns a pointer to the method.
+If the macro is set to 0, the "GNU" Objective-C message sending convention
+will be used by default.  This convention passes just the object and the
+selector to the method-lookup function, which returns a pointer to the method.
+
+In either case, it remains possible to select code-generation for the alternate
+scheme, by means of compiler command line switches.
 @end defmac
 
 @node Addressing Modes
@@ -7012,6 +7019,8 @@ otherwise.
 @end deftypefn
 
 @hook TARGET_ASM_MERGEABLE_RODATA_PREFIX
+
+@hook TARGET_ASM_TM_CLONE_TABLE_SECTION
 
 @hook TARGET_ASM_SELECT_RTX_SECTION
 Return the section into which a constant @var{x}, of mode @var{mode},
@@ -9966,6 +9975,8 @@ of @code{target_flags}.  @var{pch_flags} specifies the value that
 @code{target_flags} had when the PCH file was created.  The return
 value is the same as for @code{TARGET_PCH_VALID_P}.
 @end deftypefn
+
+@hook TARGET_PREPARE_PCH_SAVE
 
 @node C++ ABI
 @section C++ ABI parameters

@@ -1,7 +1,7 @@
 /* Gcov.c: prepend line execution counts and branch probabilities to a
    source file.
    Copyright (C) 1990, 1991, 1992, 1993, 1994, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Contributed by James E. Wilson of Cygnus Support.
    Mangled by Bob Manson of Cygnus Support.
@@ -64,8 +64,6 @@ along with Gcov; see the file COPYING3.  If not see
 
 /* This is the size of the buffer used to read in source file lines.  */
 
-#define STRING_SIZE 200
-
 struct function_info;
 struct block_info;
 struct source_info;
@@ -87,6 +85,9 @@ typedef struct arc_info
   unsigned int on_tree : 1;
   unsigned int fake : 1;
   unsigned int fall_through : 1;
+
+  /* Arc to a catch handler.  */
+  unsigned int is_throw : 1;
 
   /* Arc is for a function that abnormally returns.  */
   unsigned int is_call_non_return : 1;
@@ -123,10 +124,11 @@ typedef struct block_info
 
   /* Block execution count.  */
   gcov_type count;
-  unsigned flags : 13;
+  unsigned flags : 12;
   unsigned count_valid : 1;
   unsigned valid_chain : 1;
   unsigned invalid_chain : 1;
+  unsigned exceptional : 1;
 
   /* Block is a call instrumenting site.  */
   unsigned is_call_site : 1; /* Does the call.  */
@@ -171,6 +173,9 @@ typedef struct function_info
   unsigned ident;
   unsigned lineno_checksum;
   unsigned cfg_checksum;
+
+  /* The graph contains at least one fake incoming edge.  */
+  unsigned has_catch : 1;
 
   /* Array of basic blocks.  */
   block_t *blocks;
@@ -224,6 +229,7 @@ typedef struct line_info
 			      in all-blocks mode.  */
   } u;
   unsigned exists : 1;
+  unsigned unexceptional : 1;
 } line_t;
 
 /* Describes a file mentioned in the block graph.  Contains an array
@@ -269,6 +275,9 @@ static unsigned a_names;    /* Allocated names */
 
 static unsigned object_runs;
 static unsigned program_count;
+
+static unsigned total_lines;
+static unsigned total_executed;
 
 /* Modification time of graph file.  */
 
@@ -369,8 +378,10 @@ static unsigned find_source (const char *);
 static function_t *read_graph_file (void);
 static int read_count_file (function_t *);
 static void solve_flow_graph (function_t *);
+static void find_exception_blocks (function_t *);
 static void add_branch_counts (coverage_t *, const arc_t *);
 static void add_line_counts (coverage_t *, function_t *);
+static void executed_summary (unsigned, unsigned);
 static void function_summary (const coverage_t *, const char *);
 static const char *format_gcov (gcov_type, gcov_type, int);
 static void accumulate_line_counts (source_t *);
@@ -406,6 +417,11 @@ main (int argc, char **argv)
   /* Handle response files.  */
   expandargv (&argc, &argv);
 
+  a_names = 10;
+  names = XNEWVEC (name_map_t, a_names);
+  a_sources = 10;
+  sources = XNEWVEC (source_t, a_sources);
+  
   argno = process_args (argc, argv);
   if (optind == argc)
     print_usage (true);
@@ -468,7 +484,7 @@ static void
 print_version (void)
 {
   fnotice (stdout, "gcov %s%s\n", pkgversion_string, version_string);
-  fprintf (stdout, "Copyright %s 2011 Free Software Foundation, Inc.\n",
+  fprintf (stdout, "Copyright %s 2012 Free Software Foundation, Inc.\n",
 	   _("(C)"));
   fnotice (stdout,
 	   _("This is free software; see the source for copying conditions.\n"
@@ -623,6 +639,8 @@ process_file (const char *file_name)
 	    sources[src].num_lines = line + 1;
 	  
 	  solve_flow_graph (fn);
+	  if (fn->has_catch)
+	    find_exception_blocks (fn);
 	  *fn_end = fn;
 	  fn_end = &fn->next;
 	}
@@ -686,28 +704,42 @@ generate_results (const char *file_name)
       
       accumulate_line_counts (src);
       function_summary (&src->coverage, "File");
-      if (flag_gcov_file && src->coverage.lines)
+      total_lines += src->coverage.lines;
+      total_executed += src->coverage.lines_executed;
+      if (flag_gcov_file)
 	{
 	  char *gcov_file_name
 	    = make_gcov_file_name (file_name, src->coverage.name);
-	  FILE *gcov_file = fopen (gcov_file_name, "w");
 
-	  if (gcov_file)
+	  if (src->coverage.lines)
 	    {
-	      fnotice (stdout, "Creating '%s'\n", gcov_file_name);
-	      output_lines (gcov_file, src);
-	      if (ferror (gcov_file))
+	      FILE *gcov_file = fopen (gcov_file_name, "w");
+
+	      if (gcov_file)
+		{
+		  fnotice (stdout, "Creating '%s'\n", gcov_file_name);
+		  output_lines (gcov_file, src);
+		  if (ferror (gcov_file))
 		    fnotice (stderr, "Error writing output file '%s'\n",
 			     gcov_file_name);
-	      fclose (gcov_file);
+		  fclose (gcov_file);
+		}
+	      else
+		fnotice (stderr, "Could not open output file '%s'\n",
+			 gcov_file_name);
 	    }
 	  else
-	    fnotice (stderr, "Could not open output file '%s'\n",
-		     gcov_file_name);
+	    {
+	      unlink (gcov_file_name);
+	      fnotice (stdout, "Removing '%s'\n", gcov_file_name);
+	    }
 	  free (gcov_file_name);
 	}
       fnotice (stdout, "\n");
     }
+
+  if (!file_name)
+    executed_summary (total_lines, total_executed);
 }
 
 /* Release a function structure */
@@ -874,8 +906,6 @@ find_source (const char *file_name)
     {
       /* Extend the name map array -- we'll be inserting one or two
 	 entries.  */
-      if (!a_names)
-	a_names = 10;
       a_names *= 2;
       name_map = XNEWVEC (name_map_t, a_names);
       memcpy (name_map, names, n_names * sizeof (*names));
@@ -894,8 +924,6 @@ find_source (const char *file_name)
       
       if (n_sources == a_sources)
 	{
-	  if (!a_sources)
-	    a_sources = 10;
 	  a_sources *= 2;
 	  src = XNEWVEC (source_t, a_sources);
 	  memcpy (src, sources, n_sources * sizeof (*sources));
@@ -1050,13 +1078,15 @@ read_graph_file (void)
 	{
 	  unsigned src = gcov_read_unsigned ();
 	  unsigned num_dests = GCOV_TAG_ARCS_NUM (length);
+	  block_t *src_blk = &fn->blocks[src];
+	  unsigned mark_catches = 0;
+	  struct arc_info *arc;
 
 	  if (src >= fn->num_blocks || fn->blocks[src].succ)
 	    goto corrupt;
 
 	  while (num_dests--)
 	    {
-	      struct arc_info *arc;
 	      unsigned dest = gcov_read_unsigned ();
 	      unsigned flags = gcov_read_unsigned ();
 
@@ -1065,7 +1095,7 @@ read_graph_file (void)
 	      arc = XCNEW (arc_t);
 
 	      arc->dst = &fn->blocks[dest];
-	      arc->src = &fn->blocks[src];
+	      arc->src = src_blk;
 
 	      arc->count = 0;
 	      arc->count_valid = 0;
@@ -1073,9 +1103,9 @@ read_graph_file (void)
 	      arc->fake = !!(flags & GCOV_ARC_FAKE);
 	      arc->fall_through = !!(flags & GCOV_ARC_FALLTHROUGH);
 
-	      arc->succ_next = fn->blocks[src].succ;
-	      fn->blocks[src].succ = arc;
-	      fn->blocks[src].num_succ++;
+	      arc->succ_next = src_blk->succ;
+	      src_blk->succ = arc;
+	      src_blk->num_succ++;
 
 	      arc->pred_next = fn->blocks[dest].pred;
 	      fn->blocks[dest].pred = arc;
@@ -1089,12 +1119,12 @@ read_graph_file (void)
 			 source block must be a call.  */
 		      fn->blocks[src].is_call_site = 1;
 		      arc->is_call_non_return = 1;
+		      mark_catches = 1;
 		    }
 		  else
 		    {
 		      /* Non-local return from a callee of this
-		         function. The destination block is a catch or
-		         setjmp.  */
+		         function. The destination block is a setjmp.  */
 		      arc->is_nonlocal_return = 1;
 		      fn->blocks[dest].is_nonlocal_return = 1;
 		    }
@@ -1102,6 +1132,20 @@ read_graph_file (void)
 
 	      if (!arc->on_tree)
 		fn->num_counts++;
+	    }
+	  
+	  if (mark_catches)
+	    {
+	      /* We have a fake exit from this block.  The other
+		 non-fall through exits must be to catch handlers.
+		 Mark them as catch arcs.  */
+
+	      for (arc = src_blk->succ; arc; arc = arc->succ_next)
+		if (!arc->fake && !arc->fall_through)
+		  {
+		    arc->is_throw = 1;
+		    fn->has_catch = 1;
+		  }
 	    }
 	}
       else if (fn && tag == GCOV_TAG_LINES)
@@ -1542,6 +1586,34 @@ solve_flow_graph (function_t *fn)
       }
 }
 
+/* Mark all the blocks only reachable via an incoming catch.  */
+
+static void
+find_exception_blocks (function_t *fn)
+{
+  unsigned ix;
+  block_t **queue = XALLOCAVEC (block_t *, fn->num_blocks);
+
+  /* First mark all blocks as exceptional.  */
+  for (ix = fn->num_blocks; ix--;)
+    fn->blocks[ix].exceptional = 1;
+
+  /* Now mark all the blocks reachable via non-fake edges */
+  queue[0] = fn->blocks;
+  queue[0]->exceptional = 0;
+  for (ix = 1; ix;)
+    {
+      block_t *block = queue[--ix];
+      const arc_t *arc;
+      
+      for (arc = block->succ; arc; arc = arc->succ_next)
+	if (!arc->fake && !arc->is_throw && arc->dst->exceptional)
+	  {
+	    arc->dst->exceptional = 0;
+	    queue[ix++] = arc->dst;
+	  }
+    }
+}
 
 
 /* Increment totals in COVERAGE according to arc ARC.  */
@@ -1610,20 +1682,25 @@ format_gcov (gcov_type top, gcov_type bottom, int dp)
   return buffer;
 }
 
+/* Summary of execution */
 
-/* Output summary info for a function.  */
+static void
+executed_summary (unsigned lines, unsigned executed)
+{
+  if (lines)
+    fnotice (stdout, "Lines executed:%s of %d\n",
+	     format_gcov (executed, lines, 2), lines);
+  else
+    fnotice (stdout, "No executable lines\n");
+}
+  
+/* Output summary info for a function or file.  */
 
 static void
 function_summary (const coverage_t *coverage, const char *title)
 {
   fnotice (stdout, "%s '%s'\n", title, coverage->name);
-
-  if (coverage->lines)
-    fnotice (stdout, "Lines executed:%s of %d\n",
-	     format_gcov (coverage->lines_executed, coverage->lines, 2),
-	     coverage->lines);
-  else
-    fnotice (stdout, "No executable lines\n");
+  executed_summary (coverage->lines, coverage->lines_executed);
 
   if (flag_branches)
     {
@@ -1859,6 +1936,8 @@ add_line_counts (coverage_t *coverage, function_t *fn)
 		  coverage->lines_executed++;
 	      }
 	    line->exists = 1;
+	    if (!block->exceptional)
+	      line->unexceptional = 1;
 	    line->count += block->count;
 	  }
       free (block->u.line.encoding);
@@ -2081,7 +2160,6 @@ accumulate_line_counts (source_t *src)
 static int
 output_branch_count (FILE *gcov_file, int ix, const arc_t *arc)
 {
-
   if (arc->is_call_non_return)
     {
       if (arc->src->count)
@@ -2098,7 +2176,8 @@ output_branch_count (FILE *gcov_file, int ix, const arc_t *arc)
       if (arc->src->count)
 	fnotice (gcov_file, "branch %2d taken %s%s\n", ix,
 		 format_gcov (arc->count, arc->src->count, -flag_counts),
-		 arc->fall_through ? " (fallthrough)" : "");
+		 arc->fall_through ? " (fallthrough)"
+		 : arc->is_throw ? " (throw)" : "");
       else
 	fnotice (gcov_file, "branch %2d never executed\n", ix);
     }
@@ -2116,6 +2195,44 @@ output_branch_count (FILE *gcov_file, int ix, const arc_t *arc)
 
 }
 
+static const char *
+read_line (FILE *file)
+{
+  static char *string;
+  static size_t string_len;
+  size_t pos = 0;
+  char *ptr;
+
+  if (!string_len)
+    {
+      string_len = 200;
+      string = XNEWVEC (char, string_len);
+    }
+
+  while ((ptr = fgets (string + pos, string_len - pos, file)))
+    {
+      size_t len = strlen (string + pos);
+
+      if (string[pos + len - 1] == '\n')
+	{
+	  string[pos + len - 1] = 0;
+	  return string;
+	}
+      pos += len;
+      ptr = XNEWVEC (char, string_len * 2);
+      if (ptr)
+	{
+	  memcpy (ptr, string, pos);
+	  string = ptr;
+	  string_len += 2;
+	}
+      else
+	pos = 0;
+    }
+      
+  return pos ? string : NULL;
+}
+
 /* Read in the source file one line at a time, and output that line to
    the gcov file preceded by its execution count and other
    information.  */
@@ -2126,8 +2243,7 @@ output_lines (FILE *gcov_file, const source_t *src)
   FILE *source_file;
   unsigned line_num;	/* current line number.  */
   const line_t *line;           /* current line info ptr.  */
-  char string[STRING_SIZE];     /* line buffer.  */
-  char const *retval = "";	/* status of source file reading.  */
+  const char *retval = "";	/* status of source file reading.  */
   function_t *fn = NULL;
 
   fprintf (gcov_file, "%9s:%5d:Source:%s\n", "-", 0, src->coverage.name);
@@ -2174,30 +2290,20 @@ output_lines (FILE *gcov_file, const source_t *src)
 	  fprintf (gcov_file, "\n");
 	}
 
+      if (retval)
+	retval = read_line (source_file);
+
       /* For lines which don't exist in the .bb file, print '-' before
 	 the source line.  For lines which exist but were never
-	 executed, print '#####' before the source line.  Otherwise,
-	 print the execution count before the source line.  There are
-	 16 spaces of indentation added before the source line so that
-	 tabs won't be messed up.  */
-      fprintf (gcov_file, "%9s:%5u:",
-	       !line->exists ? "-" : !line->count ? "#####"
-	       : format_gcov (line->count, 0, -1), line_num);
-
-      if (retval)
-	{
-	  /* Copy source line.  */
-	  do
-	    {
-	      retval = fgets (string, STRING_SIZE, source_file);
-	      if (!retval)
-		break;
-	      fputs (retval, gcov_file);
-	    }
-	  while (!retval[0] || retval[strlen (retval) - 1] != '\n');
-	}
-      if (!retval)
-	fputs ("/*EOF*/\n", gcov_file);
+	 executed, print '#####' or '=====' before the source line.
+	 Otherwise, print the execution count before the source line.
+	 There are 16 spaces of indentation added before the source
+	 line so that tabs won't be messed up.  */
+      fprintf (gcov_file, "%9s:%5u:%s\n",
+	       !line->exists ? "-" : line->count
+	       ? format_gcov (line->count, 0, -1)
+	       : line->unexceptional ? "#####" : "=====", line_num,
+	       retval ? retval : "/*EOF*/");
 
       if (flag_all_blocks)
 	{
@@ -2210,8 +2316,9 @@ output_lines (FILE *gcov_file, const source_t *src)
 	    {
 	      if (!block->is_call_return)
 		fprintf (gcov_file, "%9s:%5u-block %2d\n",
-			 !line->exists ? "-" : !block->count ? "$$$$$"
-			 : format_gcov (block->count, 0, -1),
+			 !line->exists ? "-" : block->count
+			 ? format_gcov (block->count, 0, -1)
+			 : block->exceptional ? "%%%%%" : "$$$$$",
 			 line_num, ix++);
 	      if (flag_branches)
 		for (arc = block->succ; arc; arc = arc->succ_next)
@@ -2232,18 +2339,8 @@ output_lines (FILE *gcov_file, const source_t *src)
      last line of code.  */
   if (retval)
     {
-      for (; (retval = fgets (string, STRING_SIZE, source_file)); line_num++)
-	{
-	  fprintf (gcov_file, "%9s:%5u:%s", "-", line_num, retval);
-
-	  while (!retval[0] || retval[strlen (retval) - 1] != '\n')
-	    {
-	      retval = fgets (string, STRING_SIZE, source_file);
-	      if (!retval)
-		break;
-	      fputs (retval, gcov_file);
-	    }
-	}
+      for (; (retval = read_line (source_file)); line_num++)
+	fprintf (gcov_file, "%9s:%5u:%s\n", "-", line_num, retval);
     }
 
   if (source_file)

@@ -1,7 +1,7 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string
 svn://gcc.gnu.org/svn/gcc
 
@@ -30,6 +30,9 @@ find
 dir
 
 modifiers
+dir
+
+substr
 dir
 
 pthread18185.cc
@@ -66,13 +69,10 @@ bonzini
 
 1613
 
-substr
+operations
 dir
 
 requirements
-dir
-
-operations
 dir
 
 assign

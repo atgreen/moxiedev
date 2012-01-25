@@ -1,15 +1,15 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/18_support
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-11-07T08:46:58.527062Z
-181076
-redi
+2011-12-06T20:03:25.141848Z
+182064
+paolo
 
 
 
@@ -26,10 +26,10 @@ redi
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-exception_ptr
+numeric_limits
 dir
 
-numeric_limits
+exception_ptr
 dir
 
 new_delete_placement.cc
@@ -66,10 +66,10 @@ paolo
 
 1079
 
-uncaught_exception
+type_info
 dir
 
-type_info
+uncaught_exception
 dir
 
 pthread_guard.cc
@@ -109,19 +109,19 @@ paolo
 exception
 dir
 
-bad_alloc
+nested_exception
 dir
 
 bad_cast
 dir
 
-nested_exception
-dir
-
-bad_exception
+bad_alloc
 dir
 
 bad_typeid
+dir
+
+bad_exception
 dir
 
 50594.cc

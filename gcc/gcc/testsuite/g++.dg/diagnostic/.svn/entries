@@ -1,15 +1,15 @@
 10
 
 dir
-181550
+183351
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/diagnostic
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-09-27T01:56:17.831596Z
-179226
-paolo
+2011-12-06T10:06:49.316194Z
+182043
+dodji
 
 
 
@@ -161,6 +161,40 @@ jason
 
 
 234
+
+wrong-tag-1.C
+file
+
+
+
+
+2012-01-20T20:50:47.145277Z
+c7f8ff703c53611ffdb66eccc4747879
+2011-12-06T10:06:49.316194Z
+182043
+dodji
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+166
 
 bitfld1.C
 file

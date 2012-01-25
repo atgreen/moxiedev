@@ -113,7 +113,7 @@ static void set_std_cxx98 (int);
 static void set_std_cxx11 (int);
 static void set_std_c89 (int, int);
 static void set_std_c99 (int);
-static void set_std_c1x (int);
+static void set_std_c11 (int);
 static void check_deps_environment_vars (void);
 static void handle_deferred_opts (void);
 static void sanitize_cpp_opts (void);
@@ -449,10 +449,6 @@ c_common_handle_option (size_t scode, const char *arg, int value,
       cpp_opts->warn_endif_labels = value;
       break;
 
-    case OPT_Werror:
-      global_dc->warning_as_error_requested = value;
-      break;
-
     case OPT_Wformat:
       set_Wformat (value);
       break;
@@ -602,14 +598,6 @@ c_common_handle_option (size_t scode, const char *arg, int value,
 
     case OPT_fextended_identifiers:
       cpp_opts->extended_identifiers = value;
-      break;
-
-    case OPT_fgnu_runtime:
-      flag_next_runtime = !value;
-      break;
-
-    case OPT_fnext_runtime:
-      flag_next_runtime = value;
       break;
 
     case OPT_foperator_names:
@@ -807,14 +795,14 @@ c_common_handle_option (size_t scode, const char *arg, int value,
 	set_std_c99 (false /* ISO */);
       break;
 
-    case OPT_std_c1x:
+    case OPT_std_c11:
       if (!preprocessing_asm_p)
-	set_std_c1x (true /* ISO */);
+	set_std_c11 (true /* ISO */);
       break;
 
-    case OPT_std_gnu1x:
+    case OPT_std_gnu11:
       if (!preprocessing_asm_p)
-	set_std_c1x (false /* ISO */);
+	set_std_c11 (false /* ISO */);
       break;
 
     case OPT_trigraphs:
@@ -1069,6 +1057,13 @@ c_common_post_options (const char **pfilename)
   if (flag_working_directory
       && flag_preprocess_only && !flag_no_line_commands)
     pp_dir_change (parse_in, get_src_pwd ());
+
+  /* Disable LTO output when outputting a precompiled header.  */
+  if (pch_file && flag_lto)
+    {
+      flag_lto = 0;
+      flag_generate_lto = 0;
+    }
 
   return flag_preprocess_only;
 }
@@ -1473,7 +1468,7 @@ set_std_c89 (int c94, int iso)
   flag_no_nonansi_builtin = iso;
   flag_isoc94 = c94;
   flag_isoc99 = 0;
-  flag_isoc1x = 0;
+  flag_isoc11 = 0;
 }
 
 /* Set the C 99 standard (without GNU extensions if ISO).  */
@@ -1484,20 +1479,20 @@ set_std_c99 (int iso)
   flag_no_asm = iso;
   flag_no_nonansi_builtin = iso;
   flag_iso = iso;
-  flag_isoc1x = 0;
+  flag_isoc11 = 0;
   flag_isoc99 = 1;
   flag_isoc94 = 1;
 }
 
-/* Set the C 1X standard draft (without GNU extensions if ISO).  */
+/* Set the C 11 standard (without GNU extensions if ISO).  */
 static void
-set_std_c1x (int iso)
+set_std_c11 (int iso)
 {
-  cpp_set_lang (parse_in, iso ? CLK_STDC1X: CLK_GNUC1X);
+  cpp_set_lang (parse_in, iso ? CLK_STDC11: CLK_GNUC11);
   flag_no_asm = iso;
   flag_no_nonansi_builtin = iso;
   flag_iso = iso;
-  flag_isoc1x = 1;
+  flag_isoc11 = 1;
   flag_isoc99 = 1;
   flag_isoc94 = 1;
 }

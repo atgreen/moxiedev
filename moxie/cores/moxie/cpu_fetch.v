@@ -1,6 +1,6 @@
 // cpu_fetch.v - The instruction fetch unit
 //
-// Copyright (c) 2010, 2011 Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011, 2012 Anthony Green.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -20,7 +20,7 @@
 module cpu_fetch #(parameter BOOT_ADDRESS = 32'h00001000
 		   )(/*AUTOARG*/
   // Outputs
-  imem_address_o, opcode, valid, operand,
+  imem_address_o, opcode, valid, operand, PC_o,
   // Inputs
   rst_i, clk_i, imem_data_i, branch_flag_i, branch_target_i, stall_i
   );
@@ -31,6 +31,7 @@ module cpu_fetch #(parameter BOOT_ADDRESS = 32'h00001000
   // --- Instruction memory ---------------------------------------
   output [31:0] imem_address_o;
   input  [31:0] imem_data_i;
+  output [31:0] PC_o;
 
   // --- Branch controls ------------------------------------------
   input 	branch_flag_i;
@@ -43,18 +44,16 @@ module cpu_fetch #(parameter BOOT_ADDRESS = 32'h00001000
   output [15:0] opcode;
   output [0:0] 	valid;
   output [31:0] operand;
- 
-  // --- Test memory.  Let's just read from an internal array.  */
-  //  reg [7:0] 	MEM [0:128000];
-  reg [7:0] 	MEM [0:32000];
-  reg [31:0] 	fetchPC; /* For testing only.  */
+
+  // The program counter that we're using for fetching.
+  reg [31:0] 	fetchPC;
 
   wire [0:0] 	valid, empty, full;
   reg 		wren, rden, flush_ififo;
   reg  [31:0] 	wrdata;
-  reg [0:0] 	newPC_p;
-  wire [15:0] opcode;
-  wire [31:0] operand;
+  reg  [0:0] 	newPC_p;
+  wire [15:0]   opcode;
+  wire [31:0]   operand;
 
   wire [31:0]  imem_address_o;
   
@@ -68,6 +67,7 @@ module cpu_fetch #(parameter BOOT_ADDRESS = 32'h00001000
 		   .valid_o		(valid),
 		   .empty_o		(empty),
 		   .full_o		(full),
+		   .PC_o                (PC_o),
 		   // Inputs
 		   .rst_i		(rst_i | flush_ififo),
 		   .clk_i		(clk_i),

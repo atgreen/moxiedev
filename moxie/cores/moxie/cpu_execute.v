@@ -1,6 +1,6 @@
 // cpu_execute.v - The moxie execute stage
 //
-// Copyright (c) 2010, 2011 Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011, 2012 Anthony Green.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -27,13 +27,12 @@ module cpu_execute (/*AUTOARG*/
   branch_target_o,
   // Inputs
   rst_i, clk_i, stall_i, riA_i, riB_i, regA_i, regB_i,
-  register_write_index_i, operand_i, op_i, sp_i, fp_i
+  register_write_index_i, operand_i, op_i, sp_i, fp_i, PC_i
   );
 
   parameter [1:0] STATE_READY = 2'b00,
     STATE_JSR1 = 2'b01,
-    STATE_JSR2 = 2'b10,
-    STATE_JSR3 = 2'b11;
+    STATE_RET1 = 2'b10;
 
   // --- Clock and Reset ------------------------------------------
   input  rst_i, clk_i;
@@ -51,6 +50,7 @@ module cpu_execute (/*AUTOARG*/
   input [5:0]  op_i;
   input [31:0] sp_i;
   input [31:0] fp_i;
+  input [31:0] PC_i;
   
   // --- Outputs --------------------------------------------------
   output [3:0] register_write_index_o;
@@ -90,7 +90,7 @@ module cpu_execute (/*AUTOARG*/
       branch_flag_o <= 0;
       current_state <= STATE_READY;
     end else begin
-      branch_flag_o <= (op_i == `OP_JMPA) || (op_i == `OP_JSR);
+      branch_flag_o <= (op_i == `OP_JMPA) || (current_state == STATE_JSR1);
       current_state <= next_state;
     end
     
@@ -310,11 +310,10 @@ module cpu_execute (/*AUTOARG*/
 		  end
 		`OP_JSR:
 		  begin
-		    // Decrement $sp by 8 bytes.
+		    // Decrement $sp by 8 bytes and store the return address.
 		    reg_result_o <= sp_i - 8;
 		    memory_address_o <= sp_i - 8;
-		    // FIXME: this should be PC
-		    mem_result_o <= regB_i;
+		    mem_result_o <= PC_i+6;
 		    memory_read_enable_o <= 0;
 		    memory_write_enable_o <= 1;
 		    register_write_enable_o <= 1;
@@ -524,10 +523,14 @@ module cpu_execute (/*AUTOARG*/
 		  end
 		`OP_RET:
 		  begin
-		    $display ("Executing OP_RET");
-		    memory_read_enable_o <= 0;
+		    // Increment $sp by 8
+		    memory_address_o <= sp_i;
+		    reg_result_o <= sp_i + 8;
+		    memory_read_enable_o <= 1;
 		    memory_write_enable_o <= 0;
-		    next_state <= STATE_READY;
+		    register_write_enable_o <= 1;
+		    register_write_index_o <= 1; // $sp
+		    next_state <= STATE_RET1;
 		    stall_o <= 0;
 		  end
 		`OP_SSR:
@@ -646,6 +649,20 @@ module cpu_execute (/*AUTOARG*/
 	      memory_read_enable_o <= 0;
 	      memory_write_enable_o <= 1;
 	      register_write_enable_o <= 1;
+	      register_write_index_o <= 1; // $sp
+	      branch_target_o <= operand_i;
+	      next_state <= STATE_READY;
+	      stall_o <= 0;
+	    end
+	  STATE_RET1:
+	    begin
+	      // Increment $sp by 4 bytes.
+	      reg_result_o <= sp_i + 4;
+	      memory_address_o <= sp_i + 4;
+	      memory_read_enable_o <= 1;
+	      memory_write_enable_o <= 0;
+	      register_write_enable_o <= 1;
+	      // This is all wrong
 	      register_write_index_o <= 1; // $sp
 	      branch_target_o <= operand_i;
 	      next_state <= STATE_READY;

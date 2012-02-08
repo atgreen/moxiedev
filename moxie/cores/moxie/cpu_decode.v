@@ -1,6 +1,6 @@
 // cpu_decode.v - The instruction decode unit
 //
-// Copyright (c) 2010, 2011 Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011, 2012 Anthony Green.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -22,9 +22,9 @@
 module cpu_decode (/*AUTOARG*/
   // Outputs
   register_write_enable_o, register_write_index_o, operand_o, riA_o,
-  riB_o, op_o,
+  riB_o, op_o, PC_o,
   // Inputs
-  rst_i, clk_i, stall_i, opcode_i, operand_i, valid_i
+  rst_i, clk_i, stall_i, opcode_i, operand_i, valid_i, PC_i
   );
 
   // --- Clock and Reset ------------------------------------------
@@ -37,6 +37,7 @@ module cpu_decode (/*AUTOARG*/
   input [15:0] opcode_i;	
   input [31:0] operand_i;	
   input valid_i;
+  input [31:0] PC_i;
   
   // --- Outputs --------------------------------------------------
   output [0:0] register_write_enable_o;
@@ -45,6 +46,7 @@ module cpu_decode (/*AUTOARG*/
   output [3:0] 	riA_o;
   output [3:0] 	riB_o;
   output [5:0] 	op_o;
+  output [31:0] PC_o;
 
   reg [5:0] 	op_o;
   wire [3:0] 	riA;
@@ -52,10 +54,11 @@ module cpu_decode (/*AUTOARG*/
   reg [3:0] 	riA_o;
   reg [3:0] 	riB_o;
   reg [31:0] 	operand_o;
+  reg [31:0] 	PC_o;
   reg [0:0] 	register_write_enable_o;
   reg [3:0] 	register_write_index_o;
 
-  wire 		foo = !opcode_i[15:15];
+  wire 		 foo = !opcode_i[15:15];
   wire [3:0]     b1 = opcode_i[3:0];
   wire [3:0]     b2 = opcode_i[7:4];
   wire [3:0]     b3 = opcode_i[11:8];
@@ -68,6 +71,7 @@ module cpu_decode (/*AUTOARG*/
     begin
       riA_o <= riA;
       riB_o <= riB;
+      PC_o <= PC_i;
     end
   
   always @(posedge clk_i)

@@ -3,7 +3,7 @@
 ;;; --------------------------------------------------------------------
 ;;; GTKWave Process Filter to Disassemble Moxie Opcodes
 ;;;
-;;; Copyright (c) 2011 Anthony Green.  All Rights Reserved.
+;;; Copyright (c) 2011, 2012 Anthony Green.
 ;;; DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 ;;; 
 ;;; The above named program is free software; you can redistribute it
@@ -34,6 +34,10 @@
 
 (defun moxie-narg (name instr)
   name)
+
+(defun moxie-f1-a (name instr)
+  (format nil "~A ~A" name 
+	  (regname (logand (ash instr -4) #xf))))
 
 (defun moxie-f1-a4 (name instr)
   (format nil "~A ~A __" name 

@@ -1,6 +1,6 @@
 // moxie.v - Top level Moxie Core
 //
-// Copyright (c) 2009, 2010, 2011  Anthony Green.  All Rights Reserved.
+// Copyright (c) 2009, 2010, 2011, 2012  Anthony Green.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -60,8 +60,10 @@ module moxie (/*AUTOARG*/
 
   wire [15:0] fd_opcode;
   wire [31:0] fd_operand;
+  wire [31:0] fd_PC;
   wire [0:0]  fd_valid;
   wire [31:0] dx_operand;
+  wire [31:0] dx_PC;
   wire [0:0]  dx_register_write_enable;
   wire [5:0]  dx_op;
   wire [0:0]  xw_register_write_enable;
@@ -141,9 +143,10 @@ module moxie (/*AUTOARG*/
   
   cpu_fetch stage_fetch (// Outputs
 			 .opcode		(fd_opcode[15:0]),
-			 .valid		(fd_valid),
+			 .valid		        (fd_valid),
 			 .operand		(fd_operand[31:0]),
 			 .imem_address_o        (wb_I_adr_o[31:0]),
+			 .PC_o                  (fd_PC[31:0]),
 			 // Inputs
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
@@ -157,12 +160,14 @@ module moxie (/*AUTOARG*/
 			   .clk_i			(clk_i),
 			   .opcode_i		(fd_opcode[15:0]),
 			   .operand_i		(fd_operand[31:0]),
+			   .PC_i                (fd_PC[31:0]),
 			   .valid_i		(fd_valid),
 			   .stall_i             (hazard_war | stall_x),
 			   // Outputs
 			   .register_write_enable_o (dx_register_write_enable),
 			   .register_write_index_o (dx_register_write_index),
 			   .operand_o (dx_operand),
+			   .PC_o (dx_PC),
 			   .riA_o (dx_reg_index1),
 			   .riB_o (dx_reg_index2),
 			   .op_o (dx_op));
@@ -173,6 +178,7 @@ module moxie (/*AUTOARG*/
 			     .stall_i        (hazard_war),
 			     .stall_o        (stall_x),
 			     .op_i           (dx_op),
+			     .PC_i           (dx_PC),
 			     .operand_i		(dx_operand[31:0]),
 			     .riA_i (dx_reg_index1),
 			     .riB_i (dx_reg_index2),

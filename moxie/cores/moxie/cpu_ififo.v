@@ -1,6 +1,6 @@
 // cpu_ififo.v - The instruction FIFO unit
 //
-// Copyright (c) 2010, 2011 Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011, 2012 Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -35,7 +35,8 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 
   input [0:0]  newPC_p_i;
   input [31:0] PC_i;
-  reg [31:0]   PC;
+  wire [31:0]   PC;
+  reg [31:0]   next_PC;
   output [31:0] PC_o;
   reg [31:0] 	PC_o;
   
@@ -55,7 +56,7 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
   
   wire [0:0]   can_write_32, can_read_16, can_read_48;
   wire [0:0]   buffer_full,  buffer_empty;
-  
+
   assign can_write_32 = ((ptr_gap == 0) || (ptr_gap == 1) || (ptr_gap == 2));
   assign can_read_16 = (ptr_gap != 0);
   assign can_read_48 =  ((ptr_gap != 0) && (ptr_gap != 1) && (ptr_gap != 2));
@@ -102,6 +103,11 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 		    || (op == 8'he4)); // bleu
   endfunction
 
+  assign PC = (newPC_p_i ? PC_i : next_PC);
+
+  always @(negedge rst_i)
+    next_PC <= PC_i;
+  
   always @(posedge clk_i or posedge rst_i)
     if (rst_i == 1) begin
       opcode_o <= 0;
@@ -111,9 +117,8 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
       ptr_gap <= 0;
       full_o <= 0;
       valid_o <= 0;
-      PC <= PC_i;
     end else begin
-      PC_o <= PC;
+      PC_o <= (newPC_p_i ? PC_i : PC);
       // $display ("A %x buffer[read_ptr] = 0x%x", read_ptr, buffer[read_ptr][15:8]);
       // $display ("A BUFFER = 0x%x%x%x%x", buffer[0], buffer[1], buffer[2], buffer[3]);
       // $display ("A buffer_empty = %x", buffer_empty);
@@ -136,7 +141,7 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 	  // $display ("Y");
 	  opcode_o <= buffer[read_ptr];
 	  valid_o <= 1;
-	  PC <= PC + 2;
+	  next_PC <= PC + 2;
 	  read_ptr <= (read_ptr + 1) % 4;
 	  ptr_gap = ptr_gap - 1;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
@@ -150,13 +155,13 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 	  ptr_gap = 1;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	  valid_o <= 1;
-	  PC <= PC + 2;
+	  next_PC <= PC + 2;
 	end
 	else if (write_en_i && read_en_i && buffer_full) begin
 	  //	   $display ("W- ERROR");
 	  opcode_o <= buffer[read_ptr];
 	  valid_o <= 1;
-	  PC <= PC + 2;
+	  next_PC <= PC + 2;
 	  read_ptr <= (read_ptr + 1) % 4;
 	  ptr_gap = ptr_gap - 1;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
@@ -168,7 +173,7 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 	  opcode_o <= buffer[read_ptr];
 	  read_ptr <= (read_ptr + 1) % 4;
 	  valid_o <= 1;
-	  PC <= PC + 2;
+	  next_PC <= PC + 2;
 	  ptr_gap = ptr_gap + 1;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	end 
@@ -190,7 +195,7 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 	  operand_o[31:16] <= buffer[read_ptr+1];
 	  operand_o[15:0] <= buffer[read_ptr+2];
 	  valid_o <= 1;
-	  PC <= PC + 6;
+	  next_PC <= PC + 6;
 	  read_ptr <= read_ptr + 3;
 	  ptr_gap = ptr_gap - 3;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
@@ -208,7 +213,7 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 	  operand_o[31:16] <= buffer[read_ptr+1];
 	  operand_o[15:0] <= buffer[read_ptr+2];
 	  valid_o <= 1;
-	  PC <= PC + 6;
+	  next_PC <= PC + 6;
 	  read_ptr <= read_ptr + 3;
 	  ptr_gap = ptr_gap - 3;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
@@ -222,7 +227,7 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 	  operand_o[15:0] <= buffer[read_ptr+2];
 	  read_ptr <= read_ptr + 3;
 	  valid_o <= 1;
-	  PC <= PC + 6;
+	  next_PC <= PC + 6;
 	  ptr_gap = ptr_gap - 1;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	end
@@ -235,7 +240,7 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 	  operand_o[15:0] <= data_i[31:16];
 	  read_ptr <= (read_ptr + 3) % 4;
 	  valid_o <= 1;
-	  PC <= PC + 6;
+	  next_PC <= PC + 6;
 	  ptr_gap = 1;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	end
@@ -245,7 +250,7 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 	  operand_o[15:0] <= data_i[15:0];
 	  read_ptr <= (read_ptr + 1) % 4; // FIXME: this is probably not needed
 	  valid_o <= 1;
-	  PC <= PC + 6;
+	  next_PC <= PC + 6;
 	  ptr_gap = 0;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4)); // FIXME: neither is this
 	end 
@@ -258,7 +263,7 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 	  operand_o[15:0] <= buffer[(read_ptr+2)%4];
 	  read_ptr <= read_ptr + 3;
 	  valid_o <= 1;
-	  PC <= PC + 6;
+	  next_PC <= PC + 6;
 	  ptr_gap = ptr_gap - 1;
 	  full_o = ((ptr_gap == 3) || (ptr_gap == 4)); // FIXME: this is probably not needed
 	end 

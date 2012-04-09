@@ -384,6 +384,10 @@ case "${targ}" in
     targ_defvec=bfd_elf32_moxie_vec
     ;;
 
+  dcpu16-*-elf)
+    targ_defvec=bfd_elf32_dcpu16_vec
+    ;;
+
   h8300*-*-rtemscoff*)
     targ_defvec=h8300coff_vec
     targ_underscore=yes

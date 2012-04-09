@@ -1,7 +1,7 @@
 /* Interface between the opcode library and its callers.
 
    Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2009, 2010,
-   2011  Free Software Foundation, Inc.
+   2011, 2012  Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -268,6 +268,7 @@ extern int print_insn_mmix		(bfd_vma, disassemble_info *);
 extern int print_insn_mn10200		(bfd_vma, disassemble_info *);
 extern int print_insn_mn10300		(bfd_vma, disassemble_info *);
 extern int print_insn_moxie		(bfd_vma, disassemble_info *);
+extern int print_insn_dcpu16		(bfd_vma, disassemble_info *);
 extern int print_insn_msp430		(bfd_vma, disassemble_info *);
 extern int print_insn_mt                (bfd_vma, disassemble_info *);
 extern int print_insn_ns32k		(bfd_vma, disassemble_info *);

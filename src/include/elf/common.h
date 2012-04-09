@@ -1,6 +1,6 @@
 /* ELF support for BFD.
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
 
    Written by Fred Fish @ Cygnus Support, from information published
@@ -395,6 +395,7 @@
 #define EM_CYGNUS_MEP		0xF00D  /* Toshiba MeP */
 
 #define EM_MOXIE                0xFEED  /* Moxie */
+#define EM_DCPU16               0xFEEE  /* DCPU16 */
 
 /* Old Sunplus S+core7 backend magic number. Written in the absence of an ABI.  */
 #define EM_SCORE_OLD            95

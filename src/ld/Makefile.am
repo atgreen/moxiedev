@@ -237,6 +237,7 @@ ALL_EMULATION_SOURCES = \
 	eelf32microblaze.c \
 	eelf32mipswindiss.c \
 	eelf32moxie.c \
+	eelf32dcpu16.c \
 	eelf32mt.c \
 	eelf32openrisc.c \
 	eelf32ppc.c \
@@ -1093,6 +1094,9 @@ eelf32mipswindiss.c: $(srcdir)/emulparams/elf32mipswindiss.sh $(ELF_DEPS) \
 eelf32moxie.c: $(srcdir)/emulparams/elf32moxie.sh \
   $(ELF_GEN_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32moxie "$(tdir_moxie)"
+eelf32dcpu16.c: $(srcdir)/emulparams/elf32dcpu16.sh \
+  $(ELF_GEN_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+	${GENSCRIPTS} elf32dcpu16 "$(tdir_dcpu16)"
 eelf32mt.c: $(srcdir)/emulparams/elf32mt.sh \
   $(ELF_GEN_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32mt "$(tdir_mt)"

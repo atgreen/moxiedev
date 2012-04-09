@@ -2058,6 +2058,8 @@ enum bfd_architecture
 #define bfd_mach_fr550         550
   bfd_arch_moxie,       /* The moxie processor */
 #define bfd_mach_moxie         1
+  bfd_arch_dcpu16,       /* The dcpu16 processor */
+#define bfd_mach_dcpu16                1
   bfd_arch_mcore,
   bfd_arch_mep,
 #define bfd_mach_mep           1
@@ -2860,6 +2862,10 @@ to compensate for the borrow when the low bits are added.  */
 
 /* Moxie ELF relocations.  */
   BFD_RELOC_MOXIE_10_PCREL,
+
+
+/* DCPU16 ELF relocations.  */
+  BFD_RELOC_DCPU16_10_PCREL,
 
 
 /* Fujitsu Frv Relocations.  */

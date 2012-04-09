@@ -1,6 +1,6 @@
 /* BFD support for handling relocation entries.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Written by Cygnus Support.
 
@@ -1368,7 +1368,7 @@ _bfd_final_link_relocate (reloc_howto_type *howto,
     }
 
   return _bfd_relocate_contents (howto, input_bfd, relocation,
-				 contents + address);
+				 contents + (address * 2)); /* DCPU16 HACK FIXME */
 }
 
 /* Relocate a given location using a given value and howto.  */
@@ -2399,6 +2399,12 @@ ENUM
   BFD_RELOC_MOXIE_10_PCREL
 ENUMDOC
   Moxie ELF relocations.
+COMMENT
+
+ENUM
+  BFD_RELOC_DCPU16_10_PCREL
+ENUMDOC
+  DCPU16 ELF relocations.
 COMMENT
 
 ENUM

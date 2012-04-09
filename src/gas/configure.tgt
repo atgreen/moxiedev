@@ -305,6 +305,8 @@ case ${generic_target} in
   moxie-*-uclinux)			fmt=elf em=linux;;
   moxie-*-*)				fmt=elf ;;
 
+  dcpu16-*-*)				fmt=elf ;;
+
   mt-*-elf)				fmt=elf bfd_gas=yes ;;
 
   msp430-*-*)				fmt=elf ;;

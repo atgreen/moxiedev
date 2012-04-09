@@ -2,9 +2,9 @@
 # Configuration validation subroutine script.
 #   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
 #   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-#   2011 Free Software Foundation, Inc.
+#   2011, 2012 Free Software Foundation, Inc.
 
-timestamp='2011-06-03'
+timestamp='2012-04-08'
 
 # This file is (in principle) common to ALL GNU software.
 # The presence of a machine in this file suggests that SOME GNU software
@@ -253,7 +253,7 @@ case $basic_machine in
 	| arc | arm | arm[bl]e | arme[lb] | armv[2345] | armv[345][lb] | avr | avr32 \
 	| bfin \
 	| c4x | clipper \
-	| d10v | d30v | dlx | dsp16xx \
+	| d10v | d30v | dcpu16 | dlx | dsp16xx \
 	| fido | fr30 | frv \
 	| h8300 | h8500 | hppa | hppa1.[01] | hppa2.0 | hppa2.0[nw] | hppa64 \
 	| i370 | i860 | i960 | ia64 \

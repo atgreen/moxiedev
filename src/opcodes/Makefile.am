@@ -167,6 +167,8 @@ TARGET_LIBOPCODES_CFILES = \
 	mmix-opc.c \
 	moxie-dis.c \
 	moxie-opc.c \
+	dcpu16-dis.c \
+	dcpu16-opc.c \
 	msp430-dis.c \
 	mt-asm.c \
 	mt-desc.c \

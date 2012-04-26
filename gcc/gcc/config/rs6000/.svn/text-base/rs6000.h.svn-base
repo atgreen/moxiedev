@@ -467,10 +467,11 @@ extern int rs6000_vector_align[];
 /* ISA 2.01 allowed FCFID to be done in 32-bit, previously it was 64-bit only.
    Enable 32-bit fcfid's on any of the switches for newer ISA machines or
    XILINX.  */
-#define TARGET_FCFID	(TARGET_POWERPC64 \
-			 || TARGET_POPCNTB	/* ISA 2.02 */ \
-			 || TARGET_CMPB		/* ISA 2.05 */ \
-			 || TARGET_POPCNTD	/* ISA 2.06 */ \
+#define TARGET_FCFID	(TARGET_POWERPC64				\
+			 || TARGET_PPC_GPOPT	/* 970/power4 */	\
+			 || TARGET_POPCNTB	/* ISA 2.02 */		\
+			 || TARGET_CMPB		/* ISA 2.05 */		\
+			 || TARGET_POPCNTD	/* ISA 2.06 */		\
 			 || TARGET_XILINX_FPU)
 
 #define TARGET_FCTIDZ	TARGET_FCFID
@@ -492,7 +493,7 @@ extern int rs6000_vector_align[];
 
 #define TARGET_EXTRA_BUILTINS	(!TARGET_SPE && !TARGET_PAIRED_FLOAT	 \
 				 && ((TARGET_POWERPC64			 \
-				      || TARGET_PPC_GPOPT /* 970 */	 \
+				      || TARGET_PPC_GPOPT /* 970/power4 */ \
 				      || TARGET_POPCNTB	  /* ISA 2.02 */ \
 				      || TARGET_CMPB	  /* ISA 2.05 */ \
 				      || TARGET_POPCNTD	  /* ISA 2.06 */ \
@@ -770,8 +771,7 @@ extern unsigned rs6000_pointer_size;
 #define SLOW_UNALIGNED_ACCESS(MODE, ALIGN)				\
   (STRICT_ALIGNMENT							\
    || (((MODE) == SFmode || (MODE) == DFmode || (MODE) == TFmode	\
-	|| (MODE) == SDmode || (MODE) == DDmode || (MODE) == TDmode	\
-	|| (MODE) == DImode)						\
+	|| (MODE) == SDmode || (MODE) == DDmode || (MODE) == TDmode)	\
        && (ALIGN) < 32)							\
    || (VECTOR_MODE_P ((MODE)) && (((int)(ALIGN)) < VECTOR_ALIGN (MODE))))
 
@@ -909,8 +909,8 @@ extern unsigned rs6000_pointer_size;
 #define TOTAL_ALTIVEC_REGS	(LAST_ALTIVEC_REGNO - FIRST_ALTIVEC_REGNO + 1)
 
 #define FIRST_SAVED_ALTIVEC_REGNO (FIRST_ALTIVEC_REGNO+20)
-#define FIRST_SAVED_FP_REGNO    (14+32)
-#define FIRST_SAVED_GP_REGNO 13
+#define FIRST_SAVED_FP_REGNO	  (14+32)
+#define FIRST_SAVED_GP_REGNO	  (FIXED_R13 ? 14 : 13)
 
 /* List the order in which to allocate registers.  Each register must be
    listed once, even those in FIXED_REGISTERS.

@@ -1,5 +1,5 @@
 ;; Predicate definitions for IA-32 and x86-64.
-;; Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+;; Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
 ;; Free Software Foundation, Inc.
 ;;
 ;; This file is part of GCC.
@@ -341,6 +341,16 @@
     (match_operand 0 "general_operand")))
 
 ;; Return true if OP is general operand representable on x86_64
+;; as zero extended constant.  This predicate is used in zero-extending
+;; conversion operations that require non-VOIDmode immediate operands.
+(define_predicate "x86_64_zext_general_operand"
+  (if_then_else (match_test "TARGET_64BIT")
+    (ior (match_operand 0 "nonimmediate_operand")
+	 (and (match_operand 0 "x86_64_zext_immediate_operand")
+	      (match_test "GET_MODE (op) != VOIDmode")))
+    (match_operand 0 "general_operand")))
+
+;; Return true if OP is general operand representable on x86_64
 ;; as either sign extended or zero extended constant.
 (define_predicate "x86_64_szext_general_operand"
   (if_then_else (match_test "TARGET_64BIT")
@@ -410,6 +420,7 @@
 	  || (GET_CODE (op) == UNSPEC
 	      && (XINT (op, 1) == UNSPEC_GOT
 		  || XINT (op, 1) == UNSPEC_GOTOFF
+		  || XINT (op, 1) == UNSPEC_PCREL
 		  || XINT (op, 1) == UNSPEC_GOTPCREL)))
 	return true;
       if (GET_CODE (op) != PLUS
@@ -482,11 +493,11 @@
        (match_operand 0 "local_symbolic_operand")))
 
 ;; Test for various thread-local symbols.
-(define_predicate "tls_symbolic_operand"
+(define_special_predicate "tls_symbolic_operand"
   (and (match_code "symbol_ref")
        (match_test "SYMBOL_REF_TLS_MODEL (op)")))
 
-(define_predicate "tls_modbase_operand"
+(define_special_predicate "tls_modbase_operand"
   (and (match_code "symbol_ref")
        (match_test "op == ix86_tls_module_base ()")))
 
@@ -557,20 +568,23 @@
 
 ;; Test for a valid operand for indirect branch.
 (define_predicate "indirect_branch_operand"
-  (if_then_else (match_test "TARGET_X32")
-    (match_operand 0 "register_operand")
-    (match_operand 0 "nonimmediate_operand")))
+  (ior (match_operand 0 "register_operand")
+       (and (not (match_test "TARGET_X32"))
+	    (match_operand 0 "memory_operand"))))
 
 ;; Test for a valid operand for a call instruction.
-(define_predicate "call_insn_operand"
-  (ior (match_operand 0 "constant_call_address_operand")
+;; Allow constant call address operands in Pmode only.
+(define_special_predicate "call_insn_operand"
+  (ior (match_test "constant_call_address_operand
+		     (op, mode == VOIDmode ? mode : Pmode)")
        (match_operand 0 "call_register_no_elim_operand")
        (and (not (match_test "TARGET_X32"))
 	    (match_operand 0 "memory_operand"))))
 
 ;; Similarly, but for tail calls, in which we cannot allow memory references.
-(define_predicate "sibcall_insn_operand"
-  (ior (match_operand 0 "constant_call_address_operand")
+(define_special_predicate "sibcall_insn_operand"
+  (ior (match_test "constant_call_address_operand
+		     (op, mode == VOIDmode ? mode : Pmode)")
        (match_operand 0 "register_no_elim_operand")))
 
 ;; Match exactly zero.

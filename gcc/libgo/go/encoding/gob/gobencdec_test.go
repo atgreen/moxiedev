@@ -547,7 +547,6 @@ func (a isZeroBugArray) GobEncode() (b []byte, e error) {
 }
 
 func (a *isZeroBugArray) GobDecode(data []byte) error {
-	println("DECODE")
 	if len(data) != len(a) {
 		return io.EOF
 	}
@@ -572,5 +571,24 @@ func TestGobEncodeIsZero(t *testing.T) {
 	}
 	if x != y {
 		t.Fatalf("%v != %v", x, y)
+	}
+}
+
+func TestGobEncodePtrError(t *testing.T) {
+	var err error
+	b := new(bytes.Buffer)
+	enc := NewEncoder(b)
+	err = enc.Encode(&err)
+	if err != nil {
+		t.Fatal("encode:", err)
+	}
+	dec := NewDecoder(b)
+	err2 := fmt.Errorf("foo")
+	err = dec.Decode(&err2)
+	if err != nil {
+		t.Fatal("decode:", err)
+	}
+	if err2 != nil {
+		t.Fatalf("expected nil, got %v", err2)
 	}
 }

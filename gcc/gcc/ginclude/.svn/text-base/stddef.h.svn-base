@@ -1,4 +1,4 @@
-/* Copyright (C) 1989, 1997, 1998, 1999, 2000, 2002, 2004, 2009, 2011
+/* Copyright (C) 1989, 1997, 1998, 1999, 2000, 2002, 2004, 2009, 2011, 2012
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -41,8 +41,6 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #define _STDDEF_H_
 /* snaroff@next.com says the NeXT needs this.  */
 #define _ANSI_STDDEF_H
-/* Irix 5.1 needs this.  */
-#define __STDDEF_H__
 #endif
 
 #ifndef __sys_stdtypes_h
@@ -200,8 +198,11 @@ typedef __PTRDIFF_TYPE__ ptrdiff_t;
 #define ___int_size_t_h
 #define _GCC_SIZE_T
 #define _SIZET_
-#if defined (__FreeBSD__) && (__FreeBSD__ >= 5)
-/* __size_t is a typedef on FreeBSD 5!, must not trash it. */
+#if (defined (__FreeBSD__) && (__FreeBSD__ >= 5)) \
+  || defined(__FreeBSD_kernel__)
+/* __size_t is a typedef on FreeBSD 5, must not trash it. */
+#elif defined (__VMS__)
+/* __size_t is also a typedef on VMS.  */
 #else
 #define __size_t
 #endif

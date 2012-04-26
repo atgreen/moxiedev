@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -243,20 +243,19 @@ package body Exp_Aggr is
       Typ    : Entity_Id;
       Target : Node_Id) return List_Id;
    --  This routine implements top-down expansion of nested aggregates. In
-   --  doing so, it avoids the generation of temporaries at each level. N is a
-   --  nested (record or array) aggregate that has been marked with 'Delay_
-   --  Expansion'. Typ is the expected type of the aggregate. Target is a
-   --  (duplicable) expression that will hold the result of the aggregate
-   --  expansion.
+   --  doing so, it avoids the generation of temporaries at each level. N is
+   --  a nested record or array aggregate with the Expansion_Delayed flag.
+   --  Typ is the expected type of the aggregate. Target is a (duplicatable)
+   --  expression that will hold the result of the aggregate expansion.
 
    function Make_OK_Assignment_Statement
      (Sloc       : Source_Ptr;
       Name       : Node_Id;
       Expression : Node_Id) return Node_Id;
    --  This is like Make_Assignment_Statement, except that Assignment_OK
-   --  is set in the left operand. All assignments built by this unit
-   --  use this routine. This is needed to deal with assignments to
-   --  initialized constants that are done in place.
+   --  is set in the left operand. All assignments built by this unit use
+   --  this routine. This is needed to deal with assignments to initialized
+   --  constants that are done in place.
 
    function Number_Of_Choices (N : Node_Id) return Nat;
    --  Returns the number of discrete choices (not including the others choice
@@ -267,9 +266,9 @@ package body Exp_Aggr is
    --  array aggregate with all constant values, where the aggregate can be
    --  evaluated at compile time. If this is possible, then N is rewritten
    --  to be its proper compile time value with all the components properly
-   --  assembled. The expression is analyzed and resolved and True is
-   --  returned. If this transformation is not possible, N is unchanged
-   --  and False is returned
+   --  assembled. The expression is analyzed and resolved and True is returned.
+   --  If this transformation is not possible, N is unchanged and False is
+   --  returned.
 
    function Safe_Slice_Assignment (N : Node_Id) return Boolean;
    --  If a slice assignment has an aggregate with a single others_choice,
@@ -339,7 +338,7 @@ package body Exp_Aggr is
                Hi : constant Node_Id :=
                       Type_High_Bound (Etype (First_Index (T)));
 
-               Siz  : constant Int := Component_Count (Component_Type (T));
+               Siz : constant Int := Component_Count (Component_Type (T));
 
             begin
                if not Compile_Time_Known_Value (Lo)
@@ -5116,6 +5115,14 @@ package body Exp_Aggr is
       --  and the aggregate can be constructed statically and handled by
       --  the back-end.
 
+      function Compile_Time_Known_Composite_Value (N : Node_Id) return Boolean;
+      --  Returns true if N is an expression of composite type which can be
+      --  fully evaluated at compile time without raising constraint error.
+      --  Such expressions can be passed as is to Gigi without any expansion.
+      --
+      --  This returns true for N_Aggregate with Compile_Time_Known_Aggregate
+      --  set and constants whose expression is such an aggregate, recursively.
+
       function Component_Not_OK_For_Backend return Boolean;
       --  Check for presence of component which makes it impossible for the
       --  backend to process the aggregate, thus requiring the use of a series
@@ -5145,6 +5152,45 @@ package body Exp_Aggr is
       function Top_Level_Aggregate (N : Node_Id) return Node_Id;
       --  For nested aggregates return the ultimate enclosing aggregate; for
       --  non-nested aggregates return N.
+
+      ----------------------------------------
+      -- Compile_Time_Known_Composite_Value --
+      ----------------------------------------
+
+      function Compile_Time_Known_Composite_Value
+        (N : Node_Id) return Boolean
+      is
+      begin
+         --  If we have an entity name, then see if it is the name of a
+         --  constant and if so, test the corresponding constant value.
+
+         if Is_Entity_Name (N) then
+            declare
+               E : constant Entity_Id := Entity (N);
+               V : Node_Id;
+            begin
+               if Ekind (E) /= E_Constant then
+                  return False;
+               else
+                  V := Constant_Value (E);
+                  return Present (V)
+                    and then Compile_Time_Known_Composite_Value (V);
+               end if;
+            end;
+
+         --  We have a value, see if it is compile time known
+
+         else
+            if Nkind (N) = N_Aggregate then
+               return Compile_Time_Known_Aggregate (N);
+            end if;
+
+            --  All other types of values are not known at compile time
+
+            return False;
+         end if;
+
+      end Compile_Time_Known_Composite_Value;
 
       ----------------------------------
       -- Component_Not_OK_For_Backend --
@@ -5202,14 +5248,12 @@ package body Exp_Aggr is
                return True;
             end if;
 
-            if Is_Scalar_Type (Etype (Expr_Q)) then
+            if Is_Elementary_Type (Etype (Expr_Q)) then
                if not Compile_Time_Known_Value (Expr_Q) then
                   Static_Components := False;
                end if;
 
-            elsif Nkind (Expr_Q) /= N_Aggregate
-              or else not Compile_Time_Known_Aggregate (Expr_Q)
-            then
+            elsif not Compile_Time_Known_Composite_Value (Expr_Q) then
                Static_Components := False;
 
                if Is_Private_Type (Etype (Expr_Q))
@@ -5297,7 +5341,7 @@ package body Exp_Aggr is
 
       --  Ada 2005 (AI-318-2): We need to convert to assignments if components
       --  are build-in-place function calls. The assignments will each turn
-      --  into a build-in-place function call.  If components are all static,
+      --  into a build-in-place function call. If components are all static,
       --  we can pass the aggregate to the backend regardless of limitedness.
 
       --  Extension aggregates, aggregates in extended return statements, and
@@ -5353,8 +5397,8 @@ package body Exp_Aggr is
       elsif Component_Not_OK_For_Backend then
          Convert_To_Assignments (N, Typ);
 
-      --  If an ancestor is private, some components are not inherited and
-      --  we cannot expand into a record aggregate
+      --  If an ancestor is private, some components are not inherited and we
+      --  cannot expand into a record aggregate.
 
       elsif Has_Visible_Private_Ancestor (Typ) then
          Convert_To_Assignments (N, Typ);
@@ -5375,12 +5419,14 @@ package body Exp_Aggr is
       --  may be distinct from the default size of the type component, so
       --  we need to expand to insure that the back-end copies the proper
       --  size of the data. However, if the aggregate is the initial value of
-      --  a constant, the target is immutable and may be built statically.
+      --  a constant, the target is immutable and might be built statically
+      --  if components are appropriate.
 
       elsif Has_Mutable_Components (Typ)
         and then
           (Nkind (Parent (Top_Level_Aggr)) /= N_Object_Declaration
-            or else not Constant_Present (Parent (Top_Level_Aggr)))
+            or else not Constant_Present (Parent (Top_Level_Aggr))
+            or else not Static_Components)
       then
          Convert_To_Assignments (N, Typ);
 
@@ -5413,7 +5459,7 @@ package body Exp_Aggr is
 
          elsif Is_Derived_Type (Typ) then
 
-            --  For untagged types,  non-stored discriminants are replaced
+            --  For untagged types, non-stored discriminants are replaced
             --  with stored discriminants, which are the ones that gigi uses
             --  to describe the type and its components.
 
@@ -5547,16 +5593,16 @@ package body Exp_Aggr is
 
          if Is_Tagged_Type (Typ) then
 
-            --  The tagged case, _parent and _tag component must be created
+            --  In the tagged case, _parent and _tag component must be created
 
-            --  Reset null_present unconditionally. tagged records always have
-            --  at least one field (the tag or the parent)
+            --  Reset Null_Present unconditionally. Tagged records always have
+            --  at least one field (the tag or the parent).
 
             Set_Null_Record_Present (N, False);
 
             --  When the current aggregate comes from the expansion of an
             --  extension aggregate, the parent expr is replaced by an
-            --  aggregate formed by selected components of this expr
+            --  aggregate formed by selected components of this expr.
 
             if Present (Parent_Expr)
               and then Is_Empty_List (Comps)
@@ -5596,7 +5642,7 @@ package body Exp_Aggr is
 
             --  Compute the value for the Tag now, if the type is a root it
             --  will be included in the aggregate right away, otherwise it will
-            --  be propagated to the parent aggregate
+            --  be propagated to the parent aggregate.
 
             if Present (Orig_Tag) then
                Tag_Value := Orig_Tag;
@@ -5657,8 +5703,15 @@ package body Exp_Aggr is
 
                   --  Expand recursively the parent propagating the right Tag
 
-                  Expand_Record_Aggregate (
-                    Parent_Aggr, Tag_Value, Parent_Expr);
+                  Expand_Record_Aggregate
+                    (Parent_Aggr, Tag_Value, Parent_Expr);
+
+                  --  The ancestor part may be a nested aggregate that has
+                  --  delayed expansion: recheck now.
+
+                  if Component_Not_OK_For_Backend then
+                     Convert_To_Assignments (N, Typ);
+                  end if;
                end;
 
             --  For a root type, the tag component is added (unless compiling

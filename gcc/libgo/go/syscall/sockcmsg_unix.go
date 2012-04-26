@@ -14,7 +14,7 @@ import (
 
 // Round the length of a raw sockaddr up to align it propery.
 func cmsgAlignOf(salen int) int {
-	salign := sizeofPtr
+	salign := int(sizeofPtr)
 	// NOTE: It seems like 64-bit Darwin kernel still requires 32-bit
 	// aligned access to BSD subsystem.
 	if darwinAMD64 {

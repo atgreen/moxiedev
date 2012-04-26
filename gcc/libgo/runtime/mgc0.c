@@ -4,6 +4,8 @@
 
 // Garbage collector.
 
+#include <unistd.h>
+
 #include "runtime.h"
 #include "arch.h"
 #include "malloc.h"
@@ -61,10 +63,22 @@ enum {
 
 #define bitMask (bitBlockBoundary | bitAllocated | bitMarked | bitSpecial)
 
+// Holding worldsema grants an M the right to try to stop the world.
+// The procedure is:
+//
+//	runtime_semacquire(&runtime_worldsema);
+//	m->gcing = 1;
+//	runtime_stoptheworld();
+//
+//	... do stuff ...
+//
+//	m->gcing = 0;
+//	runtime_semrelease(&runtime_worldsema);
+//	runtime_starttheworld();
+//
+uint32 runtime_worldsema = 1;
+
 // TODO: Make these per-M.
-static uint64 nlookup;
-static uint64 nsizelookup;
-static uint64 naddrlookup;
 static uint64 nhandoff;
 
 static int32 gctrace;
@@ -94,7 +108,6 @@ struct FinBlock
 	int32 cap;
 	Finalizer fin[1];
 };
-
 
 static G *fing;
 static FinBlock *finq; // list of finalizers that are to be executed
@@ -218,8 +231,6 @@ scanblock(byte *b, int64 n)
 
 			// Otherwise consult span table to find beginning.
 			// (Manually inlined copy of MHeap_LookupMaybe.)
-			nlookup++;
-			naddrlookup++;
 			k = (uintptr)obj>>PageShift;
 			x = k;
 			if(sizeof(void*) == 8)
@@ -307,49 +318,8 @@ scanblock(byte *b, int64 n)
 		b = *--wp;
 		nobj--;
 
-		// Figure out n = size of b.  Start by loading bits for b.
-		off = (uintptr*)b - (uintptr*)arena_start;
-		bitp = (uintptr*)arena_start - off/wordsPerBitmapWord - 1;
-		shift = off % wordsPerBitmapWord;
-		xbits = *bitp;
-		bits = xbits >> shift;
-
-		// Might be small; look for nearby block boundary.
-		// A block boundary is marked by either bitBlockBoundary
-		// or bitAllocated being set (see notes near their definition).
-		enum {
-			boundary = bitBlockBoundary|bitAllocated
-		};
-		// Look for a block boundary both after and before b
-		// in the same bitmap word.
-		//
-		// A block boundary j words after b is indicated by
-		//	bits>>j & boundary
-		// assuming shift+j < bitShift.  (If shift+j >= bitShift then
-		// we'll be bleeding other bit types like bitMarked into our test.)
-		// Instead of inserting the conditional shift+j < bitShift into the loop,
-		// we can let j range from 1 to bitShift as long as we first
-		// apply a mask to keep only the bits corresponding
-		// to shift+j < bitShift aka j < bitShift-shift.
-		bits &= (boundary<<(bitShift-shift)) - boundary;
-
-		// A block boundary j words before b is indicated by
-		//	xbits>>(shift-j) & boundary
-		// (assuming shift >= j).  There is no cleverness here
-		// avoid the test, because when j gets too large the shift
-		// turns negative, which is undefined in C.
-
-		for(j=1; j<bitShift; j++) {
-			if(((bits>>j)&boundary) != 0 || (shift>=j && ((xbits>>(shift-j))&boundary) != 0)) {
-				n = j*PtrSize;
-				goto scan;
-			}
-		}
-
-		// Fall back to asking span about size class.
+		// Ask span about size class.
 		// (Manually inlined copy of MHeap_Lookup.)
-		nlookup++;
-		nsizelookup++;
 		x = (uintptr)b>>PageShift;
 		if(sizeof(void*) == 8)
 			x -= (uintptr)arena_start>>PageShift;
@@ -358,7 +328,6 @@ scanblock(byte *b, int64 n)
 			n = s->npages<<PageShift;
 		else
 			n = runtime_class_to_size[s->sizeclass];
-	scan:;
 	}
 }
 
@@ -687,14 +656,6 @@ markfin(void *v)
 	scanblock(v, size);
 }
 
-struct root_list {
-	struct root_list *next;
-	struct root {
-		void *decl;
-		size_t size;
-	} roots[];
-};
-
 static struct root_list* roots;
 
 void
@@ -825,9 +786,11 @@ sweep(void)
 	byte *p;
 	MCache *c;
 	byte *arena_start;
+	int64 now;
 
 	m = runtime_m();
 	arena_start = runtime_mheap.arena_start;
+	now = runtime_nanotime();
 
 	for(;;) {
 		s = work.spans;
@@ -835,6 +798,11 @@ sweep(void)
 			break;
 		if(!runtime_casp(&work.spans, s, s->allnext))
 			continue;
+
+		// Stamp newly unused spans. The scavenger will use that
+		// info to potentially give back some pages to the OS.
+		if(s->state == MSpanFree && s->unusedsince == 0)
+			s->unusedsince = now;
 
 		if(s->state != MSpanInUse)
 			continue;
@@ -922,11 +890,6 @@ runtime_gchelper(void)
 		runtime_notewakeup(&work.alldone);
 }
 
-// Semaphore, not Lock, so that the goroutine
-// reschedules when there is contention rather
-// than spinning.
-static uint32 gcsema = 1;
-
 // Initialized from $GOGC.  GOGC=off means no gc.
 //
 // Next gc is after we've allocated an extra amount of
@@ -957,7 +920,7 @@ cachestats(void)
 	uint64 stacks_sys;
 
 	stacks_inuse = 0;
-	stacks_sys = 0;
+	stacks_sys = runtime_stacks_sys;
 	for(m=runtime_allm; m; m=m->alllink) {
 		runtime_purgecachedstats(m);
 		// stacks_inuse += m->stackalloc->inuse;
@@ -982,6 +945,10 @@ runtime_gc(int32 force)
 	uint64 heap0, heap1, obj0, obj1;
 	const byte *p;
 	bool extra;
+
+	// Make sure all registers are saved on stack so that
+	// scanstack sees them.
+	__builtin_unwind_init();
 
 	// The gc is turned off (via enablegc) until
 	// the bootstrap has completed.
@@ -1011,16 +978,13 @@ runtime_gc(int32 force)
 	if(gcpercent < 0)
 		return;
 
-	runtime_semacquire(&gcsema);
+	runtime_semacquire(&runtime_worldsema);
 	if(!force && mstats.heap_alloc < mstats.next_gc) {
-		runtime_semrelease(&gcsema);
+		runtime_semrelease(&runtime_worldsema);
 		return;
 	}
 
 	t0 = runtime_nanotime();
-	nlookup = 0;
-	nsizelookup = 0;
-	naddrlookup = 0;
 	nhandoff = 0;
 
 	m->gcing = 1;
@@ -1058,7 +1022,7 @@ runtime_gc(int32 force)
 	stealcache();
 	cachestats();
 
-	mstats.next_gc = mstats.heap_alloc+mstats.heap_alloc*gcpercent/100;
+	mstats.next_gc = mstats.heap_alloc+(mstats.heap_alloc-runtime_stacks_sys)*gcpercent/100;
 	m->gcing = 0;
 
 	m->locks++;	// disable gc during the mallocs in newproc
@@ -1078,6 +1042,7 @@ runtime_gc(int32 force)
 	obj1 = mstats.nmalloc - mstats.nfree;
 
 	t3 = runtime_nanotime();
+	mstats.last_gc = t3;
 	mstats.pause_ns[mstats.numgc%nelem(mstats.pause_ns)] = t3 - t0;
 	mstats.pause_total_ns += t3 - t0;
 	mstats.numgc++;
@@ -1085,14 +1050,15 @@ runtime_gc(int32 force)
 		runtime_printf("pause %llu\n", (unsigned long long)t3-t0);
 
 	if(gctrace) {
-		runtime_printf("gc%d: %llu+%llu+%llu ms %llu -> %llu MB %llu -> %llu (%llu-%llu) objects %llu pointer lookups (%llu size, %llu addr) %llu handoff\n",
-			mstats.numgc, (unsigned long long)(t1-t0)/1000000, (unsigned long long)(t2-t1)/1000000, (unsigned long long)(t3-t2)/1000000,
+		runtime_printf("gc%d(%d): %llu+%llu+%llu ms %llu -> %llu MB %llu -> %llu (%llu-%llu) objects %llu handoff\n",
+			mstats.numgc, work.nproc, (unsigned long long)(t1-t0)/1000000, (unsigned long long)(t2-t1)/1000000, (unsigned long long)(t3-t2)/1000000,
 			(unsigned long long)heap0>>20, (unsigned long long)heap1>>20, (unsigned long long)obj0, (unsigned long long)obj1,
-			(unsigned long long)mstats.nmalloc, (unsigned long long)mstats.nfree,
-			(unsigned long long)nlookup, (unsigned long long)nsizelookup, (unsigned long long)naddrlookup, (unsigned long long) nhandoff);
+			(unsigned long long) mstats.nmalloc, (unsigned long long)mstats.nfree,
+			(unsigned long long) nhandoff);
 	}
-
-	runtime_semrelease(&gcsema);
+	
+	runtime_MProf_GC();
+	runtime_semrelease(&runtime_worldsema);
 
 	// If we could have used another helper proc, start one now,
 	// in the hope that it will be available next time.
@@ -1111,25 +1077,26 @@ runtime_gc(int32 force)
 		runtime_gc(1);
 }
 
-void runtime_UpdateMemStats(void)
-  __asm__("libgo_runtime.runtime.UpdateMemStats");
+void runtime_ReadMemStats(MStats *)
+  __asm__("libgo_runtime.runtime.ReadMemStats");
 
 void
-runtime_UpdateMemStats(void)
+runtime_ReadMemStats(MStats *stats)
 {
 	M *m;
 
-	// Have to acquire gcsema to stop the world,
+	// Have to acquire worldsema to stop the world,
 	// because stoptheworld can only be used by
 	// one goroutine at a time, and there might be
 	// a pending garbage collection already calling it.
-	runtime_semacquire(&gcsema);
+	runtime_semacquire(&runtime_worldsema);
 	m = runtime_m();
 	m->gcing = 1;
 	runtime_stoptheworld();
 	cachestats();
+	*stats = mstats;
 	m->gcing = 0;
-	runtime_semrelease(&gcsema);
+	runtime_semrelease(&runtime_worldsema);
 	runtime_starttheworld(false);
 }
 
@@ -1364,6 +1331,8 @@ runtime_setblockspecial(void *v, bool s)
 void
 runtime_MHeap_MapBits(MHeap *h)
 {
+	size_t page_size;
+
 	// Caller has added extra mappings to the arena.
 	// Add extra mappings of bitmap words as needed.
 	// We allocate extra bitmap pieces in chunks of bitmapChunk.
@@ -1376,6 +1345,9 @@ runtime_MHeap_MapBits(MHeap *h)
 	n = (n+bitmapChunk-1) & ~(bitmapChunk-1);
 	if(h->bitmap_mapped >= n)
 		return;
+
+	page_size = getpagesize();
+	n = (n+page_size-1) & ~(page_size-1);
 
 	runtime_SysMap(h->arena_start - n, n - h->bitmap_mapped);
 	h->bitmap_mapped = n;

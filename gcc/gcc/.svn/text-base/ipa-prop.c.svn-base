@@ -1,5 +1,5 @@
 /* Interprocedural analyses.
-   Copyright (C) 2005, 2007, 2008, 2009, 2010, 2011
+   Copyright (C) 2005, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -91,7 +91,7 @@ ipa_populate_param_decls (struct cgraph_node *node,
   tree parm;
   int param_num;
 
-  fndecl = node->decl;
+  fndecl = node->symbol.decl;
   fnargs = DECL_ARGUMENTS (fndecl);
   param_num = 0;
   for (parm = fnargs; parm; parm = DECL_CHAIN (parm))
@@ -129,7 +129,7 @@ ipa_initialize_node_params (struct cgraph_node *node)
     {
       int param_count;
 
-      param_count = count_formal_params (node->decl);
+      param_count = count_formal_params (node->symbol.decl);
       if (param_count)
 	{
 	  VEC_safe_grow_cleared (ipa_param_descriptor_t, heap,
@@ -260,7 +260,7 @@ ipa_print_all_jump_functions (FILE *f)
   struct cgraph_node *node;
 
   fprintf (f, "\nJump functions:\n");
-  for (node = cgraph_nodes; node; node = node->next)
+  FOR_EACH_FUNCTION (node)
     {
       ipa_print_node_jump_functions (f, node);
     }
@@ -442,13 +442,11 @@ detect_type_change_1 (tree arg, tree base, tree comp_type, gimple call,
   if (!flag_devirtualize || !gimple_vuse (call))
     return false;
 
-  ao.ref = arg;
+  ao_ref_init (&ao, arg);
   ao.base = base;
   ao.offset = offset;
   ao.size = POINTER_SIZE;
   ao.max_size = ao.size;
-  ao.ref_alias_set = -1;
-  ao.base_alias_set = -1;
 
   tci.offset = offset;
   tci.object = get_base_address (arg);
@@ -1592,7 +1590,7 @@ static void
 ipa_analyze_params_uses (struct cgraph_node *node,
 			 struct param_analysis_info *parms_ainfo)
 {
-  tree decl = node->decl;
+  tree decl = node->symbol.decl;
   basic_block bb;
   struct function *func;
   gimple_stmt_iterator gsi;
@@ -1608,7 +1606,7 @@ ipa_analyze_params_uses (struct cgraph_node *node,
       /* For SSA regs see if parameter is used.  For non-SSA we compute
 	 the flag during modification analysis.  */
       if (is_gimple_reg (parm)
-	  && gimple_default_def (DECL_STRUCT_FUNCTION (node->decl), parm))
+	  && gimple_default_def (DECL_STRUCT_FUNCTION (node->symbol.decl), parm))
 	ipa_set_param_used (info, i, true);
     }
 
@@ -1652,8 +1650,8 @@ ipa_analyze_node (struct cgraph_node *node)
   ipa_check_create_node_params ();
   ipa_check_create_edge_args ();
   info = IPA_NODE_REF (node);
-  push_cfun (DECL_STRUCT_FUNCTION (node->decl));
-  current_function_decl = node->decl;
+  push_cfun (DECL_STRUCT_FUNCTION (node->symbol.decl));
+  current_function_decl = node->symbol.decl;
   ipa_initialize_node_params (node);
 
   param_count = ipa_get_param_count (info);
@@ -1908,7 +1906,7 @@ update_indirect_edges_after_inlining (struct cgraph_edge *cs,
 	  if (new_direct_edge->call_stmt)
 	    new_direct_edge->call_stmt_cannot_inline_p
 	      = !gimple_check_call_matching_types (new_direct_edge->call_stmt,
-						   new_direct_edge->callee->decl);
+						   new_direct_edge->callee->symbol.decl);
 	  if (new_edges)
 	    {
 	      VEC_safe_push (cgraph_edge_p, heap, *new_edges,
@@ -2211,7 +2209,7 @@ ipa_print_all_params (FILE * f)
   struct cgraph_node *node;
 
   fprintf (f, "\nFunction parameters:\n");
-  for (node = cgraph_nodes; node; node = node->next)
+  FOR_EACH_FUNCTION (node)
     ipa_print_node_params (f, node);
 }
 
@@ -2429,7 +2427,7 @@ ipa_modify_call_arguments (struct cgraph_edge *cs, gimple stmt,
 
   len = VEC_length (ipa_parm_adjustment_t, adjustments);
   vargs = VEC_alloc (tree, heap, len);
-  callee_decl = !cs ? gimple_call_fndecl (stmt) : cs->callee->decl;
+  callee_decl = !cs ? gimple_call_fndecl (stmt) : cs->callee->symbol.decl;
 
   gsi = gsi_for_stmt (stmt);
   for (i = 0; i < len; i++)
@@ -2510,9 +2508,27 @@ ipa_modify_call_arguments (struct cgraph_edge *cs, gimple stmt,
 		}
 	    }
 
-	  expr = fold_build2_loc (loc, MEM_REF, adj->type, base, off);
-	  if (adj->by_ref)
-	    expr = build_fold_addr_expr (expr);
+	  if (!adj->by_ref)
+	    {
+	      tree type = adj->type;
+	      unsigned int align;
+	      unsigned HOST_WIDE_INT misalign;
+	      align = get_pointer_alignment_1 (base, &misalign);
+	      misalign += (double_int_sext (tree_to_double_int (off),
+					    TYPE_PRECISION (TREE_TYPE (off))).low
+			   * BITS_PER_UNIT);
+	      misalign = misalign & (align - 1);
+	      if (misalign != 0)
+		align = (misalign & -misalign);
+	      if (align < TYPE_ALIGN (type))
+		type = build_aligned_type (type, align);
+	      expr = fold_build2_loc (loc, MEM_REF, type, base, off);
+	    }
+	  else
+	    {
+	      expr = fold_build2_loc (loc, MEM_REF, adj->type, base, off);
+	      expr = build_fold_addr_expr (expr);
+	    }
 
 	  expr = force_gimple_operand_gsi (&gsi, expr,
 					   adj->by_ref
@@ -3071,7 +3087,7 @@ ipa_update_after_lto_read (void)
   ipa_check_create_node_params ();
   ipa_check_create_edge_args ();
 
-  for (node = cgraph_nodes; node; node = node->next)
+  FOR_EACH_DEFINED_FUNCTION (node)
     if (node->analyzed)
       ipa_initialize_node_params (node);
 }

@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/zlib/contrib/vstudio
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2005-09-12T17:42:53.000000Z
-104184
-tromey
+2012-03-02T17:24:45.458146Z
+184806
+doko
 
 
 
@@ -26,10 +26,7 @@ tromey
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-vc7
-dir
-
-vc8
+vc10
 dir
 
 readme.txt
@@ -38,11 +35,11 @@ file
 
 
 
-2009-04-24T17:50:46.000000Z
-ce377b65f44ec3b7af92777ee56e7f92
-2005-09-12T17:04:02.000000Z
-104182
-tromey
+2012-04-26T00:33:29.747414Z
+057524e1fd3e683dd4d7486a7b14148d
+2012-03-02T17:15:20.251905Z
+184805
+doko
 
 
 
@@ -64,5 +61,8 @@ tromey
 
 
 
-3040
+2231
+
+vc9
+dir
 

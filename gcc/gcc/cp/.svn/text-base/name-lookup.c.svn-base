@@ -1,5 +1,5 @@
 /* Definitions for C++ name lookup routines.
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Contributed by Gabriel Dos Reis <gdr@integrable-solutions.net>
 
@@ -400,6 +400,9 @@ pop_binding (tree id, tree decl)
 tree
 strip_using_decl (tree decl)
 {
+  if (decl == NULL_TREE)
+    return NULL_TREE;
+
   while (TREE_CODE (decl) == USING_DECL && !DECL_DEPENDENT_P (decl))
     decl = USING_DECL_DECLS (decl);
   return decl;
@@ -763,7 +766,7 @@ pushdecl_maybe_friend_1 (tree x, bool is_friend)
 	  else if (t == wchar_decl_node)
 	    {
 	      if (! DECL_IN_SYSTEM_HEADER (x))
-		pedwarn (input_location, OPT_pedantic, "redeclaration of %<wchar_t%> as %qT",
+		pedwarn (input_location, OPT_Wpedantic, "redeclaration of %<wchar_t%> as %qT",
 			 TREE_TYPE (x));
 	      
 	      /* Throw away the redeclaration.  */
@@ -2853,7 +2856,7 @@ set_inherited_value_binding_p (cxx_binding *binding, tree decl,
       tree context;
 
       if (TREE_CODE (decl) == OVERLOAD)
-	context = CP_DECL_CONTEXT (OVL_CURRENT (decl));
+	context = ovl_scope (decl);
       else
 	{
 	  gcc_assert (DECL_P (decl));
@@ -4115,9 +4118,13 @@ qualify_lookup (tree val, int flags)
     return false;
   if ((flags & LOOKUP_PREFER_NAMESPACES) && TREE_CODE (val) == NAMESPACE_DECL)
     return true;
-  if ((flags & LOOKUP_PREFER_TYPES)
-      && (TREE_CODE (val) == TYPE_DECL || TREE_CODE (val) == TEMPLATE_DECL))
-    return true;
+  if (flags & LOOKUP_PREFER_TYPES)
+    {
+      tree target_val = strip_using_decl (val);
+      if (TREE_CODE (target_val) == TYPE_DECL
+	  || TREE_CODE (target_val) == TEMPLATE_DECL)
+	return true;
+    }
   if (flags & (LOOKUP_PREFER_NAMESPACES | LOOKUP_PREFER_TYPES))
     return false;
   /* Look through lambda things that we shouldn't be able to see.  */
@@ -4466,21 +4473,38 @@ static bool
 binding_to_template_parms_of_scope_p (cxx_binding *binding,
 				      cp_binding_level *scope)
 {
-  tree binding_value;
+  tree binding_value, tmpl, tinfo;
+  int level;
 
-  if (!binding || !scope)
+  if (!binding || !scope || !scope->this_entity)
     return false;
 
   binding_value = binding->value ?  binding->value : binding->type;
+  tinfo = get_template_info (scope->this_entity);
 
-  return (scope
-	  && scope->this_entity
-	  && get_template_info (scope->this_entity)
-	  && PRIMARY_TEMPLATE_P (TI_TEMPLATE
-				 (get_template_info (scope->this_entity)))
-	  && parameter_of_template_p (binding_value,
-				      TI_TEMPLATE (get_template_info \
-						    (scope->this_entity))));
+  /* BINDING_VALUE must be a template parm.  */
+  if (binding_value == NULL_TREE
+      || (!DECL_P (binding_value)
+          || !DECL_TEMPLATE_PARM_P (binding_value)))
+    return false;
+
+  /*  The level of BINDING_VALUE.  */
+  level =
+    template_type_parameter_p (binding_value)
+    ? TEMPLATE_PARM_LEVEL (TEMPLATE_TYPE_PARM_INDEX
+			 (TREE_TYPE (binding_value)))
+    : TEMPLATE_PARM_LEVEL (DECL_INITIAL (binding_value));
+
+  /* The template of the current scope, iff said scope is a primary
+     template.  */
+  tmpl = (tinfo
+	  && PRIMARY_TEMPLATE_P (TI_TEMPLATE (tinfo))
+	  ? TI_TEMPLATE (tinfo)
+	  : NULL_TREE);
+
+  /* If the level of the parm BINDING_VALUE equals the depth of TMPL,
+     then BINDING_VALUE is a parameter of TMPL.  */
+  return (tmpl && level == TMPL_PARMS_DEPTH (DECL_TEMPLATE_PARMS (tmpl)));
 }
 
 /* Return the innermost non-namespace binding for NAME from a scope

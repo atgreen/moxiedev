@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string/requirements
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,13 +26,16 @@ paolo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+exception
+dir
+
 citerators.cc
 file
 
 
 
 
-2009-09-08T13:21:24.000000Z
+2012-02-01T17:19:25.215009Z
 1aa78dd39a13411b23ae5077fd4519b8
 2009-08-25T22:29:08.525821Z
 151106
@@ -72,7 +75,7 @@ file
 
 
 
-2011-06-04T18:06:03.437104Z
+2012-02-01T17:19:25.216009Z
 1ced065b1ae4ce178fc1bc7223ca5caa
 2011-01-16T20:42:57.308078Z
 168871
@@ -99,7 +102,4 @@ paolo
 
 
 1027
-
-exception
-dir
 

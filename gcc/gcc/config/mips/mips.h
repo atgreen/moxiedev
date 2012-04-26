@@ -158,15 +158,9 @@ struct mips_cpu_info {
    This is true for both the PIC and non-PIC VxWorks RTP modes.  */
 #define TARGET_USE_PIC_FN_ADDR_REG (TARGET_ABICALLS || TARGET_VXWORKS_RTP)
 
-/* True if .gpword or .gpdword should be used for switch tables.
-
-   Although GAS does understand .gpdword, the SGI linker mishandles
-   the relocations GAS generates (R_MIPS_GPREL32 followed by R_MIPS_64).
-   We therefore disable GP-relative switch tables for n64 on IRIX targets.  */
+/* True if .gpword or .gpdword should be used for switch tables.  */
 #define TARGET_GPWORD				\
-  (TARGET_ABICALLS				\
-   && !TARGET_ABSOLUTE_ABICALLS			\
-   && !(mips_abi == ABI_64 && TARGET_IRIX6))
+  (TARGET_ABICALLS && !TARGET_ABSOLUTE_ABICALLS)
 
 /* True if the output must have a writable .eh_frame.
    See ASM_PREFERRED_EH_DATA_FORMAT for details.  */
@@ -319,9 +313,6 @@ struct mips_cpu_info {
    those loads and stores follow it.  */
 #define TARGET_SYNC_AFTER_SC (!TARGET_OCTEON)
 
-/* IRIX specific stuff.  */
-#define TARGET_IRIX6	   0
-
 /* Define preprocessor macros for the -march and -mtune options.
    PREFIX is either _MIPS_ARCH or _MIPS_TUNE, INFO is the selected
    processor.  If INFO's canonical name is "foo", define PREFIX to
@@ -348,10 +339,7 @@ struct mips_cpu_info {
 #define TARGET_CPU_CPP_BUILTINS()					\
   do									\
     {									\
-      /* Everyone but IRIX defines this to mips.  */            	\
-      if (!TARGET_IRIX6)                                         	\
-	builtin_assert ("machine=mips");                        	\
-									\
+      builtin_assert ("machine=mips");                        		\
       builtin_assert ("cpu=mips");					\
       builtin_define ("__mips__");     					\
       builtin_define ("_mips");						\
@@ -369,22 +357,20 @@ struct mips_cpu_info {
       if (TARGET_64BIT)							\
 	builtin_define ("__mips64");					\
 									\
-      if (!TARGET_IRIX6)						\
+      /* Treat _R3000 and _R4000 like register-size			\
+	 defines, which is how they've historically			\
+	 been used.  */							\
+      if (TARGET_64BIT)							\
 	{								\
-	  /* Treat _R3000 and _R4000 like register-size			\
-	     defines, which is how they've historically			\
-	     been used.  */						\
-	  if (TARGET_64BIT)						\
-	    {								\
-	      builtin_define_std ("R4000");				\
-	      builtin_define ("_R4000");				\
-	    }								\
-	  else								\
-	    {								\
-	      builtin_define_std ("R3000");				\
-	      builtin_define ("_R3000");				\
-	    }								\
+	  builtin_define_std ("R4000");					\
+	  builtin_define ("_R4000");					\
 	}								\
+      else								\
+	{								\
+	  builtin_define_std ("R3000");					\
+	  builtin_define ("_R3000");					\
+	}								\
+									\
       if (TARGET_FLOAT64)						\
 	builtin_define ("__mips_fpr=64");				\
       else								\
@@ -548,7 +534,7 @@ struct mips_cpu_info {
 	{								\
 	  builtin_define ("_LANGUAGE_OBJECTIVE_C");			\
 	  builtin_define ("__LANGUAGE_OBJECTIVE_C");			\
-	  /* Bizarre, but needed at least for Irix.  */			\
+	  /* Bizarre, but retained for backwards compatibility.  */	\
 	  builtin_define_std ("LANGUAGE_C");				\
 	  builtin_define ("_LANGUAGE_C");				\
 	}								\
@@ -715,7 +701,7 @@ struct mips_cpu_info {
        |march=34k*|march=74k*|march=1004k*: -mips32r2} \
      %{march=mips64|march=5k*|march=20k*|march=sb1*|march=sr71000 \
        |march=xlr|march=loongson3a: -mips64} \
-     %{march=mips64r2|march=octeon: -mips64r2} \
+     %{march=mips64r2|march=octeon|march=xlp: -mips64r2} \
      %{!march=*: -" MULTILIB_ISA_DEFAULT "}}"
 
 /* A spec that infers a -mhard-float or -msoft-float setting from an
@@ -2550,10 +2536,6 @@ do									\
     fputs ("\n", STREAM);						\
   }									\
 while (0)
-
-/* Use .loc directives for SDB line numbers.  */
-#define SDB_OUTPUT_SOURCE_LINE(STREAM, LINE)			\
-  fprintf (STREAM, "\t.loc\t%d %d\n", num_source_filenames, LINE)
 
 /* The MIPS implementation uses some labels for its own purpose.  The
    following lists what labels are created, and are all formed by the

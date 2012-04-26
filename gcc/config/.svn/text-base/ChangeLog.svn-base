@@ -1,3 +1,27 @@
+2012-04-03  Tristan Gingold  <gingold@adacore.com>
+
+	* mmap.m4: Use *vms* instead of vms*.
+
+2012-04-02  Tristan Gingold  <gingold@adacore.com>
+
+	* math.m4 (GCC_CHECK_MATH_FUNC): Remove if-present
+	argument.  Define the variable.
+
+2012-03-26  Tristan Gingold  <gingold@adacore.com>
+
+	* math.m4: New file.
+
+2012-03-12  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* weakref.m4 (GCC_CHECK_ELF_STYLE_WEAKREF): Remove
+	alpha*-dec-osf*.
+
+2012-01-22  Douglas B Rupp  <rupp@gnat.com>
+
+	* config/mh-interix: Remove as unneeded.
+	* config/picflag.m4 (i[[34567]]86-*-interix3*):
+        Change triplet to i[[34567]]86-*-interix[[3-9]]*.
+
 2012-01-04  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
 
 	PR bootstrap/51734

@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/bitset
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,18 +25,6 @@ paolo
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-test
-dir
-
-hash
-dir
-
-requirements
-dir
-
-operations
-dir
 
 debug
 dir
@@ -65,7 +53,7 @@ file
 
 
 
-2010-01-06T00:59:50.192647Z
+2012-02-01T17:19:25.317006Z
 9eed82ae067401c711becc0fbd97ecc4
 2010-01-04T01:58:21.786085Z
 155603
@@ -99,7 +87,7 @@ file
 
 
 
-2010-11-22T19:18:29.436784Z
+2012-02-01T17:19:25.317006Z
 dc835bf4f992f157923d1d4c2c94e7fc
 2010-09-18T01:29:31.182163Z
 164388
@@ -131,5 +119,17 @@ to_string
 dir
 
 all
+dir
+
+test
+dir
+
+hash
+dir
+
+requirements
+dir
+
+operations
 dir
 

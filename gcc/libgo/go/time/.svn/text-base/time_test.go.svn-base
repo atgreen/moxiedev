@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
@@ -226,6 +228,7 @@ var formatTests = []FormatTest{
 	{"RFC1123", RFC1123, "Wed, 04 Feb 2009 21:00:57 PST"},
 	{"RFC1123Z", RFC1123Z, "Wed, 04 Feb 2009 21:00:57 -0800"},
 	{"RFC3339", RFC3339, "2009-02-04T21:00:57-08:00"},
+	{"RFC3339Nano", RFC3339Nano, "2009-02-04T21:00:57.0123456-08:00"},
 	{"Kitchen", Kitchen, "9:00PM"},
 	{"am/pm", "3pm", "9pm"},
 	{"AM/PM", "3PM", "9PM"},
@@ -234,16 +237,48 @@ var formatTests = []FormatTest{
 	{"Stamp", Stamp, "Feb  4 21:00:57"},
 	{"StampMilli", StampMilli, "Feb  4 21:00:57.012"},
 	{"StampMicro", StampMicro, "Feb  4 21:00:57.012345"},
-	{"StampNano", StampNano, "Feb  4 21:00:57.012345678"},
+	{"StampNano", StampNano, "Feb  4 21:00:57.012345600"},
 }
 
 func TestFormat(t *testing.T) {
-	// The numeric time represents Thu Feb  4 21:00:57.012345678 PST 2010
-	time := Unix(0, 1233810057012345678)
+	// The numeric time represents Thu Feb  4 21:00:57.012345600 PST 2010
+	time := Unix(0, 1233810057012345600)
 	for _, test := range formatTests {
 		result := time.Format(test.format)
 		if result != test.result {
 			t.Errorf("%s expected %q got %q", test.name, test.result, result)
+		}
+	}
+}
+
+func TestFormatShortYear(t *testing.T) {
+	years := []int{
+		-100001, -100000, -99999,
+		-10001, -10000, -9999,
+		-1001, -1000, -999,
+		-101, -100, -99,
+		-11, -10, -9,
+		-1, 0, 1,
+		9, 10, 11,
+		99, 100, 101,
+		999, 1000, 1001,
+		9999, 10000, 10001,
+		99999, 100000, 100001,
+	}
+
+	for _, y := range years {
+		time := Date(y, January, 1, 0, 0, 0, 0, UTC)
+		result := time.Format("2006.01.02")
+		var want string
+		if y < 0 {
+			// The 4 in %04d counts the - sign, so print -y instead
+			// and introduce our own - sign.
+			want = fmt.Sprintf("-%04d.%02d.%02d", -y, 1, 1)
+		} else {
+			want = fmt.Sprintf("%04d.%02d.%02d", y, 1, 1)
+		}
+		if result != want {
+			t.Errorf("(jan 1 %d).Format(\"2006.01.02\") = %q, want %q", y, result, want)
 		}
 	}
 }
@@ -769,7 +804,7 @@ var jsonTests = []struct {
 	time Time
 	json string
 }{
-	{Date(9999, 4, 12, 23, 20, 50, .52*1e9, UTC), `"9999-04-12T23:20:50.52Z"`},
+	{Date(9999, 4, 12, 23, 20, 50, 520*1e6, UTC), `"9999-04-12T23:20:50.52Z"`},
 	{Date(1996, 12, 19, 16, 39, 57, 0, Local), `"1996-12-19T16:39:57-08:00"`},
 	{Date(0, 1, 1, 0, 0, 0, 1, FixedZone("", 1*60)), `"0000-01-01T00:00:00.000000001+00:01"`},
 }
@@ -781,7 +816,7 @@ func TestTimeJSON(t *testing.T) {
 		if jsonBytes, err := json.Marshal(tt.time); err != nil {
 			t.Errorf("%v json.Marshal error = %v, want nil", tt.time, err)
 		} else if string(jsonBytes) != tt.json {
-			t.Errorf("%v JSON = %q, want %q", tt.time, string(jsonBytes), tt.json)
+			t.Errorf("%v JSON = %#q, want %#q", tt.time, string(jsonBytes), tt.json)
 		} else if err = json.Unmarshal(jsonBytes, &jsonTime); err != nil {
 			t.Errorf("%v json.Unmarshal error = %v, want nil", tt.time, err)
 		} else if !equalTimeAndZone(jsonTime, tt.time) {
@@ -812,6 +847,82 @@ func TestNotJSONEncodableTime(t *testing.T) {
 		_, err := tt.time.MarshalJSON()
 		if err == nil || err.Error() != tt.want {
 			t.Errorf("%v MarshalJSON error = %v, want %v", tt.time, err, tt.want)
+		}
+	}
+}
+
+var parseDurationTests = []struct {
+	in   string
+	ok   bool
+	want Duration
+}{
+	// simple
+	{"0", true, 0},
+	{"5s", true, 5 * Second},
+	{"30s", true, 30 * Second},
+	{"1478s", true, 1478 * Second},
+	// sign
+	{"-5s", true, -5 * Second},
+	{"+5s", true, 5 * Second},
+	{"-0", true, 0},
+	{"+0", true, 0},
+	// decimal
+	{"5.0s", true, 5 * Second},
+	{"5.6s", true, 5*Second + 600*Millisecond},
+	{"5.s", true, 5 * Second},
+	{".5s", true, 500 * Millisecond},
+	{"1.0s", true, 1 * Second},
+	{"1.00s", true, 1 * Second},
+	{"1.004s", true, 1*Second + 4*Millisecond},
+	{"1.0040s", true, 1*Second + 4*Millisecond},
+	{"100.00100s", true, 100*Second + 1*Millisecond},
+	// different units
+	{"10ns", true, 10 * Nanosecond},
+	{"11us", true, 11 * Microsecond},
+	{"12µs", true, 12 * Microsecond}, // U+00B5
+	{"12μs", true, 12 * Microsecond}, // U+03BC
+	{"13ms", true, 13 * Millisecond},
+	{"14s", true, 14 * Second},
+	{"15m", true, 15 * Minute},
+	{"16h", true, 16 * Hour},
+	// composite durations
+	{"3h30m", true, 3*Hour + 30*Minute},
+	{"10.5s4m", true, 4*Minute + 10*Second + 500*Millisecond},
+	{"-2m3.4s", true, -(2*Minute + 3*Second + 400*Millisecond)},
+	{"1h2m3s4ms5us6ns", true, 1*Hour + 2*Minute + 3*Second + 4*Millisecond + 5*Microsecond + 6*Nanosecond},
+	{"39h9m14.425s", true, 39*Hour + 9*Minute + 14*Second + 425*Millisecond},
+
+	// errors
+	{"", false, 0},
+	{"3", false, 0},
+	{"-", false, 0},
+	{"s", false, 0},
+	{".", false, 0},
+	{"-.", false, 0},
+	{".s", false, 0},
+	{"+.s", false, 0},
+}
+
+func TestParseDuration(t *testing.T) {
+	for _, tc := range parseDurationTests {
+		d, err := ParseDuration(tc.in)
+		if tc.ok && (err != nil || d != tc.want) {
+			t.Errorf("ParseDuration(%q) = %v, %v, want %v, nil", tc.in, d, err, tc.want)
+		} else if !tc.ok && err == nil {
+			t.Errorf("ParseDuration(%q) = _, nil, want _, non-nil", tc.in)
+		}
+	}
+}
+
+func TestParseDurationRoundTrip(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		// Resolutions finer than milliseconds will result in
+		// imprecise round-trips.
+		d0 := Duration(rand.Int31()) * Millisecond
+		s := d0.String()
+		d1, err := ParseDuration(s)
+		if err != nil || d0 != d1 {
+			t.Errorf("round-trip failed: %d => %q => %d, %v", d0, s, d1, err)
 		}
 	}
 }

@@ -629,6 +629,13 @@ type DeepEqualTest struct {
 	eq   bool
 }
 
+// Simple functions for DeepEqual tests.
+var (
+	fn1 func()             // nil.
+	fn2 func()             // nil.
+	fn3 = func() { fn1() } // Not nil.
+)
+
 var deepEqualTests = []DeepEqualTest{
 	// Equalities
 	{1, 1, true},
@@ -641,6 +648,7 @@ var deepEqualTests = []DeepEqualTest{
 	{Basic{1, 0.5}, Basic{1, 0.5}, true},
 	{error(nil), error(nil), true},
 	{map[int]string{1: "one", 2: "two"}, map[int]string{2: "two", 1: "one"}, true},
+	{fn1, fn2, true},
 
 	// Inequalities
 	{1, 2, false},
@@ -658,6 +666,8 @@ var deepEqualTests = []DeepEqualTest{
 	{map[int]string{2: "two", 1: "one"}, map[int]string{1: "one"}, false},
 	{nil, 1, false},
 	{1, nil, false},
+	{fn1, fn3, false},
+	{fn3, fn3, false},
 
 	// Nil vs empty: not the same.
 	{[]int{}, []int(nil), false},
@@ -1364,8 +1374,19 @@ func TestFieldByName(t *testing.T) {
 }
 
 func TestImportPath(t *testing.T) {
-	if path := TypeOf(&base64.Encoding{}).Elem().PkgPath(); path != "libgo_encoding.base64" {
-		t.Errorf(`TypeOf(&base64.Encoding{}).Elem().PkgPath() = %q, want "libgo_encoding.base64"`, path)
+	tests := []struct {
+		t    Type
+		path string
+	}{
+		{TypeOf(&base64.Encoding{}).Elem(), "libgo_encoding.base64"},
+		{TypeOf(uint(0)), ""},
+		{TypeOf(map[string]int{}), ""},
+		{TypeOf((*error)(nil)).Elem(), ""},
+	}
+	for _, test := range tests {
+		if path := test.t.PkgPath(); path != test.path {
+			t.Errorf("%v.PkgPath() = %q, want %q", test.t, path, test.path)
+		}
 	}
 }
 
@@ -1517,6 +1538,18 @@ func TestAddr(t *testing.T) {
 	if p.X != 4 {
 		t.Errorf("Addr.Elem.Set valued to set value in top value")
 	}
+
+	// Verify that taking the address of a type gives us a pointer
+	// which we can convert back using the usual interface
+	// notation.
+	var s struct {
+		B *bool
+	}
+	ps := ValueOf(&s).Elem().Field(0).Addr().Interface()
+	*(ps.(**bool)) = new(bool)
+	if s.B == nil {
+		t.Errorf("Addr.Interface direct assignment failed")
+	}
 }
 
 /* gccgo does do allocations here.
@@ -1524,15 +1557,19 @@ func TestAddr(t *testing.T) {
 func noAlloc(t *testing.T, n int, f func(int)) {
 	// once to prime everything
 	f(-1)
-	runtime.MemStats.Mallocs = 0
+	memstats := new(runtime.MemStats)
+	runtime.ReadMemStats(memstats)
+	oldmallocs := memstats.Mallocs
 
 	for j := 0; j < n; j++ {
 		f(j)
 	}
 	// A few allocs may happen in the testing package when GOMAXPROCS > 1, so don't
 	// require zero mallocs.
-	if runtime.MemStats.Mallocs > 5 {
-		t.Fatalf("%d mallocs after %d iterations", runtime.MemStats.Mallocs, n)
+	runtime.ReadMemStats(memstats)
+	mallocs := memstats.Mallocs - oldmallocs
+	if mallocs > 5 {
+		t.Fatalf("%d mallocs after %d iterations", mallocs, n)
 	}
 }
 
@@ -1708,5 +1745,17 @@ func isNonNil(x interface{}) {
 func isValid(v Value) {
 	if !v.IsValid() {
 		panic("zero Value")
+	}
+}
+
+func TestAlias(t *testing.T) {
+	x := string("hello")
+	v := ValueOf(&x).Elem()
+	oldvalue := v.Interface()
+	v.SetString("world")
+	newvalue := v.Interface()
+
+	if oldvalue != "hello" || newvalue != "world" {
+		t.Errorf("aliasing: old=%q new=%q, want hello, world", oldvalue, newvalue)
 	}
 }

@@ -12,29 +12,34 @@ import (
 	"unicode"
 )
 
-// FormatMediaType serializes type t, subtype sub and the paramaters
-// param as a media type conform RFC 2045 and RFC 2616.
-// The type, subtype, and parameter names are written in lower-case.
+// FormatMediaType serializes mediatype t and the parameters
+// param as a media type conforming to RFC 2045 and RFC 2616.
+// The type and parameter names are written in lower-case.
 // When any of the arguments result in a standard violation then
 // FormatMediaType returns the empty string.
-func FormatMediaType(t, sub string, param map[string]string) string {
-	if !(IsToken(t) && IsToken(sub)) {
+func FormatMediaType(t string, param map[string]string) string {
+	slash := strings.Index(t, "/")
+	if slash == -1 {
+		return ""
+	}
+	major, sub := t[:slash], t[slash+1:]
+	if !isToken(major) || !isToken(sub) {
 		return ""
 	}
 	var b bytes.Buffer
-	b.WriteString(strings.ToLower(t))
+	b.WriteString(strings.ToLower(major))
 	b.WriteByte('/')
 	b.WriteString(strings.ToLower(sub))
 
 	for attribute, value := range param {
 		b.WriteByte(';')
 		b.WriteByte(' ')
-		if !IsToken(attribute) {
+		if !isToken(attribute) {
 			return ""
 		}
 		b.WriteString(strings.ToLower(attribute))
 		b.WriteByte('=')
-		if IsToken(value) {
+		if isToken(value) {
 			b.WriteString(value)
 			continue
 		}
@@ -200,7 +205,7 @@ func decode2231Enc(v string) string {
 }
 
 func isNotTokenChar(r rune) bool {
-	return !IsTokenChar(r)
+	return !isTokenChar(r)
 }
 
 // consumeToken consumes a token from the beginning of provided

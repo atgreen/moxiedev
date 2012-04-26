@@ -56,6 +56,10 @@ class Gcc_tree
   get_tree() const
   { return this->t_; }
 
+  void
+  set_tree(tree t)
+  { this->t_ = t; }
+
  private:
   tree t_;
 };
@@ -334,6 +338,9 @@ class Gcc_backend : public Backend
 
   Btype*
   fill_in_array(Btype*, Btype*, Bexpression*);
+
+  tree
+  non_zero_size_type(tree);
 };
 
 // A helper function.
@@ -602,7 +609,7 @@ Btype*
 Gcc_backend::placeholder_pointer_type(const std::string& name,
 				      Location location, bool)
 {
-  tree ret = build_variant_type_copy(ptr_type_node);
+  tree ret = build_distinct_type_copy(ptr_type_node);
   if (!name.empty())
     {
       tree decl = build_decl(location.gcc_location(), TYPE_DECL,
@@ -626,7 +633,7 @@ Gcc_backend::set_placeholder_pointer_type(Btype* placeholder,
   tree tt = to_type->get_tree();
   if (tt == error_mark_node)
     {
-      TREE_TYPE(pt) = tt;
+      placeholder->set_tree(error_mark_node);
       return false;
     }
   gcc_assert(TREE_CODE(tt) == POINTER_TYPE);
@@ -778,7 +785,10 @@ Gcc_backend::is_circular_pointer_type(Btype* btype)
 size_t
 Gcc_backend::type_size(Btype* btype)
 {
-  tree t = TYPE_SIZE_UNIT(btype->get_tree());
+  tree t = btype->get_tree();
+  if (t == error_mark_node)
+    return 1;
+  t = TYPE_SIZE_UNIT(t);
   gcc_assert(TREE_CODE(t) == INTEGER_CST);
   gcc_assert(TREE_INT_CST_HIGH(t) == 0);
   unsigned HOST_WIDE_INT val_wide = TREE_INT_CST_LOW(t);
@@ -792,7 +802,10 @@ Gcc_backend::type_size(Btype* btype)
 size_t
 Gcc_backend::type_alignment(Btype* btype)
 {
-  return TYPE_ALIGN_UNIT(btype->get_tree());
+  tree t = btype->get_tree();
+  if (t == error_mark_node)
+    return 1;
+  return TYPE_ALIGN_UNIT(t);
 }
 
 // Return the alignment of a struct field of type BTYPE.
@@ -800,7 +813,10 @@ Gcc_backend::type_alignment(Btype* btype)
 size_t
 Gcc_backend::type_field_alignment(Btype* btype)
 {
-  return go_field_alignment(btype->get_tree());
+  tree t = btype->get_tree();
+  if (t == error_mark_node)
+    return 1;
+  return go_field_alignment(t);
 }
 
 // Return the offset of a field in a struct.
@@ -809,6 +825,8 @@ size_t
 Gcc_backend::type_field_offset(Btype* btype, size_t index)
 {
   tree struct_tree = btype->get_tree();
+  if (struct_tree == error_mark_node)
+    return 0;
   gcc_assert(TREE_CODE(struct_tree) == RECORD_TYPE);
   tree field = TYPE_FIELDS(struct_tree);
   for (; index > 0; --index)
@@ -855,9 +873,27 @@ Gcc_backend::init_statement(Bvariable* var, Bexpression* init)
   if (var_tree == error_mark_node || init_tree == error_mark_node)
     return this->error_statement();
   gcc_assert(TREE_CODE(var_tree) == VAR_DECL);
-  DECL_INITIAL(var_tree) = init_tree;
-  return this->make_statement(build1_loc(DECL_SOURCE_LOCATION(var_tree),
-					 DECL_EXPR, void_type_node, var_tree));
+
+  // To avoid problems with GNU ld, we don't make zero-sized
+  // externally visible variables.  That might lead us to doing an
+  // initialization of a zero-sized expression to a non-zero sized
+  // variable, or vice-versa.  Avoid crashes by omitting the
+  // initializer.  Such initializations don't mean anything anyhow.
+  if (int_size_in_bytes(TREE_TYPE(var_tree)) != 0
+      && init_tree != NULL_TREE
+      && int_size_in_bytes(TREE_TYPE(init_tree)) != 0)
+    {
+      DECL_INITIAL(var_tree) = init_tree;
+      init_tree = NULL_TREE;
+    }
+
+  tree ret = build1_loc(DECL_SOURCE_LOCATION(var_tree), DECL_EXPR,
+			void_type_node, var_tree);
+  if (init_tree != NULL_TREE)
+    ret = build2_loc(DECL_SOURCE_LOCATION(var_tree), COMPOUND_EXPR,
+		     void_type_node, init_tree, ret);
+
+  return this->make_statement(ret);
 }
 
 // Assignment.
@@ -870,6 +906,42 @@ Gcc_backend::assignment_statement(Bexpression* lhs, Bexpression* rhs,
   tree rhs_tree = rhs->get_tree();
   if (lhs_tree == error_mark_node || rhs_tree == error_mark_node)
     return this->error_statement();
+
+  // To avoid problems with GNU ld, we don't make zero-sized
+  // externally visible variables.  That might lead us to doing an
+  // assignment of a zero-sized expression to a non-zero sized
+  // expression; avoid crashes here by avoiding assignments of
+  // zero-sized expressions.  Such assignments don't really mean
+  // anything anyhow.
+  if (int_size_in_bytes(TREE_TYPE(lhs_tree)) == 0
+      || int_size_in_bytes(TREE_TYPE(rhs_tree)) == 0)
+    return this->compound_statement(this->expression_statement(lhs),
+				    this->expression_statement(rhs));
+
+  // Sometimes the same unnamed Go type can be created multiple times
+  // and thus have multiple tree representations.  Make sure this does
+  // not confuse the middle-end.
+  if (TREE_TYPE(lhs_tree) != TREE_TYPE(rhs_tree))
+    {
+      tree lhs_type_tree = TREE_TYPE(lhs_tree);
+      gcc_assert(TREE_CODE(lhs_type_tree) == TREE_CODE(TREE_TYPE(rhs_tree)));
+      if (POINTER_TYPE_P(lhs_type_tree)
+	  || INTEGRAL_TYPE_P(lhs_type_tree)
+	  || SCALAR_FLOAT_TYPE_P(lhs_type_tree)
+	  || COMPLEX_FLOAT_TYPE_P(lhs_type_tree))
+	rhs_tree = fold_convert_loc(location.gcc_location(), lhs_type_tree,
+				    rhs_tree);
+      else if (TREE_CODE(lhs_type_tree) == RECORD_TYPE
+	       || TREE_CODE(lhs_type_tree) == ARRAY_TYPE)
+	{
+	  gcc_assert(int_size_in_bytes(lhs_type_tree)
+		     == int_size_in_bytes(TREE_TYPE(rhs_tree)));
+	  rhs_tree = fold_build1_loc(location.gcc_location(),
+				     VIEW_CONVERT_EXPR,
+				     lhs_type_tree, rhs_tree);
+	}
+    }
+
   return this->make_statement(fold_build2_loc(location.gcc_location(),
                                               MODIFY_EXPR,
 					      void_type_node,
@@ -1015,7 +1087,7 @@ Gcc_backend::switch_statement(
   if (tv == error_mark_node)
     return this->error_statement();
   tree t = build3_loc(switch_location.gcc_location(), SWITCH_EXPR,
-                      void_type_node, tv, stmt_list, NULL_TREE);
+                      NULL_TREE, tv, stmt_list, NULL_TREE);
   return this->make_statement(t);
 }
 
@@ -1163,6 +1235,48 @@ Gcc_backend::block_statement(Bblock* bblock)
   return this->make_statement(bind_tree);
 }
 
+// This is not static because we declare it with GTY(()) in go-c.h.
+tree go_non_zero_struct;
+
+// Return a type corresponding to TYPE with non-zero size.
+
+tree
+Gcc_backend::non_zero_size_type(tree type)
+{
+  if (int_size_in_bytes(type) != 0)
+    return type;
+
+  switch (TREE_CODE(type))
+    {
+    case RECORD_TYPE:
+      {
+	if (go_non_zero_struct == NULL_TREE)
+	  {
+	    type = make_node(RECORD_TYPE);
+	    tree field = build_decl(UNKNOWN_LOCATION, FIELD_DECL,
+				    get_identifier("dummy"),
+				    boolean_type_node);
+	    DECL_CONTEXT(field) = type;
+	    TYPE_FIELDS(type) = field;
+	    layout_type(type);
+	    go_non_zero_struct = type;
+	  }
+	return go_non_zero_struct;
+      }
+
+    case ARRAY_TYPE:
+      {
+	tree element_type = non_zero_size_type(TREE_TYPE(type));
+	return build_array_type_nelts(element_type, 1);
+      }
+
+    default:
+      gcc_unreachable();
+    }
+
+  gcc_unreachable();
+}
+
 // Make a global variable.
 
 Bvariable*
@@ -1177,6 +1291,10 @@ Gcc_backend::global_variable(const std::string& package_name,
   tree type_tree = btype->get_tree();
   if (type_tree == error_mark_node)
     return this->error_variable();
+
+  // The GNU linker does not like dynamic variables with zero size.
+  if ((is_external || !is_hidden) && int_size_in_bytes(type_tree) == 0)
+    type_tree = this->non_zero_size_type(type_tree);
 
   std::string var_name(package_name);
   var_name.push_back('.');

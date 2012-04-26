@@ -6,7 +6,9 @@ package types
 
 import (
 	"go/ast"
+	"go/build"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -15,23 +17,23 @@ import (
 	"time"
 )
 
-var gcName, gcPath string // compiler name and path
+var gcPath string // Go compiler path
 
 func init() {
 	// determine compiler
+	var gc string
 	switch runtime.GOARCH {
 	case "386":
-		gcName = "8g"
+		gc = "8g"
 	case "amd64":
-		gcName = "6g"
+		gc = "6g"
 	case "arm":
-		gcName = "5g"
+		gc = "5g"
 	default:
-		gcName = "unknown-GOARCH-compiler"
-		gcPath = gcName
+		gcPath = "unknown-GOARCH-compiler"
 		return
 	}
-	gcPath, _ = exec.LookPath(gcName)
+	gcPath = filepath.Join(build.ToolDir, gc)
 }
 
 func compile(t *testing.T, dirname, filename string) {
@@ -39,7 +41,7 @@ func compile(t *testing.T, dirname, filename string) {
 	cmd.Dir = dirname
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Errorf("%s %s failed: %s", gcName, filename, err)
+		t.Errorf("%s %s failed: %s", gcPath, filename, err)
 		return
 	}
 	t.Logf("%s", string(out))
@@ -50,7 +52,7 @@ func compile(t *testing.T, dirname, filename string) {
 var imports = make(map[string]*ast.Object)
 
 func testPath(t *testing.T, path string) bool {
-	_, err := GcImporter(imports, path)
+	_, err := GcImport(imports, path)
 	if err != nil {
 		t.Errorf("testPath(%s): %s", path, err)
 		return false
@@ -61,7 +63,7 @@ func testPath(t *testing.T, path string) bool {
 const maxTime = 3 * time.Second
 
 func testDir(t *testing.T, dir string, endTime time.Time) (nimports int) {
-	dirname := filepath.Join(pkgRoot, dir)
+	dirname := filepath.Join(runtime.GOROOT(), "pkg", runtime.GOOS+"_"+runtime.GOARCH, dir)
 	list, err := ioutil.ReadDir(dirname)
 	if err != nil {
 		t.Errorf("testDir(%s): %s", dirname, err)
@@ -90,6 +92,13 @@ func testDir(t *testing.T, dir string, endTime time.Time) (nimports int) {
 }
 
 func TestGcImport(t *testing.T) {
+	// On cross-compile builds, the path will not exist.
+	// Need to use GOHOSTOS, which is not available.
+	if _, err := os.Stat(gcPath); err != nil {
+		t.Logf("skipping test: %v", err)
+		return
+	}
+
 	compile(t, "testdata", "exports.go")
 
 	nimports := 0

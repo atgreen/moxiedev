@@ -1,3 +1,67 @@
+2012-04-11  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	* testsuite/lib/libgomp.exp: Add -fno-diagnostics-show-caret.
+
+2012-03-31  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR bootstrap/52812
+	* configure.tgt (i[456]86-*-linux*): Handle -mx32 like -m64.
+
+2012-03-22  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/52547
+	* testsuite/libgomp.c/pr52547.c: New test.
+
+2012-03-16  Bernhard Reutner-Fischer  <aldot@gcc.gnu.org>
+
+	* testsuite/lib/libgomp.exp: load fortran-modules.exp
+
+2012-03-14  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* configure.tgt (mips-sgi-irix6*): Remove.
+
+2012-03-12  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* configure.tgt (alpha*-dec-osf*): Remove.
+
+	* config/osf/sem.h: Remove.
+	* config/posix/lock.c (_XOPEN_SOURCE): Define unconditionally.
+
+2012-02-29  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* config/linux/sparc/futex.h (cpu_relax): Read from CC register.
+
+2012-02-27  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR libstdc++/52188
+	* acinclude.m4 (LIBGOMP_ENABLE_SYMVERS): Remove	symvers_renaming.
+	Remove ENABLE_SYMVERS_SOL2.
+	* configure: Regenerate.
+	* Makefile.am [LIBGOMP_BUILD_VERSIONED_SHLIB] (comma): New variable.
+	(PREPROCESS): New variable.
+	(libgomp.ver): New target.
+	[LIBGOMP_BUILD_VERSIONED_SHLIB &&
+	LIBGOMP_BUILD_VERSIONED_SHLIB_GNU]: Remove
+	LIBGOMP_BUILD_VERSIONED_SHLIB_SOL2 handling.
+	Use libgomp.ver.
+	[LIBGOMP_BUILD_VERSIONED_SHLIB_SUN]: Use libgomp.ver, libgomp.ver-sun.
+	* Makefile.in: Regenerate.
+
+2012-02-14  Walter Lee  <walt@tilera.com>
+
+	* configure.tgt: Handle tilegx and tilepro.
+	* config/linux/tile/futex.h: New file.
+
+2012-02-08  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/46886
+	* testsuite/libgomp.c/pr46886.c: New testcase.
+
+2012-01-25  Matthias Klose  <doko@ubuntu.com>
+
+	* config/linux/arm: Remove empty directory.
+	* configure.tgt (config_path): Remove linux-arm for arm*-*-linux*.
+
 2011-12-09  Alan Modra  <amodra@gmail.com>
 
 	PR libgomp/51376

@@ -898,13 +898,8 @@ case "${host}" in
         SYSTEMSPEC="-lunicows $SYSTEMSPEC"
       fi
     ;;
-    *-*-darwin9*)
+    *-*-darwin[[912]]*)
       SYSTEMSPEC="%{!Zdynamiclib:%{!Zbundle:-allow_stack_execute}}"
-    ;;
-    *-*-darwin[[12]]*)
-      # Something is incompatible with pie, would be nice to fix it and
-      # remove -no_pie.  PR49461
-      SYSTEMSPEC="-no_pie %{!Zdynamiclib:%{!Zbundle:-allow_stack_execute}}"
     ;;
     *)
       SYSTEMSPEC=
@@ -966,17 +961,9 @@ esac
 AC_CACHE_CHECK([for --no-merge-exidx-entries], [libgcj_cv_exidx],
   [saved_ldflags="$LDFLAGS"
    LDFLAGS="${LDFLAGS} -Wl,--no-merge-exidx-entries"
-   # The IRIX 6 ld doesn't recognize --no-merge-exidx-entries, but only
-   # warns about unknown options, which breaks the testsuite.  So enable
-   # AC_LANG_WERROR, but there's currently (autoconf 2.64) no way to turn
-   # it off again.  As a workaround, save and restore werror flag like
-   # AC_PATH_XTRA.
-   ac_xsave_[]_AC_LANG_ABBREV[]_werror_flag=$ac_[]_AC_LANG_ABBREV[]_werror_flag
-   AC_LANG_WERROR
    AC_LINK_IFELSE([int main(void){ return 0;} ],
 		      [eval "libgcj_cv_exidx=yes"],
 		      [eval "libgcj_cv_exidx=no"])
-   ac_[]_AC_LANG_ABBREV[]_werror_flag=$ac_xsave_[]_AC_LANG_ABBREV[]_werror_flag
    LDFLAGS="${saved_ldflags}"]
 )
 if test "${libgcj_cv_exidx}" = "yes"; then
@@ -1093,22 +1080,14 @@ case "$THREADS" in
 	THREADLDFLAGS=-pthread
 	THREADSPEC=-lpthread
 	;;
-     alpha*-dec-osf* | hppa*-hp-hpux*)
+     hppa*-hp-hpux*)
 	THREADCXXFLAGS=-pthread
 	# boehm-gc needs some functions from librt, so link that too.
 	THREADLIBS='-lpthread -lrt'
 	THREADSPEC='-lpthread -lrt'
 	;;
-     *-*-solaris2.8)
-	# Always use alternate thread library on Solaris 8.  Need libthread
-	# for TLS support.
-	# Need -Wl,-R to get it through libtool ...
-	THREADLIBS='-L/usr/lib/lwp$(MULTISUBDIR) -Wl,-R -Wl,/usr/lib/lwp$(MULTISUBDIR) -lpthread -lthread'
-	# ... while ld only accepts -R.
-	THREADSPEC='-L/usr/lib/lwp%{m64:/64} -R/usr/lib/lwp%{m64:/64} -lpthread -lthread'
-        ;;
      *-*-solaris2.9)
-	# As on Solaris 8, need libthread for TLS support.
+	# Need libthread for TLS support.
 	THREADLIBS='-lpthread -lthread'
 	THREADSPEC='-lpthread -lthread'
 	;;
@@ -1150,9 +1129,14 @@ case "$THREADS" in
     # FIXME: In Java we are able to detect thread death at the end of
     # Thread.run() so we should be able to clean up the exception handling
     # contexts ourselves.
-    THREADSTARTFILESPEC='crtmt%O%s'
+    case "$host" in
+    *-w64-mingw*)
+      ;;
+    *)
+      THREADSTARTFILESPEC='crtmt%O%s'
+      ;;
+    esac
     ;;
-
  none)
     THREADH=no-threads.h
     ;;
@@ -1481,10 +1465,6 @@ else
    # requires -ldl.
    if test "$GC" = boehm; then
       case "${host}" in
-          mips-sgi-irix6*)
-	    # While IRIX 6 has libdl for the O32 and N32 ABIs, the N64 one is
-	    # missing.  It's unnecessary anyway since dlopen lives in libc.
-	    ;;
 	  *-*-darwin*)
 	    ;;
 	  *)
@@ -1636,7 +1616,7 @@ TL_AC_GXX_INCLUDE_DIR
 # BSD_COMP is defined; just including sys/filio.h is simpler.
 # We avoid AC_HEADER_DIRENT since we really only care about dirent.h
 # for now.  If you change this, you also must update natFile.cc.
-AC_CHECK_HEADERS([unistd.h bstring.h sys/time.h sys/types.h fcntl.h \
+AC_CHECK_HEADERS([unistd.h sys/time.h sys/types.h fcntl.h \
 		  sys/ioctl.h sys/filio.h sys/stat.h sys/select.h \
 		  sys/socket.h netinet/in.h arpa/inet.h netdb.h \
 		  pwd.h sys/config.h stdint.h langinfo.h locale.h \
@@ -1732,7 +1712,7 @@ SYSDEP_SOURCES=
 SIGNAL_HANDLER_AUX=
 
 case "${host}" in
- alpha*-dec-osf* | mips-sgi-irix* | *-*-solaris2*)
+ *-*-solaris2*)
     SIGNAL_HANDLER=include/posix-signal.h
     ;;
  i?86-*-linux*)

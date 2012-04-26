@@ -1382,7 +1382,7 @@ finish_asm_stmt (int volatile_p, tree string, tree output_operands,
       for (i = 0, t = input_operands; t; ++i, t = TREE_CHAIN (t))
 	{
 	  constraint = TREE_STRING_POINTER (TREE_VALUE (TREE_PURPOSE (t)));
-	  operand = decay_conversion (TREE_VALUE (t));
+	  operand = decay_conversion (TREE_VALUE (t), tf_warning_or_error);
 
 	  /* If the type of the operand hasn't been determined (e.g.,
 	     because it involves an overloaded function), then issue
@@ -1590,7 +1590,7 @@ finish_non_static_data_member (tree decl, tree object, tree qualifying_scope)
   else if (processing_template_decl)
     return build_qualified_name (TREE_TYPE (decl),
 				 qualifying_scope,
-				 DECL_NAME (decl),
+				 decl,
 				 /*template_p=*/false);
   else
     {
@@ -2807,23 +2807,20 @@ finish_base_specifier (tree base, tree access, bool virtual_p)
 tree
 baselink_for_fns (tree fns)
 {
-  tree fn;
+  tree scope;
   tree cl;
 
   if (BASELINK_P (fns) 
       || error_operand_p (fns))
     return fns;
-  
-  fn = fns;
-  if (TREE_CODE (fn) == TEMPLATE_ID_EXPR)
-    fn = TREE_OPERAND (fn, 0);
-  fn = get_first_fn (fn);
-  if (!DECL_FUNCTION_MEMBER_P (fn))
+
+  scope = ovl_scope (fns);
+  if (!CLASS_TYPE_P (scope))
     return fns;
 
-  cl = currently_open_derived_class (DECL_CONTEXT (fn));
+  cl = currently_open_derived_class (scope);
   if (!cl)
-    cl = DECL_CONTEXT (fn);
+    cl = scope;
   cl = TYPE_BINFO (cl);
   return build_baselink (cl, cl, fns, /*optype=*/NULL_TREE);
 }
@@ -5924,6 +5921,12 @@ build_constexpr_constructor_member_initializers (tree type, tree body)
 	    break;
 	}
     }
+  else if (TREE_CODE (body) == TRY_BLOCK)
+    {
+      error ("body of %<constexpr%> constructor cannot be "
+	     "a function-try-block");
+      return error_mark_node;
+    }
   else if (EXPR_P (body))
     ok = build_data_member_initialization (body, &vec);
   else
@@ -6028,13 +6031,28 @@ cx_check_missing_mem_inits (tree fun, tree body, bool complain)
   bool bad;
   tree field;
   unsigned i, nelts;
+  tree ctype;
 
   if (TREE_CODE (body) != CONSTRUCTOR)
     return false;
 
-  bad = false;
   nelts = CONSTRUCTOR_NELTS (body);
-  field = TYPE_FIELDS (DECL_CONTEXT (fun));
+  ctype = DECL_CONTEXT (fun);
+  field = TYPE_FIELDS (ctype);
+
+  if (TREE_CODE (ctype) == UNION_TYPE)
+    {
+      if (nelts == 0 && next_initializable_field (field))
+	{
+	  if (complain)
+	    error ("%<constexpr%> constructor for union %qT must "
+		   "initialize exactly one non-static data member", ctype);
+	  return true;
+	}
+      return false;
+    }
+
+  bad = false;
   for (i = 0; i <= nelts; ++i)
     {
       tree index;
@@ -6053,8 +6071,6 @@ cx_check_missing_mem_inits (tree fun, tree body, bool complain)
 	  if (TREE_CODE (field) != FIELD_DECL
 	      || (DECL_C_BIT_FIELD (field) && !DECL_NAME (field)))
 	    continue;
-	  if (!complain)
-	    return true;
 	  ftype = strip_array_types (TREE_TYPE (field));
 	  if (type_has_constexpr_default_constructor (ftype))
 	    {
@@ -6065,6 +6081,8 @@ cx_check_missing_mem_inits (tree fun, tree body, bool complain)
 				   || errorcount != 0);
 	      continue;
 	    }
+	  if (!complain)
+	    return true;
 	  error ("uninitialized member %qD in %<constexpr%> constructor",
 		 field);
 	  bad = true;
@@ -7190,7 +7208,8 @@ cxx_fold_indirect_ref (location_t loc, tree type, tree op0, bool *empty_base)
   sub = op0;
   STRIP_NOPS (sub);
   subtype = TREE_TYPE (sub);
-  gcc_assert (POINTER_TYPE_P (subtype));
+  if (!POINTER_TYPE_P (subtype))
+    return NULL_TREE;
 
   if (TREE_CODE (sub) == ADDR_EXPR)
     {
@@ -8679,18 +8698,16 @@ begin_lambda_type (tree lambda)
 tree
 lambda_return_type (tree expr)
 {
-  tree type;
+  if (expr == NULL_TREE)
+    return void_type_node;
   if (type_unknown_p (expr)
       || BRACE_ENCLOSED_INITIALIZER_P (expr))
     {
       cxx_incomplete_type_error (expr, TREE_TYPE (expr));
       return void_type_node;
     }
-  if (type_dependent_expression_p (expr))
-    type = dependent_lambda_return_type_node;
-  else
-    type = cv_unqualified (type_decays_to (unlowered_expr_type (expr)));
-  return type;
+  gcc_checking_assert (!type_dependent_expression_p (expr));
+  return cv_unqualified (type_decays_to (unlowered_expr_type (expr)));
 }
 
 /* Given a LAMBDA_EXPR or closure type LAMBDA, return the op() of the
@@ -8737,28 +8754,31 @@ lambda_capture_field_type (tree expr)
   return type;
 }
 
-/* Recompute the return type for LAMBDA with body of the form:
-     { return EXPR ; }  */
+/* Insert the deduced return type for an auto function.  */
 
 void
-apply_lambda_return_type (tree lambda, tree return_type)
+apply_deduced_return_type (tree fco, tree return_type)
 {
-  tree fco = lambda_function (lambda);
   tree result;
-
-  LAMBDA_EXPR_RETURN_TYPE (lambda) = return_type;
 
   if (return_type == error_mark_node)
     return;
-  if (TREE_TYPE (TREE_TYPE (fco)) == return_type)
-    return;
 
-  /* TREE_TYPE (FUNCTION_DECL) == METHOD_TYPE
-     TREE_TYPE (METHOD_TYPE)   == return-type  */
+  if (LAMBDA_FUNCTION_P (fco))
+    {
+      tree lambda = CLASSTYPE_LAMBDA_EXPR (current_class_type);
+      LAMBDA_EXPR_RETURN_TYPE (lambda) = return_type;
+    }
+
+  if (DECL_CONV_FN_P (fco))
+    DECL_NAME (fco) = mangle_conv_op_name_for_type (return_type);
+
   TREE_TYPE (fco) = change_return_type (return_type, TREE_TYPE (fco));
 
   result = DECL_RESULT (fco);
   if (result == NULL_TREE)
+    return;
+  if (TREE_TYPE (result) == return_type)
     return;
 
   /* We already have a DECL_RESULT from start_preparsed_function.
@@ -8774,12 +8794,13 @@ apply_lambda_return_type (tree lambda, tree return_type)
 
   DECL_RESULT (fco) = result;
 
-  if (!processing_template_decl && aggregate_value_p (result, fco))
+  if (!processing_template_decl)
     {
+      bool aggr = aggregate_value_p (result, fco);
 #ifdef PCC_STATIC_STRUCT_RETURN
-      cfun->returns_pcc_struct = 1;
+      cfun->returns_pcc_struct = aggr;
 #endif
-      cfun->returns_struct = 1;
+      cfun->returns_struct = aggr;
     }
 
 }
@@ -9344,7 +9365,7 @@ maybe_add_lambda_conv_op (tree type)
   body = begin_function_body ();
   compound_stmt = begin_compound_stmt (0);
 
-  finish_return_stmt (decay_conversion (statfn));
+  finish_return_stmt (decay_conversion (statfn, tf_warning_or_error));
 
   finish_compound_stmt (compound_stmt);
   finish_function_body (body);

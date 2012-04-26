@@ -124,7 +124,7 @@ func (h *Handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		"GATEWAY_INTERFACE=CGI/1.1",
 		"REQUEST_METHOD=" + req.Method,
 		"QUERY_STRING=" + req.URL.RawQuery,
-		"REQUEST_URI=" + req.URL.RawPath,
+		"REQUEST_URI=" + req.URL.RequestURI(),
 		"PATH_INFO=" + pathInfo,
 		"SCRIPT_NAME=" + root,
 		"SCRIPT_FILENAME=" + h.Path,
@@ -217,7 +217,7 @@ func (h *Handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	defer cmd.Wait()
 	defer stdoutRead.Close()
 
-	linebody, _ := bufio.NewReaderSize(stdoutRead, 1024)
+	linebody := bufio.NewReaderSize(stdoutRead, 1024)
 	headers := make(http.Header)
 	statusCode := 0
 	for {

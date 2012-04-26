@@ -7,6 +7,7 @@ package rand
 import (
 	"bytes"
 	"compress/flate"
+	"io"
 	"testing"
 )
 
@@ -16,13 +17,13 @@ func TestRead(t *testing.T) {
 		n = 1e5
 	}
 	b := make([]byte, n)
-	n, err := Read(b)
+	n, err := io.ReadFull(Reader, b)
 	if n != len(b) || err != nil {
-		t.Fatalf("Read(buf) = %d, %s", n, err)
+		t.Fatalf("ReadFull(buf) = %d, %s", n, err)
 	}
 
 	var z bytes.Buffer
-	f := flate.NewWriter(&z, 5)
+	f, _ := flate.NewWriter(&z, 5)
 	f.Write(b)
 	f.Close()
 	if z.Len() < len(b)*99/100 {

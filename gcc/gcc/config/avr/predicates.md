@@ -45,29 +45,32 @@
 ;; Return true if OP is a valid address for lower half of I/O space.
 (define_predicate "low_io_address_operand"
   (and (match_code "const_int")
-       (match_test "IN_RANGE((INTVAL (op)), 0x20, 0x3F)")))
+       (match_test "IN_RANGE (INTVAL (op) - avr_current_arch->sfr_offset,
+                              0, 0x1f)")))
 
 ;; Return true if OP is a valid address for high half of I/O space.
 (define_predicate "high_io_address_operand"
   (and (match_code "const_int")
-       (match_test "IN_RANGE((INTVAL (op)), 0x40, 0x5F)")))
+       (match_test "IN_RANGE (INTVAL (op) - avr_current_arch->sfr_offset,
+                              0x20, 0x3F)")))
 
 ;; Return true if OP is a valid address of I/O space.
 (define_predicate "io_address_operand"
   (and (match_code "const_int")
-       (match_test "IN_RANGE((INTVAL (op)), 0x20, (0x60 - GET_MODE_SIZE(mode)))")))
+       (match_test "IN_RANGE (INTVAL (op) - avr_current_arch->sfr_offset,
+                              0, 0x40 - GET_MODE_SIZE (mode))")))
 
-;; Return 1 if OP is a general operand not in program memory
+;; Return 1 if OP is a general operand not in flash memory
 (define_predicate "nop_general_operand"
   (and (match_operand 0 "general_operand")
-       (match_test "!avr_mem_pgm_p (op)")))
+       (match_test "!avr_mem_flash_p (op)")))
 
 ;; Return 1 if OP is an "ordinary" general operand, i.e. a general
 ;; operand whose load is not handled by a libgcc call or ELPM.
 (define_predicate "nox_general_operand"
   (and (match_operand 0 "general_operand")
        (not (match_test "avr_load_libgcc_p (op)"))
-       (not (match_test "avr_mem_pgmx_p (op)"))))
+       (not (match_test "avr_mem_memx_p (op)"))))
 
 ;; Return 1 if OP is the zero constant for MODE.
 (define_predicate "const0_operand"

@@ -266,6 +266,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "params.h"
 
 static tree analyze_scalar_evolution_1 (struct loop *, tree, tree);
+static tree analyze_scalar_evolution_for_address_of (struct loop *loop,
+						     tree var);
 
 /* The cached information about an SSA name VAR, claiming that below
    basic block INSTANTIATED_BELOW, the value of VAR can be expressed
@@ -497,65 +499,6 @@ compute_overall_effect_of_inner_loop (struct loop *loop, tree evolution_fn)
 
   else
     return chrec_dont_know;
-}
-
-/* Determine whether the CHREC is always positive/negative.  If the expression
-   cannot be statically analyzed, return false, otherwise set the answer into
-   VALUE.  */
-
-bool
-chrec_is_positive (tree chrec, bool *value)
-{
-  bool value0, value1, value2;
-  tree end_value, nb_iter;
-
-  switch (TREE_CODE (chrec))
-    {
-    case POLYNOMIAL_CHREC:
-      if (!chrec_is_positive (CHREC_LEFT (chrec), &value0)
-	  || !chrec_is_positive (CHREC_RIGHT (chrec), &value1))
-	return false;
-
-      /* FIXME -- overflows.  */
-      if (value0 == value1)
-	{
-	  *value = value0;
-	  return true;
-	}
-
-      /* Otherwise the chrec is under the form: "{-197, +, 2}_1",
-	 and the proof consists in showing that the sign never
-	 changes during the execution of the loop, from 0 to
-	 loop->nb_iterations.  */
-      if (!evolution_function_is_affine_p (chrec))
-	return false;
-
-      nb_iter = number_of_latch_executions (get_chrec_loop (chrec));
-      if (chrec_contains_undetermined (nb_iter))
-	return false;
-
-#if 0
-      /* TODO -- If the test is after the exit, we may decrease the number of
-	 iterations by one.  */
-      if (after_exit)
-	nb_iter = chrec_fold_minus (type, nb_iter, build_int_cst (type, 1));
-#endif
-
-      end_value = chrec_apply (CHREC_VARIABLE (chrec), chrec, nb_iter);
-
-      if (!chrec_is_positive (end_value, &value2))
-	return false;
-
-      *value = value0;
-      return value0 == value1;
-
-    case INTEGER_CST:
-      *value = (tree_int_cst_sgn (chrec) == 1);
-      return true;
-
-    default:
-      return false;
-    }
 }
 
 /* Associate CHREC to SCALAR.  */
@@ -1712,16 +1655,59 @@ interpret_rhs_expr (struct loop *loop, gimple at_stmt,
   switch (code)
     {
     case ADDR_EXPR:
-      /* Handle &MEM[ptr + CST] which is equivalent to POINTER_PLUS_EXPR.  */
-      if (TREE_CODE (TREE_OPERAND (rhs1, 0)) != MEM_REF)
-	{
-	  res = chrec_dont_know;
-	  break;
-	}
+      if (TREE_CODE (TREE_OPERAND (rhs1, 0)) == MEM_REF
+	  || handled_component_p (TREE_OPERAND (rhs1, 0)))
+        {
+	  enum machine_mode mode;
+	  HOST_WIDE_INT bitsize, bitpos;
+	  int unsignedp;
+	  int volatilep = 0;
+	  tree base, offset;
+	  tree chrec3;
+	  tree unitpos;
 
-      rhs2 = TREE_OPERAND (TREE_OPERAND (rhs1, 0), 1);
-      rhs1 = TREE_OPERAND (TREE_OPERAND (rhs1, 0), 0);
-      /* Fall through.  */
+	  base = get_inner_reference (TREE_OPERAND (rhs1, 0),
+				      &bitsize, &bitpos, &offset,
+				      &mode, &unsignedp, &volatilep, false);
+
+	  if (TREE_CODE (base) == MEM_REF)
+	    {
+	      rhs2 = TREE_OPERAND (base, 1);
+	      rhs1 = TREE_OPERAND (base, 0);
+
+	      chrec1 = analyze_scalar_evolution (loop, rhs1);
+	      chrec2 = analyze_scalar_evolution (loop, rhs2);
+	      chrec1 = chrec_convert (type, chrec1, at_stmt);
+	      chrec2 = chrec_convert (TREE_TYPE (rhs2), chrec2, at_stmt);
+	      res = chrec_fold_plus (type, chrec1, chrec2);
+	    }
+	  else
+	    {
+	      chrec1 = analyze_scalar_evolution_for_address_of (loop, base);
+	      chrec1 = chrec_convert (type, chrec1, at_stmt);
+	      res = chrec1;
+	    }
+
+	  if (offset != NULL_TREE)
+	    {
+	      chrec2 = analyze_scalar_evolution (loop, offset);
+	      chrec2 = chrec_convert (TREE_TYPE (offset), chrec2, at_stmt);
+	      res = chrec_fold_plus (type, res, chrec2);
+	    }
+
+	  if (bitpos != 0)
+	    {
+	      gcc_assert ((bitpos % BITS_PER_UNIT) == 0);
+
+	      unitpos = size_int (bitpos / BITS_PER_UNIT);
+	      chrec3 = analyze_scalar_evolution (loop, unitpos);
+	      chrec3 = chrec_convert (TREE_TYPE (unitpos), chrec3, at_stmt);
+	      res = chrec_fold_plus (type, res, chrec3);
+	    }
+        }
+      else
+	res = chrec_dont_know;
+      break;
 
     case POINTER_PLUS_EXPR:
       chrec1 = analyze_scalar_evolution (loop, rhs1);
@@ -1959,6 +1945,14 @@ analyze_scalar_evolution (struct loop *loop, tree var)
     fprintf (dump_file, ")\n");
 
   return res;
+}
+
+/* Analyzes and returns the scalar evolution of VAR address in LOOP.  */
+
+static tree
+analyze_scalar_evolution_for_address_of (struct loop *loop, tree var)
+{
+  return analyze_scalar_evolution (loop, build_fold_addr_expr (var));
 }
 
 /* Analyze scalar evolution of use of VERSION in USE_LOOP with respect to

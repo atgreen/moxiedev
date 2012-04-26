@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/char_traits/requirements/explicit_instantiation
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,6 +26,9 @@ bonzini
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+char
+dir
+
 short
 dir
 
@@ -36,8 +39,5 @@ char16_t
 dir
 
 wchar_t
-dir
-
-char
 dir
 

@@ -38,6 +38,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "diagnostic-core.h"
 #include "gimple.h"
 #include "target.h"
+#include "cfgloop.h"
 
 /* In some instances a tree and a gimple need to be stored in a same table,
    i.e. in hash tables. This is a structure to do this. */
@@ -2532,7 +2533,7 @@ tree_could_trap_p (tree expr)
 	  if (!DECL_EXTERNAL (expr))
 	    return false;
 	  node = cgraph_function_node (cgraph_get_node (expr), NULL);
-	  if (node && node->in_other_partition)
+	  if (node && node->symbol.in_other_partition)
 	    return false;
 	  return true;
 	}
@@ -2548,7 +2549,7 @@ tree_could_trap_p (tree expr)
 	  if (!DECL_EXTERNAL (expr))
 	    return false;
 	  node = varpool_variable_node (varpool_get_node (expr), NULL);
-	  if (node && node->in_other_partition)
+	  if (node && node->symbol.in_other_partition)
 	    return false;
 	  return true;
 	}
@@ -3041,6 +3042,8 @@ lower_resx (basic_block bb, gimple stmt, struct pointer_map_t *mnt_map)
 	      gimple_stmt_iterator gsi2;
 
 	      new_bb = create_empty_bb (bb);
+	      if (current_loops)
+		add_bb_to_loop (new_bb, bb->loop_father);
 	      lab = gimple_block_label (new_bb);
 	      gsi2 = gsi_start_bb (new_bb);
 
@@ -3265,12 +3268,12 @@ sink_clobbers (basic_block bb)
       vdef = gimple_vdef (stmt);
       if (vdef && TREE_CODE (vdef) == SSA_NAME)
 	{
+	  release_ssa_name (vdef);
 	  vdef = SSA_NAME_VAR (vdef);
 	  mark_sym_for_renaming (vdef);
 	  gimple_set_vdef (stmt, vdef);
 	  gimple_set_vuse (stmt, vdef);
 	}
-      release_defs (stmt);
       gsi_insert_before (&dgsi, stmt, GSI_SAME_STMT);
     }
 
@@ -3617,14 +3620,40 @@ remove_unreachable_handlers_no_lp (void)
 {
   eh_region r;
   int i;
+  sbitmap r_reachable;
+  basic_block bb;
+
+  r_reachable = sbitmap_alloc (VEC_length (eh_region, cfun->eh->region_array));
+  sbitmap_zero (r_reachable);
+
+  FOR_EACH_BB (bb)
+    {
+      gimple stmt = last_stmt (bb);
+      if (stmt)
+	/* Avoid removing regions referenced from RESX/EH_DISPATCH.  */
+	switch (gimple_code (stmt))
+	  {
+	  case GIMPLE_RESX:
+	    SET_BIT (r_reachable, gimple_resx_region (stmt));
+	    break;
+	  case GIMPLE_EH_DISPATCH:
+	    SET_BIT (r_reachable, gimple_eh_dispatch_region (stmt));
+	    break;
+	  default:
+	    break;
+	  }
+    }
 
   for (i = 1; VEC_iterate (eh_region, cfun->eh->region_array, i, r); ++i)
-    if (r && r->landing_pads == NULL && r->type != ERT_MUST_NOT_THROW)
+    if (r && r->landing_pads == NULL && r->type != ERT_MUST_NOT_THROW
+	&& !TEST_BIT (r_reachable, i))
       {
 	if (dump_file)
 	  fprintf (dump_file, "Removing unreachable region %d\n", i);
 	remove_eh_handler (r);
       }
+
+  sbitmap_free (r_reachable);
 }
 
 /* Undo critical edge splitting on an EH landing pad.  Earlier, we
@@ -3887,6 +3916,21 @@ cleanup_empty_eh_merge_phis (basic_block new_bb, basic_block old_bb,
   for (ei = ei_start (old_bb->preds); (e = ei_safe_edge (ei)); )
     if (e->flags & EDGE_EH)
       {
+	/* ???  CFG manipluation routines do not try to update loop
+	   form on edge redirection.  Do so manually here for now.  */
+	/* If we redirect a loop entry or latch edge that will either create
+	   a multiple entry loop or rotate the loop.  If the loops merge
+	   we may have created a loop with multiple latches.
+	   All of this isn't easily fixed thus cancel the affected loop
+	   and mark the other loop as possibly having multiple latches.  */
+	if (current_loops
+	    && e->dest == e->dest->loop_father->header)
+	  {
+	    e->dest->loop_father->header = NULL;
+	    e->dest->loop_father->latch = NULL;
+	    new_bb->loop_father->latch = NULL;
+	    loops_state_set (LOOPS_NEED_FIXUP|LOOPS_MAY_HAVE_MULTIPLE_LATCHES);
+	  }
 	redirect_eh_edge_1 (e, new_bb, change_region);
 	redirect_edge_succ (e, new_bb);
 	flush_pending_stmts (e);
@@ -3926,7 +3970,7 @@ cleanup_empty_eh_move_lp (basic_block bb, edge e_out,
 
   /* Delete the RESX that was matched within the empty handler block.  */
   gsi = gsi_last_bb (bb);
-  mark_virtual_ops_for_renaming (gsi_stmt (gsi));
+  unlink_stmt_vdef (gsi_stmt (gsi));
   gsi_remove (&gsi, true);
 
   /* Clean up E_OUT for the fallthru.  */
@@ -4030,6 +4074,7 @@ cleanup_empty_eh (eh_landing_pad lp)
   edge_iterator ei;
   edge e, e_out;
   bool has_non_eh_pred;
+  bool ret = false;
   int new_lp_nr;
 
   /* There can be zero or one edges out of BB.  This is the quickest test.  */
@@ -4044,6 +4089,16 @@ cleanup_empty_eh (eh_landing_pad lp)
     default:
       return false;
     }
+
+  resx = last_stmt (bb);
+  if (resx && is_gimple_resx (resx))
+    {
+      if (stmt_can_throw_external (resx))
+	optimize_clobbers (bb);
+      else if (sink_clobbers (bb))
+	ret = true;
+    }
+
   gsi = gsi_after_labels (bb);
 
   /* Make sure to skip debug statements.  */
@@ -4055,9 +4110,9 @@ cleanup_empty_eh (eh_landing_pad lp)
     {
       /* For the degenerate case of an infinite loop bail out.  */
       if (infinite_empty_loop_p (e_out))
-	return false;
+	return ret;
 
-      return cleanup_empty_eh_unsplit (bb, e_out, lp);
+      return ret | cleanup_empty_eh_unsplit (bb, e_out, lp);
     }
 
   /* The block should consist only of a single RESX statement, modulo a
@@ -4070,7 +4125,7 @@ cleanup_empty_eh (eh_landing_pad lp)
       resx = gsi_stmt (gsi);
     }
   if (!is_gimple_resx (resx))
-    return false;
+    return ret;
   gcc_assert (gsi_one_before_end_p (gsi));
 
   /* Determine if there are non-EH edges, or resx edges into the handler.  */
@@ -4146,7 +4201,7 @@ cleanup_empty_eh (eh_landing_pad lp)
       return true;
     }
 
-  return false;
+  return ret;
 
  succeed:
   if (dump_file && (dump_flags & TDF_DETAILS))

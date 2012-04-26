@@ -1534,11 +1534,13 @@ struct GTY(()) tree_complex {
 };
 
 /* In a VECTOR_CST node.  */
-#define TREE_VECTOR_CST_ELTS(NODE) (VECTOR_CST_CHECK (NODE)->vector.elements)
+#define VECTOR_CST_NELTS(NODE) (TYPE_VECTOR_SUBPARTS (TREE_TYPE (NODE)))
+#define VECTOR_CST_ELTS(NODE) (VECTOR_CST_CHECK (NODE)->vector.elts)
+#define VECTOR_CST_ELT(NODE,IDX) (VECTOR_CST_CHECK (NODE)->vector.elts[IDX])
 
 struct GTY(()) tree_vector {
   struct tree_typed typed;
-  tree elements;
+  tree GTY ((length ("TYPE_VECTOR_SUBPARTS (TREE_TYPE ((tree)&%h))"))) elts[1];
 };
 
 #include "symtab.h"
@@ -2087,6 +2089,9 @@ struct GTY(()) tree_omp_clause {
 #define BLOCK_CHAIN(NODE) (BLOCK_CHECK (NODE)->block.chain)
 #define BLOCK_ABSTRACT_ORIGIN(NODE) (BLOCK_CHECK (NODE)->block.abstract_origin)
 #define BLOCK_ABSTRACT(NODE) (BLOCK_CHECK (NODE)->block.abstract_flag)
+
+/* True if BLOCK has the same ranges as its BLOCK_SUPERCONTEXT.  */
+#define BLOCK_SAME_RANGE(NODE) (BLOCK_CHECK (NODE)->base.nameless_flag)
 
 /* An index number for this block.  These values are not guaranteed to
    be unique across functions -- whether or not they are depends on
@@ -3021,6 +3026,11 @@ struct GTY(()) tree_decl_with_rtl {
 #define DECL_BIT_FIELD_TYPE(NODE) \
   (FIELD_DECL_CHECK (NODE)->field_decl.bit_field_type)
 
+/* In a FIELD_DECL of a RECORD_TYPE, this is a pointer to the storage
+   representative FIELD_DECL.  */
+#define DECL_BIT_FIELD_REPRESENTATIVE(NODE) \
+  (FIELD_DECL_CHECK (NODE)->field_decl.qualifier)
+
 /* For a FIELD_DECL in a QUAL_UNION_TYPE, records the expression, which
    if nonzero, indicates that the field occupies the type.  */
 #define DECL_QUALIFIER(NODE) (FIELD_DECL_CHECK (NODE)->field_decl.qualifier)
@@ -3737,6 +3747,7 @@ enum tree_index
   TI_UINTDI_TYPE,
   TI_UINTTI_TYPE,
 
+  TI_UINT16_TYPE,
   TI_UINT32_TYPE,
   TI_UINT64_TYPE,
 
@@ -3892,6 +3903,7 @@ extern GTY(()) tree global_trees[TI_MAX];
 #define unsigned_intDI_type_node	global_trees[TI_UINTDI_TYPE]
 #define unsigned_intTI_type_node	global_trees[TI_UINTTI_TYPE]
 
+#define uint16_type_node		global_trees[TI_UINT16_TYPE]
 #define uint32_type_node		global_trees[TI_UINT32_TYPE]
 #define uint64_type_node		global_trees[TI_UINT64_TYPE]
 
@@ -4329,7 +4341,10 @@ build_int_cstu (tree type, unsigned HOST_WIDE_INT cst)
 extern tree build_int_cst (tree, HOST_WIDE_INT);
 extern tree build_int_cst_type (tree, HOST_WIDE_INT);
 extern tree build_int_cst_wide (tree, unsigned HOST_WIDE_INT, HOST_WIDE_INT);
-extern tree build_vector (tree, tree);
+extern tree make_vector_stat (unsigned MEM_STAT_DECL);
+#define make_vector(n) make_vector_stat (n MEM_STAT_INFO)
+extern tree build_vector_stat (tree, tree * MEM_STAT_DECL);
+#define build_vector(t,v) build_vector_stat (t, v MEM_STAT_INFO)
 extern tree build_vector_from_ctor (tree, VEC(constructor_elt,gc) *);
 extern tree build_vector_from_val (tree, tree);
 extern tree build_constructor (tree, VEC(constructor_elt,gc) *);
@@ -4776,18 +4791,19 @@ extern HOST_WIDE_INT int_byte_position (const_tree);
 
 enum size_type_kind
 {
-  SIZETYPE,		/* Normal representation of sizes in bytes.  */
-  SSIZETYPE,		/* Signed representation of sizes in bytes.  */
-  BITSIZETYPE,		/* Normal representation of sizes in bits.  */
-  SBITSIZETYPE,		/* Signed representation of sizes in bits.  */
-  TYPE_KIND_LAST};
+  stk_sizetype,		/* Normal representation of sizes in bytes.  */
+  stk_ssizetype,	/* Signed representation of sizes in bytes.  */
+  stk_bitsizetype,	/* Normal representation of sizes in bits.  */
+  stk_sbitsizetype,	/* Signed representation of sizes in bits.  */
+  stk_type_kind_last
+};
 
-extern GTY(()) tree sizetype_tab[(int) TYPE_KIND_LAST];
+extern GTY(()) tree sizetype_tab[(int) stk_type_kind_last];
 
-#define sizetype sizetype_tab[(int) SIZETYPE]
-#define bitsizetype sizetype_tab[(int) BITSIZETYPE]
-#define ssizetype sizetype_tab[(int) SSIZETYPE]
-#define sbitsizetype sizetype_tab[(int) SBITSIZETYPE]
+#define sizetype sizetype_tab[(int) stk_sizetype]
+#define bitsizetype sizetype_tab[(int) stk_bitsizetype]
+#define ssizetype sizetype_tab[(int) stk_ssizetype]
+#define sbitsizetype sizetype_tab[(int) stk_sbitsizetype]
 
 extern tree size_int_kind (HOST_WIDE_INT, enum size_type_kind);
 #define size_binop(CODE,T1,T2)\
@@ -4797,10 +4813,10 @@ extern tree size_binop_loc (location_t, enum tree_code, tree, tree);
    size_diffop_loc (UNKNOWN_LOCATION, T1, T2)
 extern tree size_diffop_loc (location_t, tree, tree);
 
-#define size_int(L) size_int_kind (L, SIZETYPE)
-#define ssize_int(L) size_int_kind (L, SSIZETYPE)
-#define bitsize_int(L) size_int_kind (L, BITSIZETYPE)
-#define sbitsize_int(L) size_int_kind (L, SBITSIZETYPE)
+#define size_int(L) size_int_kind (L, stk_sizetype)
+#define ssize_int(L) size_int_kind (L, stk_ssizetype)
+#define bitsize_int(L) size_int_kind (L, stk_bitsizetype)
+#define sbitsize_int(L) size_int_kind (L, stk_sbitsizetype)
 
 #define round_up(T,N) round_up_loc (UNKNOWN_LOCATION, T, N)
 extern tree round_up_loc (location_t, tree, int);
@@ -5018,13 +5034,13 @@ handled_component_p (const_tree t)
 {
   switch (TREE_CODE (t))
     {
-    case BIT_FIELD_REF:
     case COMPONENT_REF:
+    case BIT_FIELD_REF:
     case ARRAY_REF:
     case ARRAY_RANGE_REF:
-    case VIEW_CONVERT_EXPR:
     case REALPART_EXPR:
     case IMAGPART_EXPR:
+    case VIEW_CONVERT_EXPR:
       return true;
 
     default:
@@ -5050,6 +5066,8 @@ extern bool contains_packed_reference (const_tree exp);
    of EXP, an ARRAY_REF or an ARRAY_RANGE_REF.  */
 
 extern tree array_ref_element_size (tree);
+
+bool array_at_struct_end_p (tree);
 
 /* Return a tree representing the lower bound of the array mentioned in
    EXP, an ARRAY_REF or an ARRAY_RANGE_REF.  */
@@ -5199,7 +5217,6 @@ extern tree unshare_expr (tree);
 /* In stmt.c */
 
 extern void expand_expr_stmt (tree);
-extern int warn_if_unused_value (const_tree, location_t);
 extern void expand_label (tree);
 extern void expand_goto (tree);
 
@@ -5450,6 +5467,7 @@ extern bool is_builtin_fn (tree);
 extern unsigned int get_object_alignment_1 (tree, unsigned HOST_WIDE_INT *);
 extern unsigned int get_object_alignment (tree);
 extern unsigned int get_object_or_type_alignment (tree);
+extern unsigned int get_pointer_alignment_1 (tree, unsigned HOST_WIDE_INT *);
 extern unsigned int get_pointer_alignment (tree);
 extern tree fold_call_stmt (gimple, bool);
 extern tree gimple_fold_builtin_snprintf_chk (gimple, tree, enum built_in_function);

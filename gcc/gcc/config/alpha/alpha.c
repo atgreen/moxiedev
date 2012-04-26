@@ -1,6 +1,6 @@
 /* Subroutines used for code generation on the DEC Alpha.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Contributed by Richard Kenner (kenner@vlsi1.ultra.nyu.edu)
 
@@ -250,6 +250,11 @@ alpha_option_override (void)
   SUBTARGET_OVERRIDE_OPTIONS;
 #endif
 
+  /* Default to full IEEE compliance mode for Go language.  */
+  if (strcmp (lang_hooks.name, "GNU Go") == 0
+      && !(target_flags_explicit & MASK_IEEE))
+    target_flags |= MASK_IEEE;
+
   alpha_fprm = ALPHA_FPRM_NORM;
   alpha_tp = ALPHA_TP_PROG;
   alpha_fptm = ALPHA_FPTM_N;
@@ -423,9 +428,8 @@ alpha_option_override (void)
     target_flags &= ~MASK_SMALL_DATA;
 
   /* Align labels and loops for optimal branching.  */
-  /* ??? Kludge these by not doing anything if we don't optimize and also if
-     we are writing ECOFF symbols to work around a bug in DEC's assembler.  */
-  if (optimize > 0 && write_symbols != SDB_DEBUG)
+  /* ??? Kludge these by not doing anything if we don't optimize.  */
+  if (optimize > 0)
     {
       if (align_loops <= 0)
 	align_loops = 16;
@@ -1489,8 +1493,6 @@ alpha_set_memflags_1 (rtx *xp, void *data)
     return 0;
 
   MEM_VOLATILE_P (x) = MEM_VOLATILE_P (orig);
-  MEM_IN_STRUCT_P (x) = MEM_IN_STRUCT_P (orig);
-  MEM_SCALAR_P (x) = MEM_SCALAR_P (orig);
   MEM_NOTRAP_P (x) = MEM_NOTRAP_P (orig);
   MEM_READONLY_P (x) = MEM_READONLY_P (orig);
 
@@ -1520,8 +1522,6 @@ alpha_set_memflags (rtx seq, rtx ref)
      generated from one of the insn patterns.  So if everything is
      zero, the pattern is already up-to-date.  */
   if (!MEM_VOLATILE_P (ref)
-      && !MEM_IN_STRUCT_P (ref)
-      && !MEM_SCALAR_P (ref)
       && !MEM_NOTRAP_P (ref)
       && !MEM_READONLY_P (ref))
     return;
@@ -4672,7 +4672,7 @@ struct GTY(()) machine_function
   /* For OSF.  */
   const char *some_ld_name;
 
-  /* For TARGET_LD_BUGGY_LDGP.  */
+  /* For flag_reorder_blocks_and_partition.  */
   rtx gp_save_rtx;
 
   /* For VMS condition handlers.  */
@@ -4987,8 +4987,7 @@ print_operand (FILE *file, rtx x, int code)
 	const char *round = get_round_mode_suffix ();
 
 	if (trap || round)
-	  fprintf (file, (TARGET_AS_SLASH_BEFORE_SUFFIX ? "/%s%s" : "%s%s"),
-		   (trap ? trap : ""), (round ? round : ""));
+	  fprintf (file, "/%s%s", (trap ? trap : ""), (round ? round : ""));
 	break;
       }
 
@@ -6227,7 +6226,7 @@ alpha_gimplify_va_arg (tree valist, tree type, gimple_seq *pre_p,
      offset field so that it's the proper width for pointer arithmetic.  */
   base = get_formal_tmp_var (base_field, pre_p);
 
-  t = fold_convert (lang_hooks.types.type_for_size (64, 0), offset_field);
+  t = fold_convert (build_nonstandard_integer_type (64, 0), offset_field);
   offset = get_initialized_tmp_var (t, pre_p, NULL);
 
   indirect = pass_by_reference (NULL, TYPE_MODE (type), type, false);
@@ -7858,10 +7857,8 @@ alpha_start_function (FILE *file, const char *fnname,
   HOST_WIDE_INT sa_size;
   /* Complete stack size needed.  */
   unsigned HOST_WIDE_INT frame_size;
-  /* The maximum debuggable frame size (512 Kbytes using Tru64 as).  */
-  unsigned HOST_WIDE_INT max_frame_size = TARGET_ABI_OSF && !TARGET_GAS
-					  ? 524288
-					  : 1UL << 31;
+  /* The maximum debuggable frame size.  */
+  unsigned HOST_WIDE_INT max_frame_size = 1UL << 31;
   /* Offset from base reg to register save area.  */
   HOST_WIDE_INT reg_offset;
   char *entry_label = (char *) alloca (strlen (fnname) + 6);
@@ -7869,14 +7866,7 @@ alpha_start_function (FILE *file, const char *fnname,
   int i;
 
 #if TARGET_ABI_OPEN_VMS
-  if (vms_debug_main
-      && strncmp (vms_debug_main, fnname, strlen (vms_debug_main)) == 0)
-    {
-      targetm.asm_out.globalize_label (asm_out_file, VMS_DEBUG_MAIN_POINTER);
-      ASM_OUTPUT_DEF (asm_out_file, VMS_DEBUG_MAIN_POINTER, fnname);
-      switch_to_section (text_section);
-      vms_debug_main = NULL;
-    }
+  vms_start_function (fnname);
 #endif
 
   alpha_fnname = fnname;
@@ -7889,27 +7879,6 @@ alpha_start_function (FILE *file, const char *fnname,
     reg_offset = ALPHA_ROUND (crtl->outgoing_args_size);
 
   alpha_sa_mask (&imask, &fmask);
-
-  /* Ecoff can handle multiple .file directives, so put out file and lineno.
-     We have to do that before the .ent directive as we cannot switch
-     files within procedures with native ecoff because line numbers are
-     linked to procedure descriptors.
-     Outputting the lineno helps debugging of one line functions as they
-     would otherwise get no line number at all. Please note that we would
-     like to put out last_linenum from final.c, but it is not accessible.  */
-
-  if (write_symbols == SDB_DEBUG)
-    {
-#ifdef ASM_OUTPUT_SOURCE_FILENAME
-      ASM_OUTPUT_SOURCE_FILENAME (file,
-				  DECL_SOURCE_FILE (current_function_decl));
-#endif
-#ifdef SDB_OUTPUT_SOURCE_LINE
-      if (debug_info_level != DINFO_LEVEL_TERSE)
-        SDB_OUTPUT_SOURCE_LINE (file,
-				DECL_SOURCE_LINE (current_function_decl));
-#endif
-    }
 
   /* Issue function start and label.  */
   if (TARGET_ABI_OPEN_VMS || !flag_inhibit_size_directive)
@@ -8389,11 +8358,6 @@ alpha_output_mi_thunk_osf (FILE *file, tree thunk_fndecl ATTRIBUTE_UNUSED,
 
 #include "gstab.h"
 
-/* Count the number of sdb related labels are generated (to find block
-   start and end boundaries).  */
-
-int sdb_label_count = 0;
-
 /* Name of the file containing the current function.  */
 
 static const char *current_function_file = "";
@@ -8418,25 +8382,14 @@ alpha_output_filename (FILE *stream, const char *name)
       fprintf (stream, "\t.file\t%d ", num_source_filenames);
       output_quoted_string (stream, name);
       fprintf (stream, "\n");
-      if (!TARGET_GAS && write_symbols == DBX_DEBUG)
-	fprintf (stream, "\t#@stabs\n");
     }
-
-  else if (write_symbols == DBX_DEBUG)
-    /* dbxout.c will emit an appropriate .stabs directive.  */
-    return;
 
   else if (name != current_function_file
 	   && strcmp (name, current_function_file) != 0)
     {
-      if (inside_function && ! TARGET_GAS)
-	fprintf (stream, "\t#.file\t%d ", num_source_filenames);
-      else
-	{
-	  ++num_source_filenames;
-	  current_function_file = name;
-	  fprintf (stream, "\t.file\t%d ", num_source_filenames);
-	}
+      ++num_source_filenames;
+      current_function_file = name;
+      fprintf (stream, "\t.file\t%d ", num_source_filenames);
 
       output_quoted_string (stream, name);
       fprintf (stream, "\n");
@@ -9375,24 +9328,10 @@ alpha_reorg (void)
     }
 }
 
-#ifdef HAVE_STAMP_H
-#include <stamp.h>
-#endif
-
 static void
 alpha_file_start (void)
 {
-#ifdef OBJECT_FORMAT_ELF
-  /* If emitting dwarf2 debug information, we cannot generate a .file
-     directive to start the file, as it will conflict with dwarf2out
-     file numbers.  So it's only useful when emitting mdebug output.  */
-  targetm.asm_file_start_file_directive = (write_symbols == DBX_DEBUG);
-#endif
-
   default_file_start ();
-#ifdef MS_STAMP
-  fprintf (asm_out_file, "\t.verstamp %d %d\n", MS_STAMP, LS_STAMP);
-#endif
 
   fputs ("\t.set noreorder\n", asm_out_file);
   fputs ("\t.set volatile\n", asm_out_file);
@@ -9419,7 +9358,6 @@ alpha_file_start (void)
     }
 }
 
-#ifdef OBJECT_FORMAT_ELF
 /* Since we don't have a .dynbss section, we should not allow global
    relocations in the .rodata section.  */
 
@@ -9459,7 +9397,6 @@ alpha_elf_section_type_flags (tree decl, const char *name, int reloc)
   flags |= default_section_type_flags (decl, name, reloc);
   return flags;
 }
-#endif /* OBJECT_FORMAT_ELF */
 
 /* Structure to collect function names for final output in link section.  */
 /* Note that items marked with GTY can't be ifdef'ed out.  */
@@ -9742,7 +9679,7 @@ alpha_conditional_register_usage (void)
 
 /* Default unaligned ops are provided for ELF systems.  To get unaligned
    data for non-ELF systems, we have to turn off auto alignment.  */
-#if !defined (OBJECT_FORMAT_ELF) || TARGET_ABI_OPEN_VMS
+#if TARGET_ABI_OPEN_VMS
 #undef TARGET_ASM_UNALIGNED_HI_OP
 #define TARGET_ASM_UNALIGNED_HI_OP "\t.align 0\n\t.word\t"
 #undef TARGET_ASM_UNALIGNED_SI_OP
@@ -9751,14 +9688,12 @@ alpha_conditional_register_usage (void)
 #define TARGET_ASM_UNALIGNED_DI_OP "\t.align 0\n\t.quad\t"
 #endif
 
-#ifdef OBJECT_FORMAT_ELF
 #undef  TARGET_ASM_RELOC_RW_MASK
 #define TARGET_ASM_RELOC_RW_MASK  alpha_elf_reloc_rw_mask
 #undef	TARGET_ASM_SELECT_RTX_SECTION
 #define	TARGET_ASM_SELECT_RTX_SECTION  alpha_elf_select_rtx_section
 #undef  TARGET_SECTION_TYPE_FLAGS
 #define TARGET_SECTION_TYPE_FLAGS  alpha_elf_section_type_flags
-#endif
 
 #undef TARGET_ASM_FUNCTION_END_PROLOGUE
 #define TARGET_ASM_FUNCTION_END_PROLOGUE alpha_output_function_end_prologue
@@ -9771,8 +9706,6 @@ alpha_conditional_register_usage (void)
 
 #undef TARGET_ASM_FILE_START
 #define TARGET_ASM_FILE_START alpha_file_start
-#undef TARGET_ASM_FILE_START_FILE_DIRECTIVE
-#define TARGET_ASM_FILE_START_FILE_DIRECTIVE true
 
 #undef TARGET_SCHED_ADJUST_COST
 #define TARGET_SCHED_ADJUST_COST alpha_adjust_cost

@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/java
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-08-12T18:23:32.869529Z
-163199
-tromey
+2012-04-05T10:04:40.058561Z
+186161
+ro
 
 
 
@@ -25,6 +25,18 @@ tromey
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+beans
+dir
+
+math
+dir
+
+awt
+dir
+
+util
+dir
 
 locale
 dir
@@ -48,17 +60,5 @@ rmi
 dir
 
 security
-dir
-
-beans
-dir
-
-math
-dir
-
-awt
-dir
-
-util
 dir
 

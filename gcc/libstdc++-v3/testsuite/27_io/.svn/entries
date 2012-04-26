@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-11-28T13:24:23.758937Z
-181775
-paolo
+2012-03-14T17:08:03.950143Z
+185392
+ro
 
 
 
@@ -26,13 +26,58 @@ paolo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+basic_streambuf
+dir
+
+objects
+dir
+
+basic_ios
+dir
+
+basic_istringstream
+dir
+
+basic_fstream
+dir
+
+basic_ostringstream
+dir
+
+types
+dir
+
+basic_stringbuf
+dir
+
+basic_istream
+dir
+
+fpos
+dir
+
+basic_ifstream
+dir
+
+basic_ostream
+dir
+
+headers
+dir
+
+basic_filebuf
+dir
+
+manipulators
+dir
+
 rvalue_streams.cc
 file
 
 
 
 
-2009-09-08T13:10:04.000000Z
+2012-02-01T17:19:25.845990Z
 886c09e2fec1d2004722aab30544a301
 2009-08-01T03:56:47.146447Z
 150328
@@ -66,54 +111,9 @@ dir
 basic_stringstream
 dir
 
-basic_iostream
-dir
-
 ios_base
 dir
 
-objects
-dir
-
-basic_streambuf
-dir
-
-basic_ios
-dir
-
-basic_istringstream
-dir
-
-basic_fstream
-dir
-
-basic_ostringstream
-dir
-
-types
-dir
-
-basic_stringbuf
-dir
-
-basic_istream
-dir
-
-fpos
-dir
-
-headers
-dir
-
-basic_ostream
-dir
-
-basic_ifstream
-dir
-
-basic_filebuf
-dir
-
-manipulators
+basic_iostream
 dir
 

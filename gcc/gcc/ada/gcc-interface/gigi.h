@@ -6,7 +6,7 @@
  *                                                                          *
  *                              C Header File                               *
  *                                                                          *
- *          Copyright (C) 1992-2011, Free Software Foundation, Inc.         *
+ *          Copyright (C) 1992-2012, Free Software Foundation, Inc.         *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -50,9 +50,6 @@ extern tree gnat_to_gnu_field_decl (Entity_Id gnat_entity);
 /* Similar, but GNAT_ENTITY is assumed to refer to a GNAT type.  Return
    the GCC type corresponding to that entity.  */
 extern tree gnat_to_gnu_type (Entity_Id gnat_entity);
-
-/* Wrap up compilation of T, a TYPE_DECL, possibly deferring it.  */
-extern void rest_of_type_decl_compilation (tree t);
 
 /* Start a new statement group chained to the previous group.  */
 extern void start_stmt_group (void);
@@ -117,6 +114,11 @@ extern void mark_out_of_scope (Entity_Id gnat_entity);
 
 /* Get the unpadded version of a GNAT type.  */
 extern tree get_unpadded_type (Entity_Id gnat_entity);
+
+/* Return the DECL associated with the public subprogram GNAT_ENTITY but whose
+   type has been changed to that of the parameterless procedure, except if an
+   alias is already present, in which case it is returned instead.  */
+extern tree get_minimal_subprog_decl (Entity_Id gnat_entity);
 
 /* Create a record type that contains a SIZE bytes long field of TYPE with a
     starting bit position so that it is aligned to ALIGN bits, and leaving at
@@ -558,8 +560,8 @@ extern void finish_record_type (tree record_type, tree field_list,
    a parallel type is to be attached to the record type.  */
 extern void rest_of_record_type_compilation (tree record_type);
 
-/* Append PARALLEL_TYPE on the chain of parallel types for decl.  */
-extern void add_parallel_type (tree decl, tree parallel_type);
+/* Append PARALLEL_TYPE on the chain of parallel types for TYPE.  */
+extern void add_parallel_type (tree type, tree parallel_type);
 
 /* Return a FUNCTION_TYPE node.  RETURN_TYPE is the type returned by the
    subprogram.  If it is VOID_TYPE, then we are dealing with a procedure,
@@ -672,8 +674,9 @@ extern tree create_field_decl (tree field_name, tree field_type,
 extern tree create_param_decl (tree param_name, tree param_type,
                                bool readonly);
 
-/* Return a LABEL_DECL node for LABEL_NAME.  */
-extern tree create_label_decl (tree label_name);
+/* Return a LABEL_DECL with LABEL_NAME.  GNAT_NODE is used for the position
+   of the decl.  */
+extern tree create_label_decl (tree, Node_Id);
 
 /* Return a FUNCTION_DECL node.  SUBPROG_NAME is the name of the subprogram,
    ASM_NAME is its assembler name, SUBPROG_TYPE is its type (a FUNCTION_TYPE
@@ -732,10 +735,6 @@ extern tree build_unc_object_type (tree template_type, tree object_type,
 extern tree build_unc_object_type_from_ptr (tree thin_fat_ptr_type,
 					    tree object_type, tree name,
 					    bool debug_info_p);
-
-/* Shift the component offsets within an unconstrained object TYPE to make it
-   suitable for use as a designated type for thin pointers.  */
-extern void shift_unc_components_for_thin_pointers (tree type);
 
 /* Update anything previously pointing to OLD_TYPE to point to NEW_TYPE.  In
    the normal case this is just two adjustments, but we have more to do
@@ -998,11 +997,11 @@ extern void enumerate_modes (void (*f) (const char *, int, int, int, int, int,
 #define TARGET_ABI_OPEN_VMS 0
 #endif
 
-/* VMS macro set by default, when clear forces 32bit mallocs and 32bit
-   Descriptors. Always used in combination with TARGET_ABI_OPEN_VMS
+/* VMS option set by default, when clear forces 32bit mallocs and 32bit
+   Descriptors.  Always used in combination with TARGET_ABI_OPEN_VMS
    so no effect on non-VMS systems.  */
-#ifndef TARGET_MALLOC64
-#define TARGET_MALLOC64 0
+#if TARGET_ABI_OPEN_VMS == 0
+#define flag_vms_malloc64 0
 #endif
 
 /* Convenient shortcuts.  */

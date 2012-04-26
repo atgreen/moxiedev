@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 S p e c                                  --
 --                                                                          --
---          Copyright (C) 2001-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 2001-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -298,9 +298,26 @@ package Prj is
    --  Type for the kind of language. All languages are file based, except Ada
    --  which is unit based.
 
-   type Dependency_File_Kind is (None, Makefile, ALI_File);
-   --  Type of dependency to be checked: no dependency file, Makefile fragment
-   --  or ALI file (for Ada).
+   --  Type of dependency to be checked
+
+   type Dependency_File_Kind is
+     (None,
+      --  There is no dependency file, the source must always be recompiled
+
+      Makefile,
+      --  The dependency file is a Makefile fragment indicating all the files
+      --  the source depends on. If the object file or the dependency file is
+      --  more recent than any of these files, the source must be recompiled.
+
+      ALI_File,
+      --  The dependency file is an ALI file and the source must be recompiled
+      --  if the object or ALI file is more recent than any of the sources
+      --  listed in the D lines.
+
+      ALI_Closure);
+      --  The dependency file is an ALI file and the source must be recompiled
+      --  if the object or ALI file is more recent than any source in the full
+      --  closure.
 
    Makefile_Dependency_Suffix : constant String := ".d";
    ALI_Dependency_Suffix      : constant String := ".ali";
@@ -472,6 +489,11 @@ package Prj is
       --  are used to specify the object file. The object file name is appended
       --  to the last switch in the list. Example: ("-o", "").
 
+      Object_Path_Switches : Name_List_Index := No_Name_List;
+      --  List of switches to specify to the compiler the path name of a
+      --  temporary file containing the list of object directories in the
+      --  correct order.
+
       Compilation_PIC_Option : Name_List_Index := No_Name_List;
       --  The option(s) to compile a source in Position Independent Code for
       --  shared libraries. Specified in the configuration. When not specified,
@@ -602,6 +624,7 @@ package Prj is
                            Source_File_Switches         => No_Name_List,
                            Object_File_Suffix           => No_Name,
                            Object_File_Switches         => No_Name_List,
+                           Object_Path_Switches         => No_Name_List,
                            Compilation_PIC_Option       => No_Name_List,
                            Object_Generated             => True,
                            Objects_Linked               => True,
@@ -938,8 +961,9 @@ package Prj is
    type Project_List_Element;
    type Project_List is access all Project_List_Element;
    type Project_List_Element is record
-      Project : Project_Id   := No_Project;
-      Next    : Project_List := null;
+      Project               : Project_Id   := No_Project;
+      From_Encapsulated_Lib : Boolean      := False;
+      Next                  : Project_List := null;
    end record;
    --  A list of projects
 
@@ -1179,7 +1203,8 @@ package Prj is
       --  True for virtual extending projects
 
       Location : Source_Ptr := No_Location;
-      --  The location in the project file source of the reserved word project
+      --  The location in the project file source of the project name that
+      --  immediately follows the reserved word "project".
 
       ---------------
       -- Languages --
@@ -1230,6 +1255,10 @@ package Prj is
       Exec_Directory : Path_Information := No_Path_Information;
       --  The path name of the exec directory of this project file. Default is
       --  equal to Object_Directory.
+
+      Object_Path_File : Path_Name_Type := No_Path;
+      --  Store the name of the temporary file that contains the list of object
+      --  directories, when attribute Object_Path_Switches is declared.
 
       -------------
       -- Library --
@@ -1404,11 +1433,13 @@ package Prj is
    type Source_Iterator is private;
 
    function For_Each_Source
-     (In_Tree  : Project_Tree_Ref;
-      Project  : Project_Id := No_Project;
-      Language : Name_Id := No_Name) return Source_Iterator;
+     (In_Tree           : Project_Tree_Ref;
+      Project           : Project_Id := No_Project;
+      Language          : Name_Id    := No_Name;
+      Encapsulated_Libs : Boolean    := True) return Source_Iterator;
    --  Returns an iterator for all the sources of a project tree, or a specific
-   --  project, or a specific language.
+   --  project, or a specific language. Include sources from aggregated libs if
+   --  Aggregated_Libs is True.
 
    function Element (Iter : Source_Iterator) return Source_Id;
    --  Return the current source (or No_Source if there are no more sources)
@@ -1562,10 +1593,9 @@ package Prj is
    generic
       type State is limited private;
       with procedure Action
-        (Project          : Project_Id;
-         Tree             : Project_Tree_Ref;
-         In_Aggregate_Lib : Boolean;
-         With_State       : in out State);
+        (Project    : Project_Id;
+         Tree       : Project_Tree_Ref;
+         With_State : in out State);
    procedure For_Every_Project_Imported
      (By                 : Project_Id;
       Tree               : Project_Tree_Ref;
@@ -1596,6 +1626,39 @@ package Prj is
    --
    --  The Tree argument passed to the callback is required in the case of
    --  aggregated projects, since they might not be using the same tree as 'By'
+
+   type Project_Context is record
+      In_Aggregate_Lib : Boolean;
+      --  True if the project is part of an aggregate library
+
+      From_Encapsulated_Lib : Boolean;
+      --  True if the project is imported from an encapsulated library
+   end record;
+
+   generic
+      type State is limited private;
+      with procedure Action
+        (Project    : Project_Id;
+         Tree       : Project_Tree_Ref;
+         Context    : Project_Context;
+         With_State : in out State);
+   procedure For_Every_Project_Imported_Context
+     (By                 : Project_Id;
+      Tree               : Project_Tree_Ref;
+      With_State         : in out State;
+      Include_Aggregated : Boolean := True;
+      Imported_First     : Boolean := False);
+   --  As for For_Every_Project_Imported but with an associated context
+
+   generic
+      with procedure Action
+        (Project : Project_Id;
+         Tree    : Project_Tree_Ref;
+         Context : Project_Context);
+   procedure For_Project_And_Aggregated_Context
+     (Root_Project : Project_Id;
+      Root_Tree    : Project_Tree_Ref);
+   --  As for For_Project_And_Aggregated but with an associated context
 
    function Extend_Name
      (File        : File_Name_Type;
@@ -1827,6 +1890,9 @@ private
       --  Only sources of this language will be returned (or all if No_Name)
 
       Current : Source_Id;
+
+      Encapsulated_Libs : Boolean;
+      --  True if we want to include the sources from encapsulated libs
    end record;
 
    procedure Add_To_Buffer

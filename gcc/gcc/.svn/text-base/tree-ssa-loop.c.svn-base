@@ -92,7 +92,7 @@ struct gimple_opt_pass pass_tree_loop_init =
   0,					/* static_pass_number */
   TV_TREE_LOOP_INIT,			/* tv_id */
   PROP_cfg,				/* properties_required */
-  0,					/* properties_provided */
+  PROP_loops,				/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
   0             			/* todo_flags_finish */
@@ -266,8 +266,7 @@ gate_graphite_transforms (void)
       || flag_loop_interchange
       || flag_loop_strip_mine
       || flag_graphite_identity
-      || flag_loop_parallelize_all
-      || flag_loop_flatten)
+      || flag_loop_parallelize_all)
     flag_graphite = 1;
 
   return flag_graphite != 0;
@@ -421,7 +420,7 @@ tree_ssa_loop_bounds (void)
   if (number_of_loops () <= 1)
     return 0;
 
-  estimate_numbers_of_iterations (true);
+  estimate_numbers_of_iterations ();
   scev_reset ();
   return 0;
 }

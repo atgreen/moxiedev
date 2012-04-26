@@ -587,7 +587,7 @@ phi_trans_add (pre_expr e, pre_expr v, basic_block pred)
 
 /* Add expression E to the expression set of value id V.  */
 
-void
+static void
 add_to_value (unsigned int v, pre_expr e)
 {
   bitmap_set_t set;
@@ -1031,7 +1031,7 @@ debug_bitmap_set (bitmap_set_t set)
 
 /* Print out the expressions that have VAL to OUTFILE.  */
 
-void
+static void
 print_value_expressions (FILE *outfile, unsigned int val)
 {
   bitmap_set_t set = VEC_index (bitmap_set_t, value_expressions, val);
@@ -2123,16 +2123,7 @@ valid_in_sets (bitmap_set_t set1, bitmap_set_t set2, pre_expr expr,
 	    if (!vro_valid_in_sets (set1, set2, vro))
 	      return false;
 	  }
-	if (ref->vuse)
-	  {
-	    gimple def_stmt = SSA_NAME_DEF_STMT (ref->vuse);
-	    if (!gimple_nop_p (def_stmt)
-		&& gimple_bb (def_stmt) != block
-		&& !dominated_by_p (CDI_DOMINATORS,
-				    block, gimple_bb (def_stmt)))
-	      return false;
-	  }
-	return !value_dies_in_block_x (expr, block);
+	return true;
       }
     default:
       gcc_unreachable ();
@@ -2175,6 +2166,38 @@ clean (bitmap_set_t set, basic_block block)
     {
       if (!valid_in_sets (set, NULL, expr, block))
 	bitmap_remove_from_set (set, expr);
+    }
+  VEC_free (pre_expr, heap, exprs);
+}
+
+/* Clean the set of expressions that are no longer valid in SET because
+   they are clobbered in BLOCK.  */
+
+static void
+prune_clobbered_mems (bitmap_set_t set, basic_block block)
+{
+  VEC (pre_expr, heap) *exprs = sorted_array_from_bitmap_set (set);
+  pre_expr expr;
+  int i;
+
+  FOR_EACH_VEC_ELT (pre_expr, exprs, i, expr)
+    {
+      vn_reference_t ref;
+      if (expr->kind != REFERENCE)
+	continue;
+
+      ref = PRE_EXPR_REFERENCE (expr);
+      if (ref->vuse)
+	{
+	  gimple def_stmt = SSA_NAME_DEF_STMT (ref->vuse);
+	  if (!gimple_nop_p (def_stmt)
+	      && ((gimple_bb (def_stmt) != block
+		   && !dominated_by_p (CDI_DOMINATORS,
+				       block, gimple_bb (def_stmt)))
+		  || (gimple_bb (def_stmt) == block
+		      && value_dies_in_block_x (expr, block))))
+	    bitmap_remove_from_set (set, expr);
+	}
     }
   VEC_free (pre_expr, heap, exprs);
 }
@@ -2319,6 +2342,10 @@ compute_antic_aux (basic_block block, bool block_has_abnormal_pred_edge)
 	}
       VEC_free (basic_block, heap, worklist);
     }
+
+  /* Prune expressions that are clobbered in block and thus become
+     invalid if translated from ANTIC_OUT to ANTIC_IN.  */
+  prune_clobbered_mems (ANTIC_OUT, block);
 
   /* Generate ANTIC_OUT - TMP_GEN.  */
   S = bitmap_set_subtract (ANTIC_OUT, TMP_GEN (block));
@@ -2473,6 +2500,10 @@ compute_partial_antic_aux (basic_block block,
 	}
       VEC_free (basic_block, heap, worklist);
     }
+
+  /* Prune expressions that are clobbered in block and thus become
+     invalid if translated from PA_OUT to PA_IN.  */
+  prune_clobbered_mems (PA_OUT, block);
 
   /* PA_IN starts with PA_OUT - TMP_GEN.
      Then we subtract things from ANTIC_IN.  */
@@ -2790,6 +2821,23 @@ create_component_ref_by_pieces_1 (basic_block block, vn_reference_t ref,
 	folded = fold_build1 (currop->opcode, currop->type,
 			      genop0);
 	return folded;
+      }
+      break;
+    case WITH_SIZE_EXPR:
+      {
+	tree genop0 = create_component_ref_by_pieces_1 (block, ref, operand,
+							stmts, domstmt);
+	pre_expr op1expr = get_or_alloc_expr_for (currop->op0);
+	tree genop1;
+
+	if (!genop0)
+	  return NULL_TREE;
+
+	genop1 = find_or_generate_expression (block, op1expr, stmts, domstmt);
+	if (!genop1)
+	  return NULL_TREE;
+
+	return fold_build2 (currop->opcode, currop->type, genop0, genop1);
       }
       break;
     case BIT_FIELD_REF:
@@ -3225,6 +3273,10 @@ inhibit_phi_insertion (basic_block bb, pre_expr expr)
     {
       switch (op->opcode)
 	{
+	case CALL_EXPR:
+	  /* Calls are not a problem.  */
+	  return false;
+
 	case ARRAY_REF:
 	case ARRAY_RANGE_REF:
 	  if (TREE_CODE (op->op0) != SSA_NAME)
@@ -4006,15 +4058,26 @@ compute_avail (void)
 		    if (vro->op2 && TREE_CODE (vro->op2) == SSA_NAME)
 		      add_to_exp_gen (block, vro->op2);
 		  }
-		result = (pre_expr) pool_alloc (pre_expr_pool);
-		result->kind = REFERENCE;
-		result->id = 0;
-		PRE_EXPR_REFERENCE (result) = ref;
 
-		get_or_alloc_expression_id (result);
-		add_to_value (get_expr_value_id (result), result);
-		if (!in_fre)
-		  bitmap_value_insert_into_set (EXP_GEN (block), result);
+		/* If the value of the call is not invalidated in
+		   this block until it is computed, add the expression
+		   to EXP_GEN.  */
+		if (!gimple_vuse (stmt)
+		    || gimple_code
+		         (SSA_NAME_DEF_STMT (gimple_vuse (stmt))) == GIMPLE_PHI
+		    || gimple_bb (SSA_NAME_DEF_STMT
+				    (gimple_vuse (stmt))) != block)
+		  {
+		    result = (pre_expr) pool_alloc (pre_expr_pool);
+		    result->kind = REFERENCE;
+		    result->id = 0;
+		    PRE_EXPR_REFERENCE (result) = ref;
+
+		    get_or_alloc_expression_id (result);
+		    add_to_value (get_expr_value_id (result), result);
+		    if (!in_fre)
+		      bitmap_value_insert_into_set (EXP_GEN (block), result);
+		  }
 		continue;
 	      }
 
@@ -4074,6 +4137,32 @@ compute_avail (void)
 			  if (vro->op2 && TREE_CODE (vro->op2) == SSA_NAME)
 			    add_to_exp_gen (block, vro->op2);
 			}
+
+		      /* If the value of the reference is not invalidated in
+			 this block until it is computed, add the expression
+			 to EXP_GEN.  */
+		      if (gimple_vuse (stmt))
+			{
+			  gimple def_stmt;
+			  bool ok = true;
+			  def_stmt = SSA_NAME_DEF_STMT (gimple_vuse (stmt));
+			  while (!gimple_nop_p (def_stmt)
+				 && gimple_code (def_stmt) != GIMPLE_PHI
+				 && gimple_bb (def_stmt) == block)
+			    {
+			      if (stmt_may_clobber_ref_p
+				    (def_stmt, gimple_assign_rhs1 (stmt)))
+				{
+				  ok = false;
+				  break;
+				}
+			      def_stmt
+				= SSA_NAME_DEF_STMT (gimple_vuse (def_stmt));
+			    }
+			  if (!ok)
+			    continue;
+			}
+
 		      result = (pre_expr) pool_alloc (pre_expr_pool);
 		      result->kind = REFERENCE;
 		      result->id = 0;
@@ -4320,6 +4409,7 @@ eliminate (void)
 	     has the same value number as its rhs.  If so, the store is
 	     dead.  */
 	  else if (gimple_assign_single_p (stmt)
+		   && !gimple_has_volatile_ops (stmt)
 		   && !is_gimple_reg (gimple_assign_lhs (stmt))
 		   && (TREE_CODE (rhs) == SSA_NAME
 		       || is_gimple_min_invariant (rhs)))
@@ -4540,11 +4630,8 @@ eliminate (void)
 	  basic_block bb = gimple_bb (stmt);
 	  gsi = gsi_for_stmt (stmt);
 	  unlink_stmt_vdef (stmt);
-	  gsi_remove (&gsi, true);
-	  /* ???  gsi_remove doesn't tell us whether the stmt was
-	     in EH tables and thus whether we need to purge EH edges.
-	     Simply schedule the block for a cleanup.  */
-	  bitmap_set_bit (need_eh_cleanup, bb->index);
+	  if (gsi_remove (&gsi, true))
+	    bitmap_set_bit (need_eh_cleanup, bb->index);
 	  if (TREE_CODE (lhs) == SSA_NAME)
 	    bitmap_clear_bit (inserted_exprs, SSA_NAME_VERSION (lhs));
 	  release_defs (stmt);
@@ -4819,6 +4906,9 @@ init_pre (bool do_fre)
 static void
 fini_pre (bool do_fre)
 {
+  bool do_eh_cleanup = !bitmap_empty_p (need_eh_cleanup);
+  bool do_ab_cleanup = !bitmap_empty_p (need_ab_cleanup);
+
   free (postorder);
   VEC_free (bitmap_set_t, heap, value_expressions);
   BITMAP_FREE (inserted_exprs);
@@ -4834,21 +4924,17 @@ fini_pre (bool do_fre)
 
   free_dominance_info (CDI_POST_DOMINATORS);
 
-  if (!bitmap_empty_p (need_eh_cleanup))
-    {
-      gimple_purge_all_dead_eh_edges (need_eh_cleanup);
-      cleanup_tree_cfg ();
-    }
+  if (do_eh_cleanup)
+    gimple_purge_all_dead_eh_edges (need_eh_cleanup);
+
+  if (do_ab_cleanup)
+    gimple_purge_all_dead_abnormal_call_edges (need_ab_cleanup);
 
   BITMAP_FREE (need_eh_cleanup);
-
-  if (!bitmap_empty_p (need_ab_cleanup))
-    {
-      gimple_purge_all_dead_abnormal_call_edges (need_ab_cleanup);
-      cleanup_tree_cfg ();
-    }
-
   BITMAP_FREE (need_ab_cleanup);
+
+  if (do_eh_cleanup || do_ab_cleanup)
+    cleanup_tree_cfg ();
 
   if (!do_fre)
     loop_optimizer_finalize ();

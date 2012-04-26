@@ -8,6 +8,7 @@ package os_test
 
 import (
 	. "os"
+	"runtime"
 	"syscall"
 	"testing"
 )
@@ -17,7 +18,7 @@ func checkUidGid(t *testing.T, path string, uid, gid int) {
 	if err != nil {
 		t.Fatalf("Stat %q (looking for uid/gid %d/%d): %s", path, uid, gid, err)
 	}
-	sys := dir.(*FileStat).Sys.(*syscall.Stat_t)
+	sys := dir.Sys().(*syscall.Stat_t)
 	if int(sys.Uid) != uid {
 		t.Errorf("Stat %q: uid %d want %d", path, sys.Uid, uid)
 	}
@@ -29,7 +30,7 @@ func checkUidGid(t *testing.T, path string, uid, gid int) {
 func TestChown(t *testing.T) {
 	// Chown is not supported under windows or Plan 9.
 	// Plan9 provides a native ChownPlan9 version instead.
-	if syscall.OS == "windows" || syscall.OS == "plan9" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
 		return
 	}
 	// Use TempDir() to make sure we're on a local file system,
@@ -51,7 +52,7 @@ func TestChown(t *testing.T) {
 	if err = Chown(f.Name(), -1, gid); err != nil {
 		t.Fatalf("chown %s -1 %d: %s", f.Name(), gid, err)
 	}
-	sys := dir.(*FileStat).Sys.(*syscall.Stat_t)
+	sys := dir.Sys().(*syscall.Stat_t)
 	checkUidGid(t, f.Name(), int(sys.Uid), gid)
 
 	// Then try all the auxiliary groups.

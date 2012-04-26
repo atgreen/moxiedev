@@ -93,6 +93,7 @@ void
 Export::export_globals(const std::string& package_name,
 		       const std::string& unique_prefix,
 		       int package_priority,
+		       const std::map<std::string, Package*>& imports,
 		       const std::string& import_init_fn,
 		       const std::set<Import_init>& imported_init_fns,
 		       const Bindings* bindings)
@@ -149,6 +150,8 @@ Export::export_globals(const std::string& package_name,
   snprintf(buf, sizeof buf, "priority %d;\n", package_priority);
   this->write_c_string(buf);
 
+  this->write_imports(imports);
+
   this->write_imported_init_fns(package_name, package_priority, import_init_fn,
 				imported_init_fns);
 
@@ -177,7 +180,46 @@ Export::export_globals(const std::string& package_name,
   this->stream_->write_checksum(s);
 }
 
-// Write out the import control variables for this package.
+// Sort imported packages.
+
+static bool
+import_compare(const std::pair<std::string, Package*>& a,
+	       const std::pair<std::string, Package*>& b)
+{
+  return a.first < b.first;
+}
+
+// Write out the imported packages.
+
+void
+Export::write_imports(const std::map<std::string, Package*>& imports)
+{
+  // Sort the imports for more consistent output.
+  std::vector<std::pair<std::string, Package*> > imp;
+  for (std::map<std::string, Package*>::const_iterator p = imports.begin();
+       p != imports.end();
+       ++p)
+    imp.push_back(std::make_pair(p->first, p->second));
+
+  std::sort(imp.begin(), imp.end(), import_compare);
+
+  for (std::vector<std::pair<std::string, Package*> >::const_iterator p =
+	 imp.begin();
+       p != imp.end();
+       ++p)
+    {
+      this->write_c_string("import ");
+      this->write_string(p->second->name());
+      this->write_c_string(" ");
+      this->write_string(p->second->unique_prefix());
+      this->write_c_string(" \"");
+      this->write_string(p->first);
+      this->write_c_string("\";\n");
+    }
+}
+
+// Write out the initialization functions which need to run for this
+// package.
 
 void
 Export::write_imported_init_fns(
@@ -189,7 +231,7 @@ Export::write_imported_init_fns(
   if (import_init_fn.empty() && imported_init_fns.empty())
     return;
 
-  this->write_c_string("import");
+  this->write_c_string("init");
 
   if (!import_init_fn.empty())
     {
@@ -227,6 +269,17 @@ Export::write_imported_init_fns(
     }
 
   this->write_c_string(";\n");
+}
+
+// Write a name to the export stream.
+
+void
+Export::write_name(const std::string& name)
+{
+  if (name.empty())
+    this->write_c_string("?");
+  else
+    this->write_string(Gogo::message_name(name));
 }
 
 // Export a type.  We have to ensure that on import we create a single
@@ -338,6 +391,8 @@ Export::register_builtin_types(Gogo* gogo)
   this->register_builtin_type(gogo, "bool", BUILTIN_BOOL);
   this->register_builtin_type(gogo, "string", BUILTIN_STRING);
   this->register_builtin_type(gogo, "error", BUILTIN_ERROR);
+  this->register_builtin_type(gogo, "byte", BUILTIN_BYTE);
+  this->register_builtin_type(gogo, "rune", BUILTIN_RUNE);
 }
 
 // Register one builtin type in the export table.
@@ -352,10 +407,14 @@ Export::register_builtin_type(Gogo* gogo, const char* name, Builtin_code code)
   go_assert(ins.second);
 
   // We also insert the underlying type.  We can see the underlying
-  // type at least for string and bool.
-  Type* real_type = named_object->type_value()->real_type();
-  ins = this->type_refs_.insert(std::make_pair(real_type, code));
-  go_assert(ins.second);
+  // type at least for string and bool.  We skip the type aliases byte
+  // and rune here.
+  if (code != BUILTIN_BYTE && code != BUILTIN_RUNE)
+    {
+      Type* real_type = named_object->type_value()->real_type();
+      ins = this->type_refs_.insert(std::make_pair(real_type, code));
+      go_assert(ins.second);
+    }
 }
 
 // Class Export::Stream.

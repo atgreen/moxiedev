@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_filebuf
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,16 +26,10 @@ paolo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-sputbackc
-dir
-
-sgetn
+seekoff
 dir
 
 in_avail
-dir
-
-seekoff
 dir
 
 requirements
@@ -53,10 +47,10 @@ dir
 sputc
 dir
 
-imbue
+open
 dir
 
-open
+imbue
 dir
 
 cons
@@ -93,5 +87,11 @@ pbackfail
 dir
 
 sync
+dir
+
+sputbackc
+dir
+
+sgetn
 dir
 

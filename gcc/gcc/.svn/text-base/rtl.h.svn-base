@@ -1,6 +1,6 @@
 /* Register Transfer Language (RTL) definitions for GCC
    Copyright (C) 1987, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -296,10 +296,7 @@ struct GTY((chain_next ("RTX_NEXT (&%h)"),
      barrier.
      1 in a CONCAT is VAL_NEEDS_RESOLUTION in var-tracking.c.  */
   unsigned int volatil : 1;
-  /* 1 in a MEM referring to a field of an aggregate.
-     0 if the MEM was a variable or the result of a * operator in C;
-     1 if it was the result of a . or -> operator (on a struct) in C.
-     1 in a REG if the register is used only in exit code a loop.
+  /* 1 in a REG if the register is used only in exit code a loop.
      1 in a SUBREG expression if was generated from a variable with a
      promoted mode.
      1 in a CODE_LABEL if the label is used for nonlocal gotos
@@ -308,7 +305,10 @@ struct GTY((chain_next ("RTX_NEXT (&%h)"),
      together with the preceding insn.  Valid only within sched.
      1 in an INSN, JUMP_INSN, or CALL_INSN if insn is in a delay slot and
      from the target of a branch.  Valid from reorg until end of compilation;
-     cleared before used.  */
+     cleared before used.
+
+     The name of the field is historical.  It used to be used in MEMs
+     to record whether the MEM accessed part of a structure.  */
   unsigned int in_struct : 1;
   /* At the end of RTL generation, 1 if this rtx is used.  This is used for
      copying shared structure.  See `unshare_all_rtl'.
@@ -328,7 +328,6 @@ struct GTY((chain_next ("RTX_NEXT (&%h)"),
      1 in a VALUE is VALUE_CHANGED in var-tracking.c.  */
   unsigned frame_related : 1;
   /* 1 in a REG or PARALLEL that is the current function's return value.
-     1 in a MEM if it refers to a scalar.
      1 in a SYMBOL_REF for a weak symbol.
      1 in a CALL_INSN logically equivalent to ECF_PURE and DECL_PURE_P.
      1 in a CONCAT is VAL_EXPR_HAS_REVERSE in var-tracking.c.
@@ -1335,17 +1334,6 @@ do {									\
   (RTL_FLAG_CHECK3("MEM_VOLATILE_P", (RTX), MEM, ASM_OPERANDS,		\
 		   ASM_INPUT)->volatil)
 
-/* 1 if RTX is a mem that refers to an aggregate, either to the
-   aggregate itself or to a field of the aggregate.  If zero, RTX may
-   or may not be such a reference.  */
-#define MEM_IN_STRUCT_P(RTX)						\
-  (RTL_FLAG_CHECK1("MEM_IN_STRUCT_P", (RTX), MEM)->in_struct)
-
-/* 1 if RTX is a MEM that refers to a scalar.  If zero, RTX may or may
-   not refer to a scalar.  */
-#define MEM_SCALAR_P(RTX)						\
-  (RTL_FLAG_CHECK1("MEM_SCALAR_P", (RTX), MEM)->return_val)
-
 /* 1 if RTX is a mem that cannot trap.  */
 #define MEM_NOTRAP_P(RTX) \
   (RTL_FLAG_CHECK1("MEM_NOTRAP_P", (RTX), MEM)->call)
@@ -1404,8 +1392,6 @@ do {									\
 /* Copy the attributes that apply to memory locations from RHS to LHS.  */
 #define MEM_COPY_ATTRIBUTES(LHS, RHS)				\
   (MEM_VOLATILE_P (LHS) = MEM_VOLATILE_P (RHS),			\
-   MEM_IN_STRUCT_P (LHS) = MEM_IN_STRUCT_P (RHS),		\
-   MEM_SCALAR_P (LHS) = MEM_SCALAR_P (RHS),			\
    MEM_NOTRAP_P (LHS) = MEM_NOTRAP_P (RHS),			\
    MEM_READONLY_P (LHS) = MEM_READONLY_P (RHS),			\
    MEM_KEEP_ALIAS_SET_P (LHS) = MEM_KEEP_ALIAS_SET_P (RHS),	\
@@ -1658,6 +1644,7 @@ extern int ceil_log2 (unsigned HOST_WIDE_INT);
 /* In explow.c */
 extern HOST_WIDE_INT trunc_int_for_mode	(HOST_WIDE_INT, enum machine_mode);
 extern rtx plus_constant (rtx, HOST_WIDE_INT);
+extern rtx plus_constant_mode (enum machine_mode, rtx, HOST_WIDE_INT);
 
 /* In rtl.c */
 extern rtx rtx_alloc_stat (RTX_CODE MEM_STAT_DECL);
@@ -1922,6 +1909,7 @@ extern HOST_WIDE_INT get_integer_term (const_rtx);
 extern rtx get_related_value (const_rtx);
 extern bool offset_within_block_p (const_rtx, HOST_WIDE_INT);
 extern void split_const (rtx, rtx *, rtx *);
+extern bool unsigned_reg_p (rtx);
 extern int reg_mentioned_p (const_rtx, const_rtx);
 extern int count_occurrences (const_rtx, const_rtx, int);
 extern int reg_referenced_p (const_rtx, const_rtx);
@@ -2103,6 +2091,11 @@ extern GTY(()) rtx const_tiny_rtx[4][(int) MAX_MACHINE_MODE];
 #define CONST2_RTX(MODE) (const_tiny_rtx[2][(int) (MODE)])
 #define CONSTM1_RTX(MODE) (const_tiny_rtx[3][(int) (MODE)])
 
+extern GTY(()) rtx pc_rtx;
+extern GTY(()) rtx cc0_rtx;
+extern GTY(()) rtx ret_rtx;
+extern GTY(()) rtx simple_return_rtx;
+
 /* If HARD_FRAME_POINTER_REGNUM is defined, then a special dummy reg
    is used to represent the frame pointer.  This is because the
    hard frame pointer and the automatic variables are separated by an amount
@@ -2126,10 +2119,6 @@ extern GTY(()) rtx const_tiny_rtx[4][(int) MAX_MACHINE_MODE];
 /* Index labels for global_rtl.  */
 enum global_rtl_index
 {
-  GR_PC,
-  GR_CC0,
-  GR_RETURN,
-  GR_SIMPLE_RETURN,
   GR_STACK_POINTER,
   GR_FRAME_POINTER,
 /* For register elimination to work properly these hard_frame_pointer_rtx,
@@ -2221,12 +2210,6 @@ extern struct target_rtl *this_target_rtl;
   (this_target_rtl->x_top_of_stack)
 #define mode_mem_attrs \
   (this_target_rtl->x_mode_mem_attrs)
-
-/* Standard pieces of rtx, to be substituted directly into things.  */
-#define pc_rtx                  (global_rtl[GR_PC])
-#define ret_rtx                 (global_rtl[GR_RETURN])
-#define simple_return_rtx       (global_rtl[GR_SIMPLE_RETURN])
-#define cc0_rtx                 (global_rtl[GR_CC0])
 
 /* All references to certain hard regs, except those created
    by allocating pseudo regs into them (when that's possible),
@@ -2392,7 +2375,6 @@ extern int rtx_to_tree_code (enum rtx_code);
 
 /* In cse.c */
 extern int delete_trivially_dead_insns (rtx, int);
-extern int cse_main (rtx, int);
 extern int exp_equiv_p (const_rtx, const_rtx, int, bool);
 extern unsigned hash_rtx (const_rtx x, enum machine_mode, int *, int *, bool);
 
@@ -2461,12 +2443,12 @@ extern void add_insn_before (rtx, rtx, struct basic_block_def *);
 extern void add_insn_after (rtx, rtx, struct basic_block_def *);
 extern void remove_insn (rtx);
 extern rtx emit (rtx);
-extern rtx delete_insn (rtx);
+extern void delete_insn (rtx);
 extern rtx entry_of_function (void);
 extern void emit_insn_at_entry (rtx);
 extern void delete_insn_chain (rtx, rtx, bool);
 extern rtx unlink_insn_chain (rtx, rtx);
-extern rtx delete_insn_and_edges (rtx);
+extern void delete_insn_and_edges (rtx);
 extern rtx gen_lowpart_SUBREG (enum machine_mode, rtx);
 extern rtx gen_const_mem (enum machine_mode, rtx);
 extern rtx gen_frame_mem (enum machine_mode, rtx);
@@ -2602,10 +2584,10 @@ extern bool read_rtx (const char *, rtx *);
 
 /* In alias.c */
 extern rtx canon_rtx (rtx);
-extern int true_dependence (const_rtx, enum machine_mode, const_rtx, bool (*)(const_rtx, bool));
+extern int true_dependence (const_rtx, enum machine_mode, const_rtx);
 extern rtx get_addr (rtx);
-extern int canon_true_dependence (const_rtx, enum machine_mode, rtx, const_rtx,
-				  rtx, bool (*)(const_rtx, bool));
+extern int canon_true_dependence (const_rtx, enum machine_mode, rtx,
+				  const_rtx, rtx);
 extern int read_dependence (const_rtx, const_rtx);
 extern int anti_dependence (const_rtx, const_rtx);
 extern int output_dependence (const_rtx, const_rtx);
@@ -2615,7 +2597,7 @@ extern void init_alias_analysis (void);
 extern void end_alias_analysis (void);
 extern void vt_equate_reg_base_value (const_rtx, const_rtx);
 extern bool memory_modified_in_insn_p (const_rtx, const_rtx);
-extern rtx find_base_term (rtx);
+extern bool may_be_sp_based_p (rtx);
 extern rtx gen_hard_reg_clobber (enum machine_mode, unsigned int);
 extern rtx get_reg_known_value (unsigned int);
 extern bool get_reg_known_equiv_p (unsigned int);

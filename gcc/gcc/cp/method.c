@@ -244,7 +244,6 @@ make_alias_for (tree target, tree newid)
   TREE_ADDRESSABLE (alias) = 1;
   TREE_USED (alias) = 1;
   SET_DECL_ASSEMBLER_NAME (alias, DECL_NAME (alias));
-  TREE_SYMBOL_REFERENCED (DECL_ASSEMBLER_NAME (alias)) = 1;
   return alias;
 }
 
@@ -1272,8 +1271,11 @@ synthesized_method_walk (tree ctype, special_function_kind sfk, bool const_p,
 	  rval = locate_fn_flags (base_binfo, complete_dtor_identifier,
 				  NULL_TREE, flags, complain);
 	  /* Note that we don't pass down trivial_p; the subobject
-	     destructors don't affect triviality of the constructor.  */
-	  process_subob_fn (rval, false, spec_p, NULL,
+	     destructors don't affect triviality of the constructor.  Nor
+	     do they affect constexpr-ness (a constant expression doesn't
+	     throw) or exception-specification (a throw from one of the
+	     dtors would be a double-fault).  */
+	  process_subob_fn (rval, false, NULL, NULL,
 			    deleted_p, NULL, NULL,
 			    basetype);
 	}
@@ -1441,7 +1443,7 @@ explain_implicit_non_constexpr (tree decl)
    reference argument or a non-const reference.  Returns the
    FUNCTION_DECL for the implicitly declared function.  */
 
-static tree
+tree
 implicitly_declare_fn (special_function_kind kind, tree type, bool const_p)
 {
   tree fn;
@@ -1590,6 +1592,7 @@ implicitly_declare_fn (special_function_kind kind, tree type, bool const_p)
       DECL_DELETED_FN (fn) = deleted_p;
       DECL_DECLARED_CONSTEXPR_P (fn) = constexpr_p;
     }
+  DECL_EXTERNAL (fn) = true;
   DECL_NOT_REALLY_EXTERN (fn) = 1;
   DECL_DECLARED_INLINE_P (fn) = 1;
   gcc_assert (!TREE_USED (fn));

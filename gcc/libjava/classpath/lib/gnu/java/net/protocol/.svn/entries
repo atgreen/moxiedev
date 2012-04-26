@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/net/protocol
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,6 +26,9 @@ doko
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+jar
+dir
+
 file
 dir
 
@@ -42,8 +45,5 @@ ftp
 dir
 
 gcjlib
-dir
-
-jar
 dir
 

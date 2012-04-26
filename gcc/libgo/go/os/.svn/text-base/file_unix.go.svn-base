@@ -28,19 +28,20 @@ type file struct {
 }
 
 // Fd returns the integer Unix file descriptor referencing the open file.
-func (f *File) Fd() int {
+func (f *File) Fd() uintptr {
 	if f == nil {
-		return -1
+		return ^(uintptr(0))
 	}
-	return f.fd
+	return uintptr(f.fd)
 }
 
 // NewFile returns a new File with the given file descriptor and name.
-func NewFile(fd int, name string) *File {
-	if fd < 0 {
+func NewFile(fd uintptr, name string) *File {
+	fdi := int(fd)
+	if fdi < 0 {
 		return nil
 	}
-	f := &File{&file{fd: fd, name: name}}
+	f := &File{&file{fd: fdi, name: name}}
 	runtime.SetFinalizer(f.file, (*file).close)
 	return f
 }
@@ -59,9 +60,9 @@ const DevNull = "/dev/null"
 // or Create instead.  It opens the named file with specified flag
 // (O_RDONLY etc.) and perm, (0666 etc.) if applicable.  If successful,
 // methods on the returned File can be used for I/O.
-// It returns the File and an error, if any.
-func OpenFile(name string, flag int, perm uint32) (file *File, err error) {
-	r, e := syscall.Open(name, flag|syscall.O_CLOEXEC, perm)
+// If there is an error, it will be of type *PathError.
+func OpenFile(name string, flag int, perm FileMode) (file *File, err error) {
+	r, e := syscall.Open(name, flag|syscall.O_CLOEXEC, syscallMode(perm))
 	if e != nil {
 		return nil, &PathError{"open", name, e}
 	}
@@ -77,7 +78,7 @@ func OpenFile(name string, flag int, perm uint32) (file *File, err error) {
 		syscall.CloseOnExec(r)
 	}
 
-	return NewFile(r, name), nil
+	return NewFile(uintptr(r), name), nil
 }
 
 // Close closes the File, rendering it unusable for I/O.
@@ -88,7 +89,7 @@ func (f *File) Close() error {
 
 func (file *file) close() error {
 	if file == nil || file.fd < 0 {
-		return EINVAL
+		return syscall.EINVAL
 	}
 	var err error
 	if e := syscall.Close(file.fd); e != nil {
@@ -109,7 +110,7 @@ func (file *file) close() error {
 }
 
 // Stat returns the FileInfo structure describing file.
-// It returns the FileInfo and an error, if any.
+// If there is an error, it will be of type *PathError.
 func (f *File) Stat() (fi FileInfo, err error) {
 	var stat syscall.Stat_t
 	err = syscall.Fstat(f.fd, &stat)
@@ -119,11 +120,8 @@ func (f *File) Stat() (fi FileInfo, err error) {
 	return fileInfoFromStat(&stat, f.name), nil
 }
 
-// Stat returns a FileInfo describing the named file and an error, if any.
-// If name names a valid symbolic link, the returned FileInfo describes
-// the file pointed at by the link and has fi.FollowedSymlink set to true.
-// If name names an invalid symbolic link, the returned FileInfo describes
-// the link itself and has fi.FollowedSymlink set to false.
+// Stat returns a FileInfo describing the named file.
+// If there is an error, it will be of type *PathError.
 func Stat(name string) (fi FileInfo, err error) {
 	var stat syscall.Stat_t
 	err = syscall.Stat(name, &stat)
@@ -133,9 +131,10 @@ func Stat(name string) (fi FileInfo, err error) {
 	return fileInfoFromStat(&stat, name), nil
 }
 
-// Lstat returns a FileInfo describing the named file and an
-// error, if any.  If the file is a symbolic link, the returned FileInfo
+// Lstat returns a FileInfo describing the named file.
+// If the file is a symbolic link, the returned FileInfo
 // describes the symbolic link.  Lstat makes no attempt to follow the link.
+// If there is an error, it will be of type *PathError.
 func Lstat(name string) (fi FileInfo, err error) {
 	var stat syscall.Stat_t
 	err = syscall.Lstat(name, &stat)
@@ -145,22 +144,7 @@ func Lstat(name string) (fi FileInfo, err error) {
 	return fileInfoFromStat(&stat, name), nil
 }
 
-// Readdir reads the contents of the directory associated with file and
-// returns an array of up to n FileInfo values, as would be returned
-// by Lstat, in directory order. Subsequent calls on the same file will yield
-// further FileInfos.
-//
-// If n > 0, Readdir returns at most n FileInfo structures. In this case, if
-// Readdir returns an empty slice, it will return a non-nil error
-// explaining why. At the end of a directory, the error is io.EOF.
-//
-// If n <= 0, Readdir returns all the FileInfo from the directory in
-// a single slice. In this case, if Readdir succeeds (reads all
-// the way to the end of the directory), it returns the slice and a
-// nil error. If it encounters an error before the end of the
-// directory, Readdir returns the FileInfo read until that point
-// and a non-nil error.
-func (f *File) Readdir(n int) (fi []FileInfo, err error) {
+func (f *File) readdir(n int) (fi []FileInfo, err error) {
 	dirname := f.name
 	if dirname == "" {
 		dirname = "."
@@ -173,7 +157,7 @@ func (f *File) Readdir(n int) (fi []FileInfo, err error) {
 		if err == nil {
 			fi[i] = fip
 		} else {
-			fi[i] = &FileStat{name: filename}
+			fi[i] = &fileStat{name: filename}
 		}
 	}
 	return fi, err
@@ -195,7 +179,21 @@ func (f *File) pread(b []byte, off int64) (n int, err error) {
 // write writes len(b) bytes to the File.
 // It returns the number of bytes written and an error, if any.
 func (f *File) write(b []byte) (n int, err error) {
-	return syscall.Write(f.fd, b)
+	for {
+		m, err := syscall.Write(f.fd, b)
+		n += m
+
+		// If the syscall wrote some data but not all (short write)
+		// or it returned EINTR, then assume it stopped early for
+		// reasons that are uninteresting to the caller, and try again.
+		if 0 < m && m < len(b) || err == syscall.EINTR {
+			b = b[m:]
+			continue
+		}
+
+		return n, err
+	}
+	panic("not reached")
 }
 
 // pwrite writes len(b) bytes to the File starting at byte offset off.
@@ -214,6 +212,7 @@ func (f *File) seek(offset int64, whence int) (ret int64, err error) {
 
 // Truncate changes the size of the named file.
 // If the file is a symbolic link, it changes the size of the link's target.
+// If there is an error, it will be of type *PathError.
 func Truncate(name string, size int64) error {
 	if e := syscall.Truncate(name, size); e != nil {
 		return &PathError{"truncate", name, e}
@@ -222,6 +221,7 @@ func Truncate(name string, size int64) error {
 }
 
 // Remove removes the named file or directory.
+// If there is an error, it will be of type *PathError.
 func Remove(name string) error {
 	// System call interface forces us to know
 	// whether name is a file or directory.
@@ -285,7 +285,7 @@ func Pipe() (r *File, w *File, err error) {
 	syscall.CloseOnExec(p[1])
 	syscall.ForkLock.RUnlock()
 
-	return NewFile(p[0], "|0"), NewFile(p[1], "|1"), nil
+	return NewFile(uintptr(p[0]), "|0"), NewFile(uintptr(p[1]), "|1"), nil
 }
 
 // TempDir returns the default directory to use for temporary files.

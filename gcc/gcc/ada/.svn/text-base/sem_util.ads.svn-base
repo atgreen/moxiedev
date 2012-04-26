@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 S p e c                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -538,8 +538,9 @@ package Sem_Util is
    --  If expression N references a part of an object, return this object.
    --  Otherwise return Empty. Expression N should have been resolved already.
 
-   function Get_Ensures_From_Test_Case_Pragma (N : Node_Id) return Node_Id;
-   --  Return the Ensures component of Test_Case pragma N, or Empty otherwise
+   function Get_Ensures_From_CTC_Pragma (N : Node_Id) return Node_Id;
+   --  Return the Ensures component of Contract_Case or Test_Case pragma N, or
+   --  Empty otherwise.
 
    function Get_Generic_Entity (N : Node_Id) return Entity_Id;
    --  Returns the true generic entity in an instantiation. If the name in the
@@ -572,8 +573,8 @@ package Sem_Util is
    --  is the innermost visible entity with the given name. See the body of
    --  Sem_Ch8 for further details on handling of entity visibility.
 
-   function Get_Name_From_Test_Case_Pragma (N : Node_Id) return String_Id;
-   --  Return the Name component of Test_Case pragma N
+   function Get_Name_From_CTC_Pragma (N : Node_Id) return String_Id;
+   --  Return the Name component of Contract_Case or Test_Case pragma N
 
    function Get_Pragma_Id (N : Node_Id) return Pragma_Id;
    pragma Inline (Get_Pragma_Id);
@@ -590,8 +591,9 @@ package Sem_Util is
    --  not a renamed entity, returns its argument. It is an error to call this
    --  with any other kind of entity.
 
-   function Get_Requires_From_Test_Case_Pragma (N : Node_Id) return Node_Id;
-   --  Return the Requires component of Test_Case pragma N, or Empty otherwise
+   function Get_Requires_From_CTC_Pragma (N : Node_Id) return Node_Id;
+   --  Return the Requires component of Contract_Case or Test_Case pragma N, or
+   --  Empty otherwise.
 
    function Get_Subprogram_Entity (Nod : Node_Id) return Entity_Id;
    --  Nod is either a procedure call statement, or a function call, or an
@@ -792,6 +794,10 @@ package Sem_Util is
    function Is_Atomic_Object (N : Node_Id) return Boolean;
    --  Determines if the given node denotes an atomic object in the sense of
    --  the legality checks described in RM C.6(12).
+
+   function Is_Bounded_String (T : Entity_Id) return Boolean;
+   --  True if T is a bounded string type. Used to make sure "=" composes
+   --  properly for bounded string types.
 
    function Is_Controlling_Limited_Procedure
      (Proc_Nam : Entity_Id) return Boolean;
@@ -1094,7 +1100,7 @@ package Sem_Util is
    --  and the one in Nmake are both potentially use-visible, it will cause
    --  a compilation error. Note that type and value are irrelevant.
 
-   N_Return_Statement : constant := -2**33;
+   N_Return_Statement : constant := -2 ** 33;
    --  Attempt to prevent accidental uses of N_Return_Statement; similar to
    --  Make_Return_Statement above.
 
@@ -1114,6 +1120,9 @@ package Sem_Util is
    --  it returns True. It tries hard to get the answer right, but it is hard
    --  to guarantee this in all cases. Note that it is more possible to give
    --  correct answer if the tree is fully analyzed.
+
+   function Must_Inline (Subp : Entity_Id) return Boolean;
+   --  Return true if Subp must be inlined by the frontend
 
    function Needs_One_Actual (E : Entity_Id) return Boolean;
    --  Returns True if a function has defaults for all but its first
@@ -1212,6 +1221,11 @@ package Sem_Util is
    --  Note that the result produced is always an expression, not a parameter
    --  association node, even if named notation was used.
 
+   function No_Scalar_Parts (T : Entity_Id) return Boolean;
+   --  Tests if type T can be determined at compile time to have no scalar
+   --  parts in the sense of the Valid_Scalars attribute. Returns True if
+   --  this is the case, meaning that the result of Valid_Scalars is True.
+
    procedure Normalize_Actuals
      (N       : Node_Id;
       S       : Entity_Id;
@@ -1270,6 +1284,11 @@ package Sem_Util is
    --  parameter Ent gives the entity to which the End_Label refers,
    --  and to which cross-references are to be generated.
 
+   function Proper_First_Index (Array_Typ : Entity_Id) return Entity_Id;
+   --  Return the First_Index attribute of an arbitrary array type unless it
+   --  is a string literal subtype in which case return the First_Index of the
+   --  base type.
+
    function References_Generic_Formal_Type (N : Node_Id) return Boolean;
    --  Returns True if the expression Expr contains any references to a
    --  generic type. This can only happen within a generic template.
@@ -1306,6 +1325,9 @@ package Sem_Util is
 
    procedure Reset_Analyzed_Flags (N : Node_Id);
    --  Reset the Analyzed flags in all nodes of the tree whose root is N
+
+   function Returns_Unconstrained_Type (Subp : Entity_Id) return Boolean;
+   --  Return true if Subp is a function that returns an unconstrained type
 
    function Safe_To_Capture_Value
      (N    : Node_Id;

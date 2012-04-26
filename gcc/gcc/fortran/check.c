@@ -521,14 +521,17 @@ variable_check (gfc_expr *e, int n, bool allow_proc)
 
   if (e->expr_type == EXPR_VARIABLE
       && e->symtree->n.sym->attr.flavor != FL_PARAMETER
-      && (allow_proc
-	  || !e->symtree->n.sym->attr.function
-	  || (e->symtree->n.sym == e->symtree->n.sym->result
-	      && (e->symtree->n.sym == gfc_current_ns->proc_name
-		  || (gfc_current_ns->parent
-		      && e->symtree->n.sym
-			 == gfc_current_ns->parent->proc_name)))))
+      && (allow_proc || !e->symtree->n.sym->attr.function))
     return SUCCESS;
+
+  if (e->expr_type == EXPR_VARIABLE && e->symtree->n.sym->attr.function
+      && e->symtree->n.sym == e->symtree->n.sym->result)
+    {
+      gfc_namespace *ns;
+      for (ns = gfc_current_ns; ns; ns = ns->parent)
+	if (ns->proc_name == e->symtree->n.sym)
+	  return SUCCESS;
+    }
 
   gfc_error ("'%s' argument of '%s' intrinsic at %L must be a variable",
 	     gfc_current_intrinsic_arg[n]->name, gfc_current_intrinsic, &e->where);
@@ -905,7 +908,7 @@ gfc_check_associated (gfc_expr *pointer, gfc_expr *target)
   if (attr1.pointer && gfc_is_coindexed (pointer))
     {
       gfc_error ("'%s' argument of '%s' intrinsic at %L shall not be "
-		 "conindexed", gfc_current_intrinsic_arg[0]->name,
+		 "coindexed", gfc_current_intrinsic_arg[0]->name,
 		 gfc_current_intrinsic, &pointer->where);
       return FAILURE;
     }
@@ -941,7 +944,7 @@ gfc_check_associated (gfc_expr *pointer, gfc_expr *target)
   if (attr1.pointer && gfc_is_coindexed (target))
     {
       gfc_error ("'%s' argument of '%s' intrinsic at %L shall not be "
-		 "conindexed", gfc_current_intrinsic_arg[1]->name,
+		 "coindexed", gfc_current_intrinsic_arg[1]->name,
 		 gfc_current_intrinsic, &target->where);
       return FAILURE;
     }
@@ -2848,7 +2851,7 @@ gfc_check_null (gfc_expr *mold)
   if (gfc_is_coindexed (mold))
     {
       gfc_error ("'%s' argument of '%s' intrinsic at %L shall not be "
-		 "conindexed", gfc_current_intrinsic_arg[0]->name,
+		 "coindexed", gfc_current_intrinsic_arg[0]->name,
 		 gfc_current_intrinsic, &mold->where);
       return FAILURE;
     }

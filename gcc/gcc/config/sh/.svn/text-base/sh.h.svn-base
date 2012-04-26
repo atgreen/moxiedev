@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler for Renesas / SuperH SH.
    Copyright (C) 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Contributed by Steve Chamberlain (sac@cygnus.com).
    Improved by Jim Wilson (wilson@cygnus.com).
@@ -290,7 +290,7 @@ do { \
 #endif
 
 #ifndef TARGET_OPT_DEFAULT
-#define TARGET_OPT_DEFAULT  MASK_ADJUST_UNROLL
+#define TARGET_OPT_DEFAULT  0
 #endif
 
 #define TARGET_DEFAULT \
@@ -579,9 +579,7 @@ extern enum sh_divide_strategy_e sh_div_strategy;
 #define LABEL_ALIGN_AFTER_BARRIER(LABEL_AFTER_BARRIER) \
   barrier_align (LABEL_AFTER_BARRIER)
 
-#define LOOP_ALIGN(A_LABEL) \
-  ((! optimize || TARGET_HARD_SH4 || optimize_size) \
-   ? 0 : sh_loop_align (A_LABEL))
+#define LOOP_ALIGN(A_LABEL) sh_loop_align (A_LABEL)
 
 #define LABEL_ALIGN(A_LABEL) \
 (									\
@@ -1218,80 +1216,6 @@ extern enum reg_class regno_reg_class[FIRST_PSEUDO_REGISTER];
 #define ZERO_EXTRACT_ANDMASK(EXTRACT_SZ_RTX, EXTRACT_POS_RTX)\
   (((1 << INTVAL (EXTRACT_SZ_RTX)) - 1) << INTVAL (EXTRACT_POS_RTX))
 
-#if 0
-#define SECONDARY_INOUT_RELOAD_CLASS(CLASS,MODE,X,ELSE) \
-  ((((REGCLASS_HAS_FP_REG (CLASS) 					\
-      && (REG_P (X)							\
-      && (GENERAL_OR_AP_REGISTER_P (REGNO (X))				\
-	  || (FP_REGISTER_P (REGNO (X)) && (MODE) == SImode		\
-	      && TARGET_FMOVD))))					\
-     || (REGCLASS_HAS_GENERAL_REG (CLASS) 				\
-	 && REG_P (X)							\
-	 && FP_REGISTER_P (REGNO (X))))					\
-    && ! TARGET_SHMEDIA							\
-    && ((MODE) == SFmode || (MODE) == SImode))				\
-   ? FPUL_REGS								\
-   : (((CLASS) == FPUL_REGS						\
-       || (REGCLASS_HAS_FP_REG (CLASS)					\
-	   && ! TARGET_SHMEDIA && MODE == SImode))			\
-      && (MEM_P (X)							\
-	  || (REG_P (X)							\
-	      && (REGNO (X) >= FIRST_PSEUDO_REGISTER			\
-		  || REGNO (X) == T_REG					\
-		  || system_reg_operand (X, VOIDmode)))))		\
-   ? GENERAL_REGS							\
-   : (((CLASS) == TARGET_REGS						\
-       || (TARGET_SHMEDIA && (CLASS) == SIBCALL_REGS))			\
-      && !satisfies_constraint_Csy (X)					\
-      && (!REG_P (X) || ! GENERAL_REGISTER_P (REGNO (X))))		\
-   ? GENERAL_REGS							\
-   : (((CLASS) == MAC_REGS || (CLASS) == PR_REGS)			\
-      && REG_P (X) && ! GENERAL_REGISTER_P (REGNO (X))			\
-      && (CLASS) != REGNO_REG_CLASS (REGNO (X)))			\
-   ? GENERAL_REGS							\
-   : ((CLASS) != GENERAL_REGS && REG_P (X)				\
-      && TARGET_REGISTER_P (REGNO (X)))					\
-   ? GENERAL_REGS : (ELSE))
-
-#define SECONDARY_OUTPUT_RELOAD_CLASS(CLASS,MODE,X) \
- SECONDARY_INOUT_RELOAD_CLASS(CLASS,MODE,X,NO_REGS)
-
-#define SECONDARY_INPUT_RELOAD_CLASS(CLASS,MODE,X)  \
-  ((REGCLASS_HAS_FP_REG (CLASS) 					\
-    && ! TARGET_SHMEDIA							\
-    && immediate_operand ((X), (MODE))					\
-    && ! ((fp_zero_operand (X) || fp_one_operand (X))			\
-	  && (MODE) == SFmode && fldi_ok ()))				\
-   ? R0_REGS								\
-   : ((CLASS) == FPUL_REGS						\
-      && ((REG_P (X)							\
-	   && (REGNO (X) == MACL_REG || REGNO (X) == MACH_REG		\
-	       || REGNO (X) == T_REG))					\
-	  || GET_CODE (X) == PLUS))					\
-   ? GENERAL_REGS							\
-   : (CLASS) == FPUL_REGS && immediate_operand ((X), (MODE))		\
-   ? (satisfies_constraint_I08 (X)					\
-      ? GENERAL_REGS							\
-      : R0_REGS)							\
-   : ((CLASS) == FPSCR_REGS						\
-      && ((REG_P (X) && REGNO (X) >= FIRST_PSEUDO_REGISTER)		\
-	  || (MEM_P (X) && GET_CODE (XEXP ((X), 0)) == PLUS)))		\
-   ? GENERAL_REGS							\
-   : (REGCLASS_HAS_FP_REG (CLASS) 					\
-      && TARGET_SHMEDIA							\
-      && immediate_operand ((X), (MODE))				\
-      && (X) != CONST0_RTX (GET_MODE (X))				\
-      && GET_MODE (X) != V4SFmode)					\
-   ? GENERAL_REGS							\
-   : (((MODE) == QImode || (MODE) == HImode)				\
-      && TARGET_SHMEDIA && inqhi_operand ((X), (MODE)))			\
-   ? GENERAL_REGS							\
-   : (TARGET_SHMEDIA && (CLASS) == GENERAL_REGS				\
-      && (GET_CODE (X) == LABEL_REF || PIC_ADDR_P (X)))			\
-   ? TARGET_REGS							\
-   : SECONDARY_INOUT_RELOAD_CLASS((CLASS),(MODE),(X), NO_REGS))
-#endif
-
 /* Return the maximum number of consecutive registers
    needed to represent mode MODE in a register of class CLASS.
 
@@ -1727,7 +1651,7 @@ struct sh_args {
    can ignore COUNT.  */
 
 #define RETURN_ADDR_RTX(COUNT, FRAME)	\
-  (((COUNT) == 0) ? sh_get_pr_initial_val () : (rtx) 0)
+  (((COUNT) == 0) ? sh_get_pr_initial_val () : NULL_RTX)
 
 /* A C expression whose value is RTL representing the location of the
    incoming return address at the beginning of any function, before the
@@ -1909,12 +1833,6 @@ struct sh_args {
 
 #define ALLOW_INDEXED_ADDRESS \
   ((!TARGET_SHMEDIA32 && !TARGET_SHCOMPACT) || TARGET_ALLOW_INDEXED_ADDRESS)
-
-#define GO_IF_LEGITIMATE_INDEX(MODE, OP, WIN)	\
-  do {						\
-    if (sh_legitimate_index_p ((MODE), (OP)))	\
-      goto WIN;					\
-  } while (0)
 
 /* A C compound statement that attempts to replace X, which is an address
    that needs reloading, with a valid memory address for an operand of
@@ -2383,8 +2301,6 @@ extern int current_function_interrupt;
 
 #define MAX_FIXED_MODE_SIZE (TARGET_SH5 ? 128 : 64)
 
-#define SIDI_OFF (TARGET_LITTLE_ENDIAN ? 0 : 4)
-
 /* Better to allocate once the maximum space for outgoing args in the
    prologue rather than duplicate around each call.  */
 #define ACCUMULATE_OUTGOING_ARGS TARGET_ACCUMULATE_OUTGOING_ARGS
@@ -2477,8 +2393,5 @@ extern int current_function_interrupt;
 1:	.long	" USER_LABEL_PREFIX #FUNC " - 0b\n\
 2:\n" TEXT_SECTION_ASM_OP);
 #endif /* (defined CRT_BEGIN || defined CRT_END) && ! __SHMEDIA__ */
-
-/* FIXME: middle-end support for highpart optimizations is missing.  */
-#define high_life_started reload_in_progress
 
 #endif /* ! GCC_SH_H */

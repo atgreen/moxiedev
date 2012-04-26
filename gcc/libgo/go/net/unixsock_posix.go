@@ -11,19 +11,20 @@ package net
 import (
 	"os"
 	"syscall"
+	"time"
 )
 
 func unixSocket(net string, laddr, raddr *UnixAddr, mode string) (fd *netFD, err error) {
-	var proto int
+	var sotype int
 	switch net {
 	default:
 		return nil, UnknownNetworkError(net)
 	case "unix":
-		proto = syscall.SOCK_STREAM
+		sotype = syscall.SOCK_STREAM
 	case "unixgram":
-		proto = syscall.SOCK_DGRAM
+		sotype = syscall.SOCK_DGRAM
 	case "unixpacket":
-		proto = syscall.SOCK_SEQPACKET
+		sotype = syscall.SOCK_SEQPACKET
 	}
 
 	var la, ra syscall.Sockaddr
@@ -37,7 +38,7 @@ func unixSocket(net string, laddr, raddr *UnixAddr, mode string) (fd *netFD, err
 		}
 		if raddr != nil {
 			ra = &syscall.SockaddrUnix{Name: raddr.Name}
-		} else if proto != syscall.SOCK_DGRAM || laddr == nil {
+		} else if sotype != syscall.SOCK_DGRAM || laddr == nil {
 			return nil, &OpError{Op: mode, Net: net, Err: errMissingAddress}
 		}
 
@@ -52,14 +53,14 @@ func unixSocket(net string, laddr, raddr *UnixAddr, mode string) (fd *netFD, err
 	}
 
 	f := sockaddrToUnix
-	if proto == syscall.SOCK_DGRAM {
+	if sotype == syscall.SOCK_DGRAM {
 		f = sockaddrToUnixgram
-	} else if proto == syscall.SOCK_SEQPACKET {
+	} else if sotype == syscall.SOCK_SEQPACKET {
 		f = sockaddrToUnixpacket
 	}
 
-	fd, oserr := socket(net, syscall.AF_UNIX, proto, 0, la, ra, f)
-	if oserr != nil {
+	fd, err = socket(net, syscall.AF_UNIX, sotype, 0, false, la, ra, f)
+	if err != nil {
 		goto Error
 	}
 	return fd, nil
@@ -69,7 +70,7 @@ Error:
 	if mode == "listen" {
 		addr = laddr
 	}
-	return nil, &OpError{Op: mode, Net: net, Addr: addr, Err: oserr}
+	return nil, &OpError{Op: mode, Net: net, Addr: addr, Err: err}
 }
 
 func sockaddrToUnix(sa syscall.Sockaddr) Addr {
@@ -93,8 +94,8 @@ func sockaddrToUnixpacket(sa syscall.Sockaddr) Addr {
 	return nil
 }
 
-func protoToNet(proto int) string {
-	switch proto {
+func sotypeToNet(sotype int) string {
+	switch sotype {
 	case syscall.SOCK_STREAM:
 		return "unix"
 	case syscall.SOCK_SEQPACKET:
@@ -102,7 +103,7 @@ func protoToNet(proto int) string {
 	case syscall.SOCK_DGRAM:
 		return "unixgram"
 	default:
-		panic("protoToNet unknown protocol")
+		panic("sotypeToNet unknown socket type")
 	}
 	return ""
 }
@@ -119,18 +120,18 @@ func (c *UnixConn) ok() bool { return c != nil && c.fd != nil }
 
 // Implementation of the Conn interface - see Conn for documentation.
 
-// Read implements the net.Conn Read method.
+// Read implements the Conn Read method.
 func (c *UnixConn) Read(b []byte) (n int, err error) {
 	if !c.ok() {
-		return 0, os.EINVAL
+		return 0, syscall.EINVAL
 	}
 	return c.fd.Read(b)
 }
 
-// Write implements the net.Conn Write method.
+// Write implements the Conn Write method.
 func (c *UnixConn) Write(b []byte) (n int, err error) {
 	if !c.ok() {
-		return 0, os.EINVAL
+		return 0, syscall.EINVAL
 	}
 	return c.fd.Write(b)
 }
@@ -138,7 +139,7 @@ func (c *UnixConn) Write(b []byte) (n int, err error) {
 // Close closes the Unix domain connection.
 func (c *UnixConn) Close() error {
 	if !c.ok() {
-		return os.EINVAL
+		return syscall.EINVAL
 	}
 	err := c.fd.Close()
 	c.fd = nil
@@ -164,35 +165,35 @@ func (c *UnixConn) RemoteAddr() Addr {
 	return c.fd.raddr
 }
 
-// SetTimeout implements the net.Conn SetTimeout method.
-func (c *UnixConn) SetTimeout(nsec int64) error {
+// SetDeadline implements the Conn SetDeadline method.
+func (c *UnixConn) SetDeadline(t time.Time) error {
 	if !c.ok() {
-		return os.EINVAL
+		return syscall.EINVAL
 	}
-	return setTimeout(c.fd, nsec)
+	return setDeadline(c.fd, t)
 }
 
-// SetReadTimeout implements the net.Conn SetReadTimeout method.
-func (c *UnixConn) SetReadTimeout(nsec int64) error {
+// SetReadDeadline implements the Conn SetReadDeadline method.
+func (c *UnixConn) SetReadDeadline(t time.Time) error {
 	if !c.ok() {
-		return os.EINVAL
+		return syscall.EINVAL
 	}
-	return setReadTimeout(c.fd, nsec)
+	return setReadDeadline(c.fd, t)
 }
 
-// SetWriteTimeout implements the net.Conn SetWriteTimeout method.
-func (c *UnixConn) SetWriteTimeout(nsec int64) error {
+// SetWriteDeadline implements the Conn SetWriteDeadline method.
+func (c *UnixConn) SetWriteDeadline(t time.Time) error {
 	if !c.ok() {
-		return os.EINVAL
+		return syscall.EINVAL
 	}
-	return setWriteTimeout(c.fd, nsec)
+	return setWriteDeadline(c.fd, t)
 }
 
 // SetReadBuffer sets the size of the operating system's
 // receive buffer associated with the connection.
 func (c *UnixConn) SetReadBuffer(bytes int) error {
 	if !c.ok() {
-		return os.EINVAL
+		return syscall.EINVAL
 	}
 	return setReadBuffer(c.fd, bytes)
 }
@@ -201,34 +202,34 @@ func (c *UnixConn) SetReadBuffer(bytes int) error {
 // transmit buffer associated with the connection.
 func (c *UnixConn) SetWriteBuffer(bytes int) error {
 	if !c.ok() {
-		return os.EINVAL
+		return syscall.EINVAL
 	}
 	return setWriteBuffer(c.fd, bytes)
 }
 
 // ReadFromUnix reads a packet from c, copying the payload into b.
-// It returns the number of bytes copied into b and the return address
-// that was on the packet.
+// It returns the number of bytes copied into b and the source address
+// of the packet.
 //
 // ReadFromUnix can be made to time out and return
 // an error with Timeout() == true after a fixed time limit;
-// see SetTimeout and SetReadTimeout.
+// see SetDeadline and SetReadDeadline.
 func (c *UnixConn) ReadFromUnix(b []byte) (n int, addr *UnixAddr, err error) {
 	if !c.ok() {
-		return 0, nil, os.EINVAL
+		return 0, nil, syscall.EINVAL
 	}
 	n, sa, err := c.fd.ReadFrom(b)
 	switch sa := sa.(type) {
 	case *syscall.SockaddrUnix:
-		addr = &UnixAddr{sa.Name, protoToNet(c.fd.proto)}
+		addr = &UnixAddr{sa.Name, sotypeToNet(c.fd.sotype)}
 	}
 	return
 }
 
-// ReadFrom implements the net.PacketConn ReadFrom method.
+// ReadFrom implements the PacketConn ReadFrom method.
 func (c *UnixConn) ReadFrom(b []byte) (n int, addr Addr, err error) {
 	if !c.ok() {
-		return 0, nil, os.EINVAL
+		return 0, nil, syscall.EINVAL
 	}
 	n, uaddr, err := c.ReadFromUnix(b)
 	return n, uaddr.toAddr(), err
@@ -238,50 +239,58 @@ func (c *UnixConn) ReadFrom(b []byte) (n int, addr Addr, err error) {
 //
 // WriteToUnix can be made to time out and return
 // an error with Timeout() == true after a fixed time limit;
-// see SetTimeout and SetWriteTimeout.
+// see SetDeadline and SetWriteDeadline.
 // On packet-oriented connections, write timeouts are rare.
 func (c *UnixConn) WriteToUnix(b []byte, addr *UnixAddr) (n int, err error) {
 	if !c.ok() {
-		return 0, os.EINVAL
+		return 0, syscall.EINVAL
 	}
-	if addr.Net != protoToNet(c.fd.proto) {
-		return 0, os.EAFNOSUPPORT
+	if addr.Net != sotypeToNet(c.fd.sotype) {
+		return 0, syscall.EAFNOSUPPORT
 	}
 	sa := &syscall.SockaddrUnix{Name: addr.Name}
 	return c.fd.WriteTo(b, sa)
 }
 
-// WriteTo implements the net.PacketConn WriteTo method.
+// WriteTo implements the PacketConn WriteTo method.
 func (c *UnixConn) WriteTo(b []byte, addr Addr) (n int, err error) {
 	if !c.ok() {
-		return 0, os.EINVAL
+		return 0, syscall.EINVAL
 	}
 	a, ok := addr.(*UnixAddr)
 	if !ok {
-		return 0, &OpError{"writeto", "unix", addr, os.EINVAL}
+		return 0, &OpError{"write", c.fd.net, addr, syscall.EINVAL}
 	}
 	return c.WriteToUnix(b, a)
 }
 
+// ReadMsgUnix reads a packet from c, copying the payload into b
+// and the associated out-of-band data into oob.
+// It returns the number of bytes copied into b, the number of
+// bytes copied into oob, the flags that were set on the packet,
+// and the source address of the packet.
 func (c *UnixConn) ReadMsgUnix(b, oob []byte) (n, oobn, flags int, addr *UnixAddr, err error) {
 	if !c.ok() {
-		return 0, 0, 0, nil, os.EINVAL
+		return 0, 0, 0, nil, syscall.EINVAL
 	}
 	n, oobn, flags, sa, err := c.fd.ReadMsg(b, oob)
 	switch sa := sa.(type) {
 	case *syscall.SockaddrUnix:
-		addr = &UnixAddr{sa.Name, protoToNet(c.fd.proto)}
+		addr = &UnixAddr{sa.Name, sotypeToNet(c.fd.sotype)}
 	}
 	return
 }
 
+// WriteMsgUnix writes a packet to addr via c, copying the payload from b
+// and the associated out-of-band data from oob.  It returns the number
+// of payload and out-of-band bytes written.
 func (c *UnixConn) WriteMsgUnix(b, oob []byte, addr *UnixAddr) (n, oobn int, err error) {
 	if !c.ok() {
-		return 0, 0, os.EINVAL
+		return 0, 0, syscall.EINVAL
 	}
 	if addr != nil {
-		if addr.Net != protoToNet(c.fd.proto) {
-			return 0, 0, os.EAFNOSUPPORT
+		if addr.Net != sotypeToNet(c.fd.sotype) {
+			return 0, 0, syscall.EAFNOSUPPORT
 		}
 		sa := &syscall.SockaddrUnix{Name: addr.Name}
 		return c.fd.WriteMsg(b, oob, sa)
@@ -297,10 +306,10 @@ func (c *UnixConn) File() (f *os.File, err error) { return c.fd.dup() }
 // DialUnix connects to the remote address raddr on the network net,
 // which must be "unix" or "unixgram".  If laddr is not nil, it is used
 // as the local address for the connection.
-func DialUnix(net string, laddr, raddr *UnixAddr) (c *UnixConn, err error) {
-	fd, e := unixSocket(net, laddr, raddr, "dial")
-	if e != nil {
-		return nil, e
+func DialUnix(net string, laddr, raddr *UnixAddr) (*UnixConn, error) {
+	fd, err := unixSocket(net, laddr, raddr, "dial")
+	if err != nil {
+		return nil, err
 	}
 	return newUnixConn(fd), nil
 }
@@ -315,7 +324,7 @@ type UnixListener struct {
 
 // ListenUnix announces on the Unix domain socket laddr and returns a Unix listener.
 // Net must be "unix" (stream sockets).
-func ListenUnix(net string, laddr *UnixAddr) (l *UnixListener, err error) {
+func ListenUnix(net string, laddr *UnixAddr) (*UnixListener, error) {
 	if net != "unix" && net != "unixgram" && net != "unixpacket" {
 		return nil, UnknownNetworkError(net)
 	}
@@ -326,25 +335,25 @@ func ListenUnix(net string, laddr *UnixAddr) (l *UnixListener, err error) {
 	if err != nil {
 		return nil, err
 	}
-	e1 := syscall.Listen(fd.sysfd, 8) // listenBacklog());
-	if e1 != nil {
+	err = syscall.Listen(fd.sysfd, listenerBacklog)
+	if err != nil {
 		closesocket(fd.sysfd)
-		return nil, &OpError{Op: "listen", Net: "unix", Addr: laddr, Err: e1}
+		return nil, &OpError{Op: "listen", Net: net, Addr: laddr, Err: err}
 	}
 	return &UnixListener{fd, laddr.Name}, nil
 }
 
 // AcceptUnix accepts the next incoming call and returns the new connection
 // and the remote address.
-func (l *UnixListener) AcceptUnix() (c *UnixConn, err error) {
+func (l *UnixListener) AcceptUnix() (*UnixConn, error) {
 	if l == nil || l.fd == nil {
-		return nil, os.EINVAL
+		return nil, syscall.EINVAL
 	}
-	fd, e := l.fd.accept(sockaddrToUnix)
-	if e != nil {
-		return nil, e
+	fd, err := l.fd.accept(sockaddrToUnix)
+	if err != nil {
+		return nil, err
 	}
-	c = newUnixConn(fd)
+	c := newUnixConn(fd)
 	return c, nil
 }
 
@@ -362,7 +371,7 @@ func (l *UnixListener) Accept() (c Conn, err error) {
 // Already accepted connections are not closed.
 func (l *UnixListener) Close() error {
 	if l == nil || l.fd == nil {
-		return os.EINVAL
+		return syscall.EINVAL
 	}
 
 	// The operating system doesn't clean up
@@ -386,12 +395,13 @@ func (l *UnixListener) Close() error {
 // Addr returns the listener's network address.
 func (l *UnixListener) Addr() Addr { return l.fd.laddr }
 
-// SetTimeout sets the deadline associated wuth the listener
-func (l *UnixListener) SetTimeout(nsec int64) (err error) {
+// SetDeadline sets the deadline associated with the listener.
+// A zero time value disables the deadline.
+func (l *UnixListener) SetDeadline(t time.Time) (err error) {
 	if l == nil || l.fd == nil {
-		return os.EINVAL
+		return syscall.EINVAL
 	}
-	return setTimeout(l.fd, nsec)
+	return setDeadline(l.fd, t)
 }
 
 // File returns a copy of the underlying os.File, set to blocking mode.
@@ -403,18 +413,18 @@ func (l *UnixListener) File() (f *os.File, err error) { return l.fd.dup() }
 // local address laddr.  The returned connection c's ReadFrom
 // and WriteTo methods can be used to receive and send UDP
 // packets with per-packet addressing.  The network net must be "unixgram".
-func ListenUnixgram(net string, laddr *UnixAddr) (c *UDPConn, err error) {
+func ListenUnixgram(net string, laddr *UnixAddr) (*UDPConn, error) {
 	switch net {
 	case "unixgram":
 	default:
 		return nil, UnknownNetworkError(net)
 	}
 	if laddr == nil {
-		return nil, &OpError{"listen", "unixgram", nil, errMissingAddress}
+		return nil, &OpError{"listen", net, nil, errMissingAddress}
 	}
-	fd, e := unixSocket(net, laddr, nil, "listen")
-	if e != nil {
-		return nil, e
+	fd, err := unixSocket(net, laddr, nil, "listen")
+	if err != nil {
+		return nil, err
 	}
 	return newUDPConn(fd), nil
 }

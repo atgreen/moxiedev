@@ -5,6 +5,7 @@
 package http_test
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -46,19 +47,19 @@ func TestPostQuery(t *testing.T) {
 
 type stringMap map[string][]string
 type parseContentTypeTest struct {
+	shouldError bool
 	contentType stringMap
 }
 
 var parseContentTypeTests = []parseContentTypeTest{
-	{contentType: stringMap{"Content-Type": {"text/plain"}}},
-	{contentType: stringMap{}}, // Non-existent keys are not placed. The value nil is illegal.
-	{contentType: stringMap{"Content-Type": {"text/plain; boundary="}}},
-	{
-		contentType: stringMap{"Content-Type": {"application/unknown"}},
-	},
+	{false, stringMap{"Content-Type": {"text/plain"}}},
+	// Non-existent keys are not placed. The value nil is illegal.
+	{true, stringMap{}},
+	{true, stringMap{"Content-Type": {"text/plain; boundary="}}},
+	{false, stringMap{"Content-Type": {"application/unknown"}}},
 }
 
-func TestParseFormBadContentType(t *testing.T) {
+func TestParseFormUnknownContentType(t *testing.T) {
 	for i, test := range parseContentTypeTests {
 		req := &Request{
 			Method: "POST",
@@ -66,8 +67,11 @@ func TestParseFormBadContentType(t *testing.T) {
 			Body:   ioutil.NopCloser(bytes.NewBufferString("body")),
 		}
 		err := req.ParseForm()
-		if err == nil {
+		switch {
+		case err == nil && test.shouldError:
 			t.Errorf("test %d should have returned error", i)
+		case err != nil && !test.shouldError:
+			t.Errorf("test %d should not have returned error, got %v", i, err)
 		}
 	}
 }
@@ -171,6 +175,24 @@ func TestRequestMultipartCallOrder(t *testing.T) {
 	err = req.ParseMultipartForm(1024)
 	if err == nil {
 		t.Errorf("expected an error from ParseMultipartForm after call to MultipartReader")
+	}
+}
+
+var readRequestErrorTests = []struct {
+	in  string
+	err error
+}{
+	{"GET / HTTP/1.1\r\nheader:foo\r\n\r\n", nil},
+	{"GET / HTTP/1.1\r\nheader:foo\r\n", io.ErrUnexpectedEOF},
+	{"", io.EOF},
+}
+
+func TestReadRequestErrors(t *testing.T) {
+	for i, tt := range readRequestErrorTests {
+		_, err := ReadRequest(bufio.NewReader(strings.NewReader(tt.in)))
+		if err != tt.err {
+			t.Errorf("%d. got error = %v; want %v", i, err, tt.err)
+		}
 	}
 }
 

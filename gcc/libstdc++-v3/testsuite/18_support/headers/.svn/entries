@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/18_support/headers
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,6 +26,27 @@ redi
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+climits
+dir
+
+csetjmp
+dir
+
+cfloat
+dir
+
+cstdint
+dir
+
+cstdalign
+dir
+
+cstdbool
+dir
+
+cstddef
+dir
+
 csignal
 dir
 
@@ -44,30 +65,9 @@ dir
 exception
 dir
 
-limits
-dir
-
 ctime
 dir
 
-climits
-dir
-
-csetjmp
-dir
-
-cstdalign
-dir
-
-cstdint
-dir
-
-cfloat
-dir
-
-cstdbool
-dir
-
-cstddef
+limits
 dir
 

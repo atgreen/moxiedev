@@ -22,6 +22,7 @@ import (
 type Reader struct {
 	R   *bufio.Reader
 	dot *dotReader
+	buf []byte // a re-usable buffer for readContinuedLineSlice
 }
 
 // NewReader returns a new Reader reading from r.
@@ -121,74 +122,44 @@ func (r *Reader) readContinuedLineSlice() ([]byte, error) {
 	// Read the first line.
 	line, err := r.readLineSlice()
 	if err != nil {
-		return line, err
+		return nil, err
 	}
 	if len(line) == 0 { // blank line - no continuation
 		return line, nil
 	}
-	line = trim(line)
 
-	copied := false
-	if r.R.Buffered() < 1 {
-		// ReadByte will flush the buffer; make a copy of the slice.
-		copied = true
-		line = append([]byte(nil), line...)
-	}
-
-	// Look for a continuation line.
-	c, err := r.R.ReadByte()
-	if err != nil {
-		// Delay err until we read the byte next time.
-		return line, nil
-	}
-	if c != ' ' && c != '\t' {
-		// Not a continuation.
-		r.R.UnreadByte()
-		return line, nil
-	}
-
-	if !copied {
-		// The next readLineSlice will invalidate the previous one.
-		line = append(make([]byte, 0, len(line)*2), line...)
-	}
+	// ReadByte or the next readLineSlice will flush the read buffer;
+	// copy the slice into buf.
+	r.buf = append(r.buf[:0], trim(line)...)
 
 	// Read continuation lines.
-	for {
-		// Consume leading spaces; one already gone.
-		for {
-			c, err = r.R.ReadByte()
-			if err != nil {
-				break
-			}
-			if c != ' ' && c != '\t' {
-				r.R.UnreadByte()
-				break
-			}
-		}
-		var cont []byte
-		cont, err = r.readLineSlice()
-		cont = trim(cont)
-		line = append(line, ' ')
-		line = append(line, cont...)
+	for r.skipSpace() > 0 {
+		line, err := r.readLineSlice()
 		if err != nil {
 			break
 		}
+		r.buf = append(r.buf, ' ')
+		r.buf = append(r.buf, line...)
+	}
+	return r.buf, nil
+}
 
-		// Check for leading space on next line.
-		if c, err = r.R.ReadByte(); err != nil {
+// skipSpace skips R over all spaces and returns the number of bytes skipped.
+func (r *Reader) skipSpace() int {
+	n := 0
+	for {
+		c, err := r.R.ReadByte()
+		if err != nil {
+			// Bufio will keep err until next read.
 			break
 		}
 		if c != ' ' && c != '\t' {
 			r.R.UnreadByte()
 			break
 		}
+		n++
 	}
-
-	// Delay error until next call.
-	if len(line) > 0 {
-		err = nil
-	}
-	return line, err
+	return n
 }
 
 func (r *Reader) readCodeLine(expectCode int) (code int, continued bool, message string, err error) {
@@ -483,10 +454,14 @@ func (r *Reader) ReadMIMEHeader() (MIMEHeader, error) {
 
 		// Key ends at first colon; must not have spaces.
 		i := bytes.IndexByte(kv, ':')
-		if i < 0 || bytes.IndexByte(kv[0:i], ' ') >= 0 {
+		if i < 0 {
 			return m, ProtocolError("malformed MIME header line: " + string(kv))
 		}
-		key := CanonicalMIMEHeaderKey(string(kv[0:i]))
+		key := string(kv[0:i])
+		if strings.Index(key, " ") >= 0 {
+			key = strings.TrimRight(key, " ")
+		}
+		key = CanonicalMIMEHeaderKey(key)
 
 		// Skip initial spaces in value.
 		i++ // skip colon
@@ -532,6 +507,11 @@ MustRewrite:
 	a := []byte(s)
 	upper := true
 	for i, v := range a {
+		if v == ' ' {
+			a[i] = '-'
+			upper = true
+			continue
+		}
 		if upper && 'a' <= v && v <= 'z' {
 			a[i] = v + 'A' - 'a'
 		}

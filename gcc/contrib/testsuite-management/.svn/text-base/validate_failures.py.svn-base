@@ -5,7 +5,7 @@
 
 # Contributed by Diego Novillo <dnovillo@google.com>
 #
-# Copyright (C) 2011 Free Software Foundation, Inc.
+# Copyright (C) 2011, 2012 Free Software Foundation, Inc.
 #
 # This file is part of GCC.
 #
@@ -97,10 +97,14 @@ class TestResult(object):
       self.attrs = ''
       if '|' in summary_line:
         (self.attrs, summary_line) = summary_line.split('|', 1)
-      (self.state,
-       self.name,
-       self.description) = re.match(r' *([A-Z]+): ([^ ]+) (.*)',
-                                    summary_line).groups()
+      try:
+        (self.state,
+         self.name,
+         self.description) = re.match(r' *([A-Z]+): (\S+)\s(.*)',
+                                      summary_line).groups()
+      except:
+        print 'Failed to parse summary line: "%s"' % summary_line
+        raise
       self.attrs = self.attrs.strip()
       self.state = self.state.strip()
       self.description = self.description.strip()
@@ -146,7 +150,8 @@ def GetMakefileValue(makefile_name, value_name):
 def ValidBuildDirectory(builddir, target):
   if (not os.path.exists(builddir) or
       not os.path.exists('%s/Makefile' % builddir) or
-      not os.path.exists('%s/build-%s' % (builddir, target))):
+      (not os.path.exists('%s/build-%s' % (builddir, target)) and
+       not os.path.exists('%s/%s' % (builddir, target)))):
     return False
   return True
 
@@ -236,7 +241,7 @@ def CompareResults(manifest, actual):
 
 
 def GetBuildData(options):
-  target = GetMakefileValue('%s/Makefile' % options.build_dir, 'target=')
+  target = GetMakefileValue('%s/Makefile' % options.build_dir, 'target_alias=')
   srcdir = GetMakefileValue('%s/Makefile' % options.build_dir, 'srcdir =')
   if not ValidBuildDirectory(options.build_dir, target):
     Error('%s is not a valid GCC top level build directory.' %

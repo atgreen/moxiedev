@@ -89,9 +89,8 @@ do {									\
     }									\
   else if (!strcmp (rs6000_abi_name, "aixdesc"))			\
     rs6000_current_abi = ABI_AIX;					\
-  else if (!strcmp (rs6000_abi_name, "freebsd"))			\
-    rs6000_current_abi = ABI_V4;					\
-  else if (!strcmp (rs6000_abi_name, "linux"))				\
+  else if (!strcmp (rs6000_abi_name, "freebsd")				\
+	   || !strcmp (rs6000_abi_name, "linux"))			\
     {									\
       if (TARGET_64BIT)							\
 	rs6000_current_abi = ABI_AIX;					\
@@ -246,13 +245,16 @@ do {									\
 
 /* Define cutoff for using external functions to save floating point.
    When optimizing for size, use external functions when profitable.  */
-#define FP_SAVE_INLINE(FIRST_REG) (optimize_size			\
-				   ? ((FIRST_REG) == 62			\
-				      || (FIRST_REG) == 63)		\
-				   : (FIRST_REG) < 64)
+#define FP_SAVE_INLINE(FIRST_REG) ((FIRST_REG) == 62			\
+				   || (FIRST_REG) == 63			\
+				   || !optimize_size)
+
 /* And similarly for general purpose registers.  */
-#define GP_SAVE_INLINE(FIRST_REG) ((FIRST_REG) < 32	\
-				   && !optimize_size)
+#define GP_SAVE_INLINE(FIRST_REG) (!optimize_size)
+
+/* And vector registers.  */
+#define V_SAVE_INLINE(FIRST_REG) ((FIRST_REG) == LAST_ALTIVEC_REGNO	\
+				  || !optimize_size)
 
 /* Put jump tables in read-only memory, rather than in .text.  */
 #define JUMP_TABLES_IN_TEXT_SECTION 0

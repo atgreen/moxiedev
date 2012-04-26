@@ -20,6 +20,7 @@ func define(kind ast.ObjKind, name string) *ast.Object {
 	if scope.Insert(obj) != nil {
 		panic("types internal error: double declaration")
 	}
+	obj.Decl = scope
 	return obj
 }
 
@@ -101,11 +102,6 @@ func init() {
 	defType("Pointer")
 
 	defFun("Alignof")
-	defFun("New")
-	defFun("NewArray")
 	defFun("Offsetof")
-	defFun("Reflect")
 	defFun("Sizeof")
-	defFun("Typeof")
-	defFun("Unreflect")
 }

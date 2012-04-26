@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 S p e c                                  --
 --                                                                          --
---          Copyright (C) 2004-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 2004-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- This specification is derived from the Ada Reference Manual for use with --
 -- GNAT. The copyright notice above, and the license provisions that follow --
@@ -31,10 +31,11 @@
 -- This unit was originally developed by Matthew J Heaney.                  --
 ------------------------------------------------------------------------------
 
+with Ada.Iterator_Interfaces;
+
 private with Ada.Containers.Red_Black_Trees;
 private with Ada.Finalization;
-with Ada.Streams; use Ada.Streams;
-with Ada.Iterator_Interfaces;
+private with Ada.Streams;
 
 generic
    type Element_Type (<>) is private;
@@ -98,18 +99,7 @@ package Ada.Containers.Indefinite_Ordered_Sets is
    function Constant_Reference
      (Container : aliased Set;
       Position  : Cursor) return Constant_Reference_Type;
-
-   procedure Read
-     (Stream : not null access Root_Stream_Type'Class;
-      Item   : out Constant_Reference_Type);
-
-   for Constant_Reference_Type'Read use Read;
-
-   procedure Write
-     (Stream : not null access Root_Stream_Type'Class;
-      Item   : Constant_Reference_Type);
-
-   for Constant_Reference_Type'Write use Write;
+   pragma Inline (Constant_Reference);
 
    procedure Assign (Target : in out Set; Source : Set);
 
@@ -306,6 +296,8 @@ package Ada.Containers.Indefinite_Ordered_Sets is
       type Reference_Type
          (Element : not null access Element_Type) is null record;
 
+      use Ada.Streams;
+
       procedure Write
         (Stream : not null access Root_Stream_Type'Class;
          Item   : Reference_Type);
@@ -351,6 +343,19 @@ private
    use Red_Black_Trees;
    use Tree_Types;
    use Ada.Finalization;
+   use Ada.Streams;
+
+   procedure Write
+     (Stream    : not null access Root_Stream_Type'Class;
+      Container : Set);
+
+   for Set'Write use Write;
+
+   procedure Read
+     (Stream    : not null access Root_Stream_Type'Class;
+      Container : out Set);
+
+   for Set'Read use Read;
 
    type Set_Access is access all Set;
    for Set_Access'Storage_Size use 0;
@@ -372,22 +377,34 @@ private
 
    for Cursor'Read use Read;
 
-   No_Element : constant Cursor := Cursor'(null, null);
+   type Reference_Control_Type is
+      new Controlled with record
+         Container : Set_Access;
+      end record;
 
-   procedure Write
-     (Stream    : not null access Root_Stream_Type'Class;
-      Container : Set);
+   overriding procedure Adjust (Control : in out Reference_Control_Type);
+   pragma Inline (Adjust);
 
-   for Set'Write use Write;
-
-   procedure Read
-     (Stream    : not null access Root_Stream_Type'Class;
-      Container : out Set);
-
-   for Set'Read use Read;
+   overriding procedure Finalize (Control : in out Reference_Control_Type);
+   pragma Inline (Finalize);
 
    type Constant_Reference_Type
-      (Element : not null access constant Element_Type) is null record;
+      (Element : not null access constant Element_Type) is
+      record
+         Control : Reference_Control_Type;
+      end record;
+
+   procedure Read
+     (Stream : not null access Root_Stream_Type'Class;
+      Item   : out Constant_Reference_Type);
+
+   for Constant_Reference_Type'Read use Read;
+
+   procedure Write
+     (Stream : not null access Root_Stream_Type'Class;
+      Item   : Constant_Reference_Type);
+
+   for Constant_Reference_Type'Write use Write;
 
    Empty_Set : constant Set :=
                  (Controlled with Tree => (First  => null,
@@ -396,5 +413,7 @@ private
                                            Length => 0,
                                            Busy   => 0,
                                            Lock   => 0));
+
+   No_Element : constant Cursor := Cursor'(null, null);
 
 end Ada.Containers.Indefinite_Ordered_Sets;

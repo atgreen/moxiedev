@@ -1,5 +1,6 @@
 m4_include(../config/acx.m4)
 m4_include(../config/no-executables.m4)
+m4_include(../config/math.m4)
 
 dnl Check that we have a working GNU Fortran compiler
 AC_DEFUN([LIBGFOR_WORKING_GFORTRAN], [
@@ -99,7 +100,7 @@ void foo (void);
 	      [Define to 1 if the target supports #pragma weak])
   fi
   case "$host" in
-    *-*-darwin* | *-*-hpux* | *-*-cygwin* | *-*-mingw* | alpha*-dec-osf* )
+    *-*-darwin* | *-*-hpux* | *-*-cygwin* | *-*-mingw* )
       AC_DEFINE(GTHREAD_USE_WEAK, 0,
 		[Define to 0 if the target shouldn't use #pragma weak])
       ;;

@@ -50,57 +50,6 @@ Expression::~Expression()
 {
 }
 
-// If this expression has a constant integer value, return it.
-
-bool
-Expression::integer_constant_value(bool iota_is_constant, mpz_t val,
-				   Type** ptype) const
-{
-  *ptype = NULL;
-  return this->do_integer_constant_value(iota_is_constant, val, ptype);
-}
-
-// If this expression has a constant floating point value, return it.
-
-bool
-Expression::float_constant_value(mpfr_t val, Type** ptype) const
-{
-  *ptype = NULL;
-  if (this->do_float_constant_value(val, ptype))
-    return true;
-  mpz_t ival;
-  mpz_init(ival);
-  Type* t;
-  bool ret;
-  if (!this->do_integer_constant_value(false, ival, &t))
-    ret = false;
-  else
-    {
-      mpfr_set_z(val, ival, GMP_RNDN);
-      ret = true;
-    }
-  mpz_clear(ival);
-  return ret;
-}
-
-// If this expression has a constant complex value, return it.
-
-bool
-Expression::complex_constant_value(mpfr_t real, mpfr_t imag,
-				   Type** ptype) const
-{
-  *ptype = NULL;
-  if (this->do_complex_constant_value(real, imag, ptype))
-    return true;
-  Type *t;
-  if (this->float_constant_value(real, &t))
-    {
-      mpfr_set_ui(imag, 0, GMP_RNDN);
-      return true;
-    }
-  return false;
-}
-
 // Traverse the expressions.
 
 int
@@ -205,9 +154,6 @@ Expression::convert_for_assignment(Translate_context* context, Type* lhs_type,
 				   Type* rhs_type, tree rhs_tree,
 				   Location location)
 {
-  if (lhs_type == rhs_type)
-    return rhs_tree;
-
   if (lhs_type->is_error() || rhs_type->is_error())
     return error_mark_node;
 
@@ -220,7 +166,7 @@ Expression::convert_for_assignment(Translate_context* context, Type* lhs_type,
   if (lhs_type_tree == error_mark_node)
     return error_mark_node;
 
-  if (lhs_type->interface_type() != NULL)
+  if (lhs_type != rhs_type && lhs_type->interface_type() != NULL)
     {
       if (rhs_type->interface_type() == NULL)
 	return Expression::convert_type_to_interface(context, lhs_type,
@@ -231,7 +177,7 @@ Expression::convert_for_assignment(Translate_context* context, Type* lhs_type,
 							  rhs_type, rhs_tree,
 							  false, location);
     }
-  else if (rhs_type->interface_type() != NULL)
+  else if (lhs_type != rhs_type && rhs_type->interface_type() != NULL)
     return Expression::convert_interface_to_type(context, lhs_type, rhs_type,
 						 rhs_tree, location);
   else if (lhs_type->is_slice_type() && rhs_type->is_nil_type())
@@ -284,13 +230,21 @@ Expression::convert_for_assignment(Translate_context* context, Type* lhs_type,
 	   || SCALAR_FLOAT_TYPE_P(lhs_type_tree)
 	   || COMPLEX_FLOAT_TYPE_P(lhs_type_tree))
     return fold_convert_loc(location.gcc_location(), lhs_type_tree, rhs_tree);
-  else if (TREE_CODE(lhs_type_tree) == RECORD_TYPE
-	   && TREE_CODE(TREE_TYPE(rhs_tree)) == RECORD_TYPE)
+  else if ((TREE_CODE(lhs_type_tree) == RECORD_TYPE
+	    && TREE_CODE(TREE_TYPE(rhs_tree)) == RECORD_TYPE)
+	   || (TREE_CODE(lhs_type_tree) == ARRAY_TYPE
+	       && TREE_CODE(TREE_TYPE(rhs_tree)) == ARRAY_TYPE))
     {
+      // Avoid confusion from zero sized variables which may be
+      // represented as non-zero-sized.
+      if (int_size_in_bytes(lhs_type_tree) == 0
+	  || int_size_in_bytes(TREE_TYPE(rhs_tree)) == 0)
+	return rhs_tree;
+
       // This conversion must be permitted by Go, or we wouldn't have
       // gotten here.
       go_assert(int_size_in_bytes(lhs_type_tree)
-		 == int_size_in_bytes(TREE_TYPE(rhs_tree)));
+		== int_size_in_bytes(TREE_TYPE(rhs_tree)));
       return fold_build1_loc(location.gcc_location(), VIEW_CONVERT_EXPR,
                              lhs_type_tree, rhs_tree);
     }
@@ -522,8 +476,8 @@ Expression::convert_interface_to_interface(Translate_context* context,
       // first field is just the type descriptor of the object.
       go_assert(strcmp(IDENTIFIER_POINTER(DECL_NAME(field)),
 			"__type_descriptor") == 0);
-      go_assert(TREE_TYPE(field) == TREE_TYPE(rhs_type_descriptor));
-      elt->value = rhs_type_descriptor;
+      elt->value = fold_convert_loc(location.gcc_location(),
+				    TREE_TYPE(field), rhs_type_descriptor);
     }
   else
     {
@@ -819,24 +773,9 @@ class Error_expression : public Expression
   { return true; }
 
   bool
-  do_integer_constant_value(bool, mpz_t val, Type**) const
+  do_numeric_constant_value(Numeric_constant* nc) const
   {
-    mpz_set_ui(val, 0);
-    return true;
-  }
-
-  bool
-  do_float_constant_value(mpfr_t val, Type**) const
-  {
-    mpfr_set_ui(val, 0, GMP_RNDN);
-    return true;
-  }
-
-  bool
-  do_complex_constant_value(mpfr_t real, mpfr_t imag, Type**) const
-  {
-    mpfr_set_ui(real, 0, GMP_RNDN);
-    mpfr_set_ui(imag, 0, GMP_RNDN);
+    nc->set_unsigned_long(NULL, 0);
     return true;
   }
 
@@ -1328,7 +1267,8 @@ Func_expression::get_tree_without_closure(Gogo* gogo)
   // can't take their address.
   if (fntype->is_builtin())
     {
-      error_at(this->location(), "invalid use of special builtin function %qs",
+      error_at(this->location(),
+	       "invalid use of special builtin function %qs; must be called",
 	       this->function_->name().c_str());
       return error_mark_node;
     }
@@ -1454,8 +1394,9 @@ Unknown_expression::do_lower(Gogo*, Named_object*, Statement_inserter*, int)
 	{
 	  if (this->is_composite_literal_key_)
 	    return this;
-	  error_at(location, "reference to undefined name %qs",
-		   this->named_object_->message_name().c_str());
+	  if (!this->no_error_message_)
+	    error_at(location, "reference to undefined name %qs",
+		     this->named_object_->message_name().c_str());
 	  return Expression::make_error(location);
 	}
     }
@@ -1468,10 +1409,12 @@ Unknown_expression::do_lower(Gogo*, Named_object*, Statement_inserter*, int)
     case Named_object::NAMED_OBJECT_TYPE_DECLARATION:
       if (this->is_composite_literal_key_)
 	return this;
-      error_at(location, "reference to undefined type %qs",
-	       real->message_name().c_str());
+      if (!this->no_error_message_)
+	error_at(location, "reference to undefined type %qs",
+		 real->message_name().c_str());
       return Expression::make_error(location);
     case Named_object::NAMED_OBJECT_VAR:
+      real->var_value()->set_is_used();
       return Expression::make_var_reference(real, location);
     case Named_object::NAMED_OBJECT_FUNC:
     case Named_object::NAMED_OBJECT_FUNC_DECLARATION:
@@ -1479,7 +1422,8 @@ Unknown_expression::do_lower(Gogo*, Named_object*, Statement_inserter*, int)
     case Named_object::NAMED_OBJECT_PACKAGE:
       if (this->is_composite_literal_key_)
 	return this;
-      error_at(location, "unexpected reference to package");
+      if (!this->no_error_message_)
+	error_at(location, "unexpected reference to package");
       return Expression::make_error(location);
     default:
       go_unreachable();
@@ -1497,7 +1441,7 @@ Unknown_expression::do_dump_expression(Ast_dump_context* ast_dump_context) const
 
 // Make a reference to an unknown name.
 
-Expression*
+Unknown_expression*
 Expression::make_unknown_reference(Named_object* no, Location location)
 {
   return new Unknown_expression(no, location);
@@ -1740,17 +1684,14 @@ Expression::make_string(const std::string& val, Location location)
 class Integer_expression : public Expression
 {
  public:
-  Integer_expression(const mpz_t* val, Type* type, Location location)
+  Integer_expression(const mpz_t* val, Type* type, bool is_character_constant,
+		     Location location)
     : Expression(EXPRESSION_INTEGER, location),
-      type_(type)
+      type_(type), is_character_constant_(is_character_constant)
   { mpz_init_set(this->val_, *val); }
 
   static Expression*
   do_import(Import*);
-
-  // Return whether VAL fits in the type.
-  static bool
-  check_constant(mpz_t val, Type*, Location);
 
   // Write VAL to string dump.
   static void
@@ -1766,7 +1707,7 @@ class Integer_expression : public Expression
   { return true; }
 
   bool
-  do_integer_constant_value(bool, mpz_t val, Type** ptype) const;
+  do_numeric_constant_value(Numeric_constant* nc) const;
 
   Type*
   do_type();
@@ -1782,8 +1723,14 @@ class Integer_expression : public Expression
 
   Expression*
   do_copy()
-  { return Expression::make_integer(&this->val_, this->type_,
-				    this->location()); }
+  {
+    if (this->is_character_constant_)
+      return Expression::make_character(&this->val_, this->type_,
+					this->location());
+    else
+      return Expression::make_integer(&this->val_, this->type_,
+				      this->location());
+  }
 
   void
   do_export(Export*) const;
@@ -1796,17 +1743,20 @@ class Integer_expression : public Expression
   mpz_t val_;
   // The type so far.
   Type* type_;
+  // Whether this is a character constant.
+  bool is_character_constant_;
 };
 
-// Return an integer constant value.
+// Return a numeric constant for this expression.  We have to mark
+// this as a character when appropriate.
 
 bool
-Integer_expression::do_integer_constant_value(bool, mpz_t val,
-					      Type** ptype) const
+Integer_expression::do_numeric_constant_value(Numeric_constant* nc) const
 {
-  if (this->type_ != NULL)
-    *ptype = this->type_;
-  mpz_set(val, this->val_);
+  if (this->is_character_constant_)
+    nc->set_rune(this->type_, this->val_);
+  else
+    nc->set_int(this->type_, this->val_);
   return true;
 }
 
@@ -1817,7 +1767,12 @@ Type*
 Integer_expression::do_type()
 {
   if (this->type_ == NULL)
-    this->type_ = Type::make_abstract_integer_type();
+    {
+      if (this->is_character_constant_)
+	this->type_ = Type::make_abstract_character_type();
+      else
+	this->type_ = Type::make_abstract_integer_type();
+    }
   return this->type_;
 }
 
@@ -1829,53 +1784,15 @@ Integer_expression::do_determine_type(const Type_context* context)
 {
   if (this->type_ != NULL && !this->type_->is_abstract())
     ;
-  else if (context->type != NULL
-	   && (context->type->integer_type() != NULL
-	       || context->type->float_type() != NULL
-	       || context->type->complex_type() != NULL))
+  else if (context->type != NULL && context->type->is_numeric_type())
     this->type_ = context->type;
   else if (!context->may_be_abstract)
-    this->type_ = Type::lookup_integer_type("int");
-}
-
-// Return true if the integer VAL fits in the range of the type TYPE.
-// Otherwise give an error and return false.  TYPE may be NULL.
-
-bool
-Integer_expression::check_constant(mpz_t val, Type* type,
-				   Location location)
-{
-  if (type == NULL)
-    return true;
-  Integer_type* itype = type->integer_type();
-  if (itype == NULL || itype->is_abstract())
-    return true;
-
-  int bits = mpz_sizeinbase(val, 2);
-
-  if (itype->is_unsigned())
     {
-      // For an unsigned type we can only accept a nonnegative number,
-      // and we must be able to represent at least BITS.
-      if (mpz_sgn(val) >= 0
-	  && bits <= itype->bits())
-	return true;
+      if (this->is_character_constant_)
+	this->type_ = Type::lookup_integer_type("int32");
+      else
+	this->type_ = Type::lookup_integer_type("int");
     }
-  else
-    {
-      // For a signed type we need an extra bit to indicate the sign.
-      // We have to handle the most negative integer specially.
-      if (bits + 1 <= itype->bits()
-	  || (bits <= itype->bits()
-	      && mpz_sgn(val) < 0
-	      && (mpz_scan1(val, 0)
-		  == static_cast<unsigned long>(itype->bits() - 1))
-	      && mpz_scan0(val, itype->bits()) == ULONG_MAX))
-	return true;
-    }
-
-  error_at(location, "integer constant overflow");
-  return false;
 }
 
 // Check the type of an integer constant.
@@ -1883,10 +1800,15 @@ Integer_expression::check_constant(mpz_t val, Type* type,
 void
 Integer_expression::do_check_types(Gogo*)
 {
-  if (this->type_ == NULL)
+  Type* type = this->type_;
+  if (type == NULL)
     return;
-  if (!Integer_expression::check_constant(this->val_, this->type_,
-					  this->location()))
+  Numeric_constant nc;
+  if (this->is_character_constant_)
+    nc.set_rune(NULL, this->val_);
+  else
+    nc.set_int(NULL, this->val_);
+  if (!nc.set_type(type, true, this->location()))
     this->set_is_error();
 }
 
@@ -1950,6 +1872,8 @@ void
 Integer_expression::do_export(Export* exp) const
 {
   Integer_expression::export_integer(exp, this->val_);
+  if (this->is_character_constant_)
+    exp->write_c_string("'");
   // A trailing space lets us reliably identify the end of the number.
   exp->write_c_string(" ");
 }
@@ -2013,6 +1937,10 @@ Integer_expression::do_import(Import* imp)
   else if (num.find('.') == std::string::npos
 	   && num.find('E') == std::string::npos)
     {
+      bool is_character_constant = (!num.empty()
+				    && num[num.length() - 1] == '\'');
+      if (is_character_constant)
+	num = num.substr(0, num.length() - 1);
       mpz_t val;
       if (mpz_init_set_str(val, num.c_str(), 10) != 0)
 	{
@@ -2020,7 +1948,11 @@ Integer_expression::do_import(Import* imp)
 		   num.c_str());
 	  return Expression::make_error(imp->location());
 	}
-      Expression* ret = Expression::make_integer(&val, NULL, imp->location());
+      Expression* ret;
+      if (is_character_constant)
+	ret = Expression::make_character(&val, NULL, imp->location());
+      else
+	ret = Expression::make_integer(&val, NULL, imp->location());
       mpz_clear(val);
       return ret;
     }
@@ -2043,16 +1975,27 @@ Integer_expression::do_import(Import* imp)
 void
 Integer_expression::do_dump_expression(Ast_dump_context* ast_dump_context) const
 {
+  if (this->is_character_constant_)
+    ast_dump_context->ostream() << '\'';
   Integer_expression::export_integer(ast_dump_context, this->val_);
+  if (this->is_character_constant_)
+    ast_dump_context->ostream() << '\'';
 }
 
 // Build a new integer value.
 
 Expression*
-Expression::make_integer(const mpz_t* val, Type* type,
-			 Location location)
+Expression::make_integer(const mpz_t* val, Type* type, Location location)
 {
-  return new Integer_expression(val, type, location);
+  return new Integer_expression(val, type, false, location);
+}
+
+// Build a new character constant value.
+
+Expression*
+Expression::make_character(const mpz_t* val, Type* type, Location location)
+{
+  return new Integer_expression(val, type, true, location);
 }
 
 // Floats.
@@ -2066,14 +2009,6 @@ class Float_expression : public Expression
   {
     mpfr_init_set(this->val_, *val, GMP_RNDN);
   }
-
-  // Constrain VAL to fit into TYPE.
-  static void
-  constrain_float(mpfr_t val, Type* type);
-
-  // Return whether VAL fits in the type.
-  static bool
-  check_constant(mpfr_t val, Type*, Location);
 
   // Write VAL to export data.
   static void
@@ -2089,7 +2024,11 @@ class Float_expression : public Expression
   { return true; }
 
   bool
-  do_float_constant_value(mpfr_t val, Type**) const;
+  do_numeric_constant_value(Numeric_constant* nc) const
+  {
+    nc->set_float(this->type_, this->val_);
+    return true;
+  }
 
   Type*
   do_type();
@@ -2121,27 +2060,6 @@ class Float_expression : public Expression
   Type* type_;
 };
 
-// Constrain VAL to fit into TYPE.
-
-void
-Float_expression::constrain_float(mpfr_t val, Type* type)
-{
-  Float_type* ftype = type->float_type();
-  if (ftype != NULL && !ftype->is_abstract())
-    mpfr_prec_round(val, ftype->bits(), GMP_RNDN);
-}
-
-// Return a floating point constant value.
-
-bool
-Float_expression::do_float_constant_value(mpfr_t val, Type** ptype) const
-{
-  if (this->type_ != NULL)
-    *ptype = this->type_;
-  mpfr_set(val, this->val_, GMP_RNDN);
-  return true;
-}
-
 // Return the current type.  If we haven't set the type yet, we return
 // an abstract float type.
 
@@ -2170,73 +2088,18 @@ Float_expression::do_determine_type(const Type_context* context)
     this->type_ = Type::lookup_float_type("float64");
 }
 
-// Return true if the floating point value VAL fits in the range of
-// the type TYPE.  Otherwise give an error and return false.  TYPE may
-// be NULL.
-
-bool
-Float_expression::check_constant(mpfr_t val, Type* type,
-				 Location location)
-{
-  if (type == NULL)
-    return true;
-  Float_type* ftype = type->float_type();
-  if (ftype == NULL || ftype->is_abstract())
-    return true;
-
-  // A NaN or Infinity always fits in the range of the type.
-  if (mpfr_nan_p(val) || mpfr_inf_p(val) || mpfr_zero_p(val))
-    return true;
-
-  mp_exp_t exp = mpfr_get_exp(val);
-  mp_exp_t max_exp;
-  switch (ftype->bits())
-    {
-    case 32:
-      max_exp = 128;
-      break;
-    case 64:
-      max_exp = 1024;
-      break;
-    default:
-      go_unreachable();
-    }
-  if (exp > max_exp)
-    {
-      error_at(location, "floating point constant overflow");
-      return false;
-    }
-  return true;
-}
-
 // Check the type of a float value.
 
 void
 Float_expression::do_check_types(Gogo*)
 {
-  if (this->type_ == NULL)
+  Type* type = this->type_;
+  if (type == NULL)
     return;
-
-  if (!Float_expression::check_constant(this->val_, this->type_,
-					this->location()))
+  Numeric_constant nc;
+  nc.set_float(NULL, this->val_);
+  if (!nc.set_type(this->type_, true, this->location()))
     this->set_is_error();
-
-  Integer_type* integer_type = this->type_->integer_type();
-  if (integer_type != NULL)
-    {
-      if (!mpfr_integer_p(this->val_))
-	this->report_error(_("floating point constant truncated to integer"));
-      else
-	{
-	  go_assert(!integer_type->is_abstract());
-	  mpz_t ival;
-	  mpz_init(ival);
-	  mpfr_get_z(ival, this->val_, GMP_RNDN);
-	  Integer_expression::check_constant(ival, integer_type,
-					     this->location());
-	  mpz_clear(ival);
-	}
-    }
 }
 
 // Get a tree for a float constant.
@@ -2321,14 +2184,6 @@ class Complex_expression : public Expression
     mpfr_init_set(this->imag_, *imag, GMP_RNDN);
   }
 
-  // Constrain REAL/IMAG to fit into TYPE.
-  static void
-  constrain_complex(mpfr_t real, mpfr_t imag, Type* type);
-
-  // Return whether REAL/IMAG fits in the type.
-  static bool
-  check_constant(mpfr_t real, mpfr_t imag, Type*, Location);
-
   // Write REAL/IMAG to string dump.
   static void
   export_complex(String_dump* exp, const mpfr_t real, const mpfr_t val);
@@ -2344,7 +2199,11 @@ class Complex_expression : public Expression
   { return true; }
 
   bool
-  do_complex_constant_value(mpfr_t real, mpfr_t imag, Type**) const;
+  do_numeric_constant_value(Numeric_constant* nc) const
+  {
+    nc->set_complex(this->type_, this->real_, this->imag_);
+    return true;
+  }
 
   Type*
   do_type();
@@ -2380,32 +2239,6 @@ class Complex_expression : public Expression
   Type* type_;
 };
 
-// Constrain REAL/IMAG to fit into TYPE.
-
-void
-Complex_expression::constrain_complex(mpfr_t real, mpfr_t imag, Type* type)
-{
-  Complex_type* ctype = type->complex_type();
-  if (ctype != NULL && !ctype->is_abstract())
-    {
-      mpfr_prec_round(real, ctype->bits() / 2, GMP_RNDN);
-      mpfr_prec_round(imag, ctype->bits() / 2, GMP_RNDN);
-    }
-}
-
-// Return a complex constant value.
-
-bool
-Complex_expression::do_complex_constant_value(mpfr_t real, mpfr_t imag,
-					      Type** ptype) const
-{
-  if (this->type_ != NULL)
-    *ptype = this->type_;
-  mpfr_set(real, this->real_, GMP_RNDN);
-  mpfr_set(imag, this->imag_, GMP_RNDN);
-  return true;
-}
-
 // Return the current type.  If we haven't set the type yet, we return
 // an abstract complex type.
 
@@ -2432,65 +2265,17 @@ Complex_expression::do_determine_type(const Type_context* context)
     this->type_ = Type::lookup_complex_type("complex128");
 }
 
-// Return true if the complex value REAL/IMAG fits in the range of the
-// type TYPE.  Otherwise give an error and return false.  TYPE may be
-// NULL.
-
-bool
-Complex_expression::check_constant(mpfr_t real, mpfr_t imag, Type* type,
-				   Location location)
-{
-  if (type == NULL)
-    return true;
-  Complex_type* ctype = type->complex_type();
-  if (ctype == NULL || ctype->is_abstract())
-    return true;
-
-  mp_exp_t max_exp;
-  switch (ctype->bits())
-    {
-    case 64:
-      max_exp = 128;
-      break;
-    case 128:
-      max_exp = 1024;
-      break;
-    default:
-      go_unreachable();
-    }
-
-  // A NaN or Infinity always fits in the range of the type.
-  if (!mpfr_nan_p(real) && !mpfr_inf_p(real) && !mpfr_zero_p(real))
-    {
-      if (mpfr_get_exp(real) > max_exp)
-	{
-	  error_at(location, "complex real part constant overflow");
-	  return false;
-	}
-    }
-
-  if (!mpfr_nan_p(imag) && !mpfr_inf_p(imag) && !mpfr_zero_p(imag))
-    {
-      if (mpfr_get_exp(imag) > max_exp)
-	{
-	  error_at(location, "complex imaginary part constant overflow");
-	  return false;
-	}
-    }
-
-  return true;
-}
-
 // Check the type of a complex value.
 
 void
 Complex_expression::do_check_types(Gogo*)
 {
-  if (this->type_ == NULL)
+  Type* type = this->type_;
+  if (type == NULL)
     return;
-
-  if (!Complex_expression::check_constant(this->real_, this->imag_,
-					  this->type_, this->location()))
+  Numeric_constant nc;
+  nc.set_complex(NULL, this->real_, this->imag_);
+  if (!nc.set_type(this->type_, true, this->location()))
     this->set_is_error();
 }
 
@@ -2615,17 +2400,10 @@ class Const_expression : public Expression
   { return true; }
 
   bool
-  do_integer_constant_value(bool, mpz_t val, Type**) const;
+  do_numeric_constant_value(Numeric_constant* nc) const;
 
   bool
-  do_float_constant_value(mpfr_t val, Type**) const;
-
-  bool
-  do_complex_constant_value(mpfr_t real, mpfr_t imag, Type**) const;
-
-  bool
-  do_string_constant_value(std::string* val) const
-  { return this->constant_->const_value()->expr()->string_constant_value(val); }
+  do_string_constant_value(std::string* val) const;
 
   Type*
   do_type();
@@ -2705,110 +2483,49 @@ Const_expression::do_lower(Gogo* gogo, Named_object*,
   return this;
 }
 
-// Return an integer constant value.
+// Return a numeric constant value.
 
 bool
-Const_expression::do_integer_constant_value(bool iota_is_constant, mpz_t val,
-					    Type** ptype) const
+Const_expression::do_numeric_constant_value(Numeric_constant* nc) const
 {
   if (this->seen_)
     return false;
+
+  Expression* e = this->constant_->const_value()->expr();
+  
+  this->seen_ = true;
+
+  bool r = e->numeric_constant_value(nc);
+
+  this->seen_ = false;
 
   Type* ctype;
   if (this->type_ != NULL)
     ctype = this->type_;
   else
     ctype = this->constant_->const_value()->type();
-  if (ctype != NULL && ctype->integer_type() == NULL)
+  if (r && ctype != NULL)
+    {
+      if (!nc->set_type(ctype, false, this->location()))
+	return false;
+    }
+
+  return r;
+}
+
+bool
+Const_expression::do_string_constant_value(std::string* val) const
+{
+  if (this->seen_)
     return false;
 
   Expression* e = this->constant_->const_value()->expr();
 
   this->seen_ = true;
-
-  Type* t;
-  bool r = e->integer_constant_value(iota_is_constant, val, &t);
-
+  bool ok = e->string_constant_value(val);
   this->seen_ = false;
 
-  if (r
-      && ctype != NULL
-      && !Integer_expression::check_constant(val, ctype, this->location()))
-    return false;
-
-  *ptype = ctype != NULL ? ctype : t;
-  return r;
-}
-
-// Return a floating point constant value.
-
-bool
-Const_expression::do_float_constant_value(mpfr_t val, Type** ptype) const
-{
-  if (this->seen_)
-    return false;
-
-  Type* ctype;
-  if (this->type_ != NULL)
-    ctype = this->type_;
-  else
-    ctype = this->constant_->const_value()->type();
-  if (ctype != NULL && ctype->float_type() == NULL)
-    return false;
-
-  this->seen_ = true;
-
-  Type* t;
-  bool r = this->constant_->const_value()->expr()->float_constant_value(val,
-									&t);
-
-  this->seen_ = false;
-
-  if (r && ctype != NULL)
-    {
-      if (!Float_expression::check_constant(val, ctype, this->location()))
-	return false;
-      Float_expression::constrain_float(val, ctype);
-    }
-  *ptype = ctype != NULL ? ctype : t;
-  return r;
-}
-
-// Return a complex constant value.
-
-bool
-Const_expression::do_complex_constant_value(mpfr_t real, mpfr_t imag,
-					    Type **ptype) const
-{
-  if (this->seen_)
-    return false;
-
-  Type* ctype;
-  if (this->type_ != NULL)
-    ctype = this->type_;
-  else
-    ctype = this->constant_->const_value()->type();
-  if (ctype != NULL && ctype->complex_type() == NULL)
-    return false;
-
-  this->seen_ = true;
-
-  Type *t;
-  bool r = this->constant_->const_value()->expr()->complex_constant_value(real,
-									  imag,
-									  &t);
-
-  this->seen_ = false;
-
-  if (r && ctype != NULL)
-    {
-      if (!Complex_expression::check_constant(real, imag, ctype,
-					      this->location()))
-	return false;
-      Complex_expression::constrain_complex(real, imag, ctype);
-    }
-  *ptype = ctype != NULL ? ctype : t;
-  return r;
+  return ok;
 }
 
 // Return the type of the const reference.
@@ -2859,12 +2576,8 @@ Const_expression::do_determine_type(const Type_context* context)
   if (ctype != NULL && !ctype->is_abstract())
     ;
   else if (context->type != NULL
-	   && (context->type->integer_type() != NULL
-	       || context->type->float_type() != NULL
-	       || context->type->complex_type() != NULL)
-	   && (cetype->integer_type() != NULL
-	       || cetype->float_type() != NULL
-	       || cetype->complex_type() != NULL))
+	   && context->type->is_numeric_type()
+	   && cetype->is_numeric_type())
     this->type_ = context->type;
   else if (context->type != NULL
 	   && context->type->is_string_type()
@@ -2926,35 +2639,15 @@ Const_expression::do_check_types(Gogo*)
 
   this->check_for_init_loop();
 
-  if (this->type_ == NULL || this->type_->is_abstract())
-    return;
-
-  // Check for integer overflow.
-  if (this->type_->integer_type() != NULL)
+  // Check that numeric constant fits in type.
+  if (this->type_ != NULL && this->type_->is_numeric_type())
     {
-      mpz_t ival;
-      mpz_init(ival);
-      Type* dummy;
-      if (!this->integer_constant_value(true, ival, &dummy))
+      Numeric_constant nc;
+      if (this->constant_->const_value()->expr()->numeric_constant_value(&nc))
 	{
-	  mpfr_t fval;
-	  mpfr_init(fval);
-	  Expression* cexpr = this->constant_->const_value()->expr();
-	  if (cexpr->float_constant_value(fval, &dummy))
-	    {
-	      if (!mpfr_integer_p(fval))
-		this->report_error(_("floating point constant "
-				     "truncated to integer"));
-	      else
-		{
-		  mpfr_get_z(ival, fval, GMP_RNDN);
-		  Integer_expression::check_constant(ival, this->type_,
-						     this->location());
-		}
-	    }
-	  mpfr_clear(fval);
+	  if (!nc.set_type(this->type_, true, this->location()))
+	    this->set_is_error();
 	}
-      mpz_clear(ival);
     }
 }
 
@@ -2978,41 +2671,18 @@ Const_expression::do_get_tree(Translate_context* context)
   // object is an abstract int or float, we try to get the abstract
   // value.  Otherwise we may lose something in the conversion.
   if (this->type_ != NULL
+      && this->type_->is_numeric_type()
       && (this->constant_->const_value()->type() == NULL
 	  || this->constant_->const_value()->type()->is_abstract()))
     {
       Expression* expr = this->constant_->const_value()->expr();
-      mpz_t ival;
-      mpz_init(ival);
-      Type* t;
-      if (expr->integer_constant_value(true, ival, &t))
+      Numeric_constant nc;
+      if (expr->numeric_constant_value(&nc)
+	  && nc.set_type(this->type_, false, this->location()))
 	{
-	  tree ret = Expression::integer_constant_tree(ival, type_tree);
-	  mpz_clear(ival);
-	  return ret;
+	  Expression* e = nc.expression(this->location());
+	  return e->get_tree(context);
 	}
-      mpz_clear(ival);
-
-      mpfr_t fval;
-      mpfr_init(fval);
-      if (expr->float_constant_value(fval, &t))
-	{
-	  tree ret = Expression::float_constant_tree(fval, type_tree);
-	  mpfr_clear(fval);
-	  return ret;
-	}
-
-      mpfr_t imag;
-      mpfr_init(imag);
-      if (expr->complex_constant_value(fval, imag, &t))
-	{
-	  tree ret = Expression::complex_constant_tree(fval, imag, type_tree);
-	  mpfr_clear(fval);
-	  mpfr_clear(imag);
-	  return ret;
-	}
-      mpfr_clear(imag);
-      mpfr_clear(fval);
     }
 
   tree const_tree = this->constant_->get_tree(gogo, context->function());
@@ -3229,13 +2899,7 @@ class Type_conversion_expression : public Expression
   { return this->expr_->is_constant(); }
 
   bool
-  do_integer_constant_value(bool, mpz_t, Type**) const;
-
-  bool
-  do_float_constant_value(mpfr_t, Type**) const;
-
-  bool
-  do_complex_constant_value(mpfr_t, mpfr_t, Type**) const;
+  do_numeric_constant_value(Numeric_constant*) const;
 
   bool
   do_string_constant_value(std::string*) const;
@@ -3301,82 +2965,15 @@ Type_conversion_expression::do_lower(Gogo*, Named_object*,
   Expression* val = this->expr_;
   Location location = this->location();
 
-  if (type->integer_type() != NULL)
+  if (type->is_numeric_type())
     {
-      mpz_t ival;
-      mpz_init(ival);
-      Type* dummy;
-      if (val->integer_constant_value(false, ival, &dummy))
+      Numeric_constant nc;
+      if (val->numeric_constant_value(&nc))
 	{
-	  if (!Integer_expression::check_constant(ival, type, location))
-	    mpz_set_ui(ival, 0);
-	  Expression* ret = Expression::make_integer(&ival, type, location);
-	  mpz_clear(ival);
-	  return ret;
+	  if (!nc.set_type(type, true, location))
+	    return Expression::make_error(location);
+	  return nc.expression(location);
 	}
-
-      mpfr_t fval;
-      mpfr_init(fval);
-      if (val->float_constant_value(fval, &dummy))
-	{
-	  if (!mpfr_integer_p(fval))
-	    {
-	      error_at(location,
-		       "floating point constant truncated to integer");
-	      return Expression::make_error(location);
-	    }
-	  mpfr_get_z(ival, fval, GMP_RNDN);
-	  if (!Integer_expression::check_constant(ival, type, location))
-	    mpz_set_ui(ival, 0);
-	  Expression* ret = Expression::make_integer(&ival, type, location);
-	  mpfr_clear(fval);
-	  mpz_clear(ival);
-	  return ret;
-	}
-      mpfr_clear(fval);
-      mpz_clear(ival);
-    }
-
-  if (type->float_type() != NULL)
-    {
-      mpfr_t fval;
-      mpfr_init(fval);
-      Type* dummy;
-      if (val->float_constant_value(fval, &dummy))
-	{
-	  if (!Float_expression::check_constant(fval, type, location))
-	    mpfr_set_ui(fval, 0, GMP_RNDN);
-	  Float_expression::constrain_float(fval, type);
-	  Expression *ret = Expression::make_float(&fval, type, location);
-	  mpfr_clear(fval);
-	  return ret;
-	}
-      mpfr_clear(fval);
-    }
-
-  if (type->complex_type() != NULL)
-    {
-      mpfr_t real;
-      mpfr_t imag;
-      mpfr_init(real);
-      mpfr_init(imag);
-      Type* dummy;
-      if (val->complex_constant_value(real, imag, &dummy))
-	{
-	  if (!Complex_expression::check_constant(real, imag, type, location))
-	    {
-	      mpfr_set_ui(real, 0, GMP_RNDN);
-	      mpfr_set_ui(imag, 0, GMP_RNDN);
-	    }
-	  Complex_expression::constrain_complex(real, imag, type);
-	  Expression* ret = Expression::make_complex(&real, &imag, type,
-						     location);
-	  mpfr_clear(real);
-	  mpfr_clear(imag);
-	  return ret;
-	}
-      mpfr_clear(real);
-      mpfr_clear(imag);
     }
 
   if (type->is_slice_type())
@@ -3441,118 +3038,17 @@ Type_conversion_expression::do_lower(Gogo*, Named_object*,
   return this;
 }
 
-// Return the constant integer value if there is one.
+// Return the constant numeric value if there is one.
 
 bool
-Type_conversion_expression::do_integer_constant_value(bool iota_is_constant,
-						      mpz_t val,
-						      Type** ptype) const
+Type_conversion_expression::do_numeric_constant_value(
+    Numeric_constant* nc) const
 {
-  if (this->type_->integer_type() == NULL)
+  if (!this->type_->is_numeric_type())
     return false;
-
-  mpz_t ival;
-  mpz_init(ival);
-  Type* dummy;
-  if (this->expr_->integer_constant_value(iota_is_constant, ival, &dummy))
-    {
-      if (!Integer_expression::check_constant(ival, this->type_,
-					      this->location()))
-	{
-	  mpz_clear(ival);
-	  return false;
-	}
-      mpz_set(val, ival);
-      mpz_clear(ival);
-      *ptype = this->type_;
-      return true;
-    }
-  mpz_clear(ival);
-
-  mpfr_t fval;
-  mpfr_init(fval);
-  if (this->expr_->float_constant_value(fval, &dummy))
-    {
-      mpfr_get_z(val, fval, GMP_RNDN);
-      mpfr_clear(fval);
-      if (!Integer_expression::check_constant(val, this->type_,
-					      this->location()))
-	return false;
-      *ptype = this->type_;
-      return true;
-    }
-  mpfr_clear(fval);
-
-  return false;
-}
-
-// Return the constant floating point value if there is one.
-
-bool
-Type_conversion_expression::do_float_constant_value(mpfr_t val,
-						    Type** ptype) const
-{
-  if (this->type_->float_type() == NULL)
+  if (!this->expr_->numeric_constant_value(nc))
     return false;
-
-  mpfr_t fval;
-  mpfr_init(fval);
-  Type* dummy;
-  if (this->expr_->float_constant_value(fval, &dummy))
-    {
-      if (!Float_expression::check_constant(fval, this->type_,
-					    this->location()))
-	{
-	  mpfr_clear(fval);
-	  return false;
-	}
-      mpfr_set(val, fval, GMP_RNDN);
-      mpfr_clear(fval);
-      Float_expression::constrain_float(val, this->type_);
-      *ptype = this->type_;
-      return true;
-    }
-  mpfr_clear(fval);
-
-  return false;
-}
-
-// Return the constant complex value if there is one.
-
-bool
-Type_conversion_expression::do_complex_constant_value(mpfr_t real,
-						      mpfr_t imag,
-						      Type **ptype) const
-{
-  if (this->type_->complex_type() == NULL)
-    return false;
-
-  mpfr_t rval;
-  mpfr_t ival;
-  mpfr_init(rval);
-  mpfr_init(ival);
-  Type* dummy;
-  if (this->expr_->complex_constant_value(rval, ival, &dummy))
-    {
-      if (!Complex_expression::check_constant(rval, ival, this->type_,
-					      this->location()))
-	{
-	  mpfr_clear(rval);
-	  mpfr_clear(ival);
-	  return false;
-	}
-      mpfr_set(real, rval, GMP_RNDN);
-      mpfr_set(imag, ival, GMP_RNDN);
-      mpfr_clear(rval);
-      mpfr_clear(ival);
-      Complex_expression::constrain_complex(real, imag, this->type_);
-      *ptype = this->type_;
-      return true;
-    }
-  mpfr_clear(rval);
-  mpfr_clear(ival);
-
-  return false;  
+  return nc->set_type(this->type_, false, this->location());
 }
 
 // Return the constant string value if there is one.
@@ -3563,20 +3059,17 @@ Type_conversion_expression::do_string_constant_value(std::string* val) const
   if (this->type_->is_string_type()
       && this->expr_->type()->integer_type() != NULL)
     {
-      mpz_t ival;
-      mpz_init(ival);
-      Type* dummy;
-      if (this->expr_->integer_constant_value(false, ival, &dummy))
+      Numeric_constant nc;
+      if (this->expr_->numeric_constant_value(&nc))
 	{
-	  unsigned long ulval = mpz_get_ui(ival);
-	  if (mpz_cmp_ui(ival, ulval) == 0)
+	  unsigned long ival;
+	  if (nc.to_unsigned_long(&ival) == Numeric_constant::NC_UL_VALID)
 	    {
-	      Lex::append_char(ulval, true, val, this->location());
-	      mpz_clear(ival);
+	      val->clear();
+	      Lex::append_char(ival, true, val, this->location());
 	      return true;
 	    }
 	}
-      mpz_clear(ival);
     }
 
   // FIXME: Could handle conversion from const []int here.
@@ -3897,10 +3390,6 @@ Unsafe_type_conversion_expression::do_get_tree(Translate_context* context)
     go_assert(et->map_type() != NULL);
   else if (t->channel_type() != NULL)
     go_assert(et->channel_type() != NULL);
-  else if (t->points_to() != NULL && t->points_to()->channel_type() != NULL)
-    go_assert((et->points_to() != NULL
-		&& et->points_to()->channel_type() != NULL)
-	       || et->is_nil_type());
   else if (t->points_to() != NULL)
     go_assert(et->points_to() != NULL || et->is_nil_type());
   else if (et->is_unsafe_pointer_type())
@@ -3995,22 +3484,11 @@ class Unary_expression : public Expression
     this->create_temp_ = true;
   }
 
-  // Apply unary opcode OP to UVAL, setting VAL.  Return true if this
-  // could be done, false if not.
+  // Apply unary opcode OP to UNC, setting NC.  Return true if this
+  // could be done, false if not.  Issue errors for overflow.
   static bool
-  eval_integer(Operator op, Type* utype, mpz_t uval, mpz_t val,
-	       Location);
-
-  // Apply unary opcode OP to UVAL, setting VAL.  Return true if this
-  // could be done, false if not.
-  static bool
-  eval_float(Operator op, mpfr_t uval, mpfr_t val);
-
-  // Apply unary opcode OP to UREAL/UIMAG, setting REAL/IMAG.  Return
-  // true if this could be done, false if not.
-  static bool
-  eval_complex(Operator op, mpfr_t ureal, mpfr_t uimag, mpfr_t real,
-	       mpfr_t imag);
+  eval_constant(Operator op, const Numeric_constant* unc,
+		Location, Numeric_constant* nc);
 
   static Expression*
   do_import(Import*);
@@ -4027,13 +3505,7 @@ class Unary_expression : public Expression
   do_is_constant() const;
 
   bool
-  do_integer_constant_value(bool, mpz_t, Type**) const;
-
-  bool
-  do_float_constant_value(mpfr_t, Type**) const;
-
-  bool
-  do_complex_constant_value(mpfr_t, mpfr_t, Type**) const;
+  do_numeric_constant_value(Numeric_constant*) const;
 
   Type*
   do_type();
@@ -4135,59 +3607,12 @@ Unary_expression::do_lower(Gogo*, Named_object*, Statement_inserter*, int)
   if (op == OPERATOR_PLUS || op == OPERATOR_MINUS
       || op == OPERATOR_NOT || op == OPERATOR_XOR)
     {
-      Expression* ret = NULL;
-
-      mpz_t eval;
-      mpz_init(eval);
-      Type* etype;
-      if (expr->integer_constant_value(false, eval, &etype))
+      Numeric_constant nc;
+      if (expr->numeric_constant_value(&nc))
 	{
-	  mpz_t val;
-	  mpz_init(val);
-	  if (Unary_expression::eval_integer(op, etype, eval, val, loc))
-	    ret = Expression::make_integer(&val, etype, loc);
-	  mpz_clear(val);
-	}
-      mpz_clear(eval);
-      if (ret != NULL)
-	return ret;
-
-      if (op == OPERATOR_PLUS || op == OPERATOR_MINUS)
-	{
-	  mpfr_t fval;
-	  mpfr_init(fval);
-	  Type* ftype;
-	  if (expr->float_constant_value(fval, &ftype))
-	    {
-	      mpfr_t val;
-	      mpfr_init(val);
-	      if (Unary_expression::eval_float(op, fval, val))
-		ret = Expression::make_float(&val, ftype, loc);
-	      mpfr_clear(val);
-	    }
-	  if (ret != NULL)
-	    {
-	      mpfr_clear(fval);
-	      return ret;
-	    }
-
-	  mpfr_t ival;
-	  mpfr_init(ival);
-	  if (expr->complex_constant_value(fval, ival, &ftype))
-	    {
-	      mpfr_t real;
-	      mpfr_t imag;
-	      mpfr_init(real);
-	      mpfr_init(imag);
-	      if (Unary_expression::eval_complex(op, fval, ival, real, imag))
-		ret = Expression::make_complex(&real, &imag, ftype, loc);
-	      mpfr_clear(real);
-	      mpfr_clear(imag);
-	    }
-	  mpfr_clear(ival);
-	  mpfr_clear(fval);
-	  if (ret != NULL)
-	    return ret;
+	  Numeric_constant result;
+	  if (Unary_expression::eval_constant(op, &nc, loc, &result))
+	    return result.expression(loc);
 	}
     }
 
@@ -4223,180 +3648,171 @@ Unary_expression::do_is_constant() const
     return this->expr_->is_constant();
 }
 
-// Apply unary opcode OP to UVAL, setting VAL.  UTYPE is the type of
-// UVAL, if known; it may be NULL.  Return true if this could be done,
-// false if not.
+// Apply unary opcode OP to UNC, setting NC.  Return true if this
+// could be done, false if not.  Issue errors for overflow.
 
 bool
-Unary_expression::eval_integer(Operator op, Type* utype, mpz_t uval, mpz_t val,
-			       Location location)
+Unary_expression::eval_constant(Operator op, const Numeric_constant* unc,
+				Location location, Numeric_constant* nc)
 {
   switch (op)
     {
     case OPERATOR_PLUS:
-      mpz_set(val, uval);
+      *nc = *unc;
       return true;
+
+    case OPERATOR_MINUS:
+      if (unc->is_int() || unc->is_rune())
+	break;
+      else if (unc->is_float())
+	{
+	  mpfr_t uval;
+	  unc->get_float(&uval);
+	  mpfr_t val;
+	  mpfr_init(val);
+	  mpfr_neg(val, uval, GMP_RNDN);
+	  nc->set_float(unc->type(), val);
+	  mpfr_clear(uval);
+	  mpfr_clear(val);
+	  return true;
+	}
+      else if (unc->is_complex())
+	{
+	  mpfr_t ureal, uimag;
+	  unc->get_complex(&ureal, &uimag);
+	  mpfr_t real, imag;
+	  mpfr_init(real);
+	  mpfr_init(imag);
+	  mpfr_neg(real, ureal, GMP_RNDN);
+	  mpfr_neg(imag, uimag, GMP_RNDN);
+	  nc->set_complex(unc->type(), real, imag);
+	  mpfr_clear(ureal);
+	  mpfr_clear(uimag);
+	  mpfr_clear(real);
+	  mpfr_clear(imag);
+	  return true;
+	}
+      else
+	go_unreachable();
+
+    case OPERATOR_NOT:
+    case OPERATOR_XOR:
+      break;
+
+    case OPERATOR_AND:
+    case OPERATOR_MULT:
+      return false;
+
+    default:
+      go_unreachable();
+    }
+
+  if (!unc->is_int() && !unc->is_rune())
+    return false;
+
+  mpz_t uval;
+  unc->get_int(&uval);
+  mpz_t val;
+  mpz_init(val);
+
+  switch (op)
+    {
     case OPERATOR_MINUS:
       mpz_neg(val, uval);
-      return Integer_expression::check_constant(val, utype, location);
+      break;
+
     case OPERATOR_NOT:
       mpz_set_ui(val, mpz_cmp_si(uval, 0) == 0 ? 1 : 0);
-      return true;
+      break;
+
     case OPERATOR_XOR:
-      if (utype == NULL
-	  || utype->integer_type() == NULL
-	  || utype->integer_type()->is_abstract())
-	mpz_com(val, uval);
-      else
-	{
-	  // The number of HOST_WIDE_INTs that it takes to represent
-	  // UVAL.
-	  size_t count = ((mpz_sizeinbase(uval, 2)
-			   + HOST_BITS_PER_WIDE_INT
-			   - 1)
-			  / HOST_BITS_PER_WIDE_INT);
+      {
+	Type* utype = unc->type();
+	if (utype->integer_type() == NULL
+	    || utype->integer_type()->is_abstract())
+	  mpz_com(val, uval);
+	else
+	  {
+	    // The number of HOST_WIDE_INTs that it takes to represent
+	    // UVAL.
+	    size_t count = ((mpz_sizeinbase(uval, 2)
+			     + HOST_BITS_PER_WIDE_INT
+			     - 1)
+			    / HOST_BITS_PER_WIDE_INT);
 
-	  unsigned HOST_WIDE_INT* phwi = new unsigned HOST_WIDE_INT[count];
-	  memset(phwi, 0, count * sizeof(HOST_WIDE_INT));
+	    unsigned HOST_WIDE_INT* phwi = new unsigned HOST_WIDE_INT[count];
+	    memset(phwi, 0, count * sizeof(HOST_WIDE_INT));
 
-	  size_t ecount;
-	  mpz_export(phwi, &ecount, -1, sizeof(HOST_WIDE_INT), 0, 0, uval);
-	  go_assert(ecount <= count);
+	    size_t obits = utype->integer_type()->bits();
 
-	  // Trim down to the number of words required by the type.
-	  size_t obits = utype->integer_type()->bits();
-	  if (!utype->integer_type()->is_unsigned())
-	    ++obits;
-	  size_t ocount = ((obits + HOST_BITS_PER_WIDE_INT - 1)
-			   / HOST_BITS_PER_WIDE_INT);
-	  go_assert(ocount <= count);
+	    if (!utype->integer_type()->is_unsigned() && mpz_sgn(uval) < 0)
+	      {
+		mpz_t adj;
+		mpz_init_set_ui(adj, 1);
+		mpz_mul_2exp(adj, adj, obits);
+		mpz_add(uval, uval, adj);
+		mpz_clear(adj);
+	      }
 
-	  for (size_t i = 0; i < ocount; ++i)
-	    phwi[i] = ~phwi[i];
+	    size_t ecount;
+	    mpz_export(phwi, &ecount, -1, sizeof(HOST_WIDE_INT), 0, 0, uval);
+	    go_assert(ecount <= count);
 
-	  size_t clearbits = ocount * HOST_BITS_PER_WIDE_INT - obits;
-	  if (clearbits != 0)
-	    phwi[ocount - 1] &= (((unsigned HOST_WIDE_INT) (HOST_WIDE_INT) -1)
-				 >> clearbits);
+	    // Trim down to the number of words required by the type.
+	    size_t ocount = ((obits + HOST_BITS_PER_WIDE_INT - 1)
+			     / HOST_BITS_PER_WIDE_INT);
+	    go_assert(ocount <= count);
 
-	  mpz_import(val, ocount, -1, sizeof(HOST_WIDE_INT), 0, 0, phwi);
+	    for (size_t i = 0; i < ocount; ++i)
+	      phwi[i] = ~phwi[i];
 
-	  delete[] phwi;
-	}
-      return Integer_expression::check_constant(val, utype, location);
-    case OPERATOR_AND:
-    case OPERATOR_MULT:
-      return false;
+	    size_t clearbits = ocount * HOST_BITS_PER_WIDE_INT - obits;
+	    if (clearbits != 0)
+	      phwi[ocount - 1] &= (((unsigned HOST_WIDE_INT) (HOST_WIDE_INT) -1)
+				   >> clearbits);
+
+	    mpz_import(val, ocount, -1, sizeof(HOST_WIDE_INT), 0, 0, phwi);
+
+	    if (!utype->integer_type()->is_unsigned()
+		&& mpz_tstbit(val, obits - 1))
+	      {
+		mpz_t adj;
+		mpz_init_set_ui(adj, 1);
+		mpz_mul_2exp(adj, adj, obits);
+		mpz_sub(val, val, adj);
+		mpz_clear(adj);
+	      }
+
+	    delete[] phwi;
+	  }
+      }
+      break;
+
     default:
       go_unreachable();
     }
-}
 
-// Apply unary opcode OP to UVAL, setting VAL.  Return true if this
-// could be done, false if not.
+  if (unc->is_rune())
+    nc->set_rune(NULL, val);
+  else
+    nc->set_int(NULL, val);
 
-bool
-Unary_expression::eval_float(Operator op, mpfr_t uval, mpfr_t val)
-{
-  switch (op)
-    {
-    case OPERATOR_PLUS:
-      mpfr_set(val, uval, GMP_RNDN);
-      return true;
-    case OPERATOR_MINUS:
-      mpfr_neg(val, uval, GMP_RNDN);
-      return true;
-    case OPERATOR_NOT:
-    case OPERATOR_XOR:
-    case OPERATOR_AND:
-    case OPERATOR_MULT:
-      return false;
-    default:
-      go_unreachable();
-    }
-}
+  mpz_clear(uval);
+  mpz_clear(val);
 
-// Apply unary opcode OP to RVAL/IVAL, setting REAL/IMAG.  Return true
-// if this could be done, false if not.
-
-bool
-Unary_expression::eval_complex(Operator op, mpfr_t rval, mpfr_t ival,
-			       mpfr_t real, mpfr_t imag)
-{
-  switch (op)
-    {
-    case OPERATOR_PLUS:
-      mpfr_set(real, rval, GMP_RNDN);
-      mpfr_set(imag, ival, GMP_RNDN);
-      return true;
-    case OPERATOR_MINUS:
-      mpfr_neg(real, rval, GMP_RNDN);
-      mpfr_neg(imag, ival, GMP_RNDN);
-      return true;
-    case OPERATOR_NOT:
-    case OPERATOR_XOR:
-    case OPERATOR_AND:
-    case OPERATOR_MULT:
-      return false;
-    default:
-      go_unreachable();
-    }
+  return nc->set_type(unc->type(), true, location);
 }
 
 // Return the integral constant value of a unary expression, if it has one.
 
 bool
-Unary_expression::do_integer_constant_value(bool iota_is_constant, mpz_t val,
-					    Type** ptype) const
+Unary_expression::do_numeric_constant_value(Numeric_constant* nc) const
 {
-  mpz_t uval;
-  mpz_init(uval);
-  bool ret;
-  if (!this->expr_->integer_constant_value(iota_is_constant, uval, ptype))
-    ret = false;
-  else
-    ret = Unary_expression::eval_integer(this->op_, *ptype, uval, val,
-					 this->location());
-  mpz_clear(uval);
-  return ret;
-}
-
-// Return the floating point constant value of a unary expression, if
-// it has one.
-
-bool
-Unary_expression::do_float_constant_value(mpfr_t val, Type** ptype) const
-{
-  mpfr_t uval;
-  mpfr_init(uval);
-  bool ret;
-  if (!this->expr_->float_constant_value(uval, ptype))
-    ret = false;
-  else
-    ret = Unary_expression::eval_float(this->op_, uval, val);
-  mpfr_clear(uval);
-  return ret;
-}
-
-// Return the complex constant value of a unary expression, if it has
-// one.
-
-bool
-Unary_expression::do_complex_constant_value(mpfr_t real, mpfr_t imag,
-					    Type** ptype) const
-{
-  mpfr_t rval;
-  mpfr_t ival;
-  mpfr_init(rval);
-  mpfr_init(ival);
-  bool ret;
-  if (!this->expr_->complex_constant_value(rval, ival, ptype))
-    ret = false;
-  else
-    ret = Unary_expression::eval_complex(this->op_, rval, ival, real, imag);
-  mpfr_clear(rval);
-  mpfr_clear(ival);
-  return ret;
+  Numeric_constant unc;
+  if (!this->expr_->numeric_constant_value(&unc))
+    return false;
+  return Unary_expression::eval_constant(this->op_, &unc, this->location(),
+					 nc);
 }
 
 // Return the type of a unary expression.
@@ -4645,29 +4061,33 @@ Unary_expression::do_get_tree(Translate_context* context)
 	// need to check for nil.  We don't bother to check for small
 	// structs because we expect the system to crash on a nil
 	// pointer dereference.
-	HOST_WIDE_INT s = int_size_in_bytes(TREE_TYPE(TREE_TYPE(expr)));
-	if (s == -1 || s >= 4096)
+	tree target_type_tree = TREE_TYPE(TREE_TYPE(expr));
+	if (!VOID_TYPE_P(target_type_tree))
 	  {
-	    if (!DECL_P(expr))
-	      expr = save_expr(expr);
-	    tree compare = fold_build2_loc(loc.gcc_location(), EQ_EXPR,
-                                           boolean_type_node,
-					   expr,
-					   fold_convert(TREE_TYPE(expr),
-							null_pointer_node));
-	    tree crash = Gogo::runtime_error(RUNTIME_ERROR_NIL_DEREFERENCE,
-					     loc);
-	    expr = fold_build2_loc(loc.gcc_location(), COMPOUND_EXPR,
-                                   TREE_TYPE(expr), build3(COND_EXPR,
-                                                           void_type_node,
-                                                           compare, crash,
-                                                           NULL_TREE),
-				   expr);
+	    HOST_WIDE_INT s = int_size_in_bytes(target_type_tree);
+	    if (s == -1 || s >= 4096)
+	      {
+		if (!DECL_P(expr))
+		  expr = save_expr(expr);
+		tree compare = fold_build2_loc(loc.gcc_location(), EQ_EXPR,
+					       boolean_type_node,
+					       expr,
+					       fold_convert(TREE_TYPE(expr),
+							    null_pointer_node));
+		tree crash = Gogo::runtime_error(RUNTIME_ERROR_NIL_DEREFERENCE,
+						 loc);
+		expr = fold_build2_loc(loc.gcc_location(), COMPOUND_EXPR,
+				       TREE_TYPE(expr), build3(COND_EXPR,
+							       void_type_node,
+							       compare, crash,
+							       NULL_TREE),
+				       expr);
+	      }
 	  }
 
 	// If the type of EXPR is a recursive pointer type, then we
 	// need to insert a cast before indirecting.
-	if (TREE_TYPE(TREE_TYPE(expr)) == ptr_type_node)
+	if (VOID_TYPE_P(target_type_tree))
 	  {
 	    Type* pt = this->expr_->type()->points_to();
 	    tree ind = type_to_tree(pt->get_backend(context->gogo()));
@@ -4785,124 +4205,239 @@ Binary_expression::do_traverse(Traverse* traverse)
   return Expression::traverse(&this->right_, traverse);
 }
 
-// Compare integer constants according to OP.
+// Return the type to use for a binary operation on operands of
+// LEFT_TYPE and RIGHT_TYPE.  These are the types of constants and as
+// such may be NULL or abstract.
 
 bool
-Binary_expression::compare_integer(Operator op, mpz_t left_val,
-				   mpz_t right_val)
+Binary_expression::operation_type(Operator op, Type* left_type,
+				  Type* right_type, Type** result_type)
 {
-  int i = mpz_cmp(left_val, right_val);
-  switch (op)
+  if (left_type != right_type
+      && !left_type->is_abstract()
+      && !right_type->is_abstract()
+      && left_type->base() != right_type->base()
+      && op != OPERATOR_LSHIFT
+      && op != OPERATOR_RSHIFT)
     {
-    case OPERATOR_EQEQ:
-      return i == 0;
-    case OPERATOR_NOTEQ:
-      return i != 0;
-    case OPERATOR_LT:
-      return i < 0;
-    case OPERATOR_LE:
-      return i <= 0;
-    case OPERATOR_GT:
-      return i > 0;
-    case OPERATOR_GE:
-      return i >= 0;
-    default:
-      go_unreachable();
+      // May be a type error--let it be diagnosed elsewhere.
+      return false;
     }
-}
 
-// Compare floating point constants according to OP.
-
-bool
-Binary_expression::compare_float(Operator op, Type* type, mpfr_t left_val,
-				 mpfr_t right_val)
-{
-  int i;
-  if (type == NULL)
-    i = mpfr_cmp(left_val, right_val);
+  if (op == OPERATOR_LSHIFT || op == OPERATOR_RSHIFT)
+    {
+      if (left_type->integer_type() != NULL)
+	*result_type = left_type;
+      else
+	*result_type = Type::make_abstract_integer_type();
+    }
+  else if (!left_type->is_abstract() && left_type->named_type() != NULL)
+    *result_type = left_type;
+  else if (!right_type->is_abstract() && right_type->named_type() != NULL)
+    *result_type = right_type;
+  else if (!left_type->is_abstract())
+    *result_type = left_type;
+  else if (!right_type->is_abstract())
+    *result_type = right_type;
+  else if (left_type->complex_type() != NULL)
+    *result_type = left_type;
+  else if (right_type->complex_type() != NULL)
+    *result_type = right_type;
+  else if (left_type->float_type() != NULL)
+    *result_type = left_type;
+  else if (right_type->float_type() != NULL)
+    *result_type = right_type;
+  else if (left_type->integer_type() != NULL
+	   && left_type->integer_type()->is_rune())
+    *result_type = left_type;
+  else if (right_type->integer_type() != NULL
+	   && right_type->integer_type()->is_rune())
+    *result_type = right_type;
   else
-    {
-      mpfr_t lv;
-      mpfr_init_set(lv, left_val, GMP_RNDN);
-      mpfr_t rv;
-      mpfr_init_set(rv, right_val, GMP_RNDN);
-      Float_expression::constrain_float(lv, type);
-      Float_expression::constrain_float(rv, type);
-      i = mpfr_cmp(lv, rv);
-      mpfr_clear(lv);
-      mpfr_clear(rv);
-    }
+    *result_type = left_type;
+
+  return true;
+}
+
+// Convert an integer comparison code and an operator to a boolean
+// value.
+
+bool
+Binary_expression::cmp_to_bool(Operator op, int cmp)
+{
   switch (op)
     {
     case OPERATOR_EQEQ:
-      return i == 0;
+      return cmp == 0;
+      break;
     case OPERATOR_NOTEQ:
-      return i != 0;
+      return cmp != 0;
+      break;
     case OPERATOR_LT:
-      return i < 0;
+      return cmp < 0;
+      break;
     case OPERATOR_LE:
-      return i <= 0;
+      return cmp <= 0;
     case OPERATOR_GT:
-      return i > 0;
+      return cmp > 0;
     case OPERATOR_GE:
-      return i >= 0;
+      return cmp >= 0;
     default:
       go_unreachable();
     }
 }
 
-// Compare complex constants according to OP.  Complex numbers may
-// only be compared for equality.
+// Compare constants according to OP.
 
 bool
-Binary_expression::compare_complex(Operator op, Type* type,
-				   mpfr_t left_real, mpfr_t left_imag,
-				   mpfr_t right_real, mpfr_t right_imag)
+Binary_expression::compare_constant(Operator op, Numeric_constant* left_nc,
+				    Numeric_constant* right_nc,
+				    Location location, bool* result)
 {
-  bool is_equal;
-  if (type == NULL)
-    is_equal = (mpfr_cmp(left_real, right_real) == 0
-		&& mpfr_cmp(left_imag, right_imag) == 0);
+  Type* left_type = left_nc->type();
+  Type* right_type = right_nc->type();
+
+  Type* type;
+  if (!Binary_expression::operation_type(op, left_type, right_type, &type))
+    return false;
+
+  // When comparing an untyped operand to a typed operand, we are
+  // effectively coercing the untyped operand to the other operand's
+  // type, so make sure that is valid.
+  if (!left_nc->set_type(type, true, location)
+      || !right_nc->set_type(type, true, location))
+    return false;
+
+  bool ret;
+  int cmp;
+  if (type->complex_type() != NULL)
+    {
+      if (op != OPERATOR_EQEQ && op != OPERATOR_NOTEQ)
+	return false;
+      ret = Binary_expression::compare_complex(left_nc, right_nc, &cmp);
+    }
+  else if (type->float_type() != NULL)
+    ret = Binary_expression::compare_float(left_nc, right_nc, &cmp);
   else
-    {
-      mpfr_t lr;
-      mpfr_t li;
-      mpfr_init_set(lr, left_real, GMP_RNDN);
-      mpfr_init_set(li, left_imag, GMP_RNDN);
-      mpfr_t rr;
-      mpfr_t ri;
-      mpfr_init_set(rr, right_real, GMP_RNDN);
-      mpfr_init_set(ri, right_imag, GMP_RNDN);
-      Complex_expression::constrain_complex(lr, li, type);
-      Complex_expression::constrain_complex(rr, ri, type);
-      is_equal = mpfr_cmp(lr, rr) == 0 && mpfr_cmp(li, ri) == 0;
-      mpfr_clear(lr);
-      mpfr_clear(li);
-      mpfr_clear(rr);
-      mpfr_clear(ri);
-    }
-  switch (op)
-    {
-    case OPERATOR_EQEQ:
-      return is_equal;
-    case OPERATOR_NOTEQ:
-      return !is_equal;
-    default:
-      go_unreachable();
-    }
+    ret = Binary_expression::compare_integer(left_nc, right_nc, &cmp);
+
+  if (ret)
+    *result = Binary_expression::cmp_to_bool(op, cmp);
+
+  return ret;
 }
 
-// Apply binary opcode OP to LEFT_VAL and RIGHT_VAL, setting VAL.
-// LEFT_TYPE is the type of LEFT_VAL, RIGHT_TYPE is the type of
-// RIGHT_VAL; LEFT_TYPE and/or RIGHT_TYPE may be NULL.  Return true if
-// this could be done, false if not.
+// Compare integer constants.
 
 bool
-Binary_expression::eval_integer(Operator op, Type* left_type, mpz_t left_val,
-				Type* right_type, mpz_t right_val,
-				Location location, mpz_t val)
+Binary_expression::compare_integer(const Numeric_constant* left_nc,
+				   const Numeric_constant* right_nc,
+				   int* cmp)
 {
-  bool is_shift_op = false;
+  mpz_t left_val;
+  if (!left_nc->to_int(&left_val))
+    return false;
+  mpz_t right_val;
+  if (!right_nc->to_int(&right_val))
+    {
+      mpz_clear(left_val);
+      return false;
+    }
+
+  *cmp = mpz_cmp(left_val, right_val);
+
+  mpz_clear(left_val);
+  mpz_clear(right_val);
+
+  return true;
+}
+
+// Compare floating point constants.
+
+bool
+Binary_expression::compare_float(const Numeric_constant* left_nc,
+				 const Numeric_constant* right_nc,
+				 int* cmp)
+{
+  mpfr_t left_val;
+  if (!left_nc->to_float(&left_val))
+    return false;
+  mpfr_t right_val;
+  if (!right_nc->to_float(&right_val))
+    {
+      mpfr_clear(left_val);
+      return false;
+    }
+
+  // We already coerced both operands to the same type.  If that type
+  // is not an abstract type, we need to round the values accordingly.
+  Type* type = left_nc->type();
+  if (!type->is_abstract() && type->float_type() != NULL)
+    {
+      int bits = type->float_type()->bits();
+      mpfr_prec_round(left_val, bits, GMP_RNDN);
+      mpfr_prec_round(right_val, bits, GMP_RNDN);
+    }
+
+  *cmp = mpfr_cmp(left_val, right_val);
+
+  mpfr_clear(left_val);
+  mpfr_clear(right_val);
+
+  return true;
+}
+
+// Compare complex constants.  Complex numbers may only be compared
+// for equality.
+
+bool
+Binary_expression::compare_complex(const Numeric_constant* left_nc,
+				   const Numeric_constant* right_nc,
+				   int* cmp)
+{
+  mpfr_t left_real, left_imag;
+  if (!left_nc->to_complex(&left_real, &left_imag))
+    return false;
+  mpfr_t right_real, right_imag;
+  if (!right_nc->to_complex(&right_real, &right_imag))
+    {
+      mpfr_clear(left_real);
+      mpfr_clear(left_imag);
+      return false;
+    }
+
+  // We already coerced both operands to the same type.  If that type
+  // is not an abstract type, we need to round the values accordingly.
+  Type* type = left_nc->type();
+  if (!type->is_abstract() && type->complex_type() != NULL)
+    {
+      int bits = type->complex_type()->bits();
+      mpfr_prec_round(left_real, bits / 2, GMP_RNDN);
+      mpfr_prec_round(left_imag, bits / 2, GMP_RNDN);
+      mpfr_prec_round(right_real, bits / 2, GMP_RNDN);
+      mpfr_prec_round(right_imag, bits / 2, GMP_RNDN);
+    }
+
+  *cmp = (mpfr_cmp(left_real, right_real) != 0
+	  || mpfr_cmp(left_imag, right_imag) != 0);
+
+  mpfr_clear(left_real);
+  mpfr_clear(left_imag);
+  mpfr_clear(right_real);
+  mpfr_clear(right_imag);
+
+  return true;
+}
+
+// Apply binary opcode OP to LEFT_NC and RIGHT_NC, setting NC.  Return
+// true if this could be done, false if not.  Issue errors at LOCATION
+// as appropriate.
+
+bool
+Binary_expression::eval_constant(Operator op, Numeric_constant* left_nc,
+				 Numeric_constant* right_nc,
+				 Location location, Numeric_constant* nc)
+{
   switch (op)
     {
     case OPERATOR_OROR:
@@ -4913,9 +4448,68 @@ Binary_expression::eval_integer(Operator op, Type* left_type, mpz_t left_val,
     case OPERATOR_LE:
     case OPERATOR_GT:
     case OPERATOR_GE:
-      // These return boolean values.  We should probably handle them
-      // anyhow in case a type conversion is used on the result.
+      // These return boolean values and as such must be handled
+      // elsewhere.
+      go_unreachable();
+    default:
+      break;
+    }
+
+  Type* left_type = left_nc->type();
+  Type* right_type = right_nc->type();
+
+  Type* type;
+  if (!Binary_expression::operation_type(op, left_type, right_type, &type))
+    return false;
+
+  bool is_shift = op == OPERATOR_LSHIFT || op == OPERATOR_RSHIFT;
+
+  // When combining an untyped operand with a typed operand, we are
+  // effectively coercing the untyped operand to the other operand's
+  // type, so make sure that is valid.
+  if (!left_nc->set_type(type, true, location))
+    return false;
+  if (!is_shift && !right_nc->set_type(type, true, location))
+    return false;
+
+  bool r;
+  if (type->complex_type() != NULL)
+    r = Binary_expression::eval_complex(op, left_nc, right_nc, location, nc);
+  else if (type->float_type() != NULL)
+    r = Binary_expression::eval_float(op, left_nc, right_nc, location, nc);
+  else
+    r = Binary_expression::eval_integer(op, left_nc, right_nc, location, nc);
+
+  if (r)
+    r = nc->set_type(type, true, location);
+
+  return r;
+}
+
+// Apply binary opcode OP to LEFT_NC and RIGHT_NC, setting NC, using
+// integer operations.  Return true if this could be done, false if
+// not.
+
+bool
+Binary_expression::eval_integer(Operator op, const Numeric_constant* left_nc,
+				const Numeric_constant* right_nc,
+				Location location, Numeric_constant* nc)
+{
+  mpz_t left_val;
+  if (!left_nc->to_int(&left_val))
+    return false;
+  mpz_t right_val;
+  if (!right_nc->to_int(&right_val))
+    {
+      mpz_clear(left_val);
       return false;
+    }
+
+  mpz_t val;
+  mpz_init(val);
+
+  switch (op)
+    {
     case OPERATOR_PLUS:
       mpz_add(val, left_val, right_val);
       break;
@@ -4938,7 +4532,6 @@ Binary_expression::eval_integer(Operator op, Type* left_type, mpz_t left_val,
 	{
 	  error_at(location, "division by zero");
 	  mpz_set_ui(val, 0);
-	  return true;
 	}
       break;
     case OPERATOR_MOD:
@@ -4948,20 +4541,18 @@ Binary_expression::eval_integer(Operator op, Type* left_type, mpz_t left_val,
 	{
 	  error_at(location, "division by zero");
 	  mpz_set_ui(val, 0);
-	  return true;
 	}
       break;
     case OPERATOR_LSHIFT:
       {
 	unsigned long shift = mpz_get_ui(right_val);
-	if (mpz_cmp_ui(right_val, shift) != 0 || shift > 0x100000)
+	if (mpz_cmp_ui(right_val, shift) == 0 && shift <= 0x100000)
+	  mpz_mul_2exp(val, left_val, shift);
+	else
 	  {
 	    error_at(location, "shift count overflow");
 	    mpz_set_ui(val, 0);
-	    return true;
 	  }
-	mpz_mul_2exp(val, left_val, shift);
-	is_shift_op = true;
 	break;
       }
       break;
@@ -4972,13 +4563,14 @@ Binary_expression::eval_integer(Operator op, Type* left_type, mpz_t left_val,
 	  {
 	    error_at(location, "shift count overflow");
 	    mpz_set_ui(val, 0);
-	    return true;
 	  }
-	if (mpz_cmp_ui(left_val, 0) >= 0)
-	  mpz_tdiv_q_2exp(val, left_val, shift);
 	else
-	  mpz_fdiv_q_2exp(val, left_val, shift);
-	is_shift_op = true;
+	  {
+	    if (mpz_cmp_ui(left_val, 0) >= 0)
+	      mpz_tdiv_q_2exp(val, left_val, shift);
+	    else
+	      mpz_fdiv_q_2exp(val, left_val, shift);
+	  }
 	break;
       }
       break;
@@ -4998,63 +4590,47 @@ Binary_expression::eval_integer(Operator op, Type* left_type, mpz_t left_val,
       go_unreachable();
     }
 
-  Type* type = left_type;
-  if (!is_shift_op)
-    {
-      if (type == NULL)
-	type = right_type;
-      else if (type != right_type && right_type != NULL)
-	{
-	  if (type->is_abstract())
-	    type = right_type;
-	  else if (!right_type->is_abstract())
-	    {
-	      // This look like a type error which should be diagnosed
-	      // elsewhere.  Don't do anything here, to avoid an
-	      // unhelpful chain of error messages.
-	      return true;
-	    }
-	}
-    }
+  mpz_clear(left_val);
+  mpz_clear(right_val);
 
-  if (type != NULL && !type->is_abstract())
-    {
-      // We have to check the operands too, as we have implicitly
-      // coerced them to TYPE.
-      if ((type != left_type
-	   && !Integer_expression::check_constant(left_val, type, location))
-	  || (!is_shift_op
-	      && type != right_type
-	      && !Integer_expression::check_constant(right_val, type,
-						     location))
-	  || !Integer_expression::check_constant(val, type, location))
-	mpz_set_ui(val, 0);
-    }
+  if (left_nc->is_rune()
+      || (op != OPERATOR_LSHIFT
+	  && op != OPERATOR_RSHIFT
+	  && right_nc->is_rune()))
+    nc->set_rune(NULL, val);
+  else
+    nc->set_int(NULL, val);
+
+  mpz_clear(val);
 
   return true;
 }
 
-// Apply binary opcode OP to LEFT_VAL and RIGHT_VAL, setting VAL.
-// Return true if this could be done, false if not.
+// Apply binary opcode OP to LEFT_NC and RIGHT_NC, setting NC, using
+// floating point operations.  Return true if this could be done,
+// false if not.
 
 bool
-Binary_expression::eval_float(Operator op, Type* left_type, mpfr_t left_val,
-			      Type* right_type, mpfr_t right_val,
-			      mpfr_t val, Location location)
+Binary_expression::eval_float(Operator op, const Numeric_constant* left_nc,
+			      const Numeric_constant* right_nc,
+			      Location location, Numeric_constant* nc)
 {
+  mpfr_t left_val;
+  if (!left_nc->to_float(&left_val))
+    return false;
+  mpfr_t right_val;
+  if (!right_nc->to_float(&right_val))
+    {
+      mpfr_clear(left_val);
+      return false;
+    }
+
+  mpfr_t val;
+  mpfr_init(val);
+
+  bool ret = true;
   switch (op)
     {
-    case OPERATOR_OROR:
-    case OPERATOR_ANDAND:
-    case OPERATOR_EQEQ:
-    case OPERATOR_NOTEQ:
-    case OPERATOR_LT:
-    case OPERATOR_LE:
-    case OPERATOR_GT:
-    case OPERATOR_GE:
-      // These return boolean values.  We should probably handle them
-      // anyhow in case a type conversion is used on the result.
-      return false;
     case OPERATOR_PLUS:
       mpfr_add(val, left_val, right_val, GMP_RNDN);
       break;
@@ -5065,78 +4641,64 @@ Binary_expression::eval_float(Operator op, Type* left_type, mpfr_t left_val,
     case OPERATOR_XOR:
     case OPERATOR_AND:
     case OPERATOR_BITCLEAR:
-      return false;
+    case OPERATOR_MOD:
+    case OPERATOR_LSHIFT:
+    case OPERATOR_RSHIFT:
+      mpfr_set_ui(val, 0, GMP_RNDN);
+      ret = false;
+      break;
     case OPERATOR_MULT:
       mpfr_mul(val, left_val, right_val, GMP_RNDN);
       break;
     case OPERATOR_DIV:
-      if (mpfr_zero_p(right_val))
-	error_at(location, "division by zero");
-      mpfr_div(val, left_val, right_val, GMP_RNDN);
+      if (!mpfr_zero_p(right_val))
+	mpfr_div(val, left_val, right_val, GMP_RNDN);
+      else
+	{
+	  error_at(location, "division by zero");
+	  mpfr_set_ui(val, 0, GMP_RNDN);
+	}
       break;
-    case OPERATOR_MOD:
-      return false;
-    case OPERATOR_LSHIFT:
-    case OPERATOR_RSHIFT:
-      return false;
     default:
       go_unreachable();
     }
 
-  Type* type = left_type;
-  if (type == NULL)
-    type = right_type;
-  else if (type != right_type && right_type != NULL)
-    {
-      if (type->is_abstract())
-	type = right_type;
-      else if (!right_type->is_abstract())
-	{
-	  // This looks like a type error which should be diagnosed
-	  // elsewhere.  Don't do anything here, to avoid an unhelpful
-	  // chain of error messages.
-	  return true;
-	}
-    }
+  mpfr_clear(left_val);
+  mpfr_clear(right_val);
 
-  if (type != NULL && !type->is_abstract())
-    {
-      if ((type != left_type
-	   && !Float_expression::check_constant(left_val, type, location))
-	  || (type != right_type
-	      && !Float_expression::check_constant(right_val, type,
-						   location))
-	  || !Float_expression::check_constant(val, type, location))
-	mpfr_set_ui(val, 0, GMP_RNDN);
-    }
+  nc->set_float(NULL, val);
+  mpfr_clear(val);
 
-  return true;
+  return ret;
 }
 
-// Apply binary opcode OP to LEFT_REAL/LEFT_IMAG and
-// RIGHT_REAL/RIGHT_IMAG, setting REAL/IMAG.  Return true if this
-// could be done, false if not.
+// Apply binary opcode OP to LEFT_NC and RIGHT_NC, setting NC, using
+// complex operations.  Return true if this could be done, false if
+// not.
 
 bool
-Binary_expression::eval_complex(Operator op, Type* left_type,
-				mpfr_t left_real, mpfr_t left_imag,
-				Type *right_type,
-				mpfr_t right_real, mpfr_t right_imag,
-				mpfr_t real, mpfr_t imag,
-				Location location)
+Binary_expression::eval_complex(Operator op, const Numeric_constant* left_nc,
+				const Numeric_constant* right_nc,
+				Location location, Numeric_constant* nc)
 {
+  mpfr_t left_real, left_imag;
+  if (!left_nc->to_complex(&left_real, &left_imag))
+    return false;
+  mpfr_t right_real, right_imag;
+  if (!right_nc->to_complex(&right_real, &right_imag))
+    {
+      mpfr_clear(left_real);
+      mpfr_clear(left_imag);
+      return false;
+    }
+
+  mpfr_t real, imag;
+  mpfr_init(real);
+  mpfr_init(imag);
+
+  bool ret = true;
   switch (op)
     {
-    case OPERATOR_OROR:
-    case OPERATOR_ANDAND:
-    case OPERATOR_EQEQ:
-    case OPERATOR_NOTEQ:
-    case OPERATOR_LT:
-    case OPERATOR_LE:
-    case OPERATOR_GT:
-    case OPERATOR_GE:
-      // These return boolean values and must be handled differently.
-      return false;
     case OPERATOR_PLUS:
       mpfr_add(real, left_real, right_real, GMP_RNDN);
       mpfr_add(imag, left_imag, right_imag, GMP_RNDN);
@@ -5149,7 +4711,13 @@ Binary_expression::eval_complex(Operator op, Type* left_type,
     case OPERATOR_XOR:
     case OPERATOR_AND:
     case OPERATOR_BITCLEAR:
-      return false;
+    case OPERATOR_MOD:
+    case OPERATOR_LSHIFT:
+    case OPERATOR_RSHIFT:
+      mpfr_set_ui(real, 0, GMP_RNDN);
+      mpfr_set_ui(imag, 0, GMP_RNDN);
+      ret = false;
+      break;
     case OPERATOR_MULT:
       {
 	// You might think that multiplying two complex numbers would
@@ -5302,7 +4870,12 @@ Binary_expression::eval_complex(Operator op, Type* left_type,
 	// scale the values to try to avoid this.
 
 	if (mpfr_zero_p(right_real) && mpfr_zero_p(right_imag))
-	  error_at(location, "division by zero");
+	  {
+	    error_at(location, "division by zero");
+	    mpfr_set_ui(real, 0, GMP_RNDN);
+	    mpfr_set_ui(imag, 0, GMP_RNDN);
+	    break;
+	  }
 
 	mpfr_t rra;
 	mpfr_t ria;
@@ -5433,48 +5006,20 @@ Binary_expression::eval_complex(Operator op, Type* left_type,
 	mpfr_clear(ria);
       }
       break;
-    case OPERATOR_MOD:
-      return false;
-    case OPERATOR_LSHIFT:
-    case OPERATOR_RSHIFT:
-      return false;
     default:
       go_unreachable();
     }
 
-  Type* type = left_type;
-  if (type == NULL)
-    type = right_type;
-  else if (type != right_type && right_type != NULL)
-    {
-      if (type->is_abstract())
-	type = right_type;
-      else if (!right_type->is_abstract())
-	{
-	  // This looks like a type error which should be diagnosed
-	  // elsewhere.  Don't do anything here, to avoid an unhelpful
-	  // chain of error messages.
-	  return true;
-	}
-    }
+  mpfr_clear(left_real);
+  mpfr_clear(left_imag);
+  mpfr_clear(right_real);
+  mpfr_clear(right_imag);
 
-  if (type != NULL && !type->is_abstract())
-    {
-      if ((type != left_type
-	   && !Complex_expression::check_constant(left_real, left_imag,
-						  type, location))
-	  || (type != right_type
-	      && !Complex_expression::check_constant(right_real, right_imag,
-						     type, location))
-	  || !Complex_expression::check_constant(real, imag, type,
-						 location))
-	{
-	  mpfr_set_ui(real, 0, GMP_RNDN);
-	  mpfr_set_ui(imag, 0, GMP_RNDN);
-	}
-    }
+  nc->set_complex(NULL, real, imag);
+  mpfr_clear(real);
+  mpfr_clear(imag);
 
-  return true;
+  return ret;
 }
 
 // Lower a binary expression.  We have to evaluate constant
@@ -5497,319 +5042,57 @@ Binary_expression::do_lower(Gogo* gogo, Named_object*,
 			      || op == OPERATOR_GT
 			      || op == OPERATOR_GE);
 
-  // Integer constant expressions.
+  // Numeric constant expressions.
   {
-    mpz_t left_val;
-    mpz_init(left_val);
-    Type* left_type;
-    mpz_t right_val;
-    mpz_init(right_val);
-    Type* right_type;
-    if (left->integer_constant_value(false, left_val, &left_type)
-	&& right->integer_constant_value(false, right_val, &right_type))
+    Numeric_constant left_nc;
+    Numeric_constant right_nc;
+    if (left->numeric_constant_value(&left_nc)
+	&& right->numeric_constant_value(&right_nc))
       {
-	Expression* ret = NULL;
-	if (left_type != right_type
-	    && left_type != NULL
-	    && right_type != NULL
-	    && left_type->base() != right_type->base()
-	    && op != OPERATOR_LSHIFT
-	    && op != OPERATOR_RSHIFT)
+	if (is_comparison)
 	  {
-	    // May be a type error--let it be diagnosed later.
-	  }
-	else if (is_comparison)
-	  {
-	    bool b = Binary_expression::compare_integer(op, left_val,
-							right_val);
-	    ret = Expression::make_cast(Type::lookup_bool_type(),
-					Expression::make_boolean(b, location),
-					location);
+	    bool result;
+	    if (!Binary_expression::compare_constant(op, &left_nc,
+						     &right_nc, location,
+						     &result))
+	      return this;
+	    return Expression::make_cast(Type::lookup_bool_type(),
+					 Expression::make_boolean(result,
+								  location),
+					 location);
 	  }
 	else
 	  {
-	    mpz_t val;
-	    mpz_init(val);
-
-	    if (Binary_expression::eval_integer(op, left_type, left_val,
-						right_type, right_val,
-						location, val))
-	      {
-		go_assert(op != OPERATOR_OROR && op != OPERATOR_ANDAND);
-		Type* type;
-		if (op == OPERATOR_LSHIFT || op == OPERATOR_RSHIFT)
-		  type = left_type;
-		else if (left_type == NULL)
-		  type = right_type;
-		else if (right_type == NULL)
-		  type = left_type;
-		else if (!left_type->is_abstract()
-			 && left_type->named_type() != NULL)
-		  type = left_type;
-		else if (!right_type->is_abstract()
-			 && right_type->named_type() != NULL)
-		  type = right_type;
-		else if (!left_type->is_abstract())
-		  type = left_type;
-		else if (!right_type->is_abstract())
-		  type = right_type;
-		else if (left_type->float_type() != NULL)
-		  type = left_type;
-		else if (right_type->float_type() != NULL)
-		  type = right_type;
-		else if (left_type->complex_type() != NULL)
-		  type = left_type;
-		else if (right_type->complex_type() != NULL)
-		  type = right_type;
-		else
-		  type = left_type;
-		ret = Expression::make_integer(&val, type, location);
-	      }
-
-	    mpz_clear(val);
-	  }
-
-	if (ret != NULL)
-	  {
-	    mpz_clear(right_val);
-	    mpz_clear(left_val);
-	    return ret;
+	    Numeric_constant nc;
+	    if (!Binary_expression::eval_constant(op, &left_nc, &right_nc,
+						  location, &nc))
+	      return this;
+	    return nc.expression(location);
 	  }
       }
-    mpz_clear(right_val);
-    mpz_clear(left_val);
-  }
-
-  // Floating point constant expressions.
-  {
-    mpfr_t left_val;
-    mpfr_init(left_val);
-    Type* left_type;
-    mpfr_t right_val;
-    mpfr_init(right_val);
-    Type* right_type;
-    if (left->float_constant_value(left_val, &left_type)
-	&& right->float_constant_value(right_val, &right_type))
-      {
-	Expression* ret = NULL;
-	if (left_type != right_type
-	    && left_type != NULL
-	    && right_type != NULL
-	    && left_type->base() != right_type->base()
-	    && op != OPERATOR_LSHIFT
-	    && op != OPERATOR_RSHIFT)
-	  {
-	    // May be a type error--let it be diagnosed later.
-	  }
-	else if (is_comparison)
-	  {
-	    bool b = Binary_expression::compare_float(op,
-						      (left_type != NULL
-						       ? left_type
-						       : right_type),
-						      left_val, right_val);
-	    ret = Expression::make_boolean(b, location);
-	  }
-	else
-	  {
-	    mpfr_t val;
-	    mpfr_init(val);
-
-	    if (Binary_expression::eval_float(op, left_type, left_val,
-					      right_type, right_val, val,
-					      location))
-	      {
-		go_assert(op != OPERATOR_OROR && op != OPERATOR_ANDAND
-			   && op != OPERATOR_LSHIFT && op != OPERATOR_RSHIFT);
-		Type* type;
-		if (left_type == NULL)
-		  type = right_type;
-		else if (right_type == NULL)
-		  type = left_type;
-		else if (!left_type->is_abstract()
-			 && left_type->named_type() != NULL)
-		  type = left_type;
-		else if (!right_type->is_abstract()
-			 && right_type->named_type() != NULL)
-		  type = right_type;
-		else if (!left_type->is_abstract())
-		  type = left_type;
-		else if (!right_type->is_abstract())
-		  type = right_type;
-		else if (left_type->float_type() != NULL)
-		  type = left_type;
-		else if (right_type->float_type() != NULL)
-		  type = right_type;
-		else
-		  type = left_type;
-		ret = Expression::make_float(&val, type, location);
-	      }
-
-	    mpfr_clear(val);
-	  }
-
-	if (ret != NULL)
-	  {
-	    mpfr_clear(right_val);
-	    mpfr_clear(left_val);
-	    return ret;
-	  }
-      }
-    mpfr_clear(right_val);
-    mpfr_clear(left_val);
-  }
-
-  // Complex constant expressions.
-  {
-    mpfr_t left_real;
-    mpfr_t left_imag;
-    mpfr_init(left_real);
-    mpfr_init(left_imag);
-    Type* left_type;
-
-    mpfr_t right_real;
-    mpfr_t right_imag;
-    mpfr_init(right_real);
-    mpfr_init(right_imag);
-    Type* right_type;
-
-    if (left->complex_constant_value(left_real, left_imag, &left_type)
-	&& right->complex_constant_value(right_real, right_imag, &right_type))
-      {
-	Expression* ret = NULL;
-	if (left_type != right_type
-	    && left_type != NULL
-	    && right_type != NULL
-	    && left_type->base() != right_type->base())
-	  {
-	    // May be a type error--let it be diagnosed later.
-	  }
-	else if (op == OPERATOR_EQEQ || op == OPERATOR_NOTEQ)
-	  {
-	    bool b = Binary_expression::compare_complex(op,
-							(left_type != NULL
-							 ? left_type
-							 : right_type),
-							left_real,
-							left_imag,
-							right_real,
-							right_imag);
-	    ret = Expression::make_boolean(b, location);
-	  }
-	else
-	  {
-	    mpfr_t real;
-	    mpfr_t imag;
-	    mpfr_init(real);
-	    mpfr_init(imag);
-
-	    if (Binary_expression::eval_complex(op, left_type,
-						left_real, left_imag,
-						right_type,
-						right_real, right_imag,
-						real, imag,
-						location))
-	      {
-		go_assert(op != OPERATOR_OROR && op != OPERATOR_ANDAND
-			   && op != OPERATOR_LSHIFT && op != OPERATOR_RSHIFT);
-		Type* type;
-		if (left_type == NULL)
-		  type = right_type;
-		else if (right_type == NULL)
-		  type = left_type;
-		else if (!left_type->is_abstract()
-			 && left_type->named_type() != NULL)
-		  type = left_type;
-		else if (!right_type->is_abstract()
-			 && right_type->named_type() != NULL)
-		  type = right_type;
-		else if (!left_type->is_abstract())
-		  type = left_type;
-		else if (!right_type->is_abstract())
-		  type = right_type;
-		else if (left_type->complex_type() != NULL)
-		  type = left_type;
-		else if (right_type->complex_type() != NULL)
-		  type = right_type;
-		else
-		  type = left_type;
-		ret = Expression::make_complex(&real, &imag, type,
-					       location);
-	      }
-	    mpfr_clear(real);
-	    mpfr_clear(imag);
-	  }
-
-	if (ret != NULL)
-	  {
-	    mpfr_clear(left_real);
-	    mpfr_clear(left_imag);
-	    mpfr_clear(right_real);
-	    mpfr_clear(right_imag);
-	    return ret;
-	  }
-      }
-
-    mpfr_clear(left_real);
-    mpfr_clear(left_imag);
-    mpfr_clear(right_real);
-    mpfr_clear(right_imag);
   }
 
   // String constant expressions.
-  if (op == OPERATOR_PLUS
-      && left->type()->is_string_type()
-      && right->type()->is_string_type())
+  if (left->type()->is_string_type() && right->type()->is_string_type())
     {
       std::string left_string;
       std::string right_string;
       if (left->string_constant_value(&left_string)
 	  && right->string_constant_value(&right_string))
-	return Expression::make_string(left_string + right_string, location);
-    }
-
-  // Special case for shift of a floating point constant.
-  if (op == OPERATOR_LSHIFT || op == OPERATOR_RSHIFT)
-    {
-      mpfr_t left_val;
-      mpfr_init(left_val);
-      Type* left_type;
-      mpz_t right_val;
-      mpz_init(right_val);
-      Type* right_type;
-      if (left->float_constant_value(left_val, &left_type)
-	  && right->integer_constant_value(false, right_val, &right_type)
-	  && mpfr_integer_p(left_val)
-	  && (left_type == NULL
-	      || left_type->is_abstract()
-	      || left_type->integer_type() != NULL))
 	{
-	  mpz_t left_int;
-	  mpz_init(left_int);
-	  mpfr_get_z(left_int, left_val, GMP_RNDN);
-
-	  mpz_t val;
-	  mpz_init(val);
-
-	  Expression* ret = NULL;
-	  if (Binary_expression::eval_integer(op, left_type, left_int,
-					      right_type, right_val,
-					      location, val))
-	    ret = Expression::make_integer(&val, left_type, location);
-
-	  mpz_clear(left_int);
-	  mpz_clear(val);
-
-	  if (ret != NULL)
+	  if (op == OPERATOR_PLUS)
+	    return Expression::make_string(left_string + right_string,
+					   location);
+	  else if (is_comparison)
 	    {
-	      mpfr_clear(left_val);
-	      mpz_clear(right_val);
-	      return ret;
+	      int cmp = left_string.compare(right_string);
+	      bool r = Binary_expression::cmp_to_bool(op, cmp);
+	      return Expression::make_cast(Type::lookup_bool_type(),
+					   Expression::make_boolean(r,
+								    location),
+					   location);
 	    }
 	}
-
-      mpfr_clear(left_val);
-      mpz_clear(right_val);
     }
 
   // Lower struct and array comparisons.
@@ -5989,154 +5272,30 @@ Binary_expression::operand_address(Statement_inserter* inserter,
   return Expression::make_cast(unsafe_pointer_type, expr, loc);
 }
 
-// Return the integer constant value, if it has one.
+// Return the numeric constant value, if it has one.
 
 bool
-Binary_expression::do_integer_constant_value(bool iota_is_constant, mpz_t val,
-					     Type** ptype) const
+Binary_expression::do_numeric_constant_value(Numeric_constant* nc) const
 {
-  mpz_t left_val;
-  mpz_init(left_val);
-  Type* left_type;
-  if (!this->left_->integer_constant_value(iota_is_constant, left_val,
-					   &left_type))
-    {
-      mpz_clear(left_val);
-      return false;
-    }
+  Operator op = this->op_;
 
-  mpz_t right_val;
-  mpz_init(right_val);
-  Type* right_type;
-  if (!this->right_->integer_constant_value(iota_is_constant, right_val,
-					    &right_type))
-    {
-      mpz_clear(right_val);
-      mpz_clear(left_val);
-      return false;
-    }
+  if (op == OPERATOR_EQEQ
+      || op == OPERATOR_NOTEQ
+      || op == OPERATOR_LT
+      || op == OPERATOR_LE
+      || op == OPERATOR_GT
+      || op == OPERATOR_GE)
+    return false;
 
-  bool ret;
-  if (left_type != right_type
-      && left_type != NULL
-      && right_type != NULL
-      && left_type->base() != right_type->base()
-      && this->op_ != OPERATOR_RSHIFT
-      && this->op_ != OPERATOR_LSHIFT)
-    ret = false;
-  else
-    ret = Binary_expression::eval_integer(this->op_, left_type, left_val,
-					  right_type, right_val,
-					  this->location(), val);
+  Numeric_constant left_nc;
+  if (!this->left_->numeric_constant_value(&left_nc))
+    return false;
+  Numeric_constant right_nc;
+  if (!this->right_->numeric_constant_value(&right_nc))
+    return false;
 
-  mpz_clear(right_val);
-  mpz_clear(left_val);
-
-  if (ret)
-    *ptype = left_type;
-
-  return ret;
-}
-
-// Return the floating point constant value, if it has one.
-
-bool
-Binary_expression::do_float_constant_value(mpfr_t val, Type** ptype) const
-{
-  mpfr_t left_val;
-  mpfr_init(left_val);
-  Type* left_type;
-  if (!this->left_->float_constant_value(left_val, &left_type))
-    {
-      mpfr_clear(left_val);
-      return false;
-    }
-
-  mpfr_t right_val;
-  mpfr_init(right_val);
-  Type* right_type;
-  if (!this->right_->float_constant_value(right_val, &right_type))
-    {
-      mpfr_clear(right_val);
-      mpfr_clear(left_val);
-      return false;
-    }
-
-  bool ret;
-  if (left_type != right_type
-      && left_type != NULL
-      && right_type != NULL
-      && left_type->base() != right_type->base())
-    ret = false;
-  else
-    ret = Binary_expression::eval_float(this->op_, left_type, left_val,
-					right_type, right_val,
-					val, this->location());
-
-  mpfr_clear(left_val);
-  mpfr_clear(right_val);
-
-  if (ret)
-    *ptype = left_type;
-
-  return ret;
-}
-
-// Return the complex constant value, if it has one.
-
-bool
-Binary_expression::do_complex_constant_value(mpfr_t real, mpfr_t imag,
-					     Type** ptype) const
-{
-  mpfr_t left_real;
-  mpfr_t left_imag;
-  mpfr_init(left_real);
-  mpfr_init(left_imag);
-  Type* left_type;
-  if (!this->left_->complex_constant_value(left_real, left_imag, &left_type))
-    {
-      mpfr_clear(left_real);
-      mpfr_clear(left_imag);
-      return false;
-    }
-
-  mpfr_t right_real;
-  mpfr_t right_imag;
-  mpfr_init(right_real);
-  mpfr_init(right_imag);
-  Type* right_type;
-  if (!this->right_->complex_constant_value(right_real, right_imag,
-					    &right_type))
-    {
-      mpfr_clear(left_real);
-      mpfr_clear(left_imag);
-      mpfr_clear(right_real);
-      mpfr_clear(right_imag);
-      return false;
-    }
-
-  bool ret;
-  if (left_type != right_type
-      && left_type != NULL
-      && right_type != NULL
-      && left_type->base() != right_type->base())
-    ret = false;
-  else
-    ret = Binary_expression::eval_complex(this->op_, left_type,
-					  left_real, left_imag,
-					  right_type,
-					  right_real, right_imag,
-					  real, imag,
-					  this->location());
-  mpfr_clear(left_real);
-  mpfr_clear(left_imag);
-  mpfr_clear(right_real);
-  mpfr_clear(right_imag);
-
-  if (ret)
-    *ptype = left_type;
-
-  return ret;
+  return Binary_expression::eval_constant(op, &left_nc, &right_nc,
+					  this->location(), nc);
 }
 
 // Note that the value is being discarded.
@@ -6180,35 +5339,13 @@ Binary_expression::do_type()
     case OPERATOR_AND:
     case OPERATOR_BITCLEAR:
       {
-	Type* left_type = this->left_->type();
-	Type* right_type = this->right_->type();
-	if (left_type->is_error())
-	  return left_type;
-	else if (right_type->is_error())
-	  return right_type;
-	else if (!Type::are_compatible_for_binop(left_type, right_type))
-	  {
-	    this->report_error(_("incompatible types in binary expression"));
-	    return Type::make_error_type();
-	  }
-	else if (!left_type->is_abstract() && left_type->named_type() != NULL)
-	  return left_type;
-	else if (!right_type->is_abstract() && right_type->named_type() != NULL)
-	  return right_type;
-	else if (!left_type->is_abstract())
-	  return left_type;
-	else if (!right_type->is_abstract())
-	  return right_type;
-	else if (left_type->complex_type() != NULL)
-	  return left_type;
-	else if (right_type->complex_type() != NULL)
-	  return right_type;
-	else if (left_type->float_type() != NULL)
-	  return left_type;
-	else if (right_type->float_type() != NULL)
-	  return right_type;
-	else
-	  return left_type;
+	Type* type;
+	if (!Binary_expression::operation_type(this->op_,
+					       this->left_->type(),
+					       this->right_->type(),
+					       &type))
+	  return Type::make_error_type();
+	return type;
       }
 
     case OPERATOR_LSHIFT:
@@ -6473,21 +5610,25 @@ Binary_expression::do_check_types(Gogo*)
 	this->report_error(_("shift count not unsigned integer"));
       else
 	{
-	  mpz_t val;
-	  mpz_init(val);
-	  Type* type;
-	  if (this->right_->integer_constant_value(true, val, &type))
+	  Numeric_constant nc;
+	  if (this->right_->numeric_constant_value(&nc))
 	    {
-	      if (mpz_sgn(val) < 0)
+	      mpz_t val;
+	      if (!nc.to_int(&val))
+		this->report_error(_("shift count not unsigned integer"));
+	      else
 		{
-		  this->report_error(_("negative shift count"));
-		  mpz_set_ui(val, 0);
-		  Location rloc = this->right_->location();
-		  this->right_ = Expression::make_integer(&val, right_type,
-							  rloc);
+		  if (mpz_sgn(val) < 0)
+		    {
+		      this->report_error(_("negative shift count"));
+		      mpz_set_ui(val, 0);
+		      Location rloc = this->right_->location();
+		      this->right_ = Expression::make_integer(&val, right_type,
+							      rloc);
+		    }
+		  mpz_clear(val);
 		}
 	    }
-	  mpz_clear(val);
 	}
     }
 }
@@ -6506,6 +5647,7 @@ Binary_expression::do_get_tree(Translate_context* context)
   enum tree_code code;
   bool use_left_type = true;
   bool is_shift_op = false;
+  bool is_idiv_op = false;
   switch (this->op_)
     {
     case OPERATOR_EQEQ:
@@ -6548,11 +5690,15 @@ Binary_expression::do_get_tree(Translate_context* context)
 	if (t->float_type() != NULL || t->complex_type() != NULL)
 	  code = RDIV_EXPR;
 	else
-	  code = TRUNC_DIV_EXPR;
+	  {
+	    code = TRUNC_DIV_EXPR;
+	    is_idiv_op = true;
+	  }
       }
       break;
     case OPERATOR_MOD:
       code = TRUNC_MOD_EXPR;
+      is_idiv_op = true;
       break;
     case OPERATOR_LSHIFT:
       code = LSHIFT_EXPR;
@@ -6573,6 +5719,7 @@ Binary_expression::do_get_tree(Translate_context* context)
       go_unreachable();
     }
 
+  location_t gccloc = this->location().gcc_location();
   tree type = use_left_type ? TREE_TYPE(left) : TREE_TYPE(right);
 
   if (this->left_->type()->is_string_type())
@@ -6600,28 +5747,27 @@ Binary_expression::do_get_tree(Translate_context* context)
     }
 
   tree eval_saved = NULL_TREE;
-  if (is_shift_op)
+  if (is_shift_op
+      || (is_idiv_op && (go_check_divide_zero || go_check_divide_overflow)))
     {
       // Make sure the values are evaluated.
-      if (!DECL_P(left) && TREE_SIDE_EFFECTS(left))
+      if (!DECL_P(left))
 	{
 	  left = save_expr(left);
 	  eval_saved = left;
 	}
-      if (!DECL_P(right) && TREE_SIDE_EFFECTS(right))
+      if (!DECL_P(right))
 	{
 	  right = save_expr(right);
 	  if (eval_saved == NULL_TREE)
 	    eval_saved = right;
 	  else
-	    eval_saved = fold_build2_loc(this->location().gcc_location(),
-                                         COMPOUND_EXPR,
+	    eval_saved = fold_build2_loc(gccloc, COMPOUND_EXPR,
 					 void_type_node, eval_saved, right);
 	}
     }
 
-  tree ret = fold_build2_loc(this->location().gcc_location(),
-			     code,
+  tree ret = fold_build2_loc(gccloc, code,
 			     compute_type != NULL_TREE ? compute_type : type,
 			     left, right);
 
@@ -6639,39 +5785,116 @@ Binary_expression::do_get_tree(Translate_context* context)
       tree compare = fold_build2(LT_EXPR, boolean_type_node, right,
 				 build_int_cst_type(TREE_TYPE(right), bits));
 
-      tree overflow_result = fold_convert_loc(this->location().gcc_location(),
-					      TREE_TYPE(left),
+      tree overflow_result = fold_convert_loc(gccloc, TREE_TYPE(left),
 					      integer_zero_node);
       if (this->op_ == OPERATOR_RSHIFT
 	  && !this->left_->type()->integer_type()->is_unsigned())
 	{
 	  tree neg =
-            fold_build2_loc(this->location().gcc_location(), LT_EXPR,
-                            boolean_type_node, left,
-                            fold_convert_loc(this->location().gcc_location(),
-                                             TREE_TYPE(left),
+            fold_build2_loc(gccloc, LT_EXPR, boolean_type_node,
+			    left,
+                            fold_convert_loc(gccloc, TREE_TYPE(left),
                                              integer_zero_node));
 	  tree neg_one =
-            fold_build2_loc(this->location().gcc_location(),
-                            MINUS_EXPR, TREE_TYPE(left),
-                            fold_convert_loc(this->location().gcc_location(),
-                                             TREE_TYPE(left),
+            fold_build2_loc(gccloc, MINUS_EXPR, TREE_TYPE(left),
+                            fold_convert_loc(gccloc, TREE_TYPE(left),
                                              integer_zero_node),
-                            fold_convert_loc(this->location().gcc_location(),
-                                             TREE_TYPE(left),
+                            fold_convert_loc(gccloc, TREE_TYPE(left),
                                              integer_one_node));
 	  overflow_result =
-            fold_build3_loc(this->location().gcc_location(), COND_EXPR,
-                            TREE_TYPE(left), neg, neg_one,
-                            overflow_result);
+            fold_build3_loc(gccloc, COND_EXPR, TREE_TYPE(left),
+			    neg, neg_one, overflow_result);
 	}
 
-      ret = fold_build3_loc(this->location().gcc_location(), COND_EXPR,
-                            TREE_TYPE(left), compare, ret, overflow_result);
+      ret = fold_build3_loc(gccloc, COND_EXPR, TREE_TYPE(left),
+			    compare, ret, overflow_result);
 
       if (eval_saved != NULL_TREE)
-	ret = fold_build2_loc(this->location().gcc_location(), COMPOUND_EXPR,
-			      TREE_TYPE(ret), eval_saved, ret);
+	ret = fold_build2_loc(gccloc, COMPOUND_EXPR, TREE_TYPE(ret),
+			      eval_saved, ret);
+    }
+
+  // Add checks for division by zero and division overflow as needed.
+  if (is_idiv_op)
+    {
+      if (go_check_divide_zero)
+	{
+	  // right == 0
+	  tree check = fold_build2_loc(gccloc, EQ_EXPR, boolean_type_node,
+				       right,
+				       fold_convert_loc(gccloc,
+							TREE_TYPE(right),
+							integer_zero_node));
+
+	  // __go_runtime_error(RUNTIME_ERROR_DIVISION_BY_ZERO), 0
+	  int errcode = RUNTIME_ERROR_DIVISION_BY_ZERO;
+	  tree panic = fold_build2_loc(gccloc, COMPOUND_EXPR, TREE_TYPE(ret),
+				       Gogo::runtime_error(errcode,
+							   this->location()),
+				       fold_convert_loc(gccloc, TREE_TYPE(ret),
+							integer_zero_node));
+
+	  // right == 0 ? (__go_runtime_error(...), 0) : ret
+	  ret = fold_build3_loc(gccloc, COND_EXPR, TREE_TYPE(ret),
+				check, panic, ret);
+	}
+
+      if (go_check_divide_overflow)
+	{
+	  // right == -1
+	  // FIXME: It would be nice to say that this test is expected
+	  // to return false.
+	  tree m1 = integer_minus_one_node;
+	  tree check = fold_build2_loc(gccloc, EQ_EXPR, boolean_type_node,
+				       right,
+				       fold_convert_loc(gccloc,
+							TREE_TYPE(right),
+							m1));
+
+	  tree overflow;
+	  if (TYPE_UNSIGNED(TREE_TYPE(ret)))
+	    {
+	      // An unsigned -1 is the largest possible number, so
+	      // dividing is always 1 or 0.
+	      tree cmp = fold_build2_loc(gccloc, EQ_EXPR, boolean_type_node,
+					 left, right);
+	      if (this->op_ == OPERATOR_DIV)
+		overflow = fold_build3_loc(gccloc, COND_EXPR, TREE_TYPE(ret),
+					   cmp,
+					   fold_convert_loc(gccloc,
+							    TREE_TYPE(ret),
+							    integer_one_node),
+					   fold_convert_loc(gccloc,
+							    TREE_TYPE(ret),
+							    integer_zero_node));
+	      else
+		overflow = fold_build3_loc(gccloc, COND_EXPR, TREE_TYPE(ret),
+					   cmp,
+					   fold_convert_loc(gccloc,
+							    TREE_TYPE(ret),
+							    integer_zero_node),
+					   left);
+	    }
+	  else
+	    {
+	      // Computing left / -1 is the same as computing - left,
+	      // which does not overflow since Go sets -fwrapv.
+	      if (this->op_ == OPERATOR_DIV)
+		overflow = fold_build1_loc(gccloc, NEGATE_EXPR, TREE_TYPE(left),
+					   left);
+	      else
+		overflow = integer_zero_node;
+	    }
+	  overflow = fold_convert_loc(gccloc, TREE_TYPE(ret), overflow);
+
+	  // right == -1 ? - left : ret
+	  ret = fold_build3_loc(gccloc, COND_EXPR, TREE_TYPE(ret),
+				check, overflow, ret);
+	}
+
+      if (eval_saved != NULL_TREE)
+	ret = fold_build2_loc(gccloc, COMPOUND_EXPR, TREE_TYPE(ret),
+			      eval_saved, ret);
     }
 
   return ret;
@@ -7259,13 +6482,7 @@ class Builtin_call_expression : public Call_expression
   do_is_constant() const;
 
   bool
-  do_integer_constant_value(bool, mpz_t, Type**) const;
-
-  bool
-  do_float_constant_value(mpfr_t, Type**) const;
-
-  bool
-  do_complex_constant_value(mpfr_t, mpfr_t, Type**) const;
+  do_numeric_constant_value(Numeric_constant*) const;
 
   void
   do_discarding_value();
@@ -7488,7 +6705,7 @@ Builtin_call_expression::do_lower(Gogo* gogo, Named_object* function,
       if (this->code_ == BUILTIN_LEN || this->code_ == BUILTIN_CAP)
 	{
 	  Expression* arg = this->one_arg();
-	  if (!arg->is_constant())
+	  if (arg != NULL && !arg->is_constant())
 	    {
 	      Find_call_expression find_call;
 	      Expression::traverse(&arg, &find_call);
@@ -7497,37 +6714,9 @@ Builtin_call_expression::do_lower(Gogo* gogo, Named_object* function,
 	    }
 	}
 
-      mpz_t ival;
-      mpz_init(ival);
-      Type* type;
-      if (this->integer_constant_value(true, ival, &type))
-	{
-	  Expression* ret = Expression::make_integer(&ival, type, loc);
-	  mpz_clear(ival);
-	  return ret;
-	}
-      mpz_clear(ival);
-
-      mpfr_t rval;
-      mpfr_init(rval);
-      if (this->float_constant_value(rval, &type))
-	{
-	  Expression* ret = Expression::make_float(&rval, type, loc);
-	  mpfr_clear(rval);
-	  return ret;
-	}
-
-      mpfr_t imag;
-      mpfr_init(imag);
-      if (this->complex_constant_value(rval, imag, &type))
-	{
-	  Expression* ret = Expression::make_complex(&rval, &imag, type, loc);
-	  mpfr_clear(rval);
-	  mpfr_clear(imag);
-	  return ret;
-	}
-      mpfr_clear(rval);
-      mpfr_clear(imag);
+      Numeric_constant nc;
+      if (this->numeric_constant_value(&nc))
+	return nc.expression(loc);
     }
 
   switch (this->code_)
@@ -7584,7 +6773,10 @@ Builtin_call_expression::do_lower(Gogo* gogo, Named_object* function,
 	    this->set_is_error();
 	    return this;
 	  }
-	this->lower_varargs(gogo, function, inserter, slice_type, 2);
+	Type* element_type = slice_type->array_type()->element_type();
+	this->lower_varargs(gogo, function, inserter,
+			    Type::make_array_type(element_type, NULL),
+			    2);
       }
       break;
 
@@ -7668,6 +6860,10 @@ Builtin_call_expression::lower_make()
       return Expression::make_error(this->location());
     }
 
+  bool have_big_args = false;
+  Type* uintptr_type = Type::lookup_integer_type("uintptr");
+  int uintptr_bits = uintptr_type->integer_type()->bits();
+
   ++parg;
   Expression* len_arg;
   if (parg == args->end())
@@ -7691,6 +6887,9 @@ Builtin_call_expression::lower_make()
 	  this->report_error(_("bad size for make"));
 	  return Expression::make_error(this->location());
 	}
+      if (len_arg->type()->integer_type() != NULL
+	  && len_arg->type()->integer_type()->bits() > uintptr_bits)
+	have_big_args = true;
       ++parg;
     }
 
@@ -7703,6 +6902,9 @@ Builtin_call_expression::lower_make()
 	  this->report_error(_("bad capacity when making slice"));
 	  return Expression::make_error(this->location());
 	}
+      if (cap_arg->type()->integer_type() != NULL
+	  && cap_arg->type()->integer_type()->bits() > uintptr_bits)
+	have_big_args = true;
       ++parg;
     }
 
@@ -7725,16 +6927,26 @@ Builtin_call_expression::lower_make()
   if (is_slice)
     {
       if (cap_arg == NULL)
-	call = Runtime::make_call(Runtime::MAKESLICE1, loc, 2, type_arg,
-				  len_arg);
+	call = Runtime::make_call((have_big_args
+				   ? Runtime::MAKESLICE1BIG
+				   : Runtime::MAKESLICE1),
+				  loc, 2, type_arg, len_arg);
       else
-	call = Runtime::make_call(Runtime::MAKESLICE2, loc, 3, type_arg,
-				  len_arg, cap_arg);
+	call = Runtime::make_call((have_big_args
+				   ? Runtime::MAKESLICE2BIG
+				   : Runtime::MAKESLICE2),
+				  loc, 3, type_arg, len_arg, cap_arg);
     }
   else if (is_map)
-    call = Runtime::make_call(Runtime::MAKEMAP, loc, 2, type_arg, len_arg);
+    call = Runtime::make_call((have_big_args
+			       ? Runtime::MAKEMAPBIG
+			       : Runtime::MAKEMAP),
+			      loc, 2, type_arg, len_arg);
   else if (is_chan)
-    call = Runtime::make_call(Runtime::MAKECHAN, loc, 2, type_arg, len_arg);
+    call = Runtime::make_call((have_big_args
+			       ? Runtime::MAKECHANBIG
+			       : Runtime::MAKECHAN),
+			      loc, 2, type_arg, len_arg);
   else
     go_unreachable();
 
@@ -7752,42 +6964,13 @@ Builtin_call_expression::check_int_value(Expression* e)
     return true;
 
   // Check for a floating point constant with integer value.
-  mpfr_t fval;
-  mpfr_init(fval);
-
-  Type* dummy;
-  if (e->float_constant_value(fval, &dummy) && mpfr_integer_p(fval))
+  Numeric_constant nc;
+  mpz_t ival;
+  if (e->numeric_constant_value(&nc) && nc.to_int(&ival))
     {
-      mpz_t ival;
-      mpz_init(ival);
-
-      bool ok = false;
-
-      mpfr_clear_overflow();
-      mpfr_clear_erangeflag();
-      mpfr_get_z(ival, fval, GMP_RNDN);
-      if (!mpfr_overflow_p()
-	  && !mpfr_erangeflag_p()
-	  && mpz_sgn(ival) >= 0)
-	{
-	  Named_type* ntype = Type::lookup_integer_type("int");
-	  Integer_type* inttype = ntype->integer_type();
-	  mpz_t max;
-	  mpz_init_set_ui(max, 1);
-	  mpz_mul_2exp(max, max, inttype->bits() - 1);
-	  ok = mpz_cmp(ival, max) < 0;
-	  mpz_clear(max);
-	}
       mpz_clear(ival);
-
-      if (ok)
-	{
-	  mpfr_clear(fval);
-	  return true;
-	}
+      return true;
     }
-
-  mpfr_clear(fval);
 
   return false;
 }
@@ -7842,7 +7025,7 @@ Expression*
 Builtin_call_expression::one_arg() const
 {
   const Expression_list* args = this->args();
-  if (args->size() != 1)
+  if (args == NULL || args->size() != 1)
     return NULL;
   return args->front();
 }
@@ -7919,12 +7102,10 @@ Builtin_call_expression::do_is_constant() const
   return false;
 }
 
-// Return an integer constant value if possible.
+// Return a numeric constant if possible.
 
 bool
-Builtin_call_expression::do_integer_constant_value(bool iota_is_constant,
-						   mpz_t val,
-						   Type** ptype) const
+Builtin_call_expression::do_numeric_constant_value(Numeric_constant* nc) const
 {
   if (this->code_ == BUILTIN_LEN
       || this->code_ == BUILTIN_CAP)
@@ -7939,8 +7120,8 @@ Builtin_call_expression::do_integer_constant_value(bool iota_is_constant,
 	  std::string sval;
 	  if (arg->string_constant_value(&sval))
 	    {
-	      mpz_set_ui(val, sval.length());
-	      *ptype = Type::lookup_integer_type("int");
+	      nc->set_unsigned_long(Type::lookup_integer_type("int"),
+				    sval.length());
 	      return true;
 	    }
 	}
@@ -7957,13 +7138,15 @@ Builtin_call_expression::do_integer_constant_value(bool iota_is_constant,
 	    return false;
 	  Expression* e = arg_type->array_type()->length();
 	  this->seen_ = true;
-	  bool r = e->integer_constant_value(iota_is_constant, val, ptype);
+	  bool r = e->numeric_constant_value(nc);
 	  this->seen_ = false;
 	  if (r)
 	    {
-	      *ptype = Type::lookup_integer_type("int");
-	      return true;
+	      if (!nc->set_type(Type::lookup_integer_type("int"), false,
+				this->location()))
+		r = false;
 	    }
+	  return r;
 	}
     }
   else if (this->code_ == BUILTIN_SIZEOF
@@ -8004,8 +7187,8 @@ Builtin_call_expression::do_integer_constant_value(bool iota_is_constant,
       else
 	go_unreachable();
 
-      mpz_set_ui(val, ret);
-      *ptype = NULL;
+      nc->set_unsigned_long(Type::lookup_integer_type("uintptr"),
+			    static_cast<unsigned long>(ret));
       return true;
     }
   else if (this->code_ == BUILTIN_OFFSETOF)
@@ -8027,88 +7210,73 @@ Builtin_call_expression::do_integer_constant_value(bool iota_is_constant,
 						   farg->field_index(),
 						   &offset))
 	return false;
-      mpz_set_ui(val, offset);
+      nc->set_unsigned_long(Type::lookup_integer_type("uintptr"),
+			    static_cast<unsigned long>(offset));
       return true;
     }
-  return false;
-}
-
-// Return a floating point constant value if possible.
-
-bool
-Builtin_call_expression::do_float_constant_value(mpfr_t val,
-						 Type** ptype) const
-{
-  if (this->code_ == BUILTIN_REAL || this->code_ == BUILTIN_IMAG)
+  else if (this->code_ == BUILTIN_REAL || this->code_ == BUILTIN_IMAG)
     {
       Expression* arg = this->one_arg();
       if (arg == NULL)
 	return false;
 
+      Numeric_constant argnc;
+      if (!arg->numeric_constant_value(&argnc))
+	return false;
+
       mpfr_t real;
       mpfr_t imag;
-      mpfr_init(real);
-      mpfr_init(imag);
+      if (!argnc.to_complex(&real, &imag))
+	return false;
 
-      bool ret = false;
-      Type* type;
-      if (arg->complex_constant_value(real, imag, &type))
-	{
-	  if (this->code_ == BUILTIN_REAL)
-	    mpfr_set(val, real, GMP_RNDN);
-	  else
-	    mpfr_set(val, imag, GMP_RNDN);
-	  *ptype = Builtin_call_expression::real_imag_type(type);
-	  ret = true;
-	}
-
-      mpfr_clear(real);
-      mpfr_clear(imag);
-      return ret;
+      Type* type = Builtin_call_expression::real_imag_type(argnc.type());
+      if (this->code_ == BUILTIN_REAL)
+	nc->set_float(type, real);
+      else
+	nc->set_float(type, imag);
+      return true;
     }
-
-  return false;
-}
-
-// Return a complex constant value if possible.
-
-bool
-Builtin_call_expression::do_complex_constant_value(mpfr_t real, mpfr_t imag,
-						   Type** ptype) const
-{
-  if (this->code_ == BUILTIN_COMPLEX)
+  else if (this->code_ == BUILTIN_COMPLEX)
     {
       const Expression_list* args = this->args();
       if (args == NULL || args->size() != 2)
 	return false;
 
+      Numeric_constant rnc;
+      if (!args->front()->numeric_constant_value(&rnc))
+	return false;
+      Numeric_constant inc;
+      if (!args->back()->numeric_constant_value(&inc))
+	return false;
+
+      if (rnc.type() != NULL
+	  && !rnc.type()->is_abstract()
+	  && inc.type() != NULL
+	  && !inc.type()->is_abstract()
+	  && !Type::are_identical(rnc.type(), inc.type(), false, NULL))
+	return false;
+
       mpfr_t r;
-      mpfr_init(r);
-      Type* rtype;
-      if (!args->front()->float_constant_value(r, &rtype))
+      if (!rnc.to_float(&r))
+	return false;
+      mpfr_t i;
+      if (!inc.to_float(&i))
 	{
 	  mpfr_clear(r);
 	  return false;
 	}
 
-      mpfr_t i;
-      mpfr_init(i);
+      Type* arg_type = rnc.type();
+      if (arg_type == NULL || arg_type->is_abstract())
+	arg_type = inc.type();
 
-      bool ret = false;
-      Type* itype;
-      if (args->back()->float_constant_value(i, &itype)
-	  && Type::are_identical(rtype, itype, false, NULL))
-	{
-	  mpfr_set(real, r, GMP_RNDN);
-	  mpfr_set(imag, i, GMP_RNDN);
-	  *ptype = Builtin_call_expression::complex_type(rtype);
-	  ret = true;
-	}
+      Type* type = Builtin_call_expression::complex_type(arg_type);
+      nc->set_complex(type, r, i);
 
       mpfr_clear(r);
       mpfr_clear(i);
 
-      return ret;
+      return true;
     }
 
   return false;
@@ -8176,10 +7344,12 @@ Builtin_call_expression::do_type()
     case BUILTIN_CAP:
     case BUILTIN_COPY:
     case BUILTIN_LEN:
+      return Type::lookup_integer_type("int");
+
     case BUILTIN_ALIGNOF:
     case BUILTIN_OFFSETOF:
     case BUILTIN_SIZEOF:
-      return Type::lookup_integer_type("int");
+      return Type::lookup_integer_type("uintptr");
 
     case BUILTIN_CLOSE:
     case BUILTIN_DELETE:
@@ -8307,15 +7477,19 @@ Builtin_call_expression::do_determine_type(const Type_context* context)
 		{
 		  if (atype->integer_type() != NULL)
 		    {
-		      mpz_t val;
-		      mpz_init(val);
-		      Type* dummy;
-		      if (this->integer_constant_value(true, val, &dummy)
-			  && mpz_sgn(val) >= 0)
-			want_type = Type::lookup_integer_type("uint64");
-		      else
+		      Numeric_constant nc;
+		      if (this->numeric_constant_value(&nc))
+			{
+			  mpz_t val;
+			  if (nc.to_int(&val))
+			    {
+			      if (mpz_sgn(val) >= 0)
+				want_type = Type::lookup_integer_type("uint64");
+			      mpz_clear(val);
+			    }
+			}
+		      if (want_type == NULL)
 			want_type = Type::lookup_integer_type("int64");
-		      mpz_clear(val);
 		    }
 		  else if (atype->float_type() != NULL)
 		    want_type = Type::lookup_float_type("float64");
@@ -8367,11 +7541,14 @@ Builtin_call_expression::check_one_arg()
 void
 Builtin_call_expression::do_check_types(Gogo*)
 {
+  if (this->is_error_expression())
+    return;
   switch (this->code_)
     {
     case BUILTIN_INVALID:
     case BUILTIN_NEW:
     case BUILTIN_MAKE:
+    case BUILTIN_DELETE:
       return;
 
     case BUILTIN_LEN:
@@ -8441,6 +7618,11 @@ Builtin_call_expression::do_check_types(Gogo*)
 		    || type->function_type() != NULL
 		    || type->is_slice_type())
 		  ;
+		else if ((*p)->is_type_expression())
+		  {
+		    // If this is a type expression it's going to give
+		    // an error anyhow, so we don't need one here.
+		  }
 		else
 		  this->report_error(_("unsupported argument type to "
 				       "builtin function"));
@@ -8535,27 +7717,34 @@ Builtin_call_expression::do_check_types(Gogo*)
 	    this->report_error(_("too many arguments"));
 	    break;
 	  }
+	if (args->front()->type()->is_error()
+	    || args->back()->type()->is_error())
+	  break;
+
+	Array_type* at = args->front()->type()->array_type();
+	Type* e = at->element_type();
 
 	// The language permits appending a string to a []byte, as a
 	// special case.
 	if (args->back()->type()->is_string_type())
 	  {
-	    const Array_type* at = args->front()->type()->array_type();
-	    const Type* e = at->element_type()->forwarded();
 	    if (e->integer_type() != NULL && e->integer_type()->is_byte())
 	      break;
 	  }
 
+	// The language says that the second argument must be
+	// assignable to a slice of the element type of the first
+	// argument.  We already know the first argument is a slice
+	// type.
+	Type* arg2_type = Type::make_array_type(e, NULL);
 	std::string reason;
-	if (!Type::are_assignable(args->front()->type(), args->back()->type(),
-				  &reason))
+	if (!Type::are_assignable(arg2_type, args->back()->type(), &reason))
 	  {
 	    if (reason.empty())
-	      this->report_error(_("arguments 1 and 2 have different types"));
+	      this->report_error(_("argument 2 has invalid type"));
 	    else
 	      {
-		error_at(this->location(),
-			 "arguments 1 and 2 have different types (%s)",
+		error_at(this->location(), "argument 2 has invalid type (%s)",
 			 reason.c_str());
 		this->set_is_error();
 	      }
@@ -8843,7 +8032,10 @@ Builtin_call_expression::do_get_tree(Translate_context* context)
 		    fnname = "__go_print_slice";
 		  }
 		else
-		  go_unreachable();
+		  {
+		    go_assert(saw_errors());
+		    return error_mark_node;
+		  }
 
 		tree call = Gogo::call_builtin(pfndecl,
 					       location,
@@ -8978,20 +8170,17 @@ Builtin_call_expression::do_get_tree(Translate_context* context)
     case BUILTIN_OFFSETOF:
     case BUILTIN_ALIGNOF:
       {
-	mpz_t val;
-	mpz_init(val);
-	Type* dummy;
-	bool b = this->integer_constant_value(true, val, &dummy);
-	if (!b)
+	Numeric_constant nc;
+	unsigned long val;
+	if (!this->numeric_constant_value(&nc)
+	    || nc.to_unsigned_long(&val) != Numeric_constant::NC_UL_VALID)
 	  {
 	    go_assert(saw_errors());
 	    return error_mark_node;
 	  }
-	Type* int_type = Type::lookup_integer_type("int");
-	tree type = type_to_tree(int_type->get_backend(gogo));
-	tree ret = Expression::integer_constant_tree(val, type);
-	mpz_clear(val);
-	return ret;
+	Type* uintptr_type = Type::lookup_integer_type("uintptr");
+	tree type = type_to_tree(uintptr_type->get_backend(gogo));
+	return build_int_cst(type, val);
       }
 
     case BUILTIN_COPY:
@@ -9206,50 +8395,37 @@ Builtin_call_expression::do_get_tree(Translate_context* context)
 void
 Builtin_call_expression::do_export(Export* exp) const
 {
-  bool ok = false;
-
-  mpz_t val;
-  mpz_init(val);
-  Type* dummy;
-  if (this->integer_constant_value(true, val, &dummy))
-    {
-      Integer_expression::export_integer(exp, val);
-      ok = true;
-    }
-  mpz_clear(val);
-
-  if (!ok)
-    {
-      mpfr_t fval;
-      mpfr_init(fval);
-      if (this->float_constant_value(fval, &dummy))
-	{
-	  Float_expression::export_float(exp, fval);
-	  ok = true;
-	}
-      mpfr_clear(fval);
-    }
-
-  if (!ok)
-    {
-      mpfr_t real;
-      mpfr_t imag;
-      mpfr_init(real);
-      mpfr_init(imag);
-      if (this->complex_constant_value(real, imag, &dummy))
-	{
-	  Complex_expression::export_complex(exp, real, imag);
-	  ok = true;
-	}
-      mpfr_clear(real);
-      mpfr_clear(imag);
-    }
-
-  if (!ok)
+  Numeric_constant nc;
+  if (!this->numeric_constant_value(&nc))
     {
       error_at(this->location(), "value is not constant");
       return;
     }
+
+  if (nc.is_int())
+    {
+      mpz_t val;
+      nc.get_int(&val);
+      Integer_expression::export_integer(exp, val);
+      mpz_clear(val);
+    }
+  else if (nc.is_float())
+    {
+      mpfr_t fval;
+      nc.get_float(&fval);
+      Float_expression::export_float(exp, fval);
+      mpfr_clear(fval);
+    }
+  else if (nc.is_complex())
+    {
+      mpfr_t real;
+      mpfr_t imag;
+      Complex_expression::export_complex(exp, real, imag);
+      mpfr_clear(real);
+      mpfr_clear(imag);
+    }
+  else
+    go_unreachable();
 
   // A trailing space lets us reliably identify the end of the number.
   exp->write_c_string(" ");
@@ -9465,7 +8641,14 @@ Call_expression::lower_varargs(Gogo* gogo, Named_object* function,
 	new_args->push_back(*pa);
       else if (this->is_varargs_)
 	{
-	  this->report_error(_("too many arguments"));
+	  if ((*pa)->type()->is_slice_type())
+	    this->report_error(_("too many arguments"));
+	  else
+	    {
+	      error_at(this->location(),
+		       _("invalid use of %<...%> with non-slice"));
+	      this->set_is_error();
+	    }
 	  return;
 	}
       else
@@ -9526,8 +8709,11 @@ Call_expression::result_count() const
 Temporary_statement*
 Call_expression::result(size_t i) const
 {
-  go_assert(this->results_ != NULL
-	    && this->results_->size() > i);
+  if (this->results_ == NULL || this->results_->size() <= i)
+    {
+      go_assert(saw_errors());
+      return NULL;
+    }
   return (*this->results_)[i];
 }
 
@@ -9707,6 +8893,9 @@ Call_expression::check_argument_type(int i, const Type* parameter_type,
 void
 Call_expression::do_check_types(Gogo*)
 {
+  if (this->classification() == EXPRESSION_ERROR)
+    return;
+
   Function_type* fntype = this->get_function_type();
   if (fntype == NULL)
     {
@@ -9742,7 +8931,17 @@ Call_expression::do_check_types(Gogo*)
     }
 
   // Note that varargs was handled by the lower_varargs() method, so
-  // we don't have to worry about it here.
+  // we don't have to worry about it here unless something is wrong.
+  if (this->is_varargs_ && !this->varargs_are_lowered_)
+    {
+      if (!fntype->is_varargs())
+	{
+	  error_at(this->location(),
+		   _("invalid use of %<...%> calling non-variadic function"));
+	  this->set_is_error();
+	  return;
+	}
+    }
 
   const Typed_identifier_list* parameters = fntype->parameters();
   if (this->args_ == NULL)
@@ -9922,7 +9121,8 @@ Call_expression::do_get_tree(Translate_context* context)
 
   // This is to support builtin math functions when using 80387 math.
   tree excess_type = NULL_TREE;
-  if (TREE_CODE(fndecl) == FUNCTION_DECL
+  if (optimize
+      && TREE_CODE(fndecl) == FUNCTION_DECL
       && DECL_IS_BUILTIN(fndecl)
       && DECL_BUILT_IN_CLASS(fndecl) == BUILT_IN_NORMAL
       && nargs > 0
@@ -10013,6 +9213,11 @@ Call_expression::set_results(Translate_context* context, tree call_tree)
       go_assert(field != NULL_TREE);
 
       Temporary_statement* temp = this->result(i);
+      if (temp == NULL)
+	{
+	  go_assert(saw_errors());
+	  return error_mark_node;
+	}
       Temporary_reference_expression* ref =
 	Expression::make_temporary_reference(temp, loc);
       ref->set_is_lvalue();
@@ -10192,8 +9397,17 @@ tree
 Call_result_expression::do_get_tree(Translate_context* context)
 {
   Call_expression* ce = this->call_->call_expression();
-  go_assert(ce != NULL);
+  if (ce == NULL)
+    {
+      go_assert(this->call_->is_error_expression());
+      return error_mark_node;
+    }
   Temporary_statement* ts = ce->result(this->index_);
+  if (ts == NULL)
+    {
+      go_assert(saw_errors());
+      return error_mark_node;
+    }
   Expression* ref = Expression::make_temporary_reference(ts, this->location());
   return ref->get_tree(context);
 }
@@ -10472,16 +9686,14 @@ Array_index_expression::do_check_types(Gogo*)
   unsigned int int_bits =
     Type::lookup_integer_type("int")->integer_type()->bits();
 
-  Type* dummy;
+  Numeric_constant lvalnc;
   mpz_t lval;
-  mpz_init(lval);
   bool lval_valid = (array_type->length() != NULL
-		     && array_type->length()->integer_constant_value(true,
-								     lval,
-								     &dummy));
+		     && array_type->length()->numeric_constant_value(&lvalnc)
+		     && lvalnc.to_int(&lval));
+  Numeric_constant inc;
   mpz_t ival;
-  mpz_init(ival);
-  if (this->start_->integer_constant_value(true, ival, &dummy))
+  if (this->start_->numeric_constant_value(&inc) && inc.to_int(&ival))
     {
       if (mpz_sgn(ival) < 0
 	  || mpz_sizeinbase(ival, 2) >= int_bits
@@ -10493,29 +9705,33 @@ Array_index_expression::do_check_types(Gogo*)
 	  error_at(this->start_->location(), "array index out of bounds");
 	  this->set_is_error();
 	}
+      mpz_clear(ival);
     }
   if (this->end_ != NULL && !this->end_->is_nil_expression())
     {
-      if (this->end_->integer_constant_value(true, ival, &dummy))
+      Numeric_constant enc;
+      mpz_t eval;
+      if (this->end_->numeric_constant_value(&enc) && enc.to_int(&eval))
 	{
-	  if (mpz_sgn(ival) < 0
-	      || mpz_sizeinbase(ival, 2) >= int_bits
-	      || (lval_valid && mpz_cmp(ival, lval) > 0))
+	  if (mpz_sgn(eval) < 0
+	      || mpz_sizeinbase(eval, 2) >= int_bits
+	      || (lval_valid && mpz_cmp(eval, lval) > 0))
 	    {
 	      error_at(this->end_->location(), "array index out of bounds");
 	      this->set_is_error();
 	    }
+	  mpz_clear(eval);
 	}
     }
-  mpz_clear(ival);
-  mpz_clear(lval);
+  if (lval_valid)
+    mpz_clear(lval);
 
   // A slice of an array requires an addressable array.  A slice of a
   // slice is always possible.
   if (this->end_ != NULL && !array_type->is_slice_type())
     {
       if (!this->array_->is_addressable())
-	this->report_error(_("array is not addressable"));
+	this->report_error(_("slice of unaddressable value"));
       else
 	this->array_->address_taken(true);
     }
@@ -10564,11 +9780,28 @@ Array_index_expression::do_get_tree(Translate_context* context)
 
   if (array_type->length() == NULL && !DECL_P(array_tree))
     array_tree = save_expr(array_tree);
-  tree length_tree = array_type->length_tree(gogo, array_tree);
-  if (length_tree == error_mark_node)
-    return error_mark_node;
-  length_tree = save_expr(length_tree);
-  tree length_type = TREE_TYPE(length_tree);
+
+  tree length_tree = NULL_TREE;
+  if (this->end_ == NULL || this->end_->is_nil_expression())
+    {
+      length_tree = array_type->length_tree(gogo, array_tree);
+      if (length_tree == error_mark_node)
+	return error_mark_node;
+      length_tree = save_expr(length_tree);
+    }
+
+  tree capacity_tree = NULL_TREE;
+  if (this->end_ != NULL)
+    {
+      capacity_tree = array_type->capacity_tree(gogo, array_tree);
+      if (capacity_tree == error_mark_node)
+	return error_mark_node;
+      capacity_tree = save_expr(capacity_tree);
+    }
+
+  tree length_type = (length_tree != NULL_TREE
+		      ? TREE_TYPE(length_tree)
+		      : TREE_TYPE(capacity_tree));
 
   tree bad_index = boolean_false_node;
 
@@ -10591,7 +9824,9 @@ Array_index_expression::do_get_tree(Translate_context* context)
 					       ? GE_EXPR
 					       : GT_EXPR),
 					      boolean_type_node, start_tree,
-					      length_tree));
+					      (this->end_ == NULL
+					       ? length_tree
+					       : capacity_tree)));
 
   int code = (array_type->length() != NULL
 	      ? (this->end_ == NULL
@@ -10638,12 +9873,6 @@ Array_index_expression::do_get_tree(Translate_context* context)
 
   // Array slice.
 
-  tree capacity_tree = array_type->capacity_tree(gogo, array_tree);
-  if (capacity_tree == error_mark_node)
-    return error_mark_node;
-  capacity_tree = fold_convert_loc(loc.gcc_location(), length_type,
-                                   capacity_tree);
-
   tree end_tree;
   if (this->end_->is_nil_expression())
     end_tree = length_tree;
@@ -10662,7 +9891,6 @@ Array_index_expression::do_get_tree(Translate_context* context)
 
       end_tree = fold_convert_loc(loc.gcc_location(), length_type, end_tree);
 
-      capacity_tree = save_expr(capacity_tree);
       tree bad_end = fold_build2_loc(loc.gcc_location(), TRUTH_OR_EXPR,
                                      boolean_type_node,
 				     fold_build2_loc(loc.gcc_location(),
@@ -10756,13 +9984,6 @@ Expression*
 Expression::make_array_index(Expression* array, Expression* start,
 			     Expression* end, Location location)
 {
-  // Taking a slice of a composite literal requires moving the literal
-  // onto the heap.
-  if (end != NULL && array->is_composite_literal())
-    {
-      array = Expression::make_heap_composite(array, location);
-      array = Expression::make_unary(OPERATOR_MULT, array, location);
-    }
   return new Array_index_expression(array, start, end, location);
 }
 
@@ -10878,10 +10099,9 @@ String_index_expression::do_check_types(Gogo*)
   std::string sval;
   bool sval_valid = this->string_->string_constant_value(&sval);
 
+  Numeric_constant inc;
   mpz_t ival;
-  mpz_init(ival);
-  Type* dummy;
-  if (this->start_->integer_constant_value(true, ival, &dummy))
+  if (this->start_->numeric_constant_value(&inc) && inc.to_int(&ival))
     {
       if (mpz_sgn(ival) < 0
 	  || (sval_valid && mpz_cmp_ui(ival, sval.length()) >= 0))
@@ -10889,20 +10109,23 @@ String_index_expression::do_check_types(Gogo*)
 	  error_at(this->start_->location(), "string index out of bounds");
 	  this->set_is_error();
 	}
+      mpz_clear(ival);
     }
   if (this->end_ != NULL && !this->end_->is_nil_expression())
     {
-      if (this->end_->integer_constant_value(true, ival, &dummy))
+      Numeric_constant enc;
+      mpz_t eval;
+      if (this->end_->numeric_constant_value(&enc) && enc.to_int(&eval))
 	{
-	  if (mpz_sgn(ival) < 0
-	      || (sval_valid && mpz_cmp_ui(ival, sval.length()) > 0))
+	  if (mpz_sgn(eval) < 0
+	      || (sval_valid && mpz_cmp_ui(eval, sval.length()) > 0))
 	    {
 	      error_at(this->end_->location(), "string index out of bounds");
 	      this->set_is_error();
 	    }
+	  mpz_clear(eval);
 	}
     }
-  mpz_clear(ival);
 }
 
 // Get a tree for a string index.
@@ -11474,7 +10697,8 @@ Interface_field_reference_expression::do_check_types(Gogo*)
 tree
 Interface_field_reference_expression::do_get_tree(Translate_context*)
 {
-  go_unreachable();
+  error_at(this->location(), "reference to method other than calling it");
+  return error_mark_node;
 }
 
 // Dump ast representation for an interface field reference.
@@ -11633,10 +10857,21 @@ Selector_expression::lower_method_expression(Gogo* gogo)
   const Typed_identifier_list* method_parameters = method_type->parameters();
   if (method_parameters != NULL)
     {
+      int i = 0;
       for (Typed_identifier_list::const_iterator p = method_parameters->begin();
 	   p != method_parameters->end();
-	   ++p)
-	parameters->push_back(*p);
+	   ++p, ++i)
+	{
+	  if (!p->name().empty())
+	    parameters->push_back(*p);
+	  else
+	    {
+	      char buf[20];
+	      snprintf(buf, sizeof buf, "$param%d", i);
+	      parameters->push_back(Typed_identifier(buf, p->type(),
+						     p->location()));
+	    }
+	}
     }
 
   const Typed_identifier_list* method_results = method_type->results();
@@ -11696,14 +10931,14 @@ Selector_expression::lower_method_expression(Gogo* gogo)
     }
 
   Expression_list* args;
-  if (method_parameters == NULL)
+  if (parameters->size() <= 1)
     args = NULL;
   else
     {
       args = new Expression_list();
-      for (Typed_identifier_list::const_iterator p = method_parameters->begin();
-	   p != method_parameters->end();
-	   ++p)
+      Typed_identifier_list::const_iterator p = parameters->begin();
+      ++p;
+      for (; p != parameters->end(); ++p)
 	{
 	  vno = gogo->lookup(p->name(), NULL);
 	  go_assert(vno != NULL);
@@ -11848,8 +11083,14 @@ class Struct_construction_expression : public Expression
   Struct_construction_expression(Type* type, Expression_list* vals,
 				 Location location)
     : Expression(EXPRESSION_STRUCT_CONSTRUCTION, location),
-      type_(type), vals_(vals)
+      type_(type), vals_(vals), traverse_order_(NULL)
   { }
+
+  // Set the traversal order, used to ensure that we implement the
+  // order of evaluation rules.  Takes ownership of the argument.
+  void
+  set_traverse_order(std::vector<int>* traverse_order)
+  { this->traverse_order_ = traverse_order; }
 
   // Return whether this is a constant initializer.
   bool
@@ -11872,13 +11113,13 @@ class Struct_construction_expression : public Expression
   Expression*
   do_copy()
   {
-    return new Struct_construction_expression(this->type_, this->vals_->copy(),
-					      this->location());
+    Struct_construction_expression* ret =
+      new Struct_construction_expression(this->type_, this->vals_->copy(),
+					 this->location());
+    if (this->traverse_order_ != NULL)
+      ret->set_traverse_order(this->traverse_order_);
+    return ret;
   }
-
-  bool
-  do_is_addressable() const
-  { return true; }
 
   tree
   do_get_tree(Translate_context*);
@@ -11895,6 +11136,9 @@ class Struct_construction_expression : public Expression
   // The list of values, in order of the fields in the struct.  A NULL
   // entry means that the field should be zero-initialized.
   Expression_list* vals_;
+  // If not NULL, the order in which to traverse vals_.  This is used
+  // so that we implement the order of evaluation rules correctly.
+  std::vector<int>* traverse_order_;
 };
 
 // Traversal.
@@ -11902,9 +11146,26 @@ class Struct_construction_expression : public Expression
 int
 Struct_construction_expression::do_traverse(Traverse* traverse)
 {
-  if (this->vals_ != NULL
-      && this->vals_->traverse(traverse) == TRAVERSE_EXIT)
-    return TRAVERSE_EXIT;
+  if (this->vals_ != NULL)
+    {
+      if (this->traverse_order_ == NULL)
+	{
+	  if (this->vals_->traverse(traverse) == TRAVERSE_EXIT)
+	    return TRAVERSE_EXIT;
+	}
+      else
+	{
+	  for (std::vector<int>::const_iterator p =
+		 this->traverse_order_->begin();
+	       p != this->traverse_order_->end();
+	       ++p)
+	    {
+	      if (Expression::traverse(&this->vals_->at(*p), traverse)
+		  == TRAVERSE_EXIT)
+		return TRAVERSE_EXIT;
+	    }
+	}
+    }
   if (Type::traverse(this->type_, traverse) == TRAVERSE_EXIT)
     return TRAVERSE_EXIT;
   return TRAVERSE_CONTINUE;
@@ -12161,10 +11422,6 @@ protected:
   void
   do_check_types(Gogo*);
 
-  bool
-  do_is_addressable() const
-  { return true; }
-
   void
   do_export(Export*) const;
 
@@ -12268,17 +11525,15 @@ Array_construction_expression::do_check_types(Gogo*)
     }
 
   Expression* length = at->length();
-  if (length != NULL && !length->is_error_expression())
+  Numeric_constant nc;
+  unsigned long val;
+  if (length != NULL
+      && !length->is_error_expression()
+      && length->numeric_constant_value(&nc)
+      && nc.to_unsigned_long(&val) == Numeric_constant::NC_UL_VALID)
     {
-      mpz_t val;
-      mpz_init(val);
-      Type* type;
-      if (at->length()->integer_constant_value(true, val, &type))
-	{
-	  if (this->vals_->size() > mpz_get_ui(val))
-	    this->report_error(_("too many elements in composite literal"));
-	}
-      mpz_clear(val);
+      if (this->vals_->size() > val)
+	this->report_error(_("too many elements in composite literal"));
     }
 }
 
@@ -13089,6 +12344,7 @@ Composite_literal_expression::lower_struct(Gogo* gogo, Type* type)
 
   size_t field_count = st->field_count();
   std::vector<Expression*> vals(field_count);
+  std::vector<int>* traverse_order = new(std::vector<int>);
   Expression_list::const_iterator p = this->vals_->begin();
   while (p != this->vals_->end())
     {
@@ -13241,6 +12497,7 @@ Composite_literal_expression::lower_struct(Gogo* gogo, Type* type)
 		 type->named_type()->message_name().c_str());
 
       vals[index] = val;
+      traverse_order->push_back(index);
     }
 
   Expression_list* list = new Expression_list;
@@ -13248,7 +12505,10 @@ Composite_literal_expression::lower_struct(Gogo* gogo, Type* type)
   for (size_t i = 0; i < field_count; ++i)
     list->push_back(vals[i]);
 
-  return new Struct_construction_expression(type, list, location);
+  Struct_construction_expression* ret =
+    new Struct_construction_expression(type, list, location);
+  ret->set_traverse_order(traverse_order);
+  return ret;
 }
 
 // Lower an array composite literal.
@@ -13276,48 +12536,40 @@ Composite_literal_expression::lower_array(Type* type)
 
       if (index_expr != NULL)
 	{
-	  mpz_t ival;
-	  mpz_init(ival);
-
-	  Type* dummy;
-	  if (!index_expr->integer_constant_value(true, ival, &dummy))
+	  Numeric_constant nc;
+	  if (!index_expr->numeric_constant_value(&nc))
 	    {
-	      mpz_clear(ival);
 	      error_at(index_expr->location(),
 		       "index expression is not integer constant");
 	      return Expression::make_error(location);
 	    }
 
-	  if (mpz_sgn(ival) < 0)
+	  switch (nc.to_unsigned_long(&index))
 	    {
-	      mpz_clear(ival);
+	    case Numeric_constant::NC_UL_VALID:
+	      break;
+	    case Numeric_constant::NC_UL_NOTINT:
+	      error_at(index_expr->location(),
+		       "index expression is not integer constant");
+	      return Expression::make_error(location);
+	    case Numeric_constant::NC_UL_NEGATIVE:
 	      error_at(index_expr->location(), "index expression is negative");
 	      return Expression::make_error(location);
-	    }
-
-	  index = mpz_get_ui(ival);
-	  if (mpz_cmp_ui(ival, index) != 0)
-	    {
-	      mpz_clear(ival);
+	    case Numeric_constant::NC_UL_BIG:
 	      error_at(index_expr->location(), "index value overflow");
 	      return Expression::make_error(location);
+	    default:
+	      go_unreachable();
 	    }
 
 	  Named_type* ntype = Type::lookup_integer_type("int");
 	  Integer_type* inttype = ntype->integer_type();
-	  mpz_t max;
-	  mpz_init_set_ui(max, 1);
-	  mpz_mul_2exp(max, max, inttype->bits() - 1);
-	  bool ok = mpz_cmp(ival, max) < 0;
-	  mpz_clear(max);
-	  if (!ok)
+	  if (sizeof(index) <= static_cast<size_t>(inttype->bits() * 8)
+	      && index >> (inttype->bits() - 1) != 0)
 	    {
-	      mpz_clear(ival);
 	      error_at(index_expr->location(), "index value overflow");
 	      return Expression::make_error(location);
 	    }
-
-	  mpz_clear(ival);
 
 	  // FIXME: Our representation isn't very good; this avoids
 	  // thrashing.
@@ -13691,7 +12943,7 @@ tree
 Heap_composite_expression::do_get_tree(Translate_context* context)
 {
   tree expr_tree = this->expr_->get_tree(context);
-  if (expr_tree == error_mark_node)
+  if (expr_tree == error_mark_node || TREE_TYPE(expr_tree) == error_mark_node)
     return error_mark_node;
   tree expr_size = TYPE_SIZE_UNIT(TREE_TYPE(expr_tree));
   go_assert(TREE_CODE(expr_size) == INTEGER_CST);
@@ -14252,4 +13504,601 @@ Expression_list::contains_error() const
     if (*p != NULL && (*p)->is_error_expression())
       return true;
   return false;
+}
+
+// Class Numeric_constant.
+
+// Destructor.
+
+Numeric_constant::~Numeric_constant()
+{
+  this->clear();
+}
+
+// Copy constructor.
+
+Numeric_constant::Numeric_constant(const Numeric_constant& a)
+  : classification_(a.classification_), type_(a.type_)
+{
+  switch (a.classification_)
+    {
+    case NC_INVALID:
+      break;
+    case NC_INT:
+    case NC_RUNE:
+      mpz_init_set(this->u_.int_val, a.u_.int_val);
+      break;
+    case NC_FLOAT:
+      mpfr_init_set(this->u_.float_val, a.u_.float_val, GMP_RNDN);
+      break;
+    case NC_COMPLEX:
+      mpfr_init_set(this->u_.complex_val.real, a.u_.complex_val.real,
+		    GMP_RNDN);
+      mpfr_init_set(this->u_.complex_val.imag, a.u_.complex_val.imag,
+		    GMP_RNDN);
+      break;
+    default:
+      go_unreachable();
+    }
+}
+
+// Assignment operator.
+
+Numeric_constant&
+Numeric_constant::operator=(const Numeric_constant& a)
+{
+  this->clear();
+  this->classification_ = a.classification_;
+  this->type_ = a.type_;
+  switch (a.classification_)
+    {
+    case NC_INVALID:
+      break;
+    case NC_INT:
+    case NC_RUNE:
+      mpz_init_set(this->u_.int_val, a.u_.int_val);
+      break;
+    case NC_FLOAT:
+      mpfr_init_set(this->u_.float_val, a.u_.float_val, GMP_RNDN);
+      break;
+    case NC_COMPLEX:
+      mpfr_init_set(this->u_.complex_val.real, a.u_.complex_val.real,
+		    GMP_RNDN);
+      mpfr_init_set(this->u_.complex_val.imag, a.u_.complex_val.imag,
+		    GMP_RNDN);
+      break;
+    default:
+      go_unreachable();
+    }
+  return *this;
+}
+
+// Clear the contents.
+
+void
+Numeric_constant::clear()
+{
+  switch (this->classification_)
+    {
+    case NC_INVALID:
+      break;
+    case NC_INT:
+    case NC_RUNE:
+      mpz_clear(this->u_.int_val);
+      break;
+    case NC_FLOAT:
+      mpfr_clear(this->u_.float_val);
+      break;
+    case NC_COMPLEX:
+      mpfr_clear(this->u_.complex_val.real);
+      mpfr_clear(this->u_.complex_val.imag);
+      break;
+    default:
+      go_unreachable();
+    }
+  this->classification_ = NC_INVALID;
+}
+
+// Set to an unsigned long value.
+
+void
+Numeric_constant::set_unsigned_long(Type* type, unsigned long val)
+{
+  this->clear();
+  this->classification_ = NC_INT;
+  this->type_ = type;
+  mpz_init_set_ui(this->u_.int_val, val);
+}
+
+// Set to an integer value.
+
+void
+Numeric_constant::set_int(Type* type, const mpz_t val)
+{
+  this->clear();
+  this->classification_ = NC_INT;
+  this->type_ = type;
+  mpz_init_set(this->u_.int_val, val);
+}
+
+// Set to a rune value.
+
+void
+Numeric_constant::set_rune(Type* type, const mpz_t val)
+{
+  this->clear();
+  this->classification_ = NC_RUNE;
+  this->type_ = type;
+  mpz_init_set(this->u_.int_val, val);
+}
+
+// Set to a floating point value.
+
+void
+Numeric_constant::set_float(Type* type, const mpfr_t val)
+{
+  this->clear();
+  this->classification_ = NC_FLOAT;
+  this->type_ = type;
+  // Numeric constants do not have negative zero values, so remove
+  // them here.  They also don't have infinity or NaN values, but we
+  // should never see them here.
+  if (mpfr_zero_p(val))
+    mpfr_init_set_ui(this->u_.float_val, 0, GMP_RNDN);
+  else
+    mpfr_init_set(this->u_.float_val, val, GMP_RNDN);
+}
+
+// Set to a complex value.
+
+void
+Numeric_constant::set_complex(Type* type, const mpfr_t real, const mpfr_t imag)
+{
+  this->clear();
+  this->classification_ = NC_COMPLEX;
+  this->type_ = type;
+  mpfr_init_set(this->u_.complex_val.real, real, GMP_RNDN);
+  mpfr_init_set(this->u_.complex_val.imag, imag, GMP_RNDN);
+}
+
+// Get an int value.
+
+void
+Numeric_constant::get_int(mpz_t* val) const
+{
+  go_assert(this->is_int());
+  mpz_init_set(*val, this->u_.int_val);
+}
+
+// Get a rune value.
+
+void
+Numeric_constant::get_rune(mpz_t* val) const
+{
+  go_assert(this->is_rune());
+  mpz_init_set(*val, this->u_.int_val);
+}
+
+// Get a floating point value.
+
+void
+Numeric_constant::get_float(mpfr_t* val) const
+{
+  go_assert(this->is_float());
+  mpfr_init_set(*val, this->u_.float_val, GMP_RNDN);
+}
+
+// Get a complex value.
+
+void
+Numeric_constant::get_complex(mpfr_t* real, mpfr_t* imag) const
+{
+  go_assert(this->is_complex());
+  mpfr_init_set(*real, this->u_.complex_val.real, GMP_RNDN);
+  mpfr_init_set(*imag, this->u_.complex_val.imag, GMP_RNDN);
+}
+
+// Express value as unsigned long if possible.
+
+Numeric_constant::To_unsigned_long
+Numeric_constant::to_unsigned_long(unsigned long* val) const
+{
+  switch (this->classification_)
+    {
+    case NC_INT:
+    case NC_RUNE:
+      return this->mpz_to_unsigned_long(this->u_.int_val, val);
+    case NC_FLOAT:
+      return this->mpfr_to_unsigned_long(this->u_.float_val, val);
+    case NC_COMPLEX:
+      if (!mpfr_zero_p(this->u_.complex_val.imag))
+	return NC_UL_NOTINT;
+      return this->mpfr_to_unsigned_long(this->u_.complex_val.real, val);
+    default:
+      go_unreachable();
+    }
+}
+
+// Express integer value as unsigned long if possible.
+
+Numeric_constant::To_unsigned_long
+Numeric_constant::mpz_to_unsigned_long(const mpz_t ival,
+				       unsigned long *val) const
+{
+  if (mpz_sgn(ival) < 0)
+    return NC_UL_NEGATIVE;
+  unsigned long ui = mpz_get_ui(ival);
+  if (mpz_cmp_ui(ival, ui) != 0)
+    return NC_UL_BIG;
+  *val = ui;
+  return NC_UL_VALID;
+}
+
+// Express floating point value as unsigned long if possible.
+
+Numeric_constant::To_unsigned_long
+Numeric_constant::mpfr_to_unsigned_long(const mpfr_t fval,
+					unsigned long *val) const
+{
+  if (!mpfr_integer_p(fval))
+    return NC_UL_NOTINT;
+  mpz_t ival;
+  mpz_init(ival);
+  mpfr_get_z(ival, fval, GMP_RNDN);
+  To_unsigned_long ret = this->mpz_to_unsigned_long(ival, val);
+  mpz_clear(ival);
+  return ret;
+}
+
+// Convert value to integer if possible.
+
+bool
+Numeric_constant::to_int(mpz_t* val) const
+{
+  switch (this->classification_)
+    {
+    case NC_INT:
+    case NC_RUNE:
+      mpz_init_set(*val, this->u_.int_val);
+      return true;
+    case NC_FLOAT:
+      if (!mpfr_integer_p(this->u_.float_val))
+	return false;
+      mpz_init(*val);
+      mpfr_get_z(*val, this->u_.float_val, GMP_RNDN);
+      return true;
+    case NC_COMPLEX:
+      if (!mpfr_zero_p(this->u_.complex_val.imag)
+	  || !mpfr_integer_p(this->u_.complex_val.real))
+	return false;
+      mpz_init(*val);
+      mpfr_get_z(*val, this->u_.complex_val.real, GMP_RNDN);
+      return true;
+    default:
+      go_unreachable();
+    }
+}
+
+// Convert value to floating point if possible.
+
+bool
+Numeric_constant::to_float(mpfr_t* val) const
+{
+  switch (this->classification_)
+    {
+    case NC_INT:
+    case NC_RUNE:
+      mpfr_init_set_z(*val, this->u_.int_val, GMP_RNDN);
+      return true;
+    case NC_FLOAT:
+      mpfr_init_set(*val, this->u_.float_val, GMP_RNDN);
+      return true;
+    case NC_COMPLEX:
+      if (!mpfr_zero_p(this->u_.complex_val.imag))
+	return false;
+      mpfr_init_set(*val, this->u_.complex_val.real, GMP_RNDN);
+      return true;
+    default:
+      go_unreachable();
+    }
+}
+
+// Convert value to complex.
+
+bool
+Numeric_constant::to_complex(mpfr_t* vr, mpfr_t* vi) const
+{
+  switch (this->classification_)
+    {
+    case NC_INT:
+    case NC_RUNE:
+      mpfr_init_set_z(*vr, this->u_.int_val, GMP_RNDN);
+      mpfr_init_set_ui(*vi, 0, GMP_RNDN);
+      return true;
+    case NC_FLOAT:
+      mpfr_init_set(*vr, this->u_.float_val, GMP_RNDN);
+      mpfr_init_set_ui(*vi, 0, GMP_RNDN);
+      return true;
+    case NC_COMPLEX:
+      mpfr_init_set(*vr, this->u_.complex_val.real, GMP_RNDN);
+      mpfr_init_set(*vi, this->u_.complex_val.imag, GMP_RNDN);
+      return true;
+    default:
+      go_unreachable();
+    }
+}
+
+// Get the type.
+
+Type*
+Numeric_constant::type() const
+{
+  if (this->type_ != NULL)
+    return this->type_;
+  switch (this->classification_)
+    {
+    case NC_INT:
+      return Type::make_abstract_integer_type();
+    case NC_RUNE:
+      return Type::make_abstract_character_type();
+    case NC_FLOAT:
+      return Type::make_abstract_float_type();
+    case NC_COMPLEX:
+      return Type::make_abstract_complex_type();
+    default:
+      go_unreachable();
+    }
+}
+
+// If the constant can be expressed in TYPE, then set the type of the
+// constant to TYPE and return true.  Otherwise return false, and, if
+// ISSUE_ERROR is true, report an appropriate error message.
+
+bool
+Numeric_constant::set_type(Type* type, bool issue_error, Location loc)
+{
+  bool ret;
+  if (type == NULL)
+    ret = true;
+  else if (type->integer_type() != NULL)
+    ret = this->check_int_type(type->integer_type(), issue_error, loc);
+  else if (type->float_type() != NULL)
+    ret = this->check_float_type(type->float_type(), issue_error, loc);
+  else if (type->complex_type() != NULL)
+    ret = this->check_complex_type(type->complex_type(), issue_error, loc);
+  else
+    go_unreachable();
+  if (ret)
+    this->type_ = type;
+  return ret;
+}
+
+// Check whether the constant can be expressed in an integer type.
+
+bool
+Numeric_constant::check_int_type(Integer_type* type, bool issue_error,
+				 Location location) const
+{
+  mpz_t val;
+  switch (this->classification_)
+    {
+    case NC_INT:
+    case NC_RUNE:
+      mpz_init_set(val, this->u_.int_val);
+      break;
+
+    case NC_FLOAT:
+      if (!mpfr_integer_p(this->u_.float_val))
+	{
+	  if (issue_error)
+	    error_at(location, "floating point constant truncated to integer");
+	  return false;
+	}
+      mpz_init(val);
+      mpfr_get_z(val, this->u_.float_val, GMP_RNDN);
+      break;
+
+    case NC_COMPLEX:
+      if (!mpfr_integer_p(this->u_.complex_val.real)
+	  || !mpfr_zero_p(this->u_.complex_val.imag))
+	{
+	  if (issue_error)
+	    error_at(location, "complex constant truncated to integer");
+	  return false;
+	}
+      mpz_init(val);
+      mpfr_get_z(val, this->u_.complex_val.real, GMP_RNDN);
+      break;
+
+    default:
+      go_unreachable();
+    }
+
+  bool ret;
+  if (type->is_abstract())
+    ret = true;
+  else
+    {
+      int bits = mpz_sizeinbase(val, 2);
+      if (type->is_unsigned())
+	{
+	  // For an unsigned type we can only accept a nonnegative
+	  // number, and we must be able to represents at least BITS.
+	  ret = mpz_sgn(val) >= 0 && bits <= type->bits();
+	}
+      else
+	{
+	  // For a signed type we need an extra bit to indicate the
+	  // sign.  We have to handle the most negative integer
+	  // specially.
+	  ret = (bits + 1 <= type->bits()
+		 || (bits <= type->bits()
+		     && mpz_sgn(val) < 0
+		     && (mpz_scan1(val, 0)
+			 == static_cast<unsigned long>(type->bits() - 1))
+		     && mpz_scan0(val, type->bits()) == ULONG_MAX));
+	}
+    }
+
+  if (!ret && issue_error)
+    error_at(location, "integer constant overflow");
+
+  return ret;
+}
+
+// Check whether the constant can be expressed in a floating point
+// type.
+
+bool
+Numeric_constant::check_float_type(Float_type* type, bool issue_error,
+				   Location location) const
+{
+  mpfr_t val;
+  switch (this->classification_)
+    {
+    case NC_INT:
+    case NC_RUNE:
+      mpfr_init_set_z(val, this->u_.int_val, GMP_RNDN);
+      break;
+
+    case NC_FLOAT:
+      mpfr_init_set(val, this->u_.float_val, GMP_RNDN);
+      break;
+
+    case NC_COMPLEX:
+      if (!mpfr_zero_p(this->u_.complex_val.imag))
+	{
+	  if (issue_error)
+	    error_at(location, "complex constant truncated to float");
+	  return false;
+	}
+      mpfr_init_set(val, this->u_.complex_val.real, GMP_RNDN);
+      break;
+
+    default:
+      go_unreachable();
+    }
+
+  bool ret;
+  if (type->is_abstract())
+    ret = true;
+  else if (mpfr_nan_p(val) || mpfr_inf_p(val) || mpfr_zero_p(val))
+    {
+      // A NaN or Infinity always fits in the range of the type.
+      ret = true;
+    }
+  else
+    {
+      mp_exp_t exp = mpfr_get_exp(val);
+      mp_exp_t max_exp;
+      switch (type->bits())
+	{
+	case 32:
+	  max_exp = 128;
+	  break;
+	case 64:
+	  max_exp = 1024;
+	  break;
+	default:
+	  go_unreachable();
+	}
+
+      ret = exp <= max_exp;
+    }
+
+  mpfr_clear(val);
+
+  if (!ret && issue_error)
+    error_at(location, "floating point constant overflow");
+
+  return ret;
+} 
+
+// Check whether the constant can be expressed in a complex type.
+
+bool
+Numeric_constant::check_complex_type(Complex_type* type, bool issue_error,
+				     Location location) const
+{
+  if (type->is_abstract())
+    return true;
+
+  mp_exp_t max_exp;
+  switch (type->bits())
+    {
+    case 64:
+      max_exp = 128;
+      break;
+    case 128:
+      max_exp = 1024;
+      break;
+    default:
+      go_unreachable();
+    }
+
+  mpfr_t real;
+  switch (this->classification_)
+    {
+    case NC_INT:
+    case NC_RUNE:
+      mpfr_init_set_z(real, this->u_.int_val, GMP_RNDN);
+      break;
+
+    case NC_FLOAT:
+      mpfr_init_set(real, this->u_.float_val, GMP_RNDN);
+      break;
+
+    case NC_COMPLEX:
+      if (!mpfr_nan_p(this->u_.complex_val.imag)
+	  && !mpfr_inf_p(this->u_.complex_val.imag)
+	  && !mpfr_zero_p(this->u_.complex_val.imag))
+	{
+	  if (mpfr_get_exp(this->u_.complex_val.imag) > max_exp)
+	    {
+	      if (issue_error)
+		error_at(location, "complex imaginary part overflow");
+	      return false;
+	    }
+	}
+      mpfr_init_set(real, this->u_.complex_val.real, GMP_RNDN);
+      break;
+
+    default:
+      go_unreachable();
+    }
+
+  bool ret;
+  if (mpfr_nan_p(real) || mpfr_inf_p(real) || mpfr_zero_p(real))
+    ret = true;
+  else
+    ret = mpfr_get_exp(real) <= max_exp;
+
+  mpfr_clear(real);
+
+  if (!ret && issue_error)
+    error_at(location, "complex real part overflow");
+
+  return ret;
+}
+
+// Return an Expression for this value.
+
+Expression*
+Numeric_constant::expression(Location loc) const
+{
+  switch (this->classification_)
+    {
+    case NC_INT:
+      return Expression::make_integer(&this->u_.int_val, this->type_, loc);
+    case NC_RUNE:
+      return Expression::make_character(&this->u_.int_val, this->type_, loc);
+    case NC_FLOAT:
+      return Expression::make_float(&this->u_.float_val, this->type_, loc);
+    case NC_COMPLEX:
+      return Expression::make_complex(&this->u_.complex_val.real,
+				      &this->u_.complex_val.imag,
+				      this->type_, loc);
+    default:
+      go_unreachable();
+    }
 }

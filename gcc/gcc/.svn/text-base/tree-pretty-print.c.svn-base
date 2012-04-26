@@ -723,11 +723,41 @@ dump_generic_node (pretty_printer *buffer, tree node, int spc, int flags,
 	      }
 	    else if (TREE_CODE (node) == INTEGER_TYPE)
 	      {
-		pp_string (buffer, (TYPE_UNSIGNED (node)
-				    ? "<unnamed-unsigned:"
-				    : "<unnamed-signed:"));
-		pp_decimal_int (buffer, TYPE_PRECISION (node));
-		pp_string (buffer, ">");
+		if (TYPE_PRECISION (node) == CHAR_TYPE_SIZE)
+		  pp_string (buffer, (TYPE_UNSIGNED (node)
+				      ? "unsigned char"
+				      : "signed char"));
+		else if (TYPE_PRECISION (node) == SHORT_TYPE_SIZE)
+		  pp_string (buffer, (TYPE_UNSIGNED (node)
+				      ? "unsigned short"
+				      : "signed short"));
+		else if (TYPE_PRECISION (node) == INT_TYPE_SIZE)
+		  pp_string (buffer, (TYPE_UNSIGNED (node)
+				      ? "unsigned int"
+				      : "signed int"));
+		else if (TYPE_PRECISION (node) == LONG_TYPE_SIZE)
+		  pp_string (buffer, (TYPE_UNSIGNED (node)
+				      ? "unsigned long"
+				      : "signed long"));
+		else if (TYPE_PRECISION (node) == LONG_LONG_TYPE_SIZE)
+		  pp_string (buffer, (TYPE_UNSIGNED (node)
+				      ? "unsigned long long"
+				      : "signed long long"));
+		else if (TYPE_PRECISION (node) >= CHAR_TYPE_SIZE
+			 && exact_log2 (TYPE_PRECISION (node)))
+		  {
+		    pp_string (buffer, (TYPE_UNSIGNED (node) ? "uint" : "int"));
+		    pp_decimal_int (buffer, TYPE_PRECISION (node));
+		    pp_string (buffer, "_t");
+		  }
+		else
+		  {
+		    pp_string (buffer, (TYPE_UNSIGNED (node)
+					? "<unnamed-unsigned:"
+					: "<unnamed-signed:"));
+		    pp_decimal_int (buffer, TYPE_PRECISION (node));
+		    pp_string (buffer, ">");
+		  }
 	      }
 	    else if (TREE_CODE (node) == COMPLEX_TYPE)
 	      {
@@ -1082,13 +1112,14 @@ dump_generic_node (pretty_printer *buffer, tree node, int spc, int flags,
 
     case VECTOR_CST:
       {
-	tree elt;
+	unsigned i;
 	pp_string (buffer, "{ ");
-	for (elt = TREE_VECTOR_CST_ELTS (node); elt; elt = TREE_CHAIN (elt))
+	for (i = 0; i < VECTOR_CST_NELTS (node); ++i)
 	  {
-	    dump_generic_node (buffer, TREE_VALUE (elt), spc, flags, false);
-	    if (TREE_CHAIN (elt))
+	    if (i != 0)
 	      pp_string (buffer, ", ");
+	    dump_generic_node (buffer, VECTOR_CST_ELT (node, i),
+			       spc, flags, false);
 	  }
 	pp_string (buffer, " }");
       }

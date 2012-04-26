@@ -494,9 +494,6 @@ int num_source_filenames;
    written anything yet.  */
 const char *current_function_file = "";
 
-/* A label counter used by PUT_SDB_BLOCK_START and PUT_SDB_BLOCK_END.  */
-int sdb_label_count;
-
 /* Arrays that map GCC register numbers to debugger register numbers.  */
 int mips_dbx_regno[FIRST_PSEUDO_REGISTER];
 int mips_dwarf_regno[FIRST_PSEUDO_REGISTER];
@@ -591,6 +588,9 @@ struct target_globals *mips16_globals;
 /* Cached value of can_issue_more. This is cached in mips_variable_issue hook
    and returned from mips_sched_reorder2.  */
 static int cached_can_issue_more;
+
+/* True if the output uses __mips16_rdhwr.  */
+static bool mips_need_mips16_rdhwr_p;
 
 /* Index R is the smallest register class that contains register R.  */
 const enum reg_class mips_regno_to_class[FIRST_PSEUDO_REGISTER] = {
@@ -1084,6 +1084,20 @@ static const struct mips_rtx_cost_data
     COSTS_N_INSNS (8),            /* int_mult_di */
     COSTS_N_INSNS (72),           /* int_div_si */
     COSTS_N_INSNS (72),           /* int_div_di */
+		     1,           /* branch_cost */
+		     4            /* memory_latency */
+  },
+  { /* XLP */
+    /* These costs are the same as 5KF above.  */
+    COSTS_N_INSNS (4),            /* fp_add */
+    COSTS_N_INSNS (4),            /* fp_mult_sf */
+    COSTS_N_INSNS (5),            /* fp_mult_df */
+    COSTS_N_INSNS (17),           /* fp_div_sf */
+    COSTS_N_INSNS (32),           /* fp_div_df */
+    COSTS_N_INSNS (4),            /* int_mult_si */
+    COSTS_N_INSNS (11),           /* int_mult_di */
+    COSTS_N_INSNS (36),           /* int_div_si */
+    COSTS_N_INSNS (68),           /* int_div_di */
 		     1,           /* branch_cost */
 		     4            /* memory_latency */
   }
@@ -2842,7 +2856,9 @@ mips_get_tp (void)
   tp = gen_reg_rtx (Pmode);
   if (TARGET_MIPS16)
     {
+      mips_need_mips16_rdhwr_p = true;
       fn = mips16_stub_function ("__mips16_rdhwr");
+      SYMBOL_REF_FLAGS (fn) |= SYMBOL_FLAG_LOCAL;
       if (!call_insn_operand (fn, VOIDmode))
 	fn = force_reg (Pmode, fn);
       emit_insn (PMODE_INSN (gen_tls_get_tp_mips16, (tp, fn)));
@@ -3101,7 +3117,10 @@ mips_small_data_pattern_1 (rtx *loc, void *data)
 {
   enum mips_symbol_context context;
 
-  if (GET_CODE (*loc) == LO_SUM)
+  /* Ignore things like "g" constraints in asms.  We make no particular
+     guarantee about which symbolic constants are acceptable as asm operands
+     versus which must be forced into a GPR.  */
+  if (GET_CODE (*loc) == LO_SUM || GET_CODE (*loc) == ASM_OPERANDS)
     return -1;
 
   if (MEM_P (*loc))
@@ -5483,9 +5502,6 @@ mips_build_builtin_va_list (void)
       layout_type (record);
       return record;
     }
-  else if (TARGET_IRIX6)
-    /* On IRIX 6, this type is 'char *'.  */
-    return build_pointer_type (char_type_node);
   else
     /* Otherwise, we use 'void *'.  */
     return ptr_type_node;
@@ -5573,6 +5589,95 @@ mips_va_start (tree valist, rtx nextarg)
     }
 }
 
+/* Like std_gimplify_va_arg_expr, but apply alignment to zero-sized
+   types as well.  */
+
+static tree
+mips_std_gimplify_va_arg_expr (tree valist, tree type, gimple_seq *pre_p,
+			       gimple_seq *post_p)
+{
+  tree addr, t, type_size, rounded_size, valist_tmp;
+  unsigned HOST_WIDE_INT align, boundary;
+  bool indirect;
+
+  indirect = pass_by_reference (NULL, TYPE_MODE (type), type, false);
+  if (indirect)
+    type = build_pointer_type (type);
+
+  align = PARM_BOUNDARY / BITS_PER_UNIT;
+  boundary = targetm.calls.function_arg_boundary (TYPE_MODE (type), type);
+
+  /* When we align parameter on stack for caller, if the parameter
+     alignment is beyond MAX_SUPPORTED_STACK_ALIGNMENT, it will be
+     aligned at MAX_SUPPORTED_STACK_ALIGNMENT.  We will match callee
+     here with caller.  */
+  if (boundary > MAX_SUPPORTED_STACK_ALIGNMENT)
+    boundary = MAX_SUPPORTED_STACK_ALIGNMENT;
+
+  boundary /= BITS_PER_UNIT;
+
+  /* Hoist the valist value into a temporary for the moment.  */
+  valist_tmp = get_initialized_tmp_var (valist, pre_p, NULL);
+
+  /* va_list pointer is aligned to PARM_BOUNDARY.  If argument actually
+     requires greater alignment, we must perform dynamic alignment.  */
+  if (boundary > align)
+    {
+      t = build2 (MODIFY_EXPR, TREE_TYPE (valist), valist_tmp,
+		  fold_build_pointer_plus_hwi (valist_tmp, boundary - 1));
+      gimplify_and_add (t, pre_p);
+
+      t = build2 (MODIFY_EXPR, TREE_TYPE (valist), valist_tmp,
+		  fold_build2 (BIT_AND_EXPR, TREE_TYPE (valist),
+			       valist_tmp,
+			       build_int_cst (TREE_TYPE (valist), -boundary)));
+      gimplify_and_add (t, pre_p);
+    }
+  else
+    boundary = align;
+
+  /* If the actual alignment is less than the alignment of the type,
+     adjust the type accordingly so that we don't assume strict alignment
+     when dereferencing the pointer.  */
+  boundary *= BITS_PER_UNIT;
+  if (boundary < TYPE_ALIGN (type))
+    {
+      type = build_variant_type_copy (type);
+      TYPE_ALIGN (type) = boundary;
+    }
+
+  /* Compute the rounded size of the type.  */
+  type_size = size_in_bytes (type);
+  rounded_size = round_up (type_size, align);
+
+  /* Reduce rounded_size so it's sharable with the postqueue.  */
+  gimplify_expr (&rounded_size, pre_p, post_p, is_gimple_val, fb_rvalue);
+
+  /* Get AP.  */
+  addr = valist_tmp;
+  if (PAD_VARARGS_DOWN && !integer_zerop (rounded_size))
+    {
+      /* Small args are padded downward.  */
+      t = fold_build2_loc (input_location, GT_EXPR, sizetype,
+		       rounded_size, size_int (align));
+      t = fold_build3 (COND_EXPR, sizetype, t, size_zero_node,
+		       size_binop (MINUS_EXPR, rounded_size, type_size));
+      addr = fold_build_pointer_plus (addr, t);
+    }
+
+  /* Compute new value for AP.  */
+  t = fold_build_pointer_plus (valist_tmp, rounded_size);
+  t = build2 (MODIFY_EXPR, TREE_TYPE (valist), valist, t);
+  gimplify_and_add (t, pre_p);
+
+  addr = fold_convert (build_pointer_type (type), addr);
+
+  if (indirect)
+    addr = build_va_arg_indirect_ref (addr);
+
+  return build_va_arg_indirect_ref (addr);
+}
+
 /* Implement TARGET_GIMPLIFY_VA_ARG_EXPR.  */
 
 static tree
@@ -5587,7 +5692,7 @@ mips_gimplify_va_arg_expr (tree valist, tree type, gimple_seq *pre_p,
     type = build_pointer_type (type);
 
   if (!EABI_FLOAT_VARARGS_P)
-    addr = std_gimplify_va_arg_expr (valist, type, pre_p, post_p);
+    addr = mips_std_gimplify_va_arg_expr (valist, type, pre_p, post_p);
   else
     {
       tree f_ovfl, f_gtop, f_ftop, f_goff, f_foff;
@@ -5735,6 +5840,33 @@ mips_gimplify_va_arg_expr (tree valist, tree type, gimple_seq *pre_p,
   return addr;
 }
 
+/* Declare a unique, locally-binding function called NAME, then start
+   its definition.  */
+
+static void
+mips_start_unique_function (const char *name)
+{
+  tree decl;
+
+  decl = build_decl (BUILTINS_LOCATION, FUNCTION_DECL,
+		     get_identifier (name),
+		     build_function_type_list (void_type_node, NULL_TREE));
+  DECL_RESULT (decl) = build_decl (BUILTINS_LOCATION, RESULT_DECL,
+				   NULL_TREE, void_type_node);
+  TREE_PUBLIC (decl) = 1;
+  TREE_STATIC (decl) = 1;
+
+  DECL_COMDAT_GROUP (decl) = DECL_ASSEMBLER_NAME (decl);
+
+  targetm.asm_out.unique_section (decl, 0);
+  switch_to_section (get_named_section (decl, NULL, 0));
+
+  targetm.asm_out.globalize_label (asm_out_file, name);
+  fputs ("\t.hidden\t", asm_out_file);
+  assemble_name (asm_out_file, name);
+  putc ('\n', asm_out_file);
+}
+
 /* Start a definition of function NAME.  MIPS16_P indicates whether the
    function contains MIPS16 code.  */
 
@@ -5771,6 +5903,26 @@ mips_end_function_definition (const char *name)
       assemble_name (asm_out_file, name);
       fputs ("\n", asm_out_file);
     }
+}
+
+/* Output a definition of the __mips16_rdhwr function.  */
+
+static void
+mips_output_mips16_rdhwr (void)
+{
+  const char *name;
+
+  name = "__mips16_rdhwr";
+  mips_start_unique_function (name);
+  mips_start_function_definition (name, false);
+  fprintf (asm_out_file,
+	   "\t.set\tpush\n"
+	   "\t.set\tmips32r2\n"
+	   "\t.set\tnoreorder\n"
+	   "\trdhwr\t$3,$29\n"
+	   "\t.set\tpop\n"
+	   "\tj\t$31\n");
+  mips_end_function_definition (name);
 }
 
 /* Return true if calls to X can use R_MIPS_CALL* relocations.  */
@@ -6295,7 +6447,20 @@ mips16_build_call_stub (rtx retval, rtx *fn_ptr, rtx args_size, int fp_code)
       assemble_start_function (stubdecl, stubname);
       mips_start_function_definition (stubname, false);
 
-      if (!fp_ret_p)
+      if (fp_ret_p)
+	{
+	  fprintf (asm_out_file, "\t.cfi_startproc\n");
+
+	  /* Create a fake CFA 4 bytes below the stack pointer.
+	     This works around unwinders (like libgcc's) that expect
+	     the CFA for non-signal frames to be unique.  */
+	  fprintf (asm_out_file, "\t.cfi_def_cfa 29,-4\n");
+
+	  /* "Save" $sp in itself so we don't use the fake CFA.
+	     This is: DW_CFA_val_expression r29, { DW_OP_reg29 }.  */
+	  fprintf (asm_out_file, "\t.cfi_escape 0x16,29,1,0x6d\n");
+	}
+      else
 	{
 	  /* Load the address of the MIPS16 function into $25.  Do this
 	     first so that targets with coprocessor interlocks can use
@@ -6313,12 +6478,7 @@ mips16_build_call_stub (rtx retval, rtx *fn_ptr, rtx args_size, int fp_code)
 	 registers.  */
       mips_output_args_xfer (fp_code, 't');
 
-      if (!fp_ret_p)
-	{
-	  /* Jump to the previously-loaded address.  */
-	  output_asm_insn ("jr\t%^", NULL);
-	}
-      else
+      if (fp_ret_p)
 	{
 	  /* Save the return address in $18 and call the non-MIPS16 function.
 	     The stub's caller knows that $18 might be clobbered, even though
@@ -6326,6 +6486,7 @@ mips16_build_call_stub (rtx retval, rtx *fn_ptr, rtx args_size, int fp_code)
 	  fprintf (asm_out_file, "\tmove\t%s,%s\n",
 		   reg_names[GP_REG_FIRST + 18], reg_names[RETURN_ADDR_REGNUM]);
 	  output_asm_insn (MIPS_CALL ("jal", &fn, 0, -1), &fn);
+	  fprintf (asm_out_file, "\t.cfi_register 31,18\n");
 
 	  /* Move the result from floating-point registers to
 	     general registers.  */
@@ -6378,6 +6539,12 @@ mips16_build_call_stub (rtx retval, rtx *fn_ptr, rtx args_size, int fp_code)
 	      gcc_unreachable ();
 	    }
 	  fprintf (asm_out_file, "\tjr\t%s\n", reg_names[GP_REG_FIRST + 18]);
+	  fprintf (asm_out_file, "\t.cfi_endproc\n");
+	}
+      else
+	{
+	  /* Jump to the previously-loaded address.  */
+	  output_asm_insn ("jr\t%^", NULL);
 	}
 
 #ifdef ASM_DECLARE_FUNCTION_SIZE
@@ -7955,13 +8122,6 @@ mips_debugger_offset (rtx addr, HOST_WIDE_INT offset)
 	offset += cfun->machine->frame.hard_frame_pointer_offset;
     }
 
-  /* sdbout_parms does not want this to crash for unrecognized cases.  */
-#if 0
-  else if (reg != arg_pointer_rtx)
-    fatal_insn ("mips_debugger_offset called with non stack/frame/arg pointer",
-		addr);
-#endif
-
   return offset;
 }
 
@@ -8302,50 +8462,47 @@ mips_file_start (void)
   default_file_start ();
 
   /* Generate a special section to describe the ABI switches used to
-     produce the resultant binary.  This is unnecessary on IRIX and
-     causes unwanted warnings from the native linker.  */
-  if (!TARGET_IRIX6)
-    {
-      /* Record the ABI itself.  Modern versions of binutils encode
-	 this information in the ELF header flags, but GDB needs the
-	 information in order to correctly debug binaries produced by
-	 older binutils.  See the function mips_gdbarch_init in
-	 gdb/mips-tdep.c.  */
-      fprintf (asm_out_file, "\t.section .mdebug.%s\n\t.previous\n",
-	       mips_mdebug_abi_name ());
+     produce the resultant binary.  */
 
-      /* There is no ELF header flag to distinguish long32 forms of the
-	 EABI from long64 forms.  Emit a special section to help tools
-	 such as GDB.  Do the same for o64, which is sometimes used with
-	 -mlong64.  */
-      if (mips_abi == ABI_EABI || mips_abi == ABI_O64)
-	fprintf (asm_out_file, "\t.section .gcc_compiled_long%d\n"
-		 "\t.previous\n", TARGET_LONG64 ? 64 : 32);
+  /* Record the ABI itself.  Modern versions of binutils encode
+     this information in the ELF header flags, but GDB needs the
+     information in order to correctly debug binaries produced by
+     older binutils.  See the function mips_gdbarch_init in
+     gdb/mips-tdep.c.  */
+  fprintf (asm_out_file, "\t.section .mdebug.%s\n\t.previous\n",
+	   mips_mdebug_abi_name ());
+
+  /* There is no ELF header flag to distinguish long32 forms of the
+     EABI from long64 forms.  Emit a special section to help tools
+     such as GDB.  Do the same for o64, which is sometimes used with
+     -mlong64.  */
+  if (mips_abi == ABI_EABI || mips_abi == ABI_O64)
+    fprintf (asm_out_file, "\t.section .gcc_compiled_long%d\n"
+	     "\t.previous\n", TARGET_LONG64 ? 64 : 32);
 
 #ifdef HAVE_AS_GNU_ATTRIBUTE
-      {
-	int attr;
+  {
+    int attr;
 
-	/* No floating-point operations, -mno-float.  */
-	if (TARGET_NO_FLOAT)
-	  attr = 0;
-	/* Soft-float code, -msoft-float.  */
-	else if (!TARGET_HARD_FLOAT_ABI)
-	  attr = 3;
-	/* Single-float code, -msingle-float.  */
-	else if (!TARGET_DOUBLE_FLOAT)
-	  attr = 2;
-	/* 64-bit FP registers on a 32-bit target, -mips32r2 -mfp64.  */
-	else if (!TARGET_64BIT && TARGET_FLOAT64)
-	  attr = 4;
-	/* Regular FP code, FP regs same size as GP regs, -mdouble-float.  */
-	else
-	  attr = 1;
+    /* No floating-point operations, -mno-float.  */
+    if (TARGET_NO_FLOAT)
+      attr = 0;
+    /* Soft-float code, -msoft-float.  */
+    else if (!TARGET_HARD_FLOAT_ABI)
+      attr = 3;
+    /* Single-float code, -msingle-float.  */
+    else if (!TARGET_DOUBLE_FLOAT)
+      attr = 2;
+    /* 64-bit FP registers on a 32-bit target, -mips32r2 -mfp64.  */
+    else if (!TARGET_64BIT && TARGET_FLOAT64)
+      attr = 4;
+    /* Regular FP code, FP regs same size as GP regs, -mdouble-float.  */
+    else
+      attr = 1;
 
-	fprintf (asm_out_file, "\t.gnu_attribute 4, %d\n", attr);
-      }
+    fprintf (asm_out_file, "\t.gnu_attribute 4, %d\n", attr);
+  }
 #endif
-    }
 
   /* If TARGET_ABICALLS, tell GAS to generate -KPIC code.  */
   if (TARGET_ABICALLS)
@@ -8359,6 +8516,15 @@ mips_file_start (void)
     fprintf (asm_out_file, "\n%s -G value = %d, Arch = %s, ISA = %d\n",
 	     ASM_COMMENT_START,
 	     mips_small_data_threshold, mips_arch_info->name, mips_isa);
+}
+
+/* Implement TARGET_ASM_CODE_END.  */
+
+static void
+mips_code_end (void)
+{
+  if (mips_need_mips16_rdhwr_p)
+    mips_output_mips16_rdhwr ();
 }
 
 /* Make the last instruction frame-related and note that it performs
@@ -9960,11 +10126,6 @@ static void
 mips_output_function_prologue (FILE *file, HOST_WIDE_INT size ATTRIBUTE_UNUSED)
 {
   const char *fnname;
-
-#ifdef SDB_DEBUGGING_INFO
-  if (debug_info_level != DINFO_LEVEL_TERSE && write_symbols == SDB_DEBUG)
-    SDB_OUTPUT_SOURCE_LINE (file, DECL_SOURCE_LINE (current_function_decl));
-#endif
 
   /* In MIPS16 mode, we may need to generate a non-MIPS16 stub to handle
      floating-point arguments.  */
@@ -15829,10 +15990,6 @@ mips_option_override (void)
 	}
     }
 
-#ifdef MIPS_TFMODE_FORMAT
-  REAL_MODE_FORMAT (TFmode) = &MIPS_TFMODE_FORMAT;
-#endif
-
   /* Make sure that the user didn't turn off paired single support when
      MIPS-3D support is requested.  */
   if (TARGET_MIPS3D
@@ -17250,6 +17407,8 @@ mips_expand_vec_minmax (rtx target, rtx op0, rtx op1,
 #define TARGET_ASM_FILE_START mips_file_start
 #undef TARGET_ASM_FILE_START_FILE_DIRECTIVE
 #define TARGET_ASM_FILE_START_FILE_DIRECTIVE true
+#undef TARGET_ASM_CODE_END
+#define TARGET_ASM_CODE_END mips_code_end
 
 #undef TARGET_INIT_LIBFUNCS
 #define TARGET_INIT_LIBFUNCS mips_init_libfuncs

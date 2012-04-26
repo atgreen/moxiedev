@@ -1,6 +1,6 @@
 /* Alias analysis for GNU C
    Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
-   2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   2007, 2008, 2009, 2010, 2011, 2012 Free Software Foundation, Inc.
    Contributed by John Carr (jfc@mit.edu).
 
 This file is part of GCC.
@@ -157,8 +157,6 @@ static rtx find_base_value (rtx);
 static int mems_in_disjoint_alias_sets_p (const_rtx, const_rtx);
 static int insert_subset_children (splay_tree_node, void*);
 static alias_set_entry get_alias_set_entry (alias_set_type);
-static const_rtx fixed_scalar_and_varying_struct_p (const_rtx, const_rtx, rtx, rtx,
-						    bool (*) (const_rtx, bool));
 static int aliases_everything_p (const_rtx);
 static bool nonoverlapping_component_refs_p (const_tree, const_tree);
 static tree decl_for_component_ref (tree);
@@ -189,25 +187,53 @@ static void memory_modified_1 (rtx, const_rtx, void *);
    of the first set.
 
    A base address can be an ADDRESS, SYMBOL_REF, or LABEL_REF.  ADDRESS
-   expressions represent certain special values: function arguments and
-   the stack, frame, and argument pointers.
+   expressions represent three types of base:
 
-   The contents of an ADDRESS is not normally used, the mode of the
-   ADDRESS determines whether the ADDRESS is a function argument or some
-   other special value.  Pointer equality, not rtx_equal_p, determines whether
-   two ADDRESS expressions refer to the same base address.
+     1. incoming arguments.  There is just one ADDRESS to represent all
+	arguments, since we do not know at this level whether accesses
+	based on different arguments can alias.  The ADDRESS has id 0.
 
-   The only use of the contents of an ADDRESS is for determining if the
-   current function performs nonlocal memory memory references for the
-   purposes of marking the function as a constant function.  */
+     2. stack_pointer_rtx, frame_pointer_rtx, hard_frame_pointer_rtx
+	(if distinct from frame_pointer_rtx) and arg_pointer_rtx.
+	Each of these rtxes has a separate ADDRESS associated with it,
+	each with a negative id.
+
+	GCC is (and is required to be) precise in which register it
+	chooses to access a particular region of stack.  We can therefore
+	assume that accesses based on one of these rtxes do not alias
+	accesses based on another of these rtxes.
+
+     3. bases that are derived from malloc()ed memory (REG_NOALIAS).
+	Each such piece of memory has a separate ADDRESS associated
+	with it, each with an id greater than 0.
+
+   Accesses based on one ADDRESS do not alias accesses based on other
+   ADDRESSes.  Accesses based on ADDRESSes in groups (2) and (3) do not
+   alias globals either; the ADDRESSes have Pmode to indicate this.
+   The ADDRESS in group (1) _may_ alias globals; it has VOIDmode to
+   indicate this.  */
 
 static GTY(()) VEC(rtx,gc) *reg_base_value;
 static rtx *new_reg_base_value;
+
+/* The single VOIDmode ADDRESS that represents all argument bases.
+   It has id 0.  */
+static GTY(()) rtx arg_base_value;
+
+/* Used to allocate unique ids to each REG_NOALIAS ADDRESS.  */
+static int unique_id;
 
 /* We preserve the copy of old array around to avoid amount of garbage
    produced.  About 8% of garbage produced were attributed to this
    array.  */
 static GTY((deletable)) VEC(rtx,gc) *old_reg_base_value;
+
+/* Values of XINT (address, 0) of Pmode ADDRESS rtxes for special
+   registers.  */
+#define UNIQUE_BASE_VALUE_SP	-1
+#define UNIQUE_BASE_VALUE_ARGP	-2
+#define UNIQUE_BASE_VALUE_FP	-3
+#define UNIQUE_BASE_VALUE_HFP	-4
 
 #define static_reg_base_value \
   (this_target_rtl->x_static_reg_base_value)
@@ -995,6 +1021,43 @@ get_frame_alias_set (void)
   return frame_set;
 }
 
+/* Create a new, unique base with id ID.  */
+
+static rtx
+unique_base_value (HOST_WIDE_INT id)
+{
+  return gen_rtx_ADDRESS (Pmode, id);
+}
+
+/* Return true if accesses based on any other base value cannot alias
+   those based on X.  */
+
+static bool
+unique_base_value_p (rtx x)
+{
+  return GET_CODE (x) == ADDRESS && GET_MODE (x) == Pmode;
+}
+
+/* Return true if X is known to be a base value.  */
+
+static bool
+known_base_value_p (rtx x)
+{
+  switch (GET_CODE (x))
+    {
+    case LABEL_REF:
+    case SYMBOL_REF:
+      return true;
+
+    case ADDRESS:
+      /* Arguments may or may not be bases; we don't know for sure.  */
+      return GET_MODE (x) != VOIDmode;
+
+    default:
+      return false;
+    }
+}
+
 /* Inside SRC, the source of a SET, find a base address.  */
 
 static rtx
@@ -1051,7 +1114,7 @@ find_base_value (rtx src)
 	  && (XEXP (src, 0) == arg_pointer_rtx
 	      || (GET_CODE (XEXP (src, 0)) == PLUS
 		  && XEXP (XEXP (src, 0), 0) == arg_pointer_rtx)))
-	return gen_rtx_ADDRESS (VOIDmode, src);
+	return arg_base_value;
       return 0;
 
     case CONST:
@@ -1092,18 +1155,10 @@ find_base_value (rtx src)
 	/* If either base is named object or a special address
 	   (like an argument or stack reference), then use it for the
 	   base term.  */
-	if (src_0 != 0
-	    && (GET_CODE (src_0) == SYMBOL_REF
-		|| GET_CODE (src_0) == LABEL_REF
-		|| (GET_CODE (src_0) == ADDRESS
-		    && GET_MODE (src_0) != VOIDmode)))
+	if (src_0 != 0 && known_base_value_p (src_0))
 	  return src_0;
 
-	if (src_1 != 0
-	    && (GET_CODE (src_1) == SYMBOL_REF
-		|| GET_CODE (src_1) == LABEL_REF
-		|| (GET_CODE (src_1) == ADDRESS
-		    && GET_MODE (src_1) != VOIDmode)))
+	if (src_1 != 0 && known_base_value_p (src_1))
 	  return src_1;
 
 	/* Guess which operand is the base address:
@@ -1130,7 +1185,7 @@ find_base_value (rtx src)
       return 0;
 
     case TRUNCATE:
-      /* As we do not know which address space the pointer is refering to, we can
+      /* As we do not know which address space the pointer is referring to, we can
 	 handle this only if the target does not support different pointer or
 	 address modes depending on the address space.  */
       if (!target_default_pointer_address_modes_p ())
@@ -1149,7 +1204,7 @@ find_base_value (rtx src)
 
     case ZERO_EXTEND:
     case SIGN_EXTEND:	/* used for NT/Alpha pointers */
-      /* As we do not know which address space the pointer is refering to, we can
+      /* As we do not know which address space the pointer is referring to, we can
 	 handle this only if the target does not support different pointer or
 	 address modes depending on the address space.  */
       if (!target_default_pointer_address_modes_p ())
@@ -1171,15 +1226,13 @@ find_base_value (rtx src)
   return 0;
 }
 
-/* Called from init_alias_analysis indirectly through note_stores.  */
+/* Called from init_alias_analysis indirectly through note_stores,
+   or directly if DEST is a register with a REG_NOALIAS note attached.
+   SET is null in the latter case.  */
 
 /* While scanning insns to find base values, reg_seen[N] is nonzero if
    register N has been set in this function.  */
 static char *reg_seen;
-
-/* Addresses which are known not to alias anything else are identified
-   by a unique integer.  */
-static int unique_id;
 
 static void
 record_set (rtx dest, const_rtx set, void *data ATTRIBUTE_UNUSED)
@@ -1225,14 +1278,14 @@ record_set (rtx dest, const_rtx set, void *data ATTRIBUTE_UNUSED)
     }
   else
     {
+      /* There's a REG_NOALIAS note against DEST.  */
       if (reg_seen[regno])
 	{
 	  new_reg_base_value[regno] = 0;
 	  return;
 	}
       reg_seen[regno] = 1;
-      new_reg_base_value[regno] = gen_rtx_ADDRESS (Pmode,
-						   GEN_INT (unique_id++));
+      new_reg_base_value[regno] = unique_base_value (unique_id++);
       return;
     }
 
@@ -1538,7 +1591,7 @@ rtx_equal_for_memref_p (const_rtx x, const_rtx y)
   return 1;
 }
 
-rtx
+static rtx
 find_base_term (rtx x)
 {
   cselib_val *val;
@@ -1556,7 +1609,7 @@ find_base_term (rtx x)
       return REG_BASE_VALUE (x);
 
     case TRUNCATE:
-      /* As we do not know which address space the pointer is refering to, we can
+      /* As we do not know which address space the pointer is referring to, we can
 	 handle this only if the target does not support different pointer or
 	 address modes depending on the address space.  */
       if (!target_default_pointer_address_modes_p ())
@@ -1575,7 +1628,7 @@ find_base_term (rtx x)
 
     case ZERO_EXTEND:
     case SIGN_EXTEND:	/* Used for Alpha/NT pointers */
-      /* As we do not know which address space the pointer is refering to, we can
+      /* As we do not know which address space the pointer is referring to, we can
 	 handle this only if the target does not support different pointer or
 	 address modes depending on the address space.  */
       if (!target_default_pointer_address_modes_p ())
@@ -1668,18 +1721,10 @@ find_base_term (rtx x)
 	/* If either base term is named object or a special address
 	   (like an argument or stack reference), then use it for the
 	   base term.  */
-	if (tmp1 != 0
-	    && (GET_CODE (tmp1) == SYMBOL_REF
-		|| GET_CODE (tmp1) == LABEL_REF
-		|| (GET_CODE (tmp1) == ADDRESS
-		    && GET_MODE (tmp1) != VOIDmode)))
+	if (tmp1 != 0 && known_base_value_p (tmp1))
 	  return tmp1;
 
-	if (tmp2 != 0
-	    && (GET_CODE (tmp2) == SYMBOL_REF
-		|| GET_CODE (tmp2) == LABEL_REF
-		|| (GET_CODE (tmp2) == ADDRESS
-		    && GET_MODE (tmp2) != VOIDmode)))
+	if (tmp2 != 0 && known_base_value_p (tmp2))
 	  return tmp2;
 
 	/* We could not determine which of the two operands was the
@@ -1700,6 +1745,16 @@ find_base_term (rtx x)
     default:
       return 0;
     }
+}
+
+/* Return true if accesses to address X may alias accesses based
+   on the stack pointer.  */
+
+bool
+may_be_sp_based_p (rtx x)
+{
+  rtx base = find_base_term (x);
+  return !base || base == static_reg_base_value[STACK_POINTER_REGNUM];
 }
 
 /* Return 0 if the addresses X and Y are known to point to different
@@ -1764,15 +1819,33 @@ base_alias_check (rtx x, rtx y, enum machine_mode x_mode,
   if (GET_CODE (x_base) != ADDRESS && GET_CODE (y_base) != ADDRESS)
     return 0;
 
-  /* If one address is a stack reference there can be no alias:
-     stack references using different base registers do not alias,
-     a stack reference can not alias a parameter, and a stack reference
-     can not alias a global.  */
-  if ((GET_CODE (x_base) == ADDRESS && GET_MODE (x_base) == Pmode)
-      || (GET_CODE (y_base) == ADDRESS && GET_MODE (y_base) == Pmode))
+  if (unique_base_value_p (x_base) || unique_base_value_p (y_base))
     return 0;
 
   return 1;
+}
+
+/* Callback for for_each_rtx, that returns 1 upon encountering a VALUE
+   whose UID is greater than the int uid that D points to.  */
+
+static int
+refs_newer_value_cb (rtx *x, void *d)
+{
+  if (GET_CODE (*x) == VALUE && CSELIB_VAL_PTR (*x)->uid > *(int *)d)
+    return 1;
+
+  return 0;
+}
+
+/* Return TRUE if EXPR refers to a VALUE whose uid is greater than
+   that of V.  */
+
+static bool
+refs_newer_value_p (rtx expr, rtx v)
+{
+  int minuid = CSELIB_VAL_PTR (v)->uid;
+
+  return for_each_rtx (&expr, refs_newer_value_cb, &minuid);
 }
 
 /* Convert the address X into something we can use.  This is done by returning
@@ -1790,12 +1863,32 @@ get_addr (rtx x)
   v = CSELIB_VAL_PTR (x);
   if (v)
     {
+      bool have_equivs = cselib_have_permanent_equivalences ();
+      if (have_equivs)
+	v = canonical_cselib_val (v);
       for (l = v->locs; l; l = l->next)
 	if (CONSTANT_P (l->loc))
 	  return l->loc;
       for (l = v->locs; l; l = l->next)
-	if (!REG_P (l->loc) && !MEM_P (l->loc))
+	if (!REG_P (l->loc) && !MEM_P (l->loc)
+	    /* Avoid infinite recursion when potentially dealing with
+	       var-tracking artificial equivalences, by skipping the
+	       equivalences themselves, and not choosing expressions
+	       that refer to newer VALUEs.  */
+	    && (!have_equivs
+		|| (GET_CODE (l->loc) != VALUE
+		    && !refs_newer_value_p (l->loc, x))))
 	  return l->loc;
+      if (have_equivs)
+	{
+	  for (l = v->locs; l; l = l->next)
+	    if (REG_P (l->loc)
+		|| (GET_CODE (l->loc) != VALUE
+		    && !refs_newer_value_p (l->loc, x)))
+	      return l->loc;
+	  /* Return the canonical value.  */
+	  return v->val_rtx;
+	}
       if (v->locs)
 	return v->locs->loc;
     }
@@ -1875,7 +1968,8 @@ memrefs_conflict_p (int xsize, rtx x, int ysize, rtx y, HOST_WIDE_INT c)
 	{
 	  struct elt_loc_list *l = NULL;
 	  if (CSELIB_VAL_PTR (x))
-	    for (l = CSELIB_VAL_PTR (x)->locs; l; l = l->next)
+	    for (l = canonical_cselib_val (CSELIB_VAL_PTR (x))->locs;
+		 l; l = l->next)
 	      if (REG_P (l->loc) && rtx_equal_for_memref_p (l->loc, y))
 		break;
 	  if (l)
@@ -1893,7 +1987,8 @@ memrefs_conflict_p (int xsize, rtx x, int ysize, rtx y, HOST_WIDE_INT c)
 	{
 	  struct elt_loc_list *l = NULL;
 	  if (CSELIB_VAL_PTR (y))
-	    for (l = CSELIB_VAL_PTR (y)->locs; l; l = l->next)
+	    for (l = canonical_cselib_val (CSELIB_VAL_PTR (y))->locs;
+		 l; l = l->next)
 	      if (REG_P (l->loc) && rtx_equal_for_memref_p (l->loc, x))
 		break;
 	  if (l)
@@ -2078,11 +2173,9 @@ memrefs_conflict_p (int xsize, rtx x, int ysize, rtx y, HOST_WIDE_INT c)
    changed.  A volatile and non-volatile reference can be interchanged
    though.
 
-   A MEM_IN_STRUCT reference at a non-AND varying address can never
-   conflict with a non-MEM_IN_STRUCT reference at a fixed address.  We
-   also must allow AND addresses, because they may generate accesses
-   outside the object being referenced.  This is used to generate
-   aligned addresses from unaligned addresses, for instance, the alpha
+   We also must allow AND addresses, because they may generate accesses
+   outside the object being referenced.  This is used to generate aligned
+   addresses from unaligned addresses, for instance, the alpha
    storeqi_unaligned pattern.  */
 
 /* Read dependence: X is read after read in MEM takes place.  There can
@@ -2092,39 +2185,6 @@ int
 read_dependence (const_rtx mem, const_rtx x)
 {
   return MEM_VOLATILE_P (x) && MEM_VOLATILE_P (mem);
-}
-
-/* Returns MEM1 if and only if MEM1 is a scalar at a fixed address and
-   MEM2 is a reference to a structure at a varying address, or returns
-   MEM2 if vice versa.  Otherwise, returns NULL_RTX.  If a non-NULL
-   value is returned MEM1 and MEM2 can never alias.  VARIES_P is used
-   to decide whether or not an address may vary; it should return
-   nonzero whenever variation is possible.
-   MEM1_ADDR and MEM2_ADDR are the addresses of MEM1 and MEM2.  */
-
-static const_rtx
-fixed_scalar_and_varying_struct_p (const_rtx mem1, const_rtx mem2, rtx mem1_addr,
-				   rtx mem2_addr,
-				   bool (*varies_p) (const_rtx, bool))
-{
-  if (! flag_strict_aliasing)
-    return NULL_RTX;
-
-  if (MEM_ALIAS_SET (mem2)
-      && MEM_SCALAR_P (mem1) && MEM_IN_STRUCT_P (mem2)
-      && !varies_p (mem1_addr, 1) && varies_p (mem2_addr, 1))
-    /* MEM1 is a scalar at a fixed address; MEM2 is a struct at a
-       varying address.  */
-    return mem1;
-
-  if (MEM_ALIAS_SET (mem1)
-      && MEM_IN_STRUCT_P (mem1) && MEM_SCALAR_P (mem2)
-      && varies_p (mem1_addr, 1) && !varies_p (mem2_addr, 1))
-    /* MEM2 is a scalar at a fixed address; MEM1 is a struct at a
-       varying address.  */
-    return mem2;
-
-  return NULL_RTX;
 }
 
 /* Returns nonzero if something about the mode or address format MEM1
@@ -2320,7 +2380,7 @@ nonoverlapping_memrefs_p (const_rtx x, const_rtx y, bool loop_invariant)
       && ! rtx_equal_p (rtlx, rtly))
     return 1;
 
-  /* If we have MEMs refering to different address spaces (which can
+  /* If we have MEMs referring to different address spaces (which can
      potentially overlap), we cannot easily tell from the addresses
      whether the references overlap.  */
   if (MEM_P (rtlx) && MEM_P (rtly)
@@ -2391,8 +2451,6 @@ nonoverlapping_memrefs_p (const_rtx x, const_rtx y, bool loop_invariant)
 /* Helper for true_dependence and canon_true_dependence.
    Checks for true dependence: X is read after store in MEM takes place.
 
-   VARIES is the function that should be used as rtx_varies function.
-
    If MEM_CANONICALIZED is FALSE, then X_ADDR and MEM_ADDR should be
    NULL_RTX, and the canonical addresses of MEM and X are both computed
    here.  If MEM_CANONICALIZED, then MEM must be already canonicalized.
@@ -2403,8 +2461,7 @@ nonoverlapping_memrefs_p (const_rtx x, const_rtx y, bool loop_invariant)
 
 static int
 true_dependence_1 (const_rtx mem, enum machine_mode mem_mode, rtx mem_addr,
-		   const_rtx x, rtx x_addr, bool (*varies) (const_rtx, bool),
-		   bool mem_canonicalized)
+		   const_rtx x, rtx x_addr, bool mem_canonicalized)
 {
   rtx base;
   int ret;
@@ -2431,7 +2488,7 @@ true_dependence_1 (const_rtx mem, enum machine_mode mem_mode, rtx mem_addr,
   if (MEM_READONLY_P (x))
     return 0;
 
-  /* If we have MEMs refering to different address spaces (which can
+  /* If we have MEMs referring to different address spaces (which can
      potentially overlap), we cannot easily tell from the addresses
      whether the references overlap.  */
   if (MEM_ADDR_SPACE (mem) != MEM_ADDR_SPACE (x))
@@ -2496,21 +2553,16 @@ true_dependence_1 (const_rtx mem, enum machine_mode mem_mode, rtx mem_addr,
   if (mem_mode == BLKmode || GET_MODE (x) == BLKmode)
     return 1;
 
-  if (fixed_scalar_and_varying_struct_p (mem, x, mem_addr, x_addr, varies))
-    return 0;
-
   return rtx_refs_may_alias_p (x, mem, true);
 }
 
 /* True dependence: X is read after store in MEM takes place.  */
 
 int
-true_dependence (const_rtx mem, enum machine_mode mem_mode, const_rtx x,
-		 bool (*varies) (const_rtx, bool))
+true_dependence (const_rtx mem, enum machine_mode mem_mode, const_rtx x)
 {
   return true_dependence_1 (mem, mem_mode, NULL_RTX,
-			    x, NULL_RTX, varies,
-			    /*mem_canonicalized=*/false);
+			    x, NULL_RTX, /*mem_canonicalized=*/false);
 }
 
 /* Canonical true dependence: X is read after store in MEM takes place.
@@ -2521,11 +2573,10 @@ true_dependence (const_rtx mem, enum machine_mode mem_mode, const_rtx x,
 
 int
 canon_true_dependence (const_rtx mem, enum machine_mode mem_mode, rtx mem_addr,
-		       const_rtx x, rtx x_addr, bool (*varies) (const_rtx, bool))
+		       const_rtx x, rtx x_addr)
 {
   return true_dependence_1 (mem, mem_mode, mem_addr,
-			    x, x_addr, varies,
-			    /*mem_canonicalized=*/true);
+			    x, x_addr, /*mem_canonicalized=*/true);
 }
 
 /* Returns nonzero if a write to X might alias a previous read from
@@ -2535,7 +2586,6 @@ static int
 write_dependence_p (const_rtx mem, const_rtx x, int writep)
 {
   rtx x_addr, mem_addr;
-  const_rtx fixed_scalar;
   rtx base;
   int ret;
 
@@ -2556,7 +2606,7 @@ write_dependence_p (const_rtx mem, const_rtx x, int writep)
   if (!writep && MEM_READONLY_P (mem))
     return 0;
 
-  /* If we have MEMs refering to different address spaces (which can
+  /* If we have MEMs referring to different address spaces (which can
      potentially overlap), we cannot easily tell from the addresses
      whether the references overlap.  */
   if (MEM_ADDR_SPACE (mem) != MEM_ADDR_SPACE (x))
@@ -2596,14 +2646,6 @@ write_dependence_p (const_rtx mem, const_rtx x, int writep)
     return ret;
 
   if (nonoverlapping_memrefs_p (x, mem, false))
-    return 0;
-
-  fixed_scalar
-    = fixed_scalar_and_varying_struct_p (mem, x, mem_addr, x_addr,
-					 rtx_addr_varies_p);
-
-  if ((fixed_scalar == mem && !aliases_everything_p (x))
-      || (fixed_scalar == x && !aliases_everything_p (mem)))
     return 0;
 
   return rtx_refs_may_alias_p (x, mem, false);
@@ -2651,7 +2693,7 @@ may_alias_p (const_rtx mem, const_rtx x)
   if (MEM_READONLY_P (x))
     return 0;
 
-  /* If we have MEMs refering to different address spaces (which can
+  /* If we have MEMs referring to different address spaces (which can
      potentially overlap), we cannot easily tell from the addresses
      whether the references overlap.  */
   if (MEM_ADDR_SPACE (mem) != MEM_ADDR_SPACE (x))
@@ -2687,10 +2729,6 @@ may_alias_p (const_rtx mem, const_rtx x)
   if (GET_CODE (mem_addr) == AND)
     return 1;
 
-  if (fixed_scalar_and_varying_struct_p (mem, x, mem_addr, x_addr,
-                                         rtx_addr_varies_p))
-    return 0;
-
   /* TBAA not valid for loop_invarint */
   return rtx_refs_may_alias_p (x, mem, false);
 }
@@ -2700,6 +2738,9 @@ init_alias_target (void)
 {
   int i;
 
+  if (!arg_base_value)
+    arg_base_value = gen_rtx_ADDRESS (VOIDmode, 0);
+
   memset (static_reg_base_value, 0, sizeof static_reg_base_value);
 
   for (i = 0; i < FIRST_PSEUDO_REGISTER; i++)
@@ -2708,18 +2749,17 @@ init_alias_target (void)
        numbers, so translate if necessary due to register windows.  */
     if (FUNCTION_ARG_REGNO_P (OUTGOING_REGNO (i))
 	&& HARD_REGNO_MODE_OK (i, Pmode))
-      static_reg_base_value[i]
-	= gen_rtx_ADDRESS (VOIDmode, gen_rtx_REG (Pmode, i));
+      static_reg_base_value[i] = arg_base_value;
 
   static_reg_base_value[STACK_POINTER_REGNUM]
-    = gen_rtx_ADDRESS (Pmode, stack_pointer_rtx);
+    = unique_base_value (UNIQUE_BASE_VALUE_SP);
   static_reg_base_value[ARG_POINTER_REGNUM]
-    = gen_rtx_ADDRESS (Pmode, arg_pointer_rtx);
+    = unique_base_value (UNIQUE_BASE_VALUE_ARGP);
   static_reg_base_value[FRAME_POINTER_REGNUM]
-    = gen_rtx_ADDRESS (Pmode, frame_pointer_rtx);
+    = unique_base_value (UNIQUE_BASE_VALUE_FP);
 #if !HARD_FRAME_POINTER_IS_FRAME_POINTER
   static_reg_base_value[HARD_FRAME_POINTER_REGNUM]
-    = gen_rtx_ADDRESS (Pmode, hard_frame_pointer_rtx);
+    = unique_base_value (UNIQUE_BASE_VALUE_HFP);
 #endif
 }
 
@@ -2805,8 +2845,8 @@ init_alias_analysis (void)
       changed = 0;
 
       /* We want to assign the same IDs each iteration of this loop, so
-	 start counting from zero each iteration of the loop.  */
-      unique_id = 0;
+	 start counting from one each iteration of the loop.  */
+      unique_id = 1;
 
       /* We're at the start of the function each iteration through the
 	 loop, so we're copying arguments.  */

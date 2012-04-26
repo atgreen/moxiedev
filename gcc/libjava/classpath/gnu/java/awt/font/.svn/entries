@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/awt/font
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,84 +26,13 @@ gandalf
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-GNUGlyphVector.java
-file
-
-
-
-
-2011-06-04T18:38:10.210104Z
-844002fb135d9d888e81bcde60d4cca1
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-19384
-
-FontDelegate.java
-file
-
-
-
-
-2011-06-04T18:38:10.210104Z
-9be05509a1cbbf9ca696405156920849
-2011-01-11T19:46:05.727579Z
-168680
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-12438
-
-opentype
-dir
-
 OpenTypeFontPeer.java
 file
 
 
 
 
-2011-06-04T18:38:10.210104Z
+2012-02-01T17:19:14.578341Z
 373af0f4858d530131f2e72341ae5a7c
 2011-01-11T19:46:05.727579Z
 168680
@@ -140,7 +69,7 @@ file
 
 
 
-2011-06-04T18:38:10.211104Z
+2012-02-01T17:19:14.578341Z
 d7f788eeffa9d452d2200103ddefbd9e
 2011-01-11T19:46:05.727579Z
 168680
@@ -167,4 +96,75 @@ gandalf
 
 
 3166
+
+GNUGlyphVector.java
+file
+
+
+
+
+2012-02-01T17:19:14.578341Z
+844002fb135d9d888e81bcde60d4cca1
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+19384
+
+FontDelegate.java
+file
+
+
+
+
+2012-02-01T17:19:14.578341Z
+9be05509a1cbbf9ca696405156920849
+2011-01-11T19:46:05.727579Z
+168680
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12438
+
+opentype
+dir
 

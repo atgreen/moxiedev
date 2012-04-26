@@ -10,6 +10,7 @@ package json
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -495,6 +496,12 @@ func (d *decodeState) object(v reflect.Value) {
 					// Pretend this field doesn't exist.
 					continue
 				}
+				if sf.Anonymous {
+					// Pretend this field doesn't exist,
+					// so that we can do a good job with
+					// these in a later version.
+					continue
+				}
 				// First, tag match
 				tagName, _ := parseTag(tag)
 				if tagName == key {
@@ -538,7 +545,7 @@ func (d *decodeState) object(v reflect.Value) {
 		// Read value.
 		if destring {
 			d.value(reflect.ValueOf(&d.tempstr))
-			d.literalStore([]byte(d.tempstr), subv)
+			d.literalStore([]byte(d.tempstr), subv, true)
 		} else {
 			d.value(subv)
 		}
@@ -571,11 +578,15 @@ func (d *decodeState) literal(v reflect.Value) {
 	d.off--
 	d.scan.undo(op)
 
-	d.literalStore(d.data[start:d.off], v)
+	d.literalStore(d.data[start:d.off], v, false)
 }
 
 // literalStore decodes a literal stored in item into v.
-func (d *decodeState) literalStore(item []byte, v reflect.Value) {
+//
+// fromQuoted indicates whether this literal came from unwrapping a
+// string from the ",string" struct tag option. this is used only to
+// produce more helpful error messages.
+func (d *decodeState) literalStore(item []byte, v reflect.Value, fromQuoted bool) {
 	// Check for unmarshaler.
 	wantptr := item[0] == 'n' // null
 	unmarshaler, pv := d.indirect(v, wantptr)
@@ -601,7 +612,11 @@ func (d *decodeState) literalStore(item []byte, v reflect.Value) {
 		value := c == 't'
 		switch v.Kind() {
 		default:
-			d.saveError(&UnmarshalTypeError{"bool", v.Type()})
+			if fromQuoted {
+				d.saveError(fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into %v", item, v.Type()))
+			} else {
+				d.saveError(&UnmarshalTypeError{"bool", v.Type()})
+			}
 		case reflect.Bool:
 			v.SetBool(value)
 		case reflect.Interface:
@@ -611,7 +626,11 @@ func (d *decodeState) literalStore(item []byte, v reflect.Value) {
 	case '"': // string
 		s, ok := unquoteBytes(item)
 		if !ok {
-			d.error(errPhase)
+			if fromQuoted {
+				d.error(fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into %v", item, v.Type()))
+			} else {
+				d.error(errPhase)
+			}
 		}
 		switch v.Kind() {
 		default:
@@ -636,12 +655,20 @@ func (d *decodeState) literalStore(item []byte, v reflect.Value) {
 
 	default: // number
 		if c != '-' && (c < '0' || c > '9') {
-			d.error(errPhase)
+			if fromQuoted {
+				d.error(fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into %v", item, v.Type()))
+			} else {
+				d.error(errPhase)
+			}
 		}
 		s := string(item)
 		switch v.Kind() {
 		default:
-			d.error(&UnmarshalTypeError{"number", v.Type()})
+			if fromQuoted {
+				d.error(fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into %v", item, v.Type()))
+			} else {
+				d.error(&UnmarshalTypeError{"number", v.Type()})
+			}
 		case reflect.Interface:
 			n, err := strconv.ParseFloat(s, 64)
 			if err != nil {
@@ -942,3 +969,11 @@ func unquoteBytes(s []byte) (t []byte, ok bool) {
 	}
 	return b[0:w], true
 }
+
+// The following is issue 3069.
+
+// BUG(rsc): This package ignores anonymous (embedded) struct fields
+// during encoding and decoding.  A future version may assign meaning
+// to them.  To force an anonymous field to be ignored in all future
+// versions of this package, use an explicit `json:"-"` tag in the struct
+// definition.

@@ -334,7 +334,7 @@ decode_format_attr (tree args, function_format_info *info, int validated_p)
 
 /* The C standard version C++ is treated as equivalent to
    or inheriting from, for the purpose of format features supported.  */
-#define CPLUSPLUS_STD_VER	STD_C94
+#define CPLUSPLUS_STD_VER	(cxx_dialect < cxx11 ? STD_C94 : STD_C99)
 /* The C standard version we are checking formats against when pedantic.  */
 #define C_STD_VER		((int) (c_dialect_cxx ()		   \
 				 ? CPLUSPLUS_STD_VER			   \
@@ -345,7 +345,8 @@ decode_format_attr (tree args, function_format_info *info, int validated_p)
    pedantic.  FEATURE_VER is the version in which the feature warned out
    appeared, which is higher than C_STD_VER.  */
 #define C_STD_NAME(FEATURE_VER) (c_dialect_cxx ()		\
-				 ? "ISO C++"			\
+				 ? (cxx_dialect < cxx11 ? "ISO C++98" \
+				    : "ISO C++11")		\
 				 : ((FEATURE_VER) == STD_EXT	\
 				    ? "ISO C"			\
 				    : "ISO C90"))
@@ -2423,13 +2424,13 @@ check_format_types (format_wanted_type *types)
 	continue;
       /* If we want 'void *', allow any pointer type.
 	 (Anything else would already have got a warning.)
-	 With -pedantic, only allow pointers to void and to character
+	 With -Wpedantic, only allow pointers to void and to character
 	 types.  */
       if (wanted_type == void_type_node
 	  && (!pedantic || (i == 1 && char_type_flag)))
 	continue;
       /* Don't warn about differences merely in signedness, unless
-	 -pedantic.  With -pedantic, warn if the type is a pointer
+	 -Wpedantic.  With -Wpedantic, warn if the type is a pointer
 	 target and not a character type, and for character types at
 	 a second level of indirection.  */
       if (TREE_CODE (wanted_type) == INTEGER_TYPE

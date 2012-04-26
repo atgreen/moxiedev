@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/java/text/spi
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,115 +26,13 @@ doko
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-DecimalFormatSymbolsProvider.class
-file
-
-
-
-
-2009-04-24T17:48:03.000000Z
-fcd81baa1236b27091f5752926fc7fa5
-2007-06-03T23:18:43.019099Z
-125302
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-437
-
-NumberFormatProvider.class
-file
-
-
-
-
-2009-04-24T17:48:03.000000Z
-8ec070dd692f0da194e6858e29d023fb
-2007-06-03T23:18:43.019099Z
-125302
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-499
-
-DateFormatProvider.class
-file
-
-
-
-
-2009-04-24T17:48:03.000000Z
-cf18a791fa15b75f34c4591e866836ef
-2007-06-03T23:18:43.019099Z
-125302
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-505
-
 BreakIteratorProvider.class
 file
 
 
 
 
-2009-04-24T17:48:03.000000Z
+2012-02-01T17:19:17.720243Z
 91baeed69748f3f846bdd907a8755045
 2007-06-03T23:18:43.019099Z
 125302
@@ -168,7 +66,7 @@ file
 
 
 
-2009-04-24T17:48:03.000000Z
+2012-02-01T17:19:17.720243Z
 66787113f3d562f972a0cea1c052075a
 2007-06-03T23:18:43.019099Z
 125302
@@ -202,7 +100,7 @@ file
 
 
 
-2009-04-24T17:48:03.000000Z
+2012-02-01T17:19:17.720243Z
 82899e044a7e0369e51e7b58ed779751
 2007-06-03T23:18:43.019099Z
 125302
@@ -229,4 +127,106 @@ has-props
 
 
 425
+
+DecimalFormatSymbolsProvider.class
+file
+
+
+
+
+2012-02-01T17:19:17.720243Z
+fcd81baa1236b27091f5752926fc7fa5
+2007-06-03T23:18:43.019099Z
+125302
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+437
+
+NumberFormatProvider.class
+file
+
+
+
+
+2012-02-01T17:19:17.720243Z
+8ec070dd692f0da194e6858e29d023fb
+2007-06-03T23:18:43.019099Z
+125302
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+499
+
+DateFormatProvider.class
+file
+
+
+
+
+2012-02-01T17:19:17.720243Z
+cf18a791fa15b75f34c4591e866836ef
+2007-06-03T23:18:43.019099Z
+125302
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+505
 

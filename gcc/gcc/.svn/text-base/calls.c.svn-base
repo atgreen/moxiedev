@@ -716,7 +716,7 @@ flags_from_decl_or_type (const_tree exp)
 	{
 	  if (is_tm_builtin (exp))
 	    flags |= ECF_TM_BUILTIN;
-	  else if ((flags & ECF_CONST) != 0
+	  else if ((flags & (ECF_CONST|ECF_NOVOPS)) != 0
 		   || lookup_attribute ("transaction_pure",
 					TYPE_ATTRIBUTES (TREE_TYPE (exp))))
 	    flags |= ECF_TM_PURE;
@@ -1642,13 +1642,8 @@ rtx_for_function_call (tree fndecl, tree addr)
   /* Get the function to call, in the form of RTL.  */
   if (fndecl)
     {
-      /* If this is the first use of the function, see if we need to
-	 make an external definition for it.  */
       if (!TREE_USED (fndecl) && fndecl != current_function_decl)
-	{
-	  assemble_external (fndecl);
-	  TREE_USED (fndecl) = 1;
-	}
+	TREE_USED (fndecl) = 1;
 
       /* Get a SYMBOL_REF rtx for the function address.  */
       funexp = XEXP (DECL_RTL (fndecl), 0);
@@ -1808,6 +1803,11 @@ mem_overlaps_already_clobbered_arg_p (rtx addr, unsigned HOST_WIDE_INT size)
     return true;
   else
     i = INTVAL (val);
+#ifdef STACK_GROWS_DOWNWARD
+  i -= crtl->args.pretend_args_size;
+#else
+  i += crtl->args.pretend_args_size;
+#endif
 
 #ifdef ARGS_GROW_DOWNWARD
   i = -i - size;

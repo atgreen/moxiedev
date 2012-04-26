@@ -1,29 +1,30 @@
+// Copyright 2010 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package time
 
 import "errors"
 
-const (
-	numeric = iota
-	alphabetic
-	separator
-	plus
-	minus
-)
-
 // These are predefined layouts for use in Time.Format.
 // The standard time used in the layouts is:
-//	Mon Jan 2 15:04:05 MST 2006  (MST is GMT-0700)
-// which is Unix time 1136243045.
-// (Think of it as 01/02 03:04:05PM '06 -0700.)
-// To define your own format, write down what the standard
-// time would look like formatted your way.
+//	Mon Jan 2 15:04:05 MST 2006
+// which is Unix time 1136243045. Since MST is GMT-0700,
+// the standard time can be thought of as
+//	01/02 03:04:05PM '06 -0700
+// To define your own format, write down what the standard time would look
+// like formatted your way; see the values of constants like ANSIC,
+// StampMicro or Kitchen for examples.
 //
 // Within the format string, an underscore _ represents a space that may be
 // replaced by a digit if the following number (a day) has two digits; for
 // compatibility with fixed-width Unix time formats.
 //
 // A decimal point followed by one or more zeros represents a fractional
-// second. When parsing (only), the input may contain a fractional second
+// second, printed to the given number of decimal places.  A decimal point
+// followed by one or more nines represents a fractional second, printed to
+// the given number of decimal places, with trailing zeros removed.
+// When parsing (only), the input may contain a fractional second
 // field immediately after the seconds field, even if the layout does not
 // signify its presence. In that case a decimal point followed by a maximal
 // series of digits is parsed as a fractional second.
@@ -37,16 +38,17 @@ const (
 //	Z0700  Z or ±hhmm
 //	Z07:00 Z or ±hh:mm
 const (
-	ANSIC    = "Mon Jan _2 15:04:05 2006"
-	UnixDate = "Mon Jan _2 15:04:05 MST 2006"
-	RubyDate = "Mon Jan 02 15:04:05 -0700 2006"
-	RFC822   = "02 Jan 06 1504 MST"
-	RFC822Z  = "02 Jan 06 1504 -0700" // RFC822 with numeric zone
-	RFC850   = "Monday, 02-Jan-06 15:04:05 MST"
-	RFC1123  = "Mon, 02 Jan 2006 15:04:05 MST"
-	RFC1123Z = "Mon, 02 Jan 2006 15:04:05 -0700" // RFC1123 with numeric zone
-	RFC3339  = "2006-01-02T15:04:05Z07:00"
-	Kitchen  = "3:04PM"
+	ANSIC       = "Mon Jan _2 15:04:05 2006"
+	UnixDate    = "Mon Jan _2 15:04:05 MST 2006"
+	RubyDate    = "Mon Jan 02 15:04:05 -0700 2006"
+	RFC822      = "02 Jan 06 1504 MST"
+	RFC822Z     = "02 Jan 06 1504 -0700" // RFC822 with numeric zone
+	RFC850      = "Monday, 02-Jan-06 15:04:05 MST"
+	RFC1123     = "Mon, 02 Jan 2006 15:04:05 MST"
+	RFC1123Z    = "Mon, 02 Jan 2006 15:04:05 -0700" // RFC1123 with numeric zone
+	RFC3339     = "2006-01-02T15:04:05Z07:00"
+	RFC3339Nano = "2006-01-02T15:04:05.999999999Z07:00"
+	Kitchen     = "3:04PM"
 	// Handy time stamps.
 	Stamp      = "Jan _2 15:04:05"
 	StampMilli = "Jan _2 15:04:05.000"
@@ -161,15 +163,17 @@ func nextStdChunk(layout string) (prefix, std, suffix string) {
 			if len(layout) >= i+6 && layout[i:i+6] == stdISO8601ColonTZ {
 				return layout[0:i], layout[i : i+6], layout[i+6:]
 			}
-		case '.': // .000 - multiple digits of zeros (only) for fractional seconds.
-			numZeros := 0
-			var j int
-			for j = i + 1; j < len(layout) && layout[j] == '0'; j++ {
-				numZeros++
-			}
-			// String of digits must end here - only fractional second is all zeros.
-			if numZeros > 0 && !isDigit(layout, j) {
-				return layout[0:i], layout[i : i+1+numZeros], layout[i+1+numZeros:]
+		case '.': // .000 or .999 - repeated digits for fractional seconds.
+			if i+1 < len(layout) && (layout[i+1] == '0' || layout[i+1] == '9') {
+				ch := layout[i+1]
+				j := i + 1
+				for j < len(layout) && layout[j] == ch {
+					j++
+				}
+				// String of digits must end here - only fractional second is all digits.
+				if !isDigit(layout, j) {
+					return layout[0:i], layout[i:j], layout[j:]
+				}
 			}
 		}
 	}
@@ -283,25 +287,16 @@ var atoiError = errors.New("time: invalid number")
 
 // Duplicates functionality in strconv, but avoids dependency.
 func atoi(s string) (x int, err error) {
-	i := 0
-	if len(s) > 0 && s[0] == '-' {
-		i++
+	neg := false
+	if s != "" && s[0] == '-' {
+		neg = true
+		s = s[1:]
 	}
-	if i >= len(s) {
+	x, rem, err := leadingInt(s)
+	if err != nil || rem != "" {
 		return 0, atoiError
 	}
-	for ; i < len(s); i++ {
-		c := s[i]
-		if c < '0' || c > '9' {
-			return 0, atoiError
-		}
-		if x >= (1<<31-10)/10 {
-			// will overflow
-			return 0, atoiError
-		}
-		x = x*10 + int(c) - '0'
-	}
-	if s[0] == '-' {
+	if neg {
 		x = -x
 	}
 	return x, nil
@@ -318,7 +313,7 @@ func pad(i int, padding string) string {
 func zeroPad(i int) string { return pad(i, "0") }
 
 // formatNano formats a fractional second, as nanoseconds.
-func formatNano(nanosec, n int) string {
+func formatNano(nanosec, n int, trim bool) string {
 	// User might give us bad data. Make sure it's positive and in range.
 	// They'll get nonsense output but it will have the right format.
 	s := itoa(int(uint(nanosec) % 1e9))
@@ -329,13 +324,21 @@ func formatNano(nanosec, n int) string {
 	if n > 9 {
 		n = 9
 	}
+	if trim {
+		for n > 0 && s[n-1] == '0' {
+			n--
+		}
+		if n == 0 {
+			return ""
+		}
+	}
 	return "." + s[:n]
 }
 
 // String returns the time formatted using the format string
-//	"Mon Jan _2 15:04:05 -0700 MST 2006"
+//	"2006-01-02 15:04:05.999999999 -0700 MST"
 func (t Time) String() string {
-	return t.Format("Mon Jan _2 15:04:05 -0700 MST 2006")
+	return t.Format("2006-01-02 15:04:05.999999999 -0700 MST")
 }
 
 type buffer []byte
@@ -344,20 +347,18 @@ func (b *buffer) WriteString(s string) {
 	*b = append(*b, s...)
 }
 
-func (b *buffer) WriteByte(c byte) {
-	*b = append(*b, c)
-}
-
 func (b *buffer) String() string {
 	return string([]byte(*b))
 }
 
 // Format returns a textual representation of the time value formatted
 // according to layout.  The layout defines the format by showing the
-// representation of a standard time, which is then used to describe
-// the time to be formatted.  Predefined layouts ANSIC, UnixDate,
-// RFC3339 and others describe standard representations. For more
-// information about the formats, see the documentation for ANSIC.
+// representation of the standard time,
+//	Mon Jan 2 15:04:05 -0700 MST 2006
+// which is then used to describe the time to be formatted. Predefined
+// layouts ANSIC, UnixDate, RFC3339 and others describe standard
+// representations. For more information about the formats and the
+// definition of the standard time, see the documentation for ANSIC.
 func (t Time) Format(layout string) string {
 	var (
 		year  int = -1
@@ -397,7 +398,24 @@ func (t Time) Format(layout string) string {
 		case stdYear:
 			p = zeroPad(year % 100)
 		case stdLongYear:
+			// Pad year to at least 4 digits.
 			p = itoa(year)
+			switch {
+			case year <= -1000:
+				// ok
+			case year <= -100:
+				p = p[:1] + "0" + p[1:]
+			case year <= -10:
+				p = p[:1] + "00" + p[1:]
+			case year < 0:
+				p = p[:1] + "000" + p[1:]
+			case year < 10:
+				p = "000" + p
+			case year < 100:
+				p = "00" + p
+			case year < 1000:
+				p = "0" + p
+			}
 		case stdMonth:
 			p = month.String()[:3]
 		case stdLongMonth:
@@ -490,8 +508,8 @@ func (t Time) Format(layout string) string {
 				p += zeroPad(zone % 60)
 			}
 		default:
-			if len(std) >= 2 && std[0:2] == ".0" {
-				p = formatNano(t.Nanosecond(), len(std)-1)
+			if len(std) >= 2 && (std[0:2] == ".0" || std[0:2] == ".9") {
+				p = formatNano(t.Nanosecond(), len(std)-1, std[1] == '9')
 			}
 		}
 		b.WriteString(p)
@@ -583,13 +601,15 @@ func skip(value, prefix string) (string, error) {
 }
 
 // Parse parses a formatted string and returns the time value it represents.
-// The layout defines the format by showing the representation of a standard
-// time, which is then used to describe the string to be parsed.  Predefined
-// layouts ANSIC, UnixDate, RFC3339 and others describe standard
-// representations.For more information about the formats, see the
-// documentation for ANSIC.
+// The layout defines the format by showing the representation of the
+// standard time,
+//	Mon Jan 2 15:04:05 -0700 MST 2006
+// which is then used to describe the string to be parsed. Predefined layouts
+// ANSIC, UnixDate, RFC3339 and others describe standard representations. For
+// more information about the formats and the definition of the standard
+// time, see the documentation for ANSIC.
 //
-// Elements omitted from the value are assumed to be zero, or when
+// Elements omitted from the value are assumed to be zero or, when
 // zero is impossible, one, so parsing "3:04pm" returns the time
 // corresponding to Jan 1, year 0, 15:04:00 UTC.
 // Years must be in the range 0000..9999. The day of the week is checked
@@ -892,4 +912,127 @@ func parseNanoseconds(value string, nbytes int) (ns int, rangeErrString string, 
 		ns *= 10
 	}
 	return
+}
+
+var errLeadingInt = errors.New("time: bad [0-9]*") // never printed
+
+// leadingInt consumes the leading [0-9]* from s.
+func leadingInt(s string) (x int, rem string, err error) {
+	i := 0
+	for ; i < len(s); i++ {
+		c := s[i]
+		if c < '0' || c > '9' {
+			break
+		}
+		if x >= (1<<31-10)/10 {
+			// overflow
+			return 0, "", errLeadingInt
+		}
+		x = x*10 + int(c) - '0'
+	}
+	return x, s[i:], nil
+}
+
+var unitMap = map[string]float64{
+	"ns": float64(Nanosecond),
+	"us": float64(Microsecond),
+	"µs": float64(Microsecond), // U+00B5 = micro symbol
+	"μs": float64(Microsecond), // U+03BC = Greek letter mu
+	"ms": float64(Millisecond),
+	"s":  float64(Second),
+	"m":  float64(Minute),
+	"h":  float64(Hour),
+}
+
+// ParseDuration parses a duration string.
+// A duration string is a possibly signed sequence of
+// decimal numbers, each with optional fraction and a unit suffix,
+// such as "300ms", "-1.5h" or "2h45m".
+// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+func ParseDuration(s string) (Duration, error) {
+	// [-+]?([0-9]*(\.[0-9]*)?[a-z]+)+
+	orig := s
+	f := float64(0)
+	neg := false
+
+	// Consume [-+]?
+	if s != "" {
+		c := s[0]
+		if c == '-' || c == '+' {
+			neg = c == '-'
+			s = s[1:]
+		}
+	}
+	// Special case: if all that is left is "0", this is zero.
+	if s == "0" {
+		return 0, nil
+	}
+	if s == "" {
+		return 0, errors.New("time: invalid duration " + orig)
+	}
+	for s != "" {
+		g := float64(0) // this element of the sequence
+
+		var x int
+		var err error
+
+		// The next character must be [0-9.]
+		if !(s[0] == '.' || ('0' <= s[0] && s[0] <= '9')) {
+			return 0, errors.New("time: invalid duration " + orig)
+		}
+		// Consume [0-9]*
+		pl := len(s)
+		x, s, err = leadingInt(s)
+		if err != nil {
+			return 0, errors.New("time: invalid duration " + orig)
+		}
+		g = float64(x)
+		pre := pl != len(s) // whether we consumed anything before a period
+
+		// Consume (\.[0-9]*)?
+		post := false
+		if s != "" && s[0] == '.' {
+			s = s[1:]
+			pl := len(s)
+			x, s, err = leadingInt(s)
+			if err != nil {
+				return 0, errors.New("time: invalid duration " + orig)
+			}
+			scale := 1
+			for n := pl - len(s); n > 0; n-- {
+				scale *= 10
+			}
+			g += float64(x) / float64(scale)
+			post = pl != len(s)
+		}
+		if !pre && !post {
+			// no digits (e.g. ".s" or "-.s")
+			return 0, errors.New("time: invalid duration " + orig)
+		}
+
+		// Consume unit.
+		i := 0
+		for ; i < len(s); i++ {
+			c := s[i]
+			if c == '.' || ('0' <= c && c <= '9') {
+				break
+			}
+		}
+		if i == 0 {
+			return 0, errors.New("time: missing unit in duration " + orig)
+		}
+		u := s[:i]
+		s = s[i:]
+		unit, ok := unitMap[u]
+		if !ok {
+			return 0, errors.New("time: unknown unit " + u + " in duration " + orig)
+		}
+
+		f += g * unit
+	}
+
+	if neg {
+		f = -f
+	}
+	return Duration(f), nil
 }

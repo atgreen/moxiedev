@@ -2759,7 +2759,7 @@ get_constraint_for_ssa_var (tree t, VEC(ce_s, heap) **results, bool address_p)
       if (node && node->alias)
 	{
 	  node = varpool_variable_node (node, NULL);
-	  t = node->decl;
+	  t = node->symbol.decl;
 	}
     }
 
@@ -5664,7 +5664,8 @@ intra_create_variable_infos (void)
 	 Treat restrict qualified references the same.  */
       if (TYPE_RESTRICT (TREE_TYPE (t))
 	  && ((DECL_BY_REFERENCE (t) && POINTER_TYPE_P (TREE_TYPE (t)))
-	      || TREE_CODE (TREE_TYPE (t)) == REFERENCE_TYPE))
+	      || TREE_CODE (TREE_TYPE (t)) == REFERENCE_TYPE)
+	  && !type_contains_placeholder_p (TREE_TYPE (TREE_TYPE (t))))
 	{
 	  struct constraint_expr lhsc, rhsc;
 	  varinfo_t vi;
@@ -6838,7 +6839,7 @@ static bool
 associate_varinfo_to_alias (struct cgraph_node *node, void *data)
 {
   if (node->alias || node->thunk.thunk_p)
-    insert_vi_for_tree (node->decl, (varinfo_t)data);
+    insert_vi_for_tree (node->symbol.decl, (varinfo_t)data);
   return false;
 }
 
@@ -6856,12 +6857,12 @@ ipa_pta_execute (void)
 
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
-      dump_cgraph (dump_file);
+      dump_symtab (dump_file);
       fprintf (dump_file, "\n");
     }
 
   /* Build the constraints.  */
-  for (node = cgraph_nodes; node; node = node->next)
+  FOR_EACH_DEFINED_FUNCTION (node)
     {
       varinfo_t vi;
       /* Nodes without a body are not interesting.  Especially do not
@@ -6872,18 +6873,18 @@ ipa_pta_execute (void)
 
       gcc_assert (!node->clone_of);
 
-      vi = create_function_info_for (node->decl,
-			             alias_get_name (node->decl));
+      vi = create_function_info_for (node->symbol.decl,
+			             alias_get_name (node->symbol.decl));
       cgraph_for_node_and_aliases (node, associate_varinfo_to_alias, vi, true);
     }
 
   /* Create constraints for global variables and their initializers.  */
-  for (var = varpool_nodes; var; var = var->next)
+  FOR_EACH_VARIABLE (var)
     {
       if (var->alias)
 	continue;
 
-      get_vi_for_tree (var->decl);
+      get_vi_for_tree (var->symbol.decl);
     }
 
   if (dump_file)
@@ -6895,7 +6896,7 @@ ipa_pta_execute (void)
     }
   from = VEC_length (constraint_t, constraints);
 
-  for (node = cgraph_nodes; node; node = node->next)
+  FOR_EACH_DEFINED_FUNCTION (node)
     {
       struct function *func;
       basic_block bb;
@@ -6909,33 +6910,34 @@ ipa_pta_execute (void)
 	{
 	  fprintf (dump_file,
 		   "Generating constraints for %s", cgraph_node_name (node));
-	  if (DECL_ASSEMBLER_NAME_SET_P (node->decl))
+	  if (DECL_ASSEMBLER_NAME_SET_P (node->symbol.decl))
 	    fprintf (dump_file, " (%s)",
-		     IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (node->decl)));
+		     IDENTIFIER_POINTER
+		       (DECL_ASSEMBLER_NAME (node->symbol.decl)));
 	  fprintf (dump_file, "\n");
 	}
 
-      func = DECL_STRUCT_FUNCTION (node->decl);
+      func = DECL_STRUCT_FUNCTION (node->symbol.decl);
       old_func_decl = current_function_decl;
       push_cfun (func);
-      current_function_decl = node->decl;
+      current_function_decl = node->symbol.decl;
 
       /* For externally visible or attribute used annotated functions use
 	 local constraints for their arguments.
 	 For local functions we see all callers and thus do not need initial
 	 constraints for parameters.  */
-      if (node->reachable_from_other_partition
-	  || node->local.externally_visible
-	  || node->needed)
+      if (node->symbol.used_from_other_partition
+	  || node->symbol.externally_visible
+	  || node->symbol.force_output)
 	{
 	  intra_create_variable_infos ();
 
 	  /* We also need to make function return values escape.  Nothing
 	     escapes by returning from main though.  */
-	  if (!MAIN_NAME_P (DECL_NAME (node->decl)))
+	  if (!MAIN_NAME_P (DECL_NAME (node->symbol.decl)))
 	    {
 	      varinfo_t fi, rvi;
-	      fi = lookup_vi_for_tree (node->decl);
+	      fi = lookup_vi_for_tree (node->symbol.decl);
 	      rvi = first_vi_for_offset (fi, fi_result);
 	      if (rvi && rvi->offset == fi_result)
 		{
@@ -7002,7 +7004,7 @@ ipa_pta_execute (void)
   ipa_escaped_pt.ipa_escaped = 0;
 
   /* Assign the points-to sets to the SSA names in the unit.  */
-  for (node = cgraph_nodes; node; node = node->next)
+  FOR_EACH_DEFINED_FUNCTION (node)
     {
       tree ptr;
       struct function *fn;
@@ -7016,7 +7018,7 @@ ipa_pta_execute (void)
       if (!cgraph_function_with_gimple_body_p (node))
 	continue;
 
-      fn = DECL_STRUCT_FUNCTION (node->decl);
+      fn = DECL_STRUCT_FUNCTION (node->symbol.decl);
 
       /* Compute the points-to sets for pointer SSA_NAMEs.  */
       FOR_EACH_VEC_ELT (tree, fn->gimple_df->ssa_names, i, ptr)
@@ -7027,7 +7029,7 @@ ipa_pta_execute (void)
 	}
 
       /* Compute the call-use and call-clobber sets for all direct calls.  */
-      fi = lookup_vi_for_tree (node->decl);
+      fi = lookup_vi_for_tree (node->symbol.decl);
       gcc_assert (fi->is_fn_info);
       find_what_var_points_to (first_vi_for_offset (fi, fi_clobbers),
 			       &clobbers);

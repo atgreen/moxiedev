@@ -74,7 +74,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "value-prof.h"
 #include "alloc-pool.h"
 #include "tree-mudflap.h"
-#include "tree-pass.h"
 #include "gimple.h"
 #include "tree-ssa-alias.h"
 #include "plugin.h"
@@ -413,7 +412,7 @@ wrapup_global_declaration_2 (tree decl)
 	       && (TREE_USED (decl)
 		   || TREE_USED (DECL_ASSEMBLER_NAME (decl))))
 	/* needed */;
-      else if (node && node->needed)
+      else if (node && node->analyzed)
 	/* needed */;
       else if (DECL_COMDAT (decl))
 	needed = false;
@@ -486,7 +485,6 @@ check_global_declaration_1 (tree decl)
 	warning (OPT_Wunused_function, "%q+F declared %<static%> but never defined", decl);
       /* This symbol is effectively an "extern" declaration now.  */
       TREE_PUBLIC (decl) = 1;
-      assemble_external (decl);
     }
 
   /* Warn about static fns or vars defined but not used.  */
@@ -582,6 +580,7 @@ compile_file (void)
      basically finished.  */
   if (in_lto_p || !flag_lto || flag_fat_lto_objects)
     {
+      varpool_remove_unreferenced_decls ();
       varpool_assemble_pending_decls ();
       finish_aliases_2 ();
 
@@ -591,7 +590,7 @@ compile_file (void)
 
       output_shared_constant_pool ();
       output_object_blocks ();
-  finish_tm_clone_pairs ();
+      finish_tm_clone_pairs ();
 
       /* Write out any pending weak symbol declarations.  */
       weak_finish ();
@@ -962,63 +961,6 @@ init_asm_output (const char *name)
     }
 }
 
-/* Default tree printer.   Handles declarations only.  */
-bool
-default_tree_printer (pretty_printer *pp, text_info *text, const char *spec,
-		      int precision, bool wide, bool set_locus, bool hash)
-{
-  tree t;
-
-  /* FUTURE: %+x should set the locus.  */
-  if (precision != 0 || wide || hash)
-    return false;
-
-  switch (*spec)
-    {
-    case 'E':
-      t = va_arg (*text->args_ptr, tree);
-      if (TREE_CODE (t) == IDENTIFIER_NODE)
-	{
-	  pp_identifier (pp, IDENTIFIER_POINTER (t));
-	  return true;
-	}
-      break;
-
-    case 'D':
-      t = va_arg (*text->args_ptr, tree);
-      if (DECL_DEBUG_EXPR_IS_FROM (t) && DECL_DEBUG_EXPR (t))
-	t = DECL_DEBUG_EXPR (t);
-      break;
-
-    case 'F':
-    case 'T':
-      t = va_arg (*text->args_ptr, tree);
-      break;
-
-    case 'K':
-      percent_K_format (text);
-      return true;
-
-    default:
-      return false;
-    }
-
-  if (set_locus && text->locus)
-    *text->locus = DECL_SOURCE_LOCATION (t);
-
-  if (DECL_P (t))
-    {
-      const char *n = DECL_NAME (t)
-        ? identifier_to_locale (lang_hooks.decl_printable_name (t, 2))
-        : _("<anonymous>");
-      pp_string (pp, n);
-    }
-  else
-    dump_generic_node (pp, t, 0, TDF_DIAGNOSTIC, 0);
-
-  return true;
-}
-
 /* A helper function; used as the reallocator function for cpp's line
    table.  */
 static void *
@@ -1163,13 +1105,17 @@ general_init (const char *argv0)
   /* Initialize the diagnostics reporting machinery, so option parsing
      can give warnings and errors.  */
   diagnostic_initialize (global_dc, N_OPTS);
-  diagnostic_starter (global_dc) = default_tree_diagnostic_starter;
-  /* By default print macro expansion contexts in the diagnostic
-     finalizer -- for tokens resulting from macro macro expansion.  */
-  diagnostic_finalizer (global_dc) = virt_loc_aware_diagnostic_finalizer;
   /* Set a default printer.  Language specific initializations will
      override it later.  */
-  pp_format_decoder (global_dc->printer) = &default_tree_printer;
+  tree_diagnostics_defaults (global_dc);
+  /* FIXME: This should probably be moved to C-family
+     language-specific initializations.  */
+  /* By default print macro expansion contexts in the diagnostic
+     finalizer -- for tokens resulting from macro expansion.  */
+  diagnostic_finalizer (global_dc) = virt_loc_aware_diagnostic_finalizer;
+
+  global_dc->show_caret
+    = global_options_init.x_flag_diagnostics_show_caret;
   global_dc->show_option_requested
     = global_options_init.x_flag_diagnostics_show_option;
   global_dc->show_column
@@ -1315,12 +1261,11 @@ process_options (void)
   if (flag_graphite
       || flag_graphite_identity
       || flag_loop_block
-      || flag_loop_flatten
       || flag_loop_interchange
       || flag_loop_strip_mine
       || flag_loop_parallelize_all)
     sorry ("Graphite loop optimizations cannot be used (-fgraphite, "
-	   "-fgraphite-identity, -floop-block, -floop-flatten, "
+	   "-fgraphite-identity, -floop-block, "
 	   "-floop-interchange, -floop-strip-mine, -floop-parallelize-all, "
 	   "and -ftree-loop-linear)");
 #endif
@@ -1429,11 +1374,6 @@ process_options (void)
 	  flag_dump_final_insns = NULL;
 	}
     }
-
-  /* Unless over-ridden for the target, assume that all DWARF levels
-     may be emitted, if DWARF2_DEBUG is selected.  */
-  if (dwarf_strict < 0)
-    dwarf_strict = 0;
 
   /* A lot of code assumes write_symbols == NO_DEBUG if the debugging
      level is 0.  */

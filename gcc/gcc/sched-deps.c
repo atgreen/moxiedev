@@ -2,7 +2,7 @@
    instructions.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998,
    1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-   2011
+   2011, 2012
    Free Software Foundation, Inc.
    Contributed by Michael Tiemann (tiemann@cygnus.com) Enhanced by,
    and currently maintained by, Jim Wilson (wilson@cygnus.com)
@@ -520,9 +520,6 @@ sched_get_condition_with_rev_uncached (const_rtx insn, bool *rev)
 {
   rtx pat = PATTERN (insn);
   rtx src;
-
-  if (pat == 0)
-    return 0;
 
   if (rev)
     *rev = false;
@@ -1731,7 +1728,8 @@ add_insn_mem_dependence (struct deps_desc *deps, bool read_p,
   if (sched_deps_info->use_cselib)
     {
       mem = shallow_copy_rtx (mem);
-      XEXP (mem, 0) = cselib_subst_to_values (XEXP (mem, 0), GET_MODE (mem));
+      XEXP (mem, 0) = cselib_subst_to_values_from_insn (XEXP (mem, 0),
+							GET_MODE (mem), insn);
     }
   link = alloc_EXPR_LIST (VOIDmode, canon_rtx (mem), *mem_list);
   *mem_list = link;
@@ -2452,7 +2450,9 @@ sched_analyze_1 (struct deps_desc *deps, rtx x, rtx insn)
 	  t = shallow_copy_rtx (dest);
 	  cselib_lookup_from_insn (XEXP (t, 0), address_mode, 1,
 				   GET_MODE (t), insn);
-	  XEXP (t, 0) = cselib_subst_to_values (XEXP (t, 0), GET_MODE (t));
+	  XEXP (t, 0)
+	    = cselib_subst_to_values_from_insn (XEXP (t, 0), GET_MODE (t),
+						insn);
 	}
       t = canon_rtx (t);
 
@@ -2612,7 +2612,9 @@ sched_analyze_2 (struct deps_desc *deps, rtx x, rtx insn)
 	    t = shallow_copy_rtx (t);
 	    cselib_lookup_from_insn (XEXP (t, 0), address_mode, 1,
 				     GET_MODE (t), insn);
-	    XEXP (t, 0) = cselib_subst_to_values (XEXP (t, 0), GET_MODE (t));
+	    XEXP (t, 0)
+	      = cselib_subst_to_values_from_insn (XEXP (t, 0), GET_MODE (t),
+						  insn);
 	  }
 
 	if (!DEBUG_INSN_P (insn))
@@ -2636,8 +2638,7 @@ sched_analyze_2 (struct deps_desc *deps, rtx x, rtx insn)
 	    pending_mem = deps->pending_write_mems;
 	    while (pending)
 	      {
-		if (true_dependence (XEXP (pending_mem, 0), VOIDmode,
-				     t, rtx_varies_p)
+		if (true_dependence (XEXP (pending_mem, 0), VOIDmode, t)
 		    && ! sched_insns_conditions_mutex_p (insn,
 							 XEXP (pending, 0)))
 		  note_mem_dep (t, XEXP (pending_mem, 0), XEXP (pending, 0),

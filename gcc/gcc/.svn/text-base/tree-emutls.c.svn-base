@@ -338,7 +338,7 @@ new_emutls_decl (tree decl, tree alias_of)
   else 
     varpool_create_variable_alias (to,
 				   varpool_node_for_asm
-				    (DECL_ASSEMBLER_NAME (alias_of))->decl);
+				    (DECL_ASSEMBLER_NAME (alias_of))->symbol.decl);
   return to;
 }
 
@@ -366,7 +366,7 @@ emutls_decl (tree decl)
 
   i = emutls_index (decl);
   var = VEC_index (varpool_node_ptr, control_vars, i);
-  return var->decl;
+  return var->symbol.decl;
 }
 
 /* Generate a call statement to initialize CONTROL_DECL for TLS_DECL.
@@ -428,7 +428,7 @@ gen_emutls_addr (tree decl, struct lower_emutls_data *d)
       gimple x;
 
       cvar = VEC_index (varpool_node_ptr, control_vars, index);
-      cdecl = cvar->decl;
+      cdecl = cvar->symbol.decl;
       TREE_ADDRESSABLE (cdecl) = 1;
 
       addr = create_tmp_var (build_pointer_type (TREE_TYPE (decl)), NULL);
@@ -446,7 +446,7 @@ gen_emutls_addr (tree decl, struct lower_emutls_data *d)
 
       /* We may be adding a new reference to a new variable to the function.
          This means we have to play with the ipa-reference web.  */
-      ipa_record_reference (d->cfun_node, NULL, NULL, cvar, IPA_REF_ADDR, x);
+      ipa_record_reference ((symtab_node)d->cfun_node, (symtab_node)cvar, IPA_REF_ADDR, x);
 
       /* Record this ssa_name for possible use later in the basic block.  */
       VEC_replace (tree, access_vars, index, addr);
@@ -619,8 +619,8 @@ lower_emutls_function_body (struct cgraph_node *node)
   struct lower_emutls_data d;
   bool any_edge_inserts = false;
 
-  current_function_decl = node->decl;
-  push_cfun (DECL_STRUCT_FUNCTION (node->decl));
+  current_function_decl = node->symbol.decl;
+  push_cfun (DECL_STRUCT_FUNCTION (node->symbol.decl));
 
   d.cfun_node = node;
   d.builtin_decl = builtin_decl_explicit (BUILT_IN_EMUTLS_GET_ADDRESS);
@@ -703,7 +703,7 @@ create_emultls_var (struct varpool_node *var, void *data)
   tree cdecl;
   struct varpool_node *cvar;
 
-  cdecl = new_emutls_decl (var->decl, var->alias_of);
+  cdecl = new_emutls_decl (var->symbol.decl, var->alias_of);
 
   cvar = varpool_get_node (cdecl);
   VEC_quick_push (varpool_node_ptr, control_vars, cvar);
@@ -713,7 +713,7 @@ create_emultls_var (struct varpool_node *var, void *data)
       /* Make sure the COMMON block control variable gets initialized.
 	 Note that there's no point in doing this for aliases; we only
 	 need to do this once for the main variable.  */
-      emutls_common_1 (var->decl, cdecl, (tree *)data);
+      emutls_common_1 (var->symbol.decl, cdecl, (tree *)data);
     }
   if (var->alias && !var->alias_of)
     cvar->alias = true;
@@ -722,8 +722,8 @@ create_emultls_var (struct varpool_node *var, void *data)
      preventing the variable from re-appearing in the GIMPLE.  We cheat
      and use the control variable here (rather than a full call_expr),
      which is special-cased inside the DWARF2 output routines.  */
-  SET_DECL_VALUE_EXPR (var->decl, cdecl);
-  DECL_HAS_VALUE_EXPR_P (var->decl) = 1;
+  SET_DECL_VALUE_EXPR (var->symbol.decl, cdecl);
+  DECL_HAS_VALUE_EXPR_P (var->symbol.decl) = 1;
   return false;
 }
 
@@ -741,11 +741,11 @@ ipa_lower_emutls (void)
   tls_vars = varpool_node_set_new ();
 
   /* Examine all global variables for TLS variables.  */
-  for (var = varpool_nodes; var ; var = var->next)
-    if (DECL_THREAD_LOCAL_P (var->decl))
+  FOR_EACH_VARIABLE (var)
+    if (DECL_THREAD_LOCAL_P (var->symbol.decl))
       {
-	gcc_checking_assert (TREE_STATIC (var->decl)
-			     || DECL_EXTERNAL (var->decl));
+	gcc_checking_assert (TREE_STATIC (var->symbol.decl)
+			     || DECL_EXTERNAL (var->symbol.decl));
 	varpool_node_set_add (tls_vars, var);
 	if (var->alias && var->analyzed)
 	  varpool_node_set_add (tls_vars, varpool_variable_node (var, NULL));
@@ -790,8 +790,8 @@ ipa_lower_emutls (void)
     }
 
   /* Adjust all uses of TLS variables within the function bodies.  */
-  for (func = cgraph_nodes; func; func = func->next)
-    if (func->reachable && func->lowered)
+  FOR_EACH_DEFINED_FUNCTION (func)
+    if (func->lowered)
       lower_emutls_function_body (func);
 
   /* Generate the constructor for any COMMON control variables created.  */

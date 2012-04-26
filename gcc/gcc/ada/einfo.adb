@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -161,9 +161,10 @@ package body Einfo is
 
    --    Body_Entity                     Node19
    --    Corresponding_Discriminant      Node19
+   --    Default_Aspect_Component_Value  Node19
+   --    Default_Aspect_Value            Node19
    --    Extra_Accessibility_Of_Result   Node19
    --    Parent_Subtype                  Node19
-   --    Related_Array_Object            Node19
    --    Size_Check_Code                 Node19
    --    Spec_Entity                     Node19
    --    Underlying_Full_View            Node19
@@ -217,6 +218,7 @@ package body Einfo is
    --    Debug_Renaming_Link             Node25
    --    DT_Offset_To_Top_Func           Node25
    --    PPC_Wrapper                     Node25
+   --    Related_Array_Object            Node25
    --    Static_Predicate                List25
    --    Task_Body_Procedure             Node25
 
@@ -346,7 +348,7 @@ package body Einfo is
 
    --    Is_Itype                        Flag91
    --    Size_Known_At_Compile_Time      Flag92
-   --    Has_Subprogram_Descriptor       Flag93
+   --    Reverse_Storage_Order           Flag93
    --    Is_Generic_Actual_Type          Flag94
    --    Uses_Sec_Stack                  Flag95
    --    Warnings_Off                    Flag96
@@ -450,7 +452,6 @@ package body Einfo is
    --    Is_Ada_2005_Only                Flag185
    --    Is_Interface                    Flag186
    --    Has_Constrained_Partial_View    Flag187
-   --    Has_Persistent_BSS              Flag188
    --    Is_Pure_Unit_Access_Type        Flag189
    --    Has_Specified_Stream_Input      Flag190
 
@@ -465,7 +466,6 @@ package body Einfo is
    --    Is_Ada_2012_Only                Flag199
 
    --    Has_Delayed_Aspects             Flag200
-   --    Has_Anon_Block_Suffix           Flag201
    --    Itype_Printed                   Flag202
    --    Has_Pragma_Pure                 Flag203
    --    Is_Known_Null                   Flag204
@@ -524,6 +524,9 @@ package body Einfo is
    --    Is_Processed_Transient          Flag252
    --    Has_Anonymous_Master            Flag253
    --    Is_Implementation_Defined       Flag254
+
+   --    (unused)                        Flag188
+   --    (unused)                        Flag201
 
    -----------------------
    -- Local subprograms --
@@ -772,6 +775,18 @@ package body Einfo is
    begin
       return Node25 (Id);
    end Debug_Renaming_Link;
+
+   function Default_Aspect_Component_Value (Id : E) return N is
+   begin
+      pragma Assert (Is_Array_Type (Id));
+      return Node19 (Id);
+   end Default_Aspect_Component_Value;
+
+   function Default_Aspect_Value (Id : E) return N is
+   begin
+      pragma Assert (Is_Scalar_Type (Id));
+      return Node19 (Id);
+   end Default_Aspect_Value;
 
    function Default_Expr_Function (Id : E) return E is
    begin
@@ -1184,11 +1199,6 @@ package body Einfo is
       return Flag79 (Id);
    end Has_All_Calls_Remote;
 
-   function Has_Anon_Block_Suffix (Id : E) return B is
-   begin
-      return Flag201 (Id);
-   end Has_Anon_Block_Suffix;
-
    function Has_Anonymous_Master (Id : E) return B is
    begin
       pragma Assert
@@ -1384,11 +1394,6 @@ package body Einfo is
       return Flag154 (Id);
    end Has_Per_Object_Constraint;
 
-   function Has_Persistent_BSS (Id : E) return B is
-   begin
-      return Flag188 (Id);
-   end Has_Persistent_BSS;
-
    function Has_Postconditions (Id : E) return B is
    begin
       pragma Assert (Is_Subprogram (Id));
@@ -1564,11 +1569,6 @@ package body Einfo is
    begin
       return Flag184 (Id);
    end Has_Stream_Size_Clause;
-
-   function Has_Subprogram_Descriptor (Id : E) return B is
-   begin
-      return Flag93 (Id);
-   end Has_Subprogram_Descriptor;
 
    function Has_Task (Id : E) return B is
    begin
@@ -2528,7 +2528,7 @@ package body Einfo is
    function Related_Array_Object (Id : E) return E is
    begin
       pragma Assert (Is_Array_Type (Id));
-      return Node19 (Id);
+      return Node25 (Id);
    end Related_Array_Object;
 
    function Related_Expression (Id : E) return N is
@@ -2609,6 +2609,12 @@ package body Einfo is
       pragma Assert (Is_Record_Type (Id));
       return Flag164 (Base_Type (Id));
    end Reverse_Bit_Order;
+
+   function Reverse_Storage_Order (Id : E) return B is
+   begin
+      pragma Assert (Is_Record_Type (Id));
+      return Flag93 (Base_Type (Id));
+   end Reverse_Storage_Order;
 
    function RM_Size (Id : E) return U is
    begin
@@ -3262,6 +3268,18 @@ package body Einfo is
       Set_Node25 (Id, V);
    end Set_Debug_Renaming_Link;
 
+   procedure Set_Default_Aspect_Component_Value (Id : E; V : E) is
+   begin
+      pragma Assert (Is_Array_Type (Id));
+      Set_Node19 (Id, V);
+   end Set_Default_Aspect_Component_Value;
+
+   procedure Set_Default_Aspect_Value (Id : E; V : E) is
+   begin
+      pragma Assert (Is_Scalar_Type (Id));
+      Set_Node19 (Id, V);
+   end Set_Default_Aspect_Value;
+
    procedure Set_Default_Expr_Function (Id : E; V : E) is
    begin
       pragma Assert (Is_Formal (Id));
@@ -3681,11 +3699,6 @@ package body Einfo is
       Set_Flag79 (Id, V);
    end Set_Has_All_Calls_Remote;
 
-   procedure Set_Has_Anon_Block_Suffix (Id : E; V : B := True) is
-   begin
-      Set_Flag201 (Id, V);
-   end Set_Has_Anon_Block_Suffix;
-
    procedure Set_Has_Anonymous_Master (Id : E; V : B := True) is
    begin
       pragma Assert
@@ -3896,11 +3909,6 @@ package body Einfo is
       Set_Flag154 (Id, V);
    end Set_Has_Per_Object_Constraint;
 
-   procedure Set_Has_Persistent_BSS (Id : E; V : B := True) is
-   begin
-      Set_Flag188 (Id, V);
-   end Set_Has_Persistent_BSS;
-
    procedure Set_Has_Postconditions (Id : E; V : B := True) is
    begin
       pragma Assert (Is_Subprogram (Id));
@@ -4080,11 +4088,6 @@ package body Einfo is
       pragma Assert (Is_Elementary_Type (Id));
       Set_Flag184 (Id, V);
    end Set_Has_Stream_Size_Clause;
-
-   procedure Set_Has_Subprogram_Descriptor (Id : E; V : B := True) is
-   begin
-      Set_Flag93 (Id, V);
-   end Set_Has_Subprogram_Descriptor;
 
    procedure Set_Has_Task (Id : E; V : B := True) is
    begin
@@ -5083,7 +5086,7 @@ package body Einfo is
    procedure Set_Related_Array_Object (Id : E; V : E) is
    begin
       pragma Assert (Is_Array_Type (Id));
-      Set_Node19 (Id, V);
+      Set_Node25 (Id, V);
    end Set_Related_Array_Object;
 
    procedure Set_Related_Expression (Id : E; V : N) is
@@ -5165,6 +5168,13 @@ package body Einfo is
         (Is_Record_Type (Id) and then Is_Base_Type (Id));
       Set_Flag164 (Id, V);
    end Set_Reverse_Bit_Order;
+
+   procedure Set_Reverse_Storage_Order (Id : E; V : B := True) is
+   begin
+      pragma Assert
+        (Is_Record_Type (Id) and then Is_Base_Type (Id));
+      Set_Flag93 (Id, V);
+   end Set_Reverse_Storage_Order;
 
    procedure Set_RM_Size (Id : E; V : U) is
    begin
@@ -5870,7 +5880,9 @@ package body Einfo is
 
    begin
       pragma Assert
-        (Is_Record_Type (Id) or else Is_Incomplete_Or_Private_Type (Id));
+        (Is_Record_Type (Id)
+         or else Is_Incomplete_Or_Private_Type (Id)
+         or else Has_Discriminants (Id));
 
       Comp_Id := First_Entity (Id);
       while Present (Comp_Id) loop
@@ -7453,7 +7465,6 @@ package body Einfo is
       W ("Has_Aliased_Components",          Flag135 (Id));
       W ("Has_Alignment_Clause",            Flag46  (Id));
       W ("Has_All_Calls_Remote",            Flag79  (Id));
-      W ("Has_Anon_Block_Suffix",           Flag201 (Id));
       W ("Has_Anonymous_Master",            Flag253 (Id));
       W ("Has_Atomic_Components",           Flag86  (Id));
       W ("Has_Biased_Representation",       Flag139 (Id));
@@ -7487,7 +7498,6 @@ package body Einfo is
       W ("Has_Non_Standard_Rep",            Flag75  (Id));
       W ("Has_Object_Size_Clause",          Flag172 (Id));
       W ("Has_Per_Object_Constraint",       Flag154 (Id));
-      W ("Has_Persistent_BSS",              Flag188 (Id));
       W ("Has_Postconditions",              Flag240 (Id));
       W ("Has_Pragma_Controlled",           Flag27  (Id));
       W ("Has_Pragma_Elaborate_Body",       Flag150 (Id));
@@ -7520,7 +7530,6 @@ package body Einfo is
       W ("Has_Static_Discriminants",        Flag211 (Id));
       W ("Has_Storage_Size_Clause",         Flag23  (Id));
       W ("Has_Stream_Size_Clause",          Flag184 (Id));
-      W ("Has_Subprogram_Descriptor",       Flag93  (Id));
       W ("Has_Task",                        Flag30  (Id));
       W ("Has_Thunks",                      Flag228 (Id));
       W ("Has_Unchecked_Union",             Flag123 (Id));
@@ -7662,6 +7671,7 @@ package body Einfo is
       W ("Return_Present",                  Flag54  (Id));
       W ("Returns_By_Ref",                  Flag90  (Id));
       W ("Reverse_Bit_Order",               Flag164 (Id));
+      W ("Reverse_Storage_Order",           Flag93  (Id));
       W ("Sec_Stack_Needed_For_Return",     Flag167 (Id));
       W ("Size_Depends_On_Discriminant",    Flag177 (Id));
       W ("Size_Known_At_Compile_Time",      Flag92  (Id));
@@ -8317,12 +8327,14 @@ package body Einfo is
          when E_Discriminant                               =>
             Write_Str ("Corresponding_Discriminant");
 
+         when Scalar_Kind                                  =>
+            Write_Str ("Default_Value");
+
+         when E_Array_Type                                 =>
+            Write_Str ("Default_Component_Value");
+
          when E_Record_Type                                =>
             Write_Str ("Parent_Subtype");
-
-         when E_Array_Type                                 |
-              E_Array_Subtype                              =>
-            Write_Str ("Related_Array_Object");
 
          when E_Constant                                   |
               E_Variable                                   =>
@@ -8618,6 +8630,10 @@ package body Einfo is
               E_Record_Type_With_Private                   |
               E_Record_Subtype_With_Private                =>
             Write_Str ("Interfaces");
+
+         when E_Array_Type                                 |
+              E_Array_Subtype                              =>
+            Write_Str ("Related_Array_Object");
 
          when Task_Kind                                    =>
             Write_Str ("Task_Body_Procedure");

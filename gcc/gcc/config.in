@@ -1123,7 +1123,7 @@
 
 /* Define .init_array/.fini_array sections are available and working. */
 #ifndef USED_FOR_TARGET
-#undef HAVE_INITFINI_ARRAY
+#undef HAVE_INITFINI_ARRAY_SUPPORT
 #endif
 
 
@@ -1603,12 +1603,6 @@
 /* Define to the linker option to disable use of shared objects. */
 #ifndef USED_FOR_TARGET
 #undef LD_STATIC_OPTION
-#endif
-
-
-/* Define to the linker flags to use for -pthread. */
-#ifndef USED_FOR_TARGET
-#undef LIB_THREAD_LDFLAGS_SPEC
 #endif
 
 

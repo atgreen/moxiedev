@@ -7,7 +7,6 @@
 package doc
 
 import (
-	"go/ast"
 	"io"
 	"regexp"
 	"strings"
@@ -15,74 +14,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 )
-
-func isWhitespace(ch byte) bool { return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' }
-
-func stripTrailingWhitespace(s string) string {
-	i := len(s)
-	for i > 0 && isWhitespace(s[i-1]) {
-		i--
-	}
-	return s[0:i]
-}
-
-// CommentText returns the text of comment,
-// with the comment markers - //, /*, and */ - removed.
-func CommentText(comment *ast.CommentGroup) string {
-	if comment == nil {
-		return ""
-	}
-	comments := make([]string, len(comment.List))
-	for i, c := range comment.List {
-		comments[i] = string(c.Text)
-	}
-
-	lines := make([]string, 0, 10) // most comments are less than 10 lines
-	for _, c := range comments {
-		// Remove comment markers.
-		// The parser has given us exactly the comment text.
-		switch c[1] {
-		case '/':
-			//-style comment
-			c = c[2:]
-			// Remove leading space after //, if there is one.
-			// TODO(gri) This appears to be necessary in isolated
-			//           cases (bignum.RatFromString) - why?
-			if len(c) > 0 && c[0] == ' ' {
-				c = c[1:]
-			}
-		case '*':
-			/*-style comment */
-			c = c[2 : len(c)-2]
-		}
-
-		// Split on newlines.
-		cl := strings.Split(c, "\n")
-
-		// Walk lines, stripping trailing white space and adding to list.
-		for _, l := range cl {
-			lines = append(lines, stripTrailingWhitespace(l))
-		}
-	}
-
-	// Remove leading blank lines; convert runs of
-	// interior blank lines to a single blank line.
-	n := 0
-	for _, line := range lines {
-		if line != "" || n > 0 && lines[n-1] != "" {
-			lines[n] = line
-			n++
-		}
-	}
-	lines = lines[0:n]
-
-	// Add final "" entry to get trailing newline from Join.
-	if n > 0 && lines[n-1] != "" {
-		lines = append(lines, "")
-	}
-
-	return strings.Join(lines, "\n")
-}
 
 var (
 	ldquo = []byte("&ldquo;")
@@ -125,7 +56,7 @@ const (
 		filePart + `([:.,]` + filePart + `)*`
 )
 
-var matchRx = regexp.MustCompile(`(` + identRx + `)|(` + urlRx + `)`)
+var matchRx = regexp.MustCompile(`(` + urlRx + `)|(` + identRx + `)`)
 
 var (
 	html_a      = []byte(`<a href="`)
@@ -137,7 +68,8 @@ var (
 	html_endp   = []byte("</p>\n")
 	html_pre    = []byte("<pre>")
 	html_endpre = []byte("</pre>\n")
-	html_h      = []byte("<h3>")
+	html_h      = []byte(`<h3 id="`)
+	html_hq     = []byte(`">`)
 	html_endh   = []byte("</h3>\n")
 )
 
@@ -155,7 +87,7 @@ func emphasize(w io.Writer, line string, words map[string]string, nice bool) {
 		if m == nil {
 			break
 		}
-		// m >= 6 (two parenthesized sub-regexps in matchRx, 1st one is identRx)
+		// m >= 6 (two parenthesized sub-regexps in matchRx, 1st one is urlRx)
 
 		// write text before match
 		commentEscape(w, line[0:m[0]], nice)
@@ -167,8 +99,8 @@ func emphasize(w io.Writer, line string, words map[string]string, nice bool) {
 		if words != nil {
 			url, italics = words[string(match)]
 		}
-		if m[2] < 0 {
-			// didn't match against first parenthesized sub-regexp; must be match against urlRx
+		if m[2] >= 0 {
+			// match against first parenthesized sub-regexp; must be match against urlRx
 			if !italics {
 				// no alternative URL in words list, use match instead
 				url = string(match)
@@ -294,6 +226,12 @@ type block struct {
 	lines []string
 }
 
+var nonAlphaNumRx = regexp.MustCompile(`[^a-zA-Z0-9]`)
+
+func anchorID(line string) string {
+	return nonAlphaNumRx.ReplaceAllString(line, "_")
+}
+
 // ToHTML converts comment text to formatted HTML.
 // The comment was prepared by DocReader,
 // so it is known not to have leading, trailing blank lines
@@ -322,8 +260,17 @@ func ToHTML(w io.Writer, text string, words map[string]string) {
 			w.Write(html_endp)
 		case opHead:
 			w.Write(html_h)
+			id := ""
 			for _, line := range b.lines {
+				if id == "" {
+					id = anchorID(line)
+					w.Write([]byte(id))
+					w.Write(html_hq)
+				}
 				commentEscape(w, line, true)
+			}
+			if id == "" {
+				w.Write(html_hq)
 			}
 			w.Write(html_endh)
 		case opPre:
@@ -389,7 +336,7 @@ func blocks(text string) []block {
 
 		if lastWasBlank && !lastWasHeading && i+2 < len(lines) &&
 			isBlank(lines[i+1]) && !isBlank(lines[i+2]) && indentLen(lines[i+2]) == 0 {
-			// current line is non-blank, sourounded by blank lines
+			// current line is non-blank, surrounded by blank lines
 			// and the next non-blank line is not indented: this
 			// might be a heading.
 			if head := heading(line); head != "" {
@@ -422,12 +369,10 @@ func ToText(w io.Writer, text string, indent, preIndent string, width int) {
 		width:  width,
 		indent: indent,
 	}
-	for i, b := range blocks(text) {
+	for _, b := range blocks(text) {
 		switch b.op {
 		case opPara:
-			if i > 0 {
-				w.Write(nl)
-			}
+			// l.write will add leading newline if required
 			for _, line := range b.lines {
 				l.write(line)
 			}

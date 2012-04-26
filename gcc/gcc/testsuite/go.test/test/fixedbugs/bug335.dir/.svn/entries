@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/go.test/test/fixedbugs/bug335.dir
 svn://gcc.gnu.org/svn/gcc
 
@@ -32,7 +32,7 @@ file
 
 
 
-2011-09-25T18:02:27.047897Z
+2012-02-01T17:19:10.593465Z
 000aca618ffa89034bad6d1cd6169d88
 2011-09-21T23:05:39.964752Z
 179063
@@ -66,7 +66,7 @@ file
 
 
 
-2011-09-25T18:02:27.047897Z
+2012-02-01T17:19:10.593465Z
 0d195e24d4a797bea6e5fea0cfee7d99
 2011-09-21T23:05:39.964752Z
 179063

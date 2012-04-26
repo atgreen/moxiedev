@@ -2,7 +2,7 @@
 
 AC_PREREQ(2.64)
 AC_INIT(package-unused, version-unused,, libstdc++)
-AC_CONFIG_SRCDIR(src/ios.cc)
+AC_CONFIG_SRCDIR(src/shared/hashtable-aux.cc)
 AC_CONFIG_HEADER(config.h)
 
 # This works around the fact that libtool configuration may change LD
@@ -124,16 +124,17 @@ GLIBCXX_ENABLE_LONG_LONG([yes])
 GLIBCXX_ENABLE_WCHAR_T([yes])
 GLIBCXX_ENABLE_C99([yes])
 GLIBCXX_ENABLE_CONCEPT_CHECKS([no])
-GLIBCXX_ENABLE_DEBUG_FLAGS(["-g3 -O0"])
+GLIBCXX_ENABLE_DEBUG_FLAGS(["-gdwarf-4 -g3 -O0"])
 GLIBCXX_ENABLE_DEBUG([no])
 GLIBCXX_ENABLE_PARALLEL([yes])
 GLIBCXX_ENABLE_CXX_FLAGS
 GLIBCXX_ENABLE_FULLY_DYNAMIC_STRING([no])
 GLIBCXX_ENABLE_EXTERN_TEMPLATE([yes])
+GLIBCXX_ENABLE_PYTHON
+GLIBCXX_ENABLE_WERROR([yes])
 
 # Checks for operating systems support that doesn't require linking.
-GLIBCXX_CHECK_MATH_PROTO
-GLIBCXX_CHECK_STDLIB_PROTO
+GLIBCXX_CHECK_STDIO_PROTO
 GLIBCXX_CHECK_SYSTEM_ERROR
 
 # For the streamoff typedef.
@@ -163,9 +164,6 @@ GLIBCXX_CHECK_GETTIMEOFDAY
 # For clock_gettime, nanosleep and sched_yield support.
 # NB: The default is [no], because otherwise it requires linking.
 GLIBCXX_ENABLE_LIBSTDCXX_TIME([no])
-
-# For gthread support
-GLIBCXX_CHECK_GTHREADS
 
 AC_LC_MESSAGES
 
@@ -335,6 +333,9 @@ GLIBCXX_CONDITIONAL(GLIBCXX_LDBL_COMPAT, test $ac_ldbl_compat = yes)
 # This depends on GLIBCXX_ENABLE_SYMVERS and GLIBCXX_IS_NATIVE.
 GLIBCXX_CONFIGURE_TESTSUITE
 
+# For gthread support.  Depends on GLIBCXX_ENABLE_SYMVERS.
+GLIBCXX_CHECK_GTHREADS
+
 # Define documentation rules conditionally.
 
 # See if makeinfo has been installed and is modern enough
@@ -419,11 +420,11 @@ GLIBCXX_EXPORT_INCLUDES
 GLIBCXX_EXPORT_FLAGS
 
 if test "$enable_shared" = yes; then
-  LIBSUPCXX_PICFLAGS="-prefer-pic"
+  PIC_CXXFLAGS="-prefer-pic"
 else
-  LIBSUPCXX_PICFLAGS=
+  PIC_CXXFLAGS=
 fi
-AC_SUBST(LIBSUPCXX_PICFLAGS)
+AC_SUBST(PIC_CXXFLAGS)
 
 dnl In autoconf 2.5x, AC_OUTPUT is replaced by four AC_CONFIG_* macros,
 dnl which can all be called multiple times as needed, plus one (different)

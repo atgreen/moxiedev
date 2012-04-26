@@ -84,15 +84,15 @@ func (c *testConn) RemoteAddr() net.Addr {
 	return dummyAddr("remote-addr")
 }
 
-func (c *testConn) SetTimeout(nsec int64) error {
+func (c *testConn) SetDeadline(t time.Time) error {
 	return nil
 }
 
-func (c *testConn) SetReadTimeout(nsec int64) error {
+func (c *testConn) SetReadDeadline(t time.Time) error {
 	return nil
 }
 
-func (c *testConn) SetWriteTimeout(nsec int64) error {
+func (c *testConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
@@ -245,8 +245,7 @@ func TestServerTimeouts(t *testing.T) {
 		fmt.Fprintf(res, "req=%d", reqNum)
 	})
 
-	const second = 1000000000 /* nanos */
-	server := &Server{Handler: handler, ReadTimeout: 0.25 * second, WriteTimeout: 0.25 * second}
+	server := &Server{Handler: handler, ReadTimeout: 250 * time.Millisecond, WriteTimeout: 250 * time.Millisecond}
 	go server.Serve(l)
 
 	url := fmt.Sprintf("http://%s/", addr)
@@ -277,7 +276,7 @@ func TestServerTimeouts(t *testing.T) {
 	if n != 0 || err != io.EOF {
 		t.Errorf("Read = %v, %v, wanted %v, %v", n, err, 0, io.EOF)
 	}
-	if latency < 200*time.Millisecond /* fudge from 0.25 above */ {
+	if latency < 200*time.Millisecond /* fudge from 250 ms above */ {
 		t.Errorf("got EOF after %s, want >= %s", latency, 200*time.Millisecond)
 	}
 
@@ -504,8 +503,9 @@ func Test304Responses(t *testing.T) {
 }
 
 // TestHeadResponses verifies that responses to HEAD requests don't
-// declare that they're chunking in their response headers and aren't
-// allowed to produce output.
+// declare that they're chunking in their response headers, aren't
+// allowed to produce output, and don't set a Content-Type since
+// the real type of the body data cannot be inferred.
 func TestHeadResponses(t *testing.T) {
 	ts := httptest.NewServer(HandlerFunc(func(w ResponseWriter, r *Request) {
 		_, err := w.Write([]byte("Ignored body"))
@@ -526,6 +526,10 @@ func TestHeadResponses(t *testing.T) {
 	}
 	if len(res.TransferEncoding) > 0 {
 		t.Errorf("expected no TransferEncoding; got %v", res.TransferEncoding)
+	}
+	ct := res.Header.Get("Content-Type")
+	if ct != "" {
+		t.Errorf("expected no Content-Type; got %s", ct)
 	}
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -642,7 +646,7 @@ func TestServerExpect(t *testing.T) {
 		// Note using r.FormValue("readbody") because for POST
 		// requests that would read from r.Body, which we only
 		// conditionally want to do.
-		if strings.Contains(r.URL.RawPath, "readbody=true") {
+		if strings.Contains(r.URL.RawQuery, "readbody=true") {
 			ioutil.ReadAll(r.Body)
 			w.Write([]byte("Hi"))
 		} else {
@@ -904,17 +908,13 @@ func testHandlerPanic(t *testing.T, withHijack bool) {
 		panic("intentional death for testing")
 	}))
 	defer ts.Close()
-	_, err := Get(ts.URL)
-	if err == nil {
-		t.Logf("expected an error")
-	}
 
 	// Do a blocking read on the log output pipe so its logging
 	// doesn't bleed into the next test.  But wait only 5 seconds
 	// for it.
-	done := make(chan bool)
+	done := make(chan bool, 1)
 	go func() {
-		buf := make([]byte, 1024)
+		buf := make([]byte, 4<<10)
 		_, err := pr.Read(buf)
 		pr.Close()
 		if err != nil {
@@ -922,6 +922,12 @@ func testHandlerPanic(t *testing.T, withHijack bool) {
 		}
 		done <- true
 	}()
+
+	_, err := Get(ts.URL)
+	if err == nil {
+		t.Logf("expected an error")
+	}
+
 	select {
 	case <-done:
 		return

@@ -27,8 +27,9 @@ var (
 	allErrors = flag.Bool("e", false, "print all (including spurious) errors")
 
 	// debugging support
-	printTrace = flag.Bool("trace", false, "print parse trace")
-	printAST   = flag.Bool("ast", false, "print AST")
+	parseComments = flag.Bool("comments", false, "parse comments (ignored if -ast not set)")
+	printTrace    = flag.Bool("trace", false, "print parse trace")
+	printAST      = flag.Bool("ast", false, "print AST")
 )
 
 var exitCode = 0
@@ -72,6 +73,9 @@ func parse(fset *token.FileSet, filename string, src []byte) *ast.File {
 	mode := parser.DeclarationErrors
 	if *allErrors {
 		mode |= parser.SpuriousErrors
+	}
+	if *parseComments && *printAST {
+		mode |= parser.ParseComments
 	}
 	if *printTrace {
 		mode |= parser.Trace
@@ -167,7 +171,7 @@ func processFiles(filenames []string, allFiles bool) {
 
 func processPackage(fset *token.FileSet, files map[string]*ast.File) {
 	// make a package (resolve all identifiers)
-	pkg, err := ast.NewPackage(fset, files, types.GcImporter, types.Universe)
+	pkg, err := ast.NewPackage(fset, files, types.GcImport, types.Universe)
 	if err != nil {
 		report(err)
 		return

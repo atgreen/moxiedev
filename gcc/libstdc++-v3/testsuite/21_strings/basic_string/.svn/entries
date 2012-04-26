@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-11-17T16:35:11.375370Z
-181445
-jason
+2012-03-14T16:33:37.926982Z
+185390
+ro
 
 
 
@@ -26,6 +26,15 @@ jason
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+replace
+dir
+
+range_access
+dir
+
+operators
+dir
+
 find
 dir
 
@@ -41,13 +50,11 @@ file
 
 
 
-
-cd7831fe129bc91018c109e68c15ff00
-2009-05-15T07:14:45.850392Z
-147561
-bonzini
-
-
+2012-04-26T00:33:22.614413Z
+8f9b361c5e4e5f3b1d102c3da72f7506
+2012-03-14T16:33:37.926982Z
+185390
+ro
 
 
 
@@ -67,7 +74,9 @@ bonzini
 
 
 
-1613
+
+
+1559
 
 operations
 dir
@@ -96,7 +105,7 @@ file
 
 
 
-2010-01-06T00:59:47.948651Z
+2012-02-01T17:19:25.199010Z
 f375c6863a1b8c520ded5cfb67710d29
 2010-01-04T01:58:21.786085Z
 155603
@@ -130,11 +139,11 @@ file
 
 
 
-2010-07-08T15:19:29.140091Z
-d372db32e40a35d9e642a220daef6b3b
-2010-06-03T19:15:56.538099Z
-160231
-paolo
+2012-04-26T00:33:22.615413Z
+8e61495091aafe82d0971859f1b631b9
+2012-03-14T16:33:37.926982Z
+185390
+ro
 
 
 
@@ -156,7 +165,7 @@ paolo
 
 
 
-3004
+2950
 
 init-list.cc
 file
@@ -164,7 +173,7 @@ file
 
 
 
-2009-04-24T17:50:09.000000Z
+2012-02-01T17:19:25.206010Z
 06b855e373c092533d6477c3b9a64936
 2009-04-09T15:00:19.611803Z
 145841
@@ -208,14 +217,5 @@ append
 dir
 
 element_access
-dir
-
-replace
-dir
-
-range_access
-dir
-
-operators
 dir
 

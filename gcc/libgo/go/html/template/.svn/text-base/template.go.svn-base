@@ -31,6 +31,20 @@ type nameSpace struct {
 	set map[string]*Template
 }
 
+// Templates returns a slice of the templates associated with t, including t
+// itself.
+func (t *Template) Templates() []*Template {
+	ns := t.nameSpace
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
+	// Return a slice so we don't expose the map.
+	m := make([]*Template, 0, len(ns.set))
+	for _, v := range ns.set {
+		m = append(m, v)
+	}
+	return m
+}
+
 // Execute applies a parsed template to the specified data object,
 // writing the output to wr.
 func (t *Template) Execute(wr io.Writer, data interface{}) (err error) {
@@ -50,7 +64,7 @@ func (t *Template) Execute(wr io.Writer, data interface{}) (err error) {
 // ExecuteTemplate applies the template associated with t that has the given
 // name to the specified data object and writes the output to wr.
 func (t *Template) ExecuteTemplate(wr io.Writer, name string, data interface{}) error {
-	tmpl, err := t.lookupAndEscapeTemplate(wr, name)
+	tmpl, err := t.lookupAndEscapeTemplate(name)
 	if err != nil {
 		return err
 	}
@@ -60,11 +74,17 @@ func (t *Template) ExecuteTemplate(wr io.Writer, name string, data interface{}) 
 // lookupAndEscapeTemplate guarantees that the template with the given name
 // is escaped, or returns an error if it cannot be. It returns the named
 // template.
-func (t *Template) lookupAndEscapeTemplate(wr io.Writer, name string) (tmpl *Template, err error) {
+func (t *Template) lookupAndEscapeTemplate(name string) (tmpl *Template, err error) {
 	t.nameSpace.mu.Lock()
 	defer t.nameSpace.mu.Unlock()
 	tmpl = t.set[name]
-	if (tmpl == nil) != (t.text.Lookup(name) == nil) {
+	if tmpl == nil {
+		return nil, fmt.Errorf("html/template: %q is undefined", name)
+	}
+	if tmpl.text.Tree == nil || tmpl.text.Root == nil {
+		return nil, fmt.Errorf("html/template: %q is an incomplete template", name)
+	}
+	if t.text.Lookup(name) == nil {
 		panic("html/template internal error: template escaping out of sync")
 	}
 	if tmpl != nil && !tmpl.escaped {
@@ -106,14 +126,73 @@ func (t *Template) Parse(src string) (*Template, error) {
 	return t, nil
 }
 
-// AddParseTree is unimplemented.
-func (t *Template) AddParseTree(name string, tree *parse.Tree) error {
-	return fmt.Errorf("html/template: AddParseTree unimplemented")
+// AddParseTree creates a new template with the name and parse tree
+// and associates it with t.
+//
+// It returns an error if t has already been executed.
+func (t *Template) AddParseTree(name string, tree *parse.Tree) (*Template, error) {
+	t.nameSpace.mu.Lock()
+	defer t.nameSpace.mu.Unlock()
+	if t.escaped {
+		return nil, fmt.Errorf("html/template: cannot AddParseTree to %q after it has executed", t.Name())
+	}
+	text, err := t.text.AddParseTree(name, tree)
+	if err != nil {
+		return nil, err
+	}
+	ret := &Template{
+		false,
+		text,
+		t.nameSpace,
+	}
+	t.set[name] = ret
+	return ret, nil
 }
 
-// Clone is unimplemented.
-func (t *Template) Clone(name string) error {
-	return fmt.Errorf("html/template: Clone unimplemented")
+// Clone returns a duplicate of the template, including all associated
+// templates. The actual representation is not copied, but the name space of
+// associated templates is, so further calls to Parse in the copy will add
+// templates to the copy but not to the original. Clone can be used to prepare
+// common templates and use them with variant definitions for other templates
+// by adding the variants after the clone is made.
+//
+// It returns an error if t has already been executed.
+func (t *Template) Clone() (*Template, error) {
+	t.nameSpace.mu.Lock()
+	defer t.nameSpace.mu.Unlock()
+	if t.escaped {
+		return nil, fmt.Errorf("html/template: cannot Clone %q after it has executed", t.Name())
+	}
+	textClone, err := t.text.Clone()
+	if err != nil {
+		return nil, err
+	}
+	ret := &Template{
+		false,
+		textClone,
+		&nameSpace{
+			set: make(map[string]*Template),
+		},
+	}
+	for _, x := range textClone.Templates() {
+		name := x.Name()
+		src := t.set[name]
+		if src == nil || src.escaped {
+			return nil, fmt.Errorf("html/template: cannot Clone %q after it has executed", t.Name())
+		}
+		if x.Tree != nil {
+			x.Tree = &parse.Tree{
+				Name: x.Tree.Name,
+				Root: x.Tree.Root.CopyList(),
+			}
+		}
+		ret.set[name] = &Template{
+			false,
+			x,
+			ret.nameSpace,
+		}
+	}
+	return ret, nil
 }
 
 // New allocates a new HTML template with the given name.
@@ -217,7 +296,7 @@ func (t *Template) ParseFiles(filenames ...string) (*Template, error) {
 func parseFiles(t *Template, filenames ...string) (*Template, error) {
 	if len(filenames) == 0 {
 		// Not really a problem, but be consistent.
-		return nil, fmt.Errorf("template: no files named in call to ParseFiles")
+		return nil, fmt.Errorf("html/template: no files named in call to ParseFiles")
 	}
 	for _, filename := range filenames {
 		b, err := ioutil.ReadFile(filename)
@@ -274,7 +353,7 @@ func parseGlob(t *Template, pattern string) (*Template, error) {
 		return nil, err
 	}
 	if len(filenames) == 0 {
-		return nil, fmt.Errorf("template: pattern matches no files: %#q", pattern)
+		return nil, fmt.Errorf("html/template: pattern matches no files: %#q", pattern)
 	}
 	return parseFiles(t, filenames...)
 }

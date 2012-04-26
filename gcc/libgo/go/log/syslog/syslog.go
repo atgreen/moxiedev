@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !windows,!plan9
+
 // Package syslog provides a simple interface to the system log service. It
 // can send messages to the syslog daemon using UNIX domain sockets, UDP, or
 // TCP connections.
@@ -93,13 +95,19 @@ func (w *Writer) Emerg(m string) (err error) {
 	return err
 }
 
+// Alert logs a message using the LOG_ALERT priority.
+func (w *Writer) Alert(m string) (err error) {
+	_, err = w.writeString(LOG_ALERT, m)
+	return err
+}
+
 // Crit logs a message using the LOG_CRIT priority.
 func (w *Writer) Crit(m string) (err error) {
 	_, err = w.writeString(LOG_CRIT, m)
 	return err
 }
 
-// ERR logs a message using the LOG_ERR priority.
+// Err logs a message using the LOG_ERR priority.
 func (w *Writer) Err(m string) (err error) {
 	_, err = w.writeString(LOG_ERR, m)
 	return err
@@ -130,25 +138,33 @@ func (w *Writer) Debug(m string) (err error) {
 }
 
 func (n netConn) writeBytes(p Priority, prefix string, b []byte) (int, error) {
-	return fmt.Fprintf(n.conn, "<%d>%s: %s\n", p, prefix, b)
+	_, err := fmt.Fprintf(n.conn, "<%d>%s: %s\n", p, prefix, b)
+	if err != nil {
+		return 0, err
+	}
+	return len(b), nil
 }
 
 func (n netConn) writeString(p Priority, prefix string, s string) (int, error) {
-	return fmt.Fprintf(n.conn, "<%d>%s: %s\n", p, prefix, s)
+	_, err := fmt.Fprintf(n.conn, "<%d>%s: %s\n", p, prefix, s)
+	if err != nil {
+		return 0, err
+	}
+	return len(s), nil
 }
 
 func (n netConn) close() error {
 	return n.conn.Close()
 }
 
-// NewLogger provides an object that implements the full log.Logger interface,
-// but sends messages to Syslog instead; flag is passed as is to Logger;
-// priority will be used for all messages sent using this interface.
-// All messages are logged with priority p.
-func NewLogger(p Priority, flag int) *log.Logger {
+// NewLogger creates a log.Logger whose output is written to
+// the system log service with the specified priority. The logFlag
+// argument is the flag set passed through to log.New to create
+// the Logger.
+func NewLogger(p Priority, logFlag int) (*log.Logger, error) {
 	s, err := New(p, "")
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return log.New(s, "", flag)
+	return log.New(s, "", logFlag), nil
 }

@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/30_threads/timed_mutex
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-10-22T21:31:24.870016Z
-180329
-redi
+2012-03-14T16:33:37.926982Z
+185390
+ro
 
 
 
@@ -26,6 +26,18 @@ redi
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+try_lock
+dir
+
+lock
+dir
+
+unlock
+dir
+
+try_lock_for
+dir
+
 dest
 dir
 
@@ -39,17 +51,5 @@ cons
 dir
 
 requirements
-dir
-
-try_lock
-dir
-
-lock
-dir
-
-unlock
-dir
-
-try_lock_for
 dir
 

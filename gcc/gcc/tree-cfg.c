@@ -56,7 +56,7 @@ static const int initial_cfg_capacity = 20;
 
 /* This hash table allows us to efficiently lookup all CASE_LABEL_EXPRs
    which use a particular edge.  The CASE_LABEL_EXPRs are chained together
-   via their TREE_CHAIN field, which we clear after we're done with the
+   via their CASE_CHAIN field, which we clear after we're done with the
    hash table to prevent problems with duplication of GIMPLE_SWITCHes.
 
    Access to this list of CASE_LABEL_EXPRs allows us to efficiently
@@ -2273,6 +2273,43 @@ gimple_cfg2vcg (FILE *file)
 			     Miscellaneous helpers
 ---------------------------------------------------------------------------*/
 
+/* Return true if T, a GIMPLE_CALL, can make an abnormal transfer of control
+   flow.  Transfers of control flow associated with EH are excluded.  */
+
+static bool
+call_can_make_abnormal_goto (gimple t)
+{
+  /* If the function has no non-local labels, then a call cannot make an
+     abnormal transfer of control.  */
+  if (!cfun->has_nonlocal_label)
+   return false;
+
+  /* Likewise if the call has no side effects.  */
+  if (!gimple_has_side_effects (t))
+    return false;
+
+  /* Likewise if the called function is leaf.  */
+  if (gimple_call_flags (t) & ECF_LEAF)
+    return false;
+
+  return true;
+}
+
+
+/* Return true if T can make an abnormal transfer of control flow.
+   Transfers of control flow associated with EH are excluded.  */
+
+bool
+stmt_can_make_abnormal_goto (gimple t)
+{
+  if (computed_goto_p (t))
+    return true;
+  if (is_gimple_call (t))
+    return call_can_make_abnormal_goto (t);
+  return false;
+}
+
+
 /* Return true if T represents a stmt that always transfers control.  */
 
 bool
@@ -2306,10 +2343,8 @@ is_ctrl_altering_stmt (gimple t)
       {
 	int flags = gimple_call_flags (t);
 
-	/* A non-pure/const call alters flow control if the current
-	   function has nonlocal labels.  */
-	if (!(flags & (ECF_CONST | ECF_PURE | ECF_LEAF))
-	    && cfun->has_nonlocal_label)
+	/* A call alters control flow if it can make an abnormal goto.  */
+	if (call_can_make_abnormal_goto (t))
 	  return true;
 
 	/* A call also alters control flow if it does not return.  */
@@ -2364,21 +2399,6 @@ simple_goto_p (gimple t)
 {
   return (gimple_code (t) == GIMPLE_GOTO
 	  && TREE_CODE (gimple_goto_dest (t)) == LABEL_DECL);
-}
-
-
-/* Return true if T can make an abnormal transfer of control flow.
-   Transfers of control flow associated with EH are excluded.  */
-
-bool
-stmt_can_make_abnormal_goto (gimple t)
-{
-  if (computed_goto_p (t))
-    return true;
-  if (is_gimple_call (t))
-    return (gimple_has_side_effects (t) && cfun->has_nonlocal_label
-	    && !(gimple_call_flags (t) & ECF_LEAF));
-  return false;
 }
 
 
@@ -2790,17 +2810,19 @@ verify_expr (tree *tp, int *walk_subtrees, void *data ATTRIBUTE_UNUSED)
 		  error ("invalid position or size operand to BIT_FIELD_REF");
 		  return t;
 		}
-	      else if (INTEGRAL_TYPE_P (TREE_TYPE (t))
-		       && (TYPE_PRECISION (TREE_TYPE (t))
-			   != TREE_INT_CST_LOW (TREE_OPERAND (t, 1))))
+	      if (INTEGRAL_TYPE_P (TREE_TYPE (t))
+		  && (TYPE_PRECISION (TREE_TYPE (t))
+		      != TREE_INT_CST_LOW (TREE_OPERAND (t, 1))))
 		{
 		  error ("integral result type precision does not match "
 			 "field size of BIT_FIELD_REF");
 		  return t;
 		}
-	      if (!INTEGRAL_TYPE_P (TREE_TYPE (t))
-		  && (GET_MODE_PRECISION (TYPE_MODE (TREE_TYPE (t)))
-		      != TREE_INT_CST_LOW (TREE_OPERAND (t, 1))))
+	      else if (!INTEGRAL_TYPE_P (TREE_TYPE (t))
+		       && !AGGREGATE_TYPE_P (TREE_TYPE (t))
+		       && TYPE_MODE (TREE_TYPE (t)) != BLKmode
+		       && (GET_MODE_PRECISION (TYPE_MODE (TREE_TYPE (t)))
+			   != TREE_INT_CST_LOW (TREE_OPERAND (t, 1))))
 		{
 		  error ("mode precision of non-integral result does not "
 			 "match field size of BIT_FIELD_REF");
@@ -3340,15 +3362,12 @@ verify_gimple_assign_unary (gimple stmt)
     {
     CASE_CONVERT:
       {
-	/* Allow conversions between integral types and pointers only if
+	/* Allow conversions from pointer type to integral type only if
 	   there is no sign or zero extension involved.
 	   For targets were the precision of ptrofftype doesn't match that
-	   of pointers we need to allow arbitrary conversions from and
-	   to ptrofftype.  */
+	   of pointers we need to allow arbitrary conversions to ptrofftype.  */
 	if ((POINTER_TYPE_P (lhs_type)
-	     && INTEGRAL_TYPE_P (rhs1_type)
-	     && (TYPE_PRECISION (lhs_type) >= TYPE_PRECISION (rhs1_type)
-		 || ptrofftype_p (rhs1_type)))
+	     && INTEGRAL_TYPE_P (rhs1_type))
 	    || (POINTER_TYPE_P (rhs1_type)
 		&& INTEGRAL_TYPE_P (lhs_type)
 		&& (TYPE_PRECISION (rhs1_type) >= TYPE_PRECISION (lhs_type)
@@ -5576,6 +5595,20 @@ gimple_duplicate_sese_region (edge entry, edge exit,
   return true;
 }
 
+/* Checks if BB is part of the region defined by N_REGION BBS.  */
+static bool 
+bb_part_of_region_p (basic_block bb, basic_block* bbs, unsigned n_region)
+{
+  unsigned int n;
+
+  for (n = 0; n < n_region; n++)
+    {
+     if (bb == bbs[n])
+       return true;
+    }
+  return false;
+}
+
 /* Duplicates REGION consisting of N_REGION blocks.  The new blocks
    are stored to REGION_COPY in the same order in that they appear
    in REGION, if REGION_COPY is not NULL.  ENTRY is the entry to
@@ -5626,6 +5659,7 @@ gimple_duplicate_sese_tail (edge entry ATTRIBUTE_UNUSED, edge exit ATTRIBUTE_UNU
   gimple_stmt_iterator psi;
   gimple phi;
   tree def;
+  struct loop *target, *aloop, *cloop;
 
   gcc_assert (EDGE_COUNT (exit->src->succs) == 2);
   exits[0] = exit;
@@ -5636,7 +5670,16 @@ gimple_duplicate_sese_tail (edge entry ATTRIBUTE_UNUSED, edge exit ATTRIBUTE_UNU
 
   initialize_original_copy_tables ();
   set_loop_copy (orig_loop, loop);
-  duplicate_subloops (orig_loop, loop);
+
+  target= loop;
+  for (aloop = orig_loop->inner; aloop; aloop = aloop->next)
+    {
+      if (bb_part_of_region_p (aloop->header, region, n_region))
+	{
+	  cloop = duplicate_loop (aloop, target);
+	  duplicate_subloops (aloop, cloop);
+	}
+    }
 
   if (!region_copy)
     {
@@ -5739,7 +5782,7 @@ gimple_duplicate_sese_tail (edge entry ATTRIBUTE_UNUSED, edge exit ATTRIBUTE_UNU
 	    add_phi_arg (phi, def, e, gimple_phi_arg_location_from_edge (phi, e));
 	  }
       }
-  e = redirect_edge_and_branch (nexits[0], nexits[1]->dest);
+  e = redirect_edge_and_branch (nexits[1], nexits[0]->dest);
   PENDING_STMT (e) = NULL;
   
   /* Anything that is outside of the region, but was dominated by something

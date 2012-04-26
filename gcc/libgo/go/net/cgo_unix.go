@@ -21,9 +21,14 @@ import (
 	"unsafe"
 )
 
-func libc_getaddrinfo(node *byte, service *byte, hints *syscall.Addrinfo, res **syscall.Addrinfo) int __asm__ ("getaddrinfo")
-func libc_freeaddrinfo(res *syscall.Addrinfo) __asm__ ("freeaddrinfo")
-func libc_gai_strerror(errcode int) *byte __asm__ ("gai_strerror")
+//extern getaddrinfo
+func libc_getaddrinfo(node *byte, service *byte, hints *syscall.Addrinfo, res **syscall.Addrinfo) int
+
+//extern freeaddrinfo
+func libc_freeaddrinfo(res *syscall.Addrinfo)
+
+//extern gai_strerror
+func libc_gai_strerror(errcode int) *byte
 
 // bytePtrToString takes a NUL-terminated array of bytes and convert
 // it to a Go string.
@@ -70,7 +75,10 @@ func cgoLookupPort(net, service string) (port int, err error, completed bool) {
 	}
 
 	s := syscall.StringBytePtr(service)
-	if libc_getaddrinfo(nil, s, &hints, &res) == 0 {
+	syscall.Entersyscall()
+	gerrno := libc_getaddrinfo(nil, s, &hints, &res)
+	syscall.Exitsyscall()
+	if gerrno == 0 {
 		defer libc_freeaddrinfo(res)
 		for r := res; r != nil; r = r.Ai_next {
 			switch r.Ai_family {
@@ -103,7 +111,9 @@ func cgoLookupIPCNAME(name string) (addrs []IP, cname string, err error, complet
 	hints.Ai_flags = int32((syscall.AI_ALL | syscall.AI_V4MAPPED | syscall.AI_CANONNAME) & cgoAddrInfoMask())
 
 	h := syscall.StringBytePtr(name)
+	syscall.Entersyscall()
 	gerrno := libc_getaddrinfo(h, nil, &hints, &res)
+	syscall.Exitsyscall()
 	if gerrno != 0 {
 		var str string
 		if gerrno == syscall.EAI_NONAME {

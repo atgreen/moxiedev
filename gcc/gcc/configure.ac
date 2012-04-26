@@ -661,15 +661,7 @@ AC_ARG_ENABLE(fixed-point,
       ;;
 
     mips*-*-*)
-      case $host in
-	mips*-sgi-irix*)
-	  AC_MSG_WARN([fixed-point is not supported on IRIX, ignored])
-	  enable_fixed_point=no
-	  ;;
-	*)
-	  enable_fixed_point=yes
-	  ;;
-      esac
+      enable_fixed_point=yes
       ;;
     *)
       AC_MSG_WARN([fixed-point is not supported for this target, ignored])
@@ -1067,7 +1059,7 @@ fi
 AC_CHECK_TYPE(ssize_t, int)
 AC_CHECK_TYPE(caddr_t, char *)
 
-gcc_AC_FUNC_MMAP_BLACKLIST
+GCC_AC_FUNC_MMAP_BLACKLIST
 
 case "${host}" in
 *-*-*vms*)
@@ -2296,15 +2288,11 @@ if test $in_tree_ld != yes ; then
   else
     case "${target}" in
       *-*-solaris2*)
+	# See acinclude.m4 (gcc_SUN_LD_VERSION) for the version number
+	# format.
 	#
-	# Solaris 2 ld -V output looks like this for a regular version:
-	#
-	# ld: Software Generation Utilities - Solaris Link Editors: 5.11-1.1699
-	#
-	# but test versions add stuff at the end:
-	#
-	# ld: Software Generation Utilities - Solaris Link Editors: 5.11-1.1701:onnv-ab196087-6931056-03/25/10
-	#
+	# Don't reuse gcc_gv_sun_ld_vers_* in case a linker other than
+	# /usr/ccs/bin/ld has been configured.
 	ld_ver=`$gcc_cv_ld -V 2>&1`
 	if echo "$ld_ver" | grep 'Solaris Link Editors' > /dev/null; then
 	  ld_vers=`echo $ld_ver | sed -n \
@@ -2356,15 +2344,6 @@ else
         ;;
       hppa64*-*-hpux* | ia64*-*-hpux*)
 	gcc_cv_ld_hidden=yes
-	;;
-      *-*-solaris2.8*)
-        # .hidden support was backported to Solaris 8, starting with ld
-	# version 1.276.
-	if test "$ld_vers_minor" -ge 276; then
-	  gcc_cv_ld_hidden=yes
-	else
-	  gcc_cv_ld_hidden=no
-	fi
 	;;
       *-*-solaris2.9* | *-*-solaris2.1[0-9]*)
 	# Support for .hidden in Sun ld appeared in Solaris 9 FCS, but
@@ -3125,6 +3104,37 @@ foo:	.long	25
 	xor	%l1, %tle_lox10(foo), %o5
 	ld	[%g7 + %o5], %o1"
 	;;
+  tilepro*-*-*)
+      conftest_s='
+	.section ".tdata","awT",@progbits
+foo:	.long	25
+	.text
+	addli	r0, zero, tls_gd(foo)
+	auli	r0, zero, tls_gd_ha16(foo)
+	addli	r0, r0, tls_gd_lo16(foo)
+	jal	__tls_get_addr
+	addli	r0, zero, tls_ie(foo)
+	auli	r0, r0, tls_ie_ha16(foo)
+	addli	r0, r0, tls_ie_lo16(foo)'
+	tls_first_major=2
+	tls_first_minor=22
+	tls_as_opt="--fatal-warnings"
+	;;
+  tilegx*-*-*)
+      conftest_s='
+	.section ".tdata","awT",@progbits
+foo:	.long	25
+	.text
+	shl16insli r0, zero, hw0_last_tls_gd(foo)
+	shl16insli r0, zero, hw1_last_tls_gd(foo)
+	shl16insli r0, r0,   hw0_tls_gd(foo)
+	jal	   __tls_get_addr
+	shl16insli r0, zero, hw1_last_tls_ie(foo)
+	shl16insli r0, r0,   hw0_tls_ie(foo)'
+	tls_first_major=2
+	tls_first_minor=22
+	tls_as_opt="--fatal-warnings"
+	;;
   xtensa*-*-*)
     conftest_s='
 	.section ".tdata","awT",@progbits
@@ -3151,20 +3161,9 @@ else
   [set_have_as_tls=yes])
 fi
 case "$target" in
-  *-*-irix6*)
-    # IRIX 6.5 rld and libc.so lack TLS support, so even if gas and gld
-    # with TLS support are in use, native TLS cannot work.
-    set_have_as_tls=no
-    ;;
-  *-*-osf*)
-    # Tru64 UNIX loader and libc.so lack TLS support, so even if gas and
-    # gld with TLS support are in use, native TLS cannot work.
-    set_have_as_tls=no
-    ;;
-  # TLS was introduced in the Solaris 9 FCS release and backported to
-  # Solaris 8 patches.  Support for GNU-style TLS on x86 was only
-  # introduced in Solaris 9 4/04, replacing the earlier Sun style that Sun
-  # ld and GCC don't support any longer.
+  # TLS was introduced in the Solaris 9 FCS release.  Support for GNU-style
+  # TLS on x86 was only introduced in Solaris 9 4/04, replacing the earlier
+  # Sun style that Sun ld and GCC don't support any longer.
   *-*-solaris2.*)
     AC_MSG_CHECKING(linker and ld.so.1 TLS support)
     ld_tls_support=no
@@ -3175,14 +3174,6 @@ case "$target" in
       ld_tls_support=yes
     else
       case "$target" in
-        # Solaris 8/x86 ld has GNU style TLS support since version 1.280.
-        i?86-*-solaris2.8)
-          min_tls_ld_vers_minor=280
-          ;;
-        # Solaris 8/SPARC ld has TLS support since version 1.272.
-        sparc*-*-solaris2.8)
-          min_tls_ld_vers_minor=272
-          ;;
 	# Solaris 9/x86 ld has GNU style TLS support since version 1.374.
         i?86-*-solaris2.9)
           min_tls_ld_vers_minor=374
@@ -3205,28 +3196,6 @@ case "$target" in
     save_LDFLAGS="$LDFLAGS"
     LIBS=
     LDFLAGS=
-
-    AC_MSG_CHECKING(alternate thread library)
-    case "$target" in
-      # TLS support was backported to Solaris 8 patches, but only lives in
-      # the alternate thread library which became the default in Solaris 9. 
-      # We want to always use that, irrespective of TLS support.
-      *-*-solaris2.8)
-        # Take multilib subdir into account.  There's no spec to handle
-	# this.  The 64 symlink exists since Solaris 8.
-        lwp_dir=/usr/lib/lwp
-	lwp_spec="-L$lwp_dir%{m64:/64} -R$lwp_dir%{m64:/64}"
-        LDFLAGS="-L$lwp_dir -R$lwp_dir"
-        ;;
-      *-*-solaris2*)
-        lwp_dir="none"
-	lwp_spec=""
-	;;
-    esac    
-    # Always define LIB_THREAD_LDFLAGS_SPEC, even without TLS support.
-    AC_DEFINE_UNQUOTED(LIB_THREAD_LDFLAGS_SPEC, "$lwp_spec",
-        [Define to the linker flags to use for -pthread.])
-    AC_MSG_RESULT($lwp_dir)
 
     AC_MSG_CHECKING(library containing $tga_func)
     # Before Solaris 10, __tls_get_addr (SPARC/x64) resp. ___tls_get_addr
@@ -3268,12 +3237,6 @@ elif test x$gcc_cv_ld != x; then
       gcc_cv_ld_static_dynamic=yes
   else
     case "$target" in
-      # Tru64 UNIX support -noso/-so_archive instead of -Bstatic/-Bdynamic.
-      alpha*-dec-osf*)
-        gcc_cv_ld_static_dynamic=yes
-	gcc_cv_ld_static_option="-noso"
-	gcc_cv_ld_dynamic_option="-so_archive"
-        ;;
       # HP-UX ld uses -a flags to select between shared and archive.
       *-*-hpux*)
 	if test x"$gnu_ld" = xno; then
@@ -3282,10 +3245,6 @@ elif test x$gcc_cv_ld != x; then
 	  gcc_cv_ld_dynamic_option="-adefault"
 	fi
 	;;
-      # IRIX 6 ld supports -Bstatic/-Bdynamic.
-      mips-sgi-irix6*)
-        gcc_cv_ld_static_dynamic=yes
-        ;;
       # Solaris 2 ld always supports -Bstatic/-Bdynamic.
       *-*-solaris2*)
         gcc_cv_ld_static_dynamic=yes
@@ -3380,7 +3339,7 @@ AC_MSG_RESULT($gcc_cv_lto_plugin)
 
 case "$target" in
   # All TARGET_ABI_OSF targets.
-  alpha*-*-osf* | alpha*-*-linux* | alpha*-*-*bsd*)
+  alpha*-*-linux* | alpha*-*-*bsd*)
     gcc_GAS_CHECK_FEATURE([explicit relocation support],
 	gcc_cv_as_alpha_explicit_relocs, [2,12,0],,
 [	.set nomacro
@@ -3551,7 +3510,7 @@ changequote([,])dnl
 	   Cygwin DLL exports wrappers to support libstdc++ function replacement.])
     esac
     case $target_os in
-      cygwin* | pe | mingw32*)
+      cygwin* | pe | mingw32* | interix*)
 	# Recent binutils allows the three-operand form of ".comm" on PE.  This
 	# definition is used unconditionally to initialise the default state of
 	# the target option variable that governs usage of the feature.
@@ -3690,7 +3649,8 @@ foo:	nop
 
     gcc_GAS_CHECK_FEATURE([R_386_TLS_LDM_PLT reloc],
         gcc_cv_as_ix86_tlsldmplt,,,
-	[call    tls_ld@tlsldmplt],
+	[tls_ld:
+	 call    tls_ld@tlsldmplt],
 	[if test x$gcc_cv_ld != x \
 	 && $gcc_cv_ld -o conftest conftest.o -G > /dev/null 2>&1; then
 	   gcc_cv_as_ix86_tlsldmplt=yes
@@ -4071,7 +4031,7 @@ esac
 # version to the per-target configury.
 case "$cpu_type" in
   alpha | arm | avr | bfin | cris | i386 | m32c | m68k | microblaze | mips \
-  | pa | rs6000 | score | sparc | spu | xstormy16 | xtensa)
+  | pa | rs6000 | score | sparc | spu | tilegx | tilepro | xstormy16 | xtensa)
     insn="nop"
     ;;
   ia64 | s390)
@@ -4153,7 +4113,8 @@ Valid choices are 'yes' and 'no'.]) ;;
   esac],
  [gcc_GAS_CHECK_FEATURE([gnu_unique_object], gcc_cv_as_gnu_unique_object,
    [elf,2,19,52],,
-   [.type foo, @gnu_unique_object],,
+   [.type foo, '$target_type_format_char'gnu_unique_object],,
+# We need to unquote above to to use the definition from config.gcc.
 # Also check for ld.so support, i.e. glibc 2.11 or higher.
    [[if test x$host = x$build -a x$host = x$target &&
        ldd --version 2>/dev/null &&
@@ -4395,7 +4356,15 @@ if test x"$gcc_cv_ld_as_needed" = xyes; then
 fi
 
 case "$target:$tm_file" in
-  powerpc64*-*-linux* | powerpc*-*-linux*rs6000/biarch64.h*)
+  powerpc64-*-freebsd* | powerpc64*-*-linux* | powerpc*-*-linux*rs6000/biarch64.h*)
+  case "$target" in
+     *-*-linux*)
+     emul_name="-melf64ppc"
+      ;;
+     *-*-freebsd*)
+     emul_name="-melf64ppc_fbsd"
+      ;;
+  esac
     AC_CACHE_CHECK(linker support for omitting dot symbols,
     gcc_cv_ld_no_dot_syms,
     [gcc_cv_ld_no_dot_syms=no
@@ -4422,7 +4391,7 @@ foo:
 EOF
       if $gcc_cv_as -a64 -o conftest1.o conftest1.s > /dev/null 2>&1 \
          && $gcc_cv_as -a64 -o conftest2.o conftest2.s > /dev/null 2>&1 \
-         && $gcc_cv_ld -melf64ppc -o conftest conftest1.o conftest2.o > /dev/null 2>&1; then
+         && $gcc_cv_ld $emul_name -o conftest conftest1.o conftest2.o > /dev/null 2>&1; then
         gcc_cv_ld_no_dot_syms=yes
       fi
       rm -f conftest conftest1.o conftest2.o conftest1.s conftest2.s
@@ -4452,7 +4421,7 @@ _start:
 	ld 9,ie0@got@tprel@l(9)
 EOF
       if $gcc_cv_as -a64 -o conftest.o conftest.s > /dev/null 2>&1 \
-         && $gcc_cv_ld -melf64ppc --no-toc-sort -o conftest conftest.o > /dev/null 2>&1; then
+         && $gcc_cv_ld $emul_name --no-toc-sort -o conftest conftest.o > /dev/null 2>&1; then
         gcc_cv_ld_large_toc=yes
       fi
       rm -f conftest conftest.o conftest.s
@@ -4950,7 +4919,6 @@ AC_SUBST(user_headers_inc_next_pre)
 AC_SUBST(user_headers_inc_next_post)
 AC_SUBST(extra_headers_list)
 AC_SUBST(extra_objs)
-AC_SUBST(extra_passes)
 AC_SUBST(extra_programs)
 AC_SUBST(float_h_file)
 AC_SUBST(gcc_config_arguments)

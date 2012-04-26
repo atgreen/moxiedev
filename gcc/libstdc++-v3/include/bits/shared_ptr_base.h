@@ -1,6 +1,7 @@
 // shared_ptr and weak_ptr implementation details -*- C++ -*-
 
-// Copyright (C) 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+// Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012
+// Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -193,7 +194,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       {
         // No memory barrier is used here so there is no synchronization
         // with other threads.
-        return const_cast<const volatile _Atomic_word&>(_M_use_count);
+        return __atomic_load_n(&_M_use_count, __ATOMIC_RELAXED);
       }
 
     private:  
@@ -235,18 +236,17 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _M_add_ref_lock()
     {
       // Perform lock-free add-if-not-zero operation.
-      _Atomic_word __count;
+      _Atomic_word __count = _M_use_count;
       do
 	{
-	  __count = _M_use_count;
 	  if (__count == 0)
 	    __throw_bad_weak_ptr();
-	  
 	  // Replace the current counter value with the old value + 1, as
 	  // long as it's not changed meanwhile. 
 	}
-      while (!__sync_bool_compare_and_swap(&_M_use_count, __count,
-					   __count + 1));
+      while (!__atomic_compare_exchange_n(&_M_use_count, &__count, __count + 1,
+					  true, __ATOMIC_ACQ_REL, 
+					  __ATOMIC_RELAXED));
     }
 
 
@@ -343,6 +343,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _Sp_counted_deleter(_Ptr __p, _Deleter __d, const _Alloc& __a)
       : _M_ptr(__p), _M_del(__d, __a) { }
 
+      ~_Sp_counted_deleter() noexcept { }
+
       virtual void
       _M_dispose() noexcept
       { _M_del._M_del(_M_ptr); }
@@ -400,6 +402,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  allocator_traits<_Alloc>::construct(__a, _M_impl._M_ptr,
 	      std::forward<_Args>(__args)...); // might throw
 	}
+
+      ~_Sp_counted_ptr_inplace() noexcept { }
 
       virtual void
       _M_dispose() noexcept

@@ -1,5 +1,5 @@
 /* Lower vector operations to scalar operations.
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -334,7 +334,7 @@ expand_vector_addition (gimple_stmt_iterator *gsi,
 static tree
 uniform_vector_p (tree vec)
 {
-  tree first, t, els;
+  tree first, t;
   unsigned i;
 
   if (vec == NULL_TREE)
@@ -342,12 +342,9 @@ uniform_vector_p (tree vec)
 
   if (TREE_CODE (vec) == VECTOR_CST)
     {
-      els = TREE_VECTOR_CST_ELTS (vec);
-      first = TREE_VALUE (els);
-      els = TREE_CHAIN (els);
-
-      for (t = els; t; t = TREE_CHAIN (t))
-	if (!operand_equal_p (first, TREE_VALUE (t), 0))
+      first = VECTOR_CST_ELT (vec, 0);
+      for (i = 1; i < VECTOR_CST_NELTS (vec); ++i)
+	if (!operand_equal_p (first, VECTOR_CST_ELT (vec, i), 0))
 	  return NULL_TREE;
 
       return first;
@@ -471,13 +468,13 @@ expand_vector_operation (gimple_stmt_iterator *gsi, tree type, tree compute_type
 				    gimple_assign_rhs2 (assign), code);
 }
 
-/* Return a type for the widest vector mode whose components are of mode
-   INNER_MODE, or NULL_TREE if none is found.
-   SATP is true for saturating fixed-point types.  */
+/* Return a type for the widest vector mode whose components are of type
+   TYPE, or NULL_TREE if none is found.  */
 
 static tree
-type_for_widest_vector_mode (enum machine_mode inner_mode, optab op, int satp)
+type_for_widest_vector_mode (tree type, optab op)
 {
+  enum machine_mode inner_mode = TYPE_MODE (type);
   enum machine_mode best_mode = VOIDmode, mode;
   int best_nunits = 0;
 
@@ -503,13 +500,7 @@ type_for_widest_vector_mode (enum machine_mode inner_mode, optab op, int satp)
   if (best_mode == VOIDmode)
     return NULL_TREE;
   else
-    {
-      /* For fixed-point modes, we need to pass satp as the 2nd parameter.  */
-      if (ALL_FIXED_POINT_MODE_P (best_mode))
-	return lang_hooks.types.type_for_mode (best_mode, satp);
-
-      return lang_hooks.types.type_for_mode (best_mode, 1);
-    }
+    return build_vector_type_for_mode (type, best_mode);
 }
 
 
@@ -562,14 +553,7 @@ vector_element (gimple_stmt_iterator *gsi, tree vect, tree idx, tree *ptmpvec)
 	}
 
       if (TREE_CODE (vect) == VECTOR_CST)
-        {
-	  unsigned i;
-	  tree vals = TREE_VECTOR_CST_ELTS (vect);
-	  for (i = 0; vals; vals = TREE_CHAIN (vals), ++i)
-	    if (i == index)
-	       return TREE_VALUE (vals);
-	  return build_zero_cst (vect_elt_type);
-        }
+	return VECTOR_CST_ELT (vect, index);
       else if (TREE_CODE (vect) == CONSTRUCTOR)
         {
           unsigned i;
@@ -583,8 +567,9 @@ vector_element (gimple_stmt_iterator *gsi, tree vect, tree idx, tree *ptmpvec)
       else
         {
 	  tree size = TYPE_SIZE (vect_elt_type);
-          tree pos = fold_build2 (MULT_EXPR, TREE_TYPE (idx), idx, size);
-          return fold_build3 (BIT_FIELD_REF, vect_elt_type, vect, size, pos);
+	  tree pos = fold_build2 (MULT_EXPR, bitsizetype, bitsize_int (index),
+				  size);
+	  return fold_build3 (BIT_FIELD_REF, vect_elt_type, vect, size, pos);
         }
     }
 
@@ -646,10 +631,10 @@ lower_vec_perm (gimple_stmt_iterator *gsi)
   if (TREE_CODE (mask) == VECTOR_CST)
     {
       unsigned char *sel_int = XALLOCAVEC (unsigned char, elements);
-      tree vals = TREE_VECTOR_CST_ELTS (mask);
 
-      for (i = 0; i < elements; ++i, vals = TREE_CHAIN (vals))
-	sel_int[i] = TREE_INT_CST_LOW (TREE_VALUE (vals)) & (2 * elements - 1);
+      for (i = 0; i < elements; ++i)
+	sel_int[i] = (TREE_INT_CST_LOW (VECTOR_CST_ELT (mask, i))
+		      & (2 * elements - 1));
 
       if (can_vec_perm_p (TYPE_MODE (vect_type), false, sel_int))
 	return;
@@ -856,8 +841,7 @@ expand_vector_operations_1 (gimple_stmt_iterator *gsi)
   if (!VECTOR_MODE_P (TYPE_MODE (type)) && op)
     {
       tree vector_compute_type
-        = type_for_widest_vector_mode (TYPE_MODE (TREE_TYPE (type)), op,
-				       TYPE_SATURATING (TREE_TYPE (type)));
+        = type_for_widest_vector_mode (TREE_TYPE (type), op);
       if (vector_compute_type != NULL_TREE
 	  && (TYPE_VECTOR_SUBPARTS (vector_compute_type)
 	      < TYPE_VECTOR_SUBPARTS (compute_type))

@@ -1,6 +1,6 @@
 ; Options for the C, ObjC, C++ and ObjC++ front ends.
 ; Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-; 2011 Free Software Foundation, Inc.
+; 2011, 2012 Free Software Foundation, Inc.
 ;
 ; This file is part of GCC.
 ;
@@ -557,6 +557,10 @@ Wparentheses
 C ObjC C++ ObjC++ Var(warn_parentheses) Warning
 Warn about possibly missing parentheses
 
+Wpedantic
+C ObjC C++ ObjC++ Warning
+; Documented in common.opt
+
 Wpmf-conversions
 C++ ObjC++ Var(warn_pmf2ptr) Init(1) Warning
 Warn when converting the type of pointers to member functions
@@ -663,7 +667,7 @@ Warn about unsuffixed float constants
 
 Wunused-local-typedefs
 C ObjC C++ ObjC++ Var(warn_unused_local_typedefs) Warning
-Warn about
+Warn when typedefs locally defined in a function are not used
 
 Wunused-macros
 C ObjC C++ ObjC++ Warning
@@ -696,6 +700,10 @@ Warn when a pointer differs in signedness in an assignment
 Wzero-as-null-pointer-constant
 C++ ObjC++ Var(warn_zero_as_null_pointer_constant) Warning
 Warn when a literal '0' is used as null pointer
+
+Wuseless-cast
+C++ ObjC++ Var(warn_useless_cast) Warning
+Warn about useless casts
 
 ansi
 C ObjC C++ ObjC++
@@ -1035,6 +1043,10 @@ ftabstop=
 C ObjC C++ ObjC++ Joined RejectNegative UInteger
 -ftabstop=<number>	Distance between tab stops for column reporting
 
+ftemplate-backtrace-limit=
+C++ ObjC++ Joined RejectNegative UInteger Var(template_backtrace_limit) Init(10)
+Set the maximum number of template instantiation notes for a single warning or error
+
 ftemplate-depth-
 C++ ObjC++ Joined RejectNegative Undocumented Alias(ftemplate-depth=)
 
@@ -1176,7 +1188,7 @@ C ObjC C++ ObjC++ Joined Separate
 ; Documented in common.opt
 
 pedantic
-C ObjC C++ ObjC++
+C ObjC C++ ObjC++ Alias(Wpedantic)
 ; Documented in common.opt
 
 pedantic-errors
@@ -1206,6 +1218,10 @@ Conform to the ISO 2011 C++ standard (experimental and incomplete support)
 std=c++0x
 C++ ObjC++ Alias(std=c++11)
 Deprecated in favor of -std=c++11
+
+std=c++1y
+C++ ObjC++
+Conform to the ISO 201y(7?) C++ draft standard (experimental and incomplete support)
 
 std=c11
 C ObjC
@@ -1248,6 +1264,10 @@ Conform to the ISO 2011 C++ standard with GNU extensions (experimental and incom
 std=gnu++0x
 C++ ObjC++ Alias(std=gnu++11)
 Deprecated in favor of -std=gnu++11
+
+std=gnu++1y
+C++ ObjC++
+Conform to the ISO 201y(7?) C++ draft standard with GNU extensions (experimental and incomplete support)
 
 std=gnu11
 C ObjC

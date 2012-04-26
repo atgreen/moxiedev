@@ -97,6 +97,7 @@ gfc_init_options (unsigned int decoded_options_count,
   gfc_option.warn_ampersand = 0;
   gfc_option.warn_character_truncation = 0;
   gfc_option.warn_array_temp = 0;
+  gfc_option.warn_c_binding_type = 0;
   gfc_option.gfc_warn_conversion = 0;
   gfc_option.warn_conversion_extra = 0;
   gfc_option.warn_function_elimination = 0;
@@ -110,6 +111,8 @@ gfc_init_options (unsigned int decoded_options_count,
   gfc_option.warn_align_commons = 1;
   gfc_option.warn_real_q_constant = 0;
   gfc_option.warn_unused_dummy_argument = 0;
+  gfc_option.warn_realloc_lhs = 0;
+  gfc_option.warn_realloc_lhs_all = 0;
   gfc_option.max_errors = 25;
 
   gfc_option.flag_all_intrinsics = 0;
@@ -436,6 +439,9 @@ gfc_post_options (const char **pfilename)
   if (gfc_option.flag_frontend_optimize == -1)
     gfc_option.flag_frontend_optimize = optimize;
 
+  if (gfc_option.warn_realloc_lhs_all)
+    gfc_option.warn_realloc_lhs = 1;
+
   gfc_cpp_post_options ();
 
 /* FIXME: return gfc_cpp_preprocess_only ();
@@ -456,6 +462,7 @@ set_Wall (int setting)
 {
   gfc_option.warn_aliasing = setting;
   gfc_option.warn_ampersand = setting;
+  gfc_option.warn_c_binding_type = setting;
   gfc_option.gfc_warn_conversion = setting;
   gfc_option.warn_line_truncation = setting;
   gfc_option.warn_surprising = setting;
@@ -620,6 +627,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
       gfc_option.warn_array_temp = value;
       break;
 
+    case OPT_Wc_binding_type:
+      gfc_option.warn_c_binding_type = value;
+      break;
+
     case OPT_Wcharacter_truncation:
       gfc_option.warn_character_truncation = value;
       break;
@@ -646,6 +657,14 @@ gfc_handle_option (size_t scode, const char *arg, int value,
 
     case OPT_Wline_truncation:
       gfc_option.warn_line_truncation = value;
+      break;
+
+    case OPT_Wrealloc_lhs:
+      gfc_option.warn_realloc_lhs = value;
+      break;
+
+    case OPT_Wrealloc_lhs_all:
+      gfc_option.warn_realloc_lhs_all = value;
       break;
 
     case OPT_Wreturn_type:

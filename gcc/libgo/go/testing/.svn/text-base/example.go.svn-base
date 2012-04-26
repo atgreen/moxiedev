@@ -19,21 +19,22 @@ type InternalExample struct {
 	Output string
 }
 
-func RunExamples(examples []InternalExample) (ok bool) {
+func RunExamples(matchString func(pat, str string) (bool, error), examples []InternalExample) (ok bool) {
 	ok = true
 
 	var eg InternalExample
 
 	stdout, stderr := os.Stdout, os.Stderr
-	defer func() {
-		os.Stdout, os.Stderr = stdout, stderr
-		if e := recover(); e != nil {
-			fmt.Printf("--- FAIL: %s\npanic: %v\n", eg.Name, e)
-			os.Exit(1)
-		}
-	}()
 
 	for _, eg = range examples {
+		matched, err := matchString(*match, eg.Name)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "testing: invalid regexp for -test.run: %s\n", err)
+			os.Exit(1)
+		}
+		if !matched {
+			continue
+		}
 		if *chatty {
 			fmt.Printf("=== RUN: %s\n", eg.Name)
 		}

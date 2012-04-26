@@ -1,5 +1,5 @@
 /* Instruction scheduling pass.  Selective scheduler and pipeliner.
-   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011
+   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -7124,8 +7124,15 @@ reset_sched_cycles_in_current_ebb (void)
 
       if (real_insn)
 	{
+	  static state_t temp = NULL;
+
+	  if (!temp)
+	    temp = xmalloc (dfa_state_size);
+	  memcpy (temp, curr_state, dfa_state_size);
+
 	  cost = state_transition (curr_state, insn);
-	  issued_insns++;
+	  if (memcmp (temp, curr_state, dfa_state_size))
+	    issued_insns++;
 
           if (sched_verbose >= 2)
 	    {

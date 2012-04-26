@@ -350,21 +350,22 @@ i386_pe_encode_section_info (tree decl, rtx rtl, int first)
   SYMBOL_REF_FLAGS (symbol) = flags;
 }
 
+
 bool
 i386_pe_binds_local_p (const_tree exp)
 {
-  /* PE does not do dynamic binding.  Indeed, the only kind of
-     non-local reference comes from a dllimport'd symbol.  */
   if ((TREE_CODE (exp) == VAR_DECL || TREE_CODE (exp) == FUNCTION_DECL)
       && DECL_DLLIMPORT_P (exp))
     return false;
 
-  /* Or a weak one, now that they are supported.  */
-  if ((TREE_CODE (exp) == VAR_DECL || TREE_CODE (exp) == FUNCTION_DECL)
-      && DECL_WEAK (exp))
-    return false;
-
-  return true;
+  /* External public symbols, which aren't weakref-s,
+     have local-binding for PE targets.  */
+  if (DECL_P (exp)
+      && !lookup_attribute ("weakref", DECL_ATTRIBUTES (exp))
+      && TREE_PUBLIC (exp)
+      && DECL_EXTERNAL (exp))
+    return true;
+  return default_binds_local_p_1 (exp, 0);
 }
 
 /* Also strip the fastcall prefix and stdcall suffix.  */
@@ -394,6 +395,10 @@ i386_pe_unique_section (tree decl, int reloc)
   const char *name, *prefix;
   char *string;
 
+  /* Ignore RELOC, if we are allowed to put relocated
+     const data into read-only section.  */
+  if (!flag_writable_rel_rdata)
+    reloc = 0;
   name = IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (decl));
   name = i386_pe_strip_name_encoding_full (name);
 
@@ -440,6 +445,10 @@ i386_pe_section_type_flags (tree decl, const char *name, int reloc)
   unsigned int flags;
   unsigned int **slot;
 
+  /* Ignore RELOC, if we are allowed to put relocated
+     const data into read-only section.  */
+  if (!flag_writable_rel_rdata)
+    reloc = 0;
   /* The names we put in the hashtable will always be the unique
      versions given to us by the stringtable, so we can just use
      their addresses as the keys.  */

@@ -317,6 +317,7 @@ var overflowTests = []ScanTest{
 	{"(1-1e500i)", &complex128Val, 0},
 }
 
+var truth bool
 var i, j, k int
 var f float64
 var s, t string
@@ -350,6 +351,9 @@ var multiTests = []ScanfMultiTest{
 
 	// Bad UTF-8: should see every byte.
 	{"%c%c%c", "\xc2X\xc2", args(&r1, &r2, &r3), args(utf8.RuneError, 'X', utf8.RuneError), ""},
+
+	// Fixed bugs
+	{"%v%v", "FALSE23", args(&truth, &i), args(false, 23), ""},
 }
 
 func testScan(name string, t *testing.T, scan func(r io.Reader, a ...interface{}) (int, error)) {
@@ -806,7 +810,7 @@ func TestMultiLine(t *testing.T) {
 	}
 }
 
-// RecursiveInt accepts an string matching %d.%d.%d....
+// RecursiveInt accepts a string matching %d.%d.%d....
 // and parses it into a linked list.
 // It allows us to benchmark recursive descent style scanners.
 type RecursiveInt struct {
@@ -822,7 +826,7 @@ func (r *RecursiveInt) Scan(state ScanState, verb rune) (err error) {
 	next := new(RecursiveInt)
 	_, err = Fscanf(state, ".%v", next)
 	if err != nil {
-		if err == errors.New("input does not match format") || err == io.ErrUnexpectedEOF {
+		if err == io.ErrUnexpectedEOF {
 			err = nil
 		}
 		return

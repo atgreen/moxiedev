@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -128,7 +128,8 @@ package body Ch6 is
    --  other subprogram constructs.
 
    --  EXPRESSION_FUNCTION ::=
-   --    FUNCTION SPECIFICATION IS (EXPRESSION);
+   --    FUNCTION SPECIFICATION IS (EXPRESSION)
+   --      [ASPECT_SPECIFICATIONS];
 
    --  The value in Pf_Flags indicates which of these possible declarations
    --  is acceptable to the caller:
@@ -772,7 +773,10 @@ package body Ch6 is
                       (N_Expression_Function, Sloc (Specification_Node));
                   Set_Specification (Body_Node, Specification_Node);
                   Set_Expression (Body_Node, P_Expression);
-                  T_Semicolon;
+
+                  --  Expression functions can carry pre/postconditions
+
+                  P_Aspect_Specifications (Body_Node);
                   Pop_Scope_Stack;
 
                --  Subprogram body case

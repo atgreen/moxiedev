@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -481,6 +481,13 @@ package body Exp_Util is
             pragma Assert (Is_Private_Type (Typ));
 
             Utyp := Base_Type (Utyp);
+         end if;
+
+         --  When dealing with an internally built full view for a type with
+         --  unknown discriminants, use the original record type.
+
+         if Is_Underlying_Record_View (Utyp) then
+            Utyp := Etype (Utyp);
          end if;
 
          return TSS (Utyp, TSS_Finalize_Address);
@@ -3933,6 +3940,133 @@ package body Exp_Util is
       return True;
    end Is_All_Null_Statements;
 
+   --------------------------------------------------
+   -- Is_Displacement_Of_Object_Or_Function_Result --
+   --------------------------------------------------
+
+   function Is_Displacement_Of_Object_Or_Function_Result
+     (Obj_Id : Entity_Id) return Boolean
+   is
+      function Is_Controlled_Function_Call (N : Node_Id) return Boolean;
+      --  Determine if particular node denotes a controlled function call
+
+      function Is_Displace_Call (N : Node_Id) return Boolean;
+      --  Determine whether a particular node is a call to Ada.Tags.Displace.
+      --  The call might be nested within other actions such as conversions.
+
+      function Is_Source_Object (N : Node_Id) return Boolean;
+      --  Determine whether a particular node denotes a source object
+
+      ---------------------------------
+      -- Is_Controlled_Function_Call --
+      ---------------------------------
+
+      function Is_Controlled_Function_Call (N : Node_Id) return Boolean is
+         Expr : Node_Id := Original_Node (N);
+
+      begin
+         if Nkind (Expr) = N_Function_Call then
+            Expr := Name (Expr);
+         end if;
+
+         --  The function call may appear in object.operation format
+
+         if Nkind (Expr) = N_Selected_Component then
+            Expr := Selector_Name (Expr);
+         end if;
+
+         return
+           Nkind_In (Expr, N_Expanded_Name, N_Identifier)
+             and then Ekind (Entity (Expr)) = E_Function
+             and then Needs_Finalization (Etype (Entity (Expr)));
+      end Is_Controlled_Function_Call;
+
+      ----------------------
+      -- Is_Displace_Call --
+      ----------------------
+
+      function Is_Displace_Call (N : Node_Id) return Boolean is
+         Call : Node_Id := N;
+
+      begin
+         --  Strip various actions which may precede a call to Displace
+
+         loop
+            if Nkind (Call) = N_Explicit_Dereference then
+               Call := Prefix (Call);
+
+            elsif Nkind_In (Call, N_Type_Conversion,
+                                  N_Unchecked_Type_Conversion)
+            then
+               Call := Expression (Call);
+
+            else
+               exit;
+            end if;
+         end loop;
+
+         return
+           Present (Call)
+             and then Nkind (Call) = N_Function_Call
+             and then Is_RTE (Entity (Name (Call)), RE_Displace);
+      end Is_Displace_Call;
+
+      ----------------------
+      -- Is_Source_Object --
+      ----------------------
+
+      function Is_Source_Object (N : Node_Id) return Boolean is
+      begin
+         return
+           Present (N)
+             and then Nkind (N) in N_Has_Entity
+             and then Is_Object (Entity (N))
+             and then Comes_From_Source (N);
+      end Is_Source_Object;
+
+      --  Local variables
+
+      Decl      : constant Node_Id   := Parent (Obj_Id);
+      Obj_Typ   : constant Entity_Id := Base_Type (Etype (Obj_Id));
+      Orig_Decl : constant Node_Id   := Original_Node (Decl);
+
+   --  Start of processing for Is_Displacement_Of_Object_Or_Function_Result
+
+   begin
+      --  Case 1:
+
+      --     Obj : CW_Type := Function_Call (...);
+
+      --  rewritten into:
+
+      --     Tmp : ... := Function_Call (...)'reference;
+      --     Obj : CW_Type renames (... Ada.Tags.Displace (Tmp));
+
+      --  where the return type of the function and the class-wide type require
+      --  dispatch table pointer displacement.
+
+      --  Case 2:
+
+      --     Obj : CW_Type := Src_Obj;
+
+      --  rewritten into:
+
+      --     Obj : CW_Type renames (... Ada.Tags.Displace (Src_Obj));
+
+      --  where the type of the source object and the class-wide type require
+      --  dispatch table pointer displacement.
+
+      return
+        Nkind (Decl) = N_Object_Renaming_Declaration
+          and then Nkind (Orig_Decl) = N_Object_Declaration
+          and then Comes_From_Source (Orig_Decl)
+          and then Is_Class_Wide_Type (Obj_Typ)
+          and then Is_Displace_Call (Renamed_Object (Obj_Id))
+          and then
+            (Is_Controlled_Function_Call (Expression (Orig_Decl))
+              or else Is_Source_Object (Expression (Orig_Decl)));
+   end Is_Displacement_Of_Object_Or_Function_Result;
+
    ------------------------------
    -- Is_Finalizable_Transient --
    ------------------------------
@@ -4249,9 +4383,11 @@ package body Exp_Util is
 
                      --  The call must invoke the default iterate routine of
                      --  the container and the transient object must appear as
-                     --  the first actual parameter.
+                     --  the first actual parameter. Skip any calls whose names
+                     --  are not entities.
 
-                     if Entity (Name (Call)) = Iter
+                     if Is_Entity_Name (Name (Call))
+                       and then Entity (Name (Call)) = Iter
                        and then Present (Parameter_Associations (Call))
                      then
                         Param := First (Parameter_Associations (Call));
@@ -4312,7 +4448,7 @@ package body Exp_Util is
 
           --  Do not consider conversions of tags to class-wide types
 
-          and then not Is_Tag_To_CW_Conversion (Obj_Id)
+          and then not Is_Tag_To_Class_Wide_Conversion (Obj_Id)
 
           --  Do not consider containers in the context of iterator loops. Such
           --  transient objects must exist for as long as the loop is around,
@@ -4367,74 +4503,6 @@ package body Exp_Util is
       return Is_Tagged_Type (Typ)
         and then Is_Library_Level_Entity (Typ);
    end Is_Library_Level_Tagged_Type;
-
-   ----------------------------------
-   -- Is_Null_Access_BIP_Func_Call --
-   ----------------------------------
-
-   function Is_Null_Access_BIP_Func_Call (Expr : Node_Id) return Boolean is
-      Call : Node_Id := Expr;
-
-   begin
-      --  Build-in-place calls usually appear in 'reference format
-
-      if Nkind (Call) = N_Reference then
-         Call := Prefix (Call);
-      end if;
-
-      if Nkind_In (Call, N_Qualified_Expression,
-                         N_Unchecked_Type_Conversion)
-      then
-         Call := Expression (Call);
-      end if;
-
-      if Is_Build_In_Place_Function_Call (Call) then
-         declare
-            Access_Nam : Name_Id := No_Name;
-            Actual     : Node_Id;
-            Param      : Node_Id;
-            Formal     : Node_Id;
-
-         begin
-            --  Examine all parameter associations of the function call
-
-            Param := First (Parameter_Associations (Call));
-            while Present (Param) loop
-               if Nkind (Param) = N_Parameter_Association
-                 and then Nkind (Selector_Name (Param)) = N_Identifier
-               then
-                  Formal := Selector_Name (Param);
-                  Actual := Explicit_Actual_Parameter (Param);
-
-                  --  Construct the name of formal BIPaccess. It is much easier
-                  --  to extract the name of the function using an arbitrary
-                  --  formal's scope rather than the Name field of Call.
-
-                  if Access_Nam = No_Name
-                    and then Present (Entity (Formal))
-                  then
-                     Access_Nam :=
-                       New_External_Name
-                         (Chars (Scope (Entity (Formal))),
-                          BIP_Formal_Suffix (BIP_Object_Access));
-                  end if;
-
-                  --  A match for BIPaccess => null has been found
-
-                  if Chars (Formal) = Access_Nam
-                    and then Nkind (Actual) = N_Null
-                  then
-                     return True;
-                  end if;
-               end if;
-
-               Next (Param);
-            end loop;
-         end;
-      end if;
-
-      return False;
-   end Is_Null_Access_BIP_Func_Call;
 
    --------------------------
    -- Is_Non_BIP_Func_Call --
@@ -4842,11 +4910,84 @@ package body Exp_Util is
       end if;
    end Is_Renamed_Object;
 
-   -----------------------------
-   -- Is_Tag_To_CW_Conversion --
-   -----------------------------
+   --------------------------------------
+   -- Is_Secondary_Stack_BIP_Func_Call --
+   --------------------------------------
 
-   function Is_Tag_To_CW_Conversion (Obj_Id : Entity_Id) return Boolean is
+   function Is_Secondary_Stack_BIP_Func_Call (Expr : Node_Id) return Boolean is
+      Call : Node_Id := Expr;
+
+   begin
+      --  Build-in-place calls usually appear in 'reference format. Note that
+      --  the accessibility check machinery may add an extra 'reference due to
+      --  side effect removal.
+
+      while Nkind (Call) = N_Reference loop
+         Call := Prefix (Call);
+      end loop;
+
+      if Nkind_In (Call, N_Qualified_Expression,
+                         N_Unchecked_Type_Conversion)
+      then
+         Call := Expression (Call);
+      end if;
+
+      if Is_Build_In_Place_Function_Call (Call) then
+         declare
+            Access_Nam : Name_Id := No_Name;
+            Actual     : Node_Id;
+            Param      : Node_Id;
+            Formal     : Node_Id;
+
+         begin
+            --  Examine all parameter associations of the function call
+
+            Param := First (Parameter_Associations (Call));
+            while Present (Param) loop
+               if Nkind (Param) = N_Parameter_Association
+                 and then Nkind (Selector_Name (Param)) = N_Identifier
+               then
+                  Formal := Selector_Name (Param);
+                  Actual := Explicit_Actual_Parameter (Param);
+
+                  --  Construct the name of formal BIPalloc. It is much easier
+                  --  to extract the name of the function using an arbitrary
+                  --  formal's scope rather than the Name field of Call.
+
+                  if Access_Nam = No_Name
+                    and then Present (Entity (Formal))
+                  then
+                     Access_Nam :=
+                       New_External_Name
+                         (Chars (Scope (Entity (Formal))),
+                          BIP_Formal_Suffix (BIP_Alloc_Form));
+                  end if;
+
+                  --  A match for BIPalloc => 2 has been found
+
+                  if Chars (Formal) = Access_Nam
+                    and then Nkind (Actual) = N_Integer_Literal
+                    and then Intval (Actual) = Uint_2
+                  then
+                     return True;
+                  end if;
+               end if;
+
+               Next (Param);
+            end loop;
+         end;
+      end if;
+
+      return False;
+   end Is_Secondary_Stack_BIP_Func_Call;
+
+   -------------------------------------
+   -- Is_Tag_To_Class_Wide_Conversion --
+   -------------------------------------
+
+   function Is_Tag_To_Class_Wide_Conversion
+     (Obj_Id : Entity_Id) return Boolean
+   is
       Expr : constant Node_Id := Expression (Parent (Obj_Id));
 
    begin
@@ -4855,7 +4996,7 @@ package body Exp_Util is
           and then Present (Expr)
           and then Nkind (Expr) = N_Unchecked_Type_Conversion
           and then Etype (Expression (Expr)) = RTE (RE_Tag);
-   end Is_Tag_To_CW_Conversion;
+   end Is_Tag_To_Class_Wide_Conversion;
 
    ----------------------------
    -- Is_Untagged_Derivation --
@@ -7006,7 +7147,7 @@ package body Exp_Util is
               and then Needs_Finalization (Obj_Typ)
               and then not (Ekind (Obj_Id) = E_Constant
                               and then not Has_Completion (Obj_Id))
-              and then not Is_Tag_To_CW_Conversion (Obj_Id)
+              and then not Is_Tag_To_Class_Wide_Conversion (Obj_Id)
             then
                return True;
 
@@ -7014,18 +7155,17 @@ package body Exp_Util is
             --    Obj : Access_Typ := Non_BIP_Function_Call'reference;
             --
             --    Obj : Access_Typ :=
-            --            BIP_Function_Call
-            --              (..., BIPaccess => null, ...)'reference;
+            --            BIP_Function_Call (BIPalloc => 2, ...)'reference;
 
             elsif Is_Access_Type (Obj_Typ)
               and then Needs_Finalization
                          (Available_View (Designated_Type (Obj_Typ)))
               and then Present (Expr)
               and then
-                (Is_Null_Access_BIP_Func_Call (Expr)
-                   or else
-                (Is_Non_BIP_Func_Call (Expr)
-                   and then not Is_Related_To_Func_Return (Obj_Id)))
+                (Is_Secondary_Stack_BIP_Func_Call (Expr)
+                  or else
+                    (Is_Non_BIP_Func_Call (Expr)
+                      and then not Is_Related_To_Func_Return (Obj_Id)))
             then
                return True;
 
@@ -7055,10 +7195,7 @@ package body Exp_Util is
 
          --  Specific cases of object renamings
 
-         elsif Nkind (Decl) = N_Object_Renaming_Declaration
-           and then Nkind (Name (Decl)) = N_Explicit_Dereference
-           and then Nkind (Prefix (Name (Decl))) = N_Identifier
-         then
+         elsif Nkind (Decl) = N_Object_Renaming_Declaration then
             Obj_Id  := Defining_Identifier (Decl);
             Obj_Typ := Base_Type (Etype (Obj_Id));
 
@@ -7079,6 +7216,20 @@ package body Exp_Util is
               and then Is_Return_Object (Obj_Id)
               and then Present (Return_Flag_Or_Transient_Decl (Obj_Id))
             then
+               return True;
+
+            --  Detect a case where a source object has been initialized by
+            --  a controlled function call or another object which was later
+            --  rewritten as a class-wide conversion of Ada.Tags.Displace.
+
+            --     Obj1 : CW_Type := Src_Obj;
+            --     Obj2 : CW_Type := Function_Call (...);
+
+            --     Obj1 : CW_Type renames (... Ada.Tags.Displace (Src_Obj));
+            --     Tmp  : ... := Function_Call (...)'reference;
+            --     Obj2 : CW_Type renames (... Ada.Tags.Displace (Tmp));
+
+            elsif Is_Displacement_Of_Object_Or_Function_Result (Obj_Id) then
                return True;
             end if;
 

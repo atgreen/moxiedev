@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 S p e c                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -380,6 +380,9 @@ package Errout is
    Gname8 : aliased constant String := "gnat2012";
    Vname8 : aliased constant String := "2012";
 
+   Gname9 : aliased constant String := "gnateinn";
+   Vname9 : aliased constant String := "MAX_INSTANTIATIONS=nn";
+
    type Cstring_Ptr is access constant String;
 
    Gnames : array (Nat range <>) of Cstring_Ptr :=
@@ -390,7 +393,8 @@ package Errout is
                Gname5'Access,
                Gname6'Access,
                Gname7'Access,
-               Gname8'Access);
+               Gname8'Access,
+               Gname9'Access);
 
    Vnames : array (Nat range <>) of Cstring_Ptr :=
               (Vname1'Access,
@@ -400,7 +404,8 @@ package Errout is
                Vname5'Access,
                Vname6'Access,
                Vname7'Access,
-               Vname8'Access);
+               Vname8'Access,
+               Vname9'Access);
 
    -----------------------------------------------------
    -- Global Values Used for Error Message Insertions --
@@ -445,7 +450,7 @@ package Errout is
 
    Error_Msg_Qual_Level : Int renames Err_Vars.Error_Msg_Qual_Level;
    --  Number of levels of qualification required for type name (see the
-   --  description of the } insertion character. Note that this value does
+   --  description of the } insertion character). Note that this value does
    --  note get reset by any Error_Msg call, so the caller is responsible
    --  for resetting it.
 

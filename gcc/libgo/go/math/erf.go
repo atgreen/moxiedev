@@ -191,14 +191,12 @@ func Erf(x float64) float64 {
 		Small    = 1.0 / (1 << 28)        // 2**-28
 	)
 	// special cases
-	// TODO(rsc): Remove manual inlining of IsNaN, IsInf
-	// when compiler does it for us
 	switch {
-	case x != x: // IsNaN(x):
+	case IsNaN(x):
 		return NaN()
-	case x > MaxFloat64: // IsInf(x, 1):
+	case IsInf(x, 1):
 		return 1
-	case x < -MaxFloat64: // IsInf(x, -1):
+	case IsInf(x, -1):
 		return -1
 	}
 	sign := false
@@ -250,7 +248,7 @@ func Erf(x float64) float64 {
 		R = rb0 + s*(rb1+s*(rb2+s*(rb3+s*(rb4+s*(rb5+s*rb6)))))
 		S = 1 + s*(sb1+s*(sb2+s*(sb3+s*(sb4+s*(sb5+s*(sb6+s*sb7))))))
 	}
-	z := Float64frombits(Float64bits(x) & 0xffffffff00000000) // pseudo-single (20-bit) precison x
+	z := Float64frombits(Float64bits(x) & 0xffffffff00000000) // pseudo-single (20-bit) precision x
 	r := Exp(-z*z-0.5625) * Exp((z-x)*(z+x)+R/S)
 	if sign {
 		return r/x - 1
@@ -267,14 +265,12 @@ func Erf(x float64) float64 {
 func Erfc(x float64) float64 {
 	const Tiny = 1.0 / (1 << 56) // 2**-56
 	// special cases
-	// TODO(rsc): Remove manual inlining of IsNaN, IsInf
-	// when compiler does it for us
 	switch {
-	case x != x: // IsNaN(x):
+	case IsNaN(x):
 		return NaN()
-	case x > MaxFloat64: // IsInf(x, 1):
+	case IsInf(x, 1):
 		return 0
-	case x < -MaxFloat64: // IsInf(x, -1):
+	case IsInf(x, -1):
 		return 2
 	}
 	sign := false
@@ -325,7 +321,7 @@ func Erfc(x float64) float64 {
 			R = rb0 + s*(rb1+s*(rb2+s*(rb3+s*(rb4+s*(rb5+s*rb6)))))
 			S = 1 + s*(sb1+s*(sb2+s*(sb3+s*(sb4+s*(sb5+s*(sb6+s*sb7))))))
 		}
-		z := Float64frombits(Float64bits(x) & 0xffffffff00000000) // pseudo-single (20-bit) precison x
+		z := Float64frombits(Float64bits(x) & 0xffffffff00000000) // pseudo-single (20-bit) precision x
 		r := Exp(-z*z-0.5625) * Exp((z-x)*(z+x)+R/S)
 		if sign {
 			return 2 - r/x

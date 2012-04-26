@@ -117,6 +117,12 @@ FIXED_VALUE_TYPE fconst1[MAX_FCONST1];
 
 rtx const_int_rtx[MAX_SAVED_CONST_INT * 2 + 1];
 
+/* Standard pieces of rtx, to be substituted directly into things.  */
+rtx pc_rtx;
+rtx ret_rtx;
+rtx simple_return_rtx;
+rtx cc0_rtx;
+
 /* A hash table storing CONST_INTs whose absolute value is greater
    than MAX_SAVED_CONST_INT.  */
 
@@ -511,8 +517,11 @@ immed_double_int_const (double_int i, enum machine_mode mode)
 
 /* Return a CONST_DOUBLE or CONST_INT for a value specified as a pair
    of ints: I0 is the low-order word and I1 is the high-order word.
-   Do not use this routine for non-integer modes; convert to
-   REAL_VALUE_TYPE and use CONST_DOUBLE_FROM_REAL_VALUE.  */
+   For values that are larger than 2*HOST_BITS_PER_WIDE_INT, the
+   implied upper bits are copies of the high bit of i1.  The value
+   itself is neither signed nor unsigned.  Do not use this routine for
+   non-integer modes; convert to REAL_VALUE_TYPE and use
+   CONST_DOUBLE_FROM_REAL_VALUE.  */
 
 rtx
 immed_double_const (HOST_WIDE_INT i0, HOST_WIDE_INT i1, enum machine_mode mode)
@@ -525,10 +534,9 @@ immed_double_const (HOST_WIDE_INT i0, HOST_WIDE_INT i1, enum machine_mode mode)
 
      1) If GET_MODE_BITSIZE (mode) <= HOST_BITS_PER_WIDE_INT, then we use
 	gen_int_mode.
-     2) GET_MODE_BITSIZE (mode) == 2 * HOST_BITS_PER_WIDE_INT, but the value of
-	the integer fits into HOST_WIDE_INT anyway (i.e., i1 consists only
-	from copies of the sign bit, and sign of i0 and i1 are the same),  then
-	we return a CONST_INT for i0.
+     2) If the value of the integer fits into HOST_WIDE_INT anyway
+        (i.e., i1 consists only from copies of the sign bit, and sign
+	of i0 and i1 are the same), then we return a CONST_INT for i0.
      3) Otherwise, we create a CONST_DOUBLE for i0 and i1.  */
   if (mode != VOIDmode)
     {
@@ -540,8 +548,6 @@ immed_double_const (HOST_WIDE_INT i0, HOST_WIDE_INT i1, enum machine_mode mode)
 
       if (GET_MODE_BITSIZE (mode) <= HOST_BITS_PER_WIDE_INT)
 	return gen_int_mode (i0, mode);
-
-      gcc_assert (GET_MODE_BITSIZE (mode) == 2 * HOST_BITS_PER_WIDE_INT);
     }
 
   /* If this integer fits in one word, return a CONST_INT.  */
@@ -964,6 +970,22 @@ void
 set_reg_attrs_from_value (rtx reg, rtx x)
 {
   int offset;
+  bool can_be_reg_pointer = true;
+
+  /* Don't call mark_reg_pointer for incompatible pointer sign
+     extension.  */
+  while (GET_CODE (x) == SIGN_EXTEND
+	 || GET_CODE (x) == ZERO_EXTEND
+	 || GET_CODE (x) == TRUNCATE
+	 || (GET_CODE (x) == SUBREG && subreg_lowpart_p (x)))
+    {
+#if defined(POINTERS_EXTEND_UNSIGNED) && !defined(HAVE_ptr_extend)
+      if ((GET_CODE (x) == SIGN_EXTEND && POINTERS_EXTEND_UNSIGNED)
+	  || (GET_CODE (x) != SIGN_EXTEND && ! POINTERS_EXTEND_UNSIGNED))
+	can_be_reg_pointer = false;
+#endif
+      x = XEXP (x, 0);
+    }
 
   /* Hard registers can be reused for multiple purposes within the same
      function, so setting REG_ATTRS, REG_POINTER and REG_POINTER_ALIGN
@@ -977,14 +999,14 @@ set_reg_attrs_from_value (rtx reg, rtx x)
       if (MEM_OFFSET_KNOWN_P (x))
 	REG_ATTRS (reg) = get_reg_attrs (MEM_EXPR (x),
 					 MEM_OFFSET (x) + offset);
-      if (MEM_POINTER (x))
+      if (can_be_reg_pointer && MEM_POINTER (x))
 	mark_reg_pointer (reg, 0);
     }
   else if (REG_P (x))
     {
       if (REG_ATTRS (x))
 	update_reg_offset (reg, x, offset);
-      if (REG_POINTER (x))
+      if (can_be_reg_pointer && REG_POINTER (x))
 	mark_reg_pointer (reg, REGNO_POINTER_ALIGN (REGNO (x)));
     }
 }
@@ -1548,6 +1570,7 @@ set_mem_attributes_minus_bitpos (rtx ref, tree t, int objectp,
   HOST_WIDE_INT apply_bitpos = 0;
   tree type;
   struct mem_attrs attrs, *defattrs, *refattrs;
+  addr_space_t as;
 
   /* It can happen that type_for_mode was given a mode for which there
      is no language-level type.  In which case it returns NULL, which
@@ -1572,16 +1595,7 @@ set_mem_attributes_minus_bitpos (rtx ref, tree t, int objectp,
   attrs.alias = get_alias_set (t);
 
   MEM_VOLATILE_P (ref) |= TYPE_VOLATILE (type);
-  MEM_IN_STRUCT_P (ref)
-    = AGGREGATE_TYPE_P (type) || TREE_CODE (type) == COMPLEX_TYPE;
   MEM_POINTER (ref) = POINTER_TYPE_P (type);
-
-  /* If we are making an object of this type, or if this is a DECL, we know
-     that it is a scalar if the type is not an aggregate.  */
-  if ((objectp || DECL_P (t))
-      && ! AGGREGATE_TYPE_P (type)
-      && TREE_CODE (type) != COMPLEX_TYPE)
-    MEM_SCALAR_P (ref) = 1;
 
   /* Default values from pre-existing memory attributes if present.  */
   refattrs = MEM_ATTRS (ref);
@@ -1690,17 +1704,29 @@ set_mem_attributes_minus_bitpos (rtx ref, tree t, int objectp,
       MEM_NOTRAP_P (ref) = !tree_could_trap_p (t);
 
       base = get_base_address (t);
-      if (base && DECL_P (base)
-	  && TREE_READONLY (base)
-	  && (TREE_STATIC (base) || DECL_EXTERNAL (base))
-	  && !TREE_THIS_VOLATILE (base))
-	MEM_READONLY_P (ref) = 1;
+      if (base)
+	{
+	  if (DECL_P (base)
+	      && TREE_READONLY (base)
+	      && (TREE_STATIC (base) || DECL_EXTERNAL (base))
+	      && !TREE_THIS_VOLATILE (base))
+	    MEM_READONLY_P (ref) = 1;
 
-      /* Mark static const strings readonly as well.  */
-      if (base && TREE_CODE (base) == STRING_CST
-	  && TREE_READONLY (base)
-	  && TREE_STATIC (base))
-	MEM_READONLY_P (ref) = 1;
+	  /* Mark static const strings readonly as well.  */
+	  if (TREE_CODE (base) == STRING_CST
+	      && TREE_READONLY (base)
+	      && TREE_STATIC (base))
+	    MEM_READONLY_P (ref) = 1;
+
+	  if (TREE_CODE (base) == MEM_REF
+	      || TREE_CODE (base) == TARGET_MEM_REF)
+	    as = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (TREE_OPERAND (base,
+								      0))));
+	  else
+	    as = TYPE_ADDR_SPACE (TREE_TYPE (base));
+	}
+      else
+	as = TYPE_ADDR_SPACE (type);
 
       /* If this expression uses it's parent's alias set, mark it such
 	 that we won't change it.  */
@@ -1839,6 +1865,8 @@ set_mem_attributes_minus_bitpos (rtx ref, tree t, int objectp,
 	  attrs.align = MAX (attrs.align, obj_align);
 	}
     }
+  else
+    as = TYPE_ADDR_SPACE (type);
 
   /* If we modified OFFSET based on T, then subtract the outstanding
      bit position offset.  Similarly, increase the size of the accessed
@@ -1852,19 +1880,8 @@ set_mem_attributes_minus_bitpos (rtx ref, tree t, int objectp,
     }
 
   /* Now set the attributes we computed above.  */
-  attrs.addrspace = TYPE_ADDR_SPACE (type);
+  attrs.addrspace = as;
   set_mem_attrs (ref, &attrs);
-
-  /* If this is already known to be a scalar or aggregate, we are done.  */
-  if (MEM_IN_STRUCT_P (ref) || MEM_SCALAR_P (ref))
-    return;
-
-  /* If it is a reference into an aggregate, this is part of an aggregate.
-     Otherwise we don't know.  */
-  else if (TREE_CODE (t) == COMPONENT_REF || TREE_CODE (t) == ARRAY_REF
-	   || TREE_CODE (t) == ARRAY_RANGE_REF
-	   || TREE_CODE (t) == BIT_FIELD_REF)
-    MEM_IN_STRUCT_P (ref) = 1;
 }
 
 void
@@ -2473,25 +2490,6 @@ unshare_all_rtl (void)
   unshare_all_rtl_1 (get_insns ());
   return 0;
 }
-
-struct rtl_opt_pass pass_unshare_all_rtl =
-{
- {
-  RTL_PASS,
-  "unshare",                            /* name */
-  NULL,                                 /* gate */
-  unshare_all_rtl,                      /* execute */
-  NULL,                                 /* sub */
-  NULL,                                 /* next */
-  0,                                    /* static_pass_number */
-  TV_NONE,                              /* tv_id */
-  0,                                    /* properties_required */
-  0,                                    /* properties_provided */
-  0,                                    /* properties_destroyed */
-  0,                                    /* todo_flags_start */
-  TODO_verify_rtl_sharing               /* todo_flags_finish */
- }
-};
 
 
 /* Check that ORIG is not marked when it should not be and mark ORIG as in use,
@@ -5541,10 +5539,6 @@ init_emit_regs (void)
   init_reg_modes_target ();
 
   /* Assign register numbers to the globally defined register rtx.  */
-  pc_rtx = gen_rtx_fmt_ (PC, VOIDmode);
-  ret_rtx = gen_rtx_fmt_ (RETURN, VOIDmode);
-  simple_return_rtx = gen_rtx_fmt_ (SIMPLE_RETURN, VOIDmode);
-  cc0_rtx = gen_rtx_fmt_ (CC0, VOIDmode);
   stack_pointer_rtx = gen_raw_REG (Pmode, STACK_POINTER_REGNUM);
   frame_pointer_rtx = gen_raw_REG (Pmode, FRAME_POINTER_REGNUM);
   hard_frame_pointer_rtx = gen_raw_REG (Pmode, HARD_FRAME_POINTER_REGNUM);
@@ -5860,6 +5854,11 @@ init_emit_once (void)
   const_tiny_rtx[0][(int) BImode] = const0_rtx;
   if (STORE_FLAG_VALUE == 1)
     const_tiny_rtx[1][(int) BImode] = const1_rtx;
+
+  pc_rtx = gen_rtx_fmt_ (PC, VOIDmode);
+  ret_rtx = gen_rtx_fmt_ (RETURN, VOIDmode);
+  simple_return_rtx = gen_rtx_fmt_ (SIMPLE_RETURN, VOIDmode);
+  cc0_rtx = gen_rtx_fmt_ (CC0, VOIDmode);
 }
 
 /* Produce exact duplicate of insn INSN after AFTER.

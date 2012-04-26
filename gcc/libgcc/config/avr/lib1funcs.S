@@ -25,7 +25,9 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #define __zero_reg__ r1
 #define __tmp_reg__ r0
 #define __SREG__ 0x3f
+#if defined (__AVR_HAVE_SPH__)
 #define __SP_H__ 0x3e
+#endif
 #define __SP_L__ 0x3d
 #define __RAMPZ__ 0x3B
 #define __EIND__  0x3C
@@ -1258,7 +1260,7 @@ ENDF __divmodsi4
 
 #if defined (__AVR_HAVE_JMP_CALL__)
 #   define SPEED_DIV 8
-#elif defined (__AVR_HAVE_MOVW__) && !defined (__AVR_HAVE_8BIT_SP__)
+#elif defined (__AVR_HAVE_MOVW__) && defined (__AVR_HAVE_SPH__)
 #   define SPEED_DIV 16
 #else
 #   define SPEED_DIV 0
@@ -1540,10 +1542,10 @@ DEFUN  __divdi3_moddi3
 
 4:  ;; Epilogue: Restore the Z = 12 Registers and return
     in r28, __SP_L__
-#if defined (__AVR_HAVE_8BIT_SP__)
-    clr r29
-#else
+#if defined (__AVR_HAVE_SPH__)
     in r29, __SP_H__
+#else
+    clr r29
 #endif /* #SP = 8/16 */
     ldi r30, 12
     XJMP __epilogue_restores__ + ((18 - 12) * 2)
@@ -1691,11 +1693,18 @@ DEFUN __prologue_saves__
 	push r17
 	push r28
 	push r29
-#if defined (__AVR_HAVE_8BIT_SP__)
+#if !defined (__AVR_HAVE_SPH__)
 	in	r28,__SP_L__
 	sub	r28,r26
 	out	__SP_L__,r28
 	clr	r29
+#elif defined (__AVR_XMEGA__)
+	in	r28,__SP_L__
+	in	r29,__SP_H__
+	sub	r28,r26
+	sbc	r29,r27
+	out	__SP_L__,r28
+	out	__SP_H__,r29
 #else
 	in	r28,__SP_L__
 	in	r29,__SP_H__
@@ -1740,11 +1749,18 @@ DEFUN __epilogue_restores__
 	ldd	r16,Y+4
 	ldd	r17,Y+3
 	ldd	r26,Y+2
-#if defined (__AVR_HAVE_8BIT_SP__)
+#if !defined (__AVR_HAVE_SPH__)
 	ldd	r29,Y+1
 	add	r28,r30
 	out	__SP_L__,r28
 	mov	r28, r26
+#elif defined (__AVR_XMEGA__)
+	ldd  r27,Y+1
+	add  r28,r30
+	adc  r29,__zero_reg__
+	out  __SP_L__,r28
+	out  __SP_H__,r29
+	wmov 28, 26
 #else
 	ldd	r27,Y+1
 	add	r28,r30
@@ -1879,6 +1895,10 @@ DEFUN __do_copy_data
 	cpc	r27, r17
 	brne	.L__do_copy_data_loop
 #endif /* !defined(__AVR_HAVE_ELPMX__) && !defined(__AVR_HAVE_ELPM__) */
+#if defined (__AVR_HAVE_ELPM__) && defined (__AVR_HAVE_RAMPD__)
+	;; Reset RAMPZ to 0 so that EBI devices don't read garbage from RAM
+	out	__RAMPZ__, __zero_reg__
+#endif /* ELPM && RAMPD */
 ENDF __do_copy_data
 #endif /* L_copy_data */
 
@@ -1906,7 +1926,7 @@ ENDF __do_clear_bss
 #ifdef L_ctors
 	.section .init6,"ax",@progbits
 DEFUN __do_global_ctors
-#if defined(__AVR_HAVE_RAMPZ__)
+#if defined(__AVR_HAVE_ELPM__)
 	ldi	r17, hi8(__ctors_start)
 	ldi	r28, lo8(__ctors_end)
 	ldi	r29, hi8(__ctors_end)
@@ -1939,14 +1959,14 @@ DEFUN __do_global_ctors
 	cpi	r28, lo8(__ctors_start)
 	cpc	r29, r17
 	brne	.L__do_global_ctors_loop
-#endif /* defined(__AVR_HAVE_RAMPZ__) */
+#endif /* defined(__AVR_HAVE_ELPM__) */
 ENDF __do_global_ctors
 #endif /* L_ctors */
 
 #ifdef L_dtors
 	.section .fini6,"ax",@progbits
 DEFUN __do_global_dtors
-#if defined(__AVR_HAVE_RAMPZ__)
+#if defined(__AVR_HAVE_ELPM__)
 	ldi	r17, hi8(__dtors_end)
 	ldi	r28, lo8(__dtors_start)
 	ldi	r29, hi8(__dtors_start)
@@ -1979,7 +1999,7 @@ DEFUN __do_global_dtors
 	cpi	r28, lo8(__dtors_end)
 	cpc	r29, r17
 	brne	.L__do_global_dtors_loop
-#endif /* defined(__AVR_HAVE_RAMPZ__) */
+#endif /* defined(__AVR_HAVE_ELPM__) */
 ENDF __do_global_dtors
 #endif /* L_dtors */
 
@@ -1987,18 +2007,21 @@ ENDF __do_global_dtors
     
 #ifdef L_tablejump_elpm
 DEFUN __tablejump_elpm__
-#if defined (__AVR_HAVE_ELPM__)
-#if defined (__AVR_HAVE_LPMX__)
+#if defined (__AVR_HAVE_ELPMX__)
 	elpm	__tmp_reg__, Z+
 	elpm	r31, Z
 	mov	r30, __tmp_reg__
+#if defined (__AVR_HAVE_RAMPD__)
+	;; Reset RAMPZ to 0 so that EBI devices don't read garbage from RAM
+	out	__RAMPZ__, __zero_reg__
+#endif /* RAMPD */
 #if defined (__AVR_HAVE_EIJMP_EICALL__)
 	eijmp
 #else
 	ijmp
 #endif
 
-#else
+#elif defined (__AVR_HAVE_ELPM__)
 	elpm
 	adiw	r30, 1
 	push	r0
@@ -2010,7 +2033,6 @@ DEFUN __tablejump_elpm__
 #endif
 	ret
 #endif
-#endif /* defined (__AVR_HAVE_ELPM__) */
 ENDF __tablejump_elpm__
 #endif /* defined (L_tablejump_elpm) */
 
@@ -2100,11 +2122,18 @@ ENDF __load_4
     adiw    r30, 1
 .endif
 #endif
+#if defined (__AVR_HAVE_ELPM__) && defined (__AVR_HAVE_RAMPD__)
+.if \dest == D0+\n-1
+    ;; Reset RAMPZ to 0 so that EBI devices don't read garbage from RAM
+    out     __RAMPZ__, __zero_reg__
+.endif
+#endif
 .endm ; .xload
 
 #if defined (L_xload_1)
 DEFUN __xload_1
-#if defined (__AVR_HAVE_LPMX__) && !defined (__AVR_HAVE_RAMPZ__)
+#if defined (__AVR_HAVE_LPMX__) && !defined (__AVR_HAVE_ELPM__)
+    sbrc    HHI8, 7
     ld      D0, Z
     sbrs    HHI8, 7
     lpm     D0, Z
@@ -2112,14 +2141,14 @@ DEFUN __xload_1
 #else
     sbrc    HHI8, 7
     rjmp    1f
-#if defined (__AVR_HAVE_RAMPZ__)
+#if defined (__AVR_HAVE_ELPM__)
     out     __RAMPZ__, HHI8
-#endif /* __AVR_HAVE_RAMPZ__ */
+#endif /* __AVR_HAVE_ELPM__ */
     .xload  D0, 1
     ret
 1:  ld      D0, Z
     ret
-#endif /* LPMx && ! RAMPZ */
+#endif /* LPMx && ! ELPM */
 ENDF __xload_1
 #endif /* L_xload_1 */
 
@@ -2127,9 +2156,9 @@ ENDF __xload_1
 DEFUN __xload_2
     sbrc    HHI8, 7
     rjmp    1f
-#if defined (__AVR_HAVE_RAMPZ__)
+#if defined (__AVR_HAVE_ELPM__)
     out     __RAMPZ__, HHI8
-#endif /* __AVR_HAVE_RAMPZ__ */
+#endif /* __AVR_HAVE_ELPM__ */
     .xload  D0, 2
     .xload  D1, 2
     ret
@@ -2143,9 +2172,9 @@ ENDF __xload_2
 DEFUN __xload_3
     sbrc    HHI8, 7
     rjmp    1f
-#if defined (__AVR_HAVE_RAMPZ__)
+#if defined (__AVR_HAVE_ELPM__)
     out     __RAMPZ__, HHI8
-#endif /* __AVR_HAVE_RAMPZ__ */
+#endif /* __AVR_HAVE_ELPM__ */
     .xload  D0, 3
     .xload  D1, 3
     .xload  D2, 3
@@ -2161,9 +2190,9 @@ ENDF __xload_3
 DEFUN __xload_4
     sbrc    HHI8, 7
     rjmp    1f
-#if defined (__AVR_HAVE_RAMPZ__)
+#if defined (__AVR_HAVE_ELPM__)
     out     __RAMPZ__, HHI8
-#endif /* __AVR_HAVE_RAMPZ__ */
+#endif /* __AVR_HAVE_ELPM__ */
     .xload  D0, 4
     .xload  D1, 4
     .xload  D2, 4
@@ -2205,7 +2234,7 @@ DEFUN __movmemx_hi
 
 ;; Read from Flash
 
-#if defined (__AVR_HAVE_RAMPZ__)
+#if defined (__AVR_HAVE_ELPM__)
     out     __RAMPZ__, HHI8
 #endif
 
@@ -2229,6 +2258,10 @@ DEFUN __movmemx_hi
     st      X+, r0
     sbiw    LOOP, 1
     brne    0b
+#if defined (__AVR_HAVE_ELPM__) && defined (__AVR_HAVE_RAMPD__)
+    ;; Reset RAMPZ to 0 so that EBI devices don't read garbage from RAM
+    out	__RAMPZ__, __zero_reg__
+#endif /* ELPM && RAMPD */
     ret
 
 ;; Read from RAM
@@ -2238,7 +2271,7 @@ DEFUN __movmemx_hi
     ;; and store that Byte to RAM Destination
     st      X+, r0
     sbiw    LOOP, 1
-    brne    0b
+    brne    1b
     ret
 ENDF __movmemx_hi
 

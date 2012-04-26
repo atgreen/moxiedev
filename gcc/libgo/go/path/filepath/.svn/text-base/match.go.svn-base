@@ -7,11 +7,13 @@ package filepath
 import (
 	"errors"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 	"unicode/utf8"
 )
 
+// ErrBadPattern indicates a globbing pattern was malformed.
 var ErrBadPattern = errors.New("syntax error in pattern")
 
 // Match returns true if name matches the shell file name pattern.
@@ -33,7 +35,11 @@ var ErrBadPattern = errors.New("syntax error in pattern")
 //		lo '-' hi   matches character c for lo <= c <= hi
 //
 // Match requires pattern to match all of name, not just a substring.
-// The only possible error return occurs when the pattern is malformed.
+// The only possible returned error is ErrBadPattern, when pattern
+// is malformed.
+//
+// On Windows, escaping is disabled. Instead, '\\' is treated as
+// path separator.
 //
 func Match(pattern, name string) (matched bool, err error) {
 Pattern:
@@ -93,9 +99,11 @@ Scan:
 	for i = 0; i < len(pattern); i++ {
 		switch pattern[i] {
 		case '\\':
-			// error check handled in matchChunk: bad pattern.
-			if i+1 < len(pattern) {
-				i++
+			if runtime.GOOS != "windows" {
+				// error check handled in matchChunk: bad pattern.
+				if i+1 < len(pattern) {
+					i++
+				}
 			}
 		case '[':
 			inrange = true
@@ -165,10 +173,12 @@ func matchChunk(chunk, s string) (rest string, ok bool, err error) {
 			chunk = chunk[1:]
 
 		case '\\':
-			chunk = chunk[1:]
-			if len(chunk) == 0 {
-				err = ErrBadPattern
-				return
+			if runtime.GOOS != "windows" {
+				chunk = chunk[1:]
+				if len(chunk) == 0 {
+					err = ErrBadPattern
+					return
+				}
 			}
 			fallthrough
 
@@ -189,7 +199,7 @@ func getEsc(chunk string) (r rune, nchunk string, err error) {
 		err = ErrBadPattern
 		return
 	}
-	if chunk[0] == '\\' {
+	if chunk[0] == '\\' && runtime.GOOS != "windows" {
 		chunk = chunk[1:]
 		if len(chunk) == 0 {
 			err = ErrBadPattern
@@ -211,7 +221,6 @@ func getEsc(chunk string) (r rune, nchunk string, err error) {
 // if there is no matching file. The syntax of patterns is the same
 // as in Match. The pattern may describe hierarchical names such as
 // /usr/*/bin/ed (assuming the Separator is '/').
-// The only possible error return occurs when the pattern is malformed.
 //
 func Glob(pattern string) (matches []string, err error) {
 	if !hasMeta(pattern) {
@@ -253,7 +262,6 @@ func Glob(pattern string) (matches []string, err error) {
 // and appends them to matches. If the directory cannot be
 // opened, it returns the existing matches. New matches are
 // added in lexicographical order.
-// The only possible error return occurs when the pattern is malformed.
 func glob(dir, pattern string, matches []string) (m []string, e error) {
 	m = matches
 	fi, err := os.Stat(dir)

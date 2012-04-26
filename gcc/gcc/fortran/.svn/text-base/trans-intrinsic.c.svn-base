@@ -376,28 +376,25 @@ build_round_expr (tree arg, tree restype)
 {
   tree argtype;
   tree fn;
-  bool longlong;
   int argprec, resprec;
 
   argtype = TREE_TYPE (arg);
   argprec = TYPE_PRECISION (argtype);
   resprec = TYPE_PRECISION (restype);
 
-  /* Depending on the type of the result, choose the long int intrinsic
-     (lround family) or long long intrinsic (llround).  We might also
-     need to convert the result afterwards.  */
-  if (resprec <= LONG_TYPE_SIZE)
-    longlong = false;
+  /* Depending on the type of the result, choose the int intrinsic
+     (iround, available only as a builtin, therefore cannot use it for
+     __float128), long int intrinsic (lround family) or long long
+     intrinsic (llround).  We might also need to convert the result
+     afterwards.  */
+  if (resprec <= INT_TYPE_SIZE && argprec <= LONG_DOUBLE_TYPE_SIZE)
+    fn = builtin_decl_for_precision (BUILT_IN_IROUND, argprec);
+  else if (resprec <= LONG_TYPE_SIZE)
+    fn = builtin_decl_for_precision (BUILT_IN_LROUND, argprec);
   else if (resprec <= LONG_LONG_TYPE_SIZE)
-    longlong = true;
-  else
-    gcc_unreachable ();
-
-  /* Now, depending on the argument type, we choose between intrinsics.  */
-  if (longlong)
     fn = builtin_decl_for_precision (BUILT_IN_LLROUND, argprec);
   else
-    fn = builtin_decl_for_precision (BUILT_IN_LROUND, argprec);
+    gcc_unreachable ();
 
   return fold_convert (restype, build_call_expr_loc (input_location,
 						 fn, 1, arg));
@@ -623,7 +620,7 @@ gfc_build_intrinsic_lib_fndecls (void)
        q-suffixed functions.  */
 
     tree type, complex_type, func_1, func_2, func_cabs, func_frexp;
-    tree func_lround, func_llround, func_scalbn, func_cpow;
+    tree func_iround, func_lround, func_llround, func_scalbn, func_cpow;
 
     memset (quad_decls, 0, sizeof(tree) * (END_BUILTINS + 1));
 
@@ -631,6 +628,9 @@ gfc_build_intrinsic_lib_fndecls (void)
     complex_type = complex_float128_type_node;
     /* type (*) (type) */
     func_1 = build_function_type_list (type, type, NULL_TREE);
+    /* int (*) (type) */
+    func_iround = build_function_type_list (integer_type_node,
+					    type, NULL_TREE);
     /* long (*) (type) */
     func_lround = build_function_type_list (long_integer_type_node,
 					    type, NULL_TREE);
@@ -5761,10 +5761,14 @@ gfc_conv_associated (gfc_se *se, gfc_expr *expr)
       /* No optional target.  */
       if (ss1 == gfc_ss_terminator)
         {
-          /* A pointer to a scalar.  */
-          arg1se.want_pointer = 1;
-          gfc_conv_expr (&arg1se, arg1->expr);
-          tmp2 = arg1se.expr;
+	  /* A pointer to a scalar.  */
+	  arg1se.want_pointer = 1;
+	  gfc_conv_expr (&arg1se, arg1->expr);
+	  if (arg1->expr->symtree->n.sym->attr.proc_pointer
+	      && arg1->expr->symtree->n.sym->attr.dummy)
+	    arg1se.expr = build_fold_indirect_ref_loc (input_location,
+						       arg1se.expr);
+	  tmp2 = arg1se.expr;
         }
       else
         {
@@ -5794,12 +5798,21 @@ gfc_conv_associated (gfc_se *se, gfc_expr *expr)
 
       if (ss1 == gfc_ss_terminator)
         {
-          /* A pointer to a scalar.  */
-          gcc_assert (ss2 == gfc_ss_terminator);
-          arg1se.want_pointer = 1;
-          gfc_conv_expr (&arg1se, arg1->expr);
-          arg2se.want_pointer = 1;
-          gfc_conv_expr (&arg2se, arg2->expr);
+	  /* A pointer to a scalar.  */
+	  gcc_assert (ss2 == gfc_ss_terminator);
+	  arg1se.want_pointer = 1;
+	  gfc_conv_expr (&arg1se, arg1->expr);
+	  if (arg1->expr->symtree->n.sym->attr.proc_pointer
+	      && arg1->expr->symtree->n.sym->attr.dummy)
+	    arg1se.expr = build_fold_indirect_ref_loc (input_location,
+						       arg1se.expr);
+
+	  arg2se.want_pointer = 1;
+	  gfc_conv_expr (&arg2se, arg2->expr);
+	  if (arg2->expr->symtree->n.sym->attr.proc_pointer
+	      && arg2->expr->symtree->n.sym->attr.dummy)
+	    arg2se.expr = build_fold_indirect_ref_loc (input_location,
+						       arg2se.expr);
 	  gfc_add_block_to_block (&se->pre, &arg1se.pre);
 	  gfc_add_block_to_block (&se->post, &arg1se.post);
           tmp = fold_build2_loc (input_location, EQ_EXPR, boolean_type_node,
@@ -7237,10 +7250,11 @@ conv_intrinsic_move_alloc (gfc_code *code)
   gfc_init_se (&from_se, NULL);
   gfc_init_se (&to_se, NULL);
 
+  gcc_assert (from_expr->ts.type != BT_CLASS
+	      || to_expr->ts.type == BT_CLASS);
+
   if (from_expr->rank == 0)
     {
-      gcc_assert (from_expr->ts.type != BT_CLASS
-		  || to_expr->ts.type == BT_CLASS);
       if (from_expr->ts.type != BT_CLASS)
 	from_expr2 = from_expr;
       else

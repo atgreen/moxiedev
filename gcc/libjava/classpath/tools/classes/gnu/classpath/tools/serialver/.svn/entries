@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/tools/classes/gnu/classpath/tools/serialver
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,115 +26,13 @@ gandalf
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-SerialVer.class
-file
-
-
-
-
-2010-11-22T19:18:48.054784Z
-7e7fcb4f4875fbb03eeb65ff1d604290
-2010-10-12T15:55:12.882649Z
-165383
-gandalf
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4636
-
-SerialVer$1.class
-file
-
-
-
-
-2010-11-22T19:18:48.055820Z
-c83ebf025e07c555ed7b967008616d17
-2010-10-12T15:55:12.882649Z
-165383
-gandalf
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1171
-
-SerialVer$2.class
-file
-
-
-
-
-2010-11-22T19:18:48.055820Z
-acfaa529d00b89e47e787703d77d05ae
-2010-10-12T15:55:12.882649Z
-165383
-gandalf
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1197
-
 SerialVer$3.class
 file
 
 
 
 
-2010-11-22T19:18:48.056804Z
+2012-02-01T17:19:20.633152Z
 6a11b42602686c39b84c91720a00671c
 2010-10-12T15:55:12.882649Z
 165383
@@ -168,7 +66,7 @@ file
 
 
 
-2009-04-24T17:48:49.000000Z
+2012-02-01T17:19:20.633152Z
 8dc89d307fcde3c7a10f4deec6a1094a
 2006-12-18T21:51:42.686422Z
 120014
@@ -195,4 +93,106 @@ has-props
 
 
 1160
+
+SerialVer.class
+file
+
+
+
+
+2012-02-01T17:19:20.633152Z
+7e7fcb4f4875fbb03eeb65ff1d604290
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4636
+
+SerialVer$1.class
+file
+
+
+
+
+2012-02-01T17:19:20.633152Z
+c83ebf025e07c555ed7b967008616d17
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1171
+
+SerialVer$2.class
+file
+
+
+
+
+2012-02-01T17:19:20.633152Z
+acfaa529d00b89e47e787703d77d05ae
+2010-10-12T15:55:12.882649Z
+165383
+gandalf
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1197
 

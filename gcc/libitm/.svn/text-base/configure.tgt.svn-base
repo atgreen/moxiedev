@@ -53,7 +53,7 @@ case "${target_cpu}" in
 
   i[3456]86)
 	case " ${CC} ${CFLAGS} " in
-	  *" -m64 "*)
+	  *" -m64 "*|*" -mx32 "*)
 	    ;;
 	  *)
 	    if test -z "$with_arch"; then
@@ -65,6 +65,34 @@ case "${target_cpu}" in
 	;;
 
   sh*)		ARCH=sh ;;
+
+  sparc)
+	case " ${CC} ${CFLAGS} " in
+	  *" -m64 "*)
+	    ;;
+	  *)
+	    if test -z "$with_cpu"; then
+	      XCFLAGS="${XCFLAGS} -mcpu=v9"
+	    fi
+	esac
+	ARCH=sparc
+	;;
+
+  sparc64|sparcv9)
+	case " ${CC} ${CFLAGS} " in
+	  *" -m32 "*)
+	    XCFLAGS="${XCFLAGS} -mcpu=v9"
+	    ;;
+	  *" -m64 "*)
+	    ;;
+	  *)
+	    if test "x$with_cpu" = xv8; then
+	      XCFLAGS="${XCFLAGS} -mcpu=v9"
+	    fi
+	    ;;
+	esac
+	ARCH=sparc
+	;;
 
   x86_64)
 	case " ${CC} ${CFLAGS} " in
@@ -102,7 +130,7 @@ case "${target}" in
 
   *-*-gnu* | *-*-k*bsd*-gnu \
   | *-*-netbsd* | *-*-freebsd* | *-*-openbsd* \
-  | *-*-solaris2* | *-*-sysv4* | *-*-irix6* | *-*-osf* | *-*-hpux11* \
+  | *-*-solaris2* | *-*-sysv4* | *-*-hpux11* \
   | *-*-darwin* | *-*-aix*)
 	# POSIX system.  The OS is supported.
 	;;

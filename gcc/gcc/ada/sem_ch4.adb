@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -47,7 +47,6 @@ with Sem_Aux;  use Sem_Aux;
 with Sem_Case; use Sem_Case;
 with Sem_Cat;  use Sem_Cat;
 with Sem_Ch3;  use Sem_Ch3;
-with Sem_Ch5;  use Sem_Ch5;
 with Sem_Ch6;  use Sem_Ch6;
 with Sem_Ch8;  use Sem_Ch8;
 with Sem_Dim;  use Sem_Dim;
@@ -62,6 +61,7 @@ with Stand;    use Stand;
 with Sinfo;    use Sinfo;
 with Snames;   use Snames;
 with Tbuild;   use Tbuild;
+with Uintp;    use Uintp;
 
 package body Sem_Ch4 is
 
@@ -660,9 +660,22 @@ package body Sem_Ch4 is
             if Is_Indefinite_Subtype (Type_Id)
               and then Serious_Errors_Detected = Sav_Errs
             then
-               if Is_Class_Wide_Type (Type_Id) then
+               --  The build-in-place machinery may produce an allocator when
+               --  the designated type is indefinite but the underlying type is
+               --  not. In this case the unknown discriminants are meaningless
+               --  and should not trigger error messages. Check the parent node
+               --  because the allocator is marked as coming from source.
+
+               if Present (Underlying_Type (Type_Id))
+                 and then not Is_Indefinite_Subtype (Underlying_Type (Type_Id))
+                 and then not Comes_From_Source (Parent (N))
+               then
+                  null;
+
+               elsif Is_Class_Wide_Type (Type_Id) then
                   Error_Msg_N
                     ("initialization required in class-wide allocation", N);
+
                else
                   if Ada_Version < Ada_2005
                     and then Is_Limited_Type (Type_Id)
@@ -2637,6 +2650,34 @@ package body Sem_Ch4 is
       end if;
    end Analyze_Membership_Op;
 
+   -----------------
+   -- Analyze_Mod --
+   -----------------
+
+   procedure Analyze_Mod (N : Node_Id) is
+   begin
+      --  A special warning check, if we have an expression of the form:
+      --    expr mod 2 * literal
+      --  where literal is 64 or less, then probably what was meant was
+      --    expr mod 2 ** literal
+      --  so issue an appropriate warning.
+
+      if Warn_On_Suspicious_Modulus_Value
+        and then Nkind (Right_Opnd (N)) = N_Integer_Literal
+        and then Intval (Right_Opnd (N)) = Uint_2
+        and then Nkind (Parent (N)) = N_Op_Multiply
+        and then Nkind (Right_Opnd (Parent (N))) = N_Integer_Literal
+        and then Intval (Right_Opnd (Parent (N))) <= Uint_64
+      then
+         Error_Msg_N
+           ("suspicious MOD value, was '*'* intended'??", Parent (N));
+      end if;
+
+      --  Remaining processing is same as for other arithmetic operators
+
+      Analyze_Arithmetic_Op (N);
+   end Analyze_Mod;
+
    ----------------------
    -- Analyze_Negation --
    ----------------------
@@ -3361,58 +3402,37 @@ package body Sem_Ch4 is
    -----------------------------------
 
    procedure Analyze_Quantified_Expression (N : Node_Id) is
-      Loc : constant Source_Ptr := Sloc (N);
-      Ent : constant Entity_Id :=
-              New_Internal_Entity
-                (E_Loop, Current_Scope, Sloc (N), 'L');
-
-      Iterator : Node_Id;
+      QE_Scop : Entity_Id;
 
    begin
-      Set_Etype  (Ent,  Standard_Void_Type);
-      Set_Scope  (Ent, Current_Scope);
-      Set_Parent (Ent, N);
-
       Check_SPARK_Restriction ("quantified expression is not allowed", N);
 
-      --  If expansion is enabled (and not in Alfa mode), the condition is
-      --  analyzed after rewritten as a loop. So we only need to set the type.
+      --  Create a scope to emulate the loop-like behavior of the quantified
+      --  expression. The scope is needed to provide proper visibility of the
+      --  loop variable.
 
-      if Operating_Mode /= Check_Semantics
-        and then not Alfa_Mode
-      then
-         Set_Etype (N, Standard_Boolean);
-         return;
-      end if;
+      QE_Scop := New_Internal_Entity (E_Loop, Current_Scope, Sloc (N), 'L');
+      Set_Etype  (QE_Scop, Standard_Void_Type);
+      Set_Scope  (QE_Scop, Current_Scope);
+      Set_Parent (QE_Scop, N);
 
-      if Present (Loop_Parameter_Specification (N)) then
-         Iterator :=
-           Make_Iteration_Scheme (Loc,
-             Loop_Parameter_Specification =>
-               Loop_Parameter_Specification (N));
+      Push_Scope (QE_Scop);
+
+      --  All constituents are preanalyzed and resolved to avoid untimely
+      --  generation of various temporaries and types. Full analysis and
+      --  expansion is carried out when the quantified expression is
+      --  transformed into an expression with actions.
+
+      if Present (Iterator_Specification (N)) then
+         Preanalyze (Iterator_Specification (N));
       else
-         Iterator :=
-           Make_Iteration_Scheme (Loc,
-              Iterator_Specification =>
-                Iterator_Specification (N));
+         Preanalyze (Loop_Parameter_Specification (N));
       end if;
 
-      Push_Scope (Ent);
-      Set_Parent (Iterator, N);
-      Analyze_Iteration_Scheme (Iterator);
+      Preanalyze_And_Resolve (Condition (N), Standard_Boolean);
 
-      --  The loop specification may have been converted into an iterator
-      --  specification during its analysis. Update the quantified node
-      --  accordingly.
-
-      if Present (Iterator_Specification (Iterator)) then
-         Set_Iterator_Specification
-           (N, Iterator_Specification (Iterator));
-         Set_Loop_Parameter_Specification (N, Empty);
-      end if;
-
-      Analyze (Condition (N));
       End_Scope;
+
       Set_Etype (N, Standard_Boolean);
    end Analyze_Quantified_Expression;
 
@@ -4494,9 +4514,9 @@ package body Sem_Ch4 is
               ("type is not one-dimensional array in slice prefix", N);
 
          elsif not
-           Has_Compatible_Type (D, Etype (First_Index (Array_Type)))
+           Has_Compatible_Type (D, Etype (Proper_First_Index (Array_Type)))
          then
-            Wrong_Type (D, Etype (First_Index (Array_Type)));
+            Wrong_Type (D, Etype (Proper_First_Index (Array_Type)));
 
          else
             Set_Etype (N, Array_Type);
@@ -5514,19 +5534,24 @@ package body Sem_Ch4 is
                return;
             end if;
 
-         --  If we have infix notation, the operator must be usable.
-         --  Within an instance, if the type is already established we
-         --  know it is correct.
+         --  If we have infix notation, the operator must be usable. Within
+         --  an instance, if the type is already established we know it is
+         --  correct. If an operand is universal it is compatible with any
+         --  numeric type.
+
          --  In Ada 2005, the equality on anonymous access types is declared
          --  in Standard, and is always visible.
 
          elsif In_Open_Scopes (Scope (Bas))
            or else Is_Potentially_Use_Visible (Bas)
            or else In_Use (Bas)
-           or else (In_Use (Scope (Bas))
-                     and then not Is_Hidden (Bas))
+           or else (In_Use (Scope (Bas)) and then not Is_Hidden (Bas))
            or else (In_Instance
-                     and then First_Subtype (T1) = First_Subtype (Etype (R)))
+                     and then
+                       (First_Subtype (T1) = First_Subtype (Etype (R))
+                         or else
+                           (Is_Numeric_Type (T1)
+                             and then Is_Universal_Numeric_Type (Etype (R)))))
            or else Ekind (T1) = E_Anonymous_Access_Type
          then
             null;

@@ -10,6 +10,8 @@ import (
 	"errors"
 	"io"
 	"os"
+	"syscall"
+	"time"
 )
 
 // probeIPv6Stack returns two boolean values.  If the first boolean value is
@@ -21,33 +23,22 @@ func probeIPv6Stack() (supportsIPv6, supportsIPv4map bool) {
 
 // parsePlan9Addr parses address of the form [ip!]port (e.g. 127.0.0.1!80).
 func parsePlan9Addr(s string) (ip IP, iport int, err error) {
-	var (
-		addr IP
-		p, i int
-		ok   bool
-	)
-	addr = IPv4zero // address contains port only
-	i = byteIndex(s, '!')
+	addr := IPv4zero // address contains port only
+	i := byteIndex(s, '!')
 	if i >= 0 {
 		addr = ParseIP(s[:i])
 		if addr == nil {
-			err = errors.New("net: parsing IP failed")
-			goto Error
+			return nil, 0, errors.New("net: parsing IP failed")
 		}
 	}
-	p, _, ok = dtoi(s[i+1:], 0)
+	p, _, ok := dtoi(s[i+1:], 0)
 	if !ok {
-		err = errors.New("net: parsing port failed")
-		goto Error
+		return nil, 0, errors.New("net: parsing port failed")
 	}
 	if p < 0 || p > 0xFFFF {
-		err = &AddrError{"invalid port", string(p)}
-		goto Error
+		return nil, 0, &AddrError{"invalid port", string(p)}
 	}
 	return addr, p, nil
-
-Error:
-	return nil, 0, err
 }
 
 func readPlan9Addr(proto, filename string) (addr Addr, err error) {
@@ -90,10 +81,10 @@ func (c *plan9Conn) ok() bool { return c != nil && c.ctl != nil }
 
 // Implementation of the Conn interface - see Conn for documentation.
 
-// Read implements the net.Conn Read method.
+// Read implements the Conn Read method.
 func (c *plan9Conn) Read(b []byte) (n int, err error) {
 	if !c.ok() {
-		return 0, os.EINVAL
+		return 0, syscall.EINVAL
 	}
 	if c.data == nil {
 		c.data, err = os.OpenFile(c.dir+"/data", os.O_RDWR, 0)
@@ -109,10 +100,10 @@ func (c *plan9Conn) Read(b []byte) (n int, err error) {
 	return
 }
 
-// Write implements the net.Conn Write method.
+// Write implements the Conn Write method.
 func (c *plan9Conn) Write(b []byte) (n int, err error) {
 	if !c.ok() {
-		return 0, os.EINVAL
+		return 0, syscall.EINVAL
 	}
 	if c.data == nil {
 		c.data, err = os.OpenFile(c.dir+"/data", os.O_RDWR, 0)
@@ -126,7 +117,7 @@ func (c *plan9Conn) Write(b []byte) (n int, err error) {
 // Close closes the connection.
 func (c *plan9Conn) Close() error {
 	if !c.ok() {
-		return os.EINVAL
+		return syscall.EINVAL
 	}
 	err := c.ctl.Close()
 	if err != nil {
@@ -156,28 +147,19 @@ func (c *plan9Conn) RemoteAddr() Addr {
 	return c.raddr
 }
 
-// SetTimeout implements the net.Conn SetTimeout method.
-func (c *plan9Conn) SetTimeout(nsec int64) error {
-	if !c.ok() {
-		return os.EINVAL
-	}
-	return os.EPLAN9
+// SetDeadline implements the Conn SetDeadline method.
+func (c *plan9Conn) SetDeadline(t time.Time) error {
+	return syscall.EPLAN9
 }
 
-// SetReadTimeout implements the net.Conn SetReadTimeout method.
-func (c *plan9Conn) SetReadTimeout(nsec int64) error {
-	if !c.ok() {
-		return os.EINVAL
-	}
-	return os.EPLAN9
+// SetReadDeadline implements the Conn SetReadDeadline method.
+func (c *plan9Conn) SetReadDeadline(t time.Time) error {
+	return syscall.EPLAN9
 }
 
-// SetWriteTimeout implements the net.Conn SetWriteTimeout method.
-func (c *plan9Conn) SetWriteTimeout(nsec int64) error {
-	if !c.ok() {
-		return os.EINVAL
-	}
-	return os.EPLAN9
+// SetWriteDeadline implements the Conn SetWriteDeadline method.
+func (c *plan9Conn) SetWriteDeadline(t time.Time) error {
+	return syscall.EPLAN9
 }
 
 func startPlan9(net string, addr Addr) (ctl *os.File, dest, proto, name string, err error) {
@@ -299,7 +281,7 @@ func (l *plan9Listener) Accept() (c Conn, err error) {
 
 func (l *plan9Listener) Close() error {
 	if l == nil || l.ctl == nil {
-		return os.EINVAL
+		return syscall.EINVAL
 	}
 	return l.ctl.Close()
 }

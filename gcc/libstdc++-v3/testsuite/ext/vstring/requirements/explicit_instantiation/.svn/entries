@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/ext/vstring/requirements/explicit_instantiation
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,13 +26,16 @@ jsm28
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+char
+dir
+
 1.cc
 file
 
 
 
 
-2009-04-24T17:50:36.000000Z
+2012-02-01T17:19:25.994985Z
 301e0531a8253482f4d7406ee0bf07b7
 2009-04-09T15:00:19.611803Z
 145841
@@ -69,7 +72,7 @@ file
 
 
 
-2009-04-24T17:50:36.000000Z
+2012-02-01T17:19:25.994985Z
 a469d6359632a6d6e2e1868a5c138f83
 2009-04-09T15:00:19.611803Z
 145841
@@ -101,8 +104,5 @@ char16_t
 dir
 
 wchar_t
-dir
-
-char
 dir
 

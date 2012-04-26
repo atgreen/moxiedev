@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---            Copyright (C) 2011, Free Software Foundation, Inc.            --
+--          Copyright (C) 2011-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -36,7 +36,6 @@ with Rtsfind;  use Rtsfind;
 with Sem;      use Sem;
 with Sem_Eval; use Sem_Eval;
 with Sem_Res;  use Sem_Res;
-with Sem_Util; use Sem_Util;
 with Sinfo;    use Sinfo;
 with Snames;   use Snames;
 with Stand;    use Stand;
@@ -310,6 +309,10 @@ package body Sem_Dim is
       System : System_Type) return String_Id;
    --  Given a dimension vector and a dimension system, return the proper
    --  string of symbols.
+
+   function Is_Dim_IO_Package_Entity (E : Entity_Id) return Boolean;
+   --  Return True if E is the package entity of System.Dim.Float_IO or
+   --  System.Dim.Integer_IO.
 
    function Is_Invalid (Position : Dimension_Position) return Boolean;
    --  Return True if Pos denotes the invalid position
@@ -1355,94 +1358,102 @@ package body Sem_Dim is
    -- Analyze_Dimension_Function_Call --
    -------------------------------------
 
+   --  Propagate the dimensions from the returned type to the call node. Note
+   --  that there is a special treatment for elementary function calls. Indeed
+   --  for Sqrt call, the resulting dimensions equal to half the dimensions of
+   --  the actual, and for other elementary calls, this routine check that
+   --  every actuals are dimensionless.
+
    procedure Analyze_Dimension_Function_Call (N : Node_Id) is
-      Name_Call      : constant Node_Id := Name (N);
       Actuals        : constant List_Id := Parameter_Associations (N);
+      Name_Call      : constant Node_Id := Name (N);
       Actual         : Node_Id;
       Dims_Of_Actual : Dimension_Type;
       Dims_Of_Call   : Dimension_Type;
+      Ent            : Entity_Id;
 
-      function Is_Elementary_Function_Call return Boolean;
-      --  Return True if the call is a call of an elementary function (see
-      --  Ada.Numerics.Generic_Elementary_Functions).
+      function Is_Elementary_Function_Entity (E : Entity_Id) return Boolean;
+      --  Given E, the original subprogram entity, return True if call is to an
+      --  elementary function (see Ada.Numerics.Generic_Elementary_Functions).
 
-      ---------------------------------
-      -- Is_Elementary_Function_Call --
-      ---------------------------------
+      -----------------------------------
+      -- Is_Elementary_Function_Entity --
+      -----------------------------------
 
-      function Is_Elementary_Function_Call return Boolean is
-         Ent : Entity_Id;
+      function Is_Elementary_Function_Entity (E : Entity_Id) return Boolean is
+         Loc : constant Source_Ptr := Sloc (E);
 
       begin
-         if Is_Entity_Name (Name_Call) then
-            Ent := Entity (Name_Call);
+         --  Is function entity in Ada.Numerics.Generic_Elementary_Functions?
 
-            --  Check the procedure is defined in an instantiation of a generic
-            --  package.
-
-            if Is_Generic_Instance (Scope (Ent)) then
-               Ent := Cunit_Entity (Get_Source_Unit (Ent));
-
-               --  Check the name of the generic package is
-               --  Generic_Elementary_Functions
-
-               return
-                 Is_Library_Level_Entity (Ent)
-                   and then Chars (Ent) = Name_Generic_Elementary_Functions;
-            end if;
-         end if;
-
-         return False;
-      end Is_Elementary_Function_Call;
+         return
+           Loc > No_Location
+             and then
+               Is_RTU
+                (Cunit_Entity (Get_Source_Unit (Loc)),
+                 Ada_Numerics_Generic_Elementary_Functions);
+      end Is_Elementary_Function_Entity;
 
    --  Start of processing for Analyze_Dimension_Function_Call
 
    begin
-      --  Elementary function case
+      --  Look for elementary function call
 
-      if Is_Elementary_Function_Call then
+      if Is_Entity_Name (Name_Call) then
+         Ent := Entity (Name_Call);
+
+         --  Get the original subprogram entity following the renaming chain
+
+         if Present (Alias (Ent)) then
+            Ent := Alias (Ent);
+         end if;
+
+         --  Elementary function case
+
+         if Is_Elementary_Function_Entity (Ent) then
 
          --  Sqrt function call case
 
-         if Chars (Name_Call) = Name_Sqrt then
-            Dims_Of_Call := Dimensions_Of (First (Actuals));
+            if Chars (Ent) = Name_Sqrt then
+               Dims_Of_Call := Dimensions_Of (First (Actuals));
 
-            if Exists (Dims_Of_Call) then
-               for Position in Dims_Of_Call'Range loop
-                  Dims_Of_Call (Position) :=
-                    Dims_Of_Call (Position) * Rational'(Numerator =>   1,
-                                                        Denominator => 2);
-               end loop;
+               if Exists (Dims_Of_Call) then
+                  for Position in Dims_Of_Call'Range loop
+                     Dims_Of_Call (Position) :=
+                       Dims_Of_Call (Position) * Rational'(Numerator   => 1,
+                                                           Denominator => 2);
+                  end loop;
 
-               Set_Dimensions (N, Dims_Of_Call);
-            end if;
-
-         --  All other functions in Ada.Numerics.Generic_Elementary_Functions
-         --  case. Note that all parameters here should be dimensionless.
-
-         else
-            Actual := First (Actuals);
-            while Present (Actual) loop
-               Dims_Of_Actual := Dimensions_Of (Actual);
-
-               if Exists (Dims_Of_Actual) then
-                  Error_Msg_NE ("parameter should be dimensionless for " &
-                                "elementary function&",
-                                Actual,
-                                Name_Call);
-                  Error_Msg_N ("\parameter " & Dimensions_Msg_Of (Actual),
-                               Actual);
+                  Set_Dimensions (N, Dims_Of_Call);
                end if;
 
-               Next (Actual);
-            end loop;
+            --  All other elementary functions case. Note that every actual
+            --  here should be dimensionless.
+
+            else
+               Actual := First (Actuals);
+               while Present (Actual) loop
+                  Dims_Of_Actual := Dimensions_Of (Actual);
+
+                  if Exists (Dims_Of_Actual) then
+                     Error_Msg_NE ("parameter should be dimensionless for " &
+                                   "elementary function&",
+                                   Actual, Name_Call);
+                     Error_Msg_N ("\parameter " & Dimensions_Msg_Of (Actual),
+                                  Actual);
+                  end if;
+
+                  Next (Actual);
+               end loop;
+            end if;
+
+            return;
          end if;
-
-      --  Other case
-
-      else
-         Analyze_Dimension_Has_Etype (N);
       end if;
+
+      --  Other cases
+
+      Analyze_Dimension_Has_Etype (N);
    end Analyze_Dimension_Function_Call;
 
    ---------------------------------
@@ -2126,7 +2137,7 @@ package body Sem_Dim is
    -- Expand_Put_Call_With_Dimension_Symbol --
    -------------------------------------------
 
-   --  For procedure Put defined in System.Dim_Float_IO/System.Dim_Integer_IO,
+   --  For procedure Put defined in System.Dim.Float_IO/System.Dim.Integer_IO,
    --  the default string parameter must be rewritten to include the dimension
    --  symbols in the output of a dimensioned object.
 
@@ -2160,20 +2171,61 @@ package body Sem_Dim is
       Actuals        : constant List_Id := Parameter_Associations (N);
       Loc            : constant Source_Ptr := Sloc (N);
       Name_Call      : constant Node_Id := Name (N);
+      New_Actuals    : constant List_Id := New_List;
       Actual         : Node_Id;
-      Base_Typ       : Node_Id;
       Dims_Of_Actual : Dimension_Type;
       Etyp           : Entity_Id;
-      First_Actual   : Node_Id;
-      New_Actuals    : List_Id;
-      New_Str_Lit    : Node_Id;
-      Package_Name   : Name_Id;
+      New_Str_Lit    : Node_Id := Empty;
       System         : System_Type;
+
+      function Has_Dimension_Symbols return Boolean;
+      --  Return True if the current Put call already has a parameter
+      --  association for parameter "Symbols" with the correct string of
+      --  symbols.
 
       function Is_Procedure_Put_Call return Boolean;
       --  Return True if the current call is a call of an instantiation of a
-      --  procedure Put defined in the package System.Dim_Float_IO and
-      --  System.Dim_Integer_IO.
+      --  procedure Put defined in the package System.Dim.Float_IO and
+      --  System.Dim.Integer_IO.
+
+      function Item_Actual return Node_Id;
+      --  Return the item actual parameter node in the put call
+
+      ---------------------------
+      -- Has_Dimension_Symbols --
+      ---------------------------
+
+      function Has_Dimension_Symbols return Boolean is
+         Actual : Node_Id;
+
+      begin
+         Actual := First (Actuals);
+
+         --  Look for a symbols parameter association in the list of actuals
+
+         while Present (Actual) loop
+            if Nkind (Actual) = N_Parameter_Association
+              and then Chars (Selector_Name (Actual)) = Name_Symbols
+            then
+
+               --  return True if the actual comes from source or if the string
+               --  of symbols doesn't have the default value (i.e "").
+
+               return Comes_From_Source (Actual)
+                        or else String_Length
+                                  (Strval
+                                    (Explicit_Actual_Parameter (Actual))) /= 0;
+            end if;
+
+            Next (Actual);
+         end loop;
+
+         --  At this point, the call has no parameter association
+         --  Look to the last actual since the symbols parameter is the last
+         --  one.
+
+         return Nkind (Last (Actuals)) = N_String_Literal;
+      end Has_Dimension_Symbols;
 
       ---------------------------
       -- Is_Procedure_Put_Call --
@@ -2181,133 +2233,144 @@ package body Sem_Dim is
 
       function Is_Procedure_Put_Call return Boolean is
          Ent : Entity_Id;
+         Loc : Source_Ptr;
 
       begin
-         --  There are three different Put routine in each generic package
-         --  Check that the current procedure call is one of them
+         --  There are three different Put routines in each generic dim IO
+         --  package. Verify the current procedure call is one of them.
 
          if Is_Entity_Name (Name_Call) then
             Ent := Entity (Name_Call);
 
-            --  Check that the name of the procedure is Put
-            --  Check the procedure is defined in an instantiation of a
-            --  generic package.
+            --  Get the original subprogram entity following the renaming chain
 
-            if Chars (Name_Call) = Name_Put
-              and then Is_Generic_Instance (Scope (Ent))
-            then
-               Ent := Cunit_Entity (Get_Source_Unit (Ent));
-
-               --  Verify that the generic package is System.Dim_Float_IO or
-               --  System.Dim_Integer_IO.
-
-               if Is_Library_Level_Entity (Ent) then
-                  Package_Name := Chars (Ent);
-
-                  return
-                    Package_Name = Name_Dim_Float_IO
-                      or else Package_Name = Name_Dim_Integer_IO;
-               end if;
+            if Present (Alias (Ent)) then
+               Ent := Alias (Ent);
             end if;
+
+            Loc := Sloc (Ent);
+
+            --  Check the name of the entity subprogram is Put and verify this
+            --  entity is located in either System.Dim.Float_IO or
+            --  System.Dim.Integer_IO.
+
+            return Chars (Ent) = Name_Put
+              and then Loc > No_Location
+              and then Is_Dim_IO_Package_Entity
+                         (Cunit_Entity (Get_Source_Unit (Loc)));
          end if;
 
          return False;
       end Is_Procedure_Put_Call;
 
+      -----------------
+      -- Item_Actual --
+      -----------------
+
+      function Item_Actual return Node_Id is
+         Actual : Node_Id;
+
+      begin
+         --  Look for the item actual as a parameter association
+
+         Actual := First (Actuals);
+         while Present (Actual) loop
+            if Nkind (Actual) = N_Parameter_Association
+              and then Chars (Selector_Name (Actual)) = Name_Item
+            then
+               return Explicit_Actual_Parameter (Actual);
+            end if;
+
+            Next (Actual);
+         end loop;
+
+         --  Case where the item has been defined without an association
+
+         Actual := First (Actuals);
+
+         --  Depending on the procedure Put, Item actual could be first or
+         --  second in the list of actuals.
+
+         if Has_Dimension_System (Base_Type (Etype (Actual))) then
+            return Actual;
+         else
+            return Next (Actual);
+         end if;
+      end Item_Actual;
+
    --  Start of processing for Expand_Put_Call_With_Dimension_Symbol
 
    begin
-      if Is_Procedure_Put_Call then
+      if Is_Procedure_Put_Call and then not Has_Dimension_Symbols then
+         Actual := Item_Actual;
+         Dims_Of_Actual := Dimensions_Of (Actual);
+         Etyp := Etype (Actual);
 
-         --  Get the first parameter
+         --  Add the symbol as a suffix of the value if the subtype has a
+         --  dimension symbol or if the parameter is not dimensionless.
 
-         First_Actual := First (Actuals);
+         if Symbol_Of (Etyp) /= No_String then
+            Start_String;
 
-         --  Case when the Put routine has four (System.Dim_Integer_IO) or five
-         --  (System.Dim_Float_IO) parameters.
+            --  Put a space between the value and the dimension
 
-         if List_Length (Actuals) = 5
-           or else List_Length (Actuals) = 4
-         then
-            Actual := Next (First_Actual);
+            Store_String_Char (' ');
+            Store_String_Chars (Symbol_Of (Etyp));
+            New_Str_Lit := Make_String_Literal (Loc, End_String);
 
-            if Nkind (Actual) = N_Parameter_Association then
+         --  Check that the item is not dimensionless
 
-               --  Get the dimensions and the corresponding dimension system
-               --  from the first actual.
+         --  Create the new String_Literal with the new String_Id generated by
+         --  the routine From_Dimension_To_String.
 
-               Actual := First_Actual;
-            end if;
-
-         --  Case when the Put routine has six parameters
-
-         else
-            Actual := Next (First_Actual);
+         elsif Exists (Dims_Of_Actual) then
+            System := System_Of (Base_Type (Etyp));
+            New_Str_Lit :=
+              Make_String_Literal (Loc,
+                From_Dimension_To_String_Of_Symbols (Dims_Of_Actual, System));
          end if;
 
-         Base_Typ := Base_Type (Etype (Actual));
-         System := System_Of (Base_Typ);
+         if Present (New_Str_Lit) then
 
-         --  Check the base type of Actual is a dimensioned type
+            --  Insert all actuals in New_Actuals
 
-         if Exists (System) then
-            Dims_Of_Actual := Dimensions_Of (Actual);
-            Etyp := Etype (Actual);
+            Actual := First (Actuals);
+            while Present (Actual) loop
 
-            --  Add the symbol as a suffix of the value if the subtype has a
-            --  dimension symbol or if the parameter is not dimensionless.
+               --  Copy every actuals in New_Actuals except the Symbols
+               --  parameter association.
 
-            if Exists (Dims_Of_Actual)
-              or else Symbol_Of (Etyp) /= No_String
-            then
-               New_Actuals := New_List;
+               if Nkind (Actual) = N_Parameter_Association
+                 and then Chars (Selector_Name (Actual)) /= Name_Symbols
+               then
+                  Append_To (New_Actuals,
+                     Make_Parameter_Association (Loc,
+                        Selector_Name => New_Copy (Selector_Name (Actual)),
+                        Explicit_Actual_Parameter =>
+                           New_Copy (Explicit_Actual_Parameter (Actual))));
 
-               --  Add to the list First_Actual and Actual if they differ
-
-               if Actual /= First_Actual then
-                  Append (New_Copy (First_Actual), New_Actuals);
+               elsif Nkind (Actual) /= N_Parameter_Association then
+                  Append_To (New_Actuals, New_Copy (Actual));
                end if;
-
-               Append (New_Copy (Actual), New_Actuals);
-
-               --  Look to the next parameter
 
                Next (Actual);
+            end loop;
 
-               --  Check if the type of N is a subtype that has a symbol of
-               --  dimensions in Aspect_Dimension_String_Id_Hash_Table.
+            --  Create new Symbols param association and append to New_Actuals
 
-               if Symbol_Of (Etyp) /= No_String then
-                  Start_String;
+            Append_To (New_Actuals,
+              Make_Parameter_Association (Loc,
+                Selector_Name => Make_Identifier (Loc, Name_Symbols),
+                Explicit_Actual_Parameter => New_Str_Lit));
 
-                  --  Put a space between the value and the dimension
+            --  Rewrite and analyze the procedure call
 
-                  Store_String_Char (' ');
-                  Store_String_Chars (Symbol_Of (Etyp));
-                  New_Str_Lit := Make_String_Literal (Loc, End_String);
+            Rewrite (N,
+              Make_Procedure_Call_Statement (Loc,
+                Name =>                   New_Copy (Name_Call),
+                Parameter_Associations => New_Actuals));
 
-               --  Rewrite the String_Literal of the second actual with the
-               --  new String_Id created by the routine
-               --  From_Dimension_To_String.
-
-               else
-                  New_Str_Lit :=
-                    Make_String_Literal (Loc,
-                      From_Dimension_To_String_Of_Symbols (Dims_Of_Actual,
-                        System));
-               end if;
-
-               Append (New_Str_Lit, New_Actuals);
-
-               --  Rewrite the procedure call with the new list of parameters
-
-               Rewrite (N,
-                 Make_Procedure_Call_Statement (Loc,
-                   Name =>                   New_Copy (Name_Call),
-                   Parameter_Associations => New_Actuals));
-
-               Analyze (N);
-            end if;
+            Analyze (N);
          end if;
       end if;
    end Expand_Put_Call_With_Dimension_Symbol;
@@ -2442,26 +2505,34 @@ package body Sem_Dim is
       return Exists (System_Of (Typ));
    end Has_Dimension_System;
 
+   ------------------------------
+   -- Is_Dim_IO_Package_Entity --
+   ------------------------------
+
+   function Is_Dim_IO_Package_Entity (E : Entity_Id) return Boolean is
+   begin
+      --  Check the package entity corresponds to System.Dim.Float_IO or
+      --  System.Dim.Integer_IO.
+
+      return
+        Is_RTU (E, System_Dim_Float_IO)
+          or Is_RTU (E, System_Dim_Integer_IO);
+   end Is_Dim_IO_Package_Entity;
+
    -------------------------------------
    -- Is_Dim_IO_Package_Instantiation --
    -------------------------------------
 
    function Is_Dim_IO_Package_Instantiation (N : Node_Id) return Boolean is
       Gen_Id : constant Node_Id := Name (N);
-      Ent    : Entity_Id;
 
    begin
-      if Is_Entity_Name (Gen_Id) then
-         Ent := Entity (Gen_Id);
+      --  Check that the instantiated package is either System.Dim.Float_IO
+      --  or System.Dim.Integer_IO.
 
-         return
-           Is_Library_Level_Entity (Ent)
-             and then
-               (Chars (Ent) = Name_Dim_Float_IO
-                 or else Chars (Ent) = Name_Dim_Integer_IO);
-      end if;
-
-      return False;
+      return
+        Is_Entity_Name (Gen_Id)
+          and then Is_Dim_IO_Package_Entity (Entity (Gen_Id));
    end Is_Dim_IO_Package_Instantiation;
 
    ----------------

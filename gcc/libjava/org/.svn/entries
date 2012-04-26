@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/org
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,6 +26,9 @@ doko
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+w3c
+dir
+
 relaxng
 dir
 
@@ -36,8 +39,5 @@ omg
 dir
 
 ietf
-dir
-
-w3c
 dir
 

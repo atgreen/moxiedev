@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_ostringstream
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-06-08T00:45:02.718875Z
-160416
-paolo
+2012-03-14T16:33:37.926982Z
+185390
+ro
 
 
 
@@ -26,15 +26,6 @@ paolo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-cons
-dir
-
-rdbuf
-dir
-
-requirements
-dir
-
 str
 dir
 
@@ -44,11 +35,11 @@ file
 
 
 
-2010-07-08T15:19:26.441096Z
-2269effeaffb92c1d281604c9545a2c8
-2010-06-03T19:15:56.538099Z
-160231
-paolo
+2012-04-26T00:33:22.299413Z
+e715b10cf8cd2996fbf8f4917dde7838
+2012-03-14T16:33:37.926982Z
+185390
+ro
 
 
 
@@ -70,5 +61,14 @@ paolo
 
 
 
-1824
+1770
+
+cons
+dir
+
+rdbuf
+dir
+
+requirements
+dir
 

@@ -1,7 +1,7 @@
 /* Output variables, constants and external declarations, for GNU compiler.
    Copyright (C) 1987, 1988, 1989, 1992, 1993, 1994, 1995, 1996, 1997,
    1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010, 2011  Free Software Foundation, Inc.
+   2010, 2011, 2012  Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -314,11 +314,16 @@ get_section (const char *name, unsigned int flags, tree decl)
 	  if (decl == 0)
 	    decl = sect->named.decl;
 	  gcc_assert (decl);
-	  error ("%+D causes a section type conflict with %D", 
-			decl, sect->named.decl);
-	  if (decl != sect->named.decl)
-            inform (DECL_SOURCE_LOCATION (sect->named.decl), 
-		    "%qD was declared here", sect->named.decl);
+	  if (sect->named.decl == NULL)
+	    error ("%+D causes a section type conflict", decl);
+	  else
+	    {
+	      error ("%+D causes a section type conflict with %D",
+		     decl, sect->named.decl);
+	      if (decl != sect->named.decl)
+		inform (DECL_SOURCE_LOCATION (sect->named.decl),
+			"%qD was declared here", sect->named.decl);
+	    }
 	  /* Make sure we don't error about one section multiple times.  */
 	  sect->common.flags |= SECTION_OVERRIDE;
 	}
@@ -2166,11 +2171,22 @@ static GTY(()) tree weak_decls;
 void
 assemble_external (tree decl ATTRIBUTE_UNUSED)
 {
-  /* Because most platforms do not define ASM_OUTPUT_EXTERNAL, the
-     main body of this code is only rarely exercised.  To provide some
-     testing, on all platforms, we make sure that the ASM_OUT_FILE is
-     open.  If it's not, we should not be calling this function.  */
+  /*  Make sure that the ASM_OUT_FILE is open.
+      If it's not, we should not be calling this function.  */
   gcc_assert (asm_out_file);
+
+  /* In a perfect world, the following condition would be true.
+     Sadly, the Java and Go front ends emit assembly *from the front end*,
+     bypassing the call graph.  See PR52739.  Fix before GCC 4.8.  */
+#if 0
+  /* This function should only be called if we are expanding, or have
+     expanded, to RTL.
+     Ideally, only final.c would be calling this function, but it is
+     not clear whether that would break things somehow.  See PR 17982
+     for further discussion.  */
+  gcc_assert (cgraph_state == CGRAPH_STATE_EXPANSION
+	      || cgraph_state == CGRAPH_STATE_FINISHED);
+#endif
 
   if (!DECL_P (decl) || !DECL_EXTERNAL (decl) || !TREE_PUBLIC (decl))
     return;
@@ -2238,15 +2254,14 @@ mark_decl_referenced (tree decl)
       struct cgraph_node *node = cgraph_get_create_node (decl);
       if (!DECL_EXTERNAL (decl)
 	  && !node->local.finalized)
-	cgraph_mark_needed_node (node);
+	cgraph_mark_force_output_node (node);
     }
   else if (TREE_CODE (decl) == VAR_DECL)
     {
       struct varpool_node *node = varpool_node (decl);
-      varpool_mark_needed_node (node);
       /* C++ frontend use mark_decl_references to force COMDAT variables
          to be output that might appear dead otherwise.  */
-      node->force_output = true;
+      node->symbol.force_output = true;
     }
   /* else do nothing - we can get various sorts of CST nodes here,
      which do not need to be marked.  */
@@ -2706,12 +2721,12 @@ const_hash_1 (const tree exp)
 
     case VECTOR_CST:
       {
-	tree link;
+	unsigned i;
 
-	hi = 7 + TYPE_VECTOR_SUBPARTS (TREE_TYPE (exp));
+	hi = 7 + VECTOR_CST_NELTS (exp);
 
-	for (link = TREE_VECTOR_CST_ELTS (exp); link; link = TREE_CHAIN (link))
-	    hi = hi * 563 + const_hash_1 (TREE_VALUE (link));
+	for (i = 0; i < VECTOR_CST_NELTS (exp); ++i)
+	  hi = hi * 563 + const_hash_1 (VECTOR_CST_ELT (exp, i));
 
 	return hi;
       }
@@ -2846,21 +2861,15 @@ compare_constant (const tree t1, const tree t2)
 
     case VECTOR_CST:
       {
-        tree link1, link2;
+	unsigned i;
 
-        if (TYPE_VECTOR_SUBPARTS (TREE_TYPE (t1))
-	    != TYPE_VECTOR_SUBPARTS (TREE_TYPE (t2)))
+        if (VECTOR_CST_NELTS (t1) != VECTOR_CST_NELTS (t2))
 	  return 0;
 
-	link2 = TREE_VECTOR_CST_ELTS (t2);
-	for (link1 = TREE_VECTOR_CST_ELTS (t1);
-	     link1;
-	     link1 = TREE_CHAIN (link1))
-	  {
-	    if (!compare_constant (TREE_VALUE (link1), TREE_VALUE (link2)))
-	      return 0;
-	    link2 = TREE_CHAIN (link2);
-	  }
+	for (i = 0; i < VECTOR_CST_NELTS (t1); ++i)
+	  if (!compare_constant (VECTOR_CST_ELT (t1, i),
+				 VECTOR_CST_ELT (t2, i)))
+	    return 0;
 
 	return 1;
       }
@@ -3014,8 +3023,7 @@ copy_constant (tree exp)
 		     copy_constant (TREE_OPERAND (exp, 0)));
 
     case VECTOR_CST:
-      return build_vector (TREE_TYPE (exp),
-			   copy_list (TREE_VECTOR_CST_ELTS (exp)));
+      return build_vector (TREE_TYPE (exp), VECTOR_CST_ELTS (exp));
 
     case CONSTRUCTOR:
       {
@@ -3926,6 +3934,13 @@ compute_reloc_for_constant (tree exp)
 	   tem = TREE_OPERAND (tem, 0))
 	;
 
+      if (TREE_CODE (tem) == MEM_REF
+	  && TREE_CODE (TREE_OPERAND (tem, 0)) == ADDR_EXPR)
+	{
+	  reloc = compute_reloc_for_constant (TREE_OPERAND (tem, 0));
+	  break;
+	}
+
       if (TREE_PUBLIC (tem))
 	reloc |= 2;
       else
@@ -3994,6 +4009,9 @@ output_addressed_constants (tree exp)
 
       if (CONSTANT_CLASS_P (tem) || TREE_CODE (tem) == CONSTRUCTOR)
 	output_constant_def (tem, 0);
+
+      if (TREE_CODE (tem) == MEM_REF)
+	output_addressed_constants (TREE_OPERAND (tem, 0));
       break;
 
     case PLUS_EXPR:
@@ -4416,6 +4434,7 @@ initializer_constant_valid_for_bitfield_p (tree value)
       }
 
     case INTEGER_CST:
+    case REAL_CST:
       return true;
 
     case VIEW_CONVERT_EXPR:
@@ -4595,8 +4614,7 @@ output_constant (tree exp, unsigned HOST_WIDE_INT size, unsigned int align)
 	case VECTOR_CST:
 	  {
 	    int elt_size;
-	    tree link;
-	    unsigned int nalign;
+	    unsigned int i, nalign;
 	    enum machine_mode inner;
 
 	    inner = TYPE_MODE (TREE_TYPE (TREE_TYPE (exp)));
@@ -4604,12 +4622,11 @@ output_constant (tree exp, unsigned HOST_WIDE_INT size, unsigned int align)
 
 	    elt_size = GET_MODE_SIZE (inner);
 
-	    link = TREE_VECTOR_CST_ELTS (exp);
-	    output_constant (TREE_VALUE (link), elt_size, align);
+	    output_constant (VECTOR_CST_ELT (exp, 0), elt_size, align);
 	    thissize = elt_size;
-	    while ((link = TREE_CHAIN (link)) != NULL)
+	    for (i = 1; i < VECTOR_CST_NELTS (exp); ++i)
 	      {
-		output_constant (TREE_VALUE (link), elt_size, nalign);
+		output_constant (VECTOR_CST_ELT (exp, i), elt_size, nalign);
 		thissize += elt_size;
 	      }
 	    break;
@@ -5073,10 +5090,7 @@ output_constructor (tree exp, unsigned HOST_WIDE_INT size,
 
       /* The element in a union constructor specifies the proper field
 	 or index.  */
-      if ((TREE_CODE (local.type) == RECORD_TYPE
-	   || TREE_CODE (local.type) == UNION_TYPE
-	   || TREE_CODE (local.type) == QUAL_UNION_TYPE)
-	  && ce->index != NULL_TREE)
+      if (RECORD_OR_UNION_TYPE_P (local.type) && ce->index != NULL_TREE)
 	local.field = ce->index;
 
       else if (TREE_CODE (local.type) == ARRAY_TYPE)
@@ -5108,9 +5122,18 @@ output_constructor (tree exp, unsigned HOST_WIDE_INT size,
 		   || !CONSTRUCTOR_BITFIELD_P (local.field)))
 	output_constructor_regular_field (&local);
 
-      /* For a true bitfield or part of an outer one.  */
+      /* For a true bitfield or part of an outer one.  Only INTEGER_CSTs are
+	 supported for scalar fields, so we may need to convert first.  */
       else
-	output_constructor_bitfield (&local, outer);
+        {
+	  if (TREE_CODE (local.val) == REAL_CST)
+	    local.val
+	      = fold_unary (VIEW_CONVERT_EXPR,
+			    build_nonstandard_integer_type
+			    (TYPE_PRECISION (TREE_TYPE (local.val)), 0),
+			    local.val);
+	  output_constructor_bitfield (&local, outer);
+	}
     }
 
   /* If we are not at toplevel, save the pending data for our caller.
@@ -5262,12 +5285,19 @@ weak_finish_1 (tree decl)
 #endif
 }
 
+/* Fiven an assembly name, find the decl it is associated with.  */
+static tree
+find_decl (tree target)
+{
+  symtab_node node = symtab_node_for_asm (target);
+  if (node)
+    return node->symbol.decl;
+  return NULL_TREE;
+}
+
 /* This TREE_LIST contains weakref targets.  */
 
 static GTY(()) tree weakref_targets;
-
-/* Forward declaration.  */
-static tree find_decl_and_mark_needed (tree decl, tree target);
 
 /* Emit any pending weak declarations.  */
 
@@ -5294,7 +5324,7 @@ weak_finish (void)
 # if defined ASM_WEAKEN_LABEL && ! defined ASM_WEAKEN_DECL
 	  ASM_WEAKEN_LABEL (asm_out_file, IDENTIFIER_POINTER (target));
 # else
-	  tree decl = find_decl_and_mark_needed (alias_decl, target);
+	  tree decl = find_decl (target);
 
 	  if (! decl)
 	    {
@@ -5396,43 +5426,6 @@ globalize_decl (tree decl)
 }
 
 VEC(alias_pair,gc) *alias_pairs;
-
-/* Given an assembly name, find the decl it is associated with.  At the
-   same time, mark it needed for cgraph.  */
-
-static tree
-find_decl_and_mark_needed (tree decl, tree target)
-{
-  struct cgraph_node *fnode = NULL;
-  struct varpool_node *vnode = NULL;
-
-  if (TREE_CODE (decl) == FUNCTION_DECL)
-    {
-      fnode = cgraph_node_for_asm (target);
-      if (fnode == NULL)
-	vnode = varpool_node_for_asm (target);
-    }
-  else
-    {
-      vnode = varpool_node_for_asm (target);
-      if (vnode == NULL)
-	fnode = cgraph_node_for_asm (target);
-    }
-
-  if (fnode)
-    {
-      cgraph_mark_needed_node (fnode);
-      return fnode->decl;
-    }
-  else if (vnode)
-    {
-      varpool_mark_needed_node (vnode);
-      vnode->force_output = 1;
-      return vnode->decl;
-    }
-  else
-    return NULL_TREE;
-}
 
 /* Output the assembler code for a define (equate) using ASM_OUTPUT_DEF
    or ASM_OUTPUT_DEF_FROM_DECLS.  The function defines the symbol whose
@@ -5739,7 +5732,7 @@ finish_aliases_1 (void)
     {
       tree target_decl;
 
-      target_decl = find_decl_and_mark_needed (p->decl, p->target);
+      target_decl = find_decl (p->target);
       if (target_decl == NULL)
 	{
 	  if (symbol_alias_set_contains (defined, p->target))
@@ -5845,7 +5838,7 @@ assemble_alias (tree decl, tree target)
   /* If the target has already been emitted, we don't have to queue the
      alias.  This saves a tad of memory.  */
   if (cgraph_global_info_ready)
-    target_decl = find_decl_and_mark_needed (decl, target);
+    target_decl = find_decl (target);
   else
     target_decl= NULL;
   if (target_decl && TREE_ASM_WRITTEN (target_decl))
@@ -5951,12 +5944,12 @@ dump_tm_clone_pairs (VEC(tm_alias_pair,heap) *tm_alias_pairs)
 	 TM_GETTMCLONE.  If neither of these are true, we didn't generate
 	 a clone, and we didn't call it indirectly... no sense keeping it
 	 in the clone table.  */
-      if (!dst_n || !dst_n->needed)
+      if (!dst_n || !dst_n->analyzed)
 	continue;
 
       /* This covers the case where we have optimized the original
 	 function away, and only access the transactional clone.  */
-      if (!src_n || !src_n->needed)
+      if (!src_n || !src_n->analyzed)
 	continue;
 
       if (!switched)
@@ -6891,20 +6884,20 @@ default_binds_local_p_1 (const_tree exp, int shlib)
       && (TREE_STATIC (exp) || DECL_EXTERNAL (exp)))
     {
       struct varpool_node *vnode = varpool_get_node (exp);
-      if (vnode && resolution_local_p (vnode->resolution))
+      if (vnode && resolution_local_p (vnode->symbol.resolution))
 	resolved_locally = true;
       if (vnode
-	  && resolution_to_local_definition_p (vnode->resolution))
+	  && resolution_to_local_definition_p (vnode->symbol.resolution))
 	resolved_to_local_def = true;
     }
   else if (TREE_CODE (exp) == FUNCTION_DECL && TREE_PUBLIC (exp))
     {
       struct cgraph_node *node = cgraph_get_node (exp);
       if (node
-	  && resolution_local_p (node->resolution))
+	  && resolution_local_p (node->symbol.resolution))
 	resolved_locally = true;
       if (node
-	  && resolution_to_local_definition_p (node->resolution))
+	  && resolution_to_local_definition_p (node->symbol.resolution))
 	resolved_to_local_def = true;
     }
 
@@ -6985,15 +6978,15 @@ decl_binds_to_current_def_p (tree decl)
     {
       struct varpool_node *vnode = varpool_get_node (decl);
       if (vnode
-	  && vnode->resolution != LDPR_UNKNOWN)
-	return resolution_to_local_definition_p (vnode->resolution);
+	  && vnode->symbol.resolution != LDPR_UNKNOWN)
+	return resolution_to_local_definition_p (vnode->symbol.resolution);
     }
   else if (TREE_CODE (decl) == FUNCTION_DECL)
     {
       struct cgraph_node *node = cgraph_get_node (decl);
       if (node
-	  && node->resolution != LDPR_UNKNOWN)
-	return resolution_to_local_definition_p (node->resolution);
+	  && node->symbol.resolution != LDPR_UNKNOWN)
+	return resolution_to_local_definition_p (node->symbol.resolution);
     }
   /* Otherwise we have to assume the worst for DECL_WEAK (hidden weaks
      binds locally but still can be overwritten).
@@ -7658,7 +7651,7 @@ get_elf_initfini_array_priority_section (int priority,
       sprintf (buf, "%s.%.5u", 
 	       constructor_p ? ".init_array" : ".fini_array",
 	       priority);
-      sec = get_section (buf, SECTION_WRITE, NULL_TREE);
+      sec = get_section (buf, SECTION_WRITE | SECTION_NOTYPE, NULL_TREE);
     }
   else
     {
@@ -7666,16 +7659,16 @@ get_elf_initfini_array_priority_section (int priority,
 	{
 	  if (elf_init_array_section == NULL)
 	    elf_init_array_section
-	      = get_unnamed_section (0, output_section_asm_op,
-				     "\t.section\t.init_array");
+	      = get_section (".init_array",
+			     SECTION_WRITE | SECTION_NOTYPE, NULL_TREE);
 	  sec = elf_init_array_section;
 	}
       else
 	{
 	  if (elf_fini_array_section == NULL)
 	    elf_fini_array_section
-	      = get_unnamed_section (0, output_section_asm_op,
-				     "\t.section\t.fini_array");
+	      = get_section (".fini_array",
+			     SECTION_WRITE | SECTION_NOTYPE, NULL_TREE);
 	  sec = elf_fini_array_section;
 	}
     }

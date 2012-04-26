@@ -1,3 +1,95 @@
+2012-04-24  Tristan Gingold  <gingold@adacore.com>
+
+	* fixincl.c (fix_with_system): Add missing specifier.
+	* configure.ac: Default to twoprocess on vms.
+	* configure: Regenerate.
+
+2012-03-23  David Edelsohn  <dje.gcc@gmail.com>
+
+	* inclhack.def (aix_malloc): New.
+	* fixincl.x: Regenerate.
+	* tests/base/malloc.h [AIX_MALLOC_CHECK]: New.
+	
+2012-03-22  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR other/52626
+	* tests/base/pthread.h [SOLARIS_MUTEX_INIT_2_CHECK]
+	(PTHREAD_COND_INITIALIZER): Adapt for solaris_cond_init removal.
+
+2012-03-15  Tristan Gingold  <gingold@adacore.com>
+
+	* README (EXAMPLES OF FIXES): Update.
+
+2012-03-14  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* inclhack.def (math_exception): Remove duplicate.
+	(solaris_cond_init): Remove.
+	(solaris_sys_va_list): Remove Solaris 8 support.
+	* fixincl.x: Regenerate.
+	* tests/base/pthread.h [SOLARIS_COND_INIT_CHECK]: Remove.
+
+2012-03-14  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* inclhack.def (broken_cabs): Remove IRIX and SunOS 4 support.
+	(irix___restrict): Remove.
+	(irix___generic1): Remove.
+	(irix___generic2): Remove.
+	(irix_asm_apostrophe): Remove.
+	(irix_complex): Remove.
+	(irix_pthread_init): Remove.
+	(irix_socklen_t): Remove.
+	(irix_stdint_c99_mode): Remove.
+	(irix_stdint_c99_types): Remove.
+	(irix_stdint_c99_macros): Remove.
+	(irix_stdio_va_list): Remove IRIX 6.5 support.
+	(irix_wcsftime): Remove.
+	(stdio_va_list): Remove IRIX 6.5 support.
+	(svr4_profil): Remove IRIX bypass.
+	* fixincl.x: Regenerate.
+
+	* tests/base/complex.h [IRIX_COMPLEX_CHECK]: Remove.
+	* tests/base/internal/math_core.h: Remove.
+	* tests/base/internal/sgimacros.h: Remove.
+	* tests/base/internal/wchar_core.h: Remove.
+	* tests/base/math.h [BROKEN_CABS_CHECK]: Remove IRIX and SunOS 4
+	support.
+	* tests/base/pthread.h [IRIX_PTHREAD_INIT_CHECK]: Remove.
+	* tests/base/stdint-irix65.h: Remove.
+	* tests/base/stdint.h [IRIX_STDINT_C99_MODE_CHECK]: Remove.
+	* tests/base/sys/asm.h: Remove.
+	* tests/base/sys/socket.h [IRIX_SOCKLEN_T_CHECK]: Remove.
+
+2012-03-12  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* inclhack.def (alpha___extern_prefix): Remove.
+	(alpha___extern_prefix_standards): Remove.
+	(alpha___extern_prefix_sys_stat): Remove.
+	(alpha_bad_lval): Remove.
+	(alpha_pthread): Remove.
+	(alpha_pthread_gcc): Remove.
+	(alpha_pthread_init): Remove.
+	* fixincl.x: Regenerate.
+	* tests/base/pthread.h [ALPHA_PTHREAD_CHECK]: Remove.
+	[ALPHA_PTHREAD_GCC_CHECK]: Remove.
+	[ALPHA_PTHREAD_INIT_CHECK]: Remove.
+	* tests/base/standards.h: Remove.
+	* tests/base/sys/stat.h [ALPHA___EXTERN_PREFIX_SYS_STAT_CHECK]:
+	Remove.
+	* tests/base/testing.h [ALPHA___EXTERN_PREFIX_CHECK]: Remove.
+	[ALPHA_BAD_LVAL_CHECK]: Remove.
+
+2012-03-12  Tristan Gingold  <gingold@adacore.com>
+
+	* inclhack.def (vms_use_quoted_include,vms_add_missing_braces)
+	(vms_do_not_redeclare_hostalias, vms_decc_builtin)
+	(vms_no_64bit_getopt, vms_forward_declare_struct)
+	(vms_use_fast_setjmp): New fixes.
+	* fixincl.x: Regenerate.
+	* tests/base/rtldef/string.h: Update.
+	* tests/base/rtldef/if.h, tests/base/rtldef/resolv.h,
+	* tests/base/rtldef/setjmp.h, tests/base/rtldef/signal.h,
+	* tests/base/rtldef/stdio.h, tests/base/rtldef/wait.h: New files.
+
 2012-01-11  Bruce Korb <bkorb@gnu.org>
 	    Steven G. Kargl  <kargl@gcc.gnu.org>
 	    Andreas Tobler  <andreast@fgznet.ch>

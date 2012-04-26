@@ -233,12 +233,6 @@ proc check_weak_available { } {
         return 1
     }
 
-    # DEC OSF/1/Digital UNIX/Tru64 UNIX supports it
-
-    if { [istarget alpha*-dec-osf*] } {
-	return 1
-    }
-
     # Windows targets Cygwin and MingW32 support it
 
     if { [istarget *-*-cygwin*] || [istarget *-*-mingw*] } {
@@ -472,15 +466,6 @@ proc check_profiling_available { test_what } {
 	return 0
     }
 
-    # Support for -p on irix relies on libprof1.a which doesn't appear to
-    # exist on any irix6 system currently posting testsuite results.
-    # Support for -pg on irix relies on gcrt1.o which doesn't exist yet.
-    # See: http://gcc.gnu.org/ml/gcc/2002-10/msg00169.html
-    if { [istarget mips*-*-irix*]
-         && ($test_what == "-p" || $test_what == "-pg") } {
-	return 0
-    }
-
     # We don't yet support profiling for MIPS16.
     if { [istarget mips*-*-*]
 	 && ![check_effective_target_nomips16]
@@ -584,16 +569,11 @@ proc check_effective_target_pcc_bitfield_type_matters { } {
 # Add to FLAGS all the target-specific flags needed to use thread-local storage.
 
 proc add_options_for_tls { flags } {
-    # Tru64 UNIX uses emutls, which relies on a couple of pthread functions
-    # which only live in libpthread, so always pass -pthread for TLS.
-    if { [istarget alpha*-dec-osf*] } {
-	return "$flags -pthread"
-    }
-    # On Solaris 8 and 9, __tls_get_addr/___tls_get_addr only lives in
+    # On Solaris 9, __tls_get_addr/___tls_get_addr only lives in
     # libthread, so always pass -pthread for native TLS.
     # Need to duplicate native TLS check from
     # check_effective_target_tls_native to avoid recursion.
-    if { [istarget *-*-solaris2.\[89\]*] &&
+    if { [istarget *-*-solaris2.9*] &&
 	 [check_no_messages_and_pattern tls_native "!emutls" assembly {
 	     __thread int i;
 	     int f (void) { return i; }
@@ -714,6 +694,15 @@ proc check_effective_target_fopenmp {} {
     return [check_no_compiler_messages fopenmp object {
 	void foo (void) { }
     } "-fopenmp"]
+}
+
+# Return 1 if compilation with -fgnu-tm is error-free for trivial
+# code, 0 otherwise.
+
+proc check_effective_target_fgnu_tm {} {
+    return [check_no_compiler_messages fgnu_tm object {
+	void foo (void) { }
+    } "-fgnu-tm"]
 }
 
 # Return 1 if the target supports mmap, 0 otherwise.
@@ -890,6 +879,53 @@ proc check_effective_target_mips_newabi_large_long_double { } {
     } "-mabi=64"]
 }
 
+# Return true if the target is a MIPS target that has access
+# to the LL and SC instructions.
+
+proc check_effective_target_mips_llsc { } {
+    if { ![istarget mips*-*-*] } {
+	return 0
+    }
+    # Assume that these instructions are always implemented for
+    # non-elf* targets, via emulation if necessary.
+    if { ![istarget *-*-elf*] } {
+	return 1
+    }
+    # Otherwise assume LL/SC support for everything but MIPS I.
+    return [check_no_compiler_messages mips_llsc assembly {
+	#if __mips == 1
+	#error FOO
+	#endif
+    }]
+}
+
+# Return true if the target is a MIPS target that uses in-place relocations.
+
+proc check_effective_target_mips_rel { } {
+    if { ![istarget mips*-*-*] } {
+	return 0
+    }
+    return [check_no_compiler_messages mips_rel object {
+	#if (defined _ABIN32 && _MIPS_SIM == _ABIN32) \
+	    || (defined _ABI64 && _MIPS_SIM == _ABI64)
+	#error FOO
+	#endif
+    }]
+}
+
+# Return true if the target is a MIPS target that uses the EABI.
+
+proc check_effective_target_mips_eabi { } {
+    if { ![istarget mips*-*-*] } {
+	return 0
+    }
+    return [check_no_compiler_messages mips_eabi object {
+	#ifndef __mips_eabi
+	#error FOO
+	#endif
+    }]
+}
+
 # Return 1 if the current multilib does not generate PIC by default.
 
 proc check_effective_target_nonpic { } {
@@ -937,12 +973,7 @@ proc check_iconv_available { test_what } {
 # Return 1 if an ASCII locale is supported on this host, 0 otherwise.
 
 proc check_ascii_locale_available { } {
-    if { ([ishost alpha*-dec-osf*] || [ishost mips-sgi-irix*]) } {
-	# Neither Tru64 UNIX nor IRIX support an ASCII locale.
-	return 0
-    } else {
-	return 1
-    }
+    return 1
 }
 
 # Return true if named sections are supported on this target.
@@ -2520,7 +2551,22 @@ proc check_effective_target_ultrasparc_vis3_hw { } {
     } "-mcpu=niagara3"]
 }
 
-# Return 1 if this is a Sparc target with VIS enabled.
+# Return 1 if this is a SPARC-V9 target.
+
+proc check_effective_target_sparc_v9 { } {
+    if { [istarget sparc*-*-*] } {
+	return [check_no_compiler_messages sparc_v9 object {
+	    int main (void) {
+		asm volatile ("return %i7+8");
+		return 0;
+	    }
+	}]
+    } else {
+	return 0
+    }
+}
+
+# Return 1 if this is a SPARC target with VIS enabled.
 
 proc check_effective_target_sparc_vis { } {
     if { [istarget sparc*-*-*] } {
@@ -2759,7 +2805,9 @@ proc check_effective_target_vect_perm { } {
 	     || [istarget powerpc*-*-*]
              || [istarget spu-*-*]
 	     || [istarget i?86-*-*]
-	     || [istarget x86_64-*-*] } {
+	     || [istarget x86_64-*-*]
+	     || ([istarget mips*-*-*]
+		 && [check_effective_target_mpaired_single]) } {
             set et_vect_perm_saved 1
         }
     }
@@ -3372,7 +3420,8 @@ proc check_effective_target_vect_condition { } {
 	     || [istarget ia64-*-*]
 	     || [istarget i?86-*-*]
 	     || [istarget spu-*-*]
-	     || [istarget x86_64-*-*] } {
+	     || [istarget x86_64-*-*]
+	     || ([istarget arm*-*-*] && [check_effective_target_arm_neon_ok]) } {
 	   set et_vect_cond_saved 1
 	}
     }
@@ -3480,11 +3529,14 @@ proc check_effective_target_vect_extract_even_odd { } {
     } else {
         set et_vect_extract_even_odd_saved 0 
         if { [istarget powerpc*-*-*] 
+            || [is-effective-target arm_neon_ok]
              || [istarget i?86-*-*]
              || [istarget x86_64-*-*]
              || [istarget ia64-*-*]
-             || [istarget spu-*-*] } {
-           set et_vect_extract_even_odd_saved 1
+             || [istarget spu-*-*]
+	     || ([istarget mips*-*-*]
+		 && [check_effective_target_mpaired_single]) } {
+	    set et_vect_extract_even_odd_saved 1
         }
     }
 
@@ -3502,10 +3554,13 @@ proc check_effective_target_vect_interleave { } {
     } else {
         set et_vect_interleave_saved 0
         if { [istarget powerpc*-*-*]
+            || [is-effective-target arm_neon_ok]
              || [istarget i?86-*-*]
              || [istarget x86_64-*-*]
              || [istarget ia64-*-*]
-             || [istarget spu-*-*] } {
+             || [istarget spu-*-*]
+	     || ([istarget mips*-*-*]
+		 && [check_effective_target_mpaired_single]) } {
            set et_vect_interleave_saved 1
         }
     }
@@ -3690,7 +3745,8 @@ proc check_effective_target_sync_long_long { } {
     if { [istarget x86_64-*-*]
 	 || [istarget i?86-*-*])
 	 || [istarget arm*-*-*]
-	 || [istarget alpha*-*-*] } {
+	 || [istarget alpha*-*-*]
+	 || ([istarget sparc*-*-*] && [check_effective_target_lp64]) } {
 	return 1
     } else {
 	return 0
@@ -3735,6 +3791,10 @@ proc check_effective_target_sync_long_long_runtime { } {
 	} "" ]
     } elseif { [istarget alpha*-*-*] } {
 	return 1
+    } elseif { ([istarget sparc*-*-*]
+		 && [check_effective_target_lp64]
+		 && [check_effective_target_ultrasparc_hw]) } {
+	return 1
     } else {
 	return 0
     }
@@ -3760,9 +3820,8 @@ proc check_effective_target_sync_int_long { } {
 	     || [istarget hppa*-*linux*]
 	     || [istarget s390*-*-*] 
 	     || [istarget powerpc*-*-*]
-	     || [istarget sparc64-*-*]
-	     || [istarget sparcv9-*-*]
-	     || [istarget mips*-*-*] } {
+	     || ([istarget sparc*-*-*] && [check_effective_target_sparc_v9])
+	     || [check_effective_target_mips_llsc] } {
            set et_sync_int_long_saved 1
         }
     }
@@ -3790,9 +3849,8 @@ proc check_effective_target_sync_char_short { } {
 	     || [istarget hppa*-*linux*]
 	     || [istarget s390*-*-*] 
 	     || [istarget powerpc*-*-*]
-	     || [istarget sparc64-*-*]
-	     || [istarget sparcv9-*-*]
-	     || [istarget mips*-*-*] } {
+	     || ([istarget sparc*-*-*] && [check_effective_target_sparc_v9])
+	     || [check_effective_target_mips_llsc] } {
            set et_sync_char_short_saved 1
         }
     }
@@ -4066,9 +4124,6 @@ proc check_effective_target_fd_truncate { } {
 
 proc add_options_for_c99_runtime { flags } {
     if { [istarget *-*-solaris2*] } {
-	return "$flags -std=c99"
-    }
-    if { [istarget mips-sgi-irix6.5*] } {
 	return "$flags -std=c99"
     }
     if { [istarget powerpc-*-darwin*] } {
@@ -4394,11 +4449,18 @@ proc check_effective_target_c++11 { } {
     return [check-flags { { } { } { -std=c++0x -std=gnu++0x -std=c++11 -std=gnu++11 } }]
 }
 
+proc check_effective_target_c++1y { } {
+    if ![check_effective_target_c++] {
+	return 0
+    }
+    return [check-flags { { } { } { -std=c++1y -std=gnu++1y } }]
+}
+
 proc check_effective_target_c++98 { } {
     if ![check_effective_target_c++] {
 	return 0
     }
-    return [check-flags { { } { } { } { -std=c++0x -std=gnu++0x -std=c++11 -std=gnu++11 } }]
+    return [check-flags { { } { } { } { -std=c++0x -std=gnu++0x -std=c++11 -std=gnu++11 -std=c++1y -std=gnu++1y } }]
 }
 
 # Return 1 if expensive testcases should be run.

@@ -12,7 +12,7 @@
 @include gcc-common.texi
 
 @c Copyright years for this manual.
-@set copyrights-go 2010
+@set copyrights-go 2010, 2011, 2012
 
 @copying
 @c man begin COPYRIGHT
@@ -174,6 +174,31 @@ By default @command{gccgo} will warn about functions which have one or
 more return parameters but lack an explicit @code{return} statement.
 This warning may be disabled using
 @option{-fno-require-return-statement}.
+
+@item -fgo-check-divide-zero
+@cindex @option{-fgo-check-divide-zero}
+@cindex @option{-fno-go-check-divide-zero}
+Add explicit checks for division by zero.  In Go a division (or
+modulos) by zero causes a panic.  On Unix systems this is detected in
+the runtime by catching the @code{SIGFPE} signal.  Some processors,
+such as PowerPC, do not generate a SIGFPE on division by zero.  Some
+runtimes do not generate a signal that can be caught.  On those
+systems, this option may be used.  Or the checks may be removed via
+@option{-fno-go-check-divide-zero}.  This option is currently on by
+default, but in the future may be off by default on systems that do
+not require it.
+
+@item -fgo-check-divide-overflow
+@cindex @option{-fgo-check-divide-overflow}
+@cindex @option{-fno-go-check-divide-overflow}
+Add explicit checks for division overflow.  For example, division
+overflow occurs when computing @code{INT_MIN / -1}.  In Go this should
+be wrapped, to produce @code{INT_MIN}.  Some processors, such as x86,
+generate a trap on division overflow.  On those systems, this option
+may be used.  Or the checks may be removed via
+@option{-fno-go-check-divide-overflow}.  This option is currently on
+by default, but in the future may be off by default on systems that do
+not require it.
 @end table
 
 @c man end
@@ -304,14 +329,20 @@ function is still using it.
 @node Function Names
 @section Function Names
 
-@cindex @code{__asm__}
+@cindex @code{extern}
+@cindex external names
 Go code can call C functions directly using a Go extension implemented
-in @command{gccgo}: a function declaration may be followed by
-@code{__asm__ ("@var{name}")}. For example, here is how the C function
-@code{open} can be declared in Go:
+in @command{gccgo}: a function declaration may be preceded by a
+comment giving the external name.  The comment must be at the
+beginning of the line and must start with @code{//extern}.  This must
+be followed by a space and then the external name of the function.
+The function declaration must be on the line immediately after the
+comment.  For example, here is how the C function @code{open} can be
+declared in Go:
 
 @smallexample
-func c_open(name *byte, mode int, perm int) int __asm__ ("open");
+//extern open
+func c_open(name *byte, mode int, perm int) int
 @end smallexample
 
 The C function naturally expects a nul terminated string, which in Go
@@ -333,7 +364,7 @@ present the name of a Go function that does not have a receiver is
 @option{-fgo-prefix} option used when the package is compiled; if the
 option is not used, the default is simply @code{go}.  To call the
 function from C you must set the name using the @command{gcc}
-extension similar to the @command{gccgo} extension.
+@code{__asm__} extension.
 
 @smallexample
 extern int go_function(int) __asm__ ("myprefix.mypackage.Function");

@@ -1,5 +1,5 @@
 /* Statement simplification on GIMPLE.
-   Copyright (C) 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 2010, 2011, 2012 Free Software Foundation, Inc.
    Split out from tree-ssa-ccp.c.
 
 This file is part of GCC.
@@ -70,6 +70,7 @@ can_refer_decl_in_current_unit_p (tree decl)
 	 flags incorrectly.  Those variables should never
 	 be finalized.  */
       gcc_checking_assert (!(vnode = varpool_get_node (decl))
+			   || vnode->alias
 			   || !vnode->finalized);
       return false;
     }
@@ -131,17 +132,25 @@ canonicalize_constructor_val (tree cval)
   if (TREE_CODE (cval) == ADDR_EXPR)
     {
       tree base = get_base_address (TREE_OPERAND (cval, 0));
+      if (!base)
+	return NULL_TREE;
 
-      if (base
-	  && (TREE_CODE (base) == VAR_DECL
-	      || TREE_CODE (base) == FUNCTION_DECL)
+      if ((TREE_CODE (base) == VAR_DECL
+	   || TREE_CODE (base) == FUNCTION_DECL)
 	  && !can_refer_decl_in_current_unit_p (base))
 	return NULL_TREE;
-      if (base && TREE_CODE (base) == VAR_DECL)
+      if (TREE_CODE (base) == VAR_DECL)
 	{
 	  TREE_ADDRESSABLE (base) = 1;
 	  if (cfun && gimple_referenced_vars (cfun))
 	    add_referenced_var (base);
+	}
+      else if (TREE_CODE (base) == FUNCTION_DECL)
+	{
+	  /* Make sure we create a cgraph node for functions we'll reference.
+	     They can be non-existent if the reference comes from an entry
+	     of an external vtable for example.  */
+	  cgraph_get_create_node (base);
 	}
       /* Fixup types in global initializers.  */
       if (TREE_TYPE (TREE_TYPE (cval)) != TREE_TYPE (TREE_OPERAND (cval, 0)))
@@ -591,8 +600,11 @@ gimplify_and_update_call_from_tree (gimple_stmt_iterator *si_p, tree expr)
   for (i = gsi_last (stmts); !gsi_end_p (i); gsi_prev (&i))
     {
       new_stmt = gsi_stmt (i);
-      if (gimple_assign_single_p (new_stmt)
-	  && !is_gimple_reg (gimple_assign_lhs (new_stmt)))
+      if ((gimple_assign_single_p (new_stmt)
+	   && !is_gimple_reg (gimple_assign_lhs (new_stmt)))
+	  || (is_gimple_call (new_stmt)
+	      && (gimple_call_flags (new_stmt)
+		  & (ECF_NOVOPS | ECF_PURE | ECF_CONST | ECF_NORETURN)) == 0))
 	{
 	  tree vdef;
 	  if (!laststore)
@@ -967,29 +979,6 @@ gimple_fold_builtin (gimple stmt)
   return result;
 }
 
-/* Generate code adjusting the first parameter of a call statement determined
-   by GSI by DELTA.  */
-
-void
-gimple_adjust_this_by_delta (gimple_stmt_iterator *gsi, tree delta)
-{
-  gimple call_stmt = gsi_stmt (*gsi);
-  tree parm, tmp;
-  gimple new_stmt;
-
-  delta = convert_to_ptrofftype (delta);
-  gcc_assert (gimple_call_num_args (call_stmt) >= 1);
-  parm = gimple_call_arg (call_stmt, 0);
-  gcc_assert (POINTER_TYPE_P (TREE_TYPE (parm)));
-  tmp = create_tmp_var (TREE_TYPE (parm), NULL);
-  add_referenced_var (tmp);
-
-  tmp = make_ssa_name (tmp, NULL);
-  new_stmt = gimple_build_assign_with_ops (POINTER_PLUS_EXPR, tmp, parm, delta);
-  SSA_NAME_DEF_STMT (tmp) = new_stmt;
-  gsi_insert_before (gsi, new_stmt, GSI_SAME_STMT);
-  gimple_call_set_arg (call_stmt, 0, tmp);
-}
 
 /* Return a binfo to be used for devirtualization of calls based on an object
    represented by a declaration (i.e. a global or automatically allocated one)
@@ -1243,6 +1232,18 @@ fold_stmt_1 (gimple_stmt_iterator *gsi, bool inplace)
 	      tree tem = maybe_fold_reference (val, false);
 	      if (tem)
 		{
+		  gimple_debug_bind_set_value (stmt, tem);
+		  changed = true;
+		}
+	    }
+	  else if (val
+		   && TREE_CODE (val) == ADDR_EXPR)
+	    {
+	      tree ref = TREE_OPERAND (val, 0);
+	      tree tem = maybe_fold_reference (ref, false);
+	      if (tem)
+		{
+		  tem = build_fold_addr_expr_with_type (tem, TREE_TYPE (val));
 		  gimple_debug_bind_set_value (stmt, tem);
 		  changed = true;
 		}
@@ -2427,7 +2428,7 @@ gimple_fold_stmt_to_constant_1 (gimple stmt, tree (*valueize) (tree))
 	      else if (TREE_CODE (rhs) == ADDR_EXPR
 		       && !is_gimple_min_invariant (rhs))
 		{
-		  HOST_WIDE_INT offset;
+		  HOST_WIDE_INT offset = 0;
 		  tree base;
 		  base = get_addr_base_and_unit_offset_1 (TREE_OPERAND (rhs, 0),
 							  &offset,
@@ -2444,21 +2445,22 @@ gimple_fold_stmt_to_constant_1 (gimple stmt, tree (*valueize) (tree))
 			   == TYPE_VECTOR_SUBPARTS (TREE_TYPE (rhs))))
 		{
 		  unsigned i;
-		  tree val, list;
+		  tree val, *vec;
 
-		  list = NULL_TREE;
+		  vec = XALLOCAVEC (tree,
+				    TYPE_VECTOR_SUBPARTS (TREE_TYPE (rhs)));
 		  FOR_EACH_CONSTRUCTOR_VALUE (CONSTRUCTOR_ELTS (rhs), i, val)
 		    {
 		      val = (*valueize) (val);
 		      if (TREE_CODE (val) == INTEGER_CST
 			  || TREE_CODE (val) == REAL_CST
 			  || TREE_CODE (val) == FIXED_CST)
-			list = tree_cons (NULL_TREE, val, list);
+			vec[i] = val;
 		      else
 			return NULL_TREE;
 		    }
 
-		  return build_vector (TREE_TYPE (rhs), nreverse (list));
+		  return build_vector (TREE_TYPE (rhs), vec);
 		}
 
               if (kind == tcc_reference)
@@ -3086,7 +3088,7 @@ gimple_get_virt_method_for_binfo (HOST_WIDE_INT token, tree known_binfo)
   offset += token * size;
   fn = fold_ctor_reference (TREE_TYPE (TREE_TYPE (v)), DECL_INITIAL (v),
 			    offset, size);
-  if (!fn)
+  if (!fn || integer_zerop (fn))
     return NULL_TREE;
   gcc_assert (TREE_CODE (fn) == ADDR_EXPR
 	      || TREE_CODE (fn) == FDESC_EXPR);
@@ -3099,6 +3101,11 @@ gimple_get_virt_method_for_binfo (HOST_WIDE_INT token, tree known_binfo)
      possibility too late.  */
   if (!can_refer_decl_in_current_unit_p (fn))
     return NULL_TREE;
+
+  /* Make sure we create a cgraph node for functions we'll reference.
+     They can be non-existent if the reference comes from an entry
+     of an external vtable for example.  */
+  cgraph_get_create_node (fn);
 
   return fn;
 }

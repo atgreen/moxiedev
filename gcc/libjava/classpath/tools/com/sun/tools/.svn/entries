@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/tools/com/sun/tools
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,9 +26,6 @@ gandalf
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-javac
-dir
-
 javadoc
 dir
 
@@ -36,5 +33,8 @@ javah
 dir
 
 doclets
+dir
+
+javac
 dir
 

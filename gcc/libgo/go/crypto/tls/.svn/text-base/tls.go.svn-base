@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package tls partially implements the TLS 1.1 protocol, as specified in RFC
-// 4346.
+// Package tls partially implements TLS 1.0, as specified in RFC 2246.
 package tls
 
 import (
@@ -33,16 +32,16 @@ func Client(conn net.Conn, config *Config) *Conn {
 	return &Conn{conn: conn, config: config, isClient: true}
 }
 
-// A Listener implements a network listener (net.Listener) for TLS connections.
-type Listener struct {
-	listener net.Listener
-	config   *Config
+// A listener implements a network listener (net.Listener) for TLS connections.
+type listener struct {
+	net.Listener
+	config *Config
 }
 
 // Accept waits for and returns the next incoming TLS connection.
 // The returned connection c is a *tls.Conn.
-func (l *Listener) Accept() (c net.Conn, err error) {
-	c, err = l.listener.Accept()
+func (l *listener) Accept() (c net.Conn, err error) {
+	c, err = l.Listener.Accept()
 	if err != nil {
 		return
 	}
@@ -50,28 +49,22 @@ func (l *Listener) Accept() (c net.Conn, err error) {
 	return
 }
 
-// Close closes the listener.
-func (l *Listener) Close() error { return l.listener.Close() }
-
-// Addr returns the listener's network address.
-func (l *Listener) Addr() net.Addr { return l.listener.Addr() }
-
 // NewListener creates a Listener which accepts connections from an inner
 // Listener and wraps each connection with Server.
 // The configuration config must be non-nil and must have
 // at least one certificate.
-func NewListener(listener net.Listener, config *Config) (l *Listener) {
-	l = new(Listener)
-	l.listener = listener
+func NewListener(inner net.Listener, config *Config) net.Listener {
+	l := new(listener)
+	l.Listener = inner
 	l.config = config
-	return
+	return l
 }
 
 // Listen creates a TLS listener accepting connections on the
 // given network address using net.Listen.
 // The configuration config must be non-nil and must have
 // at least one certificate.
-func Listen(network, laddr string, config *Config) (*Listener, error) {
+func Listen(network, laddr string, config *Config) (net.Listener, error) {
 	if config == nil || len(config.Certificates) == 0 {
 		return nil, errors.New("tls.Listen: no certificates in configuration")
 	}
@@ -104,7 +97,9 @@ func Dial(network, addr string, config *Config) (*Conn, error) {
 	if config == nil {
 		config = defaultConfig()
 	}
-	if config.ServerName != "" {
+	// If no ServerName is set, infer the ServerName
+	// from the hostname we're connecting to.
+	if config.ServerName == "" {
 		// Make a copy to avoid polluting argument or default.
 		c := *config
 		c.ServerName = hostname
@@ -120,7 +115,7 @@ func Dial(network, addr string, config *Config) (*Conn, error) {
 
 // LoadX509KeyPair reads and parses a public/private key pair from a pair of
 // files. The files must contain PEM encoded data.
-func LoadX509KeyPair(certFile string, keyFile string) (cert Certificate, err error) {
+func LoadX509KeyPair(certFile, keyFile string) (cert Certificate, err error) {
 	certPEMBlock, err := ioutil.ReadFile(certFile)
 	if err != nil {
 		return

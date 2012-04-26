@@ -92,7 +92,8 @@ var (
 // If FieldsPerRecord is positive, Read requires each record to
 // have the given number of fields.  If FieldsPerRecord is 0, Read sets it to
 // the number of fields in the first record, so that future records must
-// have the same field count.
+// have the same field count.  If FieldsPerRecord is negative, no check is
+// made and records may have a variable number of fields.
 //
 // If LazyQuotes is true, a quote may appear in an unquoted field and a
 // non-doubled quote may appear in a quoted field.
@@ -156,6 +157,9 @@ func (r *Reader) Read() (record []string, err error) {
 
 // ReadAll reads all the remaining records from r.
 // Each record is a slice of fields.
+// A successful call returns err == nil, not err == EOF. Because ReadAll is
+// defined to read until EOF, it does not treat end of file as an error to be
+// reported.
 func (r *Reader) ReadAll() (records [][]string, err error) {
 	for {
 		record, err := r.Read()

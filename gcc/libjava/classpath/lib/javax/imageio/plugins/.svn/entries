@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/imageio/plugins
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,9 +26,9 @@ doko
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-jpeg
+bmp
 dir
 
-bmp
+jpeg
 dir
 

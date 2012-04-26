@@ -1,6 +1,6 @@
 # libgcc host-specific configuration file.
 # Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-# 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+# 2008, 2009, 2010, 2011, 2012 Free Software Foundation, Inc.
 
 #This file is part of GCC.
 
@@ -97,6 +97,8 @@ avr-*-*)
 	;;    
 bfin*-*)
 	cpu_type=bfin
+	;;
+cr16-*-*)
 	;;
 fido-*-*)
 	cpu_type=m68k
@@ -253,7 +255,7 @@ case ${host} in
   ;;
 *-*-*vms*)
   tmake_file="vms/t-vms"
-  extra_parts="vcrt0.o pcrt0.o crtbegin.o crtbeginS.o crtend.o crtendS.o"
+  extra_parts="crt0.o crtbegin.o crtbeginS.o crtend.o crtendS.o"
   ;;
 *-*-vxworks*)
   tmake_file=t-vxworks
@@ -264,8 +266,7 @@ case ${host} in
 esac
 
 case ${host} in
-*-*-darwin* | *-*-freebsd* | *-*-netbsd* | *-*-openbsd* | *-*-solaris2* | \
-  alpha*-dec-osf5.1*)
+*-*-darwin* | *-*-freebsd* | *-*-netbsd* | *-*-openbsd* | *-*-solaris2*)
   enable_execute_stack=enable-execute-stack-mprotect.c
   ;;
 i[34567]86-*-mingw* | x86_64-*-mingw*)
@@ -291,16 +292,6 @@ alpha*-*-netbsd*)
 	;;
 alpha*-*-openbsd*)
 	tmake_file="${tmake_file} alpha/t-alpha alpha/t-ieee"
-	;;
-alpha*-dec-osf5.1*)
-	tmake_file="${tmake_file} alpha/t-alpha alpha/t-ieee t-crtfm t-slibgcc alpha/t-slibgcc-osf"
-	case ${target_thread_file} in
-	  posix)
-	    tmake_file="${tmake_file} alpha/t-osf-pthread"
-	    ;;
-	esac
-	extra_parts="${extra_parts} crtfastmath.o"
-	md_unwind_header=alpha/osf5-unwind.h
 	;;
 alpha64-dec-*vms*)
 	tmake_file="$tmake_file alpha/t-alpha alpha/t-ieee alpha/t-vms t-slibgcc-vms"
@@ -414,6 +405,10 @@ bfin*-rtems*)
 bfin*-*)
 	tmake_file="$tmake_file bfin/t-bfin t-fdpbit"
 	extra_parts="crtbegin.o crtend.o crti.o crtn.o"
+        ;;
+cr16-*-elf)
+	tmake_file="${tmake_file} cr16/t-cr16 cr16/t-crtlibid t-fdpbit"
+	extra_parts="$extra_parts crti.o crtn.o crtlibid.o"
         ;;
 crisv32-*-elf)
 	tmake_file="$tmake_file cris/t-cris t-fdpbit"
@@ -600,6 +595,7 @@ i[34567]86-*-mingw*)
 		tmake_eh_file="i386/t-sjlj-eh"
 	else
 		tmake_eh_file="i386/t-dw2-eh"
+		md_unwind_header=i386/w32-unwind.h
 	fi
 	# Shared libgcc DLL install dir depends on cross/native build.
 	if test x${build} = x${host} ; then
@@ -608,7 +604,6 @@ i[34567]86-*-mingw*)
 		tmake_dlldir_file="i386/t-dlldir-x"
 	fi
 	tmake_file="${tmake_file} ${tmake_eh_file} ${tmake_dlldir_file} i386/t-slibgcc-cygming i386/t-cygming i386/t-mingw32 i386/t-crtfm i386/t-chkstk t-dfprules"
-	md_unwind_header=i386/w32-unwind.h
 	;;
 x86_64-*-mingw*)
 	case ${target_thread_file} in
@@ -634,7 +629,7 @@ x86_64-*-mingw*)
 	tmake_file="${tmake_file} ${tmake_eh_file} ${tmake_dlldir_file} i386/t-slibgcc-cygming i386/t-mingw32 t-dfprules i386/t-crtfm i386/t-chkstk"
 	extra_parts="$extra_parts crtfastmath.o"
 	;;
-i[34567]86-*-interix3*)
+i[34567]86-*-interix[3-9]*)
 	tmake_file="$tmake_file i386/t-interix i386/t-chkstk"
 	;;
 ia64*-*-elf*)
@@ -731,11 +726,6 @@ microblaze*-*-*)
         tmake_file="microblaze/t-microblaze t-fdpbit"
 	extra_parts="crtbegin.o crtend.o crti.o crtn.o"
 	;;
-mips-sgi-irix6.5*)
-	tmake_file="$tmake_file mips/t-irix6 t-crtfm mips/t-tpbit t-slibgcc mips/t-slibgcc-irix"
-	extra_parts="crtbegin.o crtend.o crtfastmath.o irix-crti.o irix-crtn.o"
-	md_unwind_header=mips/irix6-unwind.h
-	;;
 mips*-*-netbsd*)			# NetBSD/mips, either endian.
 	;;
 mips64*-*-linux* | mipsisa64*-*-linux*)
@@ -747,8 +737,6 @@ mips*-*-linux*)				# Linux MIPS, either endian.
 	extra_parts="$extra_parts crtfastmath.o"
 	tmake_file="${tmake_file} t-crtfm mips/t-mips16"
 	md_unwind_header=mips/linux-unwind.h
-	;;
-mips*-*-openbsd*)
 	;;
 mips*-sde-elf*)
 	tmake_file="$tmake_file mips/t-crtstuff mips/t-mips16"
@@ -842,9 +830,15 @@ powerpc64-*-darwin*)
 	tmake_file="$tmake_file rs6000/t-darwin64 rs6000/t-ibm-ldouble"
 	extra_parts="$extra_parts crt2.o"
 	;;
-powerpc-*-freebsd*)
-	tmake_file="${tmake_file} rs6000/t-ppccomm rs6000/t-savresfgpr rs6000/t-crtstuff rs6000/t-freebsd t-softfp-sfdf t-softfp-excl t-softfp t-slibgcc-libgcc"
+powerpc*-*-freebsd*)
+	tmake_file="${tmake_file} rs6000/t-ppccomm rs6000/t-savresfgpr rs6000/t-crtstuff rs6000/t-freebsd t-softfp-sfdf t-softfp-excl t-softfp"
 	extra_parts="$extra_parts crtbeginT.o ecrti.o ecrtn.o ncrti.o ncrtn.o"
+	case ${host} in
+	powerpc64*)
+	  tmake_file="${tmake_file} rs6000/t-freebsd64"
+	  md_unwind_header=rs6000/freebsd-unwind.h
+	  ;;
+	esac
 	;;
 powerpc-*-netbsd*)
 	tmake_file="$tmake_file rs6000/t-netbsd rs6000/t-crtstuff"
@@ -1084,6 +1078,14 @@ tic6x-*-elf)
 	extra_parts="$extra_parts crtbeginS.o crtendS.o crti.o crtn.o"
 	unwind_header=config/c6x/unwind-c6x.h
 	;;
+tilegx-*-linux*)
+	tmake_file="${tmake_file} tilegx/t-crtstuff t-softfp-sfdf tilegx/t-softfp t-softfp tilegx/t-tilegx"
+	md_unwind_header=tilepro/linux-unwind.h
+        ;;
+tilepro-*-linux*)
+	tmake_file="${tmake_file} tilepro/t-crtstuff t-softfp-sfdf t-softfp tilepro/t-tilepro"
+	md_unwind_header=tilepro/linux-unwind.h
+        ;;
 v850*-*-*)
 	tmake_file="v850/t-v850 t-fdpbit"
 	;;
@@ -1128,7 +1130,7 @@ i[34567]86-*-linux* | x86_64-*-linux* | \
   i[34567]86-*-kfreebsd*-gnu | x86_64-*-kfreebsd*-gnu | \
   i[34567]86-*-knetbsd*-gnu | \
   i[34567]86-*-gnu*)
-	tmake_file="${tmake_file} t-tls i386/t-linux"
+	tmake_file="${tmake_file} t-tls i386/t-linux i386/t-cpuinfo"
 	if test "$libgcc_cv_cfi" = "yes"; then
 		tmake_file="${tmake_file} t-stack i386/t-stack-i386"
 	fi

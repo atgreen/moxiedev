@@ -261,6 +261,8 @@ ix86_target_macros_internal (HOST_WIDE_INT isa_flag,
     def_or_undef (parse_in, "__AVX2__");
   if (isa_flag & OPTION_MASK_ISA_FMA)
     def_or_undef (parse_in, "__FMA__");
+  if (isa_flag & OPTION_MASK_ISA_RTM)
+    def_or_undef (parse_in, "__RTM__");
   if (isa_flag & OPTION_MASK_ISA_SSE4A)
     def_or_undef (parse_in, "__SSE4A__");
   if (isa_flag & OPTION_MASK_ISA_FMA4)
@@ -381,6 +383,11 @@ ix86_target_macros (void)
       cpp_define (parse_in, "__amd64__");
       cpp_define (parse_in, "__x86_64");
       cpp_define (parse_in, "__x86_64__");
+      if (TARGET_X32)
+	{
+	  cpp_define (parse_in, "_ILP32");
+	  cpp_define (parse_in, "__ILP32__");
+	}
     }
   else
     {

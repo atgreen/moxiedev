@@ -45,6 +45,7 @@ _TEXT SEGMENT
 ffi_call_win32 PROC NEAR,
     ffi_prep_args : NEAR PTR DWORD,
     ecif          : NEAR PTR DWORD,
+    cif_abi       : DWORD,
     cif_bytes     : DWORD,
     cif_flags     : DWORD,
     rvalue        : NEAR PTR DWORD,
@@ -64,6 +65,19 @@ ffi_call_win32 PROC NEAR,
         ;; Return stack to previous state and call the function
         add  esp, 8
 
+	;; Handle thiscall and fastcall
+	cmp cif_abi, 3 ;; FFI_THISCALL
+	jz do_thiscall
+	cmp cif_abi, 4 ;; FFI_FASTCALL
+	jnz do_stdcall
+	mov ecx, DWORD PTR [esp]
+	mov edx, DWORD PTR [esp+4]
+	add esp, 8
+	jmp do_stdcall
+do_thiscall:
+	mov ecx, DWORD PTR [esp]
+	add esp, 4
+do_stdcall:
         call fn
 
         ;; cdecl:   we restore esp in the epilogue, so there's no need to
@@ -156,6 +170,16 @@ ca_epilogue:
         ret
 ffi_call_win32 ENDP
 
+ffi_closure_THISCALL PROC NEAR FORCEFRAME
+	push	ebp
+	mov	ebp, esp
+	sub	esp, 40
+	lea	edx, [ebp -24]
+	mov	[ebp - 12], edx	/* resp */
+	lea	edx, [ebp + 12]  /* account for stub return address on stack */
+	jmp	stub
+ffi_closure_THISCALL ENDP
+
 ffi_closure_SYSV PROC NEAR FORCEFRAME
     ;; the ffi_closure ctx is passed in eax by the trampoline.
 
@@ -163,6 +187,7 @@ ffi_closure_SYSV PROC NEAR FORCEFRAME
         lea  edx, [ebp - 24]
         mov  [ebp - 12], edx         ;; resp
         lea  edx, [ebp + 8]
+stub:
         mov  [esp + 8], edx          ;; args
         lea  edx, [ebp - 12]
         mov  [esp + 4], edx          ;; &resp
@@ -239,6 +264,18 @@ ffi_closure_SYSV ENDP
 #define RAW_CLOSURE_USER_DATA_OFFSET (RAW_CLOSURE_FUN_OFFSET + 4)
 #define CIF_FLAGS_OFFSET 20
 
+ffi_closure_raw_THISCALL PROC NEAR
+	push ebp
+	mov  ebp, esp
+	push esi
+	sub esp, 36
+	mov  esi, [eax + RAW_CLOSURE_CIF_OFFSET]        ;; closure->cif
+	mov  edx, [eax + RAW_CLOSURE_USER_DATA_OFFSET]  ;; closure->user_data
+	mov [esp + 12], edx
+	lea edx, [ebp + 12], edx
+	jmp stubraw
+ffi_closure_raw_SYSV ENDP
+
 ffi_closure_raw_SYSV PROC NEAR USES esi
     ;; the ffi_closure ctx is passed in eax by the trampoline.
 
@@ -247,6 +284,7 @@ ffi_closure_raw_SYSV PROC NEAR USES esi
         mov  edx, [eax + RAW_CLOSURE_USER_DATA_OFFSET]  ;; closure->user_data
         mov  [esp + 12], edx                            ;; user_data
         lea  edx, [ebp + 8]
+stubraw:
         mov  [esp + 8], edx                             ;; raw_args
         lea  edx, [ebp - 24]
         mov  [esp + 4], edx                             ;; &res
@@ -405,7 +443,7 @@ _ffi_call_win32:
         movl  %esp,%ebp
 .LCFI1:
         # Make room for all of the new args.
-        movl  16(%ebp),%ecx                                                     
+        movl  20(%ebp),%ecx                                                     
         subl  %ecx,%esp
  
         movl  %esp,%eax
@@ -417,19 +455,34 @@ _ffi_call_win32:
  
         # Return stack to previous state and call the function
         addl  $8,%esp
- 
+
+	# Handle fastcall and thiscall
+	cmpl $3, 16(%ebp)  # FFI_THISCALL
+	jz .do_thiscall
+	cmpl $4, 16(%ebp) # FFI_FASTCALL
+	jnz .do_fncall
+	movl (%esp), %ecx
+	movl 4(%esp), %edx
+	addl $8, %esp
+	jmp .do_fncall
+.do_thiscall:
+	movl (%esp), %ecx
+	addl $4, %esp
+
+.do_fncall:
+	 
         # FIXME: Align the stack to a 128-bit boundary to avoid
         # potential performance hits.
 
-        call  *28(%ebp)
+        call  *32(%ebp)
  
         # stdcall functions pop arguments off the stack themselves
 
         # Load %ecx with the return type code
-        movl  20(%ebp),%ecx
+        movl  24(%ebp),%ecx
  
         # If the return value pointer is NULL, assume no return value.
-        cmpl  $0,24(%ebp)
+        cmpl  $0,28(%ebp)
         jne   0f
  
         # Even if there is no space for the return value, we are
@@ -488,50 +541,50 @@ _ffi_call_win32:
 
 .Lretint:
         # Load %ecx with the pointer to storage for the return value
-        movl  24(%ebp),%ecx
+        movl  28(%ebp),%ecx
         movl  %eax,0(%ecx)
         jmp   .Lepilogue
  
 .Lretfloat:
          # Load %ecx with the pointer to storage for the return value
-        movl  24(%ebp),%ecx
+        movl  28(%ebp),%ecx
         fstps (%ecx)
         jmp   .Lepilogue
  
 .Lretdouble:
         # Load %ecx with the pointer to storage for the return value
-        movl  24(%ebp),%ecx
+        movl  28(%ebp),%ecx
         fstpl (%ecx)
         jmp   .Lepilogue
  
 .Lretlongdouble:
         # Load %ecx with the pointer to storage for the return value
-        movl  24(%ebp),%ecx
+        movl  28(%ebp),%ecx
         fstpt (%ecx)
         jmp   .Lepilogue
  
 .Lretint64:
         # Load %ecx with the pointer to storage for the return value
-        movl  24(%ebp),%ecx
+        movl  28(%ebp),%ecx
         movl  %eax,0(%ecx)
         movl  %edx,4(%ecx)
 	jmp   .Lepilogue
 
 .Lretstruct1b:
         # Load %ecx with the pointer to storage for the return value
-        movl  24(%ebp),%ecx
+        movl  28(%ebp),%ecx
         movb  %al,0(%ecx)
         jmp   .Lepilogue
  
 .Lretstruct2b:
         # Load %ecx with the pointer to storage for the return value
-        movl  24(%ebp),%ecx
+        movl  28(%ebp),%ecx
         movw  %ax,0(%ecx)
         jmp   .Lepilogue
 
 .Lretstruct4b:
         # Load %ecx with the pointer to storage for the return value
-        movl  24(%ebp),%ecx
+        movl  28(%ebp),%ecx
         movl  %eax,0(%ecx)
         jmp   .Lepilogue
 
@@ -544,6 +597,19 @@ _ffi_call_win32:
         popl %ebp
         ret
 .ffi_call_win32_end:
+        .balign 16
+	.globl	_ffi_closure_THISCALL
+#ifndef __OS2__
+	.def	_ffi_closure_THISCALL;	.scl	2;	.type	32;	.endef
+#endif
+_ffi_closure_THISCALL:
+	pushl	%ebp
+	movl	%esp, %ebp
+	subl	$40, %esp
+	leal	-24(%ebp), %edx
+	movl	%edx, -12(%ebp)	/* resp */
+	leal	12(%ebp), %edx  /* account for stub return address on stack */
+	jmp	.stub
 .LFE1:
 
         # This assumes we are using gas.
@@ -562,6 +628,7 @@ _ffi_closure_SYSV:
 	leal	-24(%ebp), %edx
 	movl	%edx, -12(%ebp)	/* resp */
 	leal	8(%ebp), %edx
+.stub:
 	movl	%edx, 4(%esp)	/* args = __builtin_dwarf_cfa () */
 	leal	-12(%ebp), %edx
 	movl	%edx, (%esp)	/* &resp */
@@ -668,7 +735,21 @@ _ffi_closure_SYSV:
 #define RAW_CLOSURE_FUN_OFFSET (RAW_CLOSURE_CIF_OFFSET + 4)
 #define RAW_CLOSURE_USER_DATA_OFFSET (RAW_CLOSURE_FUN_OFFSET + 4)
 #define CIF_FLAGS_OFFSET 20
-
+        .balign 16
+	.globl	_ffi_closure_raw_THISCALL
+#ifndef __OS2__
+	.def	_ffi_closure_raw_THISCALL;	.scl	2;	.type	32;	.endef
+#endif
+_ffi_closure_raw_THISCALL:
+	pushl	%ebp
+	movl	%esp, %ebp
+	pushl	%esi
+	subl	$36, %esp
+	movl	RAW_CLOSURE_CIF_OFFSET(%eax), %esi	 /* closure->cif */
+	movl	RAW_CLOSURE_USER_DATA_OFFSET(%eax), %edx /* closure->user_data */
+	movl	%edx, 12(%esp)	/* user_data */
+	leal	12(%ebp), %edx	/* __builtin_dwarf_cfa () */
+	jmp	.stubraw
         # This assumes we are using gas.
         .balign 16
 	.globl	_ffi_closure_raw_SYSV
@@ -688,6 +769,7 @@ _ffi_closure_raw_SYSV:
 	movl	RAW_CLOSURE_USER_DATA_OFFSET(%eax), %edx /* closure->user_data */
 	movl	%edx, 12(%esp)	/* user_data */
 	leal	8(%ebp), %edx	/* __builtin_dwarf_cfa () */
+.stubraw:
 	movl	%edx, 8(%esp)	/* raw_args */
 	leal	-24(%ebp), %edx
 	movl	%edx, 4(%esp)	/* &res */

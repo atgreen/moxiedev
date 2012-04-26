@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 2010-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 2010-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -193,6 +193,7 @@ package body Aspects is
       N_Entry_Declaration                      => True,
       N_Exception_Declaration                  => True,
       N_Exception_Renaming_Declaration         => True,
+      N_Expression_Function                    => True,
       N_Formal_Abstract_Subprogram_Declaration => True,
       N_Formal_Concrete_Subprogram_Declaration => True,
       N_Formal_Object_Declaration              => True,
@@ -248,6 +249,7 @@ package body Aspects is
     Aspect_Bit_Order                    => Aspect_Bit_Order,
     Aspect_Component_Size               => Aspect_Component_Size,
     Aspect_Constant_Indexing            => Aspect_Constant_Indexing,
+    Aspect_Contract_Case                => Aspect_Contract_Case,
     Aspect_CPU                          => Aspect_CPU,
     Aspect_Default_Component_Value      => Aspect_Default_Component_Value,
     Aspect_Default_Iterator             => Aspect_Default_Iterator,
@@ -277,6 +279,7 @@ package body Aspects is
     Aspect_Pure_12                      => Aspect_Pure_12,
     Aspect_Remote_Call_Interface        => Aspect_Remote_Call_Interface,
     Aspect_Remote_Types                 => Aspect_Remote_Types,
+    Aspect_Scalar_Storage_Order         => Aspect_Scalar_Storage_Order,
     Aspect_Shared_Passive               => Aspect_Shared_Passive,
     Aspect_Universal_Data               => Aspect_Universal_Data,
     Aspect_Input                        => Aspect_Input,
@@ -295,8 +298,11 @@ package body Aspects is
     Aspect_Preelaborable_Initialization => Aspect_Preelaborable_Initialization,
     Aspect_Priority                     => Aspect_Priority,
     Aspect_Pure_Function                => Aspect_Pure_Function,
+    Aspect_Remote_Access_Type           => Aspect_Remote_Access_Type,
     Aspect_Read                         => Aspect_Read,
     Aspect_Shared                       => Aspect_Atomic,
+    Aspect_Simple_Storage_Pool          => Aspect_Simple_Storage_Pool,
+    Aspect_Simple_Storage_Pool_Type     => Aspect_Simple_Storage_Pool_Type,
     Aspect_Size                         => Aspect_Size,
     Aspect_Small                        => Aspect_Small,
     Aspect_Static_Predicate             => Aspect_Predicate,
@@ -305,6 +311,7 @@ package body Aspects is
     Aspect_Stream_Size                  => Aspect_Stream_Size,
     Aspect_Suppress                     => Aspect_Suppress,
     Aspect_Suppress_Debug_Info          => Aspect_Suppress_Debug_Info,
+    Aspect_Synchronization              => Aspect_Synchronization,
     Aspect_Test_Case                    => Aspect_Test_Case,
     Aspect_Type_Invariant               => Aspect_Invariant,
     Aspect_Unchecked_Union              => Aspect_Unchecked_Union,

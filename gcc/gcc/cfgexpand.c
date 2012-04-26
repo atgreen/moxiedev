@@ -47,6 +47,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "ssaexpand.h"
 #include "bitmap.h"
 #include "sbitmap.h"
+#include "cfgloop.h"
+#include "regs.h" /* For reg_renumber.  */
+#include "integrate.h" /* For emit_initial_value_sets.  */
 #include "insn-attr.h" /* For INSN_SCHEDULING.  */
 
 /* This variable holds information helping the rewriting of SSA trees
@@ -357,8 +360,7 @@ aggregate_contains_union_type (tree type)
    and due to type based aliasing rules decides that for two overlapping
    union temporaries { short s; int i; } accesses to the same mem through
    different types may not alias and happily reorders stores across
-   life-time boundaries of the temporaries (See PR25654).
-   We also have to mind MEM_IN_STRUCT_P and MEM_SCALAR_P.  */
+   life-time boundaries of the temporaries (See PR25654).  */
 
 static void
 add_alias_set_conflicts (void)
@@ -441,12 +443,11 @@ visit_conflict (gimple stmt ATTRIBUTE_UNUSED, tree op, void *data)
 
 /* Helper routine for add_scope_conflicts, calculating the active partitions
    at the end of BB, leaving the result in WORK.  We're called to generate
-   conflicts when OLD_CONFLICTS is non-null, otherwise we're just tracking
-   liveness.  If we generate conflicts then OLD_CONFLICTS stores the bits
-   for which we generated conflicts already.  */
+   conflicts when FOR_CONFLICT is true, otherwise we're just tracking
+   liveness.  */
 
 static void
-add_scope_conflicts_1 (basic_block bb, bitmap work, bitmap old_conflicts)
+add_scope_conflicts_1 (basic_block bb, bitmap work, bool for_conflict)
 {
   edge e;
   edge_iterator ei;
@@ -483,7 +484,7 @@ add_scope_conflicts_1 (basic_block bb, bitmap work, bitmap old_conflicts)
 	}
       else if (!is_gimple_debug (stmt))
 	{
-	  if (old_conflicts
+	  if (for_conflict
 	      && visit == visit_op)
 	    {
 	      /* If this is the first real instruction in this BB we need
@@ -491,27 +492,16 @@ add_scope_conflicts_1 (basic_block bb, bitmap work, bitmap old_conflicts)
 		 Unlike classical liveness for named objects we can't
 		 rely on seeing a def/use of the names we're interested in.
 		 There might merely be indirect loads/stores.  We'd not add any
-		 conflicts for such partitions.  We know that we generated
-		 conflicts between all partitions in old_conflicts already,
-		 so we need to generate only the new ones, avoiding to
-		 repeatedly pay the O(N^2) cost for each basic block.  */
+		 conflicts for such partitions.  */
 	      bitmap_iterator bi;
 	      unsigned i;
-
-	      EXECUTE_IF_AND_COMPL_IN_BITMAP (work, old_conflicts, 0, i, bi)
+	      EXECUTE_IF_SET_IN_BITMAP (work, 0, i, bi)
 		{
 		  unsigned j;
 		  bitmap_iterator bj;
-		  /* First the conflicts between new and old_conflicts.  */
-		  EXECUTE_IF_SET_IN_BITMAP (old_conflicts, 0, j, bj)
-		    add_stack_var_conflict (i, j);
-		  /* Then the conflicts between only the new members.  */
-		  EXECUTE_IF_AND_COMPL_IN_BITMAP (work, old_conflicts, i + 1,
-						  j, bj)
+		  EXECUTE_IF_SET_IN_BITMAP (work, i + 1, j, bj)
 		    add_stack_var_conflict (i, j);
 		}
-	      /* And remember for the next basic block.  */
-	      bitmap_ior_into (old_conflicts, work);
 	      visit = visit_conflict;
 	    }
 	  walk_stmt_load_store_addr_ops (stmt, work, visit, visit, visit);
@@ -528,7 +518,6 @@ add_scope_conflicts (void)
   basic_block bb;
   bool changed;
   bitmap work = BITMAP_ALLOC (NULL);
-  bitmap old_conflicts;
 
   /* We approximate the live range of a stack variable by taking the first
      mention of its name as starting point(s), and by the end-of-scope
@@ -550,18 +539,15 @@ add_scope_conflicts (void)
       FOR_EACH_BB (bb)
 	{
 	  bitmap active = (bitmap)bb->aux;
-	  add_scope_conflicts_1 (bb, work, NULL);
+	  add_scope_conflicts_1 (bb, work, false);
 	  if (bitmap_ior_into (active, work))
 	    changed = true;
 	}
     }
 
-  old_conflicts = BITMAP_ALLOC (NULL);
-
   FOR_EACH_BB (bb)
-    add_scope_conflicts_1 (bb, work, old_conflicts);
+    add_scope_conflicts_1 (bb, work, true);
 
-  BITMAP_FREE (old_conflicts);
   BITMAP_FREE (work);
   FOR_ALL_BB (bb)
     BITMAP_FREE (bb->aux);
@@ -1502,9 +1488,9 @@ estimated_stack_frame_size (struct cgraph_node *node)
   tree var;
   tree old_cur_fun_decl = current_function_decl;
   referenced_var_iterator rvi;
-  struct function *fn = DECL_STRUCT_FUNCTION (node->decl);
+  struct function *fn = DECL_STRUCT_FUNCTION (node->symbol.decl);
 
-  current_function_decl = node->decl;
+  current_function_decl = node->symbol.decl;
   push_cfun (fn);
 
   gcc_checking_assert (gimple_referenced_vars (fn));
@@ -1955,6 +1941,8 @@ expand_gimple_cond (basic_block bb, gimple stmt)
   false_edge->flags |= EDGE_FALLTHRU;
   new_bb->count = false_edge->count;
   new_bb->frequency = EDGE_FREQUENCY (false_edge);
+  if (current_loops && bb->loop_father)
+    add_bb_to_loop (new_bb, bb->loop_father);
   new_edge = make_edge (new_bb, dest, 0);
   new_edge->probability = REG_BR_PROB_BASE;
   new_edge->count = new_bb->count;
@@ -3371,9 +3359,22 @@ expand_debug_expr (tree exp)
       return op0;
 
     case VECTOR_CST:
-      exp = build_constructor_from_list (TREE_TYPE (exp),
-					 TREE_VECTOR_CST_ELTS (exp));
-      /* Fall through.  */
+      {
+	unsigned i;
+
+	op0 = gen_rtx_CONCATN
+	  (mode, rtvec_alloc (TYPE_VECTOR_SUBPARTS (TREE_TYPE (exp))));
+
+	for (i = 0; i < VECTOR_CST_NELTS (exp); ++i)
+	  {
+	    op1 = expand_debug_expr (VECTOR_CST_ELT (exp, i));
+	    if (!op1)
+	      return NULL;
+	    XVECEXP (op0, 0, i) = op1;
+	  }
+
+	return op0;
+      }
 
     case CONSTRUCTOR:
       if (TREE_CLOBBER_P (exp))
@@ -4120,6 +4121,8 @@ construct_init_block (void)
 				   ENTRY_BLOCK_PTR);
   init_block->frequency = ENTRY_BLOCK_PTR->frequency;
   init_block->count = ENTRY_BLOCK_PTR->count;
+  if (current_loops && ENTRY_BLOCK_PTR->loop_father)
+    add_bb_to_loop (init_block, ENTRY_BLOCK_PTR->loop_father);
   if (e)
     {
       first_block = e->dest;
@@ -4187,6 +4190,8 @@ construct_exit_block (void)
 				   EXIT_BLOCK_PTR->prev_bb);
   exit_block->frequency = EXIT_BLOCK_PTR->frequency;
   exit_block->count = EXIT_BLOCK_PTR->count;
+  if (current_loops && EXIT_BLOCK_PTR->loop_father)
+    add_bb_to_loop (exit_block, EXIT_BLOCK_PTR->loop_father);
 
   ix = 0;
   while (ix < EDGE_COUNT (EXIT_BLOCK_PTR->preds))
@@ -4377,8 +4382,14 @@ gimple_expand_cfg (void)
   SA.partition_to_pseudo = (rtx *)xcalloc (SA.map->num_partitions,
 					   sizeof (rtx));
 
+  /* Make sure all values used by the optimization passes have sane
+     defaults.  */
+  reg_renumber = 0;
+
   /* Some backends want to know that we are expanding to RTL.  */
   currently_expanding_to_rtl = 1;
+  /* Dominators are not kept up-to-date as we may create new basic-blocks.  */
+  free_dominance_info (CDI_DOMINATORS);
 
   rtl_profile_for_bb (ENTRY_BLOCK_PTR);
 
@@ -4544,7 +4555,11 @@ gimple_expand_cfg (void)
   if (MAY_HAVE_DEBUG_INSNS)
     expand_debug_locations ();
 
-  execute_free_datastructures ();
+  /* Free stuff we no longer need after GIMPLE optimizations.  */
+  free_dominance_info (CDI_DOMINATORS);
+  free_dominance_info (CDI_POST_DOMINATORS);
+  delete_tree_cfg_annotations ();
+
   timevar_push (TV_OUT_OF_SSA);
   finish_out_of_ssa (&SA);
   timevar_pop (TV_OUT_OF_SSA);
@@ -4552,6 +4567,8 @@ gimple_expand_cfg (void)
   timevar_push (TV_POST_EXPAND);
   /* We are no longer in SSA form.  */
   cfun->gimple_df->in_ssa_p = false;
+  if (current_loops)
+    loops_state_clear (LOOP_CLOSED_SSA);
 
   /* Expansion is used by optimization passes too, set maybe_hot_insn_p
      conservatively to true until they are all profile aware.  */
@@ -4625,13 +4642,36 @@ gimple_expand_cfg (void)
   sbitmap_free (blocks);
   purge_all_dead_edges ();
 
-  compact_blocks ();
-
   expand_stack_alignment ();
+
+  /* Fixup REG_EQUIV notes in the prologue if there are tailcalls in this
+     function.  */
+  if (crtl->tail_call_emit)
+    fixup_tail_calls ();
+
+  /* After initial rtl generation, call back to finish generating
+     exception support code.  We need to do this before cleaning up
+     the CFG as the code does not expect dead landing pads.  */
+  if (cfun->eh->region_tree != NULL)
+    finish_eh_generation ();
+
+  /* Remove unreachable blocks, otherwise we cannot compute dominators
+     which are needed for loop state verification.  As a side-effect
+     this also compacts blocks.
+     ???  We cannot remove trivially dead insns here as for example
+     the DRAP reg on i?86 is not magically live at this point.
+     gcc.c-torture/execute/ipa-sra-2.c execution, -Os -m32 fails otherwise.  */
+  cleanup_cfg (CLEANUP_NO_INSN_DEL);
 
 #ifdef ENABLE_CHECKING
   verify_flow_info ();
 #endif
+
+  /* Initialize pseudos allocated for hard registers.  */
+  emit_initial_value_sets ();
+
+  /* And finally unshare all RTL.  */
+  unshare_all_rtl ();
 
   /* There's no need to defer outputting this function any more; we
      know we want to output it.  */
@@ -4682,7 +4722,9 @@ gimple_expand_cfg (void)
      the common parent easily.  */
   set_block_levels (DECL_INITIAL (cfun->decl), 0);
   default_rtl_profile ();
+
   timevar_pop (TV_POST_EXPAND);
+
   return 0;
 }
 

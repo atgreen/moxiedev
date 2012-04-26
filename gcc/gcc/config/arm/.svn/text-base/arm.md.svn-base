@@ -1,6 +1,6 @@
 ;;- Machine description for ARM for GNU compiler
 ;;  Copyright 1991, 1993, 1994, 1995, 1996, 1996, 1997, 1998, 1999, 2000,
-;;  2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+;;  2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
 ;;  Free Software Foundation, Inc.
 ;;  Contributed by Pieter `Tiggr' Schoenmakers (rcpieter@win.tue.nl)
 ;;  and Martin Simmons (@harleqn.co.uk).
@@ -196,7 +196,7 @@
 ; for ARM or Thumb-2 with arm_arch6, and nov6 for ARM without
 ; arm_arch6.  This attribute is used to compute attribute "enabled",
 ; use type "any" to enable an alternative in all cases.
-(define_attr "arch" "any,a,t,32,t1,t2,v6,nov6,onlya8,nota8"
+(define_attr "arch" "any,a,t,32,t1,t2,v6,nov6,onlya8,neon_onlya8,nota8,neon_nota8"
   (const_string "any"))
 
 (define_attr "arch_enabled" "no,yes"
@@ -235,8 +235,18 @@
 	      (eq_attr "tune" "cortexa8"))
 	 (const_string "yes")
 
+	 (and (eq_attr "arch" "neon_onlya8")
+	      (eq_attr "tune" "cortexa8")
+	      (match_test "TARGET_NEON"))
+	 (const_string "yes")
+
 	 (and (eq_attr "arch" "nota8")
 	      (not (eq_attr "tune" "cortexa8")))
+	 (const_string "yes")
+
+	 (and (eq_attr "arch" "neon_nota8")
+	      (not (eq_attr "tune" "cortexa8"))
+	      (match_test "TARGET_NEON"))
 	 (const_string "yes")]
 	(const_string "no")))
 
@@ -283,7 +293,7 @@
 ;; scheduling information.
 
 (define_attr "insn"
-        "mov,mvn,smulxy,smlaxy,smlalxy,smulwy,smlawx,mul,muls,mla,mlas,umull,umulls,umlal,umlals,smull,smulls,smlal,smlals,smlawy,smuad,smuadx,smlad,smladx,smusd,smusdx,smlsd,smlsdx,smmul,smmulr,smmla,umaal,smlald,smlsld,clz,mrs,msr,xtab,sdiv,udiv,other"
+        "mov,mvn,smulxy,smlaxy,smlalxy,smulwy,smlawx,mul,muls,mla,mlas,umull,umulls,umlal,umlals,smull,smulls,smlal,smlals,smlawy,smuad,smuadx,smlad,smladx,smusd,smusdx,smlsd,smlsdx,smmul,smmulr,smmla,umaal,smlald,smlsld,clz,mrs,msr,xtab,sdiv,udiv,sat,other"
         (const_string "other"))
 
 ; TYPE attribute is used to detect floating point instructions which, if
@@ -3446,6 +3456,60 @@
 		      (const_int 12)))]
 )
 
+(define_code_iterator SAT [smin smax])
+(define_code_iterator SATrev [smin smax])
+(define_code_attr SATlo [(smin "1") (smax "2")])
+(define_code_attr SAThi [(smin "2") (smax "1")])
+
+(define_insn "*satsi_<SAT:code>"
+  [(set (match_operand:SI 0 "s_register_operand" "=r")
+        (SAT:SI (SATrev:SI (match_operand:SI 3 "s_register_operand" "r")
+                           (match_operand:SI 1 "const_int_operand" "i"))
+                (match_operand:SI 2 "const_int_operand" "i")))]
+  "TARGET_32BIT && arm_arch6 && <SAT:CODE> != <SATrev:CODE>
+   && arm_sat_operator_match (operands[<SAT:SATlo>], operands[<SAT:SAThi>], NULL, NULL)"
+{
+  int mask;
+  bool signed_sat;
+  if (!arm_sat_operator_match (operands[<SAT:SATlo>], operands[<SAT:SAThi>],
+                               &mask, &signed_sat))
+    gcc_unreachable ();
+
+  operands[1] = GEN_INT (mask);
+  if (signed_sat)
+    return "ssat%?\t%0, %1, %3";
+  else
+    return "usat%?\t%0, %1, %3";
+}
+  [(set_attr "predicable" "yes")
+   (set_attr "insn" "sat")])
+
+(define_insn "*satsi_<SAT:code>_shift"
+  [(set (match_operand:SI 0 "s_register_operand" "=r")
+        (SAT:SI (SATrev:SI (match_operator:SI 3 "sat_shift_operator"
+                             [(match_operand:SI 4 "s_register_operand" "r")
+                              (match_operand:SI 5 "const_int_operand" "i")])
+                           (match_operand:SI 1 "const_int_operand" "i"))
+                (match_operand:SI 2 "const_int_operand" "i")))]
+  "TARGET_32BIT && arm_arch6 && <SAT:CODE> != <SATrev:CODE>
+   && arm_sat_operator_match (operands[<SAT:SATlo>], operands[<SAT:SAThi>], NULL, NULL)"
+{
+  int mask;
+  bool signed_sat;
+  if (!arm_sat_operator_match (operands[<SAT:SATlo>], operands[<SAT:SAThi>],
+                               &mask, &signed_sat))
+    gcc_unreachable ();
+
+  operands[1] = GEN_INT (mask);
+  if (signed_sat)
+    return "ssat%?\t%0, %1, %4%S3";
+  else
+    return "usat%?\t%0, %1, %4%S3";
+}
+  [(set_attr "predicable" "yes")
+   (set_attr "insn" "sat")
+   (set_attr "shift" "3")
+   (set_attr "type" "alu_shift")])
 
 ;; Shift and rotation insns
 
@@ -4196,11 +4260,16 @@
   "")
 
 (define_insn_and_split "one_cmpldi2"
-  [(set (match_operand:DI 0 "s_register_operand" "=&r,&r")
-	(not:DI (match_operand:DI 1 "s_register_operand" "0,r")))]
+  [(set (match_operand:DI 0 "s_register_operand"	 "=w,&r,&r,?w")
+	(not:DI (match_operand:DI 1 "s_register_operand" " w, 0, r, w")))]
   "TARGET_32BIT"
-  "#"
-  "TARGET_32BIT && reload_completed"
+  "@
+   vmvn\t%P0, %P1
+   #
+   #
+   vmvn\t%P0, %P1"
+  "TARGET_32BIT && reload_completed
+   && arm_general_register_operand (operands[0], DImode)"
   [(set (match_dup 0) (not:SI (match_dup 1)))
    (set (match_dup 2) (not:SI (match_dup 3)))]
   "
@@ -4210,8 +4279,10 @@
     operands[3] = gen_highpart (SImode, operands[1]);
     operands[1] = gen_lowpart (SImode, operands[1]);
   }"
-  [(set_attr "length" "8")
-   (set_attr "predicable" "yes")]
+  [(set_attr "length" "*,8,8,*")
+   (set_attr "predicable" "no,yes,yes,no")
+   (set_attr "neon_type" "neon_int_1,*,*,neon_int_1")
+   (set_attr "arch" "neon_nota8,*,*,neon_onlya8")]
 )
 
 (define_expand "one_cmplsi2"
@@ -5581,6 +5652,21 @@
   }"
 )
 
+;; For thumb1 split imm move [256-510] into mov [1-255] and add #255
+(define_split 
+  [(set (match_operand:SI 0 "register_operand" "")
+	(match_operand:SI 1 "const_int_operand" ""))]
+  "TARGET_THUMB1 && satisfies_constraint_Pe (operands[1])"
+  [(set (match_dup 2) (match_dup 1))
+   (set (match_dup 0) (plus:SI (match_dup 2) (match_dup 3)))]
+  "
+  {
+    operands[1] = GEN_INT (INTVAL (operands[1]) - 255);
+    operands[2] = can_create_pseudo_p () ? gen_reg_rtx (SImode) : operands[0];
+    operands[3] = GEN_INT (255);
+  }"
+)
+
 ;; When generating pic, we need to load the symbol offset into a register.
 ;; So that the optimizer does not confuse this with a normal symbol load
 ;; we use an unspec.  The offset will be loaded from a constant pool entry,
@@ -5719,7 +5805,8 @@
 		    (const_int 8)
 		    (match_operand 1 "" "")]
 		   UNSPEC_PIC_BASE))
-   (set (match_operand:SI 2 "register_operand" "") (mem:SI (match_dup 0)))]
+   (set (match_operand:SI 2 "arm_general_register_operand" "")
+	(mem:SI (match_dup 0)))]
   "TARGET_ARM && peep2_reg_dead_p (2, operands[0])"
   [(set (match_dup 2)
 	(mem:SI (unspec:SI [(match_dup 3)

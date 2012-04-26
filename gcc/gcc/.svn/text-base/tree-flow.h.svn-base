@@ -504,7 +504,6 @@ extern void find_referenced_vars_in (gimple);
 /* In tree-phinodes.c  */
 extern void reserve_phi_args_for_new_edge (basic_block);
 extern void add_phi_node_to_bb (gimple phi, basic_block bb);
-extern gimple make_phi_node (tree var, int len);
 extern gimple create_phi_node (tree, basic_block);
 extern void add_phi_arg (gimple, tree, edge, source_location);
 extern void remove_phi_args (edge);
@@ -619,6 +618,9 @@ extern bool may_propagate_copy (tree, tree);
 extern bool may_propagate_copy_into_stmt (gimple, tree);
 extern bool may_propagate_copy_into_asm (tree);
 
+/* In tree-ssa-loop-ch.c  */
+bool do_while_loop_p (struct loop *);
+
 /* Affine iv.  */
 
 typedef struct
@@ -683,8 +685,7 @@ bool number_of_iterations_exit (struct loop *, edge,
 tree find_loop_niter (struct loop *, edge *);
 tree loop_niter_by_eval (struct loop *, edge);
 tree find_loop_niter_by_eval (struct loop *, edge *);
-void estimate_numbers_of_iterations (bool);
-bool array_at_struct_end_p (tree);
+void estimate_numbers_of_iterations (void);
 bool scev_probably_wraps_p (tree, tree, gimple, struct loop *, bool);
 bool convert_affine_scev (struct loop *, tree, tree *, tree *, gimple, bool);
 
@@ -792,10 +793,7 @@ extern bool verify_eh_dispatch_edge (gimple);
 extern void maybe_remove_unreachable_handlers (void);
 
 /* In tree-ssa-pre.c  */
-struct pre_expr_d;
-void add_to_value (unsigned int, struct pre_expr_d *);
 void debug_value_expressions (unsigned int);
-void print_value_expressions (FILE *, unsigned int);
 
 /* In tree-ssa-sink.c  */
 bool is_hidden_global_store (gimple);
@@ -854,7 +852,6 @@ rtx addr_for_mem_ref (struct mem_address *, addr_space_t, bool);
 void get_address_description (tree, struct mem_address *);
 tree maybe_fold_tmr (tree);
 
-unsigned int execute_free_datastructures (void);
 unsigned int execute_fixup_cfg (void);
 bool fixup_noreturn_call (gimple stmt);
 

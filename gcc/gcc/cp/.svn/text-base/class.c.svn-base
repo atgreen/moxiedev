@@ -1117,7 +1117,13 @@ add_method (tree type, tree method, tree using_decl)
     return false;
 
   /* Add the new binding.  */
-  overload = build_overload (method, current_fns);
+  if (using_decl)
+    {
+      overload = ovl_cons (method, current_fns);
+      OVL_USED (overload) = true;
+    }
+  else
+    overload = build_overload (method, current_fns);
 
   if (conv_p)
     TYPE_HAS_CONVERSION (type) = 1;
@@ -3143,8 +3149,9 @@ check_field_decls (tree t, tree *access_decls,
 	CLASSTYPE_NON_AGGREGATE (t) = 1;
 
       /* If at least one non-static data member is non-literal, the whole
-         class becomes non-literal.  */
-      if (!literal_type_p (type))
+         class becomes non-literal.  Note: if the type is incomplete we
+	 will complain later on.  */
+      if (COMPLETE_TYPE_P (type) && !literal_type_p (type))
         CLASSTYPE_LITERAL_P (t) = false;
 
       /* A standard-layout class is a class that:
@@ -4314,6 +4321,41 @@ clone_constructors_and_destructors (tree t)
     clone_function_decl (OVL_CURRENT (fns), /*update_method_vec_p=*/1);
 }
 
+/* Deduce noexcept for a destructor DTOR.  */
+
+void
+deduce_noexcept_on_destructor (tree dtor)
+{
+  if (!TYPE_RAISES_EXCEPTIONS (TREE_TYPE (dtor)))
+    {
+      tree ctx = DECL_CONTEXT (dtor);
+      tree implicit_fn = implicitly_declare_fn (sfk_destructor, ctx,
+						/*const_p=*/false);
+      tree eh_spec = TYPE_RAISES_EXCEPTIONS (TREE_TYPE (implicit_fn));
+      TREE_TYPE (dtor) = build_exception_variant (TREE_TYPE (dtor), eh_spec);
+    }
+}
+
+/* For each destructor in T, deduce noexcept:
+
+   12.4/3: A declaration of a destructor that does not have an
+   exception-specification is implicitly considered to have the
+   same exception-specification as an implicit declaration (15.4).  */
+
+static void
+deduce_noexcept_on_destructors (tree t)
+{
+  tree fns;
+
+  /* If for some reason we don't have a CLASSTYPE_METHOD_VEC, we bail
+     out now.  */
+  if (!CLASSTYPE_METHOD_VEC (t))
+    return;
+
+  for (fns = CLASSTYPE_DESTRUCTORS (t); fns; fns = OVL_NEXT (fns))
+    deduce_noexcept_on_destructor (OVL_CURRENT (fns));
+}
+
 /* Subroutine of set_one_vmethod_tm_attributes.  Search base classes
    of TYPE for virtual functions which FNDECL overrides.  Return a
    mask of the tm attributes found therein.  */
@@ -4428,7 +4470,12 @@ set_method_tm_attributes (tree t)
       tree vchain;
       for (vchain = BINFO_VIRTUALS (TYPE_BINFO (t)); vchain;
 	   vchain = TREE_CHAIN (vchain))
-	set_one_vmethod_tm_attributes (t, BV_FN (vchain));
+	{
+	  fndecl = BV_FN (vchain);
+	  if (DECL_THUNK_P (fndecl))
+	    fndecl = THUNK_TARGET (fndecl);
+	  set_one_vmethod_tm_attributes (t, fndecl);
+	}
     }
 
   /* If the class doesn't have an attribute, nothing more to do.  */
@@ -4903,7 +4950,27 @@ explain_non_literal_class (tree t)
 	      "is not a copy or move constructor", t);
       if (TYPE_HAS_DEFAULT_CONSTRUCTOR (t)
 	  && !type_has_user_provided_default_constructor (t))
-	explain_invalid_constexpr_fn (locate_ctor (t));
+	{
+	  /* Note that we can't simply call locate_ctor because when the
+	     constructor is deleted it just returns NULL_TREE.  */
+	  tree fns;
+	  for (fns = CLASSTYPE_CONSTRUCTORS (t); fns; fns = OVL_NEXT (fns))
+	    {
+	      tree fn = OVL_CURRENT (fns);
+	      tree parms = TYPE_ARG_TYPES (TREE_TYPE (fn));
+
+	      parms = skip_artificial_parms_for (fn, parms);
+
+	      if (sufficient_parms_p (parms))
+		{
+		  if (DECL_DELETED_FN (fn))
+		    maybe_explain_implicit_delete (fn);
+		  else
+		    explain_invalid_constexpr_fn (fn);
+		  break;
+		}
+	    }
+	}
     }
   else
     {
@@ -4961,6 +5028,10 @@ check_bases_and_members (tree t)
      constructors.  */
   cant_have_const_ctor = 0;
   no_const_asn_ref = 0;
+
+  /* Deduce noexcept on destructors.  */
+  if (cxx_dialect >= cxx0x)
+    deduce_noexcept_on_destructors (t);
 
   /* Check all the base-classes.  */
   check_bases (t, &cant_have_const_ctor,

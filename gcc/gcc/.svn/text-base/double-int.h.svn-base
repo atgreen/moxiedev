@@ -1,5 +1,5 @@
 /* Operations with long integers.
-   Copyright (C) 2006, 2007, 2008, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2007, 2008, 2010, 2012 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -242,6 +242,9 @@ double_int double_int_sext (double_int, unsigned);
 double_int double_int_zext (double_int, unsigned);
 double_int double_int_mask (unsigned);
 
+double_int double_int_max_value (unsigned int, bool);
+double_int double_int_min_value (unsigned int, bool);
+
 #define ALL_ONES (~((unsigned HOST_WIDE_INT) 0))
 
 /* The operands of the following comparison functions must be processed
@@ -298,9 +301,6 @@ extern int mul_double_with_sign (unsigned HOST_WIDE_INT, HOST_WIDE_INT,
 #define mul_double(l1,h1,l2,h2,lv,hv) \
   mul_double_with_sign (l1, h1, l2, h2, lv, hv, false)
 extern void lshift_double (unsigned HOST_WIDE_INT, HOST_WIDE_INT,
-			   HOST_WIDE_INT, unsigned int,
-			   unsigned HOST_WIDE_INT *, HOST_WIDE_INT *, bool);
-extern void rshift_double (unsigned HOST_WIDE_INT, HOST_WIDE_INT,
 			   HOST_WIDE_INT, unsigned int,
 			   unsigned HOST_WIDE_INT *, HOST_WIDE_INT *, bool);
 extern int div_and_round_double (unsigned, int, unsigned HOST_WIDE_INT,

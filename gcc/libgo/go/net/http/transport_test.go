@@ -16,6 +16,8 @@ import (
 	. "net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -304,6 +306,62 @@ func TestTransportServerClosingUnexpectedly(t *testing.T) {
 	}
 }
 
+// Test for http://golang.org/issue/2616 (appropriate issue number)
+// This fails pretty reliably with GOMAXPROCS=100 or something high.
+func TestStressSurpriseServerCloses(t *testing.T) {
+	if testing.Short() {
+		t.Logf("skipping test in short mode")
+		return
+	}
+	ts := httptest.NewServer(HandlerFunc(func(w ResponseWriter, r *Request) {
+		w.Header().Set("Content-Length", "5")
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("Hello"))
+		w.(Flusher).Flush()
+		conn, buf, _ := w.(Hijacker).Hijack()
+		buf.Flush()
+		conn.Close()
+	}))
+	defer ts.Close()
+
+	tr := &Transport{DisableKeepAlives: false}
+	c := &Client{Transport: tr}
+
+	// Do a bunch of traffic from different goroutines. Send to activityc
+	// after each request completes, regardless of whether it failed.
+	const (
+		numClients    = 50
+		reqsPerClient = 250
+	)
+	activityc := make(chan bool)
+	for i := 0; i < numClients; i++ {
+		go func() {
+			for i := 0; i < reqsPerClient; i++ {
+				res, err := c.Get(ts.URL)
+				if err == nil {
+					// We expect errors since the server is
+					// hanging up on us after telling us to
+					// send more requests, so we don't
+					// actually care what the error is.
+					// But we want to close the body in cases
+					// where we won the race.
+					res.Body.Close()
+				}
+				activityc <- true
+			}
+		}()
+	}
+
+	// Make sure all the request come back, one way or another.
+	for i := 0; i < numClients*reqsPerClient; i++ {
+		select {
+		case <-activityc:
+		case <-time.After(5 * time.Second):
+			t.Fatalf("presumed deadlock; no HTTP client activity seen in awhile")
+		}
+	}
+}
+
 // TestTransportHeadResponses verifies that we deal with Content-Lengths
 // with no bodies properly
 func TestTransportHeadResponses(t *testing.T) {
@@ -385,7 +443,7 @@ func TestRoundTripGzip(t *testing.T) {
 		}
 		if accept == "gzip" {
 			rw.Header().Set("Content-Encoding", "gzip")
-			gz, _ := gzip.NewWriter(rw)
+			gz := gzip.NewWriter(rw)
 			gz.Write([]byte(responseBody))
 			gz.Close()
 		} else {
@@ -404,7 +462,11 @@ func TestRoundTripGzip(t *testing.T) {
 		res, err := DefaultTransport.RoundTrip(req)
 		var body []byte
 		if test.compressed {
-			gzip, _ := gzip.NewReader(res.Body)
+			gzip, err := gzip.NewReader(res.Body)
+			if err != nil {
+				t.Errorf("%d. gzip NewReader: %v", i, err)
+				continue
+			}
 			body, err = ioutil.ReadAll(gzip)
 			res.Body.Close()
 		} else {
@@ -448,7 +510,7 @@ func TestTransportGzip(t *testing.T) {
 				rw.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
 			}()
 		}
-		gz, _ := gzip.NewWriter(w)
+		gz := gzip.NewWriter(w)
 		gz.Write([]byte(testString))
 		if req.FormValue("body") == "large" {
 			io.CopyN(gz, rand.Reader, nRandBytes)
@@ -572,6 +634,96 @@ func TestTransportGzipRecursive(t *testing.T) {
 	}
 }
 
+// tests that persistent goroutine connections shut down when no longer desired.
+func TestTransportPersistConnLeak(t *testing.T) {
+	gotReqCh := make(chan bool)
+	unblockCh := make(chan bool)
+	ts := httptest.NewServer(HandlerFunc(func(w ResponseWriter, r *Request) {
+		gotReqCh <- true
+		<-unblockCh
+		w.Header().Set("Content-Length", "0")
+		w.WriteHeader(204)
+	}))
+	defer ts.Close()
+
+	tr := &Transport{}
+	c := &Client{Transport: tr}
+
+	n0 := runtime.NumGoroutine()
+
+	const numReq = 25
+	didReqCh := make(chan bool)
+	for i := 0; i < numReq; i++ {
+		go func() {
+			res, err := c.Get(ts.URL)
+			didReqCh <- true
+			if err != nil {
+				t.Errorf("client fetch error: %v", err)
+				return
+			}
+			res.Body.Close()
+		}()
+	}
+
+	// Wait for all goroutines to be stuck in the Handler.
+	for i := 0; i < numReq; i++ {
+		<-gotReqCh
+	}
+
+	nhigh := runtime.NumGoroutine()
+
+	// Tell all handlers to unblock and reply.
+	for i := 0; i < numReq; i++ {
+		unblockCh <- true
+	}
+
+	// Wait for all HTTP clients to be done.
+	for i := 0; i < numReq; i++ {
+		<-didReqCh
+	}
+
+	tr.CloseIdleConnections()
+	time.Sleep(100 * time.Millisecond)
+	runtime.GC()
+	runtime.GC() // even more.
+	nfinal := runtime.NumGoroutine()
+
+	growth := nfinal - n0
+
+	// We expect 0 or 1 extra goroutine, empirically.  Allow up to 5.
+	// Previously we were leaking one per numReq.
+	t.Logf("goroutine growth: %d -> %d -> %d (delta: %d)", n0, nhigh, nfinal, growth)
+	if int(growth) > 5 {
+		t.Error("too many new goroutines")
+	}
+}
+
+// This used to crash; http://golang.org/issue/3266
+func TestTransportIdleConnCrash(t *testing.T) {
+	tr := &Transport{}
+	c := &Client{Transport: tr}
+
+	unblockCh := make(chan bool, 1)
+	ts := httptest.NewServer(HandlerFunc(func(w ResponseWriter, r *Request) {
+		<-unblockCh
+		tr.CloseIdleConnections()
+	}))
+	defer ts.Close()
+
+	didreq := make(chan bool)
+	go func() {
+		res, err := c.Get(ts.URL)
+		if err != nil {
+			t.Error(err)
+		} else {
+			res.Body.Close() // returns idle conn
+		}
+		didreq <- true
+	}()
+	unblockCh <- true
+	<-didreq
+}
+
 type fooProto struct{}
 
 func (fooProto) RoundTrip(req *Request) (*Response, error) {
@@ -599,6 +751,36 @@ func TestTransportAltProto(t *testing.T) {
 	body := string(bodyb)
 	if e := "You wanted foo://bar.com/path"; body != e {
 		t.Errorf("got response %q, want %q", body, e)
+	}
+}
+
+var proxyFromEnvTests = []struct {
+	env     string
+	wanturl string
+	wanterr error
+}{
+	{"127.0.0.1:8080", "http://127.0.0.1:8080", nil},
+	{"http://127.0.0.1:8080", "http://127.0.0.1:8080", nil},
+	{"https://127.0.0.1:8080", "https://127.0.0.1:8080", nil},
+	{"", "<nil>", nil},
+}
+
+func TestProxyFromEnvironment(t *testing.T) {
+	os.Setenv("HTTP_PROXY", "")
+	os.Setenv("http_proxy", "")
+	os.Setenv("NO_PROXY", "")
+	os.Setenv("no_proxy", "")
+	for i, tt := range proxyFromEnvTests {
+		os.Setenv("HTTP_PROXY", tt.env)
+		req, _ := NewRequest("GET", "http://example.com", nil)
+		url, err := ProxyFromEnvironment(req)
+		if g, e := fmt.Sprintf("%v", err), fmt.Sprintf("%v", tt.wanterr); g != e {
+			t.Errorf("%d. got error = %q, want %q", i, g, e)
+			continue
+		}
+		if got := fmt.Sprintf("%s", url); got != tt.wanturl {
+			t.Errorf("%d. got URL = %q, want %q", i, url, tt.wanturl)
+		}
 	}
 }
 

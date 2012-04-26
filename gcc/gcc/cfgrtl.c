@@ -111,12 +111,11 @@ can_delete_label_p (const_rtx label)
 	  && !in_expr_list_p (forced_labels, label));
 }
 
-/* Delete INSN by patching it out.  Return the next insn.  */
+/* Delete INSN by patching it out.  */
 
-rtx
+void
 delete_insn (rtx insn)
 {
-  rtx next = NEXT_INSN (insn);
   rtx note;
   bool really_delete = true;
 
@@ -128,11 +127,22 @@ delete_insn (rtx insn)
       if (! can_delete_label_p (insn))
 	{
 	  const char *name = LABEL_NAME (insn);
+	  basic_block bb = BLOCK_FOR_INSN (insn);
+	  rtx bb_note = NEXT_INSN (insn);
 
 	  really_delete = false;
 	  PUT_CODE (insn, NOTE);
 	  NOTE_KIND (insn) = NOTE_INSN_DELETED_LABEL;
 	  NOTE_DELETED_LABEL_NAME (insn) = name;
+
+	  if (bb_note != NULL_RTX && NOTE_INSN_BASIC_BLOCK_P (bb_note)
+	      && BLOCK_FOR_INSN (bb_note) == bb)
+	    {
+	      reorder_insns_nobb (insn, insn, bb_note);
+	      BB_HEAD (bb) = bb_note;
+	      if (BB_END (bb) == bb_note)
+		BB_END (bb) = insn;
+	    }
 	}
 
       remove_node_from_expr_list (insn, &nonlocal_goto_handler_labels);
@@ -190,26 +200,22 @@ delete_insn (rtx insn)
 	    LABEL_NUSES (label)--;
 	}
     }
-
-  return next;
 }
 
 /* Like delete_insn but also purge dead edges from BB.  */
 
-rtx
+void
 delete_insn_and_edges (rtx insn)
 {
-  rtx x;
   bool purge = false;
 
   if (INSN_P (insn)
       && BLOCK_FOR_INSN (insn)
       && BB_END (BLOCK_FOR_INSN (insn)) == insn)
     purge = true;
-  x = delete_insn (insn);
+  delete_insn (insn);
   if (purge)
     purge_dead_edges (BLOCK_FOR_INSN (insn));
-  return x;
 }
 
 /* Unlink a chain of insns between START and FINISH, leaving notes
@@ -219,25 +225,26 @@ delete_insn_and_edges (rtx insn)
 void
 delete_insn_chain (rtx start, rtx finish, bool clear_bb)
 {
-  rtx next;
+  rtx prev, current;
 
   /* Unchain the insns one by one.  It would be quicker to delete all of these
      with a single unchaining, rather than one at a time, but we need to keep
      the NOTE's.  */
+  current = finish;
   while (1)
     {
-      next = NEXT_INSN (start);
-      if (NOTE_P (start) && !can_delete_note_p (start))
+      prev = PREV_INSN (current);
+      if (NOTE_P (current) && !can_delete_note_p (current))
 	;
       else
-	next = delete_insn (start);
+	delete_insn (current);
 
-      if (clear_bb && !INSN_DELETED_P (start))
-	set_block_for_insn (start, NULL);
+      if (clear_bb && !INSN_DELETED_P (current))
+	set_block_for_insn (current, NULL);
 
-      if (start == finish)
+      if (current == start)
 	break;
-      start = next;
+      current = prev;
     }
 }
 
@@ -725,6 +732,10 @@ rtl_can_merge_blocks (basic_block a, basic_block b)
      bb-reorder.c:partition_hot_cold_basic_blocks for complete details.  */
 
   if (BB_PARTITION (a) != BB_PARTITION (b))
+    return false;
+
+  /* Protect the loop latches.  */
+  if (current_loops && b->loop_father->latch == b)
     return false;
 
   /* There must be exactly one edge in between the blocks.  */
@@ -1674,9 +1685,10 @@ rtl_dump_bb (basic_block bb, FILE *outf, int indent, int flags ATTRIBUTE_UNUSED)
       putc ('\n', outf);
     }
 
-  for (insn = BB_HEAD (bb), last = NEXT_INSN (BB_END (bb)); insn != last;
-       insn = NEXT_INSN (insn))
-    print_rtl_single (outf, insn);
+  if (bb->index != ENTRY_BLOCK && bb->index != EXIT_BLOCK)
+    for (insn = BB_HEAD (bb), last = NEXT_INSN (BB_END (bb)); insn != last;
+	 insn = NEXT_INSN (insn))
+      print_rtl_single (outf, insn);
 
   if (df)
     {
@@ -2785,6 +2797,10 @@ cfg_layout_can_merge_blocks_p (basic_block a, basic_block b)
   if (BB_PARTITION (a) != BB_PARTITION (b))
     return false;
 
+  /* Protect the loop latches.  */
+  if (current_loops && b->loop_father->latch == b)
+    return false;
+
   /* If we would end up moving B's instructions, make sure it doesn't fall
      through into the exit block, since we cannot recover from a fallthrough
      edge into the exit block occurring in the middle of a function.  */
@@ -2817,6 +2833,7 @@ static void
 cfg_layout_merge_blocks (basic_block a, basic_block b)
 {
   bool forwarder_p = (b->flags & BB_FORWARDER_BLOCK) != 0;
+  rtx insn;
 
   gcc_checking_assert (cfg_layout_can_merge_blocks_p (a, b));
 
@@ -2870,6 +2887,11 @@ cfg_layout_merge_blocks (basic_block a, basic_block b)
       rtx first = BB_END (a), last;
 
       last = emit_insn_after_noloc (b->il.rtl->header, BB_END (a), a);
+      /* The above might add a BARRIER as BB_END, but as barriers
+	 aren't valid parts of a bb, remove_insn doesn't update
+	 BB_END if it is a barrier.  So adjust BB_END here.  */
+      while (BB_END (a) != first && BARRIER_P (BB_END (a)))
+	BB_END (a) = PREV_INSN (BB_END (a));
       delete_insn_chain (NEXT_INSN (first), last, false);
       b->il.rtl->header = NULL;
     }
@@ -2877,39 +2899,27 @@ cfg_layout_merge_blocks (basic_block a, basic_block b)
   /* In the case basic blocks are not adjacent, move them around.  */
   if (NEXT_INSN (BB_END (a)) != BB_HEAD (b))
     {
-      rtx first = unlink_insn_chain (BB_HEAD (b), BB_END (b));
+      insn = unlink_insn_chain (BB_HEAD (b), BB_END (b));
 
-      emit_insn_after_noloc (first, BB_END (a), a);
-      /* Skip possible DELETED_LABEL insn.  */
-      if (!NOTE_INSN_BASIC_BLOCK_P (first))
-	first = NEXT_INSN (first);
-      gcc_assert (NOTE_INSN_BASIC_BLOCK_P (first));
-      BB_HEAD (b) = NULL;
-
-      /* emit_insn_after_noloc doesn't call df_insn_change_bb.
-         We need to explicitly call. */
-      update_bb_for_insn_chain (NEXT_INSN (first),
-				BB_END (b),
-				a);
-
-      delete_insn (first);
+      emit_insn_after_noloc (insn, BB_END (a), a);
     }
   /* Otherwise just re-associate the instructions.  */
   else
     {
-      rtx insn;
-
-      update_bb_for_insn_chain (BB_HEAD (b), BB_END (b), a);
-
       insn = BB_HEAD (b);
-      /* Skip possible DELETED_LABEL insn.  */
-      if (!NOTE_INSN_BASIC_BLOCK_P (insn))
-	insn = NEXT_INSN (insn);
-      gcc_assert (NOTE_INSN_BASIC_BLOCK_P (insn));
-      BB_HEAD (b) = NULL;
       BB_END (a) = BB_END (b);
-      delete_insn (insn);
     }
+
+  /* emit_insn_after_noloc doesn't call df_insn_change_bb.
+     We need to explicitly call. */
+  update_bb_for_insn_chain (insn, BB_END (b), a);
+
+  /* Skip possible DELETED_LABEL insn.  */
+  if (!NOTE_INSN_BASIC_BLOCK_P (insn))
+    insn = NEXT_INSN (insn);
+  gcc_assert (NOTE_INSN_BASIC_BLOCK_P (insn));
+  BB_HEAD (b) = NULL;
+  delete_insn (insn);
 
   df_bb_delete (b->index);
 

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build linux
-
 package terminal
 
 import (
@@ -391,12 +389,12 @@ func (t *Terminal) Write(buf []byte) (n int, err error) {
 
 	// We have a prompt and possibly user input on the screen. We
 	// have to clear it first.
-	t.move(0, /* up */ 0, /* down */ t.cursorX, /* left */ 0 /* right */ )
+	t.move(0 /* up */, 0 /* down */, t.cursorX /* left */, 0 /* right */)
 	t.cursorX = 0
 	t.clearLineToRight()
 
 	for t.cursorY > 0 {
-		t.move(1, /* up */ 0, 0, 0)
+		t.move(1 /* up */, 0, 0, 0)
 		t.cursorY--
 		t.clearLineToRight()
 	}
@@ -463,6 +461,31 @@ func (t *Terminal) readLine() (line string, err error) {
 	}
 
 	for {
+		rest := t.remainder
+		lineOk := false
+		for !lineOk {
+			var key int
+			key, rest = bytesToKey(rest)
+			if key < 0 {
+				break
+			}
+			if key == keyCtrlD {
+				return "", io.EOF
+			}
+			line, lineOk = t.handleKey(key)
+		}
+		if len(rest) > 0 {
+			n := copy(t.inBuf[:], rest)
+			t.remainder = t.inBuf[:n]
+		} else {
+			t.remainder = nil
+		}
+		t.c.Write(t.outBuf)
+		t.outBuf = t.outBuf[:0]
+		if lineOk {
+			return
+		}
+
 		// t.remainder is a slice at the beginning of t.inBuf
 		// containing a partial key sequence
 		readBuf := t.inBuf[len(t.remainder):]
@@ -476,36 +499,17 @@ func (t *Terminal) readLine() (line string, err error) {
 			return
 		}
 
-		if err == nil {
-			t.remainder = t.inBuf[:n+len(t.remainder)]
-			rest := t.remainder
-			lineOk := false
-			for !lineOk {
-				var key int
-				key, rest = bytesToKey(rest)
-				if key < 0 {
-					break
-				}
-				if key == keyCtrlD {
-					return "", io.EOF
-				}
-				line, lineOk = t.handleKey(key)
-			}
-			if len(rest) > 0 {
-				n := copy(t.inBuf[:], rest)
-				t.remainder = t.inBuf[:n]
-			} else {
-				t.remainder = nil
-			}
-			t.c.Write(t.outBuf)
-			t.outBuf = t.outBuf[:0]
-			if lineOk {
-				return
-			}
-			continue
-		}
+		t.remainder = t.inBuf[:n+len(t.remainder)]
 	}
 	panic("unreachable")
+}
+
+// SetPrompt sets the prompt to be used when reading subsequent lines.
+func (t *Terminal) SetPrompt(prompt string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	t.prompt = prompt
 }
 
 func (t *Terminal) SetSize(width, height int) {

@@ -3,16 +3,19 @@
 // license that can be found in the LICENSE file.
 
 // Package utf8 implements functions and constants to support text encoded in
-// UTF-8. This package calls a Unicode character a rune for brevity.
+// UTF-8. It includes functions to translate between runes and UTF-8 byte sequences.
 package utf8
 
-import "unicode" // only needed for a couple of constants
+// The conditions RuneError==unicode.ReplacementChar and
+// MaxRune==unicode.MaxRune are verified in the tests.
+// Defining them locally avoids this package depending on package unicode.
 
 // Numbers fundamental to the encoding.
 const (
-	RuneError = unicode.ReplacementChar // the "error" Rune or "replacement character".
-	RuneSelf  = 0x80                    // characters below Runeself are represented as themselves in a single byte.
-	UTFMax    = 4                       // maximum number of bytes of a UTF-8 encoded Unicode character.
+	RuneError = '\uFFFD'     // the "error" Rune or "Unicode replacement character"
+	RuneSelf  = 0x80         // characters below Runeself are represented as themselves in a single byte.
+	MaxRune   = '\U0010FFFF' // Maximum valid Unicode code point.
+	UTFMax    = 4            // maximum number of bytes of a UTF-8 encoded Unicode character.
 )
 
 const (
@@ -198,19 +201,21 @@ func FullRuneInString(s string) bool {
 }
 
 // DecodeRune unpacks the first UTF-8 encoding in p and returns the rune and its width in bytes.
+// If the encoding is invalid, it returns (RuneError, 1), an impossible result for correct UTF-8.
 func DecodeRune(p []byte) (r rune, size int) {
 	r, size, _ = decodeRuneInternal(p)
 	return
 }
 
 // DecodeRuneInString is like DecodeRune but its input is a string.
+// If the encoding is invalid, it returns (RuneError, 1), an impossible result for correct UTF-8.
 func DecodeRuneInString(s string) (r rune, size int) {
 	r, size, _ = decodeRuneInStringInternal(s)
 	return
 }
 
-// DecodeLastRune unpacks the last UTF-8 encoding in p
-// and returns the rune and its width in bytes.
+// DecodeLastRune unpacks the last UTF-8 encoding in p and returns the rune and its width in bytes.
+// If the encoding is invalid, it returns (RuneError, 1), an impossible result for correct UTF-8.
 func DecodeLastRune(p []byte) (r rune, size int) {
 	end := len(p)
 	if end == 0 {
@@ -244,6 +249,7 @@ func DecodeLastRune(p []byte) (r rune, size int) {
 }
 
 // DecodeLastRuneInString is like DecodeLastRune but its input is a string.
+// If the encoding is invalid, it returns (RuneError, 1), an impossible result for correct UTF-8.
 func DecodeLastRuneInString(s string) (r rune, size int) {
 	end := len(s)
 	if end == 0 {
@@ -306,7 +312,7 @@ func EncodeRune(p []byte, r rune) int {
 		return 2
 	}
 
-	if uint32(r) > unicode.MaxRune {
+	if uint32(r) > MaxRune {
 		r = RuneError
 	}
 

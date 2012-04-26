@@ -675,6 +675,7 @@ proper position among the other output files.  */
     %{s} %{t} %{u*} %{z} %{Z} %{!nostdlib:%{!nostartfiles:%S}}\
     %{static:} %{L*} %(mfwrap) %(link_libgcc) %o\
     %{fopenmp|ftree-parallelize-loops=*:%:include(libgomp.spec)%(link_gomp)}\
+    %{fgnu-tm:%:include(libitm.spec)%(link_itm)}\
     %(mflib) " STACK_SPLIT_SPEC "\
     %{fprofile-arcs|fprofile-generate*|coverage:-lgcov}\
     %{!nostdlib:%{!nodefaultlibs:%(link_ssp) %(link_gcc_c_sequence)}}\
@@ -702,7 +703,7 @@ proper position among the other output files.  */
 # define SYSROOT_HEADERS_SUFFIX_SPEC ""
 #endif
 
-static const char *asm_debug;
+static const char *asm_debug = ASM_DEBUG_SPEC;
 static const char *cpp_spec = CPP_SPEC;
 static const char *cc1_spec = CC1_SPEC;
 static const char *cc1plus_spec = CC1PLUS_SPEC;
@@ -839,9 +840,14 @@ static const char *const multilib_defaults_raw[] = MULTILIB_DEFAULTS;
 #define GOMP_SELF_SPECS "%{fopenmp|ftree-parallelize-loops=*: -pthread}"
 #endif
 
+/* Likewise for -fgnu-tm.  */
+#ifndef GTM_SELF_SPECS
+#define GTM_SELF_SPECS "%{fgnu-tm: -pthread}"
+#endif
+
 static const char *const driver_self_specs[] = {
   "%{fdump-final-insns:-fdump-final-insns=.} %<fdump-final-insns",
-  DRIVER_SELF_SPECS, CONFIGURE_SPECS, GOMP_SELF_SPECS
+  DRIVER_SELF_SPECS, CONFIGURE_SPECS, GOMP_SELF_SPECS, GTM_SELF_SPECS
 };
 
 #ifndef OPTION_DEFAULT_SPECS
@@ -2445,9 +2451,17 @@ add_sysrooted_prefix (struct path_prefix *pprefix, const char *prefix,
 
   if (target_system_root)
     {
+      char *sysroot_no_trailing_dir_separator = xstrdup (target_system_root);
+      size_t sysroot_len = strlen (target_system_root);
+
+      if (sysroot_len > 0
+	  && target_system_root[sysroot_len - 1] == DIR_SEPARATOR)
+	sysroot_no_trailing_dir_separator[sysroot_len - 1] = '\0';
+
       if (target_sysroot_suffix)
 	  prefix = concat (target_sysroot_suffix, prefix, NULL);
-      prefix = concat (target_system_root, prefix, NULL);
+      prefix = concat (sysroot_no_trailing_dir_separator, prefix, NULL);
+      free (sysroot_no_trailing_dir_separator);
 
       /* We have to override this because GCC's notion of sysroot
 	 moves along with GCC.  */
@@ -2944,7 +2958,7 @@ display_help (void)
   fputs (_("  -pass-exit-codes         Exit with highest error code from a phase\n"), stdout);
   fputs (_("  --help                   Display this information\n"), stdout);
   fputs (_("  --target-help            Display target specific command line options\n"), stdout);
-  fputs (_("  --help={target|optimizers|warnings|params|[^]{joined|separate|undocumented}}[,...]\n"), stdout);
+  fputs (_("  --help={common|optimizers|params|target|warnings|[^]{joined|separate|undocumented}}[,...]\n"), stdout);
   fputs (_("                           Display specific types of command line options\n"), stdout);
   if (! verbose_flag)
     fputs (_("  (Use '-v --help' to display command line options of sub-processes)\n"), stdout);
@@ -2988,6 +3002,8 @@ display_help (void)
   fputs (_("  -S                       Compile only; do not assemble or link\n"), stdout);
   fputs (_("  -c                       Compile and assemble, but do not link\n"), stdout);
   fputs (_("  -o <file>                Place the output into <file>\n"), stdout);
+  fputs (_("  -pie                     Create a position independent executable\n"), stdout);
+  fputs (_("  -shared                  Create a shared library\n"), stdout);
   fputs (_("\
   -x <language>            Specify the language of the following input files\n\
                            Permissible languages include: c c++ assembler none\n\
@@ -5445,6 +5461,21 @@ switch_matches (const char *atom, const char *end_atom, int starred)
 	&& check_live_switch (i, plen))
       return true;
 
+    /* Check if a switch with separated form matching the atom.
+       We check -D and -U switches. */
+    else if (switches[i].args != 0)
+      {
+	if ((*switches[i].part1 == 'D' || *switches[i].part1 == 'U')
+	    && *switches[i].part1 == atom[0])
+	  {
+	    if (!strncmp (switches[i].args[0], &atom[1], len - 1)
+		&& (starred || (switches[i].part1[1] == '\0'
+				&& switches[i].args[0][len - 1] == '\0'))
+		&& check_live_switch (i, (starred ? 1 : -1)))
+	      return true;
+	  }
+      }
+
   return false;
 }
 
@@ -6087,10 +6118,6 @@ main (int argc, char **argv)
   struct cl_decoded_option *decoded_options;
   unsigned int decoded_options_count;
 
-  /* Initialize here, not in definition.  The IRIX 6 O32 cc sometimes chokes
-     on ?: in file-scope variable initializations.  */
-  asm_debug = ASM_DEBUG_SPEC;
-
   p = argv[0] + strlen (argv[0]);
   while (p != argv[0] && !IS_DIR_SEPARATOR (p[-1]))
     --p;
@@ -6437,7 +6464,11 @@ main (int argc, char **argv)
 
   /* Set up to remember the pathname of the lto wrapper. */
 
-  lto_wrapper_file = find_a_file (&exec_prefixes, "lto-wrapper", X_OK, false);
+  if (have_c)
+    lto_wrapper_file = NULL;
+  else
+    lto_wrapper_file = find_a_file (&exec_prefixes, "lto-wrapper",
+				    X_OK, false);
   if (lto_wrapper_file)
     {
       lto_wrapper_spec = lto_wrapper_file;
@@ -6811,39 +6842,46 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
   if (num_linker_inputs > 0 && !seen_error () && print_subprocess_help < 2)
     {
       int tmp = execution_count;
+
+      if (! have_c)
+	{
 #if HAVE_LTO_PLUGIN > 0
 #if HAVE_LTO_PLUGIN == 2
-      const char *fno_use_linker_plugin = "fno-use-linker-plugin";
+	  const char *fno_use_linker_plugin = "fno-use-linker-plugin";
 #else
-      const char *fuse_linker_plugin = "fuse-linker-plugin";
+	  const char *fuse_linker_plugin = "fuse-linker-plugin";
 #endif
 #endif
 
-      /* We'll use ld if we can't find collect2.  */
-      if (! strcmp (linker_name_spec, "collect2"))
-	{
-	  char *s = find_a_file (&exec_prefixes, "collect2", X_OK, false);
-	  if (s == NULL)
-	    linker_name_spec = "ld";
-	}
+	  /* We'll use ld if we can't find collect2.  */
+	  if (! strcmp (linker_name_spec, "collect2"))
+	    {
+	      char *s = find_a_file (&exec_prefixes, "collect2", X_OK, false);
+	      if (s == NULL)
+		linker_name_spec = "ld";
+	    }
 
 #if HAVE_LTO_PLUGIN > 0
 #if HAVE_LTO_PLUGIN == 2
-      if (!switch_matches (fno_use_linker_plugin,
-			   fno_use_linker_plugin + strlen (fno_use_linker_plugin), 0))
+	  if (!switch_matches (fno_use_linker_plugin,
+			       fno_use_linker_plugin
+			       + strlen (fno_use_linker_plugin), 0))
 #else
-      if (switch_matches (fuse_linker_plugin,
-			  fuse_linker_plugin + strlen (fuse_linker_plugin), 0))
+	  if (switch_matches (fuse_linker_plugin,
+			      fuse_linker_plugin
+			      + strlen (fuse_linker_plugin), 0))
 #endif
-	{
-	  linker_plugin_file_spec = find_a_file (&exec_prefixes,
-						 LTOPLUGINSONAME, R_OK,
-						 false);
-	  if (!linker_plugin_file_spec)
-	    fatal_error ("-fuse-linker-plugin, but %s not found", LTOPLUGINSONAME);
+	    {
+	      linker_plugin_file_spec = find_a_file (&exec_prefixes,
+						     LTOPLUGINSONAME, R_OK,
+						     false);
+	      if (!linker_plugin_file_spec)
+		fatal_error ("-fuse-linker-plugin, but %s not found",
+			     LTOPLUGINSONAME);
+	    }
+#endif
+	  lto_gcc_spec = argv[0];
 	}
-#endif
-      lto_gcc_spec = argv[0];
 
       /* Rebuild the COMPILER_PATH and LIBRARY_PATH environment variables
 	 for collect.  */

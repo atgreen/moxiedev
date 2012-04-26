@@ -33,7 +33,6 @@ extern int avr_simple_epilogue (void);
 extern int avr_hard_regno_rename_ok (unsigned int, unsigned int);
 extern rtx avr_return_addr_rtx (int count, rtx tem);
 extern void avr_register_target_pragmas (void);
-extern bool avr_accumulate_outgoing_args (void);
 extern void avr_init_expanders (void);
 
 #ifdef TREE_CODE
@@ -76,6 +75,8 @@ extern const char *avr_out_ashlpsi3 (rtx, rtx*, int*);
 extern const char *avr_out_ashrpsi3 (rtx, rtx*, int*);
 extern const char *avr_out_lshrpsi3 (rtx, rtx*, int*);
 
+extern const char* avr_load_lpm (rtx, rtx*, int*);
+
 extern bool avr_rotate_bytes (rtx operands[]);
 
 extern void expand_prologue (void);
@@ -84,7 +85,6 @@ extern bool avr_emit_movmemhi (rtx*);
 extern int avr_epilogue_uses (int regno);
 extern int avr_starting_frame_offset (void);
 
-extern void avr_output_bld (rtx operands[], int bit_nr);
 extern void avr_output_addr_vec_elt (FILE *stream, int value);
 extern const char *avr_out_sbxx_branch (rtx insn, rtx operands[]);
 extern const char* avr_out_bitop (rtx, rtx*, int*);
@@ -94,8 +94,9 @@ extern const char* avr_out_plus64 (rtx, int*);
 extern const char* avr_out_addto_sp (rtx*, int*);
 extern const char* avr_out_xload (rtx, rtx*, int*);
 extern const char* avr_out_movmem (rtx, rtx*, int*);
-extern const char* avr_out_map_bits (rtx, rtx*, int*);
+extern const char* avr_out_insert_bits (rtx*, int*);
 extern bool avr_popcount_each_byte (rtx, int, int);
+extern bool avr_has_nibble_0xf (rtx);
 
 extern int extra_constraint_Q (rtx x);
 extern int adjust_insn_length (rtx insn, int len);
@@ -116,14 +117,22 @@ extern int avr_simplify_comparison_p (enum machine_mode mode,
 extern RTX_CODE avr_normalize_condition (RTX_CODE condition);
 extern void out_shift_with_cnt (const char *templ, rtx insn,
 				rtx operands[], int *len, int t_len);
-extern reg_class_t avr_mode_code_base_reg_class (enum machine_mode, addr_space_t, RTX_CODE, RTX_CODE);
+extern enum reg_class avr_mode_code_base_reg_class (enum machine_mode, addr_space_t, RTX_CODE, RTX_CODE);
 extern bool avr_regno_mode_code_ok_for_base_p (int, enum machine_mode, addr_space_t, RTX_CODE, RTX_CODE);
 extern rtx avr_incoming_return_addr_rtx (void);
 extern rtx avr_legitimize_reload_address (rtx*, enum machine_mode, int, int, int, int, rtx (*)(rtx,int));
-extern bool avr_mem_pgm_p (rtx);
-extern bool avr_mem_pgmx_p (rtx);
+extern bool avr_mem_flash_p (rtx);
+extern bool avr_mem_memx_p (rtx);
 extern bool avr_load_libgcc_p (rtx);
 extern bool avr_xload_libgcc_p (enum machine_mode);
+
+extern rtx lpm_reg_rtx;
+extern rtx lpm_addr_reg_rtx;
+extern rtx tmp_reg_rtx;
+extern rtx zero_reg_rtx;
+extern rtx all_regs_rtx[32];
+extern rtx rampz_rtx;
+
 #endif /* RTX_CODE */
 
 #ifdef REAL_VALUE_TYPE

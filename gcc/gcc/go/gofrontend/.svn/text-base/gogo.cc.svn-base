@@ -37,6 +37,7 @@ Gogo::Gogo(Backend* backend, Linemap* linemap, int int_type_size,
     imported_init_fns_(),
     unique_prefix_(),
     unique_prefix_specified_(false),
+    verify_types_(),
     interface_types_(),
     specific_type_functions_(),
     specific_type_functions_are_written_(false),
@@ -58,8 +59,9 @@ Gogo::Gogo(Backend* backend, Linemap* linemap, int int_type_size,
 					       RUNTIME_TYPE_KIND_INT8));
   this->add_named_type(Type::make_integer_type("int16", false,  16,
 					       RUNTIME_TYPE_KIND_INT16));
-  this->add_named_type(Type::make_integer_type("int32", false,  32,
-					       RUNTIME_TYPE_KIND_INT32));
+  Named_type* int32_type = Type::make_integer_type("int32", false,  32,
+						   RUNTIME_TYPE_KIND_INT32);
+  this->add_named_type(int32_type);
   this->add_named_type(Type::make_integer_type("int64", false,  64,
 					       RUNTIME_TYPE_KIND_INT64));
 
@@ -82,22 +84,21 @@ Gogo::Gogo(Backend* backend, Linemap* linemap, int int_type_size,
 						 RUNTIME_TYPE_KIND_INT);
   this->add_named_type(int_type);
 
-  // "byte" is an alias for "uint8".  Construct a Named_object which
-  // points to UINT8_TYPE.  Note that this breaks the normal pairing
-  // in which a Named_object points to a Named_type which points back
-  // to the same Named_object.
-  Named_object* byte_type = this->declare_type("byte", loc);
-  byte_type->set_type_value(uint8_type);
-  uint8_type->integer_type()->set_is_byte();
-
-  // "rune" is an alias for "int".
-  Named_object* rune_type = this->declare_type("rune", loc);
-  rune_type->set_type_value(int_type);
-  int_type->integer_type()->set_is_rune();
-
   this->add_named_type(Type::make_integer_type("uintptr", true,
 					       pointer_size,
 					       RUNTIME_TYPE_KIND_UINTPTR));
+
+  // "byte" is an alias for "uint8".
+  uint8_type->integer_type()->set_is_byte();
+  Named_object* byte_type = Named_object::make_type("byte", NULL, uint8_type,
+						    loc);
+  this->add_named_type(byte_type->type_value());
+
+  // "rune" is an alias for "int32".
+  int32_type->integer_type()->set_is_rune();
+  Named_object* rune_type = Named_object::make_type("rune", NULL, int32_type,
+						    loc);
+  this->add_named_type(rune_type->type_value());
 
   this->add_named_type(Type::make_named_bool_type());
 
@@ -626,8 +627,8 @@ Gogo::start_function(const std::string& name, Function_type* type,
       const Typed_identifier* receiver = type->receiver();
       Variable* this_param = new Variable(receiver->type(), NULL, false,
 					  true, true, location);
-      std::string name = receiver->name();
-      if (name.empty())
+      std::string rname = receiver->name();
+      if (rname.empty() || Gogo::is_sink_name(rname))
 	{
 	  // We need to give receivers a name since they wind up in
 	  // DECL_ARGUMENTS.  FIXME.
@@ -635,9 +636,9 @@ Gogo::start_function(const std::string& name, Function_type* type,
 	  char buf[50];
 	  snprintf(buf, sizeof buf, "r.%u", count);
 	  ++count;
-	  name = buf;
+	  rname = buf;
 	}
-      block->bindings()->add_variable(name, NULL, this_param);
+      block->bindings()->add_variable(rname, NULL, this_param);
     }
 
   const Typed_identifier_list* parameters = type->parameters();
@@ -653,8 +654,8 @@ Gogo::start_function(const std::string& name, Function_type* type,
 	  if (is_varargs && p + 1 == parameters->end())
 	    param->set_is_varargs_parameter();
 
-	  std::string name = p->name();
-	  if (name.empty() || Gogo::is_sink_name(name))
+	  std::string pname = p->name();
+	  if (pname.empty() || Gogo::is_sink_name(pname))
 	    {
 	      // We need to give parameters a name since they wind up
 	      // in DECL_ARGUMENTS.  FIXME.
@@ -662,9 +663,9 @@ Gogo::start_function(const std::string& name, Function_type* type,
 	      char buf[50];
 	      snprintf(buf, sizeof buf, "p.%u", count);
 	      ++count;
-	      name = buf;
+	      pname = buf;
 	    }
-	  block->bindings()->add_variable(name, NULL, param);
+	  block->bindings()->add_variable(pname, NULL, param);
 	}
     }
 
@@ -833,6 +834,14 @@ Gogo::finish_block(Location location)
   return block;
 }
 
+// Add an erroneous name.
+
+Named_object*
+Gogo::add_erroneous_name(const std::string& name)
+{
+  return this->package_->bindings()->add_erroneous_name(name);
+}
+
 // Add an unknown name.
 
 Named_object*
@@ -870,7 +879,7 @@ Gogo::declare_function(const std::string& name, Function_type* type,
       else if (rtype->forward_declaration_type() != NULL)
 	{
 	  Forward_declaration_type* ftype = rtype->forward_declaration_type();
-	  return ftype->add_method_declaration(name, type, location);
+	  return ftype->add_method_declaration(name, NULL, type, location);
 	}
       else
 	go_unreachable();
@@ -1035,6 +1044,23 @@ Gogo::add_named_object(Named_object* no)
   this->current_bindings()->add_named_object(no);
 }
 
+// Mark all local variables used.  This is used when some types of
+// parse error occur.
+
+void
+Gogo::mark_locals_used()
+{
+  for (Open_functions::iterator pf = this->functions_.begin();
+       pf != this->functions_.end();
+       ++pf)
+    {
+      for (std::vector<Block*>::iterator pb = pf->blocks.begin();
+	   pb != pf->blocks.end();
+	   ++pb)
+	(*pb)->bindings()->mark_locals_used();
+    }
+}
+
 // Record that we've seen an interface type.
 
 void
@@ -1178,13 +1204,13 @@ Specific_type_functions::type(Type* t)
     {
     case Type::TYPE_NAMED:
       {
+	Named_type* nt = t->named_type();
 	if (!t->compare_is_identity(this->gogo_) && t->is_comparable())
-	  t->type_functions(this->gogo_, t->named_type(), NULL, NULL, &hash_fn,
-			    &equal_fn);
+	  t->type_functions(this->gogo_, nt, NULL, NULL, &hash_fn, &equal_fn);
 
 	// If this is a struct type, we don't want to make functions
 	// for the unnamed struct.
-	Type* rt = t->named_type()->real_type();
+	Type* rt = nt->real_type();
 	if (rt->struct_type() == NULL)
 	  {
 	    if (Type::traverse(rt, this) == TRAVERSE_EXIT)
@@ -1192,8 +1218,20 @@ Specific_type_functions::type(Type* t)
 	  }
 	else
 	  {
-	    if (rt->struct_type()->traverse_field_types(this) == TRAVERSE_EXIT)
-	      return TRAVERSE_EXIT;
+	    // If this type is defined in another package, then we don't
+	    // need to worry about the unexported fields.
+	    bool is_defined_elsewhere = nt->named_object()->package() != NULL;
+	    const Struct_field_list* fields = rt->struct_type()->fields();
+	    for (Struct_field_list::const_iterator p = fields->begin();
+		 p != fields->end();
+		 ++p)
+	      {
+		if (is_defined_elsewhere
+		    && Gogo::is_hidden_name(p->field_name()))
+		  continue;
+		if (Type::traverse(p->type(), this) == TRAVERSE_EXIT)
+		  return TRAVERSE_EXIT;
+	      }
 	  }
 
 	return TRAVERSE_SKIP_COMPONENTS;
@@ -1256,6 +1294,15 @@ Gogo::traverse(Traverse* traverse)
     }
 }
 
+// Add a type to verify.  This is used for types of sink variables, in
+// order to give appropriate error messages.
+
+void
+Gogo::add_type_to_verify(Type* type)
+{
+  this->verify_types_.push_back(type);
+}
+
 // Traversal class used to verify types.
 
 class Verify_types : public Traverse
@@ -1286,6 +1333,12 @@ Gogo::verify_types()
 {
   Verify_types traverse;
   this->traverse(&traverse);
+
+  for (std::vector<Type*>::iterator p = this->verify_types_.begin();
+       p != this->verify_types_.end();
+       ++p)
+    (*p)->verify();
+  this->verify_types_.clear();
 }
 
 // Traversal class used to lower parse tree.
@@ -1478,6 +1531,8 @@ Lower_parse_tree::expression(Expression** pexpr)
 				  &this->inserter_, this->iota_value_);
       if (enew == e)
 	break;
+      if (enew->traverse_subexpressions(this) == TRAVERSE_EXIT)
+	return TRAVERSE_EXIT;
       *pexpr = enew;
     }
   return TRAVERSE_SKIP_COMPONENTS;
@@ -1598,8 +1653,12 @@ Finalize_methods::type(Type* t)
       }
 
     case Type::TYPE_STRUCT:
+      // Traverse the field types first in case there is an embedded
+      // field with methods that the struct should inherit.
+      if (t->struct_type()->traverse_field_types(this) == TRAVERSE_EXIT)
+          return TRAVERSE_EXIT;
       t->struct_type()->finalize_methods(this->gogo_);
-      break;
+      return TRAVERSE_SKIP_COMPONENTS;
 
     default:
       break;
@@ -1730,6 +1789,15 @@ Check_types_traverse::variable(Named_object* named_object)
 		     reason.c_str());
 	  var->clear_init();
 	}
+      else if (!var->is_used()
+	       && !var->is_global()
+	       && !var->is_parameter()
+	       && !var->is_receiver()
+	       && !var->type()->is_error()
+	       && (init == NULL || !init->is_error_expression())
+	       && !Lex::is_invalid_identifier(named_object->name()))
+	error_at(var->location(), "%qs declared and not used",
+		 named_object->message_name().c_str());
     }
   return TRAVERSE_CONTINUE;
 }
@@ -2148,12 +2216,18 @@ Order_eval::statement(Block* block, size_t* pindex, Statement* s)
       Expression::traverse(&init, &find_eval_ordering);
     }
 
-  if (find_eval_ordering.size() <= 1)
-    {
-      // If there is only one expression with a side-effect, we can
-      // leave it in place.
-      return TRAVERSE_CONTINUE;
-    }
+  size_t c = find_eval_ordering.size();
+  if (c == 0)
+    return TRAVERSE_CONTINUE;
+
+  // If there is only one expression with a side-effect, we can
+  // usually leave it in place.  However, for an assignment statement,
+  // we need to evaluate an expression on the right hand side before
+  // we evaluate any index expression on the left hand side, so for
+  // that case we always move the expression.  Otherwise we mishandle
+  // m[0] = len(m) where m is a map.
+  if (c == 1 && s->classification() != Statement::STATEMENT_ASSIGNMENT)
+    return TRAVERSE_CONTINUE;
 
   bool is_thunk = s->thunk_statement() != NULL;
   for (Find_eval_ordering::const_iterator p = find_eval_ordering.begin();
@@ -2434,6 +2508,9 @@ Build_recover_thunks::function(Named_object* orig_no)
   gogo->start_block(location);
 
   Call_expression* call = Expression::make_call(fn, args, false, location);
+
+  // Any varargs call has already been lowered.
+  call->set_varargs_are_lowered();
 
   Statement* s;
   if (orig_fntype->results() == NULL || orig_fntype->results()->empty())
@@ -2794,6 +2871,7 @@ Gogo::do_exports()
   exp.export_globals(this->package_name(),
 		     this->unique_prefix(),
 		     this->package_priority(),
+		     this->imports_,
 		     (this->need_init_fn_ && !this->is_main_package()
 		      ? this->get_init_fn_name()
 		      : ""),
@@ -2863,8 +2941,6 @@ Gogo::convert_named_types()
   Type::convert_builtin_named_types(this);
 
   Runtime::convert_types(this);
-
-  Function_type::convert_types(this);
 
   this->named_types_are_converted_ = true;
 }
@@ -2972,6 +3048,7 @@ Function::closure_var()
       Type* struct_type = Type::make_struct_type(sfl, loc);
       Variable* var = new Variable(Type::make_pointer_type(struct_type),
 				   NULL, false, true, false, loc);
+      var->set_is_used();
       this->closure_var_ = Named_object::make_variable("closure", NULL, var);
       // Note that the new variable is not in any binding contour.
     }
@@ -3210,7 +3287,10 @@ Function::export_func_with_type(Export* exp, const std::string& name,
   if (fntype->is_method())
     {
       exp->write_c_string("(");
-      exp->write_type(fntype->receiver()->type());
+      const Typed_identifier* receiver = fntype->receiver();
+      exp->write_name(receiver->name());
+      exp->write_c_string(" ");
+      exp->write_type(receiver->type());
       exp->write_c_string(") ");
     }
 
@@ -3230,6 +3310,8 @@ Function::export_func_with_type(Export* exp, const std::string& name,
 	    first = false;
 	  else
 	    exp->write_c_string(", ");
+	  exp->write_name(p->name());
+	  exp->write_c_string(" ");
 	  if (!is_varargs || p + 1 != parameters->end())
 	    exp->write_type(p->type());
 	  else
@@ -3244,7 +3326,7 @@ Function::export_func_with_type(Export* exp, const std::string& name,
   const Typed_identifier_list* results = fntype->results();
   if (results != NULL)
     {
-      if (results->size() == 1)
+      if (results->size() == 1 && results->begin()->name().empty())
 	{
 	  exp->write_c_string(" ");
 	  exp->write_type(results->begin()->type());
@@ -3261,6 +3343,8 @@ Function::export_func_with_type(Export* exp, const std::string& name,
 		first = false;
 	      else
 		exp->write_c_string(", ");
+	      exp->write_name(p->name());
+	      exp->write_c_string(" ");
 	      exp->write_type(p->type());
 	    }
 	  exp->write_c_string(")");
@@ -3284,9 +3368,10 @@ Function::import_func(Import* imp, std::string* pname,
   if (imp->peek_char() == '(')
     {
       imp->require_c_string("(");
+      std::string name = imp->read_name();
+      imp->require_c_string(" ");
       Type* rtype = imp->read_type();
-      *preceiver = new Typed_identifier(Import::import_marker, rtype,
-					imp->location());
+      *preceiver = new Typed_identifier(name, rtype, imp->location());
       imp->require_c_string(") ");
     }
 
@@ -3302,6 +3387,9 @@ Function::import_func(Import* imp, std::string* pname,
       parameters = new Typed_identifier_list();
       while (true)
 	{
+	  std::string name = imp->read_name();
+	  imp->require_c_string(" ");
+
 	  if (imp->match_c_string("..."))
 	    {
 	      imp->advance(3);
@@ -3311,8 +3399,8 @@ Function::import_func(Import* imp, std::string* pname,
 	  Type* ptype = imp->read_type();
 	  if (*is_varargs)
 	    ptype = Type::make_array_type(ptype, NULL);
-	  parameters->push_back(Typed_identifier(Import::import_marker,
-						 ptype, imp->location()));
+	  parameters->push_back(Typed_identifier(name, ptype,
+						 imp->location()));
 	  if (imp->peek_char() != ',')
 	    break;
 	  go_assert(!*is_varargs);
@@ -3332,17 +3420,18 @@ Function::import_func(Import* imp, std::string* pname,
       if (imp->peek_char() != '(')
 	{
 	  Type* rtype = imp->read_type();
-	  results->push_back(Typed_identifier(Import::import_marker, rtype,
-					      imp->location()));
+	  results->push_back(Typed_identifier("", rtype, imp->location()));
 	}
       else
 	{
 	  imp->require_c_string("(");
 	  while (true)
 	    {
+	      std::string name = imp->read_name();
+	      imp->require_c_string(" ");
 	      Type* rtype = imp->read_type();
-	      results->push_back(Typed_identifier(Import::import_marker,
-						  rtype, imp->location()));
+	      results->push_back(Typed_identifier(name, rtype,
+						  imp->location()));
 	      if (imp->peek_char() != ',')
 		break;
 	      imp->require_c_string(", ");
@@ -3494,6 +3583,7 @@ Block::traverse(Traverse* traverse)
 
 	    case Named_object::NAMED_OBJECT_TYPE_DECLARATION:
 	    case Named_object::NAMED_OBJECT_UNKNOWN:
+	    case Named_object::NAMED_OBJECT_ERRONEOUS:
 	      break;
 
 	    case Named_object::NAMED_OBJECT_PACKAGE:
@@ -3692,7 +3782,7 @@ Variable::Variable(Type* type, Expression* init, bool is_global,
 		   Location location)
   : type_(type), init_(init), preinit_(NULL), location_(location),
     backend_(NULL), is_global_(is_global), is_parameter_(is_parameter),
-    is_receiver_(is_receiver), is_varargs_parameter_(false),
+    is_receiver_(is_receiver), is_varargs_parameter_(false), is_used_(false),
     is_address_taken_(false), is_non_escaping_address_taken_(false),
     seen_(false), init_is_lowered_(false), type_from_init_tuple_(false),
     type_from_range_index_(false), type_from_range_value_(false),
@@ -3781,6 +3871,24 @@ Variable::add_preinit_statement(Gogo* gogo, Statement* s)
   b->set_end_location(s->location());
 }
 
+// Whether this variable has a type.
+
+bool
+Variable::has_type() const
+{
+  if (this->type_ == NULL)
+    return false;
+
+  // A variable created in a type switch case nil does not actually
+  // have a type yet.  It will be changed to use the initializer's
+  // type in determine_type.
+  if (this->is_type_switch_var_
+      && this->type_->is_nil_constant_as_type())
+    return false;
+
+  return true;
+}
+
 // In an assignment which sets a variable to a tuple of EXPR, return
 // the type of the first element of the tuple.
 
@@ -3829,7 +3937,12 @@ Variable::type_from_range(Expression* expr, bool get_index_type,
 	return t->deref()->array_type()->element_type();
     }
   else if (t->is_string_type())
-    return Type::lookup_integer_type("int");
+    {
+      if (get_index_type)
+	return Type::lookup_integer_type("int");
+      else
+	return Type::lookup_integer_type("int32");
+    }
   else if (t->map_type() != NULL)
     {
       if (get_index_type)
@@ -4090,6 +4203,11 @@ Variable::get_backend_variable(Gogo* gogo, Named_object* function,
 					    package != NULL,
 					    Gogo::is_hidden_name(name),
 					    this->location_);
+	  else if (function == NULL)
+	    {
+	      go_assert(saw_errors());
+	      bvar = backend->error_variable();
+	    }
 	  else
 	    {
 	      tree fndecl = function->func_value()->get_decl();
@@ -4235,11 +4353,12 @@ Type_declaration::add_method(const std::string& name, Function* function)
 
 Named_object*
 Type_declaration::add_method_declaration(const std::string&  name,
+					 Package* package,
 					 Function_type* type,
 					 Location location)
 {
-  Named_object* ret = Named_object::make_function_declaration(name, NULL, type,
-							      location);
+  Named_object* ret = Named_object::make_function_declaration(name, package,
+							      type, location);
   this->methods_.push_back(ret);
   return ret;
 }
@@ -4488,6 +4607,9 @@ Named_object::location() const
     case NAMED_OBJECT_UNINITIALIZED:
       go_unreachable();
 
+    case NAMED_OBJECT_ERRONEOUS:
+      return Linemap::unknown_location();
+
     case NAMED_OBJECT_UNKNOWN:
       return this->unknown_value()->location();
 
@@ -4531,6 +4653,9 @@ Named_object::export_named_object(Export* exp) const
     case NAMED_OBJECT_UNINITIALIZED:
     case NAMED_OBJECT_UNKNOWN:
       go_unreachable();
+
+    case NAMED_OBJECT_ERRONEOUS:
+      break;
 
     case NAMED_OBJECT_CONST:
       this->const_value()->export_const(exp, this->name_);
@@ -4718,12 +4843,18 @@ Bindings::add_named_object_to_contour(Contour* contour,
 Named_object*
 Bindings::new_definition(Named_object* old_object, Named_object* new_object)
 {
+  if (new_object->is_erroneous() && !old_object->is_erroneous())
+    return new_object;
+
   std::string reason;
   switch (old_object->classification())
     {
     default:
     case Named_object::NAMED_OBJECT_UNINITIALIZED:
       go_unreachable();
+
+    case Named_object::NAMED_OBJECT_ERRONEOUS:
+      return old_object;
 
     case Named_object::NAMED_OBJECT_UNKNOWN:
       {
@@ -4871,6 +5002,19 @@ Bindings::define_type(Named_object* no, Named_type* type)
   this->named_objects_.push_back(no);
 }
 
+// Mark all local variables as used.  This is used for some types of
+// parse error.
+
+void
+Bindings::mark_locals_used()
+{
+  for (std::vector<Named_object*>::iterator p = this->named_objects_.begin();
+       p != this->named_objects_.end();
+       ++p)
+    if ((*p)->is_variable())
+      (*p)->var_value()->set_is_used();
+}
+
 // Traverse bindings.
 
 int
@@ -4957,6 +5101,7 @@ Bindings::traverse(Traverse* traverse, bool is_global)
 	case Named_object::NAMED_OBJECT_TYPE_DECLARATION:
 	case Named_object::NAMED_OBJECT_FUNC_DECLARATION:
 	case Named_object::NAMED_OBJECT_UNKNOWN:
+	case Named_object::NAMED_OBJECT_ERRONEOUS:
 	  break;
 
 	case Named_object::NAMED_OBJECT_SINK:
@@ -5213,5 +5358,5 @@ Statement_inserter::insert(Statement* s)
   else if (this->var_ != NULL)
     this->var_->add_preinit_statement(this->gogo_, s);
   else
-    go_unreachable();
+    go_assert(saw_errors());
 }

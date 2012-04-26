@@ -1,6 +1,6 @@
 /* C++ Parser.
    Copyright (C) 2000, 2001, 2002, 2003, 2004,
-   2005, 2007, 2008, 2009, 2010, 2011  Free Software Foundation, Inc.
+   2005, 2007, 2008, 2009, 2010, 2011, 2012  Free Software Foundation, Inc.
    Written by Mark Mitchell <mark@codesourcery.com>.
 
    This file is part of GCC.
@@ -3581,7 +3581,13 @@ lookup_literal_operator (tree name, VEC(tree,gc) *args)
 				       TREE_TYPE (tparm))))
 		found = false;
 	    }
-	  if (found)
+	  if (found
+	      && ix == VEC_length (tree, args)
+	      /* May be this should be sufficient_parms_p instead,
+		 depending on how exactly should user-defined literals
+		 work in presence of default arguments on the literal
+		 operator parameters.  */
+	      && argtypes == void_list_node)
 	    return fn;
 	}
     }
@@ -4005,7 +4011,7 @@ cp_parser_primary_expression (cp_parser *parser,
 	    && cp_lexer_next_token_is (parser->lexer, CPP_OPEN_BRACE))
 	  {
 	    /* Statement-expressions are not allowed by the standard.  */
-	    pedwarn (token->location, OPT_pedantic, 
+	    pedwarn (token->location, OPT_Wpedantic, 
 		     "ISO C++ forbids braced-groups within expressions");
 
 	    /* And they're not allowed outside of a function-body; you
@@ -5544,7 +5550,7 @@ cp_parser_postfix_expression (cp_parser *parser, bool address_p, bool cast_p,
 	      {
 		/* Warn the user that a compound literal is not
 		   allowed in standard C++.  */
-		pedwarn (input_location, OPT_pedantic, "ISO C++ forbids compound-literals");
+		pedwarn (input_location, OPT_Wpedantic, "ISO C++ forbids compound-literals");
 		/* For simplicity, we disallow compound literals in
 		   constant-expressions.  We could
 		   allow compound literals of integer type, whose
@@ -5910,7 +5916,8 @@ cp_parser_postfix_dot_deref_expression (cp_parser *parser,
 
   /* If this is a `->' operator, dereference the pointer.  */
   if (token_type == CPP_DEREF)
-    postfix_expression = build_x_arrow (postfix_expression);
+    postfix_expression = build_x_arrow (postfix_expression,
+					tf_warning_or_error);
   /* Check to see whether or not the expression is type-dependent.  */
   dependent_p = type_dependent_expression_p (postfix_expression);
   /* The identifier following the `->' or `.' is not qualified.  */
@@ -6386,7 +6393,7 @@ cp_parser_unary_expression (cp_parser *parser, bool address_p, bool cast_p,
 		   expressions. So pedwarn if alignof is used with a non-
 		   type expression. However, __alignof__ is ok.  */
 		if (!strcmp (IDENTIFIER_POINTER (token->u.value), "alignof"))
-		  pedwarn (token->location, OPT_pedantic,
+		  pedwarn (token->location, OPT_Wpedantic,
 			   "ISO C++ does not allow %<alignof%> "
 			   "with a non-type");
 
@@ -7427,7 +7434,7 @@ cp_parser_question_colon_clause (cp_parser* parser, tree logical_or_expr)
   if (cp_parser_allow_gnu_extensions_p (parser)
       && token->type == CPP_COLON)
     {
-      pedwarn (token->location, OPT_pedantic, 
+      pedwarn (token->location, OPT_Wpedantic, 
                "ISO C++ does not allow ?: with omitted middle operand");
       /* Implicit true clause.  */
       expr = NULL_TREE;
@@ -8231,7 +8238,7 @@ cp_parser_lambda_introducer (cp_parser* parser, tree lambda_expr)
 	{
 	  /* An explicit expression exists.  */
 	  cp_lexer_consume_token (parser->lexer);
-          pedwarn (input_location, OPT_pedantic,
+          pedwarn (input_location, OPT_Wpedantic,
                    "ISO C++ does not allow initializers "
                    "in lambda expression capture lists");
 	  capture_init_expr = cp_parser_assignment_expression (parser,
@@ -8361,7 +8368,7 @@ cp_parser_lambda_declarator_opt (cp_parser* parser, tree lambda_expr)
 	 parameter-declaration-clause of a lambda-declarator.  */
       for (t = param_list; t; t = TREE_CHAIN (t))
 	if (TREE_PURPOSE (t))
-	  pedwarn (DECL_SOURCE_LOCATION (TREE_VALUE (t)), OPT_pedantic,
+	  pedwarn (DECL_SOURCE_LOCATION (TREE_VALUE (t)), OPT_Wpedantic,
 		   "default argument specified for lambda parameter");
 
       cp_parser_require (parser, CPP_CLOSE_PAREN, RT_CLOSE_PAREN);
@@ -8409,9 +8416,8 @@ cp_parser_lambda_declarator_opt (cp_parser* parser, tree lambda_expr)
     if (LAMBDA_EXPR_RETURN_TYPE (lambda_expr))
       return_type_specs.type = LAMBDA_EXPR_RETURN_TYPE (lambda_expr);
     else
-      /* Maybe we will deduce the return type later, but we can use void
-	 as a placeholder return type anyways.  */
-      return_type_specs.type = void_type_node;
+      /* Maybe we will deduce the return type later.  */
+      return_type_specs.type = make_auto ();
 
     p = obstack_alloc (&declarator_obstack, 0);
 
@@ -8532,7 +8538,8 @@ cp_parser_lambda_body (cp_parser* parser, tree lambda_expr)
 
 	if (cp_parser_parse_definitely (parser))
 	  {
-	    apply_lambda_return_type (lambda_expr, lambda_return_type (expr));
+	    if (!processing_template_decl)
+	      apply_deduced_return_type (fco, lambda_return_type (expr));
 
 	    /* Will get error here if type not deduced yet.  */
 	    finish_return_stmt (expr);
@@ -8543,13 +8550,10 @@ cp_parser_lambda_body (cp_parser* parser, tree lambda_expr)
 
     if (!done)
       {
-	if (!LAMBDA_EXPR_RETURN_TYPE (lambda_expr))
-	  LAMBDA_EXPR_DEDUCE_RETURN_TYPE_P (lambda_expr) = true;
 	while (cp_lexer_next_token_is_keyword (parser->lexer, RID_LABEL))
 	  cp_parser_label_declaration (parser);
 	cp_parser_statement_seq_opt (parser, NULL_TREE);
 	cp_parser_require (parser, CPP_CLOSE_BRACE, RT_CLOSE_BRACE);
-	LAMBDA_EXPR_DEDUCE_RETURN_TYPE_P (lambda_expr) = false;
       }
 
     finish_compound_stmt (compound_stmt);
@@ -8935,7 +8939,7 @@ cp_parser_compound_statement (cp_parser *parser, tree in_statement_expr,
     return error_mark_node;
   if (DECL_DECLARED_CONSTEXPR_P (current_function_decl)
       && !function_body)
-    pedwarn (input_location, OPT_pedantic,
+    pedwarn (input_location, OPT_Wpedantic,
 	     "compound-statement in constexpr function");
   /* Begin the compound-statement.  */
   compound_stmt = begin_compound_stmt (in_try ? BCS_TRY_BLOCK : 0);
@@ -9906,7 +9910,7 @@ cp_parser_jump_statement (cp_parser* parser)
       if (cp_lexer_next_token_is (parser->lexer, CPP_MULT))
 	{
 	  /* Issue a warning about this use of a GNU extension.  */
-	  pedwarn (token->location, OPT_pedantic, "ISO C++ forbids computed gotos");
+	  pedwarn (token->location, OPT_Wpedantic, "ISO C++ forbids computed gotos");
 	  /* Consume the '*' token.  */
 	  cp_lexer_consume_token (parser->lexer);
 	  /* Parse the dependent expression.  */
@@ -10051,7 +10055,7 @@ cp_parser_declaration_seq_opt (cp_parser* parser)
 	     invalid.  Allow it unless we're being pedantic.  */
 	  cp_lexer_consume_token (parser->lexer);
 	  if (!in_system_header)
-	    pedwarn (input_location, OPT_pedantic, "extra %<;%>");
+	    pedwarn (input_location, OPT_Wpedantic, "extra %<;%>");
 	  continue;
 	}
 
@@ -11268,8 +11272,14 @@ cp_parser_conversion_type_id (cp_parser* parser)
   if (! cp_parser_uncommitted_to_tentative_parse_p (parser)
       && type_uses_auto (type_specified))
     {
-      error ("invalid use of %<auto%> in conversion operator");
-      return error_mark_node;
+      if (cxx_dialect < cxx1y)
+	{
+	  error ("invalid use of %<auto%> in conversion operator");
+	  return error_mark_node;
+	}
+      else if (template_parm_scope_p ())
+	warning (0, "use of %<auto%> in member template "
+		 "conversion operator can never be deduced");
     }
 
   return type_specified;
@@ -12722,7 +12732,7 @@ cp_parser_template_name (cp_parser* parser,
      its name; we will look it up again during template instantiation.  */
   if (DECL_FUNCTION_TEMPLATE_P (decl) || !DECL_P (decl))
     {
-      tree scope = CP_DECL_CONTEXT (get_first_fn (decl));
+      tree scope = ovl_scope (decl);
       if (TYPE_P (scope) && dependent_type_p (scope))
 	return identifier;
     }
@@ -14352,7 +14362,7 @@ cp_parser_enum_specifier (cp_parser* parser)
 	    {
 	      /* Are template enums allowed in ISO? */
 	      if (template_parm_scope_p ())
-		pedwarn (type_start_token->location, OPT_pedantic,
+		pedwarn (type_start_token->location, OPT_Wpedantic,
 			 "%qD is an enumeration template", name);
 	      /* ignore a typename reference, for it will be solved by name
 	         in start_enum.  */
@@ -14605,7 +14615,7 @@ cp_parser_enumerator_list (cp_parser* parser, tree type)
       if (cp_lexer_next_token_is (parser->lexer, CPP_CLOSE_BRACE))
 	{
 	  if (cxx_dialect < cxx0x && !in_system_header)
-	    pedwarn (input_location, OPT_pedantic,
+	    pedwarn (input_location, OPT_Wpedantic,
                      "comma at end of enumerator list");
 	  break;
 	}
@@ -17624,7 +17634,7 @@ cp_parser_initializer_list (cp_parser* parser, bool* non_constant_p)
 	  && cp_lexer_peek_nth_token (parser->lexer, 2)->type == CPP_COLON)
 	{
 	  /* Warn the user that they are using an extension.  */
-	  pedwarn (input_location, OPT_pedantic, 
+	  pedwarn (input_location, OPT_Wpedantic, 
 		   "ISO C++ does not allow designated initializers");
 	  /* Consume the identifier.  */
 	  designator = cp_lexer_consume_token (parser->lexer)->u.value;
@@ -17638,7 +17648,7 @@ cp_parser_initializer_list (cp_parser* parser, bool* non_constant_p)
 	       && cp_lexer_peek_nth_token (parser->lexer, 3)->type == CPP_EQ)
 	{
 	  /* Warn the user that they are using an extension.  */
-	  pedwarn (input_location, OPT_pedantic,
+	  pedwarn (input_location, OPT_Wpedantic,
 		   "ISO C++ does not allow C99 designated initializers");
 	  /* Consume the `.'.  */
 	  cp_lexer_consume_token (parser->lexer);
@@ -17834,6 +17844,8 @@ cp_parser_class_name (cp_parser *parser,
       if (decl != error_mark_node)
 	decl = TYPE_NAME (decl);
     }
+
+  decl = strip_using_decl (decl);
 
   /* Check to see that it is really the name of a class.  */
   if (TREE_CODE (decl) == TEMPLATE_ID_EXPR
@@ -18852,7 +18864,7 @@ cp_parser_member_declaration (cp_parser* parser)
 	{
 	  cp_token *token = cp_lexer_peek_token (parser->lexer);
 	  if (!in_system_header_at (token->location))
-	    pedwarn (token->location, OPT_pedantic, "extra %<;%>");
+	    pedwarn (token->location, OPT_Wpedantic, "extra %<;%>");
 	}
       else
 	{
@@ -18870,7 +18882,7 @@ cp_parser_member_declaration (cp_parser* parser)
 	      /* If the `friend' keyword was present, the friend must
 		 be introduced with a class-key.  */
 	       if (!declares_class_or_enum && cxx_dialect < cxx0x)
-		 pedwarn (decl_spec_token_start->location, OPT_pedantic,
+		 pedwarn (decl_spec_token_start->location, OPT_Wpedantic,
 			  "in C++03 a class-key must be used "
 			  "when declaring a friend");
 	       /* In this case:
@@ -19097,7 +19109,7 @@ cp_parser_member_declaration (cp_parser* parser)
 		     possible that this fact is an oversight in the
 		     standard, since a pure function may be defined
 		     outside of the class-specifier.  */
-		  if (initializer)
+		  if (initializer && initializer_token_start)
 		    error_at (initializer_token_start->location,
 			      "pure-specifier on function-definition");
 		  decl = cp_parser_save_member_function_body (parser,
@@ -19587,7 +19599,7 @@ cp_parser_exception_specification_opt (cp_parser* parser)
 
 #if 0
   /* Enable this once a lot of code has transitioned to noexcept?  */
-  if (cxx_dialect == cxx0x && !in_system_header)
+  if (cxx_dialect >= cxx0x && !in_system_header)
     warning (OPT_Wdeprecated, "dynamic exception specifications are "
 	     "deprecated in C++0x; use %<noexcept%> instead");
 #endif

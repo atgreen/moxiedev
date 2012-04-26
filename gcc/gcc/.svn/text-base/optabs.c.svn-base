@@ -1,7 +1,7 @@
 /* Expand the basic unary and binary arithmetic operations, for GNU compiler.
    Copyright (C) 1987, 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
    1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-   2011  Free Software Foundation, Inc.
+   2011, 2012  Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -60,6 +60,7 @@ optab code_to_optab[NUM_RTX_CODE + 1];
 static void prepare_float_lib_cmp (rtx, rtx, enum rtx_code, rtx *,
 				   enum machine_mode *);
 static rtx expand_unop_direct (enum machine_mode, optab, rtx, rtx, int);
+static void emit_libcall_block_1 (rtx, rtx, rtx, rtx, bool);
 
 /* Debug facility for use in GDB.  */
 void debug_optab_libfuncs (void);
@@ -2115,8 +2116,9 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
       end_sequence ();
 
       target = gen_reg_rtx (mode);
-      emit_libcall_block (insns, target, value,
-			  gen_rtx_fmt_ee (binoptab->code, mode, op0, op1));
+      emit_libcall_block_1 (insns, target, value,
+			    gen_rtx_fmt_ee (binoptab->code, mode, op0, op1),
+			    trapv_binoptab_p (binoptab));
 
       return target;
     }
@@ -3028,6 +3030,47 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
   /* Widening (or narrowing) bswap needs special treatment.  */
   if (unoptab == bswap_optab)
     {
+      /* HImode is special because in this mode BSWAP is equivalent to ROTATE
+	 or ROTATERT.  First try these directly; if this fails, then try the
+	 obvious pair of shifts with allowed widening, as this will probably
+	 be always more efficient than the other fallback methods.  */
+      if (mode == HImode)
+	{
+	  rtx last, temp1, temp2;
+
+	  if (optab_handler (rotl_optab, mode) != CODE_FOR_nothing)
+	    {
+	      temp = expand_binop (mode, rotl_optab, op0, GEN_INT (8), target,
+				   unsignedp, OPTAB_DIRECT);
+	      if (temp)
+		return temp;
+	     }
+
+	  if (optab_handler (rotr_optab, mode) != CODE_FOR_nothing)
+	    {
+	      temp = expand_binop (mode, rotr_optab, op0, GEN_INT (8), target,
+				   unsignedp, OPTAB_DIRECT);
+	      if (temp)
+		return temp;
+	    }
+
+	  last = get_last_insn ();
+
+	  temp1 = expand_binop (mode, ashl_optab, op0, GEN_INT (8), NULL_RTX,
+			        unsignedp, OPTAB_WIDEN);
+	  temp2 = expand_binop (mode, lshr_optab, op0, GEN_INT (8), NULL_RTX,
+			        unsignedp, OPTAB_WIDEN);
+	  if (temp1 && temp2)
+	    {
+	      temp = expand_binop (mode, ior_optab, temp1, temp2, target,
+				   unsignedp, OPTAB_WIDEN);
+	      if (temp)
+		return temp;
+	    }
+
+	  delete_insns_since (last);
+	}
+
       temp = widen_bswap (mode, op0, target);
       if (temp)
 	return temp;
@@ -3197,7 +3240,8 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
 	eq_value = simplify_gen_unary (TRUNCATE, outmode, eq_value, mode);
       else if (GET_MODE_SIZE (outmode) > GET_MODE_SIZE (mode))
 	eq_value = simplify_gen_unary (ZERO_EXTEND, outmode, eq_value, mode);
-      emit_libcall_block (insns, target, value, eq_value);
+      emit_libcall_block_1 (insns, target, value, eq_value,
+			    trapv_unoptab_p (unoptab));
 
       return target;
     }
@@ -3219,10 +3263,10 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
 	      /* For certain operations, we need not actually extend
 		 the narrow operand, as long as we will truncate the
 		 results to the same narrowness.  */
-
 	      xop0 = widen_operand (xop0, wider_mode, mode, unsignedp,
 				    (unoptab == neg_optab
-				     || unoptab == one_cmpl_optab)
+				     || unoptab == one_cmpl_optab
+				     || unoptab == bswap_optab)
 				    && mclass == MODE_INT);
 
 	      temp = expand_unop (wider_mode, unoptab, xop0, NULL_RTX,
@@ -3236,6 +3280,20 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
 				     GEN_INT (GET_MODE_PRECISION (wider_mode)
 					      - GET_MODE_PRECISION (mode)),
 				     target, true, OPTAB_DIRECT);
+
+	      /* Likewise for bswap.  */
+	      if (unoptab == bswap_optab && temp != 0)
+		{
+		  gcc_assert (GET_MODE_PRECISION (wider_mode)
+			      == GET_MODE_BITSIZE (wider_mode)
+			      && GET_MODE_PRECISION (mode)
+				 == GET_MODE_BITSIZE (mode));
+
+		  temp = expand_shift (RSHIFT_EXPR, wider_mode, temp,
+				       GET_MODE_BITSIZE (wider_mode)
+				       - GET_MODE_BITSIZE (mode),
+				       NULL_RTX, true);
+		}
 
 	      if (temp)
 		{
@@ -3775,8 +3833,9 @@ no_conflict_move_test (rtx dest, const_rtx set, void *p0)
    an insn to move RESULT to TARGET.  This last insn will have a REQ_EQUAL
    note with an operand of EQUIV.  */
 
-void
-emit_libcall_block (rtx insns, rtx target, rtx result, rtx equiv)
+static void
+emit_libcall_block_1 (rtx insns, rtx target, rtx result, rtx equiv,
+		      bool equiv_may_trap)
 {
   rtx final_dest = target;
   rtx next, last, insn;
@@ -3789,7 +3848,8 @@ emit_libcall_block (rtx insns, rtx target, rtx result, rtx equiv)
   /* If we're using non-call exceptions, a libcall corresponding to an
      operation that may trap may also trap.  */
   /* ??? See the comment in front of make_reg_eh_region_note.  */
-  if (cfun->can_throw_non_call_exceptions && may_trap_p (equiv))
+  if (cfun->can_throw_non_call_exceptions
+      && (equiv_may_trap || may_trap_p (equiv)))
     {
       for (insn = insns; insn; insn = NEXT_INSN (insn))
 	if (CALL_P (insn))
@@ -3869,6 +3929,12 @@ emit_libcall_block (rtx insns, rtx target, rtx result, rtx equiv)
 
   if (final_dest != target)
     emit_move_insn (final_dest, target);
+}
+
+void
+emit_libcall_block (rtx insns, rtx target, rtx result, rtx equiv)
+{
+  emit_libcall_block_1 (insns, target, result, equiv, false);
 }
 
 /* Nonzero if we can perform a comparison of mode MODE straightforwardly.
@@ -7304,10 +7370,42 @@ maybe_emit_compare_and_swap_exchange_loop (rtx target, rtx mem, rtx val)
   return NULL_RTX;
 }
 
+/* This function tries to implement an atomic test-and-set operation
+   using the atomic_test_and_set instruction pattern.  A boolean value
+   is returned from the operation, using TARGET if possible.  */
+
 #ifndef HAVE_atomic_test_and_set
 #define HAVE_atomic_test_and_set 0
-#define gen_atomic_test_and_set(x,y,z)  (gcc_unreachable (), NULL_RTX)
+#define CODE_FOR_atomic_test_and_set CODE_FOR_nothing
 #endif
+
+static rtx
+maybe_emit_atomic_test_and_set (rtx target, rtx mem, enum memmodel model)
+{
+  enum machine_mode pat_bool_mode;
+  struct expand_operand ops[3];
+
+  if (!HAVE_atomic_test_and_set)
+    return NULL_RTX;
+
+  /* While we always get QImode from __atomic_test_and_set, we get
+     other memory modes from __sync_lock_test_and_set.  Note that we
+     use no endian adjustment here.  This matches the 4.6 behavior
+     in the Sparc backend.  */
+  gcc_checking_assert
+    (insn_data[CODE_FOR_atomic_test_and_set].operand[1].mode == QImode);
+  if (GET_MODE (mem) != QImode)
+    mem = adjust_address_nv (mem, QImode, 0);
+
+  pat_bool_mode = insn_data[CODE_FOR_atomic_test_and_set].operand[0].mode;
+  create_output_operand (&ops[0], target, pat_bool_mode);
+  create_fixed_operand (&ops[1], mem);
+  create_integer_operand (&ops[2], model);
+
+  if (maybe_expand_insn (CODE_FOR_atomic_test_and_set, 3, ops))
+    return ops[0].value;
+  return NULL_RTX;
+}
 
 /* This function expands the legacy _sync_lock test_and_set operation which is
    generally an atomic exchange.  Some limited targets only allow the
@@ -7323,20 +7421,21 @@ expand_sync_lock_test_and_set (rtx target, rtx mem, rtx val)
 
   /* Try an atomic_exchange first.  */
   ret = maybe_emit_atomic_exchange (target, mem, val, MEMMODEL_ACQUIRE);
+  if (ret)
+    return ret;
 
-  if (!ret)
-    ret = maybe_emit_sync_lock_test_and_set (target, mem, val,
-					     MEMMODEL_ACQUIRE);
-  if (!ret)
-    ret = maybe_emit_compare_and_swap_exchange_loop (target, mem, val);
+  ret = maybe_emit_sync_lock_test_and_set (target, mem, val, MEMMODEL_ACQUIRE);
+  if (ret)
+    return ret;
+
+  ret = maybe_emit_compare_and_swap_exchange_loop (target, mem, val);
+  if (ret)
+    return ret;
 
   /* If there are no other options, try atomic_test_and_set if the value
      being stored is 1.  */
-  if (!ret && val == const1_rtx && HAVE_atomic_test_and_set)
-    {
-      ret = gen_atomic_test_and_set (target, mem, GEN_INT (MEMMODEL_ACQUIRE));
-      emit_insn (ret);
-    }
+  if (val == const1_rtx)
+    ret = maybe_emit_atomic_test_and_set (target, mem, MEMMODEL_ACQUIRE);
 
   return ret;
 }
@@ -7351,36 +7450,57 @@ rtx
 expand_atomic_test_and_set (rtx target, rtx mem, enum memmodel model)
 {
   enum machine_mode mode = GET_MODE (mem);
-  rtx ret = NULL_RTX;
+  rtx ret, trueval, subtarget;
 
-  if (target == NULL_RTX)
-    target = gen_reg_rtx (mode);
-
-  if (HAVE_atomic_test_and_set)
-    {
-      ret = gen_atomic_test_and_set (target, mem, GEN_INT (MEMMODEL_ACQUIRE));
-      emit_insn (ret);
-      return ret;
-    }
-
-  /* If there is no test and set, try exchange, then a compare_and_swap loop,
-     then __sync_test_and_set.  */
-  ret = maybe_emit_atomic_exchange (target, mem, const1_rtx, model);
-
-  if (!ret)
-    ret = maybe_emit_compare_and_swap_exchange_loop (target, mem, const1_rtx);
-
-  if (!ret)
-    ret = maybe_emit_sync_lock_test_and_set (target, mem, const1_rtx, model);
-
+  ret = maybe_emit_atomic_test_and_set (target, mem, model);
   if (ret)
     return ret;
 
-  /* Failing all else, assume a single threaded environment and simply perform
-     the operation.  */
-  emit_move_insn (target, mem);
-  emit_move_insn (mem, const1_rtx);
-  return target;
+  /* Be binary compatible with non-default settings of trueval, and different
+     cpu revisions.  E.g. one revision may have atomic-test-and-set, but
+     another only has atomic-exchange.  */
+  if (targetm.atomic_test_and_set_trueval == 1)
+    {
+      trueval = const1_rtx;
+      subtarget = target ? target : gen_reg_rtx (mode);
+    }
+  else
+    {
+      trueval = gen_int_mode (targetm.atomic_test_and_set_trueval, mode);
+      subtarget = gen_reg_rtx (mode);
+    }
+
+  /* Try the atomic-exchange optab...  */
+  ret = maybe_emit_atomic_exchange (subtarget, mem, trueval, model);
+
+  /* ... then an atomic-compare-and-swap loop ... */
+  if (!ret)
+    ret = maybe_emit_compare_and_swap_exchange_loop (subtarget, mem, trueval);
+
+  /* ... before trying the vaguely defined legacy lock_test_and_set. */
+  if (!ret)
+    ret = maybe_emit_sync_lock_test_and_set (subtarget, mem, trueval, model);
+
+  /* Recall that the legacy lock_test_and_set optab was allowed to do magic
+     things with the value 1.  Thus we try again without trueval.  */
+  if (!ret && targetm.atomic_test_and_set_trueval != 1)
+    ret = maybe_emit_sync_lock_test_and_set (subtarget, mem, const1_rtx, model);
+
+  /* Failing all else, assume a single threaded environment and simply
+     perform the operation.  */
+  if (!ret)
+    {
+      emit_move_insn (subtarget, mem);
+      emit_move_insn (mem, trueval);
+      ret = subtarget;
+    }
+
+  /* Recall that have to return a boolean value; rectify if trueval
+     is not exactly one.  */
+  if (targetm.atomic_test_and_set_trueval != 1)
+    ret = emit_store_flag_force (target, NE, ret, const0_rtx, mode, 0, 1);
+  
+  return ret;
 }
 
 /* This function expands the atomic exchange operation:
@@ -7634,9 +7754,12 @@ expand_atomic_load (rtx target, rtx mem, enum memmodel model)
       /* Issue val = compare_and_swap (mem, 0, 0).
 	 This may cause the occasional harmless store of 0 when the value is
 	 already 0, but it seems to be OK according to the standards guys.  */
-      expand_atomic_compare_and_swap (NULL, &target, mem, const0_rtx,
-				      const0_rtx, false, model, model);
-      return target;
+      if (expand_atomic_compare_and_swap (NULL, &target, mem, const0_rtx,
+					  const0_rtx, false, model, model))
+	return target;
+      else
+      /* Otherwise there is no atomic load, leave the library call.  */
+        return NULL_RTX;
     }
 
   /* Otherwise assume loads are atomic, and emit the proper barriers.  */

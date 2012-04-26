@@ -942,7 +942,7 @@ write_nested_name (const tree decl)
 	}
       else
 	{
-	  write_prefix (CP_DECL_CONTEXT (decl));
+	  write_prefix (decl_mangling_context (decl));
 	  write_unqualified_name (decl);
 	}
     }
@@ -1030,7 +1030,7 @@ write_prefix (const tree node)
 	}
       else
 	{
-	  write_prefix (CP_DECL_CONTEXT (decl));
+	  write_prefix (decl_mangling_context (decl));
 	  write_unqualified_name (decl);
 	}
     }
@@ -1060,7 +1060,7 @@ write_template_prefix (const tree node)
 {
   tree decl = DECL_P (node) ? node : TYPE_NAME (node);
   tree type = DECL_P (node) ? TREE_TYPE (node) : node;
-  tree context = CP_DECL_CONTEXT (decl);
+  tree context = decl_mangling_context (decl);
   tree template_info;
   tree templ;
   tree substitution;
@@ -1292,18 +1292,16 @@ write_source_name (tree identifier)
 }
 
 /* Write a user-defined literal operator.
+          ::= li <source-name>    # "" <source-name>
    IDENTIFIER is an LITERAL_IDENTIFIER_NODE.  */
 
 static void
 write_literal_operator_name (tree identifier)
 {
   const char* suffix = UDLIT_OP_SUFFIX (identifier);
-  char* buffer = XNEWVEC (char, strlen (UDLIT_OP_MANGLED_PREFIX)
-			      + strlen (suffix) + 10);
-  sprintf (buffer, UDLIT_OP_MANGLED_FORMAT, suffix);
-
-  write_unsigned_number (strlen (buffer));
-  write_identifier (buffer);
+  write_identifier (UDLIT_OP_MANGLED_PREFIX);
+  write_unsigned_number (strlen (suffix));
+  write_identifier (suffix);
 }
 
 /* Encode 0 as _, and 1+ as n-1_.  */
@@ -1935,6 +1933,13 @@ write_type (tree type)
 	      break;
 
 	    case TEMPLATE_TYPE_PARM:
+	      if (is_auto (type))
+		{
+		  write_identifier ("Da");
+		  ++is_builtin_type;
+		  break;
+		}
+	      /* else fall through.  */
 	    case TEMPLATE_PARM_INDEX:
 	      write_template_param (type);
 	      break;
@@ -2018,6 +2023,8 @@ write_type (tree type)
 
 	    case NULLPTR_TYPE:
 	      write_string ("Dn");
+	      if (abi_version_at_least (7))
+		++is_builtin_type;
 	      break;
 
 	    case TYPEOF_TYPE:
@@ -2808,7 +2815,17 @@ write_expression (tree expr)
 
       if (name == NULL)
 	{
-	  sorry ("mangling %C", code);
+	  switch (code)
+	    {
+	    case TRAIT_EXPR:
+	      error ("use of built-in trait %qE in function signature; "
+		     "use library traits instead", expr);
+	      break;
+
+	    default:
+	      sorry ("mangling %C", code);
+	      break;
+	    }
 	  return;
 	}
       else

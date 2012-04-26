@@ -504,7 +504,8 @@ create_tmp_reg (tree type, const char *prefix)
 static inline tree
 create_tmp_from_val (tree val)
 {
-  return create_tmp_var (TREE_TYPE (val), get_name (val));
+  /* Drop all qualifiers and address-space information from the value type.  */
+  return create_tmp_var (TYPE_MAIN_VARIANT (TREE_TYPE (val)), get_name (val));
 }
 
 /* Create a temporary to hold the value of VAL.  If IS_FORMAL, try to reuse
@@ -547,6 +548,29 @@ lookup_tmp_var (tree val, bool is_formal)
     }
 
   return ret;
+}
+
+/* Returns true iff T is a valid RHS for an assignment to a renamed
+   user -- or front-end generated artificial -- variable.  */
+
+static bool
+is_gimple_reg_rhs (tree t)
+{
+  return get_gimple_rhs_class (TREE_CODE (t)) != GIMPLE_INVALID_RHS;
+}
+
+/* Returns true iff T is a valid RHS for an assignment to an un-renamed
+   LHS, or for a call argument.  */
+
+static bool
+is_gimple_mem_rhs (tree t)
+{
+  /* If we're dealing with a renamable type, either source or dest must be
+     a renamed variable.  */
+  if (is_gimple_reg_type (TREE_TYPE (t)))
+    return is_gimple_val (t);
+  else
+    return is_gimple_val (t) || is_gimple_lvalue (t);
 }
 
 /* Return true if T is a CALL_EXPR or an expression that can be
@@ -979,7 +1003,7 @@ unshare_body (tree fndecl)
 
   if (cgn)
     for (cgn = cgn->nested; cgn; cgn = cgn->next_nested)
-      unshare_body (cgn->decl);
+      unshare_body (cgn->symbol.decl);
 }
 
 /* Callback for walk_tree to unmark the visited trees rooted at *TP.
@@ -1022,7 +1046,7 @@ unvisit_body (tree fndecl)
 
   if (cgn)
     for (cgn = cgn->nested; cgn; cgn = cgn->next_nested)
-      unvisit_body (cgn->decl);
+      unvisit_body (cgn->symbol.decl);
 }
 
 /* Unconditionally make an unshared copy of EXPR.  This is used when using
@@ -1231,7 +1255,7 @@ gimplify_bind_expr (tree *expr_p, gimple_seq *pre_p)
 	  && !DECL_HAS_VALUE_EXPR_P (t)
 	  /* Only care for variables that have to be in memory.  Others
 	     will be rewritten into SSA names, hence moved to the top-level.  */
-	  && needs_to_live_in_memory (t))
+	  && !is_gimple_reg (t))
 	{
 	  tree clobber = build_constructor (TREE_TYPE (t), NULL);
 	  TREE_THIS_VOLATILE (clobber) = 1;
@@ -1551,6 +1575,9 @@ gimplify_switch_expr (tree *expr_p, gimple_seq *pre_p)
   tree switch_expr = *expr_p;
   gimple_seq switch_body_seq = NULL;
   enum gimplify_status ret;
+  tree index_type = TREE_TYPE (switch_expr);
+  if (index_type == NULL_TREE)
+    index_type = TREE_TYPE (SWITCH_COND (switch_expr));
 
   ret = gimplify_expr (&SWITCH_COND (switch_expr), pre_p, NULL, is_gimple_val,
                        fb_rvalue);
@@ -1561,6 +1588,7 @@ gimplify_switch_expr (tree *expr_p, gimple_seq *pre_p)
     {
       VEC (tree,heap) *labels;
       VEC (tree,heap) *saved_labels;
+      tree min_value, max_value;
       tree default_case = NULL_TREE;
       size_t i, len;
       gimple gimple_switch;
@@ -1569,7 +1597,7 @@ gimplify_switch_expr (tree *expr_p, gimple_seq *pre_p)
 	 be bothered to null out the body too.  */
       gcc_assert (!SWITCH_LABELS (switch_expr));
 
-      /* save old labels, get new ones from body, then restore the old
+      /* Save old labels, get new ones from body, then restore the old
          labels.  Save all the things from the switch body to append after.  */
       saved_labels = gimplify_ctxp->case_labels;
       gimplify_ctxp->case_labels = VEC_alloc (tree, heap, 8);
@@ -1579,18 +1607,82 @@ gimplify_switch_expr (tree *expr_p, gimple_seq *pre_p)
       gimplify_ctxp->case_labels = saved_labels;
 
       i = 0;
+      min_value = TYPE_MIN_VALUE (index_type);
+      max_value = TYPE_MAX_VALUE (index_type);
       while (i < VEC_length (tree, labels))
 	{
 	  tree elt = VEC_index (tree, labels, i);
 	  tree low = CASE_LOW (elt);
+	  tree high = CASE_HIGH (elt);
 	  bool remove_element = FALSE;
+
 
 	  if (low)
 	    {
-	      /* Discard empty ranges.  */
-	      tree high = CASE_HIGH (elt);
-	      if (high && tree_int_cst_lt (high, low))
-	        remove_element = TRUE;
+	      gcc_checking_assert (TREE_CODE (low) == INTEGER_CST);
+	      gcc_checking_assert (!high || TREE_CODE (high) == INTEGER_CST);
+
+	      /* This is a non-default case label, i.e. it has a value.
+
+		 See if the case label is reachable within the range of
+		 the index type.  Remove out-of-range case values.  Turn
+		 case ranges into a canonical form (high > low strictly)
+		 and convert the case label values to the index type.
+
+		 NB: The type of gimple_switch_index() may be the promoted
+		 type, but the case labels retain the original type.  */
+
+	      if (high)
+		{
+		  /* This is a case range.  Discard empty ranges.
+		     If the bounds or the range are equal, turn this
+		     into a simple (one-value) case.  */
+		  int cmp = tree_int_cst_compare (high, low);
+		  if (cmp < 0)
+		    remove_element = TRUE;
+		  else if (cmp == 0)
+		    high = NULL_TREE;
+		}
+
+	      if (! high)
+		{
+		  /* If the simple case value is unreachable, ignore it.  */
+		  if ((TREE_CODE (min_value) == INTEGER_CST
+		       && tree_int_cst_compare (low, min_value) < 0)
+		      || (TREE_CODE (max_value) == INTEGER_CST
+			  && tree_int_cst_compare (low, max_value) > 0))
+		    remove_element = TRUE;
+		  else
+		    low = fold_convert (index_type, low);
+		}
+	      else
+		{
+		  /* If the entire case range is unreachable, ignore it.  */
+		  if ((TREE_CODE (min_value) == INTEGER_CST
+		       && tree_int_cst_compare (high, min_value) < 0)
+		      || (TREE_CODE (max_value) == INTEGER_CST
+			  && tree_int_cst_compare (low, max_value) > 0))
+		    remove_element = TRUE;
+		  else
+		    {
+		      /* If the lower bound is less than the index type's
+			 minimum value, truncate the range bounds.  */
+		      if (TREE_CODE (min_value) == INTEGER_CST
+			  && tree_int_cst_compare (low, min_value) < 0)
+			low = min_value;
+		      low = fold_convert (index_type, low);
+
+		      /* If the upper bound is greater than the index type's
+			 maximum value, truncate the range bounds.  */
+		      if (TREE_CODE (max_value) == INTEGER_CST
+			  && tree_int_cst_compare (high, max_value) > 0)
+			high = max_value;
+		      high = fold_convert (index_type, high);
+		    }
+		}
+
+	      CASE_LOW (elt) = low;
+	      CASE_HIGH (elt) = high;
 	    }
 	  else
 	    {
@@ -1612,25 +1704,20 @@ gimplify_switch_expr (tree *expr_p, gimple_seq *pre_p)
 
       if (!default_case)
 	{
-	  tree type = TREE_TYPE (switch_expr);
-
 	  /* If the switch has no default label, add one, so that we jump
 	     around the switch body.  If the labels already cover the whole
-	     range of type, add the default label pointing to one of the
-	     existing labels.  */
-	  if (type == void_type_node)
-	    type = TREE_TYPE (SWITCH_COND (switch_expr));
+	     range of the switch index_type, add the default label pointing
+	     to one of the existing labels.  */
 	  if (len
-	      && INTEGRAL_TYPE_P (type)
-	      && TYPE_MIN_VALUE (type)
-	      && TYPE_MAX_VALUE (type)
+	      && TYPE_MIN_VALUE (index_type)
+	      && TYPE_MAX_VALUE (index_type)
 	      && tree_int_cst_equal (CASE_LOW (VEC_index (tree, labels, 0)),
-				     TYPE_MIN_VALUE (type)))
+				     TYPE_MIN_VALUE (index_type)))
 	    {
 	      tree low, high = CASE_HIGH (VEC_index (tree, labels, len - 1));
 	      if (!high)
 		high = CASE_LOW (VEC_index (tree, labels, len - 1));
-	      if (tree_int_cst_equal (high, TYPE_MAX_VALUE (type)))
+	      if (tree_int_cst_equal (high, TYPE_MAX_VALUE (index_type)))
 		{
 		  for (i = 1; i < len; i++)
 		    {
@@ -2264,17 +2351,18 @@ gimplify_self_mod_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
       arith_code = POINTER_PLUS_EXPR;
     }
 
-  t1 = build2 (arith_code, TREE_TYPE (*expr_p), lhs, rhs);
-
   if (postfix)
     {
-      gimplify_assign (lvalue, t1, orig_post_p);
+      tree t2 = get_initialized_tmp_var (lhs, pre_p, NULL);
+      t1 = build2 (arith_code, TREE_TYPE (*expr_p), t2, rhs);
+      gimplify_assign (lvalue, t1, pre_p);
       gimplify_seq_add_seq (orig_post_p, post);
-      *expr_p = lhs;
+      *expr_p = t2;
       return GS_ALL_DONE;
     }
   else
     {
+      t1 = build2 (arith_code, TREE_TYPE (*expr_p), lhs, rhs);
       *expr_p = build2 (MODIFY_EXPR, TREE_TYPE (lvalue), lvalue, t1);
       return GS_OK;
     }
@@ -4512,6 +4600,60 @@ gimplify_modify_expr_rhs (tree *expr_p, tree *from_p, tree *to_p,
 
   return ret;
 }
+
+
+/* Return true if T looks like a valid GIMPLE statement.  */
+
+static bool
+is_gimple_stmt (tree t)
+{
+  const enum tree_code code = TREE_CODE (t);
+
+  switch (code)
+    {
+    case NOP_EXPR:
+      /* The only valid NOP_EXPR is the empty statement.  */
+      return IS_EMPTY_STMT (t);
+
+    case BIND_EXPR:
+    case COND_EXPR:
+      /* These are only valid if they're void.  */
+      return TREE_TYPE (t) == NULL || VOID_TYPE_P (TREE_TYPE (t));
+
+    case SWITCH_EXPR:
+    case GOTO_EXPR:
+    case RETURN_EXPR:
+    case LABEL_EXPR:
+    case CASE_LABEL_EXPR:
+    case TRY_CATCH_EXPR:
+    case TRY_FINALLY_EXPR:
+    case EH_FILTER_EXPR:
+    case CATCH_EXPR:
+    case ASM_EXPR:
+    case STATEMENT_LIST:
+    case OMP_PARALLEL:
+    case OMP_FOR:
+    case OMP_SECTIONS:
+    case OMP_SECTION:
+    case OMP_SINGLE:
+    case OMP_MASTER:
+    case OMP_ORDERED:
+    case OMP_CRITICAL:
+    case OMP_TASK:
+      /* These are always void.  */
+      return true;
+
+    case CALL_EXPR:
+    case MODIFY_EXPR:
+    case PREDICT_EXPR:
+      /* These are valid regardless of their type.  */
+      return true;
+
+    default:
+      return false;
+    }
+}
+
 
 /* Promote partial stores to COMPLEX variables to total stores.  *EXPR_P is
    a MODIFY_EXPR with a lhs of a REAL/IMAGPART_EXPR of a variable with
@@ -7061,15 +7203,23 @@ gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
 	      ret = GS_OK;
 	      break;
 	    }
-	  ret = gimplify_expr (&TREE_OPERAND (*expr_p, 0), pre_p, post_p,
-			       is_gimple_mem_ref_addr, fb_rvalue);
-	  if (ret == GS_ERROR)
-	    break;
+	  /* Avoid re-gimplifying the address operand if it is already
+	     in suitable form.  Re-gimplifying would mark the address
+	     operand addressable.  Always gimplify when not in SSA form
+	     as we still may have to gimplify decls with value-exprs.  */
+	  if (!gimplify_ctxp || !gimplify_ctxp->into_ssa
+	      || !is_gimple_mem_ref_addr (TREE_OPERAND (*expr_p, 0)))
+	    {
+	      ret = gimplify_expr (&TREE_OPERAND (*expr_p, 0), pre_p, post_p,
+				   is_gimple_mem_ref_addr, fb_rvalue);
+	      if (ret == GS_ERROR)
+		break;
+	    }
 	  recalculate_side_effects (*expr_p);
 	  ret = GS_ALL_DONE;
 	  break;
 
-	  /* Constants need not be gimplified.  */
+	/* Constants need not be gimplified.  */
 	case INTEGER_CST:
 	case REAL_CST:
 	case FIXED_CST:

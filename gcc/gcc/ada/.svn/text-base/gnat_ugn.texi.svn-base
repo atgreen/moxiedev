@@ -7,7 +7,7 @@
 @c                                                                            o
 @c                             G N A T _ U G N                                o
 @c                                                                            o
-@c           Copyright (C) 1992-2011, Free Software Foundation, Inc.          o
+@c           Copyright (C) 1992-2012, Free Software Foundation, Inc.          o
 @c                                                                            o
 @c oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 
@@ -94,10 +94,12 @@ Texts.  A copy of the license is included in the section entitled
 
 @ifset unw
 @set PLATFORM
+@set TITLESUFFIX
 @end ifset
 
 @ifset vms
 @set PLATFORM OpenVMS
+@set TITLESUFFIX for OpenVMS
 @end ifset
 
 @c @ovar(ARG)
@@ -115,7 +117,7 @@ Texts.  A copy of the license is included in the section entitled
 @c of the @ovar macro have been expanded inline.
 
 
-@settitle @value{EDITION} User's Guide @value{PLATFORM}
+@settitle @value{EDITION} User's Guide @value{TITLESUFFIX}
 @dircategory GNU Ada tools
 @direntry
 * @value{EDITION} User's Guide: (gnat_ugn). @value{PLATFORM}
@@ -484,6 +486,7 @@ Creating Unit Tests Using gnattest
 * Tagged Types Substitutability Testing::
 * Testing with Contracts::
 * Additional Tests::
+* Support for other platforms/run-times::
 * Current Limitations::
 
 Other Utility Programs
@@ -584,7 +587,6 @@ Platform-Specific Information for the Run-Time Libraries
 * Solaris-Specific Considerations::
 * Linux-Specific Considerations::
 * AIX-Specific Considerations::
-* Irix-Specific Considerations::
 * RTX-Specific Considerations::
 * HP-UX-Specific Considerations::
 
@@ -602,7 +604,7 @@ Elaboration Order Handling in GNAT
 * Elaboration Issues for Library Tasks::
 * Mixing Elaboration Models::
 * What to Do If the Default Elaboration Behavior Fails::
-* Elaboration for Access-to-Subprogram Values::
+* Elaboration for Dispatching Calls::
 * Summary of Procedures for Elaboration Control::
 * Other Elaboration Order Considerations::
 
@@ -3078,7 +3080,7 @@ $ gnatlink ada_unit file1.o file2.o --LINK=./my_script
 Where CC is the name of the non-GNU C++ compiler.
 
 If the @code{zero cost} exception mechanism is used, and the platform
-supports automatic registration of exception tables (e.g.@: Solaris or IRIX),
+supports automatic registration of exception tables (e.g.@: Solaris),
 paths to more objects are required:
 
 @smallexample
@@ -3091,8 +3093,8 @@ $ gnatlink ada_unit file1.o file2.o --LINK=./my_script
 @end smallexample
 
 If the @code{zero cost} exception mechanism is used, and the platform
-doesn't support automatic registration of exception tables (e.g.@: HP-UX,
-Tru64 or AIX), the simple approach described above will not work and
+doesn't support automatic registration of exception tables (e.g.@: HP-UX
+or AIX), the simple approach described above will not work and
 a pre-linking phase using GNAT will be necessary.
 
 @end enumerate
@@ -4073,7 +4075,11 @@ activated. Note that these pragmas can also be controlled using the
 configuration pragmas @code{Assertion_Policy} and @code{Debug_Policy}.
 It also activates pragmas @code{Check}, @code{Precondition}, and
 @code{Postcondition}. Note that these pragmas can also be controlled
-using the configuration pragma @code{Check_Policy}.
+using the configuration pragma @code{Check_Policy}. In Ada 2012, it
+also activates all assertions defined in the RM as aspects: preconditions,
+postconditions, type invariants and (sub)type predicates. In all Ada modes,
+corresponding pragmas for type invariants and (sub)type predicates are
+also activated.
 
 @item -gnatA
 @cindex @option{-gnatA} (@command{gcc})
@@ -4152,7 +4158,13 @@ Display full source path name in brief error messages.
 @cindex @option{-gnateG} (@command{gcc})
 Save result of preprocessing in a text file.
 
-@item ^-gnateI^/MULTI_UNIT_INDEX=^@var{nnn}
+@item -gnatei@var{nnn}
+@cindex @option{-gnatei} (@command{gcc})
+Set maximum number of instantiations during compilation of a single unit to
+@var{nnn}. This may be useful in increasing the default maximum of 8000 for
+the rare case when a single unit legitimately exceeds this limit.
+
+@item -gnateI@var{nnn}
 @cindex @option{-gnateI} (@command{gcc})
 Indicates that the source is a multi-unit source and that the index of the
 unit to compile is @var{nnn}. @var{nnn} needs to be a positive number and need
@@ -5092,10 +5104,12 @@ switch are
 @option{-gnatwd} (implicit dereferencing),
 @option{-gnatwh} (hiding),
 @option{-gnatw.h} (holes (gaps) in record layouts)
+@option{-gnatw.i} (overlapping actuals),
 @option{-gnatwl} (elaboration warnings),
 @option{-gnatw.l} (inherited aspects),
-@option{-gnatw.o} (warn on values set by out parameters ignored)
-and @option{-gnatwt} (tracking of deleted conditional code).
+@option{-gnatw.o} (warn on values set by out parameters ignored),
+@option{-gnatwt} (tracking of deleted conditional code)
+and @option{-gnatw.u} (unordered enumeration),
 All other optional warnings are turned on.
 
 @item -gnatwA
@@ -5103,7 +5117,15 @@ All other optional warnings are turned on.
 @cindex @option{-gnatwA} (@command{gcc})
 This switch suppresses all optional warning messages, see remaining list
 in this section for details on optional warning messages that can be
-individually controlled.
+individually controlled. Note that unlike switch @option{-gnatws}, the
+use of switch @option{-gnatwA} does not suppress warnings that are
+normally given unconditionally and cannot be individually controlled
+(for example, the warning about a missing exit path in a function).
+Also, again unlike switch @option{-gnatws}, warnings suppressed by
+the use of switch @option{-gnatwA} can be individually turned back
+on. For example the use of switch @option{-gnatwA} followed by
+switch @option{-gnatwd} will suppress all optional warnings except
+the warnings for implicit dereferencing.
 
 @item -gnatw.a
 @emph{Activate warnings on failing assertions.}
@@ -5429,8 +5451,8 @@ when such pragmas should be used.
 @emph{List inherited aspects.}
 @cindex @option{-gnatw.l} (@command{gcc})
 This switch causes the compiler to list inherited invariants,
-preconditions, and postconditions from Invariant'Class, Pre'Class, and
-Post'Class aspects. Also list inherited subtype predicates.
+preconditions, and postconditions from Type_Invariant'Class, Invariant'Class,
+Pre'Class, and Post'Class aspects. Also list inherited subtype predicates.
 These messages are not automatically turned on by the use of @option{-gnatwa}.
 
 @item -gnatw.L
@@ -5462,7 +5484,9 @@ This switch activates warnings for modulus values that seem suspicious.
 The cases caught are where the size is the same as the modulus (e.g.
 a modulus of 7 with a size of 7 bits), and modulus values of 32 or 64
 with no size clause. The guess in both cases is that 2**x was intended
-rather than x. The default is that these warnings are given.
+rather than x. In addition expressions of the form 2*x for small x
+generate a warning (the almost certainly accurate guess being that
+2**x was intended). The default is that these warnings are given.
 
 @item -gnatw.M
 @emph{Disable warnings on suspicious modulus values.}
@@ -5630,8 +5654,14 @@ This switch suppresses warnings for object renaming function.
 @emph{Suppress all warnings.}
 @cindex @option{-gnatws} (@command{gcc})
 This switch completely suppresses the
-output of all warning messages from the GNAT front end.
-Note that it does not suppress warnings from the @command{gcc} back end.
+output of all warning messages from the GNAT front end, including
+both warnings that can be controlled by switches described in this
+section, and those that are normally given unconditionally. The
+effect of this suppress action can only be cancelled by a subsequent
+use of the switch @option{-gnatwn}.
+
+Note that switch @option{-gnatws} does not suppress
+warnings from the @command{gcc} back end.
 To suppress these back end warnings as well, use the switch @option{-w}
 in addition to @option{-gnatws}. Also this switch has no effect on the
 handling of style check messages.
@@ -5670,6 +5700,24 @@ useful for detecting deactivated code in certified applications.
 @emph{Suppress warnings for tracking of deleted conditional code.}
 @cindex @option{-gnatwT} (@command{gcc})
 This switch suppresses warnings for tracking of deleted conditional code.
+
+@item -gnatw.t
+@emph{Activate warnings on suspicious contracts.}
+@cindex @option{-gnatw.t} (@command{gcc})
+This switch activates warnings on suspicious postconditions (whether a
+pragma @code{Postcondition} or a @code{Post} aspect in Ada 2012)
+and suspicious contract cases (pragma @code{Contract_Case}). A
+function postcondition or contract case is suspicious when no postcondition
+or contract case for this function mentions the result of the function.
+A procedure postcondition or contract case is suspicious when it only
+refers to the pre-state of the procedure, because in that case it should
+rather be expressed as a precondition. The default is that such warnings
+are not generated. This warning can also be turned on using @option{-gnatwa}.
+
+@item -gnatw.T
+@emph{Suppress warnings on suspicious contracts.}
+@cindex @option{-gnatw.T} (@command{gcc})
+This switch suppresses warnings on suspicious postconditions.
 
 @item -gnatwu
 @emph{Activate warnings on unused entities.}
@@ -5711,6 +5759,8 @@ ordered. (A @emph{client} is defined as a unit that is other than the unit in
 which the type is declared, or its body or subunits.) Please refer to
 the description of pragma @code{Ordered} in the
 @cite{@value{EDITION} Reference Manual} for further details.
+The default is that such warnings are not generated.
+This warning is not automatically turned on by the use of @option{-gnatwa}.
 
 @item -gnatw.U
 @emph{Deactivate warnings on unordered enumeration types.}
@@ -5901,35 +5951,54 @@ The use of this switch also sets the default front end warning mode to
 A string of warning parameters can be used in the same parameter. For example:
 
 @smallexample
--gnatwaLe
+-gnatwaGe
 @end smallexample
 
 @noindent
-will turn on all optional warnings except for elaboration pragma warnings,
+will turn on all optional warnings except for unrecognized pragma warnings,
 and also specify that warnings should be treated as errors.
 @end ifclear
+
 When no switch @option{^-gnatw^/WARNINGS^} is used, this is equivalent to:
 
 @table @option
 @c !sort!
+@item -gnatw.a
+@item -gnatwB
+@item -gnatw.b
 @item -gnatwC
+@item -gnatw.C
 @item -gnatwD
 @item -gnatwF
 @item -gnatwg
 @item -gnatwH
 @item -gnatwi
+@item -gnatw.I
 @item -gnatwJ
 @item -gnatwK
 @item -gnatwL
+@item -gnatw.L
 @item -gnatwM
+@item -gnatw.m
 @item -gnatwn
 @item -gnatwo
+@item -gnatw.O
 @item -gnatwP
+@item -gnatw.P
+@item -gnatwq
 @item -gnatwR
+@item -gnatw.R
+@item -gnatw.S
+@item -gnatwT
+@item -gnatw.T
 @item -gnatwU
 @item -gnatwv
-@item -gnatwz
+@item -gnatww
+@item -gnatw.W
 @item -gnatwx
+@item -gnatw.X
+@item -gnatwy
+@item -gnatwz
 
 @end table
 
@@ -6299,9 +6368,10 @@ for the use of blanks to separate source tokens.
 @emph{Check Boolean operators.}
 The use of AND/OR operators is not permitted except in the cases of modular
 operands, array operands, and simple stand-alone boolean variables or
-boolean constants. In all other cases AND THEN/OR ELSE are required.
+boolean constants. In all other cases @code{and then}/@code{or else} are
+required.
 
-@item ^c^COMMENTS^ (double space)
+@item ^c^COMMENTS^
 @emph{Check comments, double space.}
 Comments must meet the following set of rules:
 
@@ -6353,7 +6423,7 @@ example:
 @end smallexample
 @end itemize
 
-@item ^C^COMMENTS1^ (single space)
+@item ^C^COMMENTS1^
 @emph{Check comments, single space.}
 This is identical to @code{^c^COMMENTS^} except that only one space
 is required following the @code{--} of a comment instead of two.
@@ -6375,7 +6445,7 @@ Neither form feeds nor vertical tab characters are permitted
 in the source text.
 
 @item ^g^GNAT^
-@emph{GNAT style mode}
+@emph{GNAT style mode.}
 The set of style check switches is set to match that used by the GNAT sources.
 This may be useful when developing code that is eventually intended to be
 incorporated into GNAT. For further details, see GNAT sources.
@@ -6395,7 +6465,7 @@ up under the @code{if} with at least one non-blank line in between
 containing all or part of the condition to be tested.
 
 @item ^I^IN_MODE^
-@emph{check mode IN keywords}
+@emph{check mode IN keywords.}
 Mode @code{in} (the default mode) is not
 allowed to be given explicitly. @code{in out} is fine,
 but not @code{in} on its own.
@@ -6484,7 +6554,7 @@ Clear :
 @end smallexample
 
 @item ^Lnnn^MAX_NESTING=nnn^
-@emph{Set maximum nesting level}
+@emph{Set maximum nesting level.}
 The maximum level of nesting of constructs (including subprograms, loops,
 blocks, packages, and conditionals) may not exceed the given value
 @option{nnn}. A value of zero disconnects this style check.
@@ -6511,7 +6581,7 @@ to match the presentation in the Ada Reference Manual (for example,
 @code{Integer} and @code{ASCII.NUL}).
 
 @item ^N^NONE^
-@emph{Turn off all style checks}
+@emph{Turn off all style checks.}
 All style check options are turned off.
 
 @item ^o^ORDERED_SUBPROGRAMS^
@@ -6541,13 +6611,6 @@ corresponding declaration. No specific casing style is imposed on
 identifiers. The only requirement is for consistency of references
 with declarations.
 
-@item ^S^STATEMENTS_AFTER_THEN_ELSE^
-@emph{Check no statements after THEN/ELSE.}
-No statements are allowed
-on the same line as a THEN or ELSE keyword following the
-keyword in an IF statement. OR ELSE and AND THEN are not affected,
-and a special exception allows a pragma to appear after ELSE.
-
 @item ^s^SPECS^
 @emph{Check separate specs.}
 Separate declarations (``specs'') are required for subprograms (a
@@ -6556,6 +6619,13 @@ exception is that parameterless library level procedures are
 not required to have a separate declaration. This exception covers
 the most frequent form of main program procedures.
 
+@item ^S^STATEMENTS_AFTER_THEN_ELSE^
+@emph{Check no statements after @code{then}/@code{else}.}
+No statements are allowed
+on the same line as a @code{then} or @code{else} keyword following the
+keyword in an @code{if} statement. @code{or else} and @code{and then} are not
+affected, and a special exception allows a pragma to appear after @code{else}.
+
 @item ^t^TOKEN^
 @emph{Check token spacing.}
 The following token spacing rules are enforced:
@@ -6563,7 +6633,7 @@ The following token spacing rules are enforced:
 @itemize @bullet
 
 @item
-The keywords @code{@b{abs}} and @code{@b{not}} must be followed by a space.
+The keywords @code{abs} and @code{not} must be followed by a space.
 
 @item
 The token @code{=>} must be surrounded by spaces.
@@ -6624,9 +6694,9 @@ around conditions in @code{if} statements, @code{while} statements and
 @item ^y^ALL_BUILTIN^
 @emph{Set all standard style check options}
 This is equivalent to @code{gnaty3aAbcefhiklmnprst}, that is all checking
-options enabled with the exception of @option{-gnatyo}, @option{-gnatyI},
-@option{-gnatyS}, @option{-gnatyLnnn},
-@option{-gnatyd}, @option{-gnatyu}, and @option{-gnatyx}.
+options enabled with the exception of @option{-gnatyB}, @option{-gnatyd},
+@option{-gnatyI}, @option{-gnatyLnnn}, @option{-gnatyo}, @option{-gnatyO},
+@option{-gnatyS}, @option{-gnatyu}, and @option{-gnatyx}.
 
 @ifclear vms
 @item -
@@ -6674,8 +6744,8 @@ including style messages, as fatal errors.
 The switch
 @ifclear vms
 @option{-gnaty} on its own (that is not
-followed by any letters or digits), then the effect is equivalent
-to the use of @option{-gnatyy}, as described above, that is all
+followed by any letters or digits) is equivalent
+to the use of @option{-gnatyy} as described above, that is all
 built-in standard style check options are enabled.
 
 @end ifclear
@@ -12985,12 +13055,8 @@ semantically legal.
 If this condition is not met, @command{gnatpp} will terminate with an
 error message; no output file will be generated.
 
-If the source files presented to @command{gnatpp} contain
-preprocessing directives, then the output file will
-correspond to the generated source after all
-preprocessing is carried out. There is no way
-using @command{gnatpp} to obtain pretty printed files that
-include the preprocessing directives.
+@command{gnatpp} cannot process sources that contain
+preprocessing directives.
 
 If the compilation unit
 contained in the input source depends semantically upon units located
@@ -17925,6 +17991,7 @@ default location.
 * Tagged Types Substitutability Testing::
 * Testing with Contracts::
 * Additional Tests::
+* Support for other platforms/run-times::
 * Current Limitations::
 @end menu
 
@@ -17956,9 +18023,11 @@ switch or by the corresponding attribute in the project file.
 
 @item filename
 is the name of the source file containing the library unit package declaration
-for which a test package will be created. The file name may given with a path.
+for which a test package will be created. The file name may be given with a
+path.
 
-@item @samp{@var{gcc_switches}} is a list of switches for
+@item @samp{@var{gcc_switches}}
+is a list of switches for
 @command{gcc}. These switches will be passed on to all compiler invocations
 made by @command{gnatstub} to generate a set of ASIS trees. Here you can provide
 @option{^-I^/INCLUDE_DIRS=^} switches to form the source search path,
@@ -17974,7 +18043,7 @@ is an optional sequence of switches as described in the next section.
 @command{gnattest} results can be found in two different places.
 
 @itemize @bullet
-@item automatic harness
+@item automatic harness:
 the harness code, which is located either in the harness-dir as specified on
 the command line or in the project file. All of this code is generated
 completely automatically and can be destroyed and regenerated at will. It is not
@@ -17991,7 +18060,7 @@ test_runner
 Note that you might need to specify the necessary values of scenario variables
 when you are not using the AUnit defaults.
 
-@item actual unit test stubs
+@item actual unit test stubs:
 a test stub for each visible subprogram is created in a separate file, if it
 doesn't exist already. By default, those separate test files are located in a
 "tests" directory that is created in the directory containing the source file
@@ -18000,10 +18069,10 @@ source, option @option{--separate-root} can be used. For example, if a source
 file my_unit.ads in directory src contains a visible subprogram Proc, then
 the corresponding unit test will be found in file
 src/tests/my_unit-tests-proc_<code>.adb. <code> is a signature encoding used to
-differentiate test names in cases of overloading.
+differentiate test names in case of overloading.
 
-Note that if the project already has both my_unit.ads and my_unit-tests.ads this
-will cause name a conflict with generated test package.
+Note that if the project already has both my_unit.ads and my_unit-tests.ads,
+this will cause a name conflict with the generated test package.
 @end itemize
 
 @node Switches for gnattest
@@ -18407,6 +18476,25 @@ gnattest -Psimple.gpr --additional-tests=additional/harness/harness.gpr \
   --harness-dir=mixing
 gnatmake -Pmixing/test_driver.gpr
 mixing/test_runner
+@end smallexample
+
+@node Support for other platforms/run-times
+@section Support for other platforms/run-times
+
+@noindent
+@command{gnattest} can be used to generate the test harness for platforms
+and run-time libraries others than the default native target with the
+default full run-time. For example, when using a limited run-time library
+such as Zero FootPrint (ZFP), a simplified harness is generated.
+
+Two variables are used to tell the underlying AUnit framework how to generate
+the test harness: @code{PLATFORM}, which identifies the target, and
+@code{RUNTIME}, used to determine the run-time library for which the harness
+is generated. For example, the following options are used to generate the
+AUnit test harness for a PowerPC ELF target using the ZFP run-time library:
+
+@smallexample
+gnattest -Psimple.gpr -XPLATFORM=powerpc-elf -XRUNTIME=zfp
 @end smallexample
 
 @node Current Limitations
@@ -22092,7 +22180,6 @@ information about several specific platforms.
 * Solaris-Specific Considerations::
 * Linux-Specific Considerations::
 * AIX-Specific Considerations::
-* Irix-Specific Considerations::
 * RTX-Specific Considerations::
 * HP-UX-Specific Considerations::
 @end menu
@@ -22104,11 +22191,6 @@ information about several specific platforms.
 @item @b{alpha-openvms}
 @item @code{@ @ }@i{rts-native (default)}
 @item @code{@ @ @ @ }Tasking    @tab native VMS threads
-@item @code{@ @ @ @ }Exceptions @tab ZCX
-@*
-@item @b{alpha-tru64}
-@item @code{@ @ }@i{rts-native (default)}
-@item @code{@ @ @ @ }Tasking    @tab native TRU64 threads
 @item @code{@ @ @ @ }Exceptions @tab ZCX
 @*
 @item @code{@ @ }@i{rts-sjlj}
@@ -22133,11 +22215,6 @@ information about several specific platforms.
 @item @b{ia64-sgi_linux}
 @item @code{@ @ }@i{rts-native (default)}
 @item @code{@ @ @ @ }Tasking    @tab pthread library
-@item @code{@ @ @ @ }Exceptions @tab ZCX
-@*
-@item @b{mips-irix}
-@item @code{@ @ }@i{rts-native (default)}
-@item @code{@ @ @ @ }Tasking    @tab native IRIX threads
 @item @code{@ @ @ @ }Exceptions @tab ZCX
 @*
 @item @b{pa-hpux}
@@ -22427,24 +22504,6 @@ to @code{GNAT.Sockets.Get_Host_By_Name} or
 occurs in the environment task, or use @code{pragma Storage_Size} to
 specify a sufficiently large size for the stack of the task that contains
 this call.
-
-@node Irix-Specific Considerations
-@section Irix-Specific Considerations
-@cindex Irix libraries
-
-@noindent
-The GCC support libraries coming with the Irix compiler have moved to
-their canonical place with respect to the general Irix ABI related
-conventions. Running applications built with the default shared GNAT
-run-time now requires the LD_LIBRARY_PATH environment variable to
-include this location. A possible way to achieve this is to issue the
-following command line on a bash prompt:
-
-@smallexample
-@group
-$  LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`dirname \`gcc --print-file-name=libgcc_s.so\``
-@end group
-@end smallexample
 
 @node RTX-Specific Considerations
 @section RTX-Specific Considerations
@@ -23243,7 +23302,7 @@ elaboration code in your own application).
 * Elaboration Issues for Library Tasks::
 * Mixing Elaboration Models::
 * What to Do If the Default Elaboration Behavior Fails::
-* Elaboration for Access-to-Subprogram Values::
+* Elaboration for Dispatching Calls::
 * Summary of Procedures for Elaboration Control::
 * Other Elaboration Order Considerations::
 @end menu
@@ -24900,39 +24959,22 @@ elaboration switch if your code is correct, and we assume that the
 C-tests are indeed correct (it is less efficient, but efficiency is
 not a factor in running the ACVC tests.)
 
-@node Elaboration for Access-to-Subprogram Values
-@section Elaboration for Access-to-Subprogram Values
-@cindex Access-to-subprogram
+@node Elaboration for Dispatching Calls
+@section Elaboration for Dispatching Calls
+@cindex Dispatching calls
 
 @noindent
-Access-to-subprogram types (introduced in Ada 95) complicate
-the handling of elaboration. The trouble is that it becomes
-impossible to tell at compile time which procedure
-is being called. This means that it is not possible for the binder
-to analyze the elaboration requirements in this case.
-
-If at the point at which the access value is created
-(i.e., the evaluation of @code{P'Access} for a subprogram @code{P}),
-the body of the subprogram is
-known to have been elaborated, then the access value is safe, and its use
-does not require a check. This may be achieved by appropriate arrangement
-of the order of declarations if the subprogram is in the current unit,
-or, if the subprogram is in another unit, by using pragma
-@code{Pure}, @code{Preelaborate}, or @code{Elaborate_Body}
-on the referenced unit.
-
-If the referenced body is not known to have been elaborated at the point
-the access value is created, then any use of the access value must do a
-dynamic check, and this dynamic check will fail and raise a
-@code{Program_Error} exception if the body has not been elaborated yet.
-GNAT will generate the necessary checks, and in addition, if the
-@option{-gnatwl}
-switch is set, will generate warnings that such checks are required.
-
-The use of dynamic dispatching for tagged types similarly generates
-a requirement for dynamic checks, and premature calls to any primitive
+In rare cases, the static elaboration model fails to prevent
+dispatching calls to not-yet-elaborated subprograms. In such cases, we
+fall back to run-time checks; premature calls to any primitive
 operation of a tagged type before the body of the operation has been
-elaborated, will result in the raising of @code{Program_Error}.
+elaborated will raise @code{Program_Error}.
+
+Access-to-subprogram types, however, are handled conservatively, and
+do not require run-time checks. This was not true in earlier versions
+of the compiler; you can use the @option{-gnatd.U} debug switch to
+revert to the old behavior if the new conservative behavior causes
+elaboration cycles.
 
 @node Summary of Procedures for Elaboration Control
 @section Summary of Procedures for Elaboration Control
@@ -26050,8 +26092,8 @@ procedure Increment is
       Result : Unsigned_32;
    begin
       Asm ("incl %0",
-           Inputs  => Unsigned_32'Asm_Input ("a", Value),
-           Outputs => Unsigned_32'Asm_Output ("=a", Result));
+           Outputs => Unsigned_32'Asm_Output ("=a", Result),
+           Inputs  => Unsigned_32'Asm_Input ("a", Value));
       return Result;
    end Incr;
 
@@ -26077,10 +26119,8 @@ The @code{"="} constraint, indicating an output value, is not present.
 You can have multiple input variables, in the same way that you can have more
 than one output variable.
 
-The parameter count (%0, %1) etc, now starts at the first input
-statement, and continues with the output statements.
-When both parameters use the same variable, the
-compiler will treat them as the same %n operand, which is the case here.
+The parameter count (%0, %1) etc, still starts at the first output statement,
+and continues with the input statements.
 
 Just as the @code{Outputs} parameter causes the register to be stored into the
 target variable after execution of the assembler statements, so does the
@@ -26134,8 +26174,8 @@ procedure Increment_2 is
       Result : Unsigned_32;
    begin
       Asm ("incl %0",
-           Inputs  => Unsigned_32'Asm_Input ("a", Value),
-           Outputs => Unsigned_32'Asm_Output ("=a", Result));
+           Outputs => Unsigned_32'Asm_Output ("=a", Result),
+           Inputs  => Unsigned_32'Asm_Input ("a", Value));
       return Result;
    end Incr;
    pragma Inline (Increment);
@@ -26217,8 +26257,8 @@ assembly code; for example:
 @group
 Asm ("movl %0, %%ebx" & LF & HT &
      "movl %%ebx, %1",
-     Inputs  => Unsigned_32'Asm_Input  ("g", Var_In),
-     Outputs => Unsigned_32'Asm_Output ("=g", Var_Out));
+     Outputs => Unsigned_32'Asm_Output ("=g", Var_Out),
+     Inputs  => Unsigned_32'Asm_Input  ("g", Var_In));
 @end group
 @end smallexample
 @noindent
@@ -26232,8 +26272,8 @@ to identify the registers that will be used by your assembly code:
 @group
 Asm ("movl %0, %%ebx" & LF & HT &
      "movl %%ebx, %1",
-     Inputs  => Unsigned_32'Asm_Input  ("g", Var_In),
      Outputs => Unsigned_32'Asm_Output ("=g", Var_Out),
+     Inputs  => Unsigned_32'Asm_Input  ("g", Var_In),
      Clobber => "ebx");
 @end group
 @end smallexample
@@ -26267,8 +26307,8 @@ the @code{Volatile} parameter to @code{True}; for example:
 @group
 Asm ("movl %0, %%ebx" & LF & HT &
      "movl %%ebx, %1",
-     Inputs   => Unsigned_32'Asm_Input  ("g", Var_In),
      Outputs  => Unsigned_32'Asm_Output ("=g", Var_Out),
+     Inputs   => Unsigned_32'Asm_Input  ("g", Var_In),
      Clobber  => "ebx",
      Volatile => True);
 @end group

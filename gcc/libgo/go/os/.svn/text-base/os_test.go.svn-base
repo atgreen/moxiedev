@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	. "os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -23,7 +24,6 @@ var dot = []string{
 	"error.go",
 	"file.go",
 	"os_test.go",
-	"time.go",
 	"types.go",
 }
 
@@ -33,7 +33,7 @@ type sysDir struct {
 }
 
 var sysdir = func() (sd *sysDir) {
-	switch syscall.OS {
+	switch runtime.GOOS {
 	case "windows":
 		sd = &sysDir{
 			Getenv("SystemRoot") + "\\system32\\drivers\\etc",
@@ -87,7 +87,7 @@ func size(name string, t *testing.T) int64 {
 }
 
 func equal(name1, name2 string) (r bool) {
-	switch syscall.OS {
+	switch runtime.GOOS {
 	case "windows":
 		r = strings.ToLower(name1) == strings.ToLower(name2)
 	default:
@@ -101,7 +101,7 @@ func newFile(testName string, t *testing.T) (f *File) {
 	// On Unix, override $TMPDIR in case the user
 	// has it set to an NFS-mounted directory.
 	dir := ""
-	if syscall.OS != "windows" {
+	if runtime.GOOS != "windows" {
 		dir = "/tmp"
 	}
 	f, err := ioutil.TempFile(dir, "_Go_"+testName)
@@ -276,7 +276,7 @@ func smallReaddirnames(file *File, length int, t *testing.T) []string {
 func TestReaddirnamesOneAtATime(t *testing.T) {
 	// big directory that doesn't change often.
 	dir := "/usr/bin"
-	switch syscall.OS {
+	switch runtime.GOOS {
 	case "windows":
 		dir = Getenv("SystemRoot") + "\\system32"
 	case "plan9":
@@ -380,7 +380,7 @@ func TestReaddirNValues(t *testing.T) {
 
 func TestHardLink(t *testing.T) {
 	// Hardlinks are not supported under windows or Plan 9.
-	if syscall.OS == "windows" || syscall.OS == "plan9" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
 		return
 	}
 	from, to := "hardlinktestfrom", "hardlinktestto"
@@ -406,14 +406,14 @@ func TestHardLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat %q failed: %v", from, err)
 	}
-	if !tostat.(*FileStat).SameFile(fromstat.(*FileStat)) {
+	if !SameFile(tostat, fromstat) {
 		t.Errorf("link %q, %q did not create hard link", to, from)
 	}
 }
 
 func TestSymLink(t *testing.T) {
 	// Symlinks are not supported under windows or Plan 9.
-	if syscall.OS == "windows" || syscall.OS == "plan9" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
 		return
 	}
 	from, to := "symlinktestfrom", "symlinktestto"
@@ -442,7 +442,7 @@ func TestSymLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat %q failed: %v", from, err)
 	}
-	if !tostat.(*FileStat).SameFile(fromstat.(*FileStat)) {
+	if !SameFile(tostat, fromstat) {
 		t.Errorf("symlink %q, %q did not create symlink", to, from)
 	}
 	fromstat, err = Lstat(from)
@@ -475,7 +475,7 @@ func TestSymLink(t *testing.T) {
 
 func TestLongSymlink(t *testing.T) {
 	// Symlinks are not supported under windows or Plan 9.
-	if syscall.OS == "windows" || syscall.OS == "plan9" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
 		return
 	}
 	s := "0123456789abcdef"
@@ -528,7 +528,6 @@ func exec(t *testing.T, dir, cmd string, args []string, expect string) {
 	if err != nil {
 		t.Fatalf("StartProcess: %v", err)
 	}
-	defer p.Release()
 	w.Close()
 
 	var b bytes.Buffer
@@ -539,13 +538,13 @@ func exec(t *testing.T, dir, cmd string, args []string, expect string) {
 		t.Errorf("exec %q returned %q wanted %q",
 			strings.Join(append([]string{cmd}, args...), " "), output, expect)
 	}
-	p.Wait(0)
+	p.Wait()
 }
 
 func TestStartProcess(t *testing.T) {
 	var dir, cmd, le string
 	var args []string
-	if syscall.OS == "windows" {
+	if runtime.GOOS == "windows" {
 		le = "\r\n"
 		cmd = Getenv("COMSPEC")
 		dir = Getenv("SystemRoot")
@@ -576,7 +575,7 @@ func checkMode(t *testing.T, path string, mode FileMode) {
 
 func TestChmod(t *testing.T) {
 	// Chmod is not supported under windows.
-	if syscall.OS == "windows" {
+	if runtime.GOOS == "windows" {
 		return
 	}
 	f := newFile("TestChmod", t)
@@ -656,7 +655,7 @@ func TestChtimes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Stat %s: %s", f.Name(), err)
 	}
-	preStat := st.(*FileStat)
+	preStat := st
 
 	// Move access and modification time back a second
 	at := Atime(preStat)
@@ -670,7 +669,7 @@ func TestChtimes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second Stat %s: %s", f.Name(), err)
 	}
-	postStat := st.(*FileStat)
+	postStat := st
 
 	/* Plan 9:
 		Mtime is the time of the last change of content.  Similarly, atime is set whenever the
@@ -678,7 +677,7 @@ func TestChtimes(t *testing.T) {
 	*/
 	pat := Atime(postStat)
 	pmt := postStat.ModTime()
-	if !pat.Before(at) && syscall.OS != "plan9" {
+	if !pat.Before(at) && runtime.GOOS != "plan9" {
 		t.Errorf("AccessTime didn't go backwards; was=%d, after=%d", at, pat)
 	}
 
@@ -689,7 +688,7 @@ func TestChtimes(t *testing.T) {
 
 func TestChdirAndGetwd(t *testing.T) {
 	// TODO(brainman): file.Chdir() is not implemented on windows.
-	if syscall.OS == "windows" {
+	if runtime.GOOS == "windows" {
 		return
 	}
 	fd, err := Open(".")
@@ -700,7 +699,7 @@ func TestChdirAndGetwd(t *testing.T) {
 	// (unlike, say, /var, /etc, and /tmp).
 	dirs := []string{"/", "/usr/bin"}
 	// /usr/bin does not usually exist on Plan 9.
-	if syscall.OS == "plan9" {
+	if runtime.GOOS == "plan9" {
 		dirs = []string{"/", "/usr"}
 	}
 	for mode := 0; mode < 2; mode++ {
@@ -742,19 +741,6 @@ func TestChdirAndGetwd(t *testing.T) {
 	fd.Close()
 }
 
-func TestTime(t *testing.T) {
-	// Just want to check that Time() is getting something.
-	// A common failure mode on Darwin is to get 0, 0,
-	// because it returns the time in registers instead of
-	// filling in the structure passed to the system call.
-	// Too bad the compiler doesn't know that
-	// 365.24*86400 is an integer.
-	sec, nsec, err := Time()
-	if sec < (2009-1970)*36524*864 {
-		t.Errorf("Time() = %d, %d, %s; not plausible", sec, nsec, err)
-	}
-}
-
 func TestSeek(t *testing.T) {
 	f := newFile("TestSeek", t)
 	defer Remove(f.Name())
@@ -781,7 +767,7 @@ func TestSeek(t *testing.T) {
 	for i, tt := range tests {
 		off, err := f.Seek(tt.in, tt.whence)
 		if off != tt.out || err != nil {
-			if e, ok := err.(*PathError); ok && e.Err == EINVAL && tt.out > 1<<32 {
+			if e, ok := err.(*PathError); ok && e.Err == syscall.EINVAL && tt.out > 1<<32 {
 				// Reiserfs rejects the big seeks.
 				// http://code.google.com/p/go/issues/detail?id=91
 				break
@@ -801,17 +787,17 @@ var openErrorTests = []openErrorTest{
 	{
 		sfdir + "/no-such-file",
 		O_RDONLY,
-		ENOENT,
+		syscall.ENOENT,
 	},
 	{
 		sfdir,
 		O_WRONLY,
-		EISDIR,
+		syscall.EISDIR,
 	},
 	{
 		sfdir + "/" + sfname + "/no-such-file",
 		O_WRONLY,
-		ENOTDIR,
+		syscall.ENOTDIR,
 	},
 }
 
@@ -828,7 +814,7 @@ func TestOpenError(t *testing.T) {
 			t.Errorf("Open(%q, %d) returns error of %T type; want *PathError", tt.path, tt.mode, err)
 		}
 		if perr.Err != tt.error {
-			if syscall.OS == "plan9" {
+			if runtime.GOOS == "plan9" {
 				syscallErrStr := perr.Err.Error()
 				expectedErrStr := strings.Replace(tt.error.Error(), "file ", "", 1)
 				if !strings.HasSuffix(syscallErrStr, expectedErrStr) {
@@ -859,12 +845,11 @@ func run(t *testing.T, cmd []string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Release()
 	w.Close()
 
 	var b bytes.Buffer
 	io.Copy(&b, r)
-	_, err = p.Wait(0)
+	_, err = p.Wait()
 	if err != nil {
 		t.Fatalf("run hostname Wait: %v", err)
 	}
@@ -886,7 +871,7 @@ func run(t *testing.T, cmd []string) string {
 func TestHostname(t *testing.T) {
 	// There is no other way to fetch hostname on windows, but via winapi.
 	// On Plan 9 it is can be taken from #c/sysname as Hostname() does.
-	if syscall.OS == "windows" || syscall.OS == "plan9" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "plan9" {
 		return
 	}
 
@@ -997,32 +982,85 @@ func TestAppend(t *testing.T) {
 }
 
 func TestStatDirWithTrailingSlash(t *testing.T) {
-	// Create new dir, in _test so it will get
-	// cleaned up by make if not by us.
-	path := "_test/_TestStatDirWithSlash_"
-	err := MkdirAll(path, 0777)
+	// Create new temporary directory and arrange to clean it up.
+	path, err := ioutil.TempDir("", "/_TestStatDirWithSlash_")
 	if err != nil {
-		t.Fatalf("MkdirAll %q: %s", path, err)
+		t.Fatalf("TempDir: %s", err)
 	}
 	defer RemoveAll(path)
 
 	// Stat of path should succeed.
 	_, err = Stat(path)
 	if err != nil {
-		t.Fatal("stat failed:", err)
+		t.Fatalf("stat %s failed: %s", path, err)
 	}
 
 	// Stat of path+"/" should succeed too.
-	_, err = Stat(path + "/")
+	path += "/"
+	_, err = Stat(path)
 	if err != nil {
-		t.Fatal("stat failed:", err)
+		t.Fatalf("stat %s failed: %s", path, err)
 	}
 }
 
-func TestNilWaitmsgString(t *testing.T) {
-	var w *Waitmsg
-	s := w.String()
+func TestNilProcessStateString(t *testing.T) {
+	var ps *ProcessState
+	s := ps.String()
 	if s != "<nil>" {
-		t.Errorf("(*Waitmsg)(nil).String() = %q, want %q", s, "<nil>")
+		t.Errorf("(*ProcessState)(nil).String() = %q, want %q", s, "<nil>")
+	}
+}
+
+func TestSameFile(t *testing.T) {
+	fa, err := Create("a")
+	if err != nil {
+		t.Fatalf("Create(a): %v", err)
+	}
+	defer Remove(fa.Name())
+	fa.Close()
+	fb, err := Create("b")
+	if err != nil {
+		t.Fatalf("Create(b): %v", err)
+	}
+	defer Remove(fb.Name())
+	fb.Close()
+
+	ia1, err := Stat("a")
+	if err != nil {
+		t.Fatalf("Stat(a): %v", err)
+	}
+	ia2, err := Stat("a")
+	if err != nil {
+		t.Fatalf("Stat(a): %v", err)
+	}
+	if !SameFile(ia1, ia2) {
+		t.Errorf("files should be same")
+	}
+
+	ib, err := Stat("b")
+	if err != nil {
+		t.Fatalf("Stat(b): %v", err)
+	}
+	if SameFile(ia1, ib) {
+		t.Errorf("files should be different")
+	}
+}
+
+func TestDevNullFile(t *testing.T) {
+	f, err := Open(DevNull)
+	if err != nil {
+		t.Fatalf("Open(%s): %v", DevNull, err)
+	}
+	defer f.Close()
+	fi, err := f.Stat()
+	if err != nil {
+		t.Fatalf("Stat(%s): %v", DevNull, err)
+	}
+	name := filepath.Base(DevNull)
+	if fi.Name() != name {
+		t.Fatalf("wrong file name have %v want %v", fi.Name(), name)
+	}
+	if fi.Size() != 0 {
+		t.Fatalf("wrong file size have %d want 0", fi.Size())
 	}
 }

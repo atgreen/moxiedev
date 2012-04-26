@@ -1667,10 +1667,6 @@ noce_try_cmove_arith (struct noce_if_info *if_info)
       /* Copy over flags as appropriate.  */
       if (MEM_VOLATILE_P (if_info->a) || MEM_VOLATILE_P (if_info->b))
 	MEM_VOLATILE_P (tmp) = 1;
-      if (MEM_IN_STRUCT_P (if_info->a) && MEM_IN_STRUCT_P (if_info->b))
-	MEM_IN_STRUCT_P (tmp) = 1;
-      if (MEM_SCALAR_P (if_info->a) && MEM_SCALAR_P (if_info->b))
-	MEM_SCALAR_P (tmp) = 1;
       if (MEM_ALIAS_SET (if_info->a) == MEM_ALIAS_SET (if_info->b))
 	set_mem_alias_set (tmp, MEM_ALIAS_SET (if_info->a));
       set_mem_align (tmp,
@@ -2299,7 +2295,9 @@ noce_get_condition (rtx jump, rtx *earliest, bool then_else_reversed)
 
   cond = XEXP (SET_SRC (set), 0);
   tmp = XEXP (cond, 0);
-  if (REG_P (tmp) && GET_MODE_CLASS (GET_MODE (tmp)) == MODE_INT)
+  if (REG_P (tmp) && GET_MODE_CLASS (GET_MODE (tmp)) == MODE_INT
+      && (GET_MODE (tmp) != BImode
+          || !targetm.small_register_classes_for_mode_p (BImode)))
     {
       *earliest = jump;
 
@@ -3928,6 +3926,11 @@ find_if_case_2 (basic_block test_bb, edge then_edge, edge else_edge)
   basic_block else_bb = else_edge->dest;
   edge else_succ;
   int then_prob, else_prob;
+
+  /* We do not want to speculate (empty) loop latches.  */
+  if (current_loops
+      && else_bb->loop_father->latch == else_bb)
+    return FALSE;
 
   /* If we are partitioning hot/cold basic blocks, we don't want to
      mess up unconditional or indirect jumps that cross between hot

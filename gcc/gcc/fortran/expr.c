@@ -336,6 +336,7 @@ gfc_copy_expr (gfc_expr *p)
 	case BT_LOGICAL:
 	case BT_DERIVED:
 	case BT_CLASS:
+	case BT_ASSUMED:
 	  break;		/* Already done.  */
 
 	case BT_PROCEDURE:
@@ -3774,7 +3775,13 @@ gfc_default_initializer (gfc_typespec *ts)
       gfc_constructor *ctor = gfc_constructor_get();
 
       if (comp->initializer)
-	ctor->expr = gfc_copy_expr (comp->initializer);
+	{
+	  ctor->expr = gfc_copy_expr (comp->initializer);
+	  if ((comp->ts.type != comp->initializer->ts.type
+	       || comp->ts.kind != comp->initializer->ts.kind)
+	      && !comp->attr.pointer && !comp->attr.proc_pointer)
+	    gfc_convert_type_warn (ctor->expr, &comp->ts, 2, false);
+	}
 
       if (comp->attr.allocatable
 	  || (comp->ts.type == BT_CLASS && CLASS_DATA (comp)->attr.allocatable))
@@ -3805,9 +3812,12 @@ gfc_get_variable_expr (gfc_symtree *var)
   e->symtree = var;
   e->ts = var->n.sym->ts;
 
-  if (var->n.sym->as != NULL)
+  if ((var->n.sym->as != NULL && var->n.sym->ts.type != BT_CLASS)
+      || (var->n.sym->ts.type == BT_CLASS && CLASS_DATA (var->n.sym)
+	  && CLASS_DATA (var->n.sym)->as))
     {
-      e->rank = var->n.sym->as->rank;
+      e->rank = var->n.sym->ts.type == BT_CLASS
+		? CLASS_DATA (var->n.sym)->as->rank : var->n.sym->as->rank;
       e->ref = gfc_get_ref ();
       e->ref->type = REF_ARRAY;
       e->ref->u.ar.type = AR_FULL;
@@ -3836,7 +3846,8 @@ gfc_lval_expr_from_sym (gfc_symbol *sym)
       lval->ref->u.ar.type = AR_FULL;
       lval->ref->u.ar.dimen = lval->rank;
       lval->ref->u.ar.where = sym->declared_at;
-      lval->ref->u.ar.as = sym->as;
+      lval->ref->u.ar.as = sym->ts.type == BT_CLASS
+			   ? CLASS_DATA (sym)->as : sym->as;
     }
 
   return lval;
@@ -4634,17 +4645,24 @@ gfc_check_vardef_context (gfc_expr* e, bool pointer, bool alloc_obj,
       return FAILURE;
     }
 
-  /* INTENT(IN) dummy argument.  Check this, unless the object itself is
-     the component of sub-component of a pointer.  Obviously,
-     procedure pointers are of no interest here.  */
+  /* INTENT(IN) dummy argument.  Check this, unless the object itself is the
+     component of sub-component of a pointer; we need to distinguish
+     assignment to a pointer component from pointer-assignment to a pointer
+     component.  Note that (normal) assignment to procedure pointers is not
+     possible.  */
   check_intentin = true;
-  ptr_component = sym->attr.pointer;
+  ptr_component = (sym->ts.type == BT_CLASS && CLASS_DATA (sym))
+		  ? CLASS_DATA (sym)->attr.class_pointer : sym->attr.pointer;
   for (ref = e->ref; ref && check_intentin; ref = ref->next)
     {
       if (ptr_component && ref->type == REF_COMPONENT)
 	check_intentin = false;
       if (ref->type == REF_COMPONENT && ref->u.c.component->attr.pointer)
-	ptr_component = true;
+	{
+	  ptr_component = true;
+	  if (!pointer)
+	    check_intentin = false;
+	}
     }
   if (check_intentin && sym->attr.intent == INTENT_IN)
     {

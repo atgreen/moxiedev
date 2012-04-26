@@ -19,29 +19,21 @@ func Gosched()
 func Goexit()
 
 // Caller reports file and line number information about function invocations on
-// the calling goroutine's stack.  The argument skip is the number of stack frames to
-// ascend, with 0 identifying the the caller of Caller.  The return values report the
+// the calling goroutine's stack.  The argument skip is the number of stack frames
+// to ascend, with 0 identifying the caller of Caller.  The return values report the
 // program counter, file name, and line number within the file of the corresponding
 // call.  The boolean ok is false if it was not possible to recover the information.
 func Caller(skip int) (pc uintptr, file string, line int, ok bool)
 
 // Callers fills the slice pc with the program counters of function invocations
 // on the calling goroutine's stack.  The argument skip is the number of stack frames
-// to skip before recording in pc, with 0 starting at the caller of Caller.
+// to skip before recording in pc, with 0 starting at the caller of Callers.
 // It returns the number of entries written to pc.
 func Callers(skip int, pc []uintptr) int
 
 type Func struct { // Keep in sync with runtime.h:struct Func
-	name   string
-	typ    string  // go type string
-	src    string  // src file name
-	pcln   []byte  // pc/ln tab for this func
-	entry  uintptr // entry pc
-	pc0    uintptr // starting pc, ln for table
-	ln0    int32
-	frame  int32 // stack frame size
-	args   int32 // number of 32-bit in/out args
-	locals int32 // number of 32-bit locals
+	name  string
+	entry uintptr // entry pc
 }
 
 // FuncForPC returns a *Func describing the function that contains the
@@ -59,64 +51,18 @@ func (f *Func) Entry() uintptr { return f.entry }
 // The result will not be accurate if pc is not a program
 // counter within f.
 func (f *Func) FileLine(pc uintptr) (file string, line int) {
-	// NOTE(rsc): If you edit this function, also edit
-	// symtab.c:/^funcline.  That function also has the
-	// comments explaining the logic.
-	targetpc := pc
-
-	var pcQuant uintptr = 1
-	if GOARCH == "arm" {
-		pcQuant = 4
-	}
-
-	p := f.pcln
-	pc = f.pc0
-	line = int(f.ln0)
-	i := 0
-	//print("FileLine start pc=", pc, " targetpc=", targetpc, " line=", line,
-	//	" tab=", p, " ", p[0], " quant=", pcQuant, " GOARCH=", GOARCH, "\n")
-	for {
-		for i < len(p) && p[i] > 128 {
-			pc += pcQuant * uintptr(p[i]-128)
-			i++
-		}
-		//print("pc<", pc, " targetpc=", targetpc, " line=", line, "\n")
-		if pc > targetpc || i >= len(p) {
-			break
-		}
-		if p[i] == 0 {
-			if i+5 > len(p) {
-				break
-			}
-			line += int(p[i+1]<<24) | int(p[i+2]<<16) | int(p[i+3]<<8) | int(p[i+4])
-			i += 5
-		} else if p[i] <= 64 {
-			line += int(p[i])
-			i++
-		} else {
-			line -= int(p[i] - 64)
-			i++
-		}
-		//print("pc=", pc, " targetpc=", targetpc, " line=", line, "\n")
-		pc += pcQuant
-	}
-	file = f.src
-	return
+	return funcline_go(f, pc)
 }
+
+// implemented in symtab.c
+func funcline_go(*Func, uintptr) (string, int)
+
+// A gccgo specific hook to use debug info to get file/line info.
+func RegisterDebugLookup(func(pc uintptr, function *string, file *string, line *int) bool,
+	func(sym string, val *uintptr) bool)
 
 // mid returns the current os thread (m) id.
 func mid() uint32
-
-// Semacquire waits until *s > 0 and then atomically decrements it.
-// It is intended as a simple sleep primitive for use by the synchronization
-// library and should not be used directly.
-func Semacquire(s *uint32)
-
-// Semrelease atomically increments *s and notifies a waiting goroutine
-// if one is blocked in Semacquire.
-// It is intended as a simple wakeup primitive for use by the synchronization
-// library and should not be used directly.
-func Semrelease(s *uint32)
 
 // SetFinalizer sets the finalizer associated with x to f.
 // When the garbage collector finds an unreachable block
@@ -180,10 +126,10 @@ func Version() string {
 	return theVersion
 }
 
-// GOOS is the Go tree's operating system target:
+// GOOS is the running program's operating system target:
 // one of darwin, freebsd, linux, and so on.
 const GOOS string = theGoos
 
-// GOARCH is the Go tree's architecture target:
+// GOARCH is the running program's architecture target:
 // 386, amd64, or arm.
 const GOARCH string = theGoarch

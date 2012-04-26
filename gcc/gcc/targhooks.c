@@ -514,6 +514,7 @@ default_builtin_vectorization_cost (enum vect_cost_for_stmt type_of_cost,
       case scalar_to_vec:
       case cond_branch_not_taken:
       case vec_perm:
+      case vec_promote_demote:
         return 1;
 
       case unaligned_load:
@@ -1199,7 +1200,8 @@ default_target_can_inline_p (tree caller, tree callee)
    this means extra overhead for dispatch tables, which raises the
    threshold for using them.  */
 
-unsigned int default_case_values_threshold (void)
+unsigned int
+default_case_values_threshold (void)
 {
   return (HAVE_casesi ? 4 : 5);
 }

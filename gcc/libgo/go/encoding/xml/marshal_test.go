@@ -5,11 +5,11 @@
 package xml
 
 import (
-	"bytes"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 type DriveType int
@@ -25,67 +25,63 @@ type Passenger struct {
 }
 
 type Ship struct {
-	XMLName Name `xml:"spaceship"`
+	XMLName struct{} `xml:"spaceship"`
 
-	Name      string       `xml:"attr"`
-	Pilot     string       `xml:"attr"`
+	Name      string       `xml:"name,attr"`
+	Pilot     string       `xml:"pilot,attr"`
 	Drive     DriveType    `xml:"drive"`
 	Age       uint         `xml:"age"`
 	Passenger []*Passenger `xml:"passenger"`
 	secret    string
 }
 
-type RawXML string
-
-func (rx RawXML) MarshalXML() ([]byte, error) {
-	return []byte(rx), nil
-}
-
 type NamedType string
 
 type Port struct {
-	XMLName Name   `xml:"port"`
-	Type    string `xml:"attr"`
-	Number  string `xml:"chardata"`
+	XMLName struct{} `xml:"port"`
+	Type    string   `xml:"type,attr,omitempty"`
+	Comment string   `xml:",comment"`
+	Number  string   `xml:",chardata"`
 }
 
 type Domain struct {
-	XMLName Name   `xml:"domain"`
-	Country string `xml:"attr"`
-	Name    []byte `xml:"chardata"`
+	XMLName struct{} `xml:"domain"`
+	Country string   `xml:",attr,omitempty"`
+	Name    []byte   `xml:",chardata"`
+	Comment []byte   `xml:",comment"`
 }
 
 type Book struct {
-	XMLName Name   `xml:"book"`
-	Title   string `xml:"chardata"`
+	XMLName struct{} `xml:"book"`
+	Title   string   `xml:",chardata"`
 }
 
 type SecretAgent struct {
-	XMLName   Name   `xml:"agent"`
-	Handle    string `xml:"attr"`
+	XMLName   struct{} `xml:"agent"`
+	Handle    string   `xml:"handle,attr"`
 	Identity  string
-	Obfuscate string `xml:"innerxml"`
+	Obfuscate string `xml:",innerxml"`
 }
 
 type NestedItems struct {
-	XMLName Name     `xml:"result"`
+	XMLName struct{} `xml:"result"`
 	Items   []string `xml:">item"`
 	Item1   []string `xml:"Items>item1"`
 }
 
 type NestedOrder struct {
-	XMLName Name   `xml:"result"`
-	Field1  string `xml:"parent>c"`
-	Field2  string `xml:"parent>b"`
-	Field3  string `xml:"parent>a"`
+	XMLName struct{} `xml:"result"`
+	Field1  string   `xml:"parent>c"`
+	Field2  string   `xml:"parent>b"`
+	Field3  string   `xml:"parent>a"`
 }
 
 type MixedNested struct {
-	XMLName Name   `xml:"result"`
-	A       string `xml:"parent1>a"`
-	B       string `xml:"b"`
-	C       string `xml:"parent1>parent2>c"`
-	D       string `xml:"parent1>d"`
+	XMLName struct{} `xml:"result"`
+	A       string   `xml:"parent1>a"`
+	B       string   `xml:"b"`
+	C       string   `xml:"parent1>parent2>c"`
+	D       string   `xml:"parent1>d"`
 }
 
 type NilTest struct {
@@ -95,62 +91,244 @@ type NilTest struct {
 }
 
 type Service struct {
-	XMLName Name    `xml:"service"`
-	Domain  *Domain `xml:"host>domain"`
-	Port    *Port   `xml:"host>port"`
+	XMLName struct{} `xml:"service"`
+	Domain  *Domain  `xml:"host>domain"`
+	Port    *Port    `xml:"host>port"`
 	Extra1  interface{}
 	Extra2  interface{} `xml:"host>extra2"`
 }
 
 var nilStruct *Ship
 
+type EmbedA struct {
+	EmbedC
+	EmbedB EmbedB
+	FieldA string
+}
+
+type EmbedB struct {
+	FieldB string
+	EmbedC
+}
+
+type EmbedC struct {
+	FieldA1 string `xml:"FieldA>A1"`
+	FieldA2 string `xml:"FieldA>A2"`
+	FieldB  string
+	FieldC  string
+}
+
+type NameCasing struct {
+	XMLName struct{} `xml:"casing"`
+	Xy      string
+	XY      string
+	XyA     string `xml:"Xy,attr"`
+	XYA     string `xml:"XY,attr"`
+}
+
+type NamePrecedence struct {
+	XMLName     Name              `xml:"Parent"`
+	FromTag     XMLNameWithoutTag `xml:"InTag"`
+	FromNameVal XMLNameWithoutTag
+	FromNameTag XMLNameWithTag
+	InFieldName string
+}
+
+type XMLNameWithTag struct {
+	XMLName Name   `xml:"InXMLNameTag"`
+	Value   string `xml:",chardata"`
+}
+
+type XMLNameWithoutTag struct {
+	XMLName Name
+	Value   string `xml:",chardata"`
+}
+
+type NameInField struct {
+	Foo Name `xml:"ns foo"`
+}
+
+type AttrTest struct {
+	Int   int     `xml:",attr"`
+	Named int     `xml:"int,attr"`
+	Float float64 `xml:",attr"`
+	Uint8 uint8   `xml:",attr"`
+	Bool  bool    `xml:",attr"`
+	Str   string  `xml:",attr"`
+	Bytes []byte  `xml:",attr"`
+}
+
+type OmitAttrTest struct {
+	Int   int     `xml:",attr,omitempty"`
+	Named int     `xml:"int,attr,omitempty"`
+	Float float64 `xml:",attr,omitempty"`
+	Uint8 uint8   `xml:",attr,omitempty"`
+	Bool  bool    `xml:",attr,omitempty"`
+	Str   string  `xml:",attr,omitempty"`
+	Bytes []byte  `xml:",attr,omitempty"`
+}
+
+type OmitFieldTest struct {
+	Int   int           `xml:",omitempty"`
+	Named int           `xml:"int,omitempty"`
+	Float float64       `xml:",omitempty"`
+	Uint8 uint8         `xml:",omitempty"`
+	Bool  bool          `xml:",omitempty"`
+	Str   string        `xml:",omitempty"`
+	Bytes []byte        `xml:",omitempty"`
+	Ptr   *PresenceTest `xml:",omitempty"`
+}
+
+type AnyTest struct {
+	XMLName  struct{}  `xml:"a"`
+	Nested   string    `xml:"nested>value"`
+	AnyField AnyHolder `xml:",any"`
+}
+
+type AnyHolder struct {
+	XMLName Name
+	XML     string `xml:",innerxml"`
+}
+
+type RecurseA struct {
+	A string
+	B *RecurseB
+}
+
+type RecurseB struct {
+	A *RecurseA
+	B string
+}
+
+type PresenceTest struct {
+	Exists *struct{}
+}
+
+type IgnoreTest struct {
+	PublicSecret string `xml:"-"`
+}
+
+type MyBytes []byte
+
+type Data struct {
+	Bytes  []byte
+	Attr   []byte `xml:",attr"`
+	Custom MyBytes
+}
+
+type Plain struct {
+	V interface{}
+}
+
+// Unless explicitly stated as such (or *Plain), all of the
+// tests below are two-way tests. When introducing new tests,
+// please try to make them two-way as well to ensure that
+// marshalling and unmarshalling are as symmetrical as feasible.
 var marshalTests = []struct {
-	Value     interface{}
-	ExpectXML string
+	Value         interface{}
+	ExpectXML     string
+	MarshalOnly   bool
+	UnmarshalOnly bool
 }{
 	// Test nil marshals to nothing
-	{Value: nil, ExpectXML: ``},
-	{Value: nilStruct, ExpectXML: ``},
+	{Value: nil, ExpectXML: ``, MarshalOnly: true},
+	{Value: nilStruct, ExpectXML: ``, MarshalOnly: true},
 
-	// Test value types (no tag name, so ???)
-	{Value: true, ExpectXML: `<???>true</???>`},
-	{Value: int(42), ExpectXML: `<???>42</???>`},
-	{Value: int8(42), ExpectXML: `<???>42</???>`},
-	{Value: int16(42), ExpectXML: `<???>42</???>`},
-	{Value: int32(42), ExpectXML: `<???>42</???>`},
-	{Value: uint(42), ExpectXML: `<???>42</???>`},
-	{Value: uint8(42), ExpectXML: `<???>42</???>`},
-	{Value: uint16(42), ExpectXML: `<???>42</???>`},
-	{Value: uint32(42), ExpectXML: `<???>42</???>`},
-	{Value: float32(1.25), ExpectXML: `<???>1.25</???>`},
-	{Value: float64(1.25), ExpectXML: `<???>1.25</???>`},
-	{Value: uintptr(0xFFDD), ExpectXML: `<???>65501</???>`},
-	{Value: "gopher", ExpectXML: `<???>gopher</???>`},
-	{Value: []byte("gopher"), ExpectXML: `<???>gopher</???>`},
-	{Value: "</>", ExpectXML: `<???>&lt;/&gt;</???>`},
-	{Value: []byte("</>"), ExpectXML: `<???>&lt;/&gt;</???>`},
-	{Value: [3]byte{'<', '/', '>'}, ExpectXML: `<???>&lt;/&gt;</???>`},
-	{Value: NamedType("potato"), ExpectXML: `<???>potato</???>`},
-	{Value: []int{1, 2, 3}, ExpectXML: `<???>1</???><???>2</???><???>3</???>`},
-	{Value: [3]int{1, 2, 3}, ExpectXML: `<???>1</???><???>2</???><???>3</???>`},
+	// Test value types
+	{Value: &Plain{true}, ExpectXML: `<Plain><V>true</V></Plain>`},
+	{Value: &Plain{false}, ExpectXML: `<Plain><V>false</V></Plain>`},
+	{Value: &Plain{int(42)}, ExpectXML: `<Plain><V>42</V></Plain>`},
+	{Value: &Plain{int8(42)}, ExpectXML: `<Plain><V>42</V></Plain>`},
+	{Value: &Plain{int16(42)}, ExpectXML: `<Plain><V>42</V></Plain>`},
+	{Value: &Plain{int32(42)}, ExpectXML: `<Plain><V>42</V></Plain>`},
+	{Value: &Plain{uint(42)}, ExpectXML: `<Plain><V>42</V></Plain>`},
+	{Value: &Plain{uint8(42)}, ExpectXML: `<Plain><V>42</V></Plain>`},
+	{Value: &Plain{uint16(42)}, ExpectXML: `<Plain><V>42</V></Plain>`},
+	{Value: &Plain{uint32(42)}, ExpectXML: `<Plain><V>42</V></Plain>`},
+	{Value: &Plain{float32(1.25)}, ExpectXML: `<Plain><V>1.25</V></Plain>`},
+	{Value: &Plain{float64(1.25)}, ExpectXML: `<Plain><V>1.25</V></Plain>`},
+	{Value: &Plain{uintptr(0xFFDD)}, ExpectXML: `<Plain><V>65501</V></Plain>`},
+	{Value: &Plain{"gopher"}, ExpectXML: `<Plain><V>gopher</V></Plain>`},
+	{Value: &Plain{[]byte("gopher")}, ExpectXML: `<Plain><V>gopher</V></Plain>`},
+	{Value: &Plain{"</>"}, ExpectXML: `<Plain><V>&lt;/&gt;</V></Plain>`},
+	{Value: &Plain{[]byte("</>")}, ExpectXML: `<Plain><V>&lt;/&gt;</V></Plain>`},
+	{Value: &Plain{[3]byte{'<', '/', '>'}}, ExpectXML: `<Plain><V>&lt;/&gt;</V></Plain>`},
+	{Value: &Plain{NamedType("potato")}, ExpectXML: `<Plain><V>potato</V></Plain>`},
+	{Value: &Plain{[]int{1, 2, 3}}, ExpectXML: `<Plain><V>1</V><V>2</V><V>3</V></Plain>`},
+	{Value: &Plain{[3]int{1, 2, 3}}, ExpectXML: `<Plain><V>1</V><V>2</V><V>3</V></Plain>`},
+
+	// Test time.
+	{
+		Value:     &Plain{time.Unix(1e9, 123456789).UTC()},
+		ExpectXML: `<Plain><V>2001-09-09T01:46:40.123456789Z</V></Plain>`,
+	},
+
+	// A pointer to struct{} may be used to test for an element's presence.
+	{
+		Value:     &PresenceTest{new(struct{})},
+		ExpectXML: `<PresenceTest><Exists></Exists></PresenceTest>`,
+	},
+	{
+		Value:     &PresenceTest{},
+		ExpectXML: `<PresenceTest></PresenceTest>`,
+	},
+
+	// A pointer to struct{} may be used to test for an element's presence.
+	{
+		Value:     &PresenceTest{new(struct{})},
+		ExpectXML: `<PresenceTest><Exists></Exists></PresenceTest>`,
+	},
+	{
+		Value:     &PresenceTest{},
+		ExpectXML: `<PresenceTest></PresenceTest>`,
+	},
+
+	// A []byte field is only nil if the element was not found.
+	{
+		Value:         &Data{},
+		ExpectXML:     `<Data></Data>`,
+		UnmarshalOnly: true,
+	},
+	{
+		Value:         &Data{Bytes: []byte{}, Custom: MyBytes{}, Attr: []byte{}},
+		ExpectXML:     `<Data Attr=""><Bytes></Bytes><Custom></Custom></Data>`,
+		UnmarshalOnly: true,
+	},
+
+	// Check that []byte works, including named []byte types.
+	{
+		Value:     &Data{Bytes: []byte("ab"), Custom: MyBytes("cd"), Attr: []byte{'v'}},
+		ExpectXML: `<Data Attr="v"><Bytes>ab</Bytes><Custom>cd</Custom></Data>`,
+	},
 
 	// Test innerxml
-	{Value: RawXML("</>"), ExpectXML: `</>`},
 	{
 		Value: &SecretAgent{
 			Handle:    "007",
 			Identity:  "James Bond",
 			Obfuscate: "<redacted/>",
 		},
-		//ExpectXML: `<agent handle="007"><redacted/></agent>`,
-		ExpectXML: `<agent handle="007"><Identity>James Bond</Identity><redacted/></agent>`,
+		ExpectXML:   `<agent handle="007"><Identity>James Bond</Identity><redacted/></agent>`,
+		MarshalOnly: true,
+	},
+	{
+		Value: &SecretAgent{
+			Handle:    "007",
+			Identity:  "James Bond",
+			Obfuscate: "<Identity>James Bond</Identity><redacted/>",
+		},
+		ExpectXML:     `<agent handle="007"><Identity>James Bond</Identity><redacted/></agent>`,
+		UnmarshalOnly: true,
 	},
 
 	// Test structs
 	{Value: &Port{Type: "ssl", Number: "443"}, ExpectXML: `<port type="ssl">443</port>`},
 	{Value: &Port{Number: "443"}, ExpectXML: `<port>443</port>`},
 	{Value: &Port{Type: "<unix>"}, ExpectXML: `<port type="&lt;unix&gt;"></port>`},
+	{Value: &Port{Number: "443", Comment: "https"}, ExpectXML: `<port><!--https-->443</port>`},
+	{Value: &Port{Number: "443", Comment: "add space-"}, ExpectXML: `<port><!--add space- -->443</port>`, MarshalOnly: true},
 	{Value: &Domain{Name: []byte("google.com&friends")}, ExpectXML: `<domain>google.com&amp;friends</domain>`},
+	{Value: &Domain{Name: []byte("google.com"), Comment: []byte(" &friends ")}, ExpectXML: `<domain>google.com<!-- &friends --></domain>`},
 	{Value: &Book{Title: "Pride & Prejudice"}, ExpectXML: `<book>Pride &amp; Prejudice</book>`},
 	{Value: atomValue, ExpectXML: atomXml},
 	{
@@ -203,16 +381,25 @@ var marshalTests = []struct {
 			`</passenger>` +
 			`</spaceship>`,
 	},
+
 	// Test a>b
 	{
-		Value: NestedItems{Items: []string{}, Item1: []string{}},
+		Value: &NestedItems{Items: nil, Item1: nil},
 		ExpectXML: `<result>` +
 			`<Items>` +
 			`</Items>` +
 			`</result>`,
 	},
 	{
-		Value: NestedItems{Items: []string{}, Item1: []string{"A"}},
+		Value: &NestedItems{Items: []string{}, Item1: []string{}},
+		ExpectXML: `<result>` +
+			`<Items>` +
+			`</Items>` +
+			`</result>`,
+		MarshalOnly: true,
+	},
+	{
+		Value: &NestedItems{Items: nil, Item1: []string{"A"}},
 		ExpectXML: `<result>` +
 			`<Items>` +
 			`<item1>A</item1>` +
@@ -220,7 +407,7 @@ var marshalTests = []struct {
 			`</result>`,
 	},
 	{
-		Value: NestedItems{Items: []string{"A", "B"}, Item1: []string{}},
+		Value: &NestedItems{Items: []string{"A", "B"}, Item1: nil},
 		ExpectXML: `<result>` +
 			`<Items>` +
 			`<item>A</item>` +
@@ -229,7 +416,7 @@ var marshalTests = []struct {
 			`</result>`,
 	},
 	{
-		Value: NestedItems{Items: []string{"A", "B"}, Item1: []string{"C"}},
+		Value: &NestedItems{Items: []string{"A", "B"}, Item1: []string{"C"}},
 		ExpectXML: `<result>` +
 			`<Items>` +
 			`<item>A</item>` +
@@ -239,7 +426,7 @@ var marshalTests = []struct {
 			`</result>`,
 	},
 	{
-		Value: NestedOrder{Field1: "C", Field2: "B", Field3: "A"},
+		Value: &NestedOrder{Field1: "C", Field2: "B", Field3: "A"},
 		ExpectXML: `<result>` +
 			`<parent>` +
 			`<c>C</c>` +
@@ -249,16 +436,17 @@ var marshalTests = []struct {
 			`</result>`,
 	},
 	{
-		Value: NilTest{A: "A", B: nil, C: "C"},
-		ExpectXML: `<???>` +
+		Value: &NilTest{A: "A", B: nil, C: "C"},
+		ExpectXML: `<NilTest>` +
 			`<parent1>` +
 			`<parent2><a>A</a></parent2>` +
 			`<parent2><c>C</c></parent2>` +
 			`</parent1>` +
-			`</???>`,
+			`</NilTest>`,
+		MarshalOnly: true, // Uses interface{}
 	},
 	{
-		Value: MixedNested{A: "A", B: "B", C: "C", D: "D"},
+		Value: &MixedNested{A: "A", B: "B", C: "C", D: "D"},
 		ExpectXML: `<result>` +
 			`<parent1><a>A</a></parent1>` +
 			`<b>B</b>` +
@@ -269,43 +457,250 @@ var marshalTests = []struct {
 			`</result>`,
 	},
 	{
-		Value:     Service{Port: &Port{Number: "80"}},
+		Value:     &Service{Port: &Port{Number: "80"}},
 		ExpectXML: `<service><host><port>80</port></host></service>`,
 	},
 	{
-		Value:     Service{},
+		Value:     &Service{},
 		ExpectXML: `<service></service>`,
 	},
 	{
-		Value: Service{Port: &Port{Number: "80"}, Extra1: "A", Extra2: "B"},
+		Value: &Service{Port: &Port{Number: "80"}, Extra1: "A", Extra2: "B"},
 		ExpectXML: `<service>` +
 			`<host><port>80</port></host>` +
 			`<Extra1>A</Extra1>` +
 			`<host><extra2>B</extra2></host>` +
 			`</service>`,
+		MarshalOnly: true,
 	},
 	{
-		Value: Service{Port: &Port{Number: "80"}, Extra2: "example"},
+		Value: &Service{Port: &Port{Number: "80"}, Extra2: "example"},
 		ExpectXML: `<service>` +
 			`<host><port>80</port></host>` +
 			`<host><extra2>example</extra2></host>` +
 			`</service>`,
+		MarshalOnly: true,
+	},
+
+	// Test struct embedding
+	{
+		Value: &EmbedA{
+			EmbedC: EmbedC{
+				FieldA1: "", // Shadowed by A.A
+				FieldA2: "", // Shadowed by A.A
+				FieldB:  "A.C.B",
+				FieldC:  "A.C.C",
+			},
+			EmbedB: EmbedB{
+				FieldB: "A.B.B",
+				EmbedC: EmbedC{
+					FieldA1: "A.B.C.A1",
+					FieldA2: "A.B.C.A2",
+					FieldB:  "", // Shadowed by A.B.B
+					FieldC:  "A.B.C.C",
+				},
+			},
+			FieldA: "A.A",
+		},
+		ExpectXML: `<EmbedA>` +
+			`<FieldB>A.C.B</FieldB>` +
+			`<FieldC>A.C.C</FieldC>` +
+			`<EmbedB>` +
+			`<FieldB>A.B.B</FieldB>` +
+			`<FieldA>` +
+			`<A1>A.B.C.A1</A1>` +
+			`<A2>A.B.C.A2</A2>` +
+			`</FieldA>` +
+			`<FieldC>A.B.C.C</FieldC>` +
+			`</EmbedB>` +
+			`<FieldA>A.A</FieldA>` +
+			`</EmbedA>`,
+	},
+
+	// Test that name casing matters
+	{
+		Value:     &NameCasing{Xy: "mixed", XY: "upper", XyA: "mixedA", XYA: "upperA"},
+		ExpectXML: `<casing Xy="mixedA" XY="upperA"><Xy>mixed</Xy><XY>upper</XY></casing>`,
+	},
+
+	// Test the order in which the XML element name is chosen
+	{
+		Value: &NamePrecedence{
+			FromTag:     XMLNameWithoutTag{Value: "A"},
+			FromNameVal: XMLNameWithoutTag{XMLName: Name{Local: "InXMLName"}, Value: "B"},
+			FromNameTag: XMLNameWithTag{Value: "C"},
+			InFieldName: "D",
+		},
+		ExpectXML: `<Parent>` +
+			`<InTag>A</InTag>` +
+			`<InXMLName>B</InXMLName>` +
+			`<InXMLNameTag>C</InXMLNameTag>` +
+			`<InFieldName>D</InFieldName>` +
+			`</Parent>`,
+		MarshalOnly: true,
+	},
+	{
+		Value: &NamePrecedence{
+			XMLName:     Name{Local: "Parent"},
+			FromTag:     XMLNameWithoutTag{XMLName: Name{Local: "InTag"}, Value: "A"},
+			FromNameVal: XMLNameWithoutTag{XMLName: Name{Local: "FromNameVal"}, Value: "B"},
+			FromNameTag: XMLNameWithTag{XMLName: Name{Local: "InXMLNameTag"}, Value: "C"},
+			InFieldName: "D",
+		},
+		ExpectXML: `<Parent>` +
+			`<InTag>A</InTag>` +
+			`<FromNameVal>B</FromNameVal>` +
+			`<InXMLNameTag>C</InXMLNameTag>` +
+			`<InFieldName>D</InFieldName>` +
+			`</Parent>`,
+		UnmarshalOnly: true,
+	},
+
+	// xml.Name works in a plain field as well.
+	{
+		Value:     &NameInField{Name{Space: "ns", Local: "foo"}},
+		ExpectXML: `<NameInField><foo xmlns="ns"></foo></NameInField>`,
+	},
+	{
+		Value:         &NameInField{Name{Space: "ns", Local: "foo"}},
+		ExpectXML:     `<NameInField><foo xmlns="ns"><ignore></ignore></foo></NameInField>`,
+		UnmarshalOnly: true,
+	},
+
+	// Marshaling zero xml.Name uses the tag or field name.
+	{
+		Value:       &NameInField{},
+		ExpectXML:   `<NameInField><foo xmlns="ns"></foo></NameInField>`,
+		MarshalOnly: true,
+	},
+
+	// Test attributes
+	{
+		Value: &AttrTest{
+			Int:   8,
+			Named: 9,
+			Float: 23.5,
+			Uint8: 255,
+			Bool:  true,
+			Str:   "str",
+			Bytes: []byte("byt"),
+		},
+		ExpectXML: `<AttrTest Int="8" int="9" Float="23.5" Uint8="255"` +
+			` Bool="true" Str="str" Bytes="byt"></AttrTest>`,
+	},
+	{
+		Value: &AttrTest{Bytes: []byte{}},
+		ExpectXML: `<AttrTest Int="0" int="0" Float="0" Uint8="0"` +
+			` Bool="false" Str="" Bytes=""></AttrTest>`,
+	},
+	{
+		Value: &OmitAttrTest{
+			Int:   8,
+			Named: 9,
+			Float: 23.5,
+			Uint8: 255,
+			Bool:  true,
+			Str:   "str",
+			Bytes: []byte("byt"),
+		},
+		ExpectXML: `<OmitAttrTest Int="8" int="9" Float="23.5" Uint8="255"` +
+			` Bool="true" Str="str" Bytes="byt"></OmitAttrTest>`,
+	},
+	{
+		Value:     &OmitAttrTest{},
+		ExpectXML: `<OmitAttrTest></OmitAttrTest>`,
+	},
+
+	// omitempty on fields
+	{
+		Value: &OmitFieldTest{
+			Int:   8,
+			Named: 9,
+			Float: 23.5,
+			Uint8: 255,
+			Bool:  true,
+			Str:   "str",
+			Bytes: []byte("byt"),
+			Ptr:   &PresenceTest{},
+		},
+		ExpectXML: `<OmitFieldTest>` +
+			`<Int>8</Int>` +
+			`<int>9</int>` +
+			`<Float>23.5</Float>` +
+			`<Uint8>255</Uint8>` +
+			`<Bool>true</Bool>` +
+			`<Str>str</Str>` +
+			`<Bytes>byt</Bytes>` +
+			`<Ptr></Ptr>` +
+			`</OmitFieldTest>`,
+	},
+	{
+		Value:     &OmitFieldTest{},
+		ExpectXML: `<OmitFieldTest></OmitFieldTest>`,
+	},
+
+	// Test ",any"
+	{
+		ExpectXML: `<a><nested><value>known</value></nested><other><sub>unknown</sub></other></a>`,
+		Value: &AnyTest{
+			Nested: "known",
+			AnyField: AnyHolder{
+				XMLName: Name{Local: "other"},
+				XML:     "<sub>unknown</sub>",
+			},
+		},
+		UnmarshalOnly: true,
+	},
+	{
+		Value:       &AnyTest{Nested: "known", AnyField: AnyHolder{XML: "<unknown/>"}},
+		ExpectXML:   `<a><nested><value>known</value></nested></a>`,
+		MarshalOnly: true,
+	},
+
+	// Test recursive types.
+	{
+		Value: &RecurseA{
+			A: "a1",
+			B: &RecurseB{
+				A: &RecurseA{"a2", nil},
+				B: "b1",
+			},
+		},
+		ExpectXML: `<RecurseA><A>a1</A><B><A><A>a2</A></A><B>b1</B></B></RecurseA>`,
+	},
+
+	// Test ignoring fields via "-" tag
+	{
+		ExpectXML: `<IgnoreTest></IgnoreTest>`,
+		Value:     &IgnoreTest{},
+	},
+	{
+		ExpectXML:   `<IgnoreTest></IgnoreTest>`,
+		Value:       &IgnoreTest{PublicSecret: "can't tell"},
+		MarshalOnly: true,
+	},
+	{
+		ExpectXML:     `<IgnoreTest><PublicSecret>ignore me</PublicSecret></IgnoreTest>`,
+		Value:         &IgnoreTest{},
+		UnmarshalOnly: true,
 	},
 }
 
 func TestMarshal(t *testing.T) {
 	for idx, test := range marshalTests {
-		buf := bytes.NewBuffer(nil)
-		err := Marshal(buf, test.Value)
+		if test.UnmarshalOnly {
+			continue
+		}
+		data, err := Marshal(test.Value)
 		if err != nil {
 			t.Errorf("#%d: Error: %s", idx, err)
 			continue
 		}
-		if got, want := buf.String(), test.ExpectXML; got != want {
+		if got, want := string(data), test.ExpectXML; got != want {
 			if strings.Contains(want, "\n") {
-				t.Errorf("#%d: marshal(%#v) - GOT:\n%s\nWANT:\n%s", idx, test.Value, got, want)
+				t.Errorf("#%d: marshal(%#v):\nHAVE:\n%s\nWANT:\n%s", idx, test.Value, got, want)
 			} else {
-				t.Errorf("#%d: marshal(%#v) = %#q want %#q", idx, test.Value, got, want)
+				t.Errorf("#%d: marshal(%#v):\nhave %#q\nwant %#q", idx, test.Value, got, want)
 			}
 		}
 	}
@@ -334,17 +729,22 @@ var marshalErrorTests = []struct {
 		Err:   "xml: unsupported type: map[*xml.Ship]bool",
 		Kind:  reflect.Map,
 	},
+	{
+		Value: &Domain{Comment: []byte("f--bar")},
+		Err:   `xml: comments must not contain "--"`,
+	},
 }
 
 func TestMarshalErrors(t *testing.T) {
 	for idx, test := range marshalErrorTests {
-		buf := bytes.NewBuffer(nil)
-		err := Marshal(buf, test.Value)
+		_, err := Marshal(test.Value)
 		if err == nil || err.Error() != test.Err {
-			t.Errorf("#%d: marshal(%#v) = [error] %q, want %q", idx, test.Value, err, test.Err)
+			t.Errorf("#%d: marshal(%#v) = [error] %v, want %v", idx, test.Value, err, test.Err)
 		}
-		if kind := err.(*UnsupportedTypeError).Type.Kind(); kind != test.Kind {
-			t.Errorf("#%d: marshal(%#v) = [error kind] %s, want %s", idx, test.Value, kind, test.Kind)
+		if test.Kind != reflect.Invalid {
+			if kind := err.(*UnsupportedTypeError).Type.Kind(); kind != test.Kind {
+				t.Errorf("#%d: marshal(%#v) = [error kind] %s, want %s", idx, test.Value, kind, test.Kind)
+			}
 		}
 	}
 }
@@ -352,39 +752,19 @@ func TestMarshalErrors(t *testing.T) {
 // Do invertibility testing on the various structures that we test
 func TestUnmarshal(t *testing.T) {
 	for i, test := range marshalTests {
-		// Skip the nil pointers
-		if i <= 1 {
+		if test.MarshalOnly {
+			continue
+		}
+		if _, ok := test.Value.(*Plain); ok {
 			continue
 		}
 
-		var dest interface{}
+		vt := reflect.TypeOf(test.Value)
+		dest := reflect.New(vt.Elem()).Interface()
+		err := Unmarshal([]byte(test.ExpectXML), dest)
 
-		switch test.Value.(type) {
-		case *Ship, Ship:
-			dest = &Ship{}
-		case *Port, Port:
-			dest = &Port{}
-		case *Domain, Domain:
-			dest = &Domain{}
-		case *Feed, Feed:
-			dest = &Feed{}
-		default:
-			continue
-		}
-
-		buffer := bytes.NewBufferString(test.ExpectXML)
-		err := Unmarshal(buffer, dest)
-
-		// Don't compare XMLNames
 		switch fix := dest.(type) {
-		case *Ship:
-			fix.XMLName = Name{}
-		case *Port:
-			fix.XMLName = Name{}
-		case *Domain:
-			fix.XMLName = Name{}
 		case *Feed:
-			fix.XMLName = Name{}
 			fix.Author.InnerXML = ""
 			for i := range fix.Entry {
 				fix.Entry[i].Author.InnerXML = ""
@@ -394,30 +774,20 @@ func TestUnmarshal(t *testing.T) {
 		if err != nil {
 			t.Errorf("#%d: unexpected error: %#v", i, err)
 		} else if got, want := dest, test.Value; !reflect.DeepEqual(got, want) {
-			t.Errorf("#%d: unmarshal(%q) = %#v, want %#v", i, test.ExpectXML, got, want)
+			t.Errorf("#%d: unmarshal(%q):\nhave %#v\nwant %#v", i, test.ExpectXML, got, want)
 		}
 	}
 }
 
 func BenchmarkMarshal(b *testing.B) {
-	idx := len(marshalTests) - 1
-	test := marshalTests[idx]
-
-	buf := bytes.NewBuffer(nil)
 	for i := 0; i < b.N; i++ {
-		Marshal(buf, test.Value)
-		buf.Truncate(0)
+		Marshal(atomValue)
 	}
 }
 
 func BenchmarkUnmarshal(b *testing.B) {
-	idx := len(marshalTests) - 1
-	test := marshalTests[idx]
-	sm := &Ship{}
-	xml := []byte(test.ExpectXML)
-
+	xml := []byte(atomXml)
 	for i := 0; i < b.N; i++ {
-		buffer := bytes.NewBuffer(xml)
-		Unmarshal(buffer, sm)
+		Unmarshal(xml, &Feed{})
 	}
 }

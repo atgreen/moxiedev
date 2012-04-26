@@ -1,3 +1,62 @@
+2012-04-20  Jan Hubicka  <jh@suse.cz>
+
+	* lto-partition.c (partition_cgraph_node_p): Use force_output.
+
+2012-04-18  Jan Hubicka  <jh@suse.cz>
+
+	* lto-partition.c (add_references_to_partition, lto_balanced_map):
+	Update for new ipa-ref API.
+
+2012-04-16  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (read_cgraph_and_symbols): Use FOR_EACH
+        walkers to walk cgraph and varpool.
+	(materialize_cgraph): Likewise.
+	* lto-partition.c (lto_1_to_1_map): Likewise.
+	(lto_balanced_map): Likewise.
+	(lto_promote_cross_file_statics): Likewise.
+
+2012-04-14  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c: Update field referenced for new cgraph/varpool layout.
+	* lto-partition.c: Likewise.
+
+2012-04-11  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c: Update copyright; remove params.h, ipa-inline.h
+	and ipa-utils.h inlines; inline lto-partition.h
+	(ltrans_partition_def, ltrans_partition, add_cgraph_node_to_partition,
+	add_varpool_node_to_partition, new_partition, free_ltrans_partitions,
+	add_references_to_partition, add_cgraph_node_to_partition_1,
+	add_cgraph_node_to_partition, add_varpool_node_to_partition,
+	undo_partition, partition_cgraph_node_p, partition_varpool_node_p,
+	lto_1_to_1_map, node_cmp, varpool_node_cmp, lto_balanced_map,
+	promote_var, promote_fn, lto_promote_cross_file_statics): move to...
+	* lto-partition.c: ... here; new file.
+	* lto-partition.h: New file.
+	* Make-lang.in (lto.o): Update dependencies.
+	(lto-partition.o): New.
+
+2012-04-05  Richard Guenther  <rguenther@suse.de>
+
+	* lto-lang.c (LANG_HOOKS_CALLGRAPH_EXPAND_FUNCTION): Remove
+	definition.
+
+2012-03-12  Richard Guenther  <rguenther@suse.de>
+
+	* lto-lang.c (builtin_type_for_size): Use lto_type_for_size.
+
+2012-03-06  Richard Guenther  <rguenther@suse.de>
+
+	PR lto/52097
+	* lto.c (uniquify_nodes): Merge TYPE_FIELDS of variant types.
+
+2012-02-28  Richard Guenther  <rguenther@suse.de>
+
+	PR lto/52400
+	* lto.c (lto_register_function_decl_in_symtab): Do not register
+	a reverse renamed decl mapping.
+
 2012-01-06  Jakub Jelinek  <jakub@redhat.com>
 
 	PR lto/51774

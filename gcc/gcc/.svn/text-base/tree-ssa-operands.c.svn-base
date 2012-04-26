@@ -1043,35 +1043,46 @@ static void
 parse_ssa_operands (gimple stmt)
 {
   enum gimple_code code = gimple_code (stmt);
+  size_t i, n, start = 0;
 
-  if (code == GIMPLE_ASM)
-    get_asm_expr_operands (stmt);
-  else if (is_gimple_debug (stmt))
+  switch (code)
     {
+    case GIMPLE_ASM:
+      get_asm_expr_operands (stmt);
+      break;
+
+    case GIMPLE_TRANSACTION:
+      /* The start of a transaction is a memory barrier.  */
+      add_virtual_operand (stmt, opf_def | opf_use);
+      break;
+
+    case GIMPLE_DEBUG:
       if (gimple_debug_bind_p (stmt)
 	  && gimple_debug_bind_has_value_p (stmt))
 	get_expr_operands (stmt, gimple_debug_bind_get_value_ptr (stmt),
 			   opf_use | opf_no_vops);
-    }
-  else
-    {
-      size_t i, start = 0;
+      break;
 
-      if (code == GIMPLE_ASSIGN || code == GIMPLE_CALL)
-	{
-	  get_expr_operands (stmt, gimple_op_ptr (stmt, 0), opf_def);
-	  start = 1;
-	}
+    case GIMPLE_RETURN:
+      append_vuse (gimple_vop (cfun));
+      goto do_default;
 
-      for (i = start; i < gimple_num_ops (stmt); i++)
-	get_expr_operands (stmt, gimple_op_ptr (stmt, i), opf_use);
-
+    case GIMPLE_CALL:
       /* Add call-clobbered operands, if needed.  */
-      if (code == GIMPLE_CALL)
-	maybe_add_call_vops (stmt);
+      maybe_add_call_vops (stmt);
+      /* FALLTHRU */
 
-      if (code == GIMPLE_RETURN)
-	append_vuse (gimple_vop (cfun));
+    case GIMPLE_ASSIGN:
+      get_expr_operands (stmt, gimple_op_ptr (stmt, 0), opf_def);
+      start = 1;
+      /* FALLTHRU */
+
+    default:
+    do_default:
+      n = gimple_num_ops (stmt);
+      for (i = start; i < n; i++)
+	get_expr_operands (stmt, gimple_op_ptr (stmt, i), opf_use);
+      break;
     }
 }
 
@@ -1464,18 +1475,19 @@ unlink_stmt_vdef (gimple stmt)
   imm_use_iterator iter;
   gimple use_stmt;
   tree vdef = gimple_vdef (stmt);
+  tree vuse = gimple_vuse (stmt);
 
   if (!vdef
       || TREE_CODE (vdef) != SSA_NAME)
     return;
 
-  FOR_EACH_IMM_USE_STMT (use_stmt, iter, gimple_vdef (stmt))
+  FOR_EACH_IMM_USE_STMT (use_stmt, iter, vdef)
     {
       FOR_EACH_IMM_USE_ON_STMT (use_p, iter)
-	SET_USE (use_p, gimple_vuse (stmt));
+	SET_USE (use_p, vuse);
     }
 
-  if (SSA_NAME_OCCURS_IN_ABNORMAL_PHI (gimple_vdef (stmt)))
-    SSA_NAME_OCCURS_IN_ABNORMAL_PHI (gimple_vuse (stmt)) = 1;
+  if (SSA_NAME_OCCURS_IN_ABNORMAL_PHI (vdef))
+    SSA_NAME_OCCURS_IN_ABNORMAL_PHI (vuse) = 1;
 }
 

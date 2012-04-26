@@ -636,6 +636,7 @@ func init() {
 		// 64-bit system; clear uintptr tests
 		hammer32[2].f = nil
 		hammer32[5].f = nil
+		hammer32[6].f = nil
 	}
 }
 
@@ -760,6 +761,7 @@ func init() {
 		// 32-bit system; clear uintptr tests
 		hammer64[2].f = nil
 		hammer64[5].f = nil
+		hammer64[6].f = nil
 	}
 }
 
@@ -1010,6 +1012,10 @@ func TestHammerStoreLoad(t *testing.T) {
 }
 
 func TestStoreLoadSeqCst32(t *testing.T) {
+	if runtime.NumCPU() == 1 {
+		t.Logf("Skipping test on %v processor machine", runtime.NumCPU())
+		return
+	}
 	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(4))
 	N := int32(1e3)
 	if testing.Short() {
@@ -1037,7 +1043,7 @@ func TestStoreLoadSeqCst32(t *testing.T) {
 				if my != i && his != i {
 					t.Fatalf("store/load are not sequentially consistent: %d/%d (%d)", my, his, i)
 				}
-				ack[me][(i-1)%3] = -1
+				StoreInt32(&ack[me][(i-1)%3], -1)
 			}
 			c <- true
 		}(p)
@@ -1047,6 +1053,10 @@ func TestStoreLoadSeqCst32(t *testing.T) {
 }
 
 func TestStoreLoadSeqCst64(t *testing.T) {
+	if runtime.NumCPU() == 1 {
+		t.Logf("Skipping test on %v processor machine", runtime.NumCPU())
+		return
+	}
 	if test64err != nil {
 		t.Logf("Skipping 64-bit tests: %v", test64err)
 		return
@@ -1078,7 +1088,7 @@ func TestStoreLoadSeqCst64(t *testing.T) {
 				if my != i && his != i {
 					t.Fatalf("store/load are not sequentially consistent: %d/%d (%d)", my, his, i)
 				}
-				ack[me][(i-1)%3] = -1
+				StoreInt64(&ack[me][(i-1)%3], -1)
 			}
 			c <- true
 		}(p)
@@ -1088,6 +1098,10 @@ func TestStoreLoadSeqCst64(t *testing.T) {
 }
 
 func TestStoreLoadRelAcq32(t *testing.T) {
+	if runtime.NumCPU() == 1 {
+		t.Logf("Skipping test on %v processor machine", runtime.NumCPU())
+		return
+	}
 	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(4))
 	N := int32(1e3)
 	if testing.Short() {
@@ -1130,6 +1144,10 @@ func TestStoreLoadRelAcq32(t *testing.T) {
 }
 
 func TestStoreLoadRelAcq64(t *testing.T) {
+	if runtime.NumCPU() == 1 {
+		t.Logf("Skipping test on %v processor machine", runtime.NumCPU())
+		return
+	}
 	if test64err != nil {
 		t.Logf("Skipping 64-bit tests: %v", test64err)
 		return

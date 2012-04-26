@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -549,10 +549,7 @@ package body Exp_Ch3 is
                 Name       => Comp,
                 Expression =>
                   Convert_To (Comp_Type,
-                    Expression
-                      (Get_Rep_Item_For_Entity
-                        (First_Subtype (A_Type),
-                         Name_Default_Component_Value)))));
+                    Default_Aspect_Component_Value (First_Subtype (A_Type)))));
 
          elsif Needs_Simple_Initialization (Comp_Type) then
             Set_Assignment_OK (Comp);
@@ -4823,6 +4820,17 @@ package body Exp_Ch3 is
                       Subtype_Mark        => New_Occurrence_Of (Typ, Loc),
                       Name => Convert_Tag_To_Interface (Typ, Tag_Comp)));
 
+                  --  If the original entity comes from source, then mark the
+                  --  new entity as needing debug information, even though it's
+                  --  defined by a generated renaming that does not come from
+                  --  source, so that Materialize_Entity will be set on the
+                  --  entity when Debug_Renaming_Declaration is called during
+                  --  analysis.
+
+                  if Comes_From_Source (Def_Id) then
+                     Set_Debug_Info_Needed (Defining_Identifier (N));
+                  end if;
+
                   Analyze (N, Suppress => All_Checks);
 
                   --  Replace internal identifier of rewritten node by the
@@ -4832,10 +4840,12 @@ package body Exp_Ch3 is
                   --  object renaming declaration ---because these identifiers
                   --  were previously added by Enter_Name to the current scope.
                   --  We must preserve the homonym chain of the source entity
-                  --  as well.
+                  --  as well. We must also preserve the kind of the entity,
+                  --  which may be a constant.
 
                   Set_Chars (Defining_Identifier (N), Chars (Def_Id));
                   Set_Homonym (Defining_Identifier (N), Homonym (Def_Id));
+                  Set_Ekind (Defining_Identifier (N), Ekind (Def_Id));
                   Exchange_Entities (Defining_Identifier (N), Def_Id);
                end;
             end if;
@@ -5066,7 +5076,7 @@ package body Exp_Ch3 is
             --  renaming that does not come from source.
 
             if Comes_From_Source (Defining_Identifier (N)) then
-               Set_Needs_Debug_Info (Defining_Identifier (N));
+               Set_Debug_Info_Needed (Defining_Identifier (N));
             end if;
 
             --  Now call the routine to generate debug info for the renaming
@@ -6118,9 +6128,8 @@ package body Exp_Ch3 is
 
       --  This is done unconditionally to ensure that tools can be linked
       --  properly with user programs compiled with older language versions.
-      --  It might be worth including a switch to revert to a non-composable
-      --  equality for untagged records, even though no program depending on
-      --  non-composability has surfaced ???
+      --  In addition, this is needed because "=" composes for bounded strings
+      --  in all language versions (see Exp_Ch4.Expand_Composite_Equality).
 
       elsif Comes_From_Source (Def_Id)
         and then Convention (Def_Id) = Convention_Ada
@@ -6853,14 +6862,17 @@ package body Exp_Ch3 is
 
          return Result;
 
-      --  Scalars with Default_Value aspect
+      --  Scalars with Default_Value aspect. The first subtype may now be
+      --   private, so retrieve value from underlying type.
 
       elsif Is_Scalar_Type (T) and then Has_Default_Aspect (T) then
-         return
-           Convert_To (T,
-             Expression
-               (Get_Rep_Item_For_Entity
-                 (First_Subtype (T), Name_Default_Value)));
+         if Is_Private_Type (First_Subtype (T)) then
+            return Unchecked_Convert_To (T,
+              Default_Aspect_Value (Full_View (First_Subtype (T))));
+         else
+            return
+              Convert_To (T, Default_Aspect_Value (First_Subtype (T)));
+         end if;
 
       --  Otherwise, for scalars, we must have normalize/initialize scalars
       --  case, or if the node N is an 'Invalid_Value attribute node.

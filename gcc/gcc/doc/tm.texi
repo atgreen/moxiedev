@@ -387,12 +387,6 @@ the effect you need.  Overriding this macro may be avoidable by overriding
 @code{LINK_GCC_C_SEQUENCE_SPEC} instead.
 @end defmac
 
-@defmac LINK_ELIMINATE_DUPLICATE_LDIRECTORIES
-A nonzero value causes @command{collect2} to remove duplicate @option{-L@var{directory}} search
-directories from linking commands.  Do not give it a nonzero value if
-removing duplicate search directories changes the linker's semantics.
-@end defmac
-
 @deftypevr {Common Target Hook} bool TARGET_ALWAYS_STRIP_DOTDOT
 True if @file{..} components should always be removed from directory names computed relative to GCC's internal directories, false (default) if such components should be preserved and directory names containing them passed to other tools such as the linker.
 @end deftypevr
@@ -1646,6 +1640,18 @@ crash on startup.
 
 If you don't define this macro, the default is @code{"long unsigned
 int"}.
+@end defmac
+
+@defmac SIZETYPE
+GCC defines internal types (@code{sizetype}, @code{ssizetype},
+@code{bitsizetype} and @code{sbitsizetype}) for expressions
+dealing with size.  This macro is a C expression for a string describing
+the name of the data type from which the precision of @code{sizetype}
+is extracted.
+
+The string has the same restrictions as @code{SIZE_TYPE} string.
+
+If you don't define this macro, the default is @code{SIZE_TYPE}.
 @end defmac
 
 @defmac PTRDIFF_TYPE
@@ -5629,6 +5635,11 @@ references inside an @code{UNSPEC} rtx to represent PIC or similar
 addressing modes.  This target hook allows GCC's optimizers to understand
 the semantics of these opaque @code{UNSPEC}s by converting them back
 into their original form.
+@end deftypefn
+
+@deftypefn {Target Hook} bool TARGET_CONST_NOT_OK_FOR_DEBUG_P (rtx @var{x})
+This hook should return true if @var{x} should not be emitted into
+debug sections.
 @end deftypefn
 
 @deftypefn {Target Hook} bool TARGET_CANNOT_FORCE_CONST_MEM (enum machine_mode @var{mode}, rtx @var{x})
@@ -10753,10 +10764,6 @@ Define this macro if macros should be expanded in the
 arguments of @samp{#pragma pack}.
 @end defmac
 
-@deftypevr {Target Hook} bool TARGET_HANDLE_PRAGMA_EXTERN_PREFIX
-True if @code{#pragma extern_prefix} is to be supported.
-@end deftypevr
-
 @defmac TARGET_DEFAULT_PACK_STRUCT
 If your target requires a structure packing default other than 0 (meaning
 the machine default), define this macro to the necessary value (in bytes).
@@ -11354,3 +11361,7 @@ value of @code{TARGET_CONST_ANCHOR} is a power of 2.  For example, on
 MIPS, where add-immediate takes a 16-bit signed value,
 @code{TARGET_CONST_ANCHOR} is set to @samp{0x8000}.  The default value
 is zero, which disables this optimization.  @end deftypevr
+
+@deftypevr {Target Hook} {unsigned char} TARGET_ATOMIC_TEST_AND_SET_TRUEVAL
+This value should be set if the result written by @code{atomic_test_and_set} is not exactly 1, i.e. the @code{bool} @code{true}.
+@end deftypevr

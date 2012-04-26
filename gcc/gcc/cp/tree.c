@@ -1,6 +1,7 @@
 /* Language-dependent node constructors for parse phase of GNU compiler.
    Copyright (C) 1987, 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011,
+   2012
    Free Software Foundation, Inc.
    Hacked by Michael Tiemann (tiemann@cygnus.com)
 
@@ -150,8 +151,14 @@ lvalue_kind (const_tree ref)
       /* A scope ref in a template, left as SCOPE_REF to support later
 	 access checking.  */
     case SCOPE_REF:
-      gcc_assert (!type_dependent_expression_p (CONST_CAST_TREE(ref)));
-      return lvalue_kind (TREE_OPERAND (ref, 1));
+      gcc_assert (!type_dependent_expression_p (CONST_CAST_TREE (ref)));
+      {
+	tree op = TREE_OPERAND (ref, 1);
+	if (TREE_CODE (op) == FIELD_DECL)
+	  return (DECL_C_BIT_FIELD (op) ? clk_bitfield : clk_ordinary);
+	else
+	  return lvalue_kind (op);
+      }
 
     case MAX_EXPR:
     case MIN_EXPR:
@@ -272,6 +279,14 @@ lvalue_or_rvalue_with_address_p (const_tree ref)
     return false;
   else
     return (kind != clk_none);
+}
+
+/* Returns true if REF is an xvalue, false otherwise.  */
+
+bool
+xvalue_p (const_tree ref)
+{
+  return (lvalue_kind (ref) == clk_rvalueref);
 }
 
 /* Test whether DECL is a builtin that may appear in a
@@ -1228,12 +1243,11 @@ copy_binfo (tree binfo, tree type, tree t, tree *igo_prev, int virt)
   TREE_CHAIN (*igo_prev) = new_binfo;
   *igo_prev = new_binfo;
 
-  if (binfo)
+  if (binfo && !BINFO_DEPENDENT_BASE_P (binfo))
     {
       int ix;
       tree base_binfo;
 
-      gcc_assert (!BINFO_DEPENDENT_BASE_P (binfo));
       gcc_assert (SAME_BINFO_TYPE_P (BINFO_TYPE (binfo), type));
 
       BINFO_OFFSET (new_binfo) = BINFO_OFFSET (binfo);
@@ -1246,8 +1260,6 @@ copy_binfo (tree binfo, tree type, tree t, tree *igo_prev, int virt)
       for (ix = 0; BINFO_BASE_ITERATE (binfo, ix, base_binfo); ix++)
 	{
 	  tree new_base_binfo;
-
-	  gcc_assert (!BINFO_DEPENDENT_BASE_P (base_binfo));
 	  new_base_binfo = copy_binfo (base_binfo, BINFO_TYPE (base_binfo),
 				       t, igo_prev,
 				       BINFO_VIRTUAL_P (base_binfo));
@@ -1523,6 +1535,24 @@ build_overload (tree decl, tree chain)
   if (! chain && TREE_CODE (decl) != TEMPLATE_DECL)
     return decl;
   return ovl_cons (decl, chain);
+}
+
+/* Return the scope where the overloaded functions OVL were found.  */
+
+tree
+ovl_scope (tree ovl)
+{
+  if (TREE_CODE (ovl) == OFFSET_REF
+      || TREE_CODE (ovl) == COMPONENT_REF)
+    ovl = TREE_OPERAND (ovl, 1);
+  if (TREE_CODE (ovl) == BASELINK)
+    return BINFO_TYPE (BASELINK_BINFO (ovl));
+  if (TREE_CODE (ovl) == TEMPLATE_ID_EXPR)
+    ovl = TREE_OPERAND (ovl, 0);
+  /* Skip using-declarations.  */
+  while (TREE_CODE (ovl) == OVERLOAD && OVL_USED (ovl) && OVL_CHAIN (ovl))
+    ovl = OVL_CHAIN (ovl);
+  return CP_DECL_CONTEXT (OVL_CURRENT (ovl));
 }
 
 /* Return TRUE if FN is a non-static member function, FALSE otherwise.
@@ -2156,6 +2186,33 @@ decl_anon_ns_mem_p (const_tree decl)
     }
 }
 
+/* Subroutine of cp_tree_equal: t1 and t2 are the CALL_EXPR_FNs of two
+   CALL_EXPRS.  Return whether they are equivalent.  */
+
+static bool
+called_fns_equal (tree t1, tree t2)
+{
+  /* Core 1321: dependent names are equivalent even if the overload sets
+     are different.  But do compare explicit template arguments.  */
+  tree name1 = dependent_name (t1);
+  tree name2 = dependent_name (t2);
+  if (name1 || name2)
+    {
+      tree targs1 = NULL_TREE, targs2 = NULL_TREE;
+
+      if (name1 != name2)
+	return false;
+
+      if (TREE_CODE (t1) == TEMPLATE_ID_EXPR)
+	targs1 = TREE_OPERAND (t1, 1);
+      if (TREE_CODE (t2) == TEMPLATE_ID_EXPR)
+	targs2 = TREE_OPERAND (t2, 1);
+      return cp_tree_equal (targs1, targs2);
+    }
+  else
+    return cp_tree_equal (t1, t2);
+}
+
 /* Return truthvalue of whether T1 is the same tree structure as T2.
    Return 1 if they are the same. Return 0 if they are different.  */
 
@@ -2243,12 +2300,7 @@ cp_tree_equal (tree t1, tree t2)
       {
 	tree arg1, arg2;
 	call_expr_arg_iterator iter1, iter2;
-	/* Core 1321: dependent names are equivalent even if the
-	   overload sets are different.  */
-	tree name1 = dependent_name (CALL_EXPR_FN (t1));
-	tree name2 = dependent_name (CALL_EXPR_FN (t2));
-	if (!(name1 && name2 && name1 == name2)
-	    && !cp_tree_equal (CALL_EXPR_FN (t1), CALL_EXPR_FN (t2)))
+	if (!called_fns_equal (CALL_EXPR_FN (t1), CALL_EXPR_FN (t2)))
 	  return false;
 	for (arg1 = first_call_expr_arg (t1, &iter1),
 	       arg2 = first_call_expr_arg (t2, &iter2);
@@ -2336,26 +2388,18 @@ cp_tree_equal (tree t1, tree t2)
 			      TREE_TYPE (TEMPLATE_PARM_DECL (t2))));
 
     case TEMPLATE_ID_EXPR:
+      return (cp_tree_equal (TREE_OPERAND (t1, 0), TREE_OPERAND (t2, 0))
+	      && cp_tree_equal (TREE_OPERAND (t1, 1), TREE_OPERAND (t2, 1)));
+
+    case TREE_VEC:
       {
 	unsigned ix;
-	tree vec1, vec2;
-
-	if (!cp_tree_equal (TREE_OPERAND (t1, 0), TREE_OPERAND (t2, 0)))
+	if (TREE_VEC_LENGTH (t1) != TREE_VEC_LENGTH (t2))
 	  return false;
-	vec1 = TREE_OPERAND (t1, 1);
-	vec2 = TREE_OPERAND (t2, 1);
-
-	if (!vec1 || !vec2)
-	  return !vec1 && !vec2;
-
-	if (TREE_VEC_LENGTH (vec1) != TREE_VEC_LENGTH (vec2))
-	  return false;
-
-	for (ix = TREE_VEC_LENGTH (vec1); ix--;)
-	  if (!cp_tree_equal (TREE_VEC_ELT (vec1, ix),
-			      TREE_VEC_ELT (vec2, ix)))
+	for (ix = TREE_VEC_LENGTH (t1); ix--;)
+	  if (!cp_tree_equal (TREE_VEC_ELT (t1, ix),
+			      TREE_VEC_ELT (t2, ix)))
 	    return false;
-
 	return true;
       }
 
@@ -3464,7 +3508,7 @@ cp_fix_function_decl_p (tree decl)
       /* Don't fix same_body aliases.  Although they don't have their own
 	 CFG, they share it with what they alias to.  */
       if (!node || !node->alias
-	  || !VEC_length (ipa_ref_t, node->ref_list.references))
+	  || !VEC_length (ipa_ref_t, node->symbol.ref_list.references))
 	return true;
     }
 

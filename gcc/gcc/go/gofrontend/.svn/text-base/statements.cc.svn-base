@@ -1013,7 +1013,7 @@ Tuple_assignment_statement::do_lower(Gogo*, Named_object*, Block* enclosing,
       b->add_statement(s);
       ++ptemp;
     }
-  go_assert(ptemp == temps.end());
+  go_assert(ptemp == temps.end() || saw_errors());
 
   return Statement::make_block_statement(b, loc);
 }
@@ -3214,10 +3214,9 @@ class Case_clauses::Hash_integer_value
 size_t
 Case_clauses::Hash_integer_value::operator()(Expression* pe) const
 {
-  Type* itype;
+  Numeric_constant nc;
   mpz_t ival;
-  mpz_init(ival);
-  if (!pe->integer_constant_value(true, ival, &itype))
+  if (!pe->numeric_constant_value(&nc) || !nc.to_int(&ival))
     go_unreachable();
   size_t ret = mpz_get_ui(ival);
   mpz_clear(ival);
@@ -3236,14 +3235,14 @@ class Case_clauses::Eq_integer_value
 bool
 Case_clauses::Eq_integer_value::operator()(Expression* a, Expression* b) const
 {
-  Type* atype;
-  Type* btype;
+  Numeric_constant anc;
   mpz_t aval;
+  Numeric_constant bnc;
   mpz_t bval;
-  mpz_init(aval);
-  mpz_init(bval);
-  if (!a->integer_constant_value(true, aval, &atype)
-      || !b->integer_constant_value(true, bval, &btype))
+  if (!a->numeric_constant_value(&anc)
+      || !anc.to_int(&aval)
+      || !b->numeric_constant_value(&bnc)
+      || !bnc.to_int(&bval))
     go_unreachable();
   bool ret = mpz_cmp(aval, bval) == 0;
   mpz_clear(aval);
@@ -3431,18 +3430,17 @@ Case_clauses::Case_clause::get_backend(Translate_context* context,
 	  Expression* e = *p;
 	  if (e->classification() != Expression::EXPRESSION_INTEGER)
 	    {
-	      Type* itype;
+	      Numeric_constant nc;
 	      mpz_t ival;
-	      mpz_init(ival);
-	      if (!(*p)->integer_constant_value(true, ival, &itype))
+	      if (!(*p)->numeric_constant_value(&nc) || !nc.to_int(&ival))
 		{
 		  // Something went wrong.  This can happen with a
 		  // negative constant and an unsigned switch value.
 		  go_assert(saw_errors());
 		  continue;
 		}
-	      go_assert(itype != NULL);
-	      e = Expression::make_integer(&ival, itype, e->location());
+	      go_assert(nc.type() != NULL);
+	      e = Expression::make_integer(&ival, nc.type(), e->location());
 	      mpz_clear(ival);
 	    }
 
@@ -3452,7 +3450,7 @@ Case_clauses::Case_clause::get_backend(Translate_context* context,
 	    {
 	      // Value was already present.
 	      error_at(this->location_, "duplicate case in switch");
-	      continue;
+	      e = Expression::make_error(this->location_);
 	    }
 
 	  tree case_tree = e->get_tree(context);
@@ -3940,7 +3938,8 @@ Type_case_clauses::Type_case_clause::traverse(Traverse* traverse)
 // statements.
 
 void
-Type_case_clauses::Type_case_clause::lower(Block* b,
+Type_case_clauses::Type_case_clause::lower(Type* switch_val_type,
+					   Block* b,
 					   Temporary_statement* descriptor_temp,
 					   Unnamed_label* break_label,
 					   Unnamed_label** stmts_label) const
@@ -3951,6 +3950,20 @@ Type_case_clauses::Type_case_clause::lower(Block* b,
   if (!this->is_default_)
     {
       Type* type = this->type_;
+
+      std::string reason;
+      if (switch_val_type->interface_type() != NULL
+	  && !type->is_nil_constant_as_type()
+	  && type->interface_type() == NULL
+	  && !switch_val_type->interface_type()->implements_interface(type,
+								      &reason))
+	{
+	  if (reason.empty())
+	    error_at(this->location_, "impossible type switch case");
+	  else
+	    error_at(this->location_, "impossible type switch case (%s)",
+		     reason.c_str());
+	}
 
       Expression* ref = Expression::make_temporary_reference(descriptor_temp,
 							     loc);
@@ -4102,7 +4115,8 @@ Type_case_clauses::check_duplicates() const
 // BREAK_LABEL is the label at the end of the type switch.
 
 void
-Type_case_clauses::lower(Block* b, Temporary_statement* descriptor_temp,
+Type_case_clauses::lower(Type* switch_val_type, Block* b,
+			 Temporary_statement* descriptor_temp,
 			 Unnamed_label* break_label) const
 {
   const Type_case_clause* default_case = NULL;
@@ -4113,7 +4127,8 @@ Type_case_clauses::lower(Block* b, Temporary_statement* descriptor_temp,
        ++p)
     {
       if (!p->is_default())
-	p->lower(b, descriptor_temp, break_label, &stmts_label);
+	p->lower(switch_val_type, b, descriptor_temp, break_label,
+		 &stmts_label);
       else
 	{
 	  // We are generating a series of tests, which means that we
@@ -4124,7 +4139,8 @@ Type_case_clauses::lower(Block* b, Temporary_statement* descriptor_temp,
   go_assert(stmts_label == NULL);
 
   if (default_case != NULL)
-    default_case->lower(b, descriptor_temp, break_label, NULL);
+    default_case->lower(switch_val_type, b, descriptor_temp, break_label,
+			NULL);
 }
 
 // Dump the AST representation for case clauses (from a switch statement)
@@ -4222,7 +4238,7 @@ Type_switch_statement::do_lower(Gogo*, Named_object*, Block* enclosing,
     }
 
   if (this->clauses_ != NULL)
-    this->clauses_->lower(b, descriptor_temp, this->break_label());
+    this->clauses_->lower(val_type, b, descriptor_temp, this->break_label());
 
   Statement* s = Statement::make_unnamed_label_statement(this->break_label_);
   b->add_statement(s);
@@ -5194,7 +5210,7 @@ For_range_statement::do_lower(Gogo* gogo, Named_object*, Block* enclosing,
   else if (range_type->is_string_type())
     {
       index_type = Type::lookup_integer_type("int");
-      value_type = index_type;
+      value_type = Type::lookup_integer_type("int32");
     }
   else if (range_type->map_type() != NULL)
     {

@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -2196,19 +2196,26 @@ package body Sem_Ch3 is
                Spec := Specification (Original_Node (Decl));
                Sent := Defining_Unit_Name (Spec);
 
+               --  Analyze preconditions and postconditions
+
                Prag := Spec_PPC_List (Contract (Sent));
                while Present (Prag) loop
                   Analyze_PPC_In_Decl_Part (Prag, Sent);
                   Prag := Next_Pragma (Prag);
                end loop;
 
-               Check_Subprogram_Contract (Sent);
+               --  Analyze contract-cases and test-cases
 
-               Prag := Spec_TC_List (Contract (Sent));
+               Prag := Spec_CTC_List (Contract (Sent));
                while Present (Prag) loop
-                  Analyze_TC_In_Decl_Part (Prag, Sent);
+                  Analyze_CTC_In_Decl_Part (Prag, Sent);
                   Prag := Next_Pragma (Prag);
                end loop;
+
+               --  At this point, entities have been attached to identifiers.
+               --  This is required to be able to detect suspicious contracts.
+
+               Check_Subprogram_Contract (Sent);
             end if;
 
             Next (Decl);
@@ -2993,6 +3000,8 @@ package body Sem_Ch3 is
          end if;
       end if;
 
+      --  Object is marked pure if it is in a pure scope
+
       Set_Is_Pure (Id, Is_Pure (Current_Scope));
 
       --  If deferred constant, make sure context is appropriate. We detect
@@ -3160,6 +3169,24 @@ package body Sem_Ch3 is
 
          Set_Etype (Id, T);
          Resolve (E, T);
+
+         --  No further action needed if E is a call to an inlined function
+         --  which returns an unconstrained type and it has been expanded into
+         --  a procedure call. In that case N has been replaced by an object
+         --  declaration without initializing expression and it has been
+         --  analyzed (see Expand_Inlined_Call).
+
+         if Debug_Flag_Dot_K
+           and then Expander_Active
+           and then Nkind (E) = N_Function_Call
+           and then Nkind (Name (E)) in N_Has_Entity
+           and then Is_Inlined (Entity (Name (E)))
+           and then not Is_Constrained (Etype (E))
+           and then Analyzed (N)
+           and then No (Expression (N))
+         then
+            return;
+         end if;
 
          --  If E is null and has been replaced by an N_Raise_Constraint_Error
          --  node (which was marked already-analyzed), we need to set the type
@@ -3546,6 +3573,14 @@ package body Sem_Ch3 is
       --  Now we can set the type of the object
 
       Set_Etype (Id, Act_T);
+
+      --  Object is marked to be treated as volatile if type is volatile and
+      --  we clear the Current_Value setting that may have been set above.
+
+      if Treat_As_Volatile (Etype (Id)) then
+         Set_Treat_As_Volatile (Id);
+         Set_Current_Value (Id, Empty);
+      end if;
 
       --  Deal with controlled types
 
@@ -7718,21 +7753,27 @@ package body Sem_Ch3 is
 
       if Is_Record_Type (Derived_Type) then
 
-         --  Ekind (Parent_Base) is not necessarily E_Record_Type since
-         --  Parent_Base can be a private type or private extension.
+         declare
+            Parent_Full : Entity_Id;
 
-         if Present (Full_View (Parent_Base)) then
+         begin
+            --  Ekind (Parent_Base) is not necessarily E_Record_Type since
+            --  Parent_Base can be a private type or private extension. Go
+            --  to the full view here to get the E_Record_Type specific flags.
+
+            if Present (Full_View (Parent_Base)) then
+               Parent_Full := Full_View (Parent_Base);
+            else
+               Parent_Full := Parent_Base;
+            end if;
+
             Set_OK_To_Reorder_Components
-              (Derived_Type,
-               OK_To_Reorder_Components (Full_View (Parent_Base)));
+              (Derived_Type, OK_To_Reorder_Components (Parent_Full));
             Set_Reverse_Bit_Order
-              (Derived_Type, Reverse_Bit_Order (Full_View (Parent_Base)));
-         else
-            Set_OK_To_Reorder_Components
-              (Derived_Type, OK_To_Reorder_Components (Parent_Base));
-            Set_Reverse_Bit_Order
-              (Derived_Type, Reverse_Bit_Order (Parent_Base));
-         end if;
+              (Derived_Type, Reverse_Bit_Order (Parent_Full));
+            Set_Reverse_Storage_Order
+              (Derived_Type, Reverse_Storage_Order (Parent_Full));
+         end;
       end if;
 
       --  Direct controlled types do not inherit Finalize_Storage_Only flag
@@ -8897,17 +8938,27 @@ package body Sem_Ch3 is
       procedure Check_Pragma_Implemented (Subp : Entity_Id) is
          Iface_Alias : constant Entity_Id := Interface_Alias (Subp);
          Impl_Kind   : constant Name_Id   := Implementation_Kind (Iface_Alias);
+         Subp_Alias  : constant Entity_Id := Alias (Subp);
          Contr_Typ   : Entity_Id;
+         Impl_Subp   : Entity_Id;
 
       begin
          --  Subp must have an alias since it is a hidden entity used to link
          --  an interface subprogram to its overriding counterpart.
 
-         pragma Assert (Present (Alias (Subp)));
+         pragma Assert (Present (Subp_Alias));
+
+         --  Handle aliases to synchronized wrappers
+
+         Impl_Subp := Subp_Alias;
+
+         if Is_Primitive_Wrapper (Impl_Subp) then
+            Impl_Subp := Wrapped_Entity (Impl_Subp);
+         end if;
 
          --  Extract the type of the controlling formal
 
-         Contr_Typ := Etype (First_Formal (Alias (Subp)));
+         Contr_Typ := Etype (First_Formal (Subp_Alias));
 
          if Is_Concurrent_Record_Type (Contr_Typ) then
             Contr_Typ := Corresponding_Concurrent_Type (Contr_Typ);
@@ -8917,12 +8968,12 @@ package body Sem_Ch3 is
          --  be implemented by an entry.
 
          if Impl_Kind = Name_By_Entry
-           and then Ekind (Wrapped_Entity (Alias (Subp))) /= E_Entry
+           and then Ekind (Impl_Subp) /= E_Entry
          then
             Error_Msg_Node_2 := Iface_Alias;
             Error_Msg_NE
               ("type & must implement abstract subprogram & with an entry",
-               Alias (Subp), Contr_Typ);
+               Subp_Alias, Contr_Typ);
 
          elsif Impl_Kind = Name_By_Protected_Procedure then
 
@@ -8934,19 +8985,17 @@ package body Sem_Ch3 is
                Error_Msg_Node_2 := Contr_Typ;
                Error_Msg_NE
                  ("interface subprogram & cannot be implemented by a " &
-                  "primitive procedure of task type &", Alias (Subp),
+                  "primitive procedure of task type &", Subp_Alias,
                   Iface_Alias);
 
             --  An interface subprogram whose implementation kind is By_
             --  Protected_Procedure must be implemented by a procedure.
 
-            elsif Is_Primitive_Wrapper (Alias (Subp))
-              and then Ekind (Wrapped_Entity (Alias (Subp))) /= E_Procedure
-            then
+            elsif Ekind (Impl_Subp) /= E_Procedure then
                Error_Msg_Node_2 := Iface_Alias;
                Error_Msg_NE
                  ("type & must implement abstract subprogram & with a " &
-                  "procedure", Alias (Subp), Contr_Typ);
+                  "procedure", Subp_Alias, Contr_Typ);
             end if;
          end if;
       end Check_Pragma_Implemented;
@@ -8966,10 +9015,11 @@ package body Sem_Ch3 is
          --  Ada 2012 (AI05-0030): The implementation kinds of an overridden
          --  and overriding subprogram are different. In general this is an
          --  error except when the implementation kind of the overridden
-         --  subprograms is By_Any.
+         --  subprograms is By_Any or Optional.
 
          if Iface_Kind /= Subp_Kind
            and then Iface_Kind /= Name_By_Any
+           and then Iface_Kind /= Name_Optional
          then
             if Iface_Kind = Name_By_Entry then
                Error_Msg_N
@@ -14949,7 +14999,15 @@ package body Sem_Ch3 is
             then
                Set_Ekind (Id, Ekind (Prev));         --  will be reset later
                Set_Class_Wide_Type (Id, Class_Wide_Type (Prev));
-               Set_Etype (Class_Wide_Type (Id), Id);
+
+               --  If the incomplete type is completed by a private declaration
+               --  the class-wide type remains associated with the incomplete
+               --  type, to prevent order-of-elaboration issues in gigi, else
+               --  we associate the class-wide type with the known full view.
+
+               if Nkind (N) /= N_Private_Type_Declaration then
+                  Set_Etype (Class_Wide_Type (Id), Id);
+               end if;
             end if;
 
          --  Case of full declaration of private type
@@ -15549,12 +15607,35 @@ package body Sem_Ch3 is
       Typ_For_Constraint : Entity_Id;
       Constraint         : Elist_Id) return Node_Id
    is
+      function Root_Corresponding_Discriminant
+        (Discr : Entity_Id) return Entity_Id;
+      --  Given a discriminant, traverse the chain of inherited discriminants
+      --  and return the topmost discriminant.
+
       function Search_Derivation_Levels
         (Ti                    : Entity_Id;
          Discrim_Values        : Elist_Id;
          Stored_Discrim_Values : Boolean) return Node_Or_Entity_Id;
       --  This is the routine that performs the recursive search of levels
       --  as described above.
+
+      -------------------------------------
+      -- Root_Corresponding_Discriminant --
+      -------------------------------------
+
+      function Root_Corresponding_Discriminant
+        (Discr : Entity_Id) return Entity_Id
+      is
+         D : Entity_Id;
+
+      begin
+         D := Discr;
+         while Present (Corresponding_Discriminant (D)) loop
+            D := Corresponding_Discriminant (D);
+         end loop;
+
+         return D;
+      end Root_Corresponding_Discriminant;
 
       ------------------------------
       -- Search_Derivation_Levels --
@@ -15730,7 +15811,7 @@ package body Sem_Ch3 is
 
       --  ??? hack to disappear when this routine is gone
 
-      if  Nkind (Result) = N_Defining_Identifier then
+      if Nkind (Result) = N_Defining_Identifier then
          declare
             D : Entity_Id;
             E : Elmt_Id;
@@ -15739,7 +15820,7 @@ package body Sem_Ch3 is
             D := First_Discriminant (Typ_For_Constraint);
             E := First_Elmt (Constraint);
             while Present (D) loop
-               if Corresponding_Discriminant (D) = Discriminant then
+               if Root_Corresponding_Discriminant (D) = Discriminant then
                   return Node (E);
                end if;
 
@@ -16789,6 +16870,21 @@ package body Sem_Ch3 is
    --  Start of processing for Modular_Type_Declaration
 
    begin
+      --  If the mod expression is (exactly) 2 * literal, where literal is
+      --  64 or less,then almost certainly the * was meant to be **. Warn!
+
+      if Warn_On_Suspicious_Modulus_Value
+        and then Nkind (Mod_Expr) = N_Op_Multiply
+        and then Nkind (Left_Opnd (Mod_Expr)) = N_Integer_Literal
+        and then Intval (Left_Opnd (Mod_Expr)) = Uint_2
+        and then Nkind (Right_Opnd (Mod_Expr)) = N_Integer_Literal
+        and then Intval (Right_Opnd (Mod_Expr)) <= Uint_64
+      then
+         Error_Msg_N ("suspicious MOD value, was '*'* intended'??", Mod_Expr);
+      end if;
+
+      --  Proceed with analysis of mod expression
+
       Analyze_And_Resolve (Mod_Expr, Any_Integer);
       Set_Etype (T, T);
       Set_Ekind (T, E_Modular_Integer_Type);
@@ -18161,7 +18257,7 @@ package body Sem_Ch3 is
 
       if Has_Predicates (Priv_T) then
          Set_Predicate_Function (Priv_T, Predicate_Function (Full_T));
-         Set_Has_Predicates (Priv_T);
+         Set_Has_Predicates (Full_T);
       end if;
    end Process_Full_View;
 

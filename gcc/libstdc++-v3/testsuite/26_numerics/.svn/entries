@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/26_numerics
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-11-12T15:57:03.405739Z
-181321
-redi
+2012-04-14T01:34:00.445268Z
+186445
+paolo
 
 
 
@@ -25,6 +25,21 @@ redi
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+complex
+dir
+
+headers
+dir
+
+inner_product
+dir
+
+iota
+dir
+
+slice_array
+dir
 
 slice
 dir
@@ -42,23 +57,5 @@ accumulate
 dir
 
 adjacent_difference
-dir
-
-complex
-dir
-
-headers
-dir
-
-inner_product
-dir
-
-iota
-dir
-
-cmath
-dir
-
-slice_array
 dir
 

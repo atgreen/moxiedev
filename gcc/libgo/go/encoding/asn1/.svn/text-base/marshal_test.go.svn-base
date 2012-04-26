@@ -7,6 +7,7 @@ package asn1
 import (
 	"bytes"
 	"encoding/hex"
+	"math/big"
 	"testing"
 	"time"
 )
@@ -18,6 +19,10 @@ type intStruct struct {
 type twoIntStruct struct {
 	A int
 	B int
+}
+
+type bigIntStruct struct {
+	A *big.Int
 }
 
 type nestedStruct struct {
@@ -49,6 +54,10 @@ type optionalRawValueTest struct {
 	A RawValue `asn1:"optional"`
 }
 
+type omitEmptyTest struct {
+	A []string `asn1:"omitempty"`
+}
+
 type testSET []int
 
 var PST = time.FixedZone("PST", -8*60*60)
@@ -65,6 +74,7 @@ var marshalTests = []marshalTest{
 	{-128, "020180"},
 	{-129, "0202ff7f"},
 	{intStruct{64}, "3003020140"},
+	{bigIntStruct{big.NewInt(0x123456)}, "30050203123456"},
 	{twoIntStruct{64, 65}, "3006020140020141"},
 	{nestedStruct{intStruct{127}}, "3005300302017f"},
 	{[]byte{1, 2, 3}, "0403010203"},
@@ -110,6 +120,8 @@ var marshalTests = []marshalTest{
 	{rawContentsStruct{[]byte{0x30, 3, 1, 2, 3}, 64}, "3003010203"},
 	{RawValue{Tag: 1, Class: 2, IsCompound: false, Bytes: []byte{1, 2, 3}}, "8103010203"},
 	{testSET([]int{10}), "310302010a"},
+	{omitEmptyTest{[]string{}}, "3000"},
+	{omitEmptyTest{[]string{"1"}}, "30053003130131"},
 }
 
 func TestMarshal(t *testing.T) {

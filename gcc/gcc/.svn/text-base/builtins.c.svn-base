@@ -1,7 +1,7 @@
 /* Expand builtin functions.
    Copyright (C) 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
+   2012 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -477,6 +477,35 @@ get_object_or_type_alignment (tree exp)
   return align;
 }
 
+/* For a pointer valued expression EXP compute values M and N such that
+   M divides (EXP - N) and such that N < M.  Store N in *BITPOSP and return M.
+
+   If EXP is not a pointer, 0 is returned.  */
+
+unsigned int
+get_pointer_alignment_1 (tree exp, unsigned HOST_WIDE_INT *bitposp)
+{
+  STRIP_NOPS (exp);
+
+  if (TREE_CODE (exp) == ADDR_EXPR)
+    return get_object_alignment_1 (TREE_OPERAND (exp, 0), bitposp);
+  else if (TREE_CODE (exp) == SSA_NAME
+	   && POINTER_TYPE_P (TREE_TYPE (exp)))
+    {
+      struct ptr_info_def *pi = SSA_NAME_PTR_INFO (exp);
+      if (!pi)
+	{
+	  *bitposp = 0;
+	  return BITS_PER_UNIT;
+	}
+      *bitposp = pi->misalign * BITS_PER_UNIT;
+      return pi->align * BITS_PER_UNIT;
+    }
+
+  *bitposp = 0;
+  return POINTER_TYPE_P (TREE_TYPE (exp)) ? BITS_PER_UNIT : 0;
+}
+
 /* Return the alignment in bits of EXP, a pointer valued expression.
    The alignment returned is, by default, the alignment of the thing that
    EXP points to.  If it is not a POINTER_TYPE, 0 is returned.
@@ -487,25 +516,18 @@ get_object_or_type_alignment (tree exp)
 unsigned int
 get_pointer_alignment (tree exp)
 {
-  STRIP_NOPS (exp);
+  unsigned HOST_WIDE_INT bitpos = 0;
+  unsigned int align;
+  
+  align = get_pointer_alignment_1 (exp, &bitpos);
 
-  if (TREE_CODE (exp) == ADDR_EXPR)
-    return get_object_alignment (TREE_OPERAND (exp, 0));
-  else if (TREE_CODE (exp) == SSA_NAME
-	   && POINTER_TYPE_P (TREE_TYPE (exp)))
-    {
-      struct ptr_info_def *pi = SSA_NAME_PTR_INFO (exp);
-      unsigned align;
-      if (!pi)
-	return BITS_PER_UNIT;
-      if (pi->misalign != 0)
-	align = (pi->misalign & -pi->misalign);
-      else
-	align = pi->align;
-      return align * BITS_PER_UNIT;
-    }
+  /* align and bitpos now specify known low bits of the pointer.
+     ptr & (align - 1) == bitpos.  */
 
-  return POINTER_TYPE_P (TREE_TYPE (exp)) ? BITS_PER_UNIT : 0;
+  if (bitpos != 0)
+    align = (bitpos & -bitpos);
+
+  return align;
 }
 
 /* Compute the length of a C string.  TREE_STRING_LENGTH is not the right
@@ -2591,8 +2613,8 @@ expand_builtin_cexpi (tree exp, rtx target)
 
       op1 = assign_temp (TREE_TYPE (arg), 0, 1, 1);
       op2 = assign_temp (TREE_TYPE (arg), 0, 1, 1);
-      op1a = copy_to_mode_reg (Pmode, XEXP (op1, 0));
-      op2a = copy_to_mode_reg (Pmode, XEXP (op2, 0));
+      op1a = copy_addr_to_reg (XEXP (op1, 0));
+      op2a = copy_addr_to_reg (XEXP (op2, 0));
       top1 = make_tree (build_pointer_type (TREE_TYPE (arg)), op1a);
       top2 = make_tree (build_pointer_type (TREE_TYPE (arg)), op2a);
 
@@ -2819,10 +2841,7 @@ expand_builtin_int_roundingfn_2 (tree exp, rtx target)
   tree fndecl = get_callee_fndecl (exp);
   tree arg;
   enum machine_mode mode;
-
-  /* There's no easy way to detect the case we need to set EDOM.  */
-  if (flag_errno_math)
-    return NULL_RTX;
+  enum built_in_function fallback_fn = BUILT_IN_NONE;
 
   if (!validate_arglist (exp, REAL_TYPE, VOID_TYPE))
      gcc_unreachable ();
@@ -2832,46 +2851,78 @@ expand_builtin_int_roundingfn_2 (tree exp, rtx target)
   switch (DECL_FUNCTION_CODE (fndecl))
     {
     CASE_FLT_FN (BUILT_IN_IRINT):
+      fallback_fn = BUILT_IN_LRINT;
+      /* FALLTHRU */
     CASE_FLT_FN (BUILT_IN_LRINT):
     CASE_FLT_FN (BUILT_IN_LLRINT):
-      builtin_optab = lrint_optab; break;
+      builtin_optab = lrint_optab;
+      break;
 
     CASE_FLT_FN (BUILT_IN_IROUND):
+      fallback_fn = BUILT_IN_LROUND;
+      /* FALLTHRU */
     CASE_FLT_FN (BUILT_IN_LROUND):
     CASE_FLT_FN (BUILT_IN_LLROUND):
-      builtin_optab = lround_optab; break;
+      builtin_optab = lround_optab;
+      break;
 
     default:
       gcc_unreachable ();
     }
 
+  /* There's no easy way to detect the case we need to set EDOM.  */
+  if (flag_errno_math && fallback_fn == BUILT_IN_NONE)
+    return NULL_RTX;
+
   /* Make a suitable register to place result in.  */
   mode = TYPE_MODE (TREE_TYPE (exp));
 
-  target = gen_reg_rtx (mode);
-
-  /* Wrap the computation of the argument in a SAVE_EXPR, as we may
-     need to expand the argument again.  This way, we will not perform
-     side-effects more the once.  */
-  CALL_EXPR_ARG (exp, 0) = arg = builtin_save_expr (arg);
-
-  op0 = expand_expr (arg, NULL, VOIDmode, EXPAND_NORMAL);
-
-  start_sequence ();
-
-  if (expand_sfix_optab (target, op0, builtin_optab))
+  /* There's no easy way to detect the case we need to set EDOM.  */
+  if (!flag_errno_math)
     {
-      /* Output the entire sequence.  */
-      insns = get_insns ();
+      target = gen_reg_rtx (mode);
+
+      /* Wrap the computation of the argument in a SAVE_EXPR, as we may
+	 need to expand the argument again.  This way, we will not perform
+	 side-effects more the once.  */
+      CALL_EXPR_ARG (exp, 0) = arg = builtin_save_expr (arg);
+
+      op0 = expand_expr (arg, NULL, VOIDmode, EXPAND_NORMAL);
+
+      start_sequence ();
+
+      if (expand_sfix_optab (target, op0, builtin_optab))
+	{
+	  /* Output the entire sequence.  */
+	  insns = get_insns ();
+	  end_sequence ();
+	  emit_insn (insns);
+	  return target;
+	}
+
+      /* If we were unable to expand via the builtin, stop the sequence
+	 (without outputting the insns) and call to the library function
+	 with the stabilized argument list.  */
       end_sequence ();
-      emit_insn (insns);
-      return target;
     }
 
-  /* If we were unable to expand via the builtin, stop the sequence
-     (without outputting the insns) and call to the library function
-     with the stabilized argument list.  */
-  end_sequence ();
+  if (fallback_fn != BUILT_IN_NONE)
+    {
+      /* Fall back to rounding to long int.  Use implicit_p 0 - for non-C99
+	 targets, (int) round (x) should never be transformed into
+	 BUILT_IN_IROUND and if __builtin_iround is called directly, emit
+	 a call to lround in the hope that the target provides at least some
+	 C99 functions.  This should result in the best user experience for
+	 not full C99 targets.  */
+      tree fallback_fndecl = mathfn_built_in_1 (TREE_TYPE (arg),
+						fallback_fn, 0);
+
+      exp = build_call_nofold_loc (EXPR_LOCATION (exp),
+				   fallback_fndecl, 1, arg);
+
+      target = expand_call (exp, NULL_RTX, target == const0_rtx);
+      return convert_to_mode (mode, target, 0);
+    }
 
   target = expand_call (exp, target, target == const0_rtx);
 
@@ -4529,7 +4580,7 @@ expand_builtin_frame_address (tree fndecl, tree exp)
 
       if (!REG_P (tem)
 	  && ! CONSTANT_P (tem))
-	tem = copy_to_mode_reg (Pmode, tem);
+	tem = copy_addr_to_reg (tem);
       return tem;
     }
 }
@@ -4575,13 +4626,15 @@ expand_builtin_alloca (tree exp, bool cannot_accumulate)
   return result;
 }
 
-/* Expand a call to a bswap builtin with argument ARG0.  MODE
-   is the mode to expand with.  */
+/* Expand a call to bswap builtin in EXP.
+   Return NULL_RTX if a normal call should be emitted rather than expanding the
+   function in-line.  If convenient, the result should be placed in TARGET.
+   SUBTARGET may be used as the target for computing one of EXP's operands.  */
 
 static rtx
-expand_builtin_bswap (tree exp, rtx target, rtx subtarget)
+expand_builtin_bswap (enum machine_mode target_mode, tree exp, rtx target,
+		      rtx subtarget)
 {
-  enum machine_mode mode;
   tree arg;
   rtx op0;
 
@@ -4589,14 +4642,18 @@ expand_builtin_bswap (tree exp, rtx target, rtx subtarget)
     return NULL_RTX;
 
   arg = CALL_EXPR_ARG (exp, 0);
-  mode = TYPE_MODE (TREE_TYPE (arg));
-  op0 = expand_expr (arg, subtarget, VOIDmode, EXPAND_NORMAL);
+  op0 = expand_expr (arg,
+		     subtarget && GET_MODE (subtarget) == target_mode
+		     ? subtarget : NULL_RTX,
+		     target_mode, EXPAND_NORMAL);
+  if (GET_MODE (op0) != target_mode)
+    op0 = convert_to_mode (target_mode, op0, 1);
 
-  target = expand_unop (mode, bswap_optab, op0, target, 1);
+  target = expand_unop (target_mode, bswap_optab, op0, target, 1);
 
   gcc_assert (target);
 
-  return convert_to_mode (mode, target, 0);
+  return convert_to_mode (target_mode, target, 1);
 }
 
 /* Expand a call to a unary builtin in EXP.
@@ -4832,7 +4889,7 @@ round_trampoline_addr (rtx tramp)
 }
 
 static rtx
-expand_builtin_init_trampoline (tree exp)
+expand_builtin_init_trampoline (tree exp, bool onstack)
 {
   tree t_tramp, t_func, t_chain;
   rtx m_tramp, r_tramp, r_chain, tmp;
@@ -4849,13 +4906,16 @@ expand_builtin_init_trampoline (tree exp)
   m_tramp = gen_rtx_MEM (BLKmode, r_tramp);
   MEM_NOTRAP_P (m_tramp) = 1;
 
-  /* The TRAMP argument should be the address of a field within the
-     local function's FRAME decl.  Let's see if we can fill in the
-     to fill in the MEM_ATTRs for this memory.  */
+  /* If ONSTACK, the TRAMP argument should be the address of a field
+     within the local function's FRAME decl.  Either way, let's see if
+     we can fill in the MEM_ATTRs for this memory.  */
   if (TREE_CODE (t_tramp) == ADDR_EXPR)
     set_mem_attributes_minus_bitpos (m_tramp, TREE_OPERAND (t_tramp, 0),
 				     true, 0);
 
+  /* Creator of a heap trampoline is responsible for making sure the
+     address is aligned to at least STACK_BOUNDARY.  Normally malloc
+     will ensure this anyhow.  */
   tmp = round_trampoline_addr (r_tramp);
   if (tmp != r_tramp)
     {
@@ -4875,10 +4935,13 @@ expand_builtin_init_trampoline (tree exp)
   /* Generate insns to initialize the trampoline.  */
   targetm.calls.trampoline_init (m_tramp, t_func, r_chain);
 
-  trampolines_created = 1;
+  if (onstack)
+    {
+      trampolines_created = 1;
 
-  warning_at (DECL_SOURCE_LOCATION (t_func), OPT_Wtrampolines,
-              "trampoline generated for nested function %qD", t_func);
+      warning_at (DECL_SOURCE_LOCATION (t_func), OPT_Wtrampolines,
+		  "trampoline generated for nested function %qD", t_func);
+    }
 
   return const0_rtx;
 }
@@ -5611,15 +5674,15 @@ fold_builtin_atomic_always_lock_free (tree arg0, tree arg1)
   /* If the object has smaller alignment, the the lock free routines cannot
      be used.  */
   if (type_align < mode_align)
-    return integer_zero_node;
+    return boolean_false_node;
 
   /* Check if a compare_and_swap pattern exists for the mode which represents
      the required size.  The pattern is not allowed to fail, so the existence
      of the pattern indicates support is present.  */
   if (can_compare_and_swap_p (mode, true))
-    return integer_one_node;
+    return boolean_true_node;
   else
-    return integer_zero_node;
+    return boolean_false_node;
 }
 
 /* Return true if the parameters to call EXP represent an object which will
@@ -5643,7 +5706,7 @@ expand_builtin_atomic_always_lock_free (tree exp)
     }
 
   size = fold_builtin_atomic_always_lock_free (arg0, arg1);
-  if (size == integer_one_node)
+  if (size == boolean_true_node)
     return const1_rtx;
   return const0_rtx;
 }
@@ -5658,8 +5721,8 @@ fold_builtin_atomic_is_lock_free (tree arg0, tree arg1)
     return NULL_TREE;
   
   /* If it isn't always lock free, don't generate a result.  */
-  if (fold_builtin_atomic_always_lock_free (arg0, arg1) == integer_one_node)
-    return integer_one_node;
+  if (fold_builtin_atomic_always_lock_free (arg0, arg1) == boolean_true_node)
+    return boolean_true_node;
 
   return NULL_TREE;
 }
@@ -5689,7 +5752,7 @@ expand_builtin_atomic_is_lock_free (tree exp)
 
   /* If the value is known at compile time, return the RTX for it.  */
   size = fold_builtin_atomic_is_lock_free (arg0, arg1);
-  if (size == integer_one_node)
+  if (size == boolean_true_node)
     return const1_rtx;
 
   return NULL_RTX;
@@ -5748,7 +5811,6 @@ expand_builtin (tree exp, rtx target, rtx subtarget, enum machine_mode mode,
      set of builtins.  */
   if (!optimize
       && !called_as_built_in (fndecl)
-      && DECL_ASSEMBLER_NAME_SET_P (fndecl)
       && fcode != BUILT_IN_ALLOCA
       && fcode != BUILT_IN_ALLOCA_WITH_ALIGN
       && fcode != BUILT_IN_FREE)
@@ -6021,10 +6083,10 @@ expand_builtin (tree exp, rtx target, rtx subtarget, enum machine_mode mode,
       expand_stack_restore (CALL_EXPR_ARG (exp, 0));
       return const0_rtx;
 
+    case BUILT_IN_BSWAP16:
     case BUILT_IN_BSWAP32:
     case BUILT_IN_BSWAP64:
-      target = expand_builtin_bswap (exp, target, subtarget);
-
+      target = expand_builtin_bswap (target_mode, exp, target, subtarget);
       if (target)
 	return target;
       break;
@@ -6303,7 +6365,9 @@ expand_builtin (tree exp, rtx target, rtx subtarget, enum machine_mode mode,
       return const0_rtx;
 
     case BUILT_IN_INIT_TRAMPOLINE:
-      return expand_builtin_init_trampoline (exp);
+      return expand_builtin_init_trampoline (exp, true);
+    case BUILT_IN_INIT_HEAP_TRAMPOLINE:
+      return expand_builtin_init_trampoline (exp, false);
     case BUILT_IN_ADJUST_TRAMPOLINE:
       return expand_builtin_adjust_trampoline (exp);
 
@@ -8111,7 +8175,7 @@ fold_builtin_bitop (tree fndecl, tree arg)
   return NULL_TREE;
 }
 
-/* Fold function call to builtin_bswap and the long and long long
+/* Fold function call to builtin_bswap and the short, long and long long
    variants.  Return NULL_TREE if no simplification can be made.  */
 static tree
 fold_builtin_bswap (tree fndecl, tree arg)
@@ -8124,15 +8188,15 @@ fold_builtin_bswap (tree fndecl, tree arg)
     {
       HOST_WIDE_INT hi, width, r_hi = 0;
       unsigned HOST_WIDE_INT lo, r_lo = 0;
-      tree type;
+      tree type = TREE_TYPE (TREE_TYPE (fndecl));
 
-      type = TREE_TYPE (arg);
       width = TYPE_PRECISION (type);
       lo = TREE_INT_CST_LOW (arg);
       hi = TREE_INT_CST_HIGH (arg);
 
       switch (DECL_FUNCTION_CODE (fndecl))
 	{
+	  case BUILT_IN_BSWAP16:
 	  case BUILT_IN_BSWAP32:
 	  case BUILT_IN_BSWAP64:
 	    {
@@ -8162,9 +8226,9 @@ fold_builtin_bswap (tree fndecl, tree arg)
 	}
 
       if (width < HOST_BITS_PER_WIDE_INT)
-	return build_int_cst (TREE_TYPE (TREE_TYPE (fndecl)), r_lo);
+	return build_int_cst (type, r_lo);
       else
-	return build_int_cst_wide (TREE_TYPE (TREE_TYPE (fndecl)), r_lo, r_hi);
+	return build_int_cst_wide (type, r_lo, r_hi);
     }
 
   return NULL_TREE;
@@ -10517,6 +10581,7 @@ fold_builtin_1 (location_t loc, tree fndecl, tree arg0, bool ignore)
     CASE_FLT_FN (BUILT_IN_LLRINT):
       return fold_fixed_mathfn (loc, fndecl, arg0);
 
+    case BUILT_IN_BSWAP16:
     case BUILT_IN_BSWAP32:
     case BUILT_IN_BSWAP64:
       return fold_builtin_bswap (fndecl, arg0);
@@ -14281,6 +14346,7 @@ is_inexpensive_builtin (tree decl)
       case BUILT_IN_ABS:
       case BUILT_IN_ALLOCA:
       case BUILT_IN_ALLOCA_WITH_ALIGN:
+      case BUILT_IN_BSWAP16:
       case BUILT_IN_BSWAP32:
       case BUILT_IN_BSWAP64:
       case BUILT_IN_CLZ:

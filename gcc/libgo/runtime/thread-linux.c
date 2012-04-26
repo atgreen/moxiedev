@@ -3,6 +3,16 @@
 // license that can be found in the LICENSE file.
 
 #include "runtime.h"
+#include "defs.h"
+
+// Linux futex.
+//
+//	futexsleep(uint32 *addr, uint32 val)
+//	futexwakeup(uint32 *addr)
+//
+// Futexsleep atomically checks if *addr == val and if so, sleeps on addr.
+// Futexwakeup wakes up threads sleeping on addr.
+// Futexsleep is allowed to wake up spuriously.
 
 #include <errno.h>
 #include <string.h>
@@ -102,4 +112,10 @@ void
 runtime_osinit(void)
 {
 	runtime_ncpu = getproccount();
+}
+
+void
+runtime_goenvs(void)
+{
+	runtime_goenvs_unix();
 }

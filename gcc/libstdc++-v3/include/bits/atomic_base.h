@@ -1,6 +1,6 @@
 // -*- C++ -*- header.
 
-// Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+// Copyright (C) 2008, 2009, 2010, 2011, 2012 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -227,12 +227,17 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   struct __atomic_flag_base
   {
+    /* The target's "set" value for test-and-set may not be exactly 1.  */
+#if __GCC_ATOMIC_TEST_AND_SET_TRUEVAL == 1
     bool _M_i;
+#else
+    unsigned char _M_i;
+#endif
   };
 
   _GLIBCXX_END_EXTERN_C
 
-#define ATOMIC_FLAG_INIT { false }
+#define ATOMIC_FLAG_INIT { 0 }
 
   /// atomic_flag
   struct atomic_flag : public __atomic_flag_base
@@ -244,7 +249,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     atomic_flag& operator=(const atomic_flag&) volatile = delete;
 
     // Conversion to ATOMIC_FLAG_INIT.
-    atomic_flag(bool __i) noexcept : __atomic_flag_base({ __i }) { }
+    constexpr atomic_flag(bool __i) noexcept
+      : __atomic_flag_base({ __i ? __GCC_ATOMIC_TEST_AND_SET_TRUEVAL : 0 })
+    { }
 
     bool
     test_and_set(memory_order __m = memory_order_seq_cst) noexcept
@@ -614,6 +621,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       __pointer_type 	_M_p;
 
+      // Factored out to facilitate explicit specialization.
+      constexpr ptrdiff_t
+      _M_type_size(ptrdiff_t __d) { return __d * sizeof(_PTp); }
+
+      constexpr ptrdiff_t
+      _M_type_size(ptrdiff_t __d) volatile { return __d * sizeof(_PTp); }
+
     public:
       __atomic_base() noexcept = default;
       ~__atomic_base() noexcept = default;
@@ -662,43 +676,51 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       __pointer_type
       operator++() noexcept
-      { return __atomic_add_fetch(&_M_p, 1, memory_order_seq_cst); }
+      { return __atomic_add_fetch(&_M_p, _M_type_size(1),
+				  memory_order_seq_cst); }
 
       __pointer_type
       operator++() volatile noexcept
-      { return __atomic_add_fetch(&_M_p, 1, memory_order_seq_cst); }
+      { return __atomic_add_fetch(&_M_p, _M_type_size(1),
+				  memory_order_seq_cst); }
 
       __pointer_type
       operator--() noexcept
-      { return __atomic_sub_fetch(&_M_p, 1, memory_order_seq_cst); }
+      { return __atomic_sub_fetch(&_M_p, _M_type_size(1),
+				  memory_order_seq_cst); }
 
       __pointer_type
       operator--() volatile noexcept
-      { return __atomic_sub_fetch(&_M_p, 1, memory_order_seq_cst); }
+      { return __atomic_sub_fetch(&_M_p, _M_type_size(1),
+				  memory_order_seq_cst); }
 
       __pointer_type
       operator+=(ptrdiff_t __d) noexcept
-      { return __atomic_add_fetch(&_M_p, __d, memory_order_seq_cst); }
+      { return __atomic_add_fetch(&_M_p, _M_type_size(__d),
+				  memory_order_seq_cst); }
 
       __pointer_type
       operator+=(ptrdiff_t __d) volatile noexcept
-      { return __atomic_add_fetch(&_M_p, __d, memory_order_seq_cst); }
+      { return __atomic_add_fetch(&_M_p, _M_type_size(__d),
+				  memory_order_seq_cst); }
 
       __pointer_type
       operator-=(ptrdiff_t __d) noexcept
-      { return __atomic_sub_fetch(&_M_p, __d, memory_order_seq_cst); }
+      { return __atomic_sub_fetch(&_M_p, _M_type_size(__d),
+				  memory_order_seq_cst); }
 
       __pointer_type
       operator-=(ptrdiff_t __d) volatile noexcept
-      { return __atomic_sub_fetch(&_M_p, __d, memory_order_seq_cst); }
+      { return __atomic_sub_fetch(&_M_p, _M_type_size(__d),
+				  memory_order_seq_cst); }
 
       bool
       is_lock_free() const noexcept
-      { return __atomic_is_lock_free (sizeof (_M_p), &_M_p); }
+      { return __atomic_is_lock_free(_M_type_size(1), &_M_p); }
 
       bool
       is_lock_free() const volatile noexcept
-      { return __atomic_is_lock_free (sizeof (_M_p), &_M_p); }
+      { return __atomic_is_lock_free(_M_type_size(1), &_M_p); }
 
       void
       store(__pointer_type __p,
@@ -782,22 +804,22 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       __pointer_type
       fetch_add(ptrdiff_t __d,
 		memory_order __m = memory_order_seq_cst) noexcept
-      { return __atomic_fetch_add(&_M_p, __d, __m); }
+      { return __atomic_fetch_add(&_M_p, _M_type_size(__d), __m); }
 
       __pointer_type
       fetch_add(ptrdiff_t __d,
 		memory_order __m = memory_order_seq_cst) volatile noexcept
-      { return __atomic_fetch_add(&_M_p, __d, __m); }
+      { return __atomic_fetch_add(&_M_p, _M_type_size(__d), __m); }
 
       __pointer_type
       fetch_sub(ptrdiff_t __d,
 		memory_order __m = memory_order_seq_cst) noexcept
-      { return __atomic_fetch_sub(&_M_p, __d, __m); }
+      { return __atomic_fetch_sub(&_M_p, _M_type_size(__d), __m); }
 
       __pointer_type
       fetch_sub(ptrdiff_t __d,
 		memory_order __m = memory_order_seq_cst) volatile noexcept
-      { return __atomic_fetch_sub(&_M_p, __d, __m); }
+      { return __atomic_fetch_sub(&_M_p, _M_type_size(__d), __m); }
     };
 
   // @} group atomics

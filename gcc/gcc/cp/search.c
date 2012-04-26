@@ -1,7 +1,8 @@
 /* Breadth-first and depth-first routines for
    searching multiple-inheritance lattice for GNU C++.
    Copyright (C) 1987, 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
+   1999, 2000, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011,
+   2012
    Free Software Foundation, Inc.
    Contributed by Michael Tiemann (tiemann@cygnus.com)
 
@@ -383,6 +384,8 @@ tree
 lookup_field_1 (tree type, tree name, bool want_type)
 {
   tree field;
+
+  gcc_assert (TREE_CODE (name) == IDENTIFIER_NODE);
 
   if (TREE_CODE (type) == TEMPLATE_TYPE_PARM
       || TREE_CODE (type) == BOUND_TEMPLATE_TEMPLATE_PARM
@@ -1250,10 +1253,12 @@ lookup_member (tree xbasetype, tree name, int protect, bool want_type,
     only the first call to "f" is valid.  However, if the function is
     static, we can check.  */
   if (rval && protect 
-      && !really_overloaded_fn (rval)
-      && !(TREE_CODE (rval) == FUNCTION_DECL
-	   && DECL_NONSTATIC_MEMBER_FUNCTION_P (rval)))
-    perform_or_defer_access_check (basetype_path, rval, rval);
+      && !really_overloaded_fn (rval))
+    {
+      tree decl = is_overloaded_fn (rval) ? get_first_fn (rval) : rval;
+      if (!DECL_NONSTATIC_MEMBER_FUNCTION_P (decl))
+	perform_or_defer_access_check (basetype_path, decl, decl);
+    }
 
   if (errstr && protect)
     {
@@ -1887,7 +1892,8 @@ check_final_overrider (tree overrider, tree basefn)
 	    }
 	}
       else if (!pedantic
-	       && can_convert (TREE_TYPE (base_type), TREE_TYPE (over_type)))
+	       && can_convert (TREE_TYPE (base_type), TREE_TYPE (over_type),
+			       tf_warning_or_error))
 	/* GNU extension, allow trivial pointer conversions such as
 	   converting to void *, or qualification conversion.  */
 	{
@@ -2426,6 +2432,11 @@ lookup_conversions_r (tree binfo,
 	  if (!IDENTIFIER_MARKED (name))
 	    {
 	      tree type = DECL_CONV_FN_TYPE (cur);
+	      if (type_uses_auto (type))
+		{
+		  mark_used (cur);
+		  type = DECL_CONV_FN_TYPE (cur);
+		}
 
 	      if (check_hidden_convs (binfo, virtual_depth, virtualness,
 				      type, parent_convs, other_convs))

@@ -570,8 +570,7 @@ func TestGobMapInterfaceEncode(t *testing.T) {
 		"bo": []bool{false},
 		"st": []string{"s"},
 	}
-	buf := bytes.NewBuffer(nil)
-	enc := NewEncoder(buf)
+	enc := NewEncoder(new(bytes.Buffer))
 	err := enc.Encode(m)
 	if err != nil {
 		t.Errorf("encode map: %s", err)
@@ -579,7 +578,7 @@ func TestGobMapInterfaceEncode(t *testing.T) {
 }
 
 func TestSliceReusesMemory(t *testing.T) {
-	buf := bytes.NewBuffer(nil)
+	buf := new(bytes.Buffer)
 	// Bytes
 	{
 		x := []byte("abcd")
@@ -676,5 +675,64 @@ func TestUnexportedChan(t *testing.T) {
 	enc := NewEncoder(&stream)
 	if err := enc.Encode(b); err != nil {
 		t.Fatalf("error encoding unexported channel: %s", err)
+	}
+}
+
+func TestSliceIncompatibility(t *testing.T) {
+	var in = []byte{1, 2, 3}
+	var out []int
+	if err := encAndDec(in, &out); err == nil {
+		t.Error("expected compatibility error")
+	}
+}
+
+// Mutually recursive slices of structs caused problems.
+type Bug3 struct {
+	Num      int
+	Children []*Bug3
+}
+
+func TestGobPtrSlices(t *testing.T) {
+	in := []*Bug3{
+		{1, nil},
+		{2, nil},
+	}
+	b := new(bytes.Buffer)
+	err := NewEncoder(b).Encode(&in)
+	if err != nil {
+		t.Fatal("encode:", err)
+	}
+
+	var out []*Bug3
+	err = NewDecoder(b).Decode(&out)
+	if err != nil {
+		t.Fatal("decode:", err)
+	}
+	if !reflect.DeepEqual(in, out) {
+		t.Fatalf("got %v; wanted %v", out, in)
+	}
+}
+
+// getDecEnginePtr cached engine for ut.base instead of ut.user so we passed
+// a *map and then tried to reuse its engine to decode the inner map.
+func TestPtrToMapOfMap(t *testing.T) {
+	Register(make(map[string]interface{}))
+	subdata := make(map[string]interface{})
+	subdata["bar"] = "baz"
+	data := make(map[string]interface{})
+	data["foo"] = subdata
+
+	b := new(bytes.Buffer)
+	err := NewEncoder(b).Encode(data)
+	if err != nil {
+		t.Fatal("encode:", err)
+	}
+	var newData map[string]interface{}
+	err = NewDecoder(b).Decode(&newData)
+	if err != nil {
+		t.Fatal("decode:", err)
+	}
+	if !reflect.DeepEqual(data, newData) {
+		t.Fatalf("expected %v got %v", data, newData)
 	}
 }

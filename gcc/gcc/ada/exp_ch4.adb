@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -149,10 +149,10 @@ package body Exp_Ch4 is
    --  Local recursive function used to expand equality for nested composite
    --  types. Used by Expand_Record/Array_Equality, Bodies is a list on which
    --  to attach bodies of local functions that are created in the process.
-   --  This is the responsibility of the caller to insert those bodies at the
+   --  It is the responsibility of the caller to insert those bodies at the
    --  right place. Nod provides the Sloc value for generated code. Lhs and Rhs
    --  are the left and right sides for the comparison, and Typ is the type of
-   --  the arrays to compare.
+   --  the objects to compare.
 
    procedure Expand_Concatenate (Cnode : Node_Id; Opnds : List_Id);
    --  Routine to expand concatenation of a sequence of two or more operands
@@ -702,13 +702,16 @@ package body Exp_Ch4 is
                  (Is_Class_Wide_Type (Etype (Exp))
                    and then Scope (PtrT) /= Current_Scope))
          then
-            --  If the allocator was built in place Ref is already a reference
+            --  If the allocator was built in place, Ref is already a reference
             --  to the access object initialized to the result of the allocator
-            --  (see Exp_Ch6.Make_Build_In_Place_Call_In_Allocator). Otherwise
-            --  it is the entity associated with the object containing the
-            --  address of the allocated object.
+            --  (see Exp_Ch6.Make_Build_In_Place_Call_In_Allocator). We call
+            --  Remove_Side_Effects for cases where the build-in-place call may
+            --  still be the prefix of the reference (to avoid generating
+            --  duplicate calls). Otherwise, it is the entity associated with
+            --  the object containing the address of the allocated object.
 
             if Built_In_Place then
+               Remove_Side_Effects (Ref);
                New_Node := New_Copy (Ref);
             else
                New_Node := New_Reference_To (Ref, Loc);
@@ -2485,21 +2488,28 @@ package body Exp_Ch4 is
                end if;
             end if;
 
-         elsif Ada_Version >= Ada_2012 then
+         --  Equality composes in Ada 2012 for untagged record types. It also
+         --  composes for bounded strings, because they are part of the
+         --  predefined environment. We could make it compose for bounded
+         --  strings by making them tagged, or by making sure all subcomponents
+         --  are set to the same value, even when not used. Instead, we have
+         --  this special case in the compiler, because it's more efficient.
+
+         elsif Ada_Version >= Ada_2012 or else Is_Bounded_String (Typ) then
 
             --  if no TSS has been created for the type, check whether there is
             --  a primitive equality declared for it.
 
             declare
-               Ada_2012_Op : constant Node_Id := Find_Primitive_Eq;
+               Op : constant Node_Id := Find_Primitive_Eq;
 
             begin
-               if Present (Ada_2012_Op) then
-                  return Ada_2012_Op;
+               --  Use user-defined primitive if it exists, otherwise use
+               --  predefined equality.
+
+               if Present (Op) then
+                  return Op;
                else
-
-               --  Use predefined equality if no user-defined primitive exists
-
                   return Make_Op_Eq (Loc, Lhs, Rhs);
                end if;
             end;
@@ -2600,6 +2610,12 @@ package body Exp_Ch4 is
       --  A tree node representing the low bound of the result (of type Ityp).
       --  This is either an integer literal node, or an identifier reference to
       --  a constant entity initialized to the appropriate value.
+
+      Last_Opnd_Low_Bound : Node_Id;
+      --  A tree node representing the low bound of the last operand. This
+      --  need only be set if the result could be null. It is used for the
+      --  special case of setting the right low bound for a null result.
+      --  This is of type Ityp.
 
       Last_Opnd_High_Bound : Node_Id;
       --  A tree node representing the high bound of the last operand. This
@@ -2811,11 +2827,14 @@ package body Exp_Ch4 is
                Result_May_Be_Null := False;
             end if;
 
-            --  Capture last operand high bound if result could be null
+            --  Capture last operand low and high bound if result could be null
 
             if J = N and then Result_May_Be_Null then
+               Last_Opnd_Low_Bound :=
+                 New_Copy_Tree (String_Literal_Low_Bound (Opnd_Typ));
+
                Last_Opnd_High_Bound :=
-                 Make_Op_Add (Loc,
+                 Make_Op_Subtract (Loc,
                    Left_Opnd  =>
                      New_Copy_Tree (String_Literal_Low_Bound (Opnd_Typ)),
                    Right_Opnd => Make_Integer_Literal (Loc, 1));
@@ -2871,9 +2890,13 @@ package body Exp_Ch4 is
                            Result_May_Be_Null := False;
                         end if;
 
-                        --  Capture last operand bound if result could be null
+                        --  Capture last operand bounds if result could be null
 
                         if J = N and then Result_May_Be_Null then
+                           Last_Opnd_Low_Bound :=
+                             Convert_To (Ityp,
+                               Make_Integer_Literal (Loc, Expr_Value (Lo)));
+
                            Last_Opnd_High_Bound :=
                              Convert_To (Ityp,
                                Make_Integer_Literal (Loc, Expr_Value (Hi)));
@@ -2914,7 +2937,16 @@ package body Exp_Ch4 is
                      Duplicate_Subexpr (Opnd, Name_Req => True),
                    Attribute_Name => Name_First);
 
+               --  Capture last operand bounds if result could be null
+
                if J = N and Result_May_Be_Null then
+                  Last_Opnd_Low_Bound :=
+                    Convert_To (Ityp,
+                      Make_Attribute_Reference (Loc,
+                        Prefix         =>
+                          Duplicate_Subexpr (Opnd, Name_Req => True),
+                        Attribute_Name => Name_First));
+
                   Last_Opnd_High_Bound :=
                     Convert_To (Ityp,
                       Make_Attribute_Reference (Loc,
@@ -3040,7 +3072,7 @@ package body Exp_Ch4 is
          Low_Bound := Opnd_Low_Bound (1);
 
       --  OK, we don't know the lower bound, we have to build a horrible
-      --  expression actions node of the form
+      --  conditional expression node of the form
 
       --     if Cond1'Length /= 0 then
       --        Opnd1 low bound
@@ -3124,6 +3156,15 @@ package body Exp_Ch4 is
       --  bounds if the last operand is super-flat).
 
       if Result_May_Be_Null then
+         Low_Bound :=
+           Make_Conditional_Expression (Loc,
+             Expressions => New_List (
+               Make_Op_Eq (Loc,
+                 Left_Opnd  => New_Copy (Aggr_Length (NN)),
+                 Right_Opnd => Make_Artyp_Literal (0)),
+               Last_Opnd_Low_Bound,
+               Low_Bound));
+
          High_Bound :=
            Make_Conditional_Expression (Loc,
              Expressions => New_List (
@@ -3491,19 +3532,19 @@ package body Exp_Ch4 is
       --  Processing for anonymous access-to-controlled types. These access
       --  types receive a special finalization master which appears in the
       --  declarations of the enclosing semantic unit. This expansion is done
-      --  now to ensure that any additional types generated by this routine
-      --  or Expand_Allocator_Expression inherit the proper type attributes.
+      --  now to ensure that any additional types generated by this routine or
+      --  Expand_Allocator_Expression inherit the proper type attributes.
 
-      if Ekind (PtrT) = E_Anonymous_Access_Type
+      if (Ekind (PtrT) = E_Anonymous_Access_Type
+           or else
+             (Is_Itype (PtrT) and then No (Finalization_Master (PtrT))))
         and then Needs_Finalization (Dtyp)
       then
          --  Anonymous access-to-controlled types allocate on the global pool.
          --  Do not set this attribute on .NET/JVM since those targets do not
          --  support pools.
 
-         if No (Associated_Storage_Pool (PtrT))
-           and then VM_Target = No_VM
-         then
+         if No (Associated_Storage_Pool (PtrT)) and then VM_Target = No_VM then
             Set_Associated_Storage_Pool
               (PtrT, Get_Global_Pool_For_Access_Type (PtrT));
          end if;
@@ -3533,6 +3574,30 @@ package body Exp_Ch4 is
                if VM_Target = No_VM then
                   Set_Procedure_To_Call (N, RTE (RE_SS_Allocate));
                end if;
+
+            --  In the case of an allocator for a simple storage pool, locate
+            --  and save a reference to the pool type's Allocate routine.
+
+            elsif Present (Get_Rep_Pragma
+                             (Etype (Pool), Name_Simple_Storage_Pool_Type))
+            then
+               declare
+                  Pool_Type : constant Entity_Id := Base_Type (Etype (Pool));
+                  Alloc_Op  : Entity_Id;
+               begin
+                  Alloc_Op := Get_Name_Entity_Id (Name_Allocate);
+                  while Present (Alloc_Op) loop
+                     if Scope (Alloc_Op) = Scope (Pool_Type)
+                       and then Present (First_Formal (Alloc_Op))
+                       and then Etype (First_Formal (Alloc_Op)) = Pool_Type
+                     then
+                        Set_Procedure_To_Call (N, Alloc_Op);
+                        exit;
+                     else
+                        Alloc_Op := Homonym (Alloc_Op);
+                     end if;
+                  end loop;
+               end;
 
             elsif Is_Class_Wide_Type (Etype (Pool)) then
                Set_Procedure_To_Call (N, RTE (RE_Allocate_Any));
@@ -3933,9 +3998,9 @@ package body Exp_Ch4 is
                   end if;
                end;
 
-               --  We set the allocator as analyzed so that when we analyze the
-               --  expression actions node, we do not get an unwanted recursive
-               --  expansion of the allocator expression.
+               --  We set the allocator as analyzed so that when we analyze
+               --  the conditional expression node, we do not get an unwanted
+               --  recursive expansion of the allocator expression.
 
                Set_Analyzed (N, True);
                Nod := Relocate_Node (N);
@@ -4214,7 +4279,7 @@ package body Exp_Ch4 is
    -- Expand_N_Conditional_Expression --
    -------------------------------------
 
-   --  Deal with limited types and expression actions
+   --  Deal with limited types and condition actions
 
    procedure Expand_N_Conditional_Expression (N : Node_Id) is
       Loc    : constant Source_Ptr := Sloc (N);
@@ -7767,9 +7832,7 @@ package body Exp_Ch4 is
    begin
       --  Do validity check if validity checking operands
 
-      if Validity_Checks_On
-        and then Validity_Check_Operands
-      then
+      if Validity_Checks_On and then Validity_Check_Operands then
          Ensure_Valid (Operand);
       end if;
 
@@ -7801,7 +7864,7 @@ package body Exp_Ch4 is
    --           end if;
    --        end loop;
 
-   --  Conversely, an existentially quantified expression:
+   --  Similarly, an existentially quantified expression:
 
    --    for some X in range => Cond
 
@@ -7819,69 +7882,79 @@ package body Exp_Ch4 is
    --  given by an iterator specification, not a loop parameter specification.
 
    procedure Expand_N_Quantified_Expression (N : Node_Id) is
-      Loc          : constant Source_Ptr := Sloc (N);
-      Is_Universal : constant Boolean := All_Present (N);
-      Actions      : constant List_Id := New_List;
-      Tnn          : constant Entity_Id := Make_Temporary (Loc, 'T', N);
-      Cond         : Node_Id;
-      Decl         : Node_Id;
-      I_Scheme     : Node_Id;
-      Test         : Node_Id;
+      Actions   : constant List_Id    := New_List;
+      For_All   : constant Boolean    := All_Present (N);
+      Iter_Spec : constant Node_Id    := Iterator_Specification (N);
+      Loc       : constant Source_Ptr := Sloc (N);
+      Loop_Spec : constant Node_Id    := Loop_Parameter_Specification (N);
+      Cond      : Node_Id;
+      Flag      : Entity_Id;
+      Scheme    : Node_Id;
+      Stmts     : List_Id;
 
    begin
-      Decl :=
+      --  Create the declaration of the flag which tracks the status of the
+      --  quantified expression. Generate:
+
+      --    Flag : Boolean := (True | False);
+
+      Flag := Make_Temporary (Loc, 'T', N);
+
+      Append_To (Actions,
         Make_Object_Declaration (Loc,
-          Defining_Identifier => Tnn,
+          Defining_Identifier => Flag,
           Object_Definition   => New_Occurrence_Of (Standard_Boolean, Loc),
           Expression          =>
-            New_Occurrence_Of (Boolean_Literals (Is_Universal), Loc));
-      Append_To (Actions, Decl);
+            New_Occurrence_Of (Boolean_Literals (For_All), Loc)));
+
+      --  Construct the circuitry which tracks the status of the quantified
+      --  expression. Generate:
+
+      --    if [not] Cond then
+      --       Flag := (False | True);
+      --       exit;
+      --    end if;
 
       Cond := Relocate_Node (Condition (N));
 
-      --  Reset flag analyzed in the condition to force its analysis. Required
-      --  since the previous analysis was done with expansion disabled (see
-      --  Resolve_Quantified_Expression) and hence checks were not inserted
-      --  and record comparisons have not been expanded.
-
-      Reset_Analyzed_Flags (Cond);
-
-      if Is_Universal then
+      if For_All then
          Cond := Make_Op_Not (Loc, Cond);
       end if;
 
-      Test :=
+      Stmts := New_List (
         Make_Implicit_If_Statement (N,
           Condition       => Cond,
           Then_Statements => New_List (
             Make_Assignment_Statement (Loc,
-              Name       => New_Occurrence_Of (Tnn, Loc),
+              Name       => New_Occurrence_Of (Flag, Loc),
               Expression =>
-                New_Occurrence_Of (Boolean_Literals (not Is_Universal), Loc)),
-            Make_Exit_Statement (Loc)));
+                New_Occurrence_Of (Boolean_Literals (not For_All), Loc)),
+            Make_Exit_Statement (Loc))));
 
-      if Present (Loop_Parameter_Specification (N)) then
-         I_Scheme :=
+      --  Build the loop equivalent of the quantified expression
+
+      if Present (Iter_Spec) then
+         Scheme :=
            Make_Iteration_Scheme (Loc,
-              Loop_Parameter_Specification =>
-                Loop_Parameter_Specification (N));
+             Iterator_Specification => Iter_Spec);
       else
-         I_Scheme :=
+         Scheme :=
            Make_Iteration_Scheme (Loc,
-             Iterator_Specification => Iterator_Specification (N));
+             Loop_Parameter_Specification => Loop_Spec);
       end if;
 
       Append_To (Actions,
         Make_Loop_Statement (Loc,
-          Iteration_Scheme => I_Scheme,
-          Statements       => New_List (Test),
+          Iteration_Scheme => Scheme,
+          Statements       => Stmts,
           End_Label        => Empty));
+
+      --  Transform the quantified expression
 
       Rewrite (N,
         Make_Expression_With_Actions (Loc,
-          Expression => New_Occurrence_Of (Tnn, Loc),
+          Expression => New_Occurrence_Of (Flag, Loc),
           Actions    => Actions));
-
       Analyze_And_Resolve (N, Standard_Boolean);
    end Expand_N_Quantified_Expression;
 

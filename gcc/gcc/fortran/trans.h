@@ -198,9 +198,6 @@ typedef struct gfc_ss_info
     struct
     {
       tree value;
-      /* Tells whether the reference can be null in the GFC_SS_REFERENCE case.
-	 Used to handle elemental procedures' optional arguments.  */
-      bool can_be_null_ref;
     }
     scalar;
 
@@ -223,6 +220,11 @@ typedef struct gfc_ss_info
 
   /* Suppresses precalculation of scalars in WHERE assignments.  */
   unsigned where:1;
+
+  /* Tells whether the SS is for an actual argument which can be a NULL
+     reference.  In other words, the associated dummy argument is OPTIONAL.
+     Used to handle elemental procedures.  */
+  bool can_be_null_ref;
 }
 gfc_ss_info;
 
@@ -346,6 +348,9 @@ tree gfc_vtable_size_get (tree);
 tree gfc_vtable_extends_get (tree);
 tree gfc_vtable_def_init_get (tree);
 tree gfc_vtable_copy_get (tree);
+tree gfc_get_class_array_ref (tree, tree);
+tree gfc_copy_class_to_class (tree, tree, tree);
+void gfc_conv_class_to_class (gfc_se *, gfc_expr *, gfc_typespec, bool);
 
 /* Initialize an init/cleanup block.  */
 void gfc_start_wrapped_block (gfc_wrapped_block* block, tree code);
@@ -421,8 +426,6 @@ int gfc_conv_procedure_call (gfc_se *, gfc_symbol *, gfc_actual_arglist *,
 			     gfc_expr *, VEC(tree,gc) *);
 
 void gfc_conv_subref_array_arg (gfc_se *, gfc_expr *, int, sym_intent, bool);
-
-/* gfc_trans_* shouldn't call push/poplevel, use gfc_push/pop_scope */
 
 /* Generate code for a scalar assignment.  */
 tree gfc_trans_scalar_assign (gfc_se *, gfc_se *, gfc_typespec, bool, bool,
@@ -627,11 +630,9 @@ void gfc_trans_deferred_vars (gfc_symbol*, gfc_wrapped_block *);
 /* In f95-lang.c.  */
 tree pushdecl (tree);
 tree pushdecl_top_level (tree);
-void pushlevel (int);
-tree poplevel (int, int, int);
+void pushlevel (void);
+tree poplevel (int, int);
 tree getdecls (void);
-tree gfc_truthvalue_conversion (tree);
-tree gfc_builtin_function (tree);
 
 /* In trans-types.c.  */
 struct array_descr_info;

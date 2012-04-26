@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/29_atomics/atomic/requirements
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,16 +26,13 @@ amacleod
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-explicit_instantiation
-dir
-
 base_classes.cc
 file
 
 
 
 
-2010-01-06T00:59:49.710644Z
+2012-02-01T17:19:25.858989Z
 405ab1d71e297704f9b477464b69b1fe
 2009-12-21T19:00:34.247142Z
 155377
@@ -62,4 +59,7 @@ bkoz
 
 
 1099
+
+explicit_instantiation
+dir
 

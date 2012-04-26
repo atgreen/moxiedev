@@ -1,14 +1,14 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-10-12T15:55:12.882649Z
-165383
+2012-03-23T15:19:26.333085Z
+185741
 gandalf
 
 
@@ -26,6 +26,12 @@ gandalf
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+imageio
+dir
+
+management
+dir
+
 crypto
 dir
 
@@ -35,31 +41,31 @@ dir
 net
 dir
 
-accessibility
+swing
 dir
 
 rmi
 dir
 
-swing
+accessibility
 dir
 
 sound
 dir
 
-activity
+print
 dir
 
-print
+activity
 dir
 
 sql
 dir
 
-xml
+tools
 dir
 
-tools
+xml
 dir
 
 activation
@@ -69,11 +75,5 @@ security
 dir
 
 naming
-dir
-
-imageio
-dir
-
-management
 dir
 

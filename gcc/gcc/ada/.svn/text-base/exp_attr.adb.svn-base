@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -75,6 +75,14 @@ package body Exp_Attr is
    -----------------------
    -- Local Subprograms --
    -----------------------
+
+   function Build_Array_VS_Func
+     (A_Type : Entity_Id;
+      Nod    : Node_Id) return Entity_Id;
+   --  Build function to test Valid_Scalars for array type A_Type. Nod is the
+   --  Valid_Scalars attribute node, used to insert the function body, and the
+   --  value returned is the entity of the constructed function body. We do not
+   --  bother to generate a separate spec for this subprogram.
 
    procedure Compile_Stream_Body_In_Scope
      (N     : Node_Id;
@@ -173,6 +181,149 @@ package body Exp_Attr is
    --  can be expanded directly by the back end and does not need front end
    --  expansion. Typically used for rounding and truncation attributes that
    --  appear directly inside a conversion to integer.
+
+   -------------------------
+   -- Build_Array_VS_Func --
+   -------------------------
+
+   function Build_Array_VS_Func
+     (A_Type : Entity_Id;
+      Nod    : Node_Id) return Entity_Id
+   is
+      Loc        : constant Source_Ptr := Sloc (Nod);
+      Comp_Type  : constant Entity_Id  := Component_Type (A_Type);
+      Body_Stmts : List_Id;
+      Index_List : List_Id;
+      Func_Id    : Entity_Id;
+      Formals    : List_Id;
+
+      function Test_Component return List_Id;
+      --  Create one statement to test validity of one component designated by
+      --  a full set of indexes. Returns statement list containing test.
+
+      function Test_One_Dimension (N : Int) return List_Id;
+      --  Create loop to test one dimension of the array. The single statement
+      --  in the loop body tests the inner dimensions if any, or else the
+      --  single component. Note that this procedure is called recursively,
+      --  with N being the dimension to be initialized. A call with N greater
+      --  than the number of dimensions simply generates the component test,
+      --  terminating the recursion. Returns statement list containing tests.
+
+      --------------------
+      -- Test_Component --
+      --------------------
+
+      function Test_Component return List_Id is
+         Comp : Node_Id;
+         Anam : Name_Id;
+
+      begin
+         Comp :=
+           Make_Indexed_Component (Loc,
+             Prefix      => Make_Identifier (Loc, Name_uA),
+             Expressions => Index_List);
+
+         if Is_Scalar_Type (Comp_Type) then
+            Anam := Name_Valid;
+         else
+            Anam := Name_Valid_Scalars;
+         end if;
+
+         return New_List (
+           Make_If_Statement (Loc,
+             Condition =>
+               Make_Op_Not (Loc,
+                 Right_Opnd =>
+                   Make_Attribute_Reference (Loc,
+                     Attribute_Name => Anam,
+                     Prefix         => Comp)),
+             Then_Statements => New_List (
+               Make_Simple_Return_Statement (Loc,
+                 Expression => New_Occurrence_Of (Standard_False, Loc)))));
+      end Test_Component;
+
+      ------------------------
+      -- Test_One_Dimension --
+      ------------------------
+
+      function Test_One_Dimension (N : Int) return List_Id is
+         Index : Entity_Id;
+
+      begin
+         --  If all dimensions dealt with, we simply test the component
+
+         if N > Number_Dimensions (A_Type) then
+            return Test_Component;
+
+         --  Here we generate the required loop
+
+         else
+            Index :=
+              Make_Defining_Identifier (Loc, New_External_Name ('J', N));
+
+            Append (New_Reference_To (Index, Loc), Index_List);
+
+            return New_List (
+              Make_Implicit_Loop_Statement (Nod,
+                Identifier => Empty,
+                Iteration_Scheme =>
+                  Make_Iteration_Scheme (Loc,
+                    Loop_Parameter_Specification =>
+                      Make_Loop_Parameter_Specification (Loc,
+                        Defining_Identifier => Index,
+                        Discrete_Subtype_Definition =>
+                          Make_Attribute_Reference (Loc,
+                            Prefix => Make_Identifier (Loc, Name_uA),
+                            Attribute_Name  => Name_Range,
+                            Expressions     => New_List (
+                              Make_Integer_Literal (Loc, N))))),
+                Statements =>  Test_One_Dimension (N + 1)),
+              Make_Simple_Return_Statement (Loc,
+                Expression => New_Occurrence_Of (Standard_True, Loc)));
+         end if;
+      end Test_One_Dimension;
+
+   --  Start of processing for Build_Array_VS_Func
+
+   begin
+      Index_List := New_List;
+      Func_Id := Make_Defining_Identifier (Loc, New_Internal_Name ('V'));
+
+      Body_Stmts := Test_One_Dimension (1);
+
+      --  Parameter is always (A : A_Typ)
+
+      Formals := New_List (
+        Make_Parameter_Specification (Loc,
+          Defining_Identifier => Make_Defining_Identifier (Loc, Name_uA),
+          In_Present          => True,
+          Out_Present         => False,
+          Parameter_Type      => New_Reference_To (A_Type, Loc)));
+
+      --  Build body
+
+      Set_Ekind       (Func_Id, E_Function);
+      Set_Is_Internal (Func_Id);
+
+      Insert_Action (Nod,
+        Make_Subprogram_Body (Loc,
+          Specification              =>
+            Make_Function_Specification (Loc,
+              Defining_Unit_Name       => Func_Id,
+              Parameter_Specifications => Formals,
+                Result_Definition        =>
+                  New_Occurrence_Of (Standard_Boolean, Loc)),
+          Declarations               => New_List,
+          Handled_Statement_Sequence =>
+            Make_Handled_Sequence_Of_Statements (Loc,
+              Statements => Body_Stmts)));
+
+      if not Debug_Generated_Code then
+         Set_Debug_Info_Off (Func_Id);
+      end if;
+
+      return Func_Id;
+   end Build_Array_VS_Func;
 
    ----------------------------------
    -- Compile_Stream_Body_In_Scope --
@@ -678,13 +829,13 @@ package body Exp_Attr is
 
       case Id is
 
-         --  Attributes related to Ada 2012 iterators (placeholder ???)
+      --  Attributes related to Ada 2012 iterators (placeholder ???)
 
-         when Attribute_Constant_Indexing    => null;
-         when Attribute_Default_Iterator     => null;
-         when Attribute_Implicit_Dereference => null;
-         when Attribute_Iterator_Element     => null;
-         when Attribute_Variable_Indexing    => null;
+      when Attribute_Constant_Indexing    => null;
+      when Attribute_Default_Iterator     => null;
+      when Attribute_Implicit_Dereference => null;
+      when Attribute_Iterator_Element     => null;
+      when Attribute_Variable_Indexing    => null;
 
       ------------
       -- Access --
@@ -4217,6 +4368,17 @@ package body Exp_Attr is
       when Attribute_Scaling =>
          Expand_Fpt_Attribute_RI (N);
 
+      -------------------------
+      -- Simple_Storage_Pool --
+      -------------------------
+
+      when Attribute_Simple_Storage_Pool =>
+         Rewrite (N,
+           Make_Type_Conversion (Loc,
+             Subtype_Mark => New_Reference_To (Etype (N), Loc),
+             Expression   => New_Reference_To (Entity (N), Loc)));
+         Analyze_And_Resolve (N, Typ);
+
       ----------
       -- Size --
       ----------
@@ -4475,7 +4637,10 @@ package body Exp_Attr is
       -- Storage_Size --
       ------------------
 
-      when Attribute_Storage_Size => Storage_Size : begin
+      when Attribute_Storage_Size => Storage_Size : declare
+         Alloc_Op  : Entity_Id := Empty;
+
+      begin
 
          --  Access type case, always go to the root type
 
@@ -4497,19 +4662,64 @@ package body Exp_Attr is
                          (Storage_Size_Variable (Root_Type (Ptyp)), Loc)))));
 
             elsif Present (Associated_Storage_Pool (Root_Type (Ptyp))) then
-               Rewrite (N,
-                 OK_Convert_To (Typ,
-                   Make_Function_Call (Loc,
-                     Name =>
-                       New_Reference_To
-                         (Find_Prim_Op
-                           (Etype (Associated_Storage_Pool (Root_Type (Ptyp))),
-                            Attribute_Name (N)),
-                          Loc),
 
-                     Parameter_Associations => New_List (
-                       New_Reference_To
-                         (Associated_Storage_Pool (Root_Type (Ptyp)), Loc)))));
+               --  If the access type is associated with a simple storage pool
+               --  object, then attempt to locate the optional Storage_Size
+               --  function of the simple storage pool type. If not found,
+               --  then the result will default to zero.
+
+               if Present (Get_Rep_Pragma (Root_Type (Ptyp),
+                                           Name_Simple_Storage_Pool_Type))
+               then
+                  declare
+                     Pool_Type : constant Entity_Id :=
+                                   Base_Type (Etype (Entity (N)));
+
+                  begin
+                     Alloc_Op := Get_Name_Entity_Id (Name_Storage_Size);
+                     while Present (Alloc_Op) loop
+                        if Scope (Alloc_Op) = Scope (Pool_Type)
+                          and then Present (First_Formal (Alloc_Op))
+                          and then Etype (First_Formal (Alloc_Op)) = Pool_Type
+                        then
+                           exit;
+                        end if;
+
+                        Alloc_Op := Homonym (Alloc_Op);
+                     end loop;
+                  end;
+
+               --  In the normal Storage_Pool case, retrieve the primitive
+               --  function associated with the pool type.
+
+               else
+                  Alloc_Op :=
+                    Find_Prim_Op
+                      (Etype (Associated_Storage_Pool (Root_Type (Ptyp))),
+                       Attribute_Name (N));
+               end if;
+
+               --  If Storage_Size wasn't found (can only occur in the simple
+               --  storage pool case), then simply use zero for the result.
+
+               if not Present (Alloc_Op) then
+                  Rewrite (N, Make_Integer_Literal (Loc, 0));
+
+               --  Otherwise, rewrite the allocator as a call to pool type's
+               --  Storage_Size function.
+
+               else
+                  Rewrite (N,
+                    OK_Convert_To (Typ,
+                      Make_Function_Call (Loc,
+                        Name =>
+                          New_Reference_To (Alloc_Op, Loc),
+
+                        Parameter_Associations => New_List (
+                          New_Reference_To
+                            (Associated_Storage_Pool
+                               (Root_Type (Ptyp)), Loc)))));
+               end if;
 
             else
                Rewrite (N, Make_Integer_Literal (Loc, 0));
@@ -5309,6 +5519,96 @@ package body Exp_Attr is
          Validity_Checks_On := Save_Validity_Checks_On;
       end Valid;
 
+      -------------------
+      -- Valid_Scalars --
+      -------------------
+
+      when Attribute_Valid_Scalars => Valid_Scalars : declare
+         Ftyp : Entity_Id;
+
+      begin
+         if Present (Underlying_Type (Ptyp)) then
+            Ftyp := Underlying_Type (Ptyp);
+         else
+            Ftyp := Ptyp;
+         end if;
+
+         --  For scalar types, Valid_Scalars is the same as Valid
+
+         if Is_Scalar_Type (Ftyp) then
+            Rewrite (N,
+              Make_Attribute_Reference (Loc,
+                Attribute_Name => Name_Valid,
+                Prefix         => Pref));
+            Analyze_And_Resolve (N, Standard_Boolean);
+
+         --  For array types, we construct a function that determines if there
+         --  are any non-valid scalar subcomponents, and call the function.
+         --  We only do this for arrays whose component type needs checking
+
+         elsif Is_Array_Type (Ftyp)
+           and then not No_Scalar_Parts (Component_Type (Ftyp))
+         then
+            Rewrite (N,
+              Make_Function_Call (Loc,
+                Name                   =>
+                  New_Occurrence_Of (Build_Array_VS_Func (Ftyp, N), Loc),
+                Parameter_Associations => New_List (Pref)));
+
+            Analyze_And_Resolve (N, Standard_Boolean);
+
+         --  For record types, we build a big conditional expression, applying
+         --  Valid or Valid_Scalars as appropriate to all relevant components.
+
+         elsif (Is_Record_Type (Ptyp) or else Has_Discriminants (Ptyp))
+           and then not No_Scalar_Parts (Ptyp)
+         then
+            declare
+               C : Entity_Id;
+               X : Node_Id;
+               A : Name_Id;
+
+            begin
+               X := New_Occurrence_Of (Standard_True, Loc);
+               C := First_Component_Or_Discriminant (Ptyp);
+               while Present (C) loop
+                  if No_Scalar_Parts (Etype (C)) then
+                     goto Continue;
+                  elsif Is_Scalar_Type (Etype (C)) then
+                     A := Name_Valid;
+                  else
+                     A := Name_Valid_Scalars;
+                  end if;
+
+                  X :=
+                    Make_And_Then (Loc,
+                      Left_Opnd   => X,
+                      Right_Opnd  =>
+                        Make_Attribute_Reference (Loc,
+                          Attribute_Name => A,
+                          Prefix         =>
+                            Make_Selected_Component (Loc,
+                              Prefix        =>
+                                Duplicate_Subexpr (Pref, Name_Req => True),
+                              Selector_Name =>
+                                New_Occurrence_Of (C, Loc))));
+               <<Continue>>
+                  Next_Component_Or_Discriminant (C);
+               end loop;
+
+               Rewrite (N, X);
+               Analyze_And_Resolve (N, Standard_Boolean);
+            end;
+
+         --  For all other types, result is True (but not static)
+
+         else
+            Rewrite (N, New_Occurrence_Of (Standard_Boolean, Loc));
+            Analyze_And_Resolve (N, Standard_Boolean);
+            Set_Is_Static_Expression (N, False);
+         end if;
+      end Valid_Scalars;
+
       -----------
       -- Value --
       -----------
@@ -5613,7 +5913,8 @@ package body Exp_Attr is
            Attribute_Definite                     |
            Attribute_Null_Parameter               |
            Attribute_Passed_By_Reference          |
-           Attribute_Pool_Address                 =>
+           Attribute_Pool_Address                 |
+           Attribute_Scalar_Storage_Order         =>
          null;
 
       --  The following attributes are also handled by the back end, but return
@@ -5641,10 +5942,12 @@ package body Exp_Attr is
            Attribute_Enabled                      |
            Attribute_Epsilon                      |
            Attribute_Fast_Math                    |
+           Attribute_First_Valid                  |
            Attribute_Has_Access_Values            |
            Attribute_Has_Discriminants            |
            Attribute_Has_Tagged_Values            |
            Attribute_Large                        |
+           Attribute_Last_Valid                   |
            Attribute_Machine_Emax                 |
            Attribute_Machine_Emin                 |
            Attribute_Machine_Mantissa             |

@@ -1,5 +1,5 @@
 /* Loop autoparallelization.
-   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011
+   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Contributed by Sebastian Pop <pop@cri.ensmp.fr> and
    Zdenek Dvorak <dvorakz@suse.cz>.
@@ -387,8 +387,14 @@ loop_parallel_p (struct loop *loop, struct obstack * parloop_obstack)
   datarefs = VEC_alloc (data_reference_p, heap, 10);
   dependence_relations = VEC_alloc (ddr_p, heap, 10 * 10);
   loop_nest = VEC_alloc (loop_p, heap, 3);
-  compute_data_dependences_for_loop (loop, true, &loop_nest, &datarefs,
-				     &dependence_relations);
+  if (! compute_data_dependences_for_loop (loop, true, &loop_nest, &datarefs,
+					   &dependence_relations))
+    {
+      if (dump_file && (dump_flags & TDF_DETAILS))
+	fprintf (dump_file, "  FAILED: cannot analyze data dependencies\n");
+      ret = false;
+      goto end;
+    }
   if (dump_file && (dump_flags & TDF_DETAILS))
     dump_data_dependence_relations (dump_file, dependence_relations);
 
@@ -405,6 +411,7 @@ loop_parallel_p (struct loop *loop, struct obstack * parloop_obstack)
     fprintf (dump_file,
 	     "  FAILED: data dependencies exist across iterations\n");
 
+ end:
   VEC_free (loop_p, heap, loop_nest);
   free_dependence_relations (dependence_relations);
   free_data_refs (datarefs);
@@ -902,7 +909,7 @@ separate_decls_in_region_debug (gimple stmt, htab_t name_copies,
     var = gimple_debug_source_bind_get_var (stmt);
   else
     return true;
-  if (TREE_CODE (var) == DEBUG_EXPR_DECL)
+  if (TREE_CODE (var) == DEBUG_EXPR_DECL || TREE_CODE (var) == LABEL_DECL)
     return true;
   gcc_assert (DECL_P (var) && SSA_VAR_P (var));
   ielt.uid = DECL_UID (var);
@@ -1474,8 +1481,6 @@ transform_to_exit_first_loop (struct loop *loop, htab_t reduction_list, tree nit
   gimple phi, nphi, cond_stmt, stmt, cond_nit;
   gimple_stmt_iterator gsi;
   tree nit_1;
-  edge exit_1;
-  tree new_rhs;
 
   split_block_after_labels (loop->header);
   orig_header = single_succ (loop->header);
@@ -1505,41 +1510,10 @@ transform_to_exit_first_loop (struct loop *loop, htab_t reduction_list, tree nit
 	}
     }
 
- /* Setting the condition towards peeling the last iteration:
-    If the block consisting of the exit condition has the latch as
-    successor, then the body of the loop is executed before
-    the exit condition is tested.  In such case, moving the
-    condition to the entry, causes that the loop will iterate
-    one less iteration (which is the wanted outcome, since we
-    peel out the last iteration).  If the body is executed after
-    the condition, moving the condition to the entry requires
-    decrementing one iteration.  */
-  exit_1 = EDGE_SUCC (exit->src, EDGE_SUCC (exit->src, 0) == exit); 
-  if (exit_1->dest == loop->latch)
-    new_rhs = gimple_cond_rhs (cond_stmt);
-  else
-  {
-    new_rhs = fold_build2 (MINUS_EXPR, TREE_TYPE (gimple_cond_rhs (cond_stmt)),
-			   gimple_cond_rhs (cond_stmt),
-			   build_int_cst (TREE_TYPE (gimple_cond_rhs (cond_stmt)), 1));
-    if (TREE_CODE (gimple_cond_rhs (cond_stmt)) == SSA_NAME)
-      {
- 	basic_block preheader;
-  	gimple_stmt_iterator gsi1;
-
-  	preheader = loop_preheader_edge(loop)->src;
-    	gsi1 = gsi_after_labels (preheader);
-	new_rhs = force_gimple_operand_gsi (&gsi1, new_rhs, true,
-					    NULL_TREE,false,GSI_CONTINUE_LINKING);
-      }
-  }
-  gimple_cond_set_rhs (cond_stmt, unshare_expr (new_rhs));
-  gimple_cond_set_lhs (cond_stmt, unshare_expr (gimple_cond_lhs (cond_stmt)));
-  
   bbs = get_loop_body_in_dom_order (loop);
 
-  for (n = 0; bbs[n] != loop->latch; n++)
-    continue;
+  for (n = 0; bbs[n] != exit->src; n++)
+   continue;
   nbbs = XNEWVEC (basic_block, n);
   ok = gimple_duplicate_sese_tail (single_succ_edge (loop->header), exit,
 				   bbs + 1, n, nbbs);
@@ -1550,7 +1524,7 @@ transform_to_exit_first_loop (struct loop *loop, htab_t reduction_list, tree nit
 
   /* Other than reductions, the only gimple reg that should be copied
      out of the loop is the control variable.  */
-
+  exit = single_dom_exit (loop);
   control_name = NULL_TREE;
   for (gsi = gsi_start_phis (ex_bb); !gsi_end_p (gsi); )
     {
@@ -1566,8 +1540,6 @@ transform_to_exit_first_loop (struct loop *loop, htab_t reduction_list, tree nit
          keep the phi at the reduction's keep_res field.  The
          PHI_RESULT of this phi is the resulting value of the reduction
          variable when exiting the loop.  */
-
-      exit = single_dom_exit (loop);
 
       if (htab_elements (reduction_list) > 0)
 	{
@@ -1732,6 +1704,10 @@ create_parallel_loop (struct loop *loop, tree loop_fn, tree data,
   stmt = gimple_build_omp_return (true);
   gimple_set_location (stmt, loc);
   gsi_insert_after (&gsi, stmt, GSI_NEW_STMT);
+
+  /* After the above dom info is hosed.  Re-compute it.  */
+  free_dominance_info (CDI_DOMINATORS);
+  calculate_dominance_info (CDI_DOMINATORS);
 
   return paral_bb;
 }
@@ -2178,12 +2154,15 @@ parallelize_loops (void)
 	  /* FIXME: the check for vector phi nodes could be removed.  */
 	  || loop_has_vector_phi_nodes (loop))
 	continue;
-      estimated = max_stmt_executions_int (loop, false);
+
+      estimated = estimated_stmt_executions_int (loop);
+      if (estimated == -1)
+	estimated = max_stmt_executions_int (loop);
       /* FIXME: Bypass this check as graphite doesn't update the
-      count and frequency correctly now.  */
+	 count and frequency correctly now.  */
       if (!flag_loop_parallelize_all
-	  && ((estimated !=-1 
-	     && estimated <= (HOST_WIDE_INT) n_threads * MIN_PER_THREAD)
+	  && ((estimated != -1
+	       && estimated <= (HOST_WIDE_INT) n_threads * MIN_PER_THREAD)
 	      /* Do not bother with loops in cold areas.  */
 	      || optimize_loop_nest_for_size_p (loop)))
 	continue;
@@ -2212,10 +2191,11 @@ parallelize_loops (void)
       }
       gen_parallel_loop (loop, reduction_list,
 			 n_threads, &niter_desc);
+#ifdef ENABLE_CHECKING
       verify_flow_info ();
-      verify_dominators (CDI_DOMINATORS);
       verify_loop_structure ();
       verify_loop_closed_ssa (true);
+#endif
     }
 
   free_stmt_vec_info_vec ();

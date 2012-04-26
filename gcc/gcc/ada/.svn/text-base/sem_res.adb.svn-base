@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -193,7 +193,6 @@ package body Sem_Res is
    procedure Resolve_Op_Expon                  (N : Node_Id; Typ : Entity_Id);
    procedure Resolve_Op_Not                    (N : Node_Id; Typ : Entity_Id);
    procedure Resolve_Qualified_Expression      (N : Node_Id; Typ : Entity_Id);
-   procedure Resolve_Quantified_Expression     (N : Node_Id; Typ : Entity_Id);
    procedure Resolve_Range                     (N : Node_Id; Typ : Entity_Id);
    procedure Resolve_Real_Literal              (N : Node_Id; Typ : Entity_Id);
    procedure Resolve_Reference                 (N : Node_Id; Typ : Entity_Id);
@@ -1770,6 +1769,10 @@ package body Sem_Res is
       --  Try and fix up a literal so that it matches its expected type. New
       --  literals are manufactured if necessary to avoid cascaded errors.
 
+      function Proper_Current_Scope return Entity_Id;
+      --  Return the current scope. Skip loop scopes created for the purpose of
+      --  quantified expression analysis since those do not appear in the tree.
+
       procedure Report_Ambiguous_Argument;
       --  Additional diagnostics when an ambiguous call has an ambiguous
       --  argument (typically a controlling actual).
@@ -1831,6 +1834,30 @@ package body Sem_Res is
             Patch_Up_Value (High_Bound (N), Typ);
          end if;
       end Patch_Up_Value;
+
+      --------------------------
+      -- Proper_Current_Scope --
+      --------------------------
+
+      function Proper_Current_Scope return Entity_Id is
+         S : Entity_Id := Current_Scope;
+
+      begin
+         while Present (S) loop
+
+            --  Skip a loop scope created for quantified expression analysis
+
+            if Ekind (S) = E_Loop
+              and then Nkind (Parent (S)) = N_Quantified_Expression
+            then
+               S := Scope (S);
+            else
+               exit;
+            end if;
+         end loop;
+
+         return S;
+      end Proper_Current_Scope;
 
       -------------------------------
       -- Report_Ambiguous_Argument --
@@ -2597,10 +2624,10 @@ package body Sem_Res is
          --  an error. We can't do this earlier, because it would cause legal
          --  cases to get errors (when some other type has an abstract "+").
 
-         if Ada_Version >= Ada_2005 and then
-           Nkind (N) in N_Op and then
-           Is_Overloaded (N) and then
-           Is_Universal_Numeric_Type (Etype (Entity (N)))
+         if Ada_Version >= Ada_2005
+           and then Nkind (N) in N_Op
+           and then Is_Overloaded (N)
+           and then Is_Universal_Numeric_Type (Etype (Entity (N)))
          then
             Get_First_Interp (N, I, It);
             while Present (It.Typ) loop
@@ -2761,8 +2788,7 @@ package body Sem_Res is
             when N_Qualified_Expression
                              => Resolve_Qualified_Expression     (N, Ctx_Type);
 
-            when N_Quantified_Expression
-                             => Resolve_Quantified_Expression    (N, Ctx_Type);
+            when N_Quantified_Expression => null;
 
             when N_Raise_xxx_Error
                              => Set_Etype (N, Ctx_Type);
@@ -2857,10 +2883,9 @@ package body Sem_Res is
          --  Ada 2012 (AI05-177): Expression functions do not freeze. Only
          --  their use (in an expanded call) freezes.
 
-         if Ekind (Current_Scope) /= E_Function
-           or else
-             Nkind (Original_Node (Unit_Declaration_Node (Current_Scope))) /=
-                                                        N_Expression_Function
+         if Ekind (Proper_Current_Scope) /= E_Function
+           or else Nkind (Original_Node (Unit_Declaration_Node
+                     (Proper_Current_Scope))) /= N_Expression_Function
          then
             Freeze_Expression (N);
          end if;
@@ -3739,7 +3764,16 @@ package body Sem_Res is
             --  Save actual for subsequent check on order dependence, and
             --  indicate whether actual is modifiable. For AI05-0144-2.
 
-            Save_Actual (A, Ekind (F) /= E_In_Parameter);
+            --  If this is a call to a reference function that is the result
+            --  of expansion, as in element iterator loops, this does not lead
+            --  to a dangerous order dependence: only subsequent use of the
+            --  denoted element might, in some enclosing call.
+
+            if not Has_Implicit_Dereference (Etype (Nam))
+              or else Comes_From_Source (N)
+            then
+               Save_Actual (A, Ekind (F) /= E_In_Parameter);
+            end if;
 
             --  For mode IN, if actual is an entity, and the type of the formal
             --  has warnings suppressed, then we reset Never_Set_In_Source for
@@ -3958,6 +3992,20 @@ package body Sem_Res is
                if not Valid_Conversion (A, F_Typ, A) then
                   Error_Msg_N
                     ("invalid implicit conversion for access parameter", A);
+               end if;
+
+               --  If the actual is an access selected component of a variable,
+               --  the call may modify its designated object. It is reasonable
+               --  to treat this as a potential modification of the enclosing
+               --  record, to prevent spurious warnings that it should be
+               --  declared as a constant, because intuitively programmers
+               --  regard the designated subcomponent as part of the record.
+
+               if Nkind (A) = N_Selected_Component
+                 and then Is_Entity_Name (Prefix (A))
+                 and then not Is_Constant_Object (Entity (Prefix (A)))
+               then
+                  Note_Possible_Modification (A, Sure => False);
                end if;
             end if;
 
@@ -4217,6 +4265,32 @@ package body Sem_Res is
            and then Base_Type (Etype (Expression (E))) /= Base_Type (Etype (E))
          then
             Wrong_Type (Expression (E), Etype (E));
+         end if;
+
+         --  Calls to build-in-place functions are not currently supported in
+         --  allocators for access types associated with a simple storage pool.
+         --  Supporting such allocators may require passing additional implicit
+         --  parameters to build-in-place functions (or a significant revision
+         --  of the current b-i-p implementation to unify the handling for
+         --  multiple kinds of storage pools). ???
+
+         if Is_Immutably_Limited_Type (Desig_T)
+           and then Nkind (Expression (E)) = N_Function_Call
+         then
+            declare
+               Pool : constant Entity_Id :=
+                        Associated_Storage_Pool (Root_Type (Typ));
+            begin
+               if Present (Pool)
+                 and then
+                   Present (Get_Rep_Pragma
+                              (Etype (Pool), Name_Simple_Storage_Pool_Type))
+               then
+                  Error_Msg_N
+                    ("limited function calls not yet supported in simple " &
+                     "storage pool allocators", Expression (E));
+               end if;
+            end;
          end if;
 
          --  A special accessibility check is needed for allocators that
@@ -5267,7 +5341,18 @@ package body Sem_Res is
       --  needs extending because we can generate procedure calls that need
       --  freezing.
 
-      if Is_Entity_Name (Subp) and then not In_Spec_Expression then
+      --  In Ada 2012, expression functions may be called within pre/post
+      --  conditions of subsequent functions or expression functions. Such
+      --  calls do not freeze when they appear within generated bodies, which
+      --  would place the freeze node in the wrong scope.  An expression
+      --  function is frozen in the usual fashion, by the appearance of a real
+      --  body, or at the end of a declarative part.
+
+      if Is_Entity_Name (Subp) and then not In_Spec_Expression
+        and then
+          (not Is_Expression_Function (Entity (Subp))
+            or else Scope (Entity (Subp)) = Current_Scope)
+      then
          Freeze_Expression (Subp);
       end if;
 
@@ -5562,6 +5647,15 @@ package body Sem_Res is
         and then Has_Pragma_Inline_Always (Nam)
         and then Nkind (Unit_Declaration_Node (Nam)) = N_Subprogram_Declaration
         and then Present (Body_To_Inline (Unit_Declaration_Node (Nam)))
+        and then not Debug_Flag_Dot_K
+      then
+         null;
+
+      elsif Is_Inlined (Nam)
+        and then Has_Pragma_Inline (Nam)
+        and then Nkind (Unit_Declaration_Node (Nam)) = N_Subprogram_Declaration
+        and then Present (Body_To_Inline (Unit_Declaration_Node (Nam)))
+        and then Debug_Flag_Dot_K
       then
          null;
 
@@ -6024,15 +6118,36 @@ package body Sem_Res is
       Condition : constant Node_Id := First (Expressions (N));
       Then_Expr : constant Node_Id := Next (Condition);
       Else_Expr : Node_Id          := Next (Then_Expr);
+      Else_Typ  : Entity_Id;
+      Then_Typ  : Entity_Id;
 
    begin
       Resolve (Condition, Any_Boolean);
       Resolve (Then_Expr, Typ);
+      Then_Typ := Etype (Then_Expr);
+
+      --  When the "then" and "else" expressions are of a scalar type, insert
+      --  a conversion to ensure the generation of a constraint check.
+
+      if Is_Scalar_Type (Then_Typ)
+        and then Then_Typ /= Typ
+      then
+         Rewrite (Then_Expr, Convert_To (Typ, Then_Expr));
+         Analyze_And_Resolve (Then_Expr, Typ);
+      end if;
 
       --  If ELSE expression present, just resolve using the determined type
 
       if Present (Else_Expr) then
          Resolve (Else_Expr, Typ);
+         Else_Typ := Etype (Else_Expr);
+
+         if Is_Scalar_Type (Else_Typ)
+           and then Else_Typ /= Typ
+         then
+            Rewrite (Else_Expr, Convert_To (Typ, Else_Expr));
+            Analyze_And_Resolve (Else_Expr, Typ);
+         end if;
 
       --  If no ELSE expression is present, root type must be Standard.Boolean
       --  and we provide a Standard.True result converted to the appropriate
@@ -8221,38 +8336,6 @@ package body Sem_Res is
       Eval_Qualified_Expression (N);
    end Resolve_Qualified_Expression;
 
-   -----------------------------------
-   -- Resolve_Quantified_Expression --
-   -----------------------------------
-
-   procedure Resolve_Quantified_Expression (N : Node_Id; Typ : Entity_Id) is
-   begin
-      if not Alfa_Mode then
-
-         --  If expansion is enabled, analysis is delayed until the expresssion
-         --  is rewritten as a loop.
-
-         if Operating_Mode /= Check_Semantics then
-            return;
-         end if;
-
-         --  The loop structure is already resolved during its analysis, only
-         --  the resolution of the condition needs to be done. Expansion is
-         --  disabled so that checks and other generated code are inserted in
-         --  the tree after expression has been rewritten as a loop.
-
-         Expander_Mode_Save_And_Set (False);
-         Resolve (Condition (N), Typ);
-         Expander_Mode_Restore;
-
-      --  In Alfa mode, we need normal expansion in order to properly introduce
-      --  the necessary transient scopes.
-
-      else
-         Resolve (Condition (N), Typ);
-      end if;
-   end Resolve_Quantified_Expression;
-
    -------------------
    -- Resolve_Range --
    -------------------
@@ -8920,7 +9003,7 @@ package body Sem_Res is
       --  necessary. Else resolve the bounds, and apply needed checks.
 
       if not Is_Entity_Name (Drange) then
-         Index := First_Index (Array_Type);
+         Index := Proper_First_Index (Array_Type);
          Resolve (Drange, Base_Type (Etype (Index)));
 
          if Nkind (Drange) = N_Range then

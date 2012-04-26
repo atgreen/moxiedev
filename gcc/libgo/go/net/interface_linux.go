@@ -7,18 +7,15 @@
 package net
 
 import (
-	"fmt"
 	"os"
 	"syscall"
 	"unsafe"
 )
 
 // If the ifindex is zero, interfaceTable returns mappings of all
-// network interfaces.  Otheriwse it returns a mapping of a specific
+// network interfaces.  Otherwise it returns a mapping of a specific
 // interface.
 func interfaceTable(ifindex int) ([]Interface, error) {
-	var ift []Interface
-
 	tab, err := syscall.NetlinkRIB(syscall.RTM_GETLINK, syscall.AF_UNSPEC)
 	if err != nil {
 		return nil, os.NewSyscallError("netlink rib", err)
@@ -29,6 +26,7 @@ func interfaceTable(ifindex int) ([]Interface, error) {
 		return nil, os.NewSyscallError("netlink message", err)
 	}
 
+	var ift []Interface
 	for _, m := range msgs {
 		switch m.Header.Type {
 		case syscall.NLMSG_DONE:
@@ -45,7 +43,6 @@ func interfaceTable(ifindex int) ([]Interface, error) {
 			}
 		}
 	}
-
 done:
 	return ift, nil
 }
@@ -67,7 +64,7 @@ func newLink(ifim *syscall.IfInfomsg, attrs []syscall.NetlinkRouteAttr) Interfac
 		case syscall.IFLA_IFNAME:
 			ifi.Name = string(a.Value[:len(a.Value)-1])
 		case syscall.IFLA_MTU:
-			ifi.MTU = int(uint32(a.Value[3])<<24 | uint32(a.Value[2])<<16 | uint32(a.Value[1])<<8 | uint32(a.Value[0]))
+			ifi.MTU = int(*(*uint32)(unsafe.Pointer(&a.Value[:4][0])))
 		}
 	}
 	return ifi
@@ -111,13 +108,11 @@ func interfaceAddrTable(ifindex int) ([]Addr, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return ifat, nil
 }
 
 func addrTable(msgs []syscall.NetlinkMessage, ifindex int) ([]Addr, error) {
 	var ifat []Addr
-
 	for _, m := range msgs {
 		switch m.Header.Type {
 		case syscall.NLMSG_DONE:
@@ -133,7 +128,6 @@ func addrTable(msgs []syscall.NetlinkMessage, ifindex int) ([]Addr, error) {
 			}
 		}
 	}
-
 done:
 	return ifat, nil
 }
@@ -165,70 +159,76 @@ func interfaceMulticastAddrTable(ifindex int) ([]Addr, error) {
 		err error
 		ifi *Interface
 	)
-
 	if ifindex > 0 {
 		ifi, err = InterfaceByIndex(ifindex)
 		if err != nil {
 			return nil, err
 		}
 	}
-
-	ifmat4 := parseProcNetIGMP(ifi)
-	ifmat6 := parseProcNetIGMP6(ifi)
-
+	ifmat4 := parseProcNetIGMP("/proc/net/igmp", ifi)
+	ifmat6 := parseProcNetIGMP6("/proc/net/igmp6", ifi)
 	return append(ifmat4, ifmat6...), nil
 }
 
-func parseProcNetIGMP(ifi *Interface) []Addr {
+func parseProcNetIGMP(path string, ifi *Interface) []Addr {
+	fd, err := open(path)
+	if err != nil {
+		return nil
+	}
+	defer fd.close()
+
 	var (
 		ifmat []Addr
 		name  string
 	)
-
-	fd, err := open("/proc/net/igmp")
-	if err != nil {
-		return nil
-	}
-	defer fd.close()
-
 	fd.readLine() // skip first line
 	b := make([]byte, IPv4len)
 	for l, ok := fd.readLine(); ok; l, ok = fd.readLine() {
-		f := getFields(l)
-		switch len(f) {
-		case 4:
+		f := splitAtBytes(l, " :\r\t\n")
+		if len(f) < 4 {
+			continue
+		}
+		switch {
+		case l[0] != ' ' && l[0] != '\t': // new interface line
+			name = f[1]
+		case len(f[0]) == 8:
 			if ifi == nil || name == ifi.Name {
-				fmt.Sscanf(f[0], "%08x", &b)
-				ifma := IPAddr{IP: IPv4(b[3], b[2], b[1], b[0])}
+				// The Linux kernel puts the IP
+				// address in /proc/net/igmp in native
+				// endianness.
+				for i := 0; i+1 < len(f[0]); i += 2 {
+					b[i/2], _ = xtoi2(f[0][i:i+2], 0)
+				}
+				i := *(*uint32)(unsafe.Pointer(&b[:4][0]))
+				ifma := IPAddr{IP: IPv4(byte(i>>24), byte(i>>16), byte(i>>8), byte(i))}
 				ifmat = append(ifmat, ifma.toAddr())
 			}
-		case 5:
-			name = f[1]
 		}
 	}
-
 	return ifmat
 }
 
-func parseProcNetIGMP6(ifi *Interface) []Addr {
-	var ifmat []Addr
-
-	fd, err := open("/proc/net/igmp6")
+func parseProcNetIGMP6(path string, ifi *Interface) []Addr {
+	fd, err := open(path)
 	if err != nil {
 		return nil
 	}
 	defer fd.close()
 
+	var ifmat []Addr
 	b := make([]byte, IPv6len)
 	for l, ok := fd.readLine(); ok; l, ok = fd.readLine() {
-		f := getFields(l)
+		f := splitAtBytes(l, " \r\t\n")
+		if len(f) < 6 {
+			continue
+		}
 		if ifi == nil || f[1] == ifi.Name {
-			fmt.Sscanf(f[2], "%32x", &b)
+			for i := 0; i+1 < len(f[2]); i += 2 {
+				b[i/2], _ = xtoi2(f[2][i:i+2], 0)
+			}
 			ifma := IPAddr{IP: IP{b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]}}
 			ifmat = append(ifmat, ifma.toAddr())
-
 		}
 	}
-
 	return ifmat
 }

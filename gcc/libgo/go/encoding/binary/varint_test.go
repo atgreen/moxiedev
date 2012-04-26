@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package binary
+package binary_test
 
 import (
 	"bytes"
+	. "encoding/binary"
 	"io"
 	"testing"
 )
@@ -25,9 +26,9 @@ func TestConstants(t *testing.T) {
 }
 
 func testVarint(t *testing.T, x int64) {
-	buf1 := make([]byte, MaxVarintLen64)
-	n := PutVarint(buf1[:], x)
-	y, m := Varint(buf1[0:n])
+	buf := make([]byte, MaxVarintLen64)
+	n := PutVarint(buf, x)
+	y, m := Varint(buf[0:n])
 	if x != y {
 		t.Errorf("Varint(%d): got %d", x, y)
 	}
@@ -35,15 +36,7 @@ func testVarint(t *testing.T, x int64) {
 		t.Errorf("Varint(%d): got n = %d; want %d", x, m, n)
 	}
 
-	var buf2 bytes.Buffer
-	err := WriteVarint(&buf2, x)
-	if err != nil {
-		t.Errorf("WriteVarint(%d): %s", x, err)
-	}
-	if n != buf2.Len() {
-		t.Errorf("WriteVarint(%d): got n = %d; want %d", x, buf2.Len(), n)
-	}
-	y, err = ReadVarint(&buf2)
+	y, err := ReadVarint(bytes.NewBuffer(buf))
 	if err != nil {
 		t.Errorf("ReadVarint(%d): %s", x, err)
 	}
@@ -53,9 +46,9 @@ func testVarint(t *testing.T, x int64) {
 }
 
 func testUvarint(t *testing.T, x uint64) {
-	buf1 := make([]byte, MaxVarintLen64)
-	n := PutUvarint(buf1[:], x)
-	y, m := Uvarint(buf1[0:n])
+	buf := make([]byte, MaxVarintLen64)
+	n := PutUvarint(buf, x)
+	y, m := Uvarint(buf[0:n])
 	if x != y {
 		t.Errorf("Uvarint(%d): got %d", x, y)
 	}
@@ -63,15 +56,7 @@ func testUvarint(t *testing.T, x uint64) {
 		t.Errorf("Uvarint(%d): got n = %d; want %d", x, m, n)
 	}
 
-	var buf2 bytes.Buffer
-	err := WriteUvarint(&buf2, x)
-	if err != nil {
-		t.Errorf("WriteUvarint(%d): %s", x, err)
-	}
-	if n != buf2.Len() {
-		t.Errorf("WriteUvarint(%d): got n = %d; want %d", x, buf2.Len(), n)
-	}
-	y, err = ReadUvarint(&buf2)
+	y, err := ReadUvarint(bytes.NewBuffer(buf))
 	if err != nil {
 		t.Errorf("ReadUvarint(%d): %s", x, err)
 	}
@@ -150,8 +135,8 @@ func testOverflow(t *testing.T, buf []byte, n0 int, err0 error) {
 }
 
 func TestOverflow(t *testing.T) {
-	testOverflow(t, []byte{0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x2}, -10, overflow)
-	testOverflow(t, []byte{0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x1, 0, 0}, -13, overflow)
+	testOverflow(t, []byte{0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x2}, -10, Overflow)
+	testOverflow(t, []byte{0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x1, 0, 0}, -13, Overflow)
 }
 
 func TestNonCanonicalZero(t *testing.T) {

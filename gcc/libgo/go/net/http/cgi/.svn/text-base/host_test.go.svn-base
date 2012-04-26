@@ -19,6 +19,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -40,6 +41,7 @@ func runCgiTest(t *testing.T, h *Handler, httpreq string, expectedMap map[string
 
 	// Make a map to hold the test map that the CGI returns.
 	m := make(map[string]string)
+	m["_body"] = rw.Body.String()
 	linesRead := 0
 readlines:
 	for {
@@ -355,7 +357,7 @@ func TestCopyError(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		return p.Signal(os.UnixSignal(0)) == nil
+		return p.Signal(syscall.Signal(0)) == nil
 	}
 
 	if !childRunning() {
@@ -364,7 +366,7 @@ func TestCopyError(t *testing.T) {
 	conn.Close()
 
 	tries := 0
-	for tries < 15 && childRunning() {
+	for tries < 25 && childRunning() {
 		time.Sleep(50 * time.Millisecond * time.Duration(tries))
 		tries++
 	}

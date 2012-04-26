@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/vect/costmodel
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-07-11T13:29:29.950393Z
-176153
-hjl
+2012-04-05T12:11:50.460054Z
+186163
+wschmidt
 
 
 
@@ -26,6 +26,9 @@ hjl
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+x86_64
+dir
+
 ppc
 dir
 
@@ -33,8 +36,5 @@ spu
 dir
 
 i386
-dir
-
-x86_64
 dir
 

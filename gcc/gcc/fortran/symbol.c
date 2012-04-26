@@ -1,6 +1,6 @@
 /* Maintain binary trees of symbols.
    Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010, 2011
+   2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Contributed by Andy Vaught
 
@@ -274,7 +274,7 @@ gfc_set_default_type (gfc_symbol *sym, int error_flag, gfc_namespace *ns)
   if (ts->type == BT_CHARACTER && ts->u.cl)
     sym->ts.u.cl = gfc_new_charlen (sym->ns, ts->u.cl);
 
-  if (sym->attr.is_bind_c == 1)
+  if (sym->attr.is_bind_c == 1 && gfc_option.warn_c_binding_type)
     {
       /* BIND(C) variables should not be implicitly declared.  */
       gfc_warning_now ("Implicitly declared BIND(C) variable '%s' at %L may "
@@ -287,7 +287,8 @@ gfc_set_default_type (gfc_symbol *sym, int error_flag, gfc_namespace *ns)
       if (sym->ns->proc_name != NULL
 	  && (sym->ns->proc_name->attr.subroutine != 0
 	      || sym->ns->proc_name->attr.function != 0)
-	  && sym->ns->proc_name->attr.is_bind_c != 0)
+	  && sym->ns->proc_name->attr.is_bind_c != 0
+	  && gfc_option.warn_c_binding_type)
         {
           /* Dummy args to a BIND(C) routine may not be interoperable if
              they are implicitly typed.  */
@@ -444,12 +445,15 @@ check_conflict (symbol_attribute *attr, const char *name, locus *where)
             a1 = gfc_code2string (flavors, attr->flavor);
             a2 = save;
 	    goto conflict;
-
+	  case FL_NAMELIST:
+	    gfc_error ("Namelist group name at %L cannot have the "
+		       "SAVE attribute", where);
+	    return FAILURE; 
+	    break;
 	  case FL_PROCEDURE:
 	    /* Conflicts between SAVE and PROCEDURE will be checked at
 	       resolution stage, see "resolve_fl_procedure".  */
 	  case FL_VARIABLE:
-	  case FL_NAMELIST:
 	  default:
 	    break;
 	}
@@ -2553,8 +2557,6 @@ gfc_new_symbol (const char *name, gfc_namespace *ns)
   /* Make sure flags for symbol being C bound are clear initially.  */
   p->attr.is_bind_c = 0;
   p->attr.is_iso_c = 0;
-  /* Make sure the binding label field has a Nul char to start.  */
-  p->binding_label[0] = '\0';
 
   /* Clear the ptrs we may need.  */
   p->common_block = NULL;
@@ -3693,7 +3695,8 @@ verify_bind_c_derived_type (gfc_symbol *derived_sym)
 		 recompiles with different flags (e.g., -m32 and -m64 on
 		 x86_64 and using integer(4) to claim interop with a
 		 C_LONG).  */
-	      if (derived_sym->attr.is_bind_c == 1)
+	      if (derived_sym->attr.is_bind_c == 1
+		  && gfc_option.warn_c_binding_type)
 		/* If the derived type is bind(c), all fields must be
 		   interop.  */
 		gfc_warning ("Component '%s' in derived type '%s' at %L "
@@ -3701,7 +3704,7 @@ verify_bind_c_derived_type (gfc_symbol *derived_sym)
                              "derived type '%s' is BIND(C)",
                              curr_comp->name, derived_sym->name,
                              &(curr_comp->loc), derived_sym->name);
-	      else
+	      else if (gfc_option.warn_c_binding_type)
 		/* If derived type is param to bind(c) routine, or to one
 		   of the iso_c_binding procs, it must be interoperable, so
 		   all fields must interop too.	 */
@@ -3802,8 +3805,8 @@ gen_special_c_interop_ptr (int ptr_id, const char *ptr_name,
   
   tmp_sym->attr.use_assoc = 1;
   tmp_sym->attr.is_bind_c = 1;
-  /* Set the binding_label.  */
-  sprintf (tmp_sym->binding_label, "%s_%s", module_name, tmp_sym->name);
+  /* Since we never generate a call to this symbol, don't set the
+     binding_label.  */
   
   /* Set the c_address field of c_null_ptr and c_null_funptr to
      the value of NULL.	 */
@@ -4585,8 +4588,9 @@ generate_isocbinding_symbol (const char *mod_name, iso_c_binding_symbol s,
 
         /* Use the procedure's name as it is in the iso_c_binding module for
            setting the binding label in case the user renamed the symbol.  */
-	sprintf (tmp_sym->binding_label, "%s_%s", mod_name,
-                 c_interop_kinds_table[s].name);
+	tmp_sym->binding_label = 
+	  gfc_get_string ("%s_%s", mod_name, 
+			  c_interop_kinds_table[s].name);
 	tmp_sym->attr.is_iso_c = 1;
 	if (s == ISOCBINDING_F_POINTER || s == ISOCBINDING_F_PROCPOINTER)
 	  tmp_sym->attr.subroutine = 1;
@@ -4681,7 +4685,7 @@ generate_isocbinding_symbol (const char *mod_name, iso_c_binding_symbol s,
 
 gfc_symbol *
 get_iso_c_sym (gfc_symbol *old_sym, char *new_name,
-               char *new_binding_label, int add_optional_arg)
+               const char *new_binding_label, int add_optional_arg)
 {
   gfc_symtree *new_symtree = NULL;
 
@@ -4699,7 +4703,7 @@ get_iso_c_sym (gfc_symbol *old_sym, char *new_name,
 			"symtree for '%s'", new_name);
 
   /* Now fill in the fields of the resolved symbol with the old sym.  */
-  strcpy (new_symtree->n.sym->binding_label, new_binding_label);
+  new_symtree->n.sym->binding_label = new_binding_label;
   new_symtree->n.sym->attr = old_sym->attr;
   new_symtree->n.sym->ts = old_sym->ts;
   new_symtree->n.sym->module = gfc_get_string (old_sym->module);

@@ -96,8 +96,8 @@ BEGIN {
     cfnresult = line
 
     printf("// Automatically generated wrapper for %s/%s\n", gofnname, cfnname)
-    printf("func c_%s(%s) %s%s__asm__(\"%s\")\n",
-	   cfnname, cfnparams, cfnresult, cfnresult == "" ? "" : " ", cfnname)
+    printf("//extern %s\n", cfnname)
+    printf("func c_%s(%s) %s\n", cfnname, cfnparams, cfnresult)
     printf("func %s(%s) %s%s%s%s{\n",
 	   gofnname, gofnparams, gofnresults == "" ? "" : "(", gofnresults,
 	   gofnresults == "" ? "" : ")", gofnresults == "" ? "" : " ")
@@ -190,7 +190,7 @@ BEGIN {
     }
 
     if (blocking) {
-	print "\tentersyscall()"
+	print "\tEntersyscall()"
     }
 
     printf("\t")
@@ -199,6 +199,7 @@ BEGIN {
     }
     printf("c_%s(%s)\n", cfnname, args)
 
+    seterr = 0
     if (gofnresults != "") {
 	fields = split(gofnresults, goresults, ", *")
 	if (fields > 2) {
@@ -218,13 +219,17 @@ BEGIN {
 	    gotype = goparam[2]
 
 	    if (goname == "err") {
+		print "\tvar errno Errno"
+		print "\tsetErrno := false"
 		if (cfnresult ~ /^\*/) {
 		    print "\tif _r == nil {"
 		} else {
 		    print "\tif _r < 0 {"
 		}
-		print "\t\terr = GetErrno()"
+		print "\t\terrno = GetErrno()"
+		print "\t\tsetErrno = true"
 		print "\t}"
+		seterr = 1
 	    } else if (gotype == "uintptr" && cfnresult ~ /^\*/) {
 		printf("\t%s = (%s)(unsafe.Pointer(_r))\n", goname, gotype)
 	    } else {
@@ -240,7 +245,13 @@ BEGIN {
     }
 
     if (blocking) {
-	print "\texitsyscall()"
+	print "\tExitsyscall()"
+    }
+
+    if (seterr) {
+	print "\tif setErrno {"
+	print "\t\terr = errno"
+	print "\t}"
     }
 
     if (gofnresults != "") {

@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/25_algorithms
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-12-04T13:21:53.627234Z
-181987
-redi
+2012-04-23T11:17:28.155053Z
+186701
+paolo
 
 
 
@@ -26,178 +26,52 @@ redi
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-copy_n
-dir
-
-inplace_merge
-dir
-
-rotate
-dir
-
-is_permutation
-dir
-
-stable_partition
-dir
-
-fill_n
-dir
-
-partition_copy
-dir
-
-lexicographical_compare
-dir
-
-move_backward
-dir
-
-search
-dir
-
-mismatch
-dir
-
-replace_copy
-dir
-
-includes
-dir
-
-find_end
-dir
-
-move
-dir
-
-copy_backward
-dir
-
-binary_search
-dir
-
-copy
-dir
-
-replace
-dir
-
-any_of
-dir
-
-find_first_of
-dir
-
-min
-dir
-
-max
-dir
-
-fill
-dir
-
-replace_if
-dir
-
-min_element
-dir
-
-all_of
-dir
-
-remove
-dir
-
-max_element
-dir
-
-count_if
-dir
-
-is_sorted_until
-dir
-
-swap
-dir
-
-make_heap
-dir
-
-push_heap
-dir
-
-is_partitioned
-dir
-
-set_intersection
-dir
-
-upper_bound
-dir
-
-search_n
-dir
-
-none_of
-dir
-
 sort_heap
 dir
 
-copy_if
+sort
 dir
 
 count
 dir
 
-minmax
+replace_if
 dir
 
-random_shuffle
+generate
 dir
 
-iter_swap
+pop_heap
+dir
+
+all_of
 dir
 
 partial_sort_copy
 dir
 
-find_if
+iter_swap
+dir
+
+remove
 dir
 
 merge
 dir
 
-unique_copy
+set_symmetric_difference
 dir
 
-minmax_element
+prev_permutation
 dir
 
-nth_element
+lexicographical_compare
 dir
 
-partial_sort
-dir
-
-reverse_copy
-dir
-
-next_permutation
-dir
-
-generate_n
+for_each
 dir
 
 equal
-dir
-
-is_heap
-dir
-
-swap_ranges
 dir
 
 partition
@@ -206,16 +80,148 @@ dir
 transform
 dir
 
+replace
+dir
+
+is_partitioned
+dir
+
+heap
+dir
+
+min
+dir
+
+is_heap_until
+dir
+
+max
+dir
+
+minmax
+dir
+
+is_sorted
+dir
+
+random_shuffle
+dir
+
+min_element
+dir
+
+max_element
+dir
+
+minmax_element
+dir
+
+stable_partition
+dir
+
+set_union
+dir
+
+replace_copy
+dir
+
+mismatch
+dir
+
+move
+dir
+
+find_end
+dir
+
+includes
+dir
+
+is_sorted_until
+dir
+
+generate_n
+dir
+
+adjacent_find
+dir
+
+copy
+dir
+
+remove_if
+dir
+
+upper_bound
+dir
+
+none_of
+dir
+
+fill
+dir
+
+copy_if
+dir
+
+inplace_merge
+dir
+
+find_if
+dir
+
+unique_copy
+dir
+
+nth_element
+dir
+
+move_backward
+dir
+
+remove_copy_if
+dir
+
+set_difference
+dir
+
+count_if
+dir
+
+unique
+dir
+
+is_heap
+dir
+
+copy_backward
+dir
+
+swap_ranges
+dir
+
+binary_search
+dir
+
+swap
+dir
+
 reverse
+dir
+
+find_first_of
 dir
 
 lower_bound
 dir
 
-find
+set_intersection
 dir
 
 stable_sort
+dir
+
+search_n
 dir
 
 partition_point
@@ -227,63 +233,57 @@ dir
 equal_range
 dir
 
-is_heap_until
+copy_n
 dir
 
 remove_copy
 dir
 
-sort
-dir
-
 rotate_copy
-dir
-
-generate
-dir
-
-pop_heap
-dir
-
-is_sorted
 dir
 
 shuffle
 dir
 
-set_symmetric_difference
+rotate
 dir
 
-prev_permutation
+is_permutation
 dir
 
-set_union
+partial_sort
 dir
 
-remove_copy_if
+partition_copy
 dir
 
-set_difference
+fill_n
 dir
 
-for_each
+next_permutation
 dir
 
-unique
+reverse_copy
 dir
 
-adjacent_find
+search
 dir
 
-remove_if
+make_heap
+dir
+
+any_of
 dir
 
 headers
 dir
 
-heap
+push_heap
 dir
 
 find_if_not
+dir
+
+find
 dir
 

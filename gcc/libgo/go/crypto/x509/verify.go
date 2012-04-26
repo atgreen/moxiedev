@@ -5,8 +5,10 @@
 package x509
 
 import (
+	"runtime"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type InvalidReason int
@@ -22,6 +24,9 @@ const (
 	// certificate has a name constraint which doesn't include the name
 	// being checked.
 	CANotAuthorizedForThisName
+	// TooManyIntermediates results when a path length constraint is
+	// violated.
+	TooManyIntermediates
 )
 
 // CertificateInvalidError results when an odd error occurs. Users of this
@@ -39,6 +44,8 @@ func (e CertificateInvalidError) Error() string {
 		return "x509: certificate has expired or is not yet valid"
 	case CANotAuthorizedForThisName:
 		return "x509: a root or intermediate certificate is not authorized to sign in this domain"
+	case TooManyIntermediates:
+		return "x509: too many intermediates for path length constraint"
 	}
 	return "x509: unknown error"
 }
@@ -75,7 +82,7 @@ func (e UnknownAuthorityError) Error() string {
 type VerifyOptions struct {
 	DNSName       string
 	Intermediates *CertPool
-	Roots         *CertPool
+	Roots         *CertPool // if nil, the system roots are used
 	CurrentTime   time.Time // if zero, the current time is used
 }
 
@@ -86,7 +93,7 @@ const (
 )
 
 // isValid performs validity checks on the c.
-func (c *Certificate) isValid(certType int, opts *VerifyOptions) error {
+func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *VerifyOptions) error {
 	now := opts.CurrentTime
 	if now.IsZero() {
 		now = time.Now()
@@ -129,26 +136,44 @@ func (c *Certificate) isValid(certType int, opts *VerifyOptions) error {
 		return CertificateInvalidError{c, NotAuthorizedToSign}
 	}
 
+	if c.BasicConstraintsValid && c.MaxPathLen >= 0 {
+		numIntermediates := len(currentChain) - 1
+		if numIntermediates > c.MaxPathLen {
+			return CertificateInvalidError{c, TooManyIntermediates}
+		}
+	}
+
 	return nil
 }
 
 // Verify attempts to verify c by building one or more chains from c to a
-// certificate in opts.roots, using certificates in opts.Intermediates if
-// needed. If successful, it returns one or chains where the first element of
-// the chain is c and the last element is from opts.Roots.
+// certificate in opts.Roots, using certificates in opts.Intermediates if
+// needed. If successful, it returns one or more chains where the first
+// element of the chain is c and the last element is from opts.Roots.
 //
 // WARNING: this doesn't do any revocation checking.
 func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err error) {
-	err = c.isValid(leafCertificate, &opts)
+	// Use Windows's own verification and chain building.
+	if opts.Roots == nil && runtime.GOOS == "windows" {
+		return c.systemVerify(&opts)
+	}
+
+	if opts.Roots == nil {
+		opts.Roots = systemRootsPool()
+	}
+
+	err = c.isValid(leafCertificate, nil, &opts)
 	if err != nil {
 		return
 	}
+
 	if len(opts.DNSName) > 0 {
 		err = c.VerifyHostname(opts.DNSName)
 		if err != nil {
 			return
 		}
 	}
+
 	return c.buildChains(make(map[int][][]*Certificate), []*Certificate{c}, &opts)
 }
 
@@ -162,7 +187,7 @@ func appendToFreshChain(chain []*Certificate, cert *Certificate) []*Certificate 
 func (c *Certificate) buildChains(cache map[int][][]*Certificate, currentChain []*Certificate, opts *VerifyOptions) (chains [][]*Certificate, err error) {
 	for _, rootNum := range opts.Roots.findVerifiedParents(c) {
 		root := opts.Roots.certs[rootNum]
-		err = root.isValid(rootCertificate, opts)
+		err = root.isValid(rootCertificate, currentChain, opts)
 		if err != nil {
 			continue
 		}
@@ -177,7 +202,7 @@ nextIntermediate:
 				continue nextIntermediate
 			}
 		}
-		err = intermediate.isValid(intermediateCertificate, opts)
+		err = intermediate.isValid(intermediateCertificate, currentChain, opts)
 		if err != nil {
 			continue
 		}
@@ -225,17 +250,51 @@ func matchHostnames(pattern, host string) bool {
 	return true
 }
 
+// toLowerCaseASCII returns a lower-case version of in. See RFC 6125 6.4.1. We use
+// an explicitly ASCII function to avoid any sharp corners resulting from
+// performing Unicode operations on DNS labels.
+func toLowerCaseASCII(in string) string {
+	// If the string is already lower-case then there's nothing to do.
+	isAlreadyLowerCase := true
+	for _, c := range in {
+		if c == utf8.RuneError {
+			// If we get a UTF-8 error then there might be
+			// upper-case ASCII bytes in the invalid sequence.
+			isAlreadyLowerCase = false
+			break
+		}
+		if 'A' <= c && c <= 'Z' {
+			isAlreadyLowerCase = false
+			break
+		}
+	}
+
+	if isAlreadyLowerCase {
+		return in
+	}
+
+	out := []byte(in)
+	for i, c := range out {
+		if 'A' <= c && c <= 'Z' {
+			out[i] += 'a' - 'A'
+		}
+	}
+	return string(out)
+}
+
 // VerifyHostname returns nil if c is a valid certificate for the named host.
 // Otherwise it returns an error describing the mismatch.
 func (c *Certificate) VerifyHostname(h string) error {
+	lowered := toLowerCaseASCII(h)
+
 	if len(c.DNSNames) > 0 {
 		for _, match := range c.DNSNames {
-			if matchHostnames(match, h) {
+			if matchHostnames(toLowerCaseASCII(match), lowered) {
 				return nil
 			}
 		}
 		// If Subject Alt Name is given, we ignore the common name.
-	} else if matchHostnames(c.Subject.CommonName, h) {
+	} else if matchHostnames(toLowerCaseASCII(c.Subject.CommonName), lowered) {
 		return nil
 	}
 

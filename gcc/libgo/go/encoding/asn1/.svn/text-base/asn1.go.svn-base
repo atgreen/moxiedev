@@ -250,10 +250,14 @@ func parseBase128Int(bytes []byte, initOffset int) (ret, offset int, err error) 
 func parseUTCTime(bytes []byte) (ret time.Time, err error) {
 	s := string(bytes)
 	ret, err = time.Parse("0601021504Z0700", s)
-	if err == nil {
-		return
+	if err != nil {
+		ret, err = time.Parse("060102150405Z0700", s)
 	}
-	ret, err = time.Parse("060102150405Z0700", s)
+	if err == nil && ret.Year() >= 2050 {
+		// UTCTime only encodes times prior to 2050. See https://tools.ietf.org/html/rfc5280#section-4.1.2.5.1
+		ret = ret.AddDate(-100, 0, 0)
+	}
+
 	return
 }
 
@@ -786,7 +790,8 @@ func setDefaultValue(v reflect.Value, params fieldParameters) (ok bool) {
 // Because Unmarshal uses the reflect package, the structs
 // being written to must use upper case field names.
 //
-// An ASN.1 INTEGER can be written to an int, int32 or int64.
+// An ASN.1 INTEGER can be written to an int, int32, int64,
+// or *big.Int (from the math/big package).
 // If the encoded value does not fit in the Go type,
 // Unmarshal returns a parse error.
 //

@@ -1,5 +1,5 @@
 /* Vectorizer
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Contributed by Dorit Naishlos <dorit@il.ibm.com>
 
@@ -253,9 +253,9 @@ typedef struct _loop_vec_info {
 
   /* All interleaving chains of stores in the loop, represented by the first
      stmt in the chain.  */
-  VEC(gimple, heap) *strided_stores;
+  VEC(gimple, heap) *grouped_stores;
 
-  /* All SLP instances in the loop. This is a subset of the set of STRIDED_STORES
+  /* All SLP instances in the loop. This is a subset of the set of GROUP_STORES
      of the loop.  */
   VEC(slp_instance, heap) *slp_instances;
 
@@ -273,7 +273,7 @@ typedef struct _loop_vec_info {
   /* Hash table used to choose the best peeling option.  */
   htab_t peeling_htab;
 
-  /* When we have strided data accesses with gaps, we may introduce invalid
+  /* When we have grouped data accesses with gaps, we may introduce invalid
      memory accesses.  We peel the last iteration of the loop to prevent
      this.  */
   bool peeling_for_gaps;
@@ -300,7 +300,7 @@ typedef struct _loop_vec_info {
 #define LOOP_VINFO_MAY_MISALIGN_STMTS(L)   (L)->may_misalign_stmts
 #define LOOP_VINFO_LOC(L)                  (L)->loop_line_number
 #define LOOP_VINFO_MAY_ALIAS_DDRS(L)       (L)->may_alias_ddrs
-#define LOOP_VINFO_STRIDED_STORES(L)       (L)->strided_stores
+#define LOOP_VINFO_GROUPED_STORES(L)       (L)->grouped_stores
 #define LOOP_VINFO_SLP_INSTANCES(L)        (L)->slp_instances
 #define LOOP_VINFO_SLP_UNROLLING_FACTOR(L) (L)->slp_unrolling_factor
 #define LOOP_VINFO_REDUCTIONS(L)           (L)->reductions
@@ -338,10 +338,10 @@ typedef struct _bb_vec_info {
   basic_block bb;
   /* All interleaving chains of stores in the basic block, represented by the
      first stmt in the chain.  */
-  VEC(gimple, heap) *strided_stores;
+  VEC(gimple, heap) *grouped_stores;
 
   /* All SLP instances in the basic block. This is a subset of the set of
-     STRIDED_STORES of the basic block.  */
+     GROUP_STORES of the basic block.  */
   VEC(slp_instance, heap) *slp_instances;
 
   /* All data references in the basic block.  */
@@ -352,7 +352,7 @@ typedef struct _bb_vec_info {
 } *bb_vec_info;
 
 #define BB_VINFO_BB(B)              (B)->bb
-#define BB_VINFO_STRIDED_STORES(B)  (B)->strided_stores
+#define BB_VINFO_GROUPED_STORES(B)  (B)->grouped_stores
 #define BB_VINFO_SLP_INSTANCES(B)   (B)->slp_instances
 #define BB_VINFO_DATAREFS(B)        (B)->datarefs
 #define BB_VINFO_DDRS(B)            (B)->ddrs
@@ -476,6 +476,13 @@ typedef struct _stmt_vec_info {
   tree dr_step;
   tree dr_aligned_to;
 
+  /* For loop PHI nodes, the evolution part of it.  This makes sure
+     this information is still available in vect_update_ivs_after_vectorizer
+     where we may not be able to re-analyze the PHI nodes evolution as
+     peeling for the prologue loop can make it unanalyzable.  The evolution
+     part is still correct though.  */
+  tree loop_phi_evolution_part;
+
   /* Used for various bookkeeping purposes, generally holding a pointer to
      some other stmt S that is in some way "related" to this stmt.
      Current use of this field is:
@@ -538,6 +545,7 @@ typedef struct _stmt_vec_info {
 
   /* For loads only, true if this is a gather load.  */
   bool gather_p;
+  bool stride_load_p;
 } *stmt_vec_info;
 
 /* Access Functions.  */
@@ -552,6 +560,7 @@ typedef struct _stmt_vec_info {
 #define STMT_VINFO_VECTORIZABLE(S)         (S)->vectorizable
 #define STMT_VINFO_DATA_REF(S)             (S)->data_ref_info
 #define STMT_VINFO_GATHER_P(S)		   (S)->gather_p
+#define STMT_VINFO_STRIDE_LOAD_P(S)	   (S)->stride_load_p
 
 #define STMT_VINFO_DR_BASE_ADDRESS(S)      (S)->dr_base_address
 #define STMT_VINFO_DR_INIT(S)              (S)->dr_init
@@ -571,7 +580,8 @@ typedef struct _stmt_vec_info {
 #define STMT_VINFO_GROUP_GAP(S)            (S)->gap
 #define STMT_VINFO_GROUP_SAME_DR_STMT(S)   (S)->same_dr_stmt
 #define STMT_VINFO_GROUP_READ_WRITE_DEPENDENCE(S)  (S)->read_write_dep
-#define STMT_VINFO_STRIDED_ACCESS(S)      ((S)->first_element != NULL && (S)->data_ref_info)
+#define STMT_VINFO_GROUPED_ACCESS(S)      ((S)->first_element != NULL && (S)->data_ref_info)
+#define STMT_VINFO_LOOP_PHI_EVOLUTION_PART(S) (S)->loop_phi_evolution_part
 
 #define GROUP_FIRST_ELEMENT(S)          (S)->first_element
 #define GROUP_NEXT_ELEMENT(S)           (S)->next_element
@@ -797,7 +807,7 @@ extern LOC vect_loop_location;
    in tree-vect-loop-manip.c.  */
 extern void slpeel_make_loop_iterate_ntimes (struct loop *, tree);
 extern bool slpeel_can_duplicate_loop_p (const struct loop *, const_edge);
-extern void vect_loop_versioning (loop_vec_info, bool, tree *, gimple_seq *);
+extern void vect_loop_versioning (loop_vec_info);
 extern void vect_do_peeling_for_loop_bound (loop_vec_info, tree *,
                                             tree, gimple_seq);
 extern void vect_do_peeling_for_alignment (loop_vec_info);
@@ -808,9 +818,11 @@ extern bool vect_can_advance_ivs_p (loop_vec_info);
 extern unsigned int current_vector_size;
 extern tree get_vectype_for_scalar_type (tree);
 extern tree get_same_sized_vectype (tree, tree);
-extern bool vect_is_simple_use (tree, loop_vec_info, bb_vec_info, gimple *,
+extern bool vect_is_simple_use (tree, gimple, loop_vec_info,
+			        bb_vec_info, gimple *,
                                 tree *,  enum vect_def_type *);
-extern bool vect_is_simple_use_1 (tree, loop_vec_info, bb_vec_info, gimple *,
+extern bool vect_is_simple_use_1 (tree, gimple, loop_vec_info,
+				  bb_vec_info, gimple *,
 				  tree *,  enum vect_def_type *, tree *);
 extern bool supportable_widening_operation (enum tree_code, gimple, tree, tree,
                                             tree *, tree *, enum tree_code *,
@@ -865,24 +877,25 @@ extern bool vect_analyze_data_ref_accesses (loop_vec_info, bb_vec_info);
 extern bool vect_prune_runtime_alias_test_list (loop_vec_info);
 extern tree vect_check_gather (gimple, loop_vec_info, tree *, tree *,
 			       int *);
+extern bool vect_check_strided_load (gimple, loop_vec_info, tree *, tree *);
 extern bool vect_analyze_data_refs (loop_vec_info, bb_vec_info, int *);
 extern tree vect_create_data_ref_ptr (gimple, tree, struct loop *, tree,
 				      tree *, gimple_stmt_iterator *,
 				      gimple *, bool, bool *);
 extern tree bump_vector_ptr (tree, gimple, gimple_stmt_iterator *, gimple, tree);
 extern tree vect_create_destination_var (tree, tree);
-extern bool vect_strided_store_supported (tree, unsigned HOST_WIDE_INT);
+extern bool vect_grouped_store_supported (tree, unsigned HOST_WIDE_INT);
 extern bool vect_store_lanes_supported (tree, unsigned HOST_WIDE_INT);
-extern bool vect_strided_load_supported (tree, unsigned HOST_WIDE_INT);
+extern bool vect_grouped_load_supported (tree, unsigned HOST_WIDE_INT);
 extern bool vect_load_lanes_supported (tree, unsigned HOST_WIDE_INT);
 extern void vect_permute_store_chain (VEC(tree,heap) *,unsigned int, gimple,
                                     gimple_stmt_iterator *, VEC(tree,heap) **);
 extern tree vect_setup_realignment (gimple, gimple_stmt_iterator *, tree *,
                                     enum dr_alignment_support, tree,
                                     struct loop **);
-extern void vect_transform_strided_load (gimple, VEC(tree,heap) *, int,
+extern void vect_transform_grouped_load (gimple, VEC(tree,heap) *, int,
                                          gimple_stmt_iterator *);
-extern void vect_record_strided_load_vectors (gimple, VEC(tree,heap) *);
+extern void vect_record_grouped_load_vectors (gimple, VEC(tree,heap) *);
 extern int vect_get_place_in_interleaving_chain (gimple, gimple);
 extern tree vect_get_new_vect_var (tree, enum vect_var_kind, const char *);
 extern tree vect_create_addr_base_for_vector_ref (gimple, gimple_seq *,
@@ -931,7 +944,7 @@ extern void vect_slp_transform_bb (basic_block);
    in the future.  */
 typedef gimple (* vect_recog_func_ptr) (VEC (gimple, heap) **, tree *, tree *);
 #define NUM_PATTERNS 10
-void vect_pattern_recog (loop_vec_info);
+void vect_pattern_recog (loop_vec_info, bb_vec_info);
 
 /* In tree-vectorizer.c.  */
 unsigned vectorize_loops (void);

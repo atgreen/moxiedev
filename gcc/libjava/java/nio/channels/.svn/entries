@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/java/nio/channels
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2007-06-03T23:18:43.019099Z
-125302
-doko
+2012-03-23T15:19:26.333085Z
+185741
+gandalf
 
 
 
@@ -26,14 +26,14 @@ doko
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-IllegalSelectorException.h
+Pipe$SinkChannel.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-d622c95668819e1c53feaf4e03adcd9a
+2012-02-01T17:19:21.812115Z
+c653a4038e93d9a123c1cdccf2464aec
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -58,16 +58,16 @@ tromey
 
 
 
-720
+1047
 
-ClosedSelectorException.h
+Selector.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-56a01521733a362f6fa9c8ebaa46a997
+2012-02-01T17:19:21.813115Z
+fb43cc4120bfde209233043f657c55af
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -92,223 +92,16 @@ tromey
 
 
 
-707
+1045
 
-Channels.h
+NoConnectionPendingException.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-d2977a61acb6747c5ee5e8bb90f6e119
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1556
-
-SelectableChannel.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-43649ed97a7fb1de14ebbef42c33530c
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1437
-
-ByteChannel.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-4452967c7eec9a8a72b2bafd671570b2
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-733
-
-natVMChannels.cc
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-f5b81bac6841e5f8fdb80ebc448d1be9
-2006-05-13T21:21:28.105431Z
-113745
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1021
-
-ClosedByInterruptException.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-3bb47e4db33b26158075da1d1db0d169
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-753
-
-CancelledKeyException.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-a8042c33875a82255b15aef17770988f
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-696
-
-spi
-dir
-
-IllegalBlockingModeException.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-dfdc13158ec33d20a1542ad6fe8a71f7
+2012-02-01T17:19:21.812115Z
+1b47f2238cfbbb7917461d64a3512056
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -335,115 +128,13 @@ tromey
 
 738
 
-Pipe$SourceChannel.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-11793a8b6536a98041a5edfde75bb152
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1056
-
-ReadableByteChannel.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-dc779cec90325f6d8a0f41de63ecbb18
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-720
-
-OverlappingFileLockException.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-659c9cbcfb3977e2927ead29e42cbff0
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-737
-
 ScatteringByteChannel.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.813115Z
 4ab5b077f07c9b288db2582cc0008e09
 2007-01-09T19:58:05.773323Z
 120621
@@ -471,13 +162,81 @@ tromey
 
 896
 
+ClosedChannelException.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+4f3ab3e84bd38ecfc09c407cdd4d4476
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+676
+
+InterruptibleChannel.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+ae34bbc1d433484056e885a226deb26a
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+647
+
 SocketChannel.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.813115Z
 4c6689ca0f5aaf308daf7a10ba973292
 2007-01-09T19:58:05.773323Z
 120621
@@ -511,7 +270,7 @@ file
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.812115Z
 0702a6a62d1043e2524e0b41fa1fd86f
 2007-01-09T19:58:05.773323Z
 120621
@@ -539,14 +298,14 @@ tromey
 
 732
 
-NotYetConnectedException.h
+ConnectionPendingException.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-f3d1f6f9068230ead9285ef9ce35bb7b
+2012-02-01T17:19:21.812115Z
+3dd8839e3cfe23bd57b0990e42db8e73
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -571,41 +330,7 @@ tromey
 
 
 
-713
-
-GatheringByteChannel.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-e2473be6b1bf387d4acae58e9c945a73
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-894
+725
 
 WritableByteChannel.h
 file
@@ -613,7 +338,7 @@ file
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.813115Z
 a4b127370d01557cf0703fac048b2ed1
 2007-01-09T19:58:05.773323Z
 120621
@@ -641,14 +366,14 @@ tromey
 
 721
 
-NotYetBoundException.h
+FileLock.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-cbf199f781a19c8d107ac6824d9f82d3
+2012-02-01T17:19:21.812115Z
+3f12b2332649a2ad9801d9e6d85123a7
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -673,7 +398,41 @@ tromey
 
 
 
-689
+1102
+
+IllegalSelectorException.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+d622c95668819e1c53feaf4e03adcd9a
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+720
 
 FileLockInterruptionException.h
 file
@@ -681,7 +440,7 @@ file
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.812115Z
 512d6ec2275ff558fa00d6dc354d3c1d
 2007-01-09T19:58:05.773323Z
 120621
@@ -709,13 +468,47 @@ tromey
 
 719
 
+Channels.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+d2977a61acb6747c5ee5e8bb90f6e119
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1556
+
 NonWritableChannelException.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.812115Z
 1dade8c164d5a54c324d199c254757dc
 2007-01-09T19:58:05.773323Z
 120621
@@ -743,16 +536,16 @@ tromey
 
 732
 
-Pipe.h
+natVMChannels.cc
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-3e34433bc4935b00ba403a1cc4fd3964
-2007-01-09T19:58:05.773323Z
-120621
+2012-02-01T17:19:21.813115Z
+f5b81bac6841e5f8fdb80ebc448d1be9
+2006-05-13T21:21:28.105431Z
+113745
 tromey
 
 
@@ -775,16 +568,16 @@ tromey
 
 
 
-762
+1021
 
-SelectionKey.h
+ClosedByInterruptException.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-b2d12e2a7715aa0015160aaffe6ffaea
+2012-02-01T17:19:21.812115Z
+3bb47e4db33b26158075da1d1db0d169
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -809,16 +602,16 @@ tromey
 
 
 
-1477
+753
 
-VMChannels.h
+IllegalBlockingModeException.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-756453a0a97ed399f3b05348faa4610e
+2012-02-01T17:19:21.812115Z
+dfdc13158ec33d20a1542ad6fe8a71f7
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -843,109 +636,7 @@ tromey
 
 
 
-1204
-
-AsynchronousCloseException.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-43b2b7f32c6d5cbe8a075395655beb4a
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-744
-
-Channel.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-a0dd062b0675dcf2a429c122e56884d7
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-582
-
-FileChannel.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-116a1c5b013bf0c91d6f201c94a5bb9d
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2218
+738
 
 ServerSocketChannel.h
 file
@@ -953,7 +644,7 @@ file
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.813115Z
 139124f36393d8aa953eca601eba486c
 2007-01-09T19:58:05.773323Z
 120621
@@ -981,13 +672,81 @@ tromey
 
 1084
 
+FileChannel.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+116a1c5b013bf0c91d6f201c94a5bb9d
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2218
+
+Channel.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+a0dd062b0675dcf2a429c122e56884d7
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+582
+
 DatagramChannel.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.812115Z
 01468ca1f7506f6ad2592a0b89adfa61
 2007-01-09T19:58:05.773323Z
 120621
@@ -1015,14 +774,14 @@ tromey
 
 1790
 
-UnresolvedAddressException.h
+Pipe$SourceChannel.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-3d8bc6934214c39a9c4cfca80259a96a
+2012-02-01T17:19:21.813115Z
+11793a8b6536a98041a5edfde75bb152
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -1047,16 +806,16 @@ tromey
 
 
 
-731
+1056
 
-Pipe$SinkChannel.h
+OverlappingFileLockException.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-c653a4038e93d9a123c1cdccf2464aec
+2012-02-01T17:19:21.812115Z
+659c9cbcfb3977e2927ead29e42cbff0
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -1081,7 +840,7 @@ tromey
 
 
 
-1047
+737
 
 FileChannel$MapMode.h
 file
@@ -1089,7 +848,7 @@ file
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.812115Z
 6c7d12df1c17ba0b1e8e64cdff2b516a
 2007-01-09T19:58:05.773323Z
 120621
@@ -1123,7 +882,7 @@ file
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.813115Z
 f4a76cba7a391f44db15fd8f6fc9cd36
 2007-01-09T19:58:05.773323Z
 120621
@@ -1151,149 +910,13 @@ tromey
 
 762
 
-NoConnectionPendingException.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-1b47f2238cfbbb7917461d64a3512056
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-738
-
-Selector.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-fb43cc4120bfde209233043f657c55af
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1045
-
-InterruptibleChannel.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-ae34bbc1d433484056e885a226deb26a
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-647
-
-ClosedChannelException.h
-file
-
-
-
-
-2009-04-24T17:49:17.000000Z
-4f3ab3e84bd38ecfc09c407cdd4d4476
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-676
-
 AlreadyConnectedException.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.812115Z
 bfc31c825fbfedbb82946c8bbfc20b9d
 2007-01-09T19:58:05.773323Z
 120621
@@ -1321,14 +944,14 @@ tromey
 
 720
 
-ConnectionPendingException.h
+NotYetConnectedException.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-3dd8839e3cfe23bd57b0990e42db8e73
+2012-02-01T17:19:21.812115Z
+f3d1f6f9068230ead9285ef9ce35bb7b
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -1353,16 +976,16 @@ tromey
 
 
 
-725
+713
 
-FileLock.h
+GatheringByteChannel.h
 file
 
 
 
 
-2009-04-24T17:49:17.000000Z
-3f12b2332649a2ad9801d9e6d85123a7
+2012-02-01T17:19:21.812115Z
+e2473be6b1bf387d4acae58e9c945a73
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -1387,7 +1010,7 @@ tromey
 
 
 
-1102
+894
 
 VMChannels.java
 file
@@ -1395,7 +1018,7 @@ file
 
 
 
-2009-04-24T17:49:17.000000Z
+2012-02-01T17:19:21.813115Z
 b441d64e651d7a40829ed4eff5288b3b
 2006-05-13T21:21:28.105431Z
 113745
@@ -1422,4 +1045,381 @@ tromey
 
 
 2949
+
+NotYetBoundException.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+cbf199f781a19c8d107ac6824d9f82d3
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+689
+
+ClosedSelectorException.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+56a01521733a362f6fa9c8ebaa46a997
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+707
+
+ByteChannel.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+4452967c7eec9a8a72b2bafd671570b2
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+733
+
+SelectableChannel.h
+file
+
+
+
+
+2012-02-01T17:19:21.813115Z
+43649ed97a7fb1de14ebbef42c33530c
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1437
+
+Pipe.h
+file
+
+
+
+
+2012-02-01T17:19:21.813115Z
+3e34433bc4935b00ba403a1cc4fd3964
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+762
+
+SelectionKey.h
+file
+
+
+
+
+2012-02-01T17:19:21.813115Z
+b2d12e2a7715aa0015160aaffe6ffaea
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1477
+
+VMChannels.h
+file
+
+
+
+
+2012-02-01T17:19:21.813115Z
+756453a0a97ed399f3b05348faa4610e
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1204
+
+AsynchronousCloseException.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+43b2b7f32c6d5cbe8a075395655beb4a
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+744
+
+CancelledKeyException.h
+file
+
+
+
+
+2012-02-01T17:19:21.812115Z
+a8042c33875a82255b15aef17770988f
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+696
+
+spi
+dir
+
+UnresolvedAddressException.h
+file
+
+
+
+
+2012-02-01T17:19:21.813115Z
+3d8bc6934214c39a9c4cfca80259a96a
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+731
+
+ReadableByteChannel.h
+file
+
+
+
+
+2012-02-01T17:19:21.813115Z
+dc779cec90325f6d8a0f41de63ecbb18
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+720
 

@@ -6,12 +6,13 @@
 // RFC 4627.
 //
 // See "JSON and Go" for an introduction to this package:
-// http://blog.golang.org/2011/01/json-and-go.html
+// http://golang.org/doc/articles/json_and_go.html
 package json
 
 import (
 	"bytes"
 	"encoding/base64"
+	"math"
 	"reflect"
 	"runtime"
 	"sort"
@@ -38,9 +39,12 @@ import (
 //
 // String values encode as JSON strings, with each invalid UTF-8 sequence
 // replaced by the encoding of the Unicode replacement character U+FFFD.
+// The angle brackets "<" and ">" are escaped to "\u003c" and "\u003e"
+// to keep some browsers from misinterpreting JSON output as HTML.
 //
 // Array and slice values encode as JSON arrays, except that
-// []byte encodes as a base64-encoded string.
+// []byte encodes as a base64-encoded string, and a nil slice
+// encodes as the null JSON object.
 //
 // Struct values encode as JSON objects. Each exported struct field
 // becomes a member of the object unless
@@ -76,7 +80,8 @@ import (
 //    Int64String int64 `json:",string"`
 //
 // The key name will be used if it's a non-empty string consisting of
-// only Unicode letters, digits, dollar signs, hyphens, and underscores.
+// only Unicode letters, digits, dollar signs, percent signs, hyphens,
+// underscores and slashes.
 //
 // Map values encode as JSON objects.
 // The map's key type must be string; the object keys are used directly
@@ -116,17 +121,6 @@ func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
-}
-
-// MarshalForHTML is like Marshal but applies HTMLEscape to the output.
-func MarshalForHTML(v interface{}) ([]byte, error) {
-	b, err := Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	HTMLEscape(&buf, b)
 	return buf.Bytes(), nil
 }
 
@@ -170,6 +164,15 @@ func (e *UnsupportedTypeError) Error() string {
 	return "json: unsupported type: " + e.Type.String()
 }
 
+type UnsupportedValueError struct {
+	Value reflect.Value
+	Str   string
+}
+
+func (e *UnsupportedValueError) Error() string {
+	return "json: unsupported value: " + e.Str
+}
+
 type InvalidUTF8Error struct {
 	S string
 }
@@ -185,11 +188,6 @@ type MarshalerError struct {
 
 func (e *MarshalerError) Error() string {
 	return "json: error calling MarshalJSON for type " + e.Type.String() + ": " + e.Err.Error()
-}
-
-type interfaceOrPtrValue interface {
-	IsNil() bool
-	Elem() reflect.Value
 }
 
 var hex = "0123456789abcdef"
@@ -249,11 +247,21 @@ func (e *encodeState) reflectValueQuoted(v reflect.Value, quoted bool) {
 		return
 	}
 
-	if j, ok := v.Interface().(Marshaler); ok && (v.Kind() != reflect.Ptr || !v.IsNil()) {
-		b, err := j.MarshalJSON()
+	m, ok := v.Interface().(Marshaler)
+	if !ok {
+		// T doesn't match the interface. Check against *T too.
+		if v.Kind() != reflect.Ptr && v.CanAddr() {
+			m, ok = v.Addr().Interface().(Marshaler)
+			if ok {
+				v = v.Addr()
+			}
+		}
+	}
+	if ok && (v.Kind() != reflect.Ptr || !v.IsNil()) {
+		b, err := m.MarshalJSON()
 		if err == nil {
 			// copy JSON into buffer, checking validity.
-			err = Compact(&e.Buffer, b)
+			err = compact(&e.Buffer, b, true)
 		}
 		if err != nil {
 			e.error(&MarshalerError{v.Type(), err})
@@ -290,7 +298,11 @@ func (e *encodeState) reflectValueQuoted(v reflect.Value, quoted bool) {
 			e.Write(b)
 		}
 	case reflect.Float32, reflect.Float64:
-		b := strconv.AppendFloat(e.scratch[:0], v.Float(), 'g', -1, v.Type().Bits())
+		f := v.Float()
+		if math.IsInf(f, 0) || math.IsNaN(f) {
+			e.error(&UnsupportedValueError{v, strconv.FormatFloat(f, 'g', -1, v.Type().Bits())})
+		}
+		b := strconv.AppendFloat(e.scratch[:0], f, 'g', -1, v.Type().Bits())
 		if quoted {
 			writeString(e, string(b))
 		} else {
@@ -403,8 +415,13 @@ func isValidTag(s string) bool {
 		return false
 	}
 	for _, c := range s {
-		if c != '$' && c != '-' && c != '_' && !unicode.IsLetter(c) && !unicode.IsDigit(c) {
-			return false
+		switch c {
+		case '$', '-', '_', '/', '%':
+			// Acceptable
+		default:
+			if !unicode.IsLetter(c) && !unicode.IsDigit(c) {
+				return false
+			}
 		}
 	}
 	return true
@@ -504,6 +521,11 @@ func encodeFields(t reflect.Type) []encodeField {
 	for i := 0; i < n; i++ {
 		f := t.Field(i)
 		if f.PkgPath != "" {
+			continue
+		}
+		if f.Anonymous {
+			// We want to do a better job with these later,
+			// so for now pretend they don't exist.
 			continue
 		}
 		var ef encodeField

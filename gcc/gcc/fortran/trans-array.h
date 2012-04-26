@@ -25,7 +25,7 @@ tree gfc_array_deallocate (tree, tree, tree, tree, tree, gfc_expr*);
 /* Generate code to initialize and allocate an array.  Statements are added to
    se, which should contain an expression for the array descriptor.  */
 bool gfc_array_allocate (gfc_se *, gfc_expr *, tree, tree, tree, tree,
-			 gfc_expr *);
+			 tree, tree *, gfc_expr *);
 
 /* Allow the bounds of a loop to be set from a callee's array spec.  */
 void gfc_set_loop_bounds_from_array_spec (gfc_interface_mapping *,
@@ -66,6 +66,8 @@ void gfc_trans_deferred_array (gfc_symbol *, gfc_wrapped_block *);
 /* Generate an initializer for a static pointer or allocatable array.  */
 void gfc_trans_static_array_pointer (gfc_symbol *);
 
+/* Get the procedure interface for a function call.  */
+gfc_symbol *gfc_get_proc_ifc_for_expr (gfc_expr *);
 /* Generate scalarization information for an expression.  */
 gfc_ss *gfc_walk_expr (gfc_expr *);
 /* Workhorse for gfc_walk_expr.  */
@@ -74,7 +76,7 @@ gfc_ss *gfc_walk_subexpr (gfc_ss *, gfc_expr *);
 gfc_ss *gfc_walk_array_ref (gfc_ss *, gfc_expr *, gfc_ref * ref);
 /* Walk the arguments of an elemental function.  */
 gfc_ss *gfc_walk_elemental_function_args (gfc_ss *, gfc_actual_arglist *,
-					  gfc_expr *, gfc_ss_type);
+					  gfc_symbol *, gfc_ss_type);
 /* Walk an intrinsic function.  */
 gfc_ss *gfc_walk_intrinsic_function (gfc_ss *, gfc_expr *,
 				     gfc_intrinsic_sym *);

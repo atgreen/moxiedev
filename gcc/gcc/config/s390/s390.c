@@ -1540,6 +1540,11 @@ s390_option_override (void)
   if (TARGET_64BIT && !TARGET_ZARCH)
     error ("64-bit ABI not supported in ESA/390 mode");
 
+  /* Use hardware DFP if available and not explicitly disabled by
+     user. E.g. with -m31 -march=z10 -mzarch   */
+  if (!(target_flags_explicit & MASK_HARD_DFP) && TARGET_DFP)
+    target_flags |= MASK_HARD_DFP;
+
   if (TARGET_HARD_DFP && !TARGET_DFP)
     {
       if (target_flags_explicit & MASK_HARD_DFP)
@@ -4408,7 +4413,7 @@ s390_expand_addcc (enum rtx_code cmp_code, rtx cmp_op0, rtx cmp_op1,
       insn = gen_rtx_SET (VOIDmode, gen_rtx_REG (cc_mode, CC_REGNUM),
 			  gen_rtx_COMPARE (cc_mode, cmp_op0, cmp_op1));
       /* We use insn_invalid_p here to add clobbers if required.  */
-      ret = insn_invalid_p (emit_insn (insn));
+      ret = insn_invalid_p (emit_insn (insn), false);
       gcc_assert (!ret);
 
       /* Emit ALC instruction pattern.  */
@@ -4480,7 +4485,7 @@ s390_expand_addcc (enum rtx_code cmp_code, rtx cmp_op0, rtx cmp_op1,
       insn = gen_rtx_SET (VOIDmode, gen_rtx_REG (cc_mode, CC_REGNUM),
 			  gen_rtx_COMPARE (cc_mode, cmp_op0, cmp_op1));
       /* We use insn_invalid_p here to add clobbers if required.  */
-      ret = insn_invalid_p (emit_insn (insn));
+      ret = insn_invalid_p (emit_insn (insn), false);
       gcc_assert (!ret);
 
       /* Emit SLB instruction pattern.  */

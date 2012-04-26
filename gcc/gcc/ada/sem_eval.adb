@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -2747,7 +2747,7 @@ package body Sem_Eval is
 
                --  General case
 
-               T := Etype (First_Index (Etype (Op)));
+               T := Etype (Proper_First_Index (Etype (Op)));
 
                --  The simple case, both bounds are known at compile time
 
@@ -4310,8 +4310,8 @@ package body Sem_Eval is
          return
            Ekind (Typ) = E_String_Literal_Subtype
              or else
-           (Is_OK_Static_Subtype (Component_Type (Typ))
-              and then Is_OK_Static_Subtype (Etype (First_Index (Typ))));
+               (Is_OK_Static_Subtype (Component_Type (Typ))
+                 and then Is_OK_Static_Subtype (Etype (First_Index (Typ))));
 
       --  Scalar types
 
@@ -4401,9 +4401,8 @@ package body Sem_Eval is
       elsif Is_String_Type (Typ) then
          return
            Ekind (Typ) = E_String_Literal_Subtype
-             or else
-           (Is_Static_Subtype (Component_Type (Typ))
-              and then Is_Static_Subtype (Etype (First_Index (Typ))));
+             or else (Is_Static_Subtype (Component_Type (Typ))
+                       and then Is_Static_Subtype (Etype (First_Index (Typ))));
 
       --  Scalar types
 

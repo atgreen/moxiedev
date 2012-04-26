@@ -24,7 +24,7 @@ type forkableWriter struct {
 }
 
 func newForkableWriter() *forkableWriter {
-	return &forkableWriter{bytes.NewBuffer(nil), nil, nil}
+	return &forkableWriter{new(bytes.Buffer), nil, nil}
 }
 
 func (f *forkableWriter) fork() (pre, post *forkableWriter) {
@@ -461,6 +461,10 @@ func marshalField(out *forkableWriter, v reflect.Value, params fieldParameters) 
 	// If the field is an interface{} then recurse into it.
 	if v.Kind() == reflect.Interface && v.Type().NumMethod() == 0 {
 		return marshalField(out, v.Elem(), params)
+	}
+
+	if v.Kind() == reflect.Slice && v.Len() == 0 && params.omitEmpty {
+		return
 	}
 
 	if params.optional && reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface()) {

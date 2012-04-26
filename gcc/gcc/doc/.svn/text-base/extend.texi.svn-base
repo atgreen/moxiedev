@@ -1237,44 +1237,37 @@ in order to put read-only data into the flash memory and access that
 data by means of the special instructions @code{LPM} or @code{ELPM}
 needed to read from flash.
 
-Per default, any data including read-only data is located in RAM so
-that address spaces are needed to locate read-only data in flash memory
-@emph{and} to generate the right instructions to access the data
+Per default, any data including read-only data is located in RAM
+(the generic address space) so that non-generic address spaces are
+needed to locate read-only data in flash memory
+@emph{and} to generate the right instructions to access this data
 without using (inline) assembler code.
 
 @table @code
-@item __pgm
-@cindex @code{__pgm} AVR Named Address Spaces
-The @code{__pgm} qualifier will locate data in the
+@item __flash
+@cindex @code{__flash} AVR Named Address Spaces
+The @code{__flash} qualifier will locate data in the
 @code{.progmem.data} section. Data will be read using the @code{LPM}
 instruction. Pointers to this address space are 16 bits wide.
 
-@item __pgm1
-@item __pgm2
-@item __pgm3
-@item __pgm4
-@item __pgm5
-@cindex @code{__pgm1} AVR Named Address Spaces
-@cindex @code{__pgm2} AVR Named Address Spaces
-@cindex @code{__pgm3} AVR Named Address Spaces
-@cindex @code{__pgm4} AVR Named Address Spaces
-@cindex @code{__pgm5} AVR Named Address Spaces
+@item __flash1
+@item __flash2
+@item __flash3
+@item __flash4
+@item __flash5
+@cindex @code{__flash1} AVR Named Address Spaces
+@cindex @code{__flash2} AVR Named Address Spaces
+@cindex @code{__flash3} AVR Named Address Spaces
+@cindex @code{__flash4} AVR Named Address Spaces
+@cindex @code{__flash5} AVR Named Address Spaces
 These are 16-bit address spaces locating data in section
 @code{.progmem@var{N}.data} where @var{N} refers to
-address space @code{__pgm@var{N}}.
+address space @code{__flash@var{N}}.
 The compiler will set the @code{RAMPZ} segment register approptiately 
 before reading data by means of the @code{ELPM} instruction.
 
-On devices with less 64kiB flash segments as indicated by the address
-space, the compiler will cut down the segment number to a number the
-device actually supports. Counting starts at @code{0}
-for space @code{__pgm}. For example, if you access address space
-@code{__pgm3} on an ATmega128 device with two 64@tie{}kiB flash segments,
-the compiler will generate a read from @code{__pgm1}, i.e.@: it
-will load @code{RAMPZ} with@tie{}@code{1} before reading.
-
-@item __pgmx
-@cindex @code{__pgmx} AVR Named Address Spaces
+@item __memx
+@cindex @code{__memx} AVR Named Address Spaces
 This is a 24-bit address space that linearizes flash and RAM:
 If the high bit of the address is set, data is read from
 RAM using the lower two bytes as RAM address.
@@ -1284,96 +1277,10 @@ with @code{RAMPZ} set according to the high byte of the address.
 Objects in this address space will be located in @code{.progmem.data}.
 @end table
 
-For each named address space supported by avr-gcc there is an equally
-named but uppercase built-in macro defined. 
-The purpose is to facilitate testing if respective address space
-support is available or not:
-
-@example
-#ifdef __PGM
-const __pgm int var = 1;
-
-int read_i (void)
-@{
-    return i;
-@}
-#else
-#include <avr/pgmspace.h> /* From avr-libc */
-
-const int var PROGMEM = 1;
-
-int read_i (void)
-@{
-    return (int) pgm_read_word (&i);
-@}
-#endif /* __PGM */
-@end example
-
-Notice that attribute @ref{AVR Variable Attributes,@code{progmem}}
-locates data in flash but
-accesses to these data will be to generic address space, i.e.@: RAM,
-so that you need special access functions like @code{pgm_read_byte}
-from @w{@uref{http://nongnu.org/avr-libc/user-manual,avr-libc}}.
-
-@b{Limitations and caveats}
-
-@itemize
-@item
-Reading across the 64@tie{}KiB section boundary of
-the @code{__pgm} or @code{__pgm@var{N}} address spaces
-will show undefined behaviour. The only address space that
-supports reading across the 64@tie{}KiB flash segment boundaries is
-@code{__pgmx}.
-
-@item
-If you use one if the @code{__pgm@var{N}} address spaces
-you will have to arrange your linker skript to locate the
-@code{.progmem@var{N}.data} sections according to your needs.
-
-@item
-Any data or pointers to the AVR address spaces spaces must
-also be qualified as @code{const}, i.e.@: as read-only data.
-This still applies if the data in one of these address
-spaces like software version number or lookup tables are intended to
-be changed after load time by, say, a boot loader. In this case
-the right qualification is @code{const} @code{volatile} so that the compiler
-must not optimize away known values or insert them
-as immediates into operands of instructions.
-
-@item
-Code like the following is not yet supported because of missing
-support in avr-binutils,
-see @w{@uref{http://sourceware.org/PR13503,PR13503}}.
-@example
-extern const __pgmx char foo;
-const __pgmx void *pfoo = &foo;
-@end example
-The code will throw an assembler warning and the high byte of
-@code{pfoo} will be initialized with @code{0}, i.e.@: the
-initialization will be as if @code{foo} was located in the first
-64@tie{}KiB chunk of flash.
-
-@item
-Address arithmetic for the @code{__pgmx} address space is carried out
-as 16-bit signed integer arithmetic. This means that in the following
-code array positions with offsets @code{idx}@tie{}>@tie{}8191 are
-inaccessible.
-
-@example
-extern const __pgmx long lookup[];
-
-long read_lookup (unsigned idx)
-@{
-    return lookup[idx];
-@}
-@end example
-
-@end itemize
-
 @b{Example}
 
 @example
-char my_read (const __pgm ** p)
+char my_read (const __flash char ** p)
 @{
     /* p is a pointer to RAM that points to a pointer to flash.
        The first indirection of p will read that flash pointer
@@ -1384,7 +1291,7 @@ char my_read (const __pgm ** p)
 @}
 
 /* Locate array[] in flash memory */
-const __pgm int array[] = @{ 3, 5, 7, 11, 13, 17, 19 @};
+const __flash int array[] = @{ 3, 5, 7, 11, 13, 17, 19 @};
 
 int i = 1;
 
@@ -1394,6 +1301,79 @@ int main (void)
    return array[array[i]];
 @}
 @end example
+
+For each named address space supported by avr-gcc there is an equally
+named but uppercase built-in macro defined. 
+The purpose is to facilitate testing if respective address space
+support is available or not:
+
+@example
+#ifdef __FLASH
+const __flash int var = 1;
+
+int read_var (void)
+@{
+    return var;
+@}
+#else
+#include <avr/pgmspace.h> /* From AVR-LibC */
+
+const int var PROGMEM = 1;
+
+int read_var (void)
+@{
+    return (int) pgm_read_word (&var);
+@}
+#endif /* __FLASH */
+@end example
+
+Notice that attribute @ref{AVR Variable Attributes,@code{progmem}}
+locates data in flash but
+accesses to these data will read from generic address space, i.e.@:
+from RAM,
+so that you need special accessors like @code{pgm_read_byte}
+from @w{@uref{http://nongnu.org/avr-libc/user-manual,AVR-LibC}}
+together with attribute @code{progmem}.
+
+@b{Limitations and caveats}
+
+@itemize
+@item
+Reading across the 64@tie{}KiB section boundary of
+the @code{__flash} or @code{__flash@var{N}} address spaces
+will show undefined behaviour. The only address space that
+supports reading across the 64@tie{}KiB flash segment boundaries is
+@code{__memx}.
+
+@item
+If you use one of the @code{__flash@var{N}} address spaces
+you will have to arrange your linker skript to locate the
+@code{.progmem@var{N}.data} sections according to your needs.
+
+@item
+Any data or pointers to the non-generic address spaces must
+be qualified as @code{const}, i.e.@: as read-only data.
+This still applies if the data in one of these address
+spaces like software version number or calibration lookup table are intended to
+be changed after load time by, say, a boot loader. In this case
+the right qualification is @code{const} @code{volatile} so that the compiler
+must not optimize away known values or insert them
+as immediates into operands of instructions.
+
+@item
+Code like the following is not yet supported because of missing
+support in avr-binutils,
+see @w{@uref{http://sourceware.org/PR13503,PR13503}}.
+@example
+extern const __memx char foo;
+const __memx void *pfoo = &foo;
+@end example
+The code will throw an assembler warning and the high byte of
+@code{pfoo} will be initialized with@tie{}@code{0}, i.e.@: the
+initialization will be as if @code{foo} was located in the first
+64@tie{}KiB chunk of flash.
+
+@end itemize
 
 @subsection M32C Named Address Spaces
 @cindex @code{__far} M32C Named Address Spaces
@@ -2736,11 +2716,12 @@ This attribute is ignored for R8C target.
 
 @item interrupt
 @cindex interrupt handler functions
-Use this attribute on the ARM, AVR, Epiphany, M32C, M32R/D, m68k, MeP, MIPS,
+Use this attribute on the ARM, AVR, CR16, Epiphany, M32C, M32R/D, m68k, MeP, MIPS,
 RL78, RX and Xstormy16 ports to indicate that the specified function is an
 interrupt handler.  The compiler will generate function entry and exit
 sequences suitable for use in an interrupt handler when this attribute
-is present.
+is present.  With Epiphany targets it may also generate a special section with
+code to initialize the interrupt vector table.
 
 Note, interrupt handlers for the Blackfin, H8/300, H8/300H, H8S, MicroBlaze,
 and SH processors can be specified via the @code{interrupt_handler} attribute.
@@ -2758,6 +2739,48 @@ Permissible values for this parameter are: IRQ, FIQ, SWI, ABORT and UNDEF@.
 
 On ARMv7-M the interrupt type is ignored, and the attribute means the function
 may be called with a word aligned stack pointer.
+
+On Epiphany targets one or more optional parameters can be added like this:
+
+@smallexample
+void __attribute__ ((interrupt ("dma0, dma1"))) universal_dma_handler ();
+@end smallexample
+
+Permissible values for these parameters are: @w{@code{reset}},
+@w{@code{software_exception}}, @w{@code{page_miss}},
+@w{@code{timer0}}, @w{@code{timer1}}, @w{@code{message}},
+@w{@code{dma0}}, @w{@code{dma1}}, @w{@code{wand}} and @w{@code{swi}}.
+Multiple parameters indicate that multiple entries in the interrupt
+vector table should be initialized for this function, i.e. for each
+parameter @w{@var{name}}, a jump to the function will be emitted in
+the section @w{ivt_entry_@var{name}}.  The parameter(s) may be omitted
+entirely, in which case no interrupt vector table entry will be provided.
+
+Note, on Epiphany targets, interrupts are enabled inside the function
+unless the @code{disinterrupt} attribute is also specified.
+
+On Epiphany targets, you can also use the following attribute to
+modify the behavior of an interrupt handler:
+@table @code
+@item forwarder_section
+@cindex @code{forwarder_section} attribute
+The interrupt handler may be in external memory which cannot be
+reached by a branch instruction, so generate a local memory trampoline
+to transfer control.  The single parameter identifies the section where
+the trampoline will be placed.
+@end table
+
+The following examples are all valid uses of these attributes on
+Epiphany targets:
+@smallexample
+void __attribute__ ((interrupt)) universal_handler ();
+void __attribute__ ((interrupt ("dma1"))) dma1_handler ();
+void __attribute__ ((interrupt ("dma0, dma1"))) universal_dma_handler ();
+void __attribute__ ((interrupt ("timer0"), disinterrupt))
+  fast_timer_handler ();
+void __attribute__ ((interrupt ("dma0, dma1"), forwarder_section ("tramp")))
+  external_dma_handler ();
+@end smallexample
 
 On MIPS targets, you can use the following attributes to modify the behavior
 of an interrupt handler:
@@ -3235,7 +3258,7 @@ is entered like for, e@.g@. task functions in a multi-threading operating
 system. In that case, changing the stack pointer register will be
 guarded by save/clear/restore of the global interrupt enable flag.
 
-The differences to the @code{naked} function attrubute are:
+The differences to the @code{naked} function attribute are:
 @itemize @bullet
 @item @code{naked} functions do not have a return instruction whereas 
 @code{OS_main} and @code{OS_task} functions will have a @code{RET} or
@@ -4752,13 +4775,32 @@ data in the non-volatile program memory (flash). The @code{progmem}
 attribute accomplishes this by putting respective variables into a
 section whose name starts with @code{.progmem}.
 
-This attrubute wirks similar to the @code{section} attribute
+This attribute works similar to the @code{section} attribute
 but adds additional checking. Notice that just like the
 @code{section} attribute, @code{progmem} affects the location
 of the data but not how this data is accessed.
 
+In order to read data located with the @code{progmem} attribute
+(inline) assembler must be used.
+@example
+/* Use custom macros from @w{@uref{http://nongnu.org/avr-libc/user-manual,AVR-LibC}} */
+#include <avr/pgmspace.h> 
+
+/* Locate var in flash memory */
+const int var[2] PROGMEM = @{ 1, 2 @};
+
+int read_var (int i)
+@{
+    /* Access var[] by accessor macro from avr/pgmspace.h */
+    return (int) pgm_read_word (& var[i]);
+@}
+@end example
+
 AVR is a Harvard architecture processor and data and read-only data
 normally resides in the data memory (RAM).
+
+See also the @ref{AVR Named Address Spaces} section for
+an alternate way to locate and access data in flash memory.
 @end table
 
 @subsection Blackfin Variable Attributes
@@ -5331,6 +5373,10 @@ typeinfo node and exception handling will break.
 
 @end table
 
+To specify multiple attributes, separate them by commas within the
+double parentheses: for example, @samp{__attribute__ ((aligned (16),
+packed))}.
+
 @subsection ARM Type Attributes
 
 On those ARM targets that support @code{dllimport} (such as Symbian
@@ -5385,10 +5431,6 @@ either format.
 Currently @option{-m[no-]ms-bitfields} is provided for the Microsoft Windows X86
 compilers to match the native Microsoft compiler.
 @end table
-
-To specify multiple attributes, separate them by commas within the
-double parentheses: for example, @samp{__attribute__ ((aligned (16),
-packed))}.
 
 @anchor{PowerPC Type Attributes}
 @subsection PowerPC Type Attributes
@@ -7086,6 +7128,11 @@ functions will map any runtime value to @code{__ATOMIC_SEQ_CST} rather
 than invoke a runtime library call or inline a switch statement.  This is
 standard compliant, safe, and the simplest approach for now.
 
+The memory model parameter is a signed int, but only the lower 8 bits are
+reserved for the memory model.  The remainder of the signed int is reserved
+for future use and should be 0.  Use of the predefined atomic values will
+ensure proper usage.
+
 @deftypefn {Built-in Function} @var{type} __atomic_load_n (@var{type} *ptr, int memmodel)
 This built-in function implements an atomic load operation.  It returns the
 contents of @code{*@var{ptr}}.
@@ -7140,9 +7187,12 @@ This built-in function implements an atomic compare and exchange operation.
 This compares the contents of @code{*@var{ptr}} with the contents of
 @code{*@var{expected}} and if equal, writes @var{desired} into
 @code{*@var{ptr}}.  If they are not equal, the current contents of
-@code{*@var{ptr}} is written into @code{*@var{expected}}.
+@code{*@var{ptr}} is written into @code{*@var{expected}}.  @var{weak} is true
+for weak compare_exchange, and false for the strong variation.  Many targets 
+only offer the strong variation and ignore the parameter.  When in doubt, use
+the strong variation.
 
-True is returned if @code{*@var{desired}} is written into
+True is returned if @var{desired} is written into
 @code{*@var{ptr}} and the execution is considered to conform to the
 memory model specified by @var{success_memmodel}.  There are no
 restrictions on what memory model can be used here.
@@ -7196,11 +7246,12 @@ All memory models are valid.
 
 @end deftypefn
 
-@deftypefn {Built-in Function} bool __atomic_test_and_set (bool *ptr, int memmodel)
+@deftypefn {Built-in Function} bool __atomic_test_and_set (void *ptr, int memmodel)
 
 This built-in function performs an atomic test-and-set operation on
-@code{*@var{ptr}}.  @code{*@var{ptr}} is set to the value 1 and
-the previous contents are returned.
+the byte at @code{*@var{ptr}}.  The byte is set to some implementation
+defined non-zero "set" value and the return value is @code{true} if and only
+if the previous contents were "set".
 
 All memory models are valid.
 
@@ -7235,27 +7286,32 @@ All memory orders are valid.
 
 @end deftypefn
 
-@deftypefn {Built-in Function} bool __atomic_always_lock_free (size_t size)
+@deftypefn {Built-in Function} bool __atomic_always_lock_free (size_t size,  void *ptr)
 
-This built-in function returns true if objects of size bytes will always
-generate lock free atomic instructions for the target architecture.
-Otherwise false is returned.
+This built-in function returns true if objects of @var{size} bytes will always
+generate lock free atomic instructions for the target architecture.  
+@var{size} must resolve to a compile time constant and the result also resolves to compile time constant.
 
-size must resolve to a compile time constant.
+@var{ptr} is an optional pointer to the object which may be used to determine
+alignment.  A value of 0 indicates typical alignment should be used.  The 
+compiler may also ignore this parameter.
 
 @smallexample
-if (_atomic_always_lock_free (sizeof (long long)))
+if (_atomic_always_lock_free (sizeof (long long), 0))
 @end smallexample
 
 @end deftypefn
 
-@deftypefn {Built-in Function} bool __atomic_is_lock_free (size_t size)
+@deftypefn {Built-in Function} bool __atomic_is_lock_free (size_t size, void *ptr)
 
-This built-in function returns true if objects of size bytes will always
+This built-in function returns true if objects of @var{size} bytes will always
 generate lock free atomic instructions for the target architecture.  If
 it is not known to be lock free a call is made to a runtime routine named
 @code{__atomic_is_lock_free}.
 
+@var{ptr} is an optional pointer to the object which may be used to determine
+alignment.  A value of 0 indicates typical alignment should be used.  The 
+compiler may also ignore this parameter.
 @end deftypefn
 
 @node Object Size Checking
@@ -8480,10 +8536,15 @@ Similar to @code{__builtin_powi}, except the argument and return types
 are @code{long double}.
 @end deftypefn
 
-@deftypefn {Built-in Function} int32_t __builtin_bswap32 (int32_t x)
+@deftypefn {Built-in Function} int16_t __builtin_bswap16 (int16_t x)
 Returns @var{x} with the order of the bytes reversed; for example,
-@code{0xaabbccdd} becomes @code{0xddccbbaa}.  Byte here always means
+@code{0xaabb} becomes @code{0xbbaa}.  Byte here always means
 exactly 8 bits.
+@end deftypefn
+
+@deftypefn {Built-in Function} int32_t __builtin_bswap32 (int32_t x)
+Similar to @code{__builtin_bswap16}, except the argument and return types
+are 32-bit.
 @end deftypefn
 
 @deftypefn {Built-in Function} int64_t __builtin_bswap64 (int64_t x)
@@ -8516,6 +8577,8 @@ instructions, but allow the compiler to schedule those calls.
 * SPARC VIS Built-in Functions::
 * SPU Built-in Functions::
 * TI C6X Built-in Functions::
+* TILE-Gx Built-in Functions::
+* TILEPro Built-in Functions::
 @end menu
 
 @node Alpha Built-in Functions
@@ -8795,33 +8858,64 @@ might increase delay time. @code{ticks} must be a compile time
 integer constant; delays with a variable number of cycles are not supported.
 
 @smallexample
-     unsigned char __builtin_avr_map8 (unsigned long map, unsigned char val)
+char __builtin_avr_flash_segment (const __memx void*)
 @end smallexample
 
 @noindent
-Each bit of the result is copied from a specific bit of @code{val}.
-@code{map} is a compile time constant that represents a map composed
-of 8 nibbles (4-bit groups):
-The @var{n}-th nibble of @code{map} specifies which bit of @code{val}
-is to be moved to the @var{n}-th bit of the result.
-For example, @code{map = 0x76543210} represents identity: The MSB of
-the result is read from the 7-th bit of @code{val}, the LSB is
-read from the 0-th bit to @code{val}, etc.
-Two more examples: @code{0x01234567} reverses the bit order and
-@code{0x32107654} is equivalent to a @code{swap} instruction.
-
-@noindent
-One typical use case for this and the following built-in is adjusting input and
-output values to non-contiguous port layouts.
+This built-in takes a byte address to the 24-bit
+@ref{AVR Named Address Spaces,address space} @code{__memx} and returns
+the number of the flash segment (the 64 KiB chunk) where the address
+points to.  Counting starts at @code{0}.
+If the address does not point to flash memory, return @code{-1}.
 
 @smallexample
-     unsigned int __builtin_avr_map16 (unsigned long long map, unsigned int val)
+unsigned char __builtin_avr_insert_bits (unsigned long map, unsigned char bits, unsigned char val)
 @end smallexample
 
 @noindent
-Similar to the previous built-in except that it operates on @code{int}
-and thus 16 bits are involved.  Again, @code{map} must be a compile
-time constant.
+Insert bits from @var{bits} into @var{val} and return the resulting
+value. The nibbles of @var{map} determine how the insertion is
+performed: Let @var{X} be the @var{n}-th nibble of @var{map}
+@enumerate
+@item If @var{X} is @code{0xf},
+then the @var{n}-th bit of @var{val} is returned unaltered.
+
+@item If X is in the range 0@dots{}7,
+then the @var{n}-th result bit is set to the @var{X}-th bit of @var{bits}
+
+@item If X is in the range 8@dots{}@code{0xe},
+then the @var{n}-th result bit is undefined.
+@end enumerate
+
+@noindent
+One typical use case for this built-in is adjusting input and
+output values to non-contiguous port layouts. Some examples:
+
+@smallexample
+// same as val, bits is unused
+__builtin_avr_insert_bits (0xffffffff, bits, val)
+@end smallexample
+
+@smallexample
+// same as bits, val is unused
+__builtin_avr_insert_bits (0x76543210, bits, val)
+@end smallexample
+
+@smallexample
+// same as rotating bits by 4
+__builtin_avr_insert_bits (0x32107654, bits, 0)
+@end smallexample
+
+@smallexample
+// high-nibble of result is the high-nibble of val
+// low-nibble of result is the low-nibble of bits
+__builtin_avr_insert_bits (0xffff3210, bits, val)
+@end smallexample
+
+@smallexample
+// reverse the bit order of bits
+__builtin_avr_insert_bits (0x01234567, bits, 0)
+@end smallexample
 
 @node Blackfin Built-in Functions
 @subsection Blackfin Built-in Functions
@@ -9324,6 +9418,144 @@ Similar to @code{__builtin_inf}, except the return type is @code{__float128}.
 Similar to @code{__builtin_huge_val}, except the return type is @code{__float128}.
 @findex __builtin_huge_valq
 @end table
+
+The following built-in functions are always available and can be used to
+check the target platform type.
+
+@deftypefn {Built-in Function} void __builtin_cpu_init (void)
+This function runs the CPU detection code to check the type of CPU and the
+features supported.  This builtin needs to be invoked along with the builtins
+to check CPU type and features, @code{__builtin_cpu_is} and
+@code{__builtin_cpu_supports}, only when used in a function that will be
+executed before any constructors are called.  The CPU detection code is
+automatically executed in a very high priority constructor.
+
+For example, this function has to be used in @code{ifunc} resolvers which
+check for CPU type using the builtins, @code{__builtin_cpu_is}
+and @code{__builtin_cpu_supports}.
+@smallexample
+
+static void (*resolve_memcpy (void)) (void)
+@{
+  // ifunc resolvers fire before constructors, explicitly call the init
+  // function.
+  __builtin_cpu_init ();
+  if (__builtin_cpu_supports ("ssse3"))
+    return ssse3_memcpy; // super fast memcpy with ssse3 instructions.
+  else
+    return default_memcpy;
+@}
+
+void *memcpy (void *, const void *, size_t)
+     __attribute__ ((ifunc ("resolve_memcpy")));
+@end smallexample
+
+@end deftypefn
+
+@deftypefn {Built-in Function} int __builtin_cpu_is (const char *@var{cpuname})
+This function returns a positive integer if the runtime cpu is of type @var{cpuname}
+ and returns @code{0} otherwise. The following cpu names can be detected:
+
+@table @samp
+@item intel
+Intel CPU.
+
+@item atom
+Intel ATOM CPU.
+
+@item core2
+Intel Core2 CPU.
+
+@item corei7
+Intel Corei7 CPU.
+
+@item nehalem
+Intel Corei7 Nehalem CPU.
+
+@item westmere
+Intel Corei7 Westmere CPU.
+
+@item sandybridge
+Intel Corei7 Sandybridge CPU.
+
+@item amd
+AMD CPU.
+
+@item amdfam10h
+AMD family 10h CPU.
+
+@item barcelona
+AMD family 10h Barcelona CPU.
+
+@item shanghai
+AMD family 10h Shanghai CPU.
+
+@item istanbul
+AMD family 10h Istanbul CPU.
+
+@item amdfam15h
+AMD family 15h CPU.
+
+@item bdver1
+AMD family 15h Bulldozer version 1.
+
+@item bdver2
+AMD family 15h Bulldozer version 2.
+@end table
+
+Here is an example:
+@smallexample
+if (__builtin_cpu_is ("corei7"))
+  @{
+     do_corei7 (); //Corei7 specific implementation.
+  @}
+else
+  @{
+     do_generic (); //Generic implementation.
+  @}
+@end smallexample
+@end deftypefn
+
+@deftypefn {Built-in Function} int __builtin_cpu_supports (const char *@var{feature})
+This function returns a postive integer if the runtime cpu supports @var{feature}
+ and returns @code{0} otherwise. The following features can be detected:
+
+@table @samp
+@item cmov
+CMOV instruction.
+@item mmx
+MMX instructions.
+@item popcnt
+POPCNT instruction.
+@item sse
+SSE instructions.
+@item sse2
+SSE2 instructions.
+@item sse3
+SSE3 instructions.
+@item ssse3
+SSSE3 instructions.
+@item sse4.1
+SSE4.1 instructions.
+@item sse4.2
+SSE4.2 instructions.
+@item avx
+AVX instructions.
+@end table
+
+Here is an example:
+@smallexample
+if (__builtin_cpu_supports ("popcnt"))
+  @{
+     asm("popcnt %1,%0" : "=r"(count) : "rm"(n) : "cc");
+  @}
+else
+  @{
+     count = generic_countbits (n); //generic implementation.
+  @}
+@end smallexample
+@end deftypefn
+
 
 The following built-in functions are made available by @option{-mmmx}.
 All of them generate the machine instruction that is part of the name.
@@ -13338,7 +13570,6 @@ float __builtin_rsqrtf (float);
 double __builtin_recipdiv (double, double);
 double __builtin_rsqrt (double);
 long __builtin_bpermd (long, long);
-int __builtin_bswap16 (int);
 @end smallexample
 
 The @code{vec_rsqrt}, @code{__builtin_rsqrt}, and
@@ -13703,6 +13934,78 @@ int _abs2 (int)
 
 @end smallexample
 
+@node TILE-Gx Built-in Functions
+@subsection TILE-Gx Built-in Functions
+
+GCC provides intrinsics to access every instruction of the TILE-Gx
+processor.  The intrinsics are of the form:
+
+@smallexample
+
+unsigned long long __insn_@var{op} (...)
+
+@end smallexample
+
+Where @var{op} is the name of the instruction.  Refer to the ISA manual
+for the complete list of instructions.
+
+GCC also provides intrinsics to directly access the network registers.
+The intrinsics are:
+
+@smallexample
+
+unsigned long long __tile_idn0_receive (void)
+unsigned long long __tile_idn1_receive (void)
+unsigned long long __tile_udn0_receive (void)
+unsigned long long __tile_udn1_receive (void)
+unsigned long long __tile_udn2_receive (void)
+unsigned long long __tile_udn3_receive (void)
+void __tile_idn_send (unsigned long long)
+void __tile_udn_send (unsigned long long)
+
+@end smallexample
+
+The intrinsic @code{void __tile_network_barrier (void)} is used to
+guarantee that no network operatons before it will be reordered with
+those after it.
+
+@node TILEPro Built-in Functions
+@subsection TILEPro Built-in Functions
+
+GCC provides intrinsics to access every instruction of the TILEPro
+processor.  The intrinsics are of the form:
+
+@smallexample
+
+unsigned __insn_@var{op} (...)
+
+@end smallexample
+
+Where @var{op} is the name of the instruction.  Refer to the ISA manual
+for the complete list of instructions.
+
+GCC also provides intrinsics to directly access the network registers.
+The intrinsics are:
+
+@smallexample
+
+unsigned __tile_idn0_receive (void)
+unsigned __tile_idn1_receive (void)
+unsigned __tile_sn_receive (void)
+unsigned __tile_udn0_receive (void)
+unsigned __tile_udn1_receive (void)
+unsigned __tile_udn2_receive (void)
+unsigned __tile_udn3_receive (void)
+void __tile_idn_send (unsigned)
+void __tile_sn_send (unsigned)
+void __tile_udn_send (unsigned)
+
+@end smallexample
+
+The intrinsic @code{void __tile_network_barrier (void)} is used to
+guarantee that no network operatons before it will be reordered with
+those after it.
+
 @node Target Format Checks
 @section Format Checks Specific to Particular Target Machines
 
@@ -13981,10 +14284,9 @@ adding a call to the @code{.init} section.
 @node Symbol-Renaming Pragmas
 @subsection Symbol-Renaming Pragmas
 
-For compatibility with the Solaris and Tru64 UNIX system headers, GCC
+For compatibility with the Solaris system headers, GCC
 supports two @code{#pragma} directives which change the name used in
-assembly for a given declaration.  @code{#pragma extern_prefix} is only
-available on platforms whose system headers need it. To get this effect
+assembly for a given declaration. To get this effect
 on all platforms supported by GCC, use the asm labels extension (@pxref{Asm
 Labels}).
 
@@ -13995,19 +14297,9 @@ Labels}).
 This pragma gives the C function @var{oldname} the assembly symbol
 @var{newname}.  The preprocessor macro @code{__PRAGMA_REDEFINE_EXTNAME}
 will be defined if this pragma is available (currently on all platforms).
-
-@item extern_prefix @var{string}
-@cindex pragma, extern_prefix
-
-This pragma causes all subsequent external function and variable
-declarations to have @var{string} prepended to their assembly symbols.
-This effect may be terminated with another @code{extern_prefix} pragma
-whose argument is an empty string.  The preprocessor macro
-@code{__PRAGMA_EXTERN_PREFIX} will be defined if this pragma is
-available (currently only on Tru64 UNIX)@.
 @end table
 
-These pragmas and the asm labels extension interact in a complicated
+This pragma and the asm labels extension interact in a complicated
 manner.  Here are some corner cases you may want to be aware of.
 
 @enumerate
@@ -14026,17 +14318,6 @@ the name does not change.
 
 @item The @var{oldname} used by @code{#pragma redefine_extname} is
 always the C-language name.
-
-@item If @code{#pragma extern_prefix} is in effect, and a declaration
-occurs with an asm label attached, the prefix is silently ignored for
-that declaration.
-
-@item If @code{#pragma extern_prefix} and @code{#pragma redefine_extname}
-apply to the same declaration, whichever triggered first wins, and a
-warning issues if they contradict each other.  (We would like to have
-@code{#pragma redefine_extname} always win, for consistency with asm
-labels, but if @code{#pragma extern_prefix} triggers first we have no
-way of knowing that that happened.)
 @end enumerate
 
 @node Structure-Packing Pragmas
@@ -15024,16 +15305,7 @@ GNU/Linux or Solaris 2, or on Microsoft Windows, G++ supports the
 Borland model.  On other systems, G++ implements neither automatic
 model.
 
-A future version of G++ will support a hybrid model whereby the compiler
-will emit any instantiations for which the template definition is
-included in the compile, and store template definitions and
-instantiation context information into the object file for the rest.
-The link wrapper will extract that information as necessary and invoke
-the compiler to produce the remaining instantiations.  The linker will
-then combine duplicate instantiations.
-
-In the mean time, you have the following options for dealing with
-template instantiations:
+You have the following options for dealing with template instantiations:
 
 @enumerate
 @item
@@ -15095,9 +15367,10 @@ compile it without @option{-fno-implicit-templates} so you get all of the
 instances required by your explicit instantiations (but not by any
 other files) without having to specify them as well.
 
-G++ has extended the template instantiation syntax given in the ISO
-standard to allow forward declaration of explicit instantiations
-(with @code{extern}), instantiation of the compiler support data for a
+The ISO C++ 2011 standard allows forward declaration of explicit
+instantiations (with @code{extern}). G++ supports explicit instantiation
+declarations in C++98 mode and has extended the template instantiation
+syntax to support instantiation of the compiler support data for a
 template class (i.e.@: the vtable) without instantiating any of its
 members (with @code{inline}), and instantiation of only the static data
 members of a template class, without the support data or member

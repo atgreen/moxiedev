@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gfortran.fortran-torture
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-10-14T19:30:42.142479Z
-180006
-ktietz
+2012-03-15T12:25:47.902359Z
+185430
+aldot
 
 
 
@@ -38,7 +38,7 @@ file
 
 
 
-2009-04-27T23:07:44.000000Z
+2012-02-01T17:19:10.108480Z
 2e53eeb757ac8134127639b4b18c5d14
 2009-04-21T19:03:23.876795Z
 146533

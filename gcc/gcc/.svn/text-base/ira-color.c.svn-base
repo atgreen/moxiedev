@@ -1,5 +1,5 @@
 /* IRA allocation based on graph coloring.
-   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011
+   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Contributed by Vladimir Makarov <vmakarov@redhat.com>.
 
@@ -821,7 +821,6 @@ setup_left_conflict_sizes_p (ira_allocno_t a)
   node_preorder_num = node->preorder_num;
   COPY_HARD_REG_SET (node_set, node->hard_regs->set);
   node_check_tick++;
-  curr_allocno_process++;
   for (k = 0; k < nobj; k++)
     {
       ira_object_t obj = ALLOCNO_OBJECT (a, k);
@@ -838,12 +837,10 @@ setup_left_conflict_sizes_p (ira_allocno_t a)
 
 	  conflict_data = ALLOCNO_COLOR_DATA (conflict_a);
 	  if (! ALLOCNO_COLOR_DATA (conflict_a)->in_graph_p
-	      || conflict_data->last_process == curr_allocno_process
 	      || ! hard_reg_set_intersect_p (profitable_hard_regs,
 					     conflict_data
 					     ->profitable_hard_regs))
 	    continue;
-	  conflict_data->last_process = curr_allocno_process;
 	  conflict_node = conflict_data->hard_regs_node;
 	  COPY_HARD_REG_SET (conflict_node_set, conflict_node->hard_regs->set);
 	  if (hard_reg_set_subset_p (node_set, conflict_node_set))
@@ -1067,7 +1064,7 @@ setup_profitable_hard_regs (void)
 		{
 		  int num = OBJECT_SUBWORD (conflict_obj);
 		  
-		  if (WORDS_BIG_ENDIAN)
+		  if (REG_WORDS_BIG_ENDIAN)
 		    CLEAR_HARD_REG_BIT
 		      (ALLOCNO_COLOR_DATA (conflict_a)->profitable_hard_regs,
 		       hard_regno + nobj - num - 1);
@@ -1451,7 +1448,7 @@ check_hard_reg_p (ira_allocno_t a, int hard_regno,
       
       if (nregs == nwords)
 	{
-	  if (WORDS_BIG_ENDIAN)
+	  if (REG_WORDS_BIG_ENDIAN)
 	    set_to_test_start = nwords - j - 1;
 	  else
 	    set_to_test_start = j;
@@ -1610,7 +1607,7 @@ assign_hard_reg (ira_allocno_t a, bool retry_p)
 		    {
 		      int num = OBJECT_SUBWORD (conflict_obj);
 
-		      if (WORDS_BIG_ENDIAN)
+		      if (REG_WORDS_BIG_ENDIAN)
 			SET_HARD_REG_BIT (conflicting_regs[word],
 					  hard_regno + n_objects - num - 1);
 		      else

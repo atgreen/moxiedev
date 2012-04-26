@@ -1382,6 +1382,14 @@ DEFHOOK
  rtx, (rtx x),
  delegitimize_mem_from_attrs)
 
+/* Given an RTX, return true if it is not ok to emit it into debug info
+   section.  */
+DEFHOOK
+(const_not_ok_for_debug_p,
+ "",
+ bool, (rtx x),
+ hook_bool_rtx_false)
+
 /* Given an address RTX, say whether it is valid.  */
 DEFHOOK
 (legitimate_address_p,
@@ -2659,6 +2667,13 @@ DEFHOOK
  enum unwind_info_type, (void),
  default_debug_unwind_info)
 
+DEFHOOKPOD
+(atomic_test_and_set_trueval,
+ "This value should be set if the result written by\
+ @code{atomic_test_and_set} is not exactly 1, i.e. the\
+ @code{bool} @code{true}.",
+ unsigned char, 1)
+ 
 /* Leave the boolean fields at the end.  */
 
 /* True if we can create zeroed data by switching to a BSS section
@@ -2705,11 +2720,6 @@ DEFHOOKPOD
 (asm_file_start_file_directive,
  "",
  bool, false)
-
-DEFHOOKPOD
-(handle_pragma_extern_prefix,
-"True if @code{#pragma extern_prefix} is to be supported.",
- bool, 0)
 
 /* True if the target is allowed to reorder memory accesses unless
    synchronization is explicitly requested.  */

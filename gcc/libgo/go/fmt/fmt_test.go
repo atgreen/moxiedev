@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 )
 
 type (
@@ -423,6 +424,7 @@ var fmttests = []struct {
 	{"p0=%p", new(int), "p0=0xPTR"},
 	{"p1=%s", &pValue, "p1=String(p)"}, // String method...
 	{"p2=%p", &pValue, "p2=0xPTR"},     // ... not called with %p
+	{"p3=%p", (*int)(nil), "p3=0x0"},
 	{"p4=%#p", new(int), "p4=PTR"},
 
 	// %p on non-pointers
@@ -430,6 +432,14 @@ var fmttests = []struct {
 	{"%p", make(map[int]int), "0xPTR"},
 	{"%p", make([]int, 1), "0xPTR"},
 	{"%p", 27, "%!p(int=27)"}, // not a pointer at all
+
+	// %q on pointers
+	{"%q", (*int)(nil), "%!q(*int=<nil>)"},
+	{"%q", new(int), "%!q(*int=0xPTR)"},
+
+	// %v on pointers formats 0 as <nil>
+	{"%v", (*int)(nil), "<nil>"},
+	{"%v", new(int), "0xPTR"},
 
 	// %d on Stringer should give integer if possible
 	{"%s", time.Time{}.Month(), "January"},
@@ -443,6 +453,14 @@ var fmttests = []struct {
 	{"%s", nil, "%!s(<nil>)"},
 	{"%T", nil, "<nil>"},
 	{"%-1", 100, "%!(NOVERB)%!(EXTRA int=100)"},
+
+	// The "<nil>" show up because maps are printed by
+	// first obtaining a list of keys and then looking up
+	// each key.  Since NaNs can be map keys but cannot
+	// be fetched directly, the lookup fails and returns a
+	// zero reflect.Value, which formats as <nil>.
+	// This test is just to check that it shows the two NaNs at all.
+	{"%v", map[float64]int{math.NaN(): 1, math.NaN(): 2}, "map[NaN:<nil> NaN:<nil>]"},
 }
 
 func TestSprintf(t *testing.T) {
@@ -508,37 +526,39 @@ func BenchmarkSprintfFloat(b *testing.B) {
 
 var mallocBuf bytes.Buffer
 
+// gccgo numbers are different because gccgo does not have escape
+// analysis yet.
 var mallocTest = []struct {
 	count int
 	desc  string
 	fn    func()
 }{
-	{0, `Sprintf("")`, func() { Sprintf("") }},
-	{1, `Sprintf("xxx")`, func() { Sprintf("xxx") }},
-	{1, `Sprintf("%x")`, func() { Sprintf("%x", 7) }},
-	{2, `Sprintf("%s")`, func() { Sprintf("%s", "hello") }},
-	{1, `Sprintf("%x %x")`, func() { Sprintf("%x", 7, 112) }},
-	{1, `Sprintf("%g")`, func() { Sprintf("%g", 3.14159) }},
-	{0, `Fprintf(buf, "%x %x %x")`, func() { mallocBuf.Reset(); Fprintf(&mallocBuf, "%x %x %x", 7, 8, 9) }},
-	{1, `Fprintf(buf, "%s")`, func() { mallocBuf.Reset(); Fprintf(&mallocBuf, "%s", "hello") }},
+	{5, `Sprintf("")`, func() { Sprintf("") }},
+	{5, `Sprintf("xxx")`, func() { Sprintf("xxx") }},
+	{5, `Sprintf("%x")`, func() { Sprintf("%x", 7) }},
+	{5, `Sprintf("%s")`, func() { Sprintf("%s", "hello") }},
+	{5, `Sprintf("%x %x")`, func() { Sprintf("%x %x", 7, 112) }},
+	// For %g we use a float32, not float64, to guarantee passing the argument
+	// does not need to allocate memory to store the result in a pointer-sized word.
+	{20, `Sprintf("%g")`, func() { Sprintf("%g", float32(3.14159)) }},
+	{5, `Fprintf(buf, "%x %x %x")`, func() { mallocBuf.Reset(); Fprintf(&mallocBuf, "%x %x %x", 7, 8, 9) }},
+	{5, `Fprintf(buf, "%s")`, func() { mallocBuf.Reset(); Fprintf(&mallocBuf, "%s", "hello") }},
 }
 
 var _ bytes.Buffer
 
 func TestCountMallocs(t *testing.T) {
-	if testing.Short() {
-		return
-	}
 	for _, mt := range mallocTest {
 		const N = 100
-		runtime.UpdateMemStats()
-		mallocs := 0 - runtime.MemStats.Mallocs
+		memstats := new(runtime.MemStats)
+		runtime.ReadMemStats(memstats)
+		mallocs := 0 - memstats.Mallocs
 		for i := 0; i < N; i++ {
 			mt.fn()
 		}
-		runtime.UpdateMemStats()
-		mallocs += runtime.MemStats.Mallocs
-		if mallocs/N != uint64(mt.count) {
+		runtime.ReadMemStats(memstats)
+		mallocs += memstats.Mallocs
+		if mallocs/N > uint64(mt.count) {
 			t.Errorf("%s: expected %d mallocs, got %d", mt.desc, mt.count, mallocs/N)
 		}
 	}
@@ -809,5 +829,15 @@ func TestBadVerbRecursion(t *testing.T) {
 	Sprintf("recur@%p, value: %d\n", r, r.i)
 	if failed {
 		t.Error("fail with value")
+	}
+}
+
+func TestIsSpace(t *testing.T) {
+	// This tests the internal isSpace function.
+	// IsSpace = isSpace is defined in export_test.go.
+	for i := rune(0); i <= unicode.MaxRune; i++ {
+		if IsSpace(i) != unicode.IsSpace(i) {
+			t.Errorf("isSpace(%U) = %v, want %v", i, IsSpace(i), unicode.IsSpace(i))
+		}
 	}
 }

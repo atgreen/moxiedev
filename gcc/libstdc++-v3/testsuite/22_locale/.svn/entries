@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-12-15T19:02:51.278862Z
-182385
-bkoz
+2012-03-14T16:33:37.926982Z
+185390
+ro
 
 
 
@@ -26,34 +26,16 @@ bkoz
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-ctype_byname
-dir
-
-money_put
-dir
-
-codecvt_byname
-dir
-
-facet
-dir
-
-collate
-dir
-
-ctype
+money_get
 dir
 
 time_put
 dir
 
-money_get
+codecvt
 dir
 
 num_put
-dir
-
-codecvt
 dir
 
 moneypunct_byname
@@ -93,5 +75,23 @@ ctype_base
 dir
 
 collate_byname
+dir
+
+money_put
+dir
+
+ctype_byname
+dir
+
+facet
+dir
+
+codecvt_byname
+dir
+
+collate
+dir
+
+ctype
 dir
 

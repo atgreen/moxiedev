@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/tr1/6_containers/headers
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,6 +26,12 @@ jakub
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+tuple
+dir
+
+array
+dir
+
 functional
 dir
 
@@ -33,11 +39,5 @@ unordered_set
 dir
 
 unordered_map
-dir
-
-tuple
-dir
-
-array
 dir
 

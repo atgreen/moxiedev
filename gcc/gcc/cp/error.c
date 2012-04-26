@@ -1,7 +1,7 @@
 /* Call-backs for C++ error reporting.
    This code is non-reentrant.
    Copyright (C) 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2002, 2003,
-   2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    This file is part of GCC.
 
@@ -1118,14 +1118,17 @@ dump_decl (tree t, int flags)
     case TEMPLATE_ID_EXPR:
       {
 	tree name = TREE_OPERAND (t, 0);
+	tree args = TREE_OPERAND (t, 1);
 
 	if (is_overloaded_fn (name))
 	  name = DECL_NAME (get_first_fn (name));
 	dump_decl (name, flags);
 	pp_cxx_begin_template_argument_list (cxx_pp);
-	if (TREE_OPERAND (t, 1))
-	  dump_template_argument_list (TREE_OPERAND (t, 1), flags);
-	pp_cxx_end_template_argument_list (cxx_pp);
+	if (args == error_mark_node)
+	  pp_string (cxx_pp, M_("<template arguments error>"));
+	else if (args)
+	  dump_template_argument_list (args, flags);
+      	pp_cxx_end_template_argument_list (cxx_pp);
       }
       break;
 
@@ -1553,6 +1556,8 @@ dump_function_name (tree t, int flags)
     {
       if (LAMBDA_TYPE_P (DECL_CONTEXT (t)))
 	name = get_identifier ("<lambda>");
+      else if (TYPE_ANONYMOUS_P (DECL_CONTEXT (t)))
+	name = get_identifier ("<constructor>");
       else
 	name = constructor_name (DECL_CONTEXT (t));
     }
@@ -2186,6 +2191,8 @@ dump_expr (tree t, int flags)
 		}
 	    }
 	}
+      if (TREE_TYPE (t) && LAMBDA_TYPE_P (TREE_TYPE (t)))
+	pp_string (cxx_pp, "<lambda closure object>");
       if (TREE_TYPE (t) && EMPTY_CONSTRUCTOR_P (t))
 	{
 	  dump_type (TREE_TYPE (t), 0);
@@ -3071,10 +3078,20 @@ print_instantiation_partial_context (diagnostic_context *context,
 
   t = t0;
 
-  if (n_total >= 12) 
+  if (template_backtrace_limit
+      && n_total > template_backtrace_limit) 
     {
-      int skip = n_total - 10;
-      for (n = 0; n < 5; n++)
+      int skip = n_total - template_backtrace_limit;
+      int head = template_backtrace_limit / 2;
+
+      /* Avoid skipping just 1.  If so, skip 2.  */
+      if (skip == 1)
+       {
+         skip = 2;
+         head = (template_backtrace_limit - 1) / 2;
+       }
+     
+      for (n = 0; n < head; n++)
 	{
 	  gcc_assert (t != NULL);
 	  if (loc != t->locus)
@@ -3083,17 +3100,19 @@ print_instantiation_partial_context (diagnostic_context *context,
 	  loc = t->locus;
 	  t = t->next;
 	}
-      if (t != NULL && skip > 1)
+      if (t != NULL && skip > 0)
 	{
 	  expanded_location xloc;
 	  xloc = expand_location (loc);
 	  if (context->show_column)
 	    pp_verbatim (context->printer,
-			 _("%s:%d:%d:   [ skipping %d instantiation contexts ]\n"),
+			 _("%s:%d:%d:   [ skipping %d instantiation contexts, "
+			   "use -ftemplate-backtrace-limit=0 to disable ]\n"),
 			 xloc.file, xloc.line, xloc.column, skip);
 	  else
 	    pp_verbatim (context->printer,
-			 _("%s:%d:   [ skipping %d instantiation contexts ]\n"),
+			 _("%s:%d:   [ skipping %d instantiation contexts, "
+			   "use -ftemplate-backtrace-limit=0 to disable ]\n"),
 			 xloc.file, xloc.line, skip);
 	  
 	  do {
@@ -3287,7 +3306,7 @@ maybe_warn_cpp0x (cpp0x_warn_str str)
 		 "only available with -std=c++11 or -std=gnu++11");
 	break;
       case CPP0X_INLINE_NAMESPACES:
-	pedwarn (input_location, OPT_pedantic,
+	pedwarn (input_location, OPT_Wpedantic,
 		 "inline namespaces "
 		 "only available with -std=c++11 or -std=gnu++11");
 	break;
@@ -3333,13 +3352,15 @@ pedwarn_cxx98 (location_t location, int opt, const char *gmsgid, ...)
 {
   diagnostic_info diagnostic;
   va_list ap;
+  bool ret;
 
   va_start (ap, gmsgid);
   diagnostic_set_info (&diagnostic, gmsgid, &ap, location,
 		       (cxx_dialect == cxx98) ? DK_PEDWARN : DK_WARNING);
   diagnostic.option_index = opt;
+  ret = report_diagnostic (&diagnostic);
   va_end (ap);
-  return report_diagnostic (&diagnostic);
+  return ret;
 }
 
 /* Issue a diagnostic that NAME cannot be found in SCOPE.  DECL is what

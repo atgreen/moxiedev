@@ -1,14 +1,14 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/archive
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2012-01-13T05:11:45.877801Z
-183150
+2012-03-30T22:14:14.665955Z
+186028
 ian
 
 
@@ -26,9 +26,9 @@ ian
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-zip
+tar
 dir
 
-tar
+zip
 dir
 

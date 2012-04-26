@@ -7,10 +7,8 @@
 package filepath
 
 import (
-	"bytes"
 	"errors"
 	"os"
-	"runtime"
 	"sort"
 	"strings"
 )
@@ -36,7 +34,7 @@ const (
 // returns the string ".".
 //
 // See also Rob Pike, ``Lexical File Names in Plan 9 or
-// Getting Dot-Dot right,''
+// Getting Dot-Dot Right,''
 // http://plan9.bell-labs.com/sys/doc/lexnames.html
 func Clean(path string) string {
 	vol := VolumeName(path)
@@ -118,7 +116,8 @@ func Clean(path string) string {
 }
 
 // ToSlash returns the result of replacing each separator character
-// in path with a slash ('/') character.
+// in path with a slash ('/') character. Multiple separators are
+// replaced by multiple slashes.
 func ToSlash(path string) string {
 	if Separator == '/' {
 		return path
@@ -127,7 +126,8 @@ func ToSlash(path string) string {
 }
 
 // FromSlash returns the result of replacing each slash ('/') character
-// in path with a separator character.
+// in path with a separator character. Multiple slashes are replaced
+// by multiple separators.
 func FromSlash(path string) string {
 	if Separator == '/' {
 		return path
@@ -135,7 +135,9 @@ func FromSlash(path string) string {
 	return strings.Replace(path, "/", string(Separator), -1)
 }
 
-// SplitList splits a list of paths joined by the OS-specific ListSeparator.
+// SplitList splits a list of paths joined by the OS-specific ListSeparator,
+// usually found in PATH or GOPATH environment variables.
+// Unlike strings.Split, SplitList returns an empty slice when passed an empty string.
 func SplitList(path string) []string {
 	if path == "" {
 		return []string{}
@@ -158,7 +160,8 @@ func Split(path string) (dir, file string) {
 }
 
 // Join joins any number of path elements into a single path, adding
-// a Separator if necessary.  All empty strings are ignored.
+// a Separator if necessary. The result is Cleaned, in particular
+// all empty strings are ignored.
 func Join(elem ...string) string {
 	for i, e := range elem {
 		if e != "" {
@@ -183,66 +186,10 @@ func Ext(path string) string {
 
 // EvalSymlinks returns the path name after the evaluation of any symbolic
 // links.
-// If path is relative it will be evaluated relative to the current directory.
+// If path is relative the result will be relative to the current directory,
+// unless one of the components is an absolute symbolic link.
 func EvalSymlinks(path string) (string, error) {
-	if runtime.GOOS == "windows" {
-		// Symlinks are not supported under windows.
-		_, err := os.Lstat(path)
-		if err != nil {
-			return "", err
-		}
-		return Clean(path), nil
-	}
-	const maxIter = 255
-	originalPath := path
-	// consume path by taking each frontmost path element,
-	// expanding it if it's a symlink, and appending it to b
-	var b bytes.Buffer
-	for n := 0; path != ""; n++ {
-		if n > maxIter {
-			return "", errors.New("EvalSymlinks: too many links in " + originalPath)
-		}
-
-		// find next path component, p
-		i := strings.IndexRune(path, Separator)
-		var p string
-		if i == -1 {
-			p, path = path, ""
-		} else {
-			p, path = path[:i], path[i+1:]
-		}
-
-		if p == "" {
-			if b.Len() == 0 {
-				// must be absolute path
-				b.WriteRune(Separator)
-			}
-			continue
-		}
-
-		fi, err := os.Lstat(b.String() + p)
-		if err != nil {
-			return "", err
-		}
-		if fi.Mode()&os.ModeSymlink == 0 {
-			b.WriteString(p)
-			if path != "" {
-				b.WriteRune(Separator)
-			}
-			continue
-		}
-
-		// it's a symlink, put it at the front of path
-		dest, err := os.Readlink(b.String() + p)
-		if err != nil {
-			return "", err
-		}
-		if IsAbs(dest) {
-			b.Reset()
-		}
-		path = dest + string(Separator) + path
-	}
-	return Clean(b.String()), nil
+	return evalSymlinks(path)
 }
 
 // Abs returns an absolute representation of path.
@@ -443,7 +390,7 @@ func Base(path string) string {
 	return path
 }
 
-// Dir returns the all but the last element of path, typically the path's directory.
+// Dir returns all but the last element of path, typically the path's directory.
 // Trailing path separators are removed before processing.
 // If the path is empty, Dir returns ".".
 // If the path consists entirely of separators, Dir returns a single separator.

@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/go.test/test/fixedbugs/bug322.dir
 svn://gcc.gnu.org/svn/gcc
 
@@ -32,7 +32,7 @@ file
 
 
 
-2011-09-25T18:02:26.996897Z
+2012-02-01T17:19:10.592465Z
 72fffc0f881c4a6382d58760719af78f
 2011-09-21T23:05:39.964752Z
 179063
@@ -66,7 +66,7 @@ file
 
 
 
-2011-09-25T18:02:26.996897Z
+2012-02-01T17:19:10.592465Z
 a083d234fefb01f4935f4eda6987fe15
 2011-09-21T23:05:39.964752Z
 179063

@@ -24,7 +24,7 @@ type pkcs1PrivateKey struct {
 	Dq   *big.Int `asn1:"optional"`
 	Qinv *big.Int `asn1:"optional"`
 
-	AdditionalPrimes []pkcs1AdditionalRSAPrime `asn1:"optional"`
+	AdditionalPrimes []pkcs1AdditionalRSAPrime `asn1:"optional,omitempty"`
 }
 
 type pkcs1AdditionalRSAPrime struct {
@@ -40,7 +40,7 @@ func ParsePKCS1PrivateKey(der []byte) (key *rsa.PrivateKey, err error) {
 	var priv pkcs1PrivateKey
 	rest, err := asn1.Unmarshal(der, &priv)
 	if len(rest) > 0 {
-		err = asn1.SyntaxError{"trailing data"}
+		err = asn1.SyntaxError{Msg: "trailing data"}
 		return
 	}
 	if err != nil {

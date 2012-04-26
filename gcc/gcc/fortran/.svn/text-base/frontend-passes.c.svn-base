@@ -70,6 +70,10 @@ static int forall_level;
 
 static bool in_omp_workshare;
 
+/* Keep track of iterators for array constructors.  */
+
+static int iterator_level;
+
 /* Entry point - run all passes for a namespace.  So far, only an
    optimization pass is run.  */
 
@@ -177,6 +181,13 @@ cfe_register_funcs (gfc_expr **e, int *walk_subtrees ATTRIBUTE_UNUSED,
      lead to wrong-code in certain circumstances.  */
 
   if (forall_level > 0)
+    return 0;
+
+  /* Function elimination inside an iterator could lead to functions which
+     depend on iterator variables being moved outside.  FIXME: We should check
+     if the functions do indeed depend on the iterator variable.  */
+
+  if (iterator_level > 0)
     return 0;
 
   /* If we don't know the shape at compile time, we create an allocatable
@@ -328,7 +339,8 @@ create_var (gfc_expr * e)
       result->ref->type = REF_ARRAY;
       result->ref->u.ar.type = AR_FULL;
       result->ref->u.ar.where = e->where;
-      result->ref->u.ar.as = symbol->as;
+      result->ref->u.ar.as = symbol->ts.type == BT_CLASS
+			     ? CLASS_DATA (symbol)->as : symbol->as;
       if (gfc_option.warn_array_temp)
 	gfc_warning ("Creating array temporary at %L", &(e->where));
     }
@@ -509,6 +521,69 @@ convert_do_while (gfc_code **c, int *walk_subtrees ATTRIBUTE_UNUSED,
   return 0;
 }
 
+/* Code callback function for converting
+   if (a) then
+   ...
+   else if (b) then
+   end if
+
+   into
+   if (a) then
+   else
+     if (b) then
+     end if
+   end if
+
+   because otherwise common function elimination would place the BLOCKs
+   into the wrong place.  */
+
+static int
+convert_elseif (gfc_code **c, int *walk_subtrees ATTRIBUTE_UNUSED,
+		void *data ATTRIBUTE_UNUSED)
+{
+  gfc_code *co = *c;
+  gfc_code *c_if1, *c_if2, *else_stmt;
+
+  if (co->op != EXEC_IF)
+    return 0;
+
+  /* This loop starts out with the first ELSE statement.  */
+  else_stmt = co->block->block;
+
+  while (else_stmt != NULL)
+    {
+      gfc_code *next_else;
+
+      /* If there is no condition, we're done.  */
+      if (else_stmt->expr1 == NULL)
+	break;
+
+      next_else = else_stmt->block;
+
+      /* Generate the new IF statement.  */
+      c_if2 = XCNEW (gfc_code);
+      c_if2->op = EXEC_IF;
+      c_if2->expr1 = else_stmt->expr1;
+      c_if2->next = else_stmt->next;
+      c_if2->loc = else_stmt->loc;
+      c_if2->block = next_else;
+
+      /* ... plus the one to chain it to.  */
+      c_if1 = XCNEW (gfc_code);
+      c_if1->op = EXEC_IF;
+      c_if1->block = c_if2;
+      c_if1->loc = else_stmt->loc;
+
+      /* Insert the new IF after the ELSE.  */
+      else_stmt->expr1 = NULL;
+      else_stmt->next = c_if1;
+      else_stmt->block = NULL;
+
+      else_stmt = next_else;
+    }
+  /*  Don't walk subtrees.  */
+  return 0;
+}
 /* Optimize a namespace, including all contained namespaces.  */
 
 static void
@@ -517,9 +592,11 @@ optimize_namespace (gfc_namespace *ns)
 
   current_ns = ns;
   forall_level = 0;
+  iterator_level = 0;
   in_omp_workshare = false;
 
   gfc_code_walker (&ns->code, convert_do_while, dummy_expr_callback, NULL);
+  gfc_code_walker (&ns->code, convert_elseif, dummy_expr_callback, NULL);
   gfc_code_walker (&ns->code, cfe_code, cfe_expr_0, NULL);
   gfc_code_walker (&ns->code, optimize_code, optimize_expr, NULL);
 
@@ -1075,9 +1152,13 @@ gfc_expr_walker (gfc_expr **e, walk_expr_fn_t exprfn, void *data)
 	    for (c = gfc_constructor_first ((*e)->value.constructor); c;
 		 c = gfc_constructor_next (c))
 	      {
-		WALK_SUBEXPR (c->expr);
-		if (c->iterator != NULL)
+		if (c->iterator == NULL)
+		  WALK_SUBEXPR (c->expr);
+		else
 		  {
+		    iterator_level ++;
+		    WALK_SUBEXPR (c->expr);
+		    iterator_level --;
 		    WALK_SUBEXPR (c->iterator->var);
 		    WALK_SUBEXPR (c->iterator->start);
 		    WALK_SUBEXPR (c->iterator->end);

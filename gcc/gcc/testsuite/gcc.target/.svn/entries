@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2012-01-20T19:39:48.915740Z
-183349
-jakub
+2012-04-26T00:02:12.845025Z
+186850
+amodra
 
 
 
@@ -25,48 +25,6 @@ jakub
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-powerpc
-dir
-
-arm
-dir
-
-m68k
-dir
-
-alpha
-dir
-
-microblaze
-dir
-
-avr
-dir
-
-rx
-dir
-
-i386
-dir
-
-xstormy16
-dir
-
-tic6x
-dir
-
-frv
-dir
-
-x86_64
-dir
-
-s390
-dir
-
-cris
-dir
 
 ia64
 dir
@@ -87,5 +45,47 @@ epiphany
 dir
 
 bfin
+dir
+
+arm
+dir
+
+powerpc
+dir
+
+alpha
+dir
+
+m68k
+dir
+
+microblaze
+dir
+
+avr
+dir
+
+i386
+dir
+
+rx
+dir
+
+xstormy16
+dir
+
+frv
+dir
+
+tic6x
+dir
+
+s390
+dir
+
+x86_64
+dir
+
+cris
 dir
 

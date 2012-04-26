@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package parse builds parse trees for templates.  The grammar is defined
-// in the documents for the template package.
+// Package parse builds parse trees for templates as defined by text/template
+// and html/template. Clients should use those packages to construct templates
+// rather than this one, which provides shared internal data structures not
+// intended for general use.
 package parse
 
 import (
@@ -191,6 +193,8 @@ func (t *Tree) add(treeSet map[string]*Tree) {
 // IsEmptyTree reports whether this tree (node) is empty of everything but space.
 func IsEmptyTree(n Node) bool {
 	switch n := n.(type) {
+	case nil:
+		return true
 	case *ActionNode:
 	case *IfNode:
 	case *ListNode:
@@ -322,7 +326,7 @@ func (t *Tree) pipeline(context string) (pipe *PipeNode) {
 	for {
 		if v := t.peek(); v.typ == itemVariable {
 			t.next()
-			if next := t.peek(); next.typ == itemColonEquals || next.typ == itemChar {
+			if next := t.peek(); next.typ == itemColonEquals || (next.typ == itemChar && next.val == ",") {
 				t.next()
 				variable := newVariable(v.val)
 				if len(variable.Ident) != 1 {

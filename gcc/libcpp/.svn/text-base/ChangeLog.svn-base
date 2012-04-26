@@ -1,3 +1,16 @@
+2012-03-22  Richard Earnshaw  <rearnsha@arm.com>
+
+	* lex.c (search_line_fast): Provide Neon-optimized version for ARM.
+
+2012-03-14  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* lex.c: Remove Solaris 8 reference.
+
+2012-02-14  Walter Lee  <walt@tilera.com>
+
+	* configure.ac: Require 64-bit hwint for tilegx and tilepro.
+	* configure: Regenerate.
+
 2012-01-09  Richard Guenther  <rguenther@suse.de>
 
 	* macro.c (_cpp_builtin_macro_text): Remove unused variable map.

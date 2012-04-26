@@ -1,5 +1,5 @@
 ;; Predicate definitions for Renesas / SuperH SH.
-;; Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010
+;; Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2012
 ;; Free Software Foundation, Inc.
 ;;
 ;; This file is part of GCC.
@@ -404,7 +404,7 @@
       if (GET_CODE (x) == PLUS
 	  && REG_P (XEXP (x, 0))
 	  && CONST_INT_P (XEXP (x, 1)))
-	return sh_legitimate_index_p (mode, XEXP (x, 1));
+	return sh_legitimate_index_p (mode, XEXP (x, 1), TARGET_SH2A, false);
     }
 
   if (TARGET_SHMEDIA
@@ -418,18 +418,12 @@
   return general_operand (op, mode);
 })
 
-;; Returns 1 if OP can be a destination of a move. Same as
-;; general_operand, but no preinc allowed.
+;; Same as movsrc_operand, but rejects displacement addressing.
 
-(define_predicate "general_movdst_operand"
-  (match_code "subreg,reg,mem")
+(define_predicate "movsrc_no_disp_mem_operand"
+  (match_code "subreg,reg,const_int,const_double,mem,symbol_ref,label_ref,const,const_vector")
 {
-  /* Only pre dec allowed.  */
-  if (MEM_P (op) && GET_CODE (XEXP (op, 0)) == POST_INC)
-    return 0;
-  if (mode == DImode && TARGET_SHMEDIA && GET_CODE (op) == SUBREG
-      && GET_MODE_SIZE (GET_MODE (SUBREG_REG (op))) < 8
-      && ! (high_life_started || reload_completed))
+  if (!general_movsrc_operand (op, mode))
     return 0;
 
   if ((mode == QImode || mode == HImode)
@@ -442,12 +436,41 @@
       if (GET_CODE (x) == PLUS
 	  && REG_P (XEXP (x, 0))
 	  && CONST_INT_P (XEXP (x, 1)))
-	return sh_legitimate_index_p (mode, XEXP (x, 1));
+	return 0;
+    }
+
+  return 1;
+})
+
+;; Returns 1 if OP can be a destination of a move. Same as
+;; general_operand, but no preinc allowed.
+
+(define_predicate "general_movdst_operand"
+  (match_code "subreg,reg,mem")
+{
+  /* Only pre dec allowed.  */
+  if (MEM_P (op) && GET_CODE (XEXP (op, 0)) == POST_INC)
+    return 0;
+  if (mode == DImode && TARGET_SHMEDIA && GET_CODE (op) == SUBREG
+      && GET_MODE_SIZE (GET_MODE (SUBREG_REG (op))) < 8
+      && ! (reload_in_progress || reload_completed))
+    return 0;
+
+  if ((mode == QImode || mode == HImode)
+      && mode == GET_MODE (op)
+      && (MEM_P (op)
+	  || (GET_CODE (op) == SUBREG && MEM_P (SUBREG_REG (op)))))
+    {
+      rtx x = XEXP ((MEM_P (op) ? op : SUBREG_REG (op)), 0);
+
+      if (GET_CODE (x) == PLUS
+	  && REG_P (XEXP (x, 0))
+	  && CONST_INT_P (XEXP (x, 1)))
+	return sh_legitimate_index_p (mode, XEXP (x, 1), TARGET_SH2A, false);
     }
 
   return general_operand (op, mode);
 })
-
 
 ;; Returns 1 if OP is a POST_INC on stack pointer register.
 
@@ -465,7 +488,6 @@
 
   return 0;
 })
-
 
 ;; Returns 1 if OP is a MEM that can be source of a simple move operation.
 

@@ -473,6 +473,11 @@ streamer_alloc_tree (struct lto_input_block *ib, struct data_in *data_in,
       HOST_WIDE_INT len = streamer_read_hwi (ib);
       result = make_tree_vec (len);
     }
+  else if (CODE_CONTAINS_STRUCT (code, TS_VECTOR))
+    {
+      HOST_WIDE_INT len = streamer_read_hwi (ib);
+      result = make_vector (len);
+    }
   else if (CODE_CONTAINS_STRUCT (code, TS_BINFO))
     {
       unsigned HOST_WIDE_INT len = streamer_read_uhwi (ib);
@@ -525,7 +530,9 @@ static void
 lto_input_ts_vector_tree_pointers (struct lto_input_block *ib,
 				   struct data_in *data_in, tree expr)
 {
-  TREE_VECTOR_CST_ELTS (expr) = streamer_read_chain (ib, data_in);
+  unsigned i;
+  for (i = 0; i < VECTOR_CST_NELTS (expr); ++i)
+    VECTOR_CST_ELT (expr, i) = stream_read_tree (ib, data_in);
 }
 
 
@@ -640,7 +647,7 @@ lto_input_ts_field_decl_tree_pointers (struct lto_input_block *ib,
 {
   DECL_FIELD_OFFSET (expr) = stream_read_tree (ib, data_in);
   DECL_BIT_FIELD_TYPE (expr) = stream_read_tree (ib, data_in);
-  DECL_QUALIFIER (expr) = stream_read_tree (ib, data_in);
+  DECL_BIT_FIELD_REPRESENTATIVE (expr) = stream_read_tree (ib, data_in);
   DECL_FIELD_BIT_OFFSET (expr) = stream_read_tree (ib, data_in);
   DECL_FCONTEXT (expr) = stream_read_tree (ib, data_in);
 }

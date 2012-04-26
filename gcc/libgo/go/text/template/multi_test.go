@@ -9,6 +9,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 	"text/template/parse"
 )
@@ -32,10 +33,10 @@ var multiParseTests = []multiParseTest{
 		nil},
 	{"one", `{{define "foo"}} FOO {{end}}`, noError,
 		[]string{"foo"},
-		[]string{`[(text: " FOO ")]`}},
+		[]string{`" FOO "`}},
 	{"two", `{{define "foo"}} FOO {{end}}{{define "bar"}} BAR {{end}}`, noError,
 		[]string{"foo", "bar"},
-		[]string{`[(text: " FOO ")]`, `[(text: " BAR ")]`}},
+		[]string{`" FOO "`, `" BAR "`}},
 	// errors
 	{"missing end", `{{define "foo"}} FOO `, hasError,
 		nil,
@@ -92,7 +93,7 @@ var multiExecTests = []execTest{
 	{"invoke dot []int", `{{template "dot" .SI}}`, "[3 4 5]", tVal, true},
 	{"invoke dotV", `{{template "dotV" .U}}`, "v", tVal, true},
 	{"invoke nested int", `{{template "nested" .I}}`, "17", tVal, true},
-	{"variable declared by template", `{{template "nested" $x=.SI}},{{index $x 1}}`, "[3 4 5],4", tVal, true},
+	{"variable declared by template", `{{template "nested" $x:=.SI}},{{index $x 1}}`, "[3 4 5],4", tVal, true},
 
 	// User-defined function: test argument evaluator.
 	{"testFunc literal", `{{oneArg "joe"}}`, "oneArg=joe", tVal, true},
@@ -192,7 +193,7 @@ func TestClone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	clone := root.Clone()
+	clone := Must(root.Clone())
 	// Add variants to both.
 	_, err = root.Parse(cloneText3)
 	if err != nil {
@@ -255,5 +256,25 @@ func TestAddParseTree(t *testing.T) {
 	}
 	if b.String() != "broot" {
 		t.Errorf("expected %q got %q", "broot", b.String())
+	}
+}
+
+func TestRedefinition(t *testing.T) {
+	var tmpl *Template
+	var err error
+	if tmpl, err = New("tmpl1").Parse(`{{define "test"}}foo{{end}}`); err != nil {
+		t.Fatalf("parse 1: %v", err)
+	}
+	if _, err = tmpl.Parse(`{{define "test"}}bar{{end}}`); err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "redefinition") {
+		t.Fatalf("expected redefinition error; got %v", err)
+	}
+	if _, err = tmpl.New("tmpl2").Parse(`{{define "test"}}bar{{end}}`); err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "redefinition") {
+		t.Fatalf("expected redefinition error; got %v", err)
 	}
 }

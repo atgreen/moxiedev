@@ -9,9 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
 )
@@ -61,6 +59,10 @@ type T struct {
 	PI  *int
 	PSI *[]int
 	NIL *int
+	// Function (not method)
+	BinaryFunc      func(string, string) string
+	VariadicFunc    func(...string) string
+	VariadicFuncInt func(int, ...string) string
 	// Template to test evaluation of templates.
 	Tmpl *Template
 }
@@ -120,6 +122,9 @@ var tVal = &T{
 	Err:               errors.New("erroozle"),
 	PI:                newInt(23),
 	PSI:               newIntSlice(21, 22, 23),
+	BinaryFunc:        func(a, b string) string { return fmt.Sprintf("[%s=%s]", a, b) },
+	VariadicFunc:      func(s ...string) string { return fmt.Sprint("<", strings.Join(s, "+"), ">") },
+	VariadicFuncInt:   func(a int, s ...string) string { return fmt.Sprint(a, "=<", strings.Join(s, "+"), ">") },
 	Tmpl:              Must(New("x").Parse("test template")), // "x" is the value of .X
 }
 
@@ -169,22 +174,12 @@ func (t *T) MAdd(a int, b []int) []int {
 	return v
 }
 
-// MSort is used to sort map keys for stable output. (Nice trick!)
-func (t *T) MSort(m map[string]int) []string {
-	keys := make([]string, len(m))
-	i := 0
-	for k := range m {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
-	return keys
-}
+var myError = errors.New("my error")
 
-// EPERM returns a value and an error according to its argument.
-func (t *T) EPERM(error bool) (bool, error) {
+// MyError returns a value and an error according to its argument.
+func (t *T) MyError(error bool) (bool, error) {
 	if error {
-		return true, os.EPERM
+		return true, myError
 	}
 	return false, nil
 }
@@ -309,8 +304,26 @@ var execTests = []execTest{
 		"{{with $x := .}}{{with .SI}}{{$.GetU.TrueFalse $.True}}{{end}}{{end}}",
 		"true", tVal, true},
 
+	// Function call builtin.
+	{".BinaryFunc", "{{call .BinaryFunc `1` `2`}}", "[1=2]", tVal, true},
+	{".VariadicFunc0", "{{call .VariadicFunc}}", "<>", tVal, true},
+	{".VariadicFunc2", "{{call .VariadicFunc `he` `llo`}}", "<he+llo>", tVal, true},
+	{".VariadicFuncInt", "{{call .VariadicFuncInt 33 `he` `llo`}}", "33=<he+llo>", tVal, true},
+	{"if .BinaryFunc call", "{{ if .BinaryFunc}}{{call .BinaryFunc `1` `2`}}{{end}}", "[1=2]", tVal, true},
+	{"if not .BinaryFunc call", "{{ if not .BinaryFunc}}{{call .BinaryFunc `1` `2`}}{{else}}No{{end}}", "No", tVal, true},
+
+	// Erroneous function calls (check args).
+	{".BinaryFuncTooFew", "{{call .BinaryFunc `1`}}", "", tVal, false},
+	{".BinaryFuncTooMany", "{{call .BinaryFunc `1` `2` `3`}}", "", tVal, false},
+	{".BinaryFuncBad0", "{{call .BinaryFunc 1 3}}", "", tVal, false},
+	{".BinaryFuncBad1", "{{call .BinaryFunc `1` 3}}", "", tVal, false},
+	{".VariadicFuncBad0", "{{call .VariadicFunc 3}}", "", tVal, false},
+	{".VariadicFuncIntBad0", "{{call .VariadicFuncInt}}", "", tVal, false},
+	{".VariadicFuncIntBad`", "{{call .VariadicFuncInt `x`}}", "", tVal, false},
+
 	// Pipelines.
 	{"pipeline", "-{{.Method0 | .Method2 .U16}}-", "-Method2: 16 M0-", tVal, true},
+	{"pipeline func", "-{{call .VariadicFunc `llo` | call .VariadicFunc `he` }}-", "-<he+<llo>>-", tVal, true},
 
 	// If.
 	{"if true", "{{if true}}TRUE{{end}}", "TRUE", tVal, true},
@@ -410,9 +423,9 @@ var execTests = []execTest{
 	{"range empty else", "{{range .SIEmpty}}-{{.}}-{{else}}EMPTY{{end}}", "EMPTY", tVal, true},
 	{"range []bool", "{{range .SB}}-{{.}}-{{end}}", "-true--false-", tVal, true},
 	{"range []int method", "{{range .SI | .MAdd .I}}-{{.}}-{{end}}", "-20--21--22-", tVal, true},
-	{"range map", "{{range .MSI | .MSort}}-{{.}}-{{end}}", "-one--three--two-", tVal, true},
+	{"range map", "{{range .MSI}}-{{.}}-{{end}}", "-1--3--2-", tVal, true},
 	{"range empty map no else", "{{range .MSIEmpty}}-{{.}}-{{end}}", "", tVal, true},
-	{"range map else", "{{range .MSI | .MSort}}-{{.}}-{{else}}EMPTY{{end}}", "-one--three--two-", tVal, true},
+	{"range map else", "{{range .MSI}}-{{.}}-{{else}}EMPTY{{end}}", "-1--3--2-", tVal, true},
 	{"range empty map else", "{{range .MSIEmpty}}-{{.}}-{{else}}EMPTY{{end}}", "EMPTY", tVal, true},
 	{"range empty interface", "{{range .Empty3}}-{{.}}-{{else}}EMPTY{{end}}", "-7--8-", tVal, true},
 	{"range empty nil", "{{range .Empty0}}-{{.}}-{{end}}", "", tVal, true},
@@ -430,8 +443,8 @@ var execTests = []execTest{
 	{"or as if false", `{{or .SIEmpty "slice is empty"}}`, "slice is empty", tVal, true},
 
 	// Error handling.
-	{"error method, error", "{{.EPERM true}}", "", tVal, false},
-	{"error method, no error", "{{.EPERM false}}", "false", tVal, true},
+	{"error method, error", "{{.MyError true}}", "", tVal, false},
+	{"error method, no error", "{{.MyError false}}", "false", tVal, true},
 
 	// Fixed bugs.
 	// Must separate dot and receiver; otherwise args are evaluated with dot set to variable.
@@ -453,6 +466,10 @@ var execTests = []execTest{
 	{"bug6b", "{{vfunc .V0 .V0}}", "vfunc", tVal, true},
 	{"bug6c", "{{vfunc .V1 .V0}}", "vfunc", tVal, true},
 	{"bug6d", "{{vfunc .V1 .V1}}", "vfunc", tVal, true},
+	// Legal parse but illegal execution: non-function should have no arguments.
+	{"bug7a", "{{3 2}}", "", tVal, false},
+	{"bug7b", "{{$x := 1}}{{$x 2}}", "", tVal, false},
+	{"bug7c", "{{$x := 1}}{{3 | $x}}", "", tVal, false},
 }
 
 func zeroArgs() string {
@@ -578,18 +595,18 @@ func TestDelims(t *testing.T) {
 func TestExecuteError(t *testing.T) {
 	b := new(bytes.Buffer)
 	tmpl := New("error")
-	_, err := tmpl.Parse("{{.EPERM true}}")
+	_, err := tmpl.Parse("{{.MyError true}}")
 	if err != nil {
 		t.Fatalf("parse error: %s", err)
 	}
 	err = tmpl.Execute(b, tVal)
 	if err == nil {
 		t.Errorf("expected error; got none")
-	} else if !strings.Contains(err.Error(), os.EPERM.Error()) {
+	} else if !strings.Contains(err.Error(), myError.Error()) {
 		if *debug {
 			fmt.Printf("test execute error: %s\n", err)
 		}
-		t.Errorf("expected os.EPERM; got %s", err)
+		t.Errorf("expected myError; got %s", err)
 	}
 }
 

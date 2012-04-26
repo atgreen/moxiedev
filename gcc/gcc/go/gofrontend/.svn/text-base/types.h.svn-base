@@ -401,6 +401,10 @@ class Type
   static Integer_type*
   make_abstract_integer_type();
 
+  // Make an abstract type for a character constant.
+  static Integer_type*
+  make_abstract_character_type();
+
   // Make a named integer type with a specified size.
   // RUNTIME_TYPE_KIND is the code to use in reflection information,
   // to distinguish int and int32.
@@ -506,7 +510,8 @@ class Type
 
   // Verify the type.  This is called after parsing, and verifies that
   // types are complete and meet the language requirements.  This
-  // returns false if the type is invalid.
+  // returns false if the type is invalid and we should not continue
+  // traversing it.
   bool
   verify()
   { return this->do_verify(); }
@@ -674,6 +679,14 @@ class Type
   const Complex_type*
   complex_type() const
   { return this->convert<const Complex_type, TYPE_COMPLEX>(); }
+
+  // Return whether this is a numeric type.
+  bool
+  is_numeric_type() const
+  {
+    Type_classification tc = this->base()->classification_;
+    return tc == TYPE_INTEGER || tc == TYPE_FLOAT || tc == TYPE_COMPLEX;
+  }
 
   // Return true if this is a boolean type.
   bool
@@ -847,6 +860,16 @@ class Type
   // Return the backend representation of this type.
   Btype*
   get_backend(Gogo*);
+
+  // Return a placeholder for the backend representation of the type.
+  // This will return a type of the correct size, but for which some
+  // of the fields may still need to be completed.
+  Btype*
+  get_backend_placeholder(Gogo*);
+
+  // Finish the backend representation of a placeholder.
+  void
+  finish_backend(Gogo*);
 
   // Build a type descriptor entry for this type.  Return a pointer to
   // it.  The location is the location which causes us to need the
@@ -1175,6 +1198,9 @@ class Type
 
   // The type classification.
   Type_classification classification_;
+  // Whether btype_ is a placeholder type used while named types are
+  // being converted.
+  bool btype_is_placeholder_;
   // The backend representation of the type, once it has been
   // determined.
   Btype* btype_;
@@ -1373,6 +1399,10 @@ class Integer_type : public Type
   // Create an abstract integer type.
   static Integer_type*
   create_abstract_integer_type();
+
+  // Create an abstract character type.
+  static Integer_type*
+  create_abstract_character_type();
 
   // Whether this is an abstract integer type.
   bool
@@ -1722,10 +1752,6 @@ class Function_type : public Type
   Function_type*
   copy_with_receiver(Type*) const;
 
-  // Finishing converting function types.
-  static void
-  convert_types(Gogo*);
-
   static Type*
   make_function_type_descriptor_type();
 
@@ -1764,16 +1790,6 @@ class Function_type : public Type
   Expression*
   type_descriptor_params(Type*, const Typed_identifier*,
 			 const Typed_identifier_list*);
-
-  Btype*
-  get_function_backend(Gogo*);
-
-  // A list of function types with multiple results and their
-  // placeholder backend representations, used to postpone building
-  // the structs we use for multiple results until all types are
-  // converted.
-  typedef std::vector<std::pair<Function_type*, Btype*> > Placeholders;
-  static Placeholders placeholders;
 
   // The receiver name and type.  This will be NULL for a normal
   // function, non-NULL for a method.
@@ -2071,6 +2087,10 @@ class Struct_type : public Type
   bool
   backend_field_offset(Gogo*, unsigned int index, unsigned int* poffset);
 
+  // Finish the backend representation of all the fields.
+  void
+  finish_backend_fields(Gogo*);
+
   // Import a struct type.
   static Struct_type*
   do_import(Import*);
@@ -2185,11 +2205,15 @@ class Array_type : public Type
 
   // Return the backend representation of the element type.
   Btype*
-  get_backend_element(Gogo*);
+  get_backend_element(Gogo*, bool use_placeholder);
 
   // Return the backend representation of the length.
   Bexpression*
   get_backend_length(Gogo*);
+
+  // Finish the backend representation of the element type.
+  void
+  finish_backend_element(Gogo*);
 
   static Type*
   make_array_type_descriptor_type();
@@ -2513,6 +2537,10 @@ class Interface_type : public Type
   static Btype*
   get_backend_empty_interface_type(Gogo*);
 
+  // Finish the backend representation of the method types.
+  void
+  finish_backend_methods(Gogo*);
+
   static Type*
   make_interface_type_descriptor_type();
 
@@ -2673,6 +2701,11 @@ class Named_type : public Type
   bool
   is_builtin() const
   { return Linemap::is_predeclared_location(this->location_); }
+
+  // Whether this is an alias.  There are currently two aliases: byte
+  // and rune.
+  bool
+  is_alias() const;
 
   // Whether this is a circular type: a pointer or function type that
   // refers to itself, which is not possible in C.
@@ -2924,7 +2957,7 @@ class Forward_declaration_type : public Type
 
   // Add a method declaration to this type.
   Named_object*
-  add_method_declaration(const std::string& name, Function_type*,
+  add_method_declaration(const std::string& name, Package*, Function_type*,
 			 Location);
 
  protected:

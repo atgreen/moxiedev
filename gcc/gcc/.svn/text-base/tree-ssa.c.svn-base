@@ -925,8 +925,6 @@ verify_ssa (bool check_modified_stmt)
 
   gcc_assert (!need_ssa_update_p (cfun));
 
-  verify_gimple_in_cfg (cfun);
-
   timevar_push (TV_TREE_SSA_VERIFY);
 
   /* Keep track of SSA names present in the IL.  */
@@ -1122,6 +1120,35 @@ init_tree_ssa (struct function *fn)
   init_phinodes ();
 }
 
+/* Do the actions required to initialize internal data structures used
+   in tree-ssa optimization passes.  */
+
+static unsigned int
+execute_init_datastructures (void)
+{
+  /* Allocate hash tables, arrays and other structures.  */
+  init_tree_ssa (cfun);
+  return 0;
+}
+
+struct gimple_opt_pass pass_init_datastructures =
+{
+ {
+  GIMPLE_PASS,
+  "*init_datastructures",		/* name */
+  NULL,					/* gate */
+  execute_init_datastructures,		/* execute */
+  NULL,					/* sub */
+  NULL,					/* next */
+  0,					/* static_pass_number */
+  TV_NONE,				/* tv_id */
+  PROP_cfg,				/* properties_required */
+  0,					/* properties_provided */
+  0,					/* properties_destroyed */
+  0,					/* todo_flags_start */
+  0					/* todo_flags_finish */
+ }
+};
 
 /* Deallocate memory associated with SSA data structures for FNDECL.  */
 

@@ -939,14 +939,7 @@ assign_stack_temp_for_type (enum machine_mode mode, HOST_WIDE_INT size,
 
   /* If a type is specified, set the relevant flags.  */
   if (type != 0)
-    {
-      MEM_VOLATILE_P (slot) = TYPE_VOLATILE (type);
-      gcc_checking_assert (!MEM_SCALAR_P (slot) && !MEM_IN_STRUCT_P (slot));
-      if (AGGREGATE_TYPE_P (type) || TREE_CODE (type) == COMPLEX_TYPE)
-	MEM_IN_STRUCT_P (slot) = 1;
-      else
-	MEM_SCALAR_P (slot) = 1;
-    }
+    MEM_VOLATILE_P (slot) = TYPE_VOLATILE (type);
   MEM_NOTRAP_P (slot) = 1;
 
   return slot;
@@ -4005,18 +3998,35 @@ generate_setjmp_warnings (void)
 
 
 /* Reverse the order of elements in the fragment chain T of blocks,
-   and return the new head of the chain (old last element).  */
+   and return the new head of the chain (old last element).
+   In addition to that clear BLOCK_SAME_RANGE flags when needed
+   and adjust BLOCK_SUPERCONTEXT from the super fragment to
+   its super fragment origin.  */
 
 static tree
 block_fragments_nreverse (tree t)
 {
-  tree prev = 0, block, next;
+  tree prev = 0, block, next, prev_super = 0;
+  tree super = BLOCK_SUPERCONTEXT (t);
+  if (BLOCK_FRAGMENT_ORIGIN (super))
+    super = BLOCK_FRAGMENT_ORIGIN (super);
   for (block = t; block; block = next)
     {
       next = BLOCK_FRAGMENT_CHAIN (block);
       BLOCK_FRAGMENT_CHAIN (block) = prev;
+      if ((prev && !BLOCK_SAME_RANGE (prev))
+	  || (BLOCK_FRAGMENT_CHAIN (BLOCK_SUPERCONTEXT (block))
+	      != prev_super))
+	BLOCK_SAME_RANGE (block) = 0;
+      prev_super = BLOCK_SUPERCONTEXT (block);
+      BLOCK_SUPERCONTEXT (block) = super;
       prev = block;
     }
+  t = BLOCK_FRAGMENT_ORIGIN (t);
+  if (BLOCK_FRAGMENT_CHAIN (BLOCK_SUPERCONTEXT (t))
+      != prev_super)
+    BLOCK_SAME_RANGE (t) = 0;
+  BLOCK_SUPERCONTEXT (t) = super;
   return prev;
 }
 
@@ -4033,11 +4043,15 @@ blocks_nreverse_all (tree t)
     {
       next = BLOCK_CHAIN (block);
       BLOCK_CHAIN (block) = prev;
-      BLOCK_SUBBLOCKS (block) = blocks_nreverse_all (BLOCK_SUBBLOCKS (block));
       if (BLOCK_FRAGMENT_CHAIN (block)
 	  && BLOCK_FRAGMENT_ORIGIN (block) == NULL_TREE)
-	BLOCK_FRAGMENT_CHAIN (block)
-	  = block_fragments_nreverse (BLOCK_FRAGMENT_CHAIN (block));
+	{
+	  BLOCK_FRAGMENT_CHAIN (block)
+	    = block_fragments_nreverse (BLOCK_FRAGMENT_CHAIN (block));
+	  if (!BLOCK_SAME_RANGE (BLOCK_FRAGMENT_CHAIN (block)))
+	    BLOCK_SAME_RANGE (block) = 0;
+	}
+      BLOCK_SUBBLOCKS (block) = blocks_nreverse_all (BLOCK_SUBBLOCKS (block));
       prev = block;
     }
   return prev;
@@ -4092,6 +4106,7 @@ static void
 reorder_blocks_1 (rtx insns, tree current_block, VEC(tree,heap) **p_block_stack)
 {
   rtx insn;
+  tree prev_beg = NULL_TREE, prev_end = NULL_TREE;
 
   for (insn = insns; insn; insn = NEXT_INSN (insn))
     {
@@ -4105,12 +4120,17 @@ reorder_blocks_1 (rtx insns, tree current_block, VEC(tree,heap) **p_block_stack)
 	      gcc_assert (BLOCK_FRAGMENT_ORIGIN (block) == NULL_TREE);
 	      origin = block;
 
+	      if (prev_end)
+		BLOCK_SAME_RANGE (prev_end) = 0;
+	      prev_end = NULL_TREE;
+
 	      /* If we have seen this block before, that means it now
 		 spans multiple address regions.  Create a new fragment.  */
 	      if (TREE_ASM_WRITTEN (block))
 		{
 		  tree new_block = copy_node (block);
 
+		  BLOCK_SAME_RANGE (new_block) = 0;
 		  BLOCK_FRAGMENT_ORIGIN (new_block) = origin;
 		  BLOCK_FRAGMENT_CHAIN (new_block)
 		    = BLOCK_FRAGMENT_CHAIN (origin);
@@ -4120,6 +4140,11 @@ reorder_blocks_1 (rtx insns, tree current_block, VEC(tree,heap) **p_block_stack)
 		  block = new_block;
 		}
 
+	      if (prev_beg == current_block && prev_beg)
+		BLOCK_SAME_RANGE (block) = 1;
+
+	      prev_beg = origin;
+
 	      BLOCK_SUBBLOCKS (block) = 0;
 	      TREE_ASM_WRITTEN (block) = 1;
 	      /* When there's only one block for the entire function,
@@ -4127,10 +4152,22 @@ reorder_blocks_1 (rtx insns, tree current_block, VEC(tree,heap) **p_block_stack)
 		 will cause infinite recursion.  */
 	      if (block != current_block)
 		{
+		  tree super;
 		  if (block != origin)
-		    gcc_assert (BLOCK_SUPERCONTEXT (origin) == current_block);
-
-		  BLOCK_SUPERCONTEXT (block) = current_block;
+		    gcc_assert (BLOCK_SUPERCONTEXT (origin) == current_block
+				|| BLOCK_FRAGMENT_ORIGIN (BLOCK_SUPERCONTEXT
+								      (origin))
+				   == current_block);
+		  if (VEC_empty (tree, *p_block_stack))
+		    super = current_block;
+		  else
+		    {
+		      super = VEC_last (tree, *p_block_stack);
+		      gcc_assert (super == current_block
+				  || BLOCK_FRAGMENT_ORIGIN (super)
+				     == current_block);
+		    }
+		  BLOCK_SUPERCONTEXT (block) = super;
 		  BLOCK_CHAIN (block) = BLOCK_SUBBLOCKS (current_block);
 		  BLOCK_SUBBLOCKS (current_block) = block;
 		  current_block = origin;
@@ -4141,7 +4178,19 @@ reorder_blocks_1 (rtx insns, tree current_block, VEC(tree,heap) **p_block_stack)
 	    {
 	      NOTE_BLOCK (insn) = VEC_pop (tree, *p_block_stack);
 	      current_block = BLOCK_SUPERCONTEXT (current_block);
+	      if (BLOCK_FRAGMENT_ORIGIN (current_block))
+		current_block = BLOCK_FRAGMENT_ORIGIN (current_block);
+	      prev_beg = NULL_TREE;
+	      prev_end = BLOCK_SAME_RANGE (NOTE_BLOCK (insn))
+			 ? NOTE_BLOCK (insn) : NULL_TREE;
 	    }
+	}
+      else
+	{
+	  prev_beg = NULL_TREE;
+	  if (prev_end)
+	    BLOCK_SAME_RANGE (prev_end) = 0;
+	  prev_end = NULL_TREE;
 	}
     }
 }
@@ -4508,33 +4557,6 @@ init_function_start (tree subr)
   if (AGGREGATE_TYPE_P (TREE_TYPE (DECL_RESULT (subr))))
     warning (OPT_Waggregate_return, "function returns an aggregate");
 }
-
-/* Make sure all values used by the optimization passes have sane defaults.  */
-unsigned int
-init_function_for_compilation (void)
-{
-  reg_renumber = 0;
-  return 0;
-}
-
-struct rtl_opt_pass pass_init_function =
-{
- {
-  RTL_PASS,
-  "*init_function",                     /* name */
-  NULL,                                 /* gate */
-  init_function_for_compilation,        /* execute */
-  NULL,                                 /* sub */
-  NULL,                                 /* next */
-  0,                                    /* static_pass_number */
-  TV_NONE,                              /* tv_id */
-  0,                                    /* properties_required */
-  0,                                    /* properties_provided */
-  0,                                    /* properties_destroyed */
-  0,                                    /* todo_flags_start */
-  0                                     /* todo_flags_finish */
- }
-};
 
 
 void

@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 2004-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 2004-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -396,6 +396,20 @@ package body Ada.Containers.Vectors is
       end;
    end Adjust;
 
+   procedure Adjust (Control : in out Reference_Control_Type) is
+   begin
+      if Control.Container /= null then
+         declare
+            C : Vector renames Control.Container.all;
+            B : Natural renames C.Busy;
+            L : Natural renames C.Lock;
+         begin
+            B := B + 1;
+            L := L + 1;
+         end;
+      end if;
+   end Adjust;
+
    ------------
    -- Append --
    ------------
@@ -499,7 +513,21 @@ package body Ada.Containers.Vectors is
          raise Constraint_Error with "Position cursor is out of range";
       end if;
 
-      return (Element => Container.Elements.EA (Position.Index)'Access);
+      declare
+         C : Vector renames Position.Container.all;
+         B : Natural renames C.Busy;
+         L : Natural renames C.Lock;
+      begin
+         return R : constant Constant_Reference_Type :=
+                      (Element =>
+                         Container.Elements.EA (Position.Index)'Access,
+                       Control =>
+                         (Controlled with Container'Unrestricted_Access))
+         do
+            B := B + 1;
+            L := L + 1;
+         end return;
+      end;
    end Constant_Reference;
 
    function Constant_Reference
@@ -510,7 +538,20 @@ package body Ada.Containers.Vectors is
       if Index > Container.Last then
          raise Constraint_Error with "Index is out of range";
       else
-         return (Element => Container.Elements.EA (Index)'Access);
+         declare
+            C : Vector renames Container'Unrestricted_Access.all;
+            B : Natural renames C.Busy;
+            L : Natural renames C.Lock;
+         begin
+            return R : constant Constant_Reference_Type :=
+                         (Element => Container.Elements.EA (Index)'Access,
+                          Control =>
+                            (Controlled with Container'Unrestricted_Access))
+            do
+               B := B + 1;
+               L := L + 1;
+            end return;
+         end;
       end if;
    end Constant_Reference;
 
@@ -825,6 +866,22 @@ package body Ada.Containers.Vectors is
       B := B - 1;
    end Finalize;
 
+   procedure Finalize (Control : in out Reference_Control_Type) is
+   begin
+      if Control.Container /= null then
+         declare
+            C : Vector renames Control.Container.all;
+            B : Natural renames C.Busy;
+            L : Natural renames C.Lock;
+         begin
+            B := B - 1;
+            L := L - 1;
+         end;
+
+         Control.Container := null;
+      end if;
+   end Finalize;
+
    ----------
    -- Find --
    ----------
@@ -1039,8 +1096,7 @@ package body Ada.Containers.Vectors is
       -- Sort --
       ----------
 
-      procedure Sort (Container : in out Vector)
-      is
+      procedure Sort (Container : in out Vector) is
          procedure Sort is
             new Generic_Array_Sort
              (Index_Type   => Index_Type,
@@ -1053,9 +1109,20 @@ package body Ada.Containers.Vectors is
             return;
          end if;
 
-         if Container.Lock > 0 then
+         --  The exception behavior for the vector container must match that
+         --  for the list container, so we check for cursor tampering here
+         --  (which will catch more things) instead of for element tampering
+         --  (which will catch fewer things). It's true that the elements of
+         --  this vector container could be safely moved around while (say) an
+         --  iteration is taking place (iteration only increments the busy
+         --  counter), and so technically all we would need here is a test for
+         --  element tampering (indicated by the lock counter), that's simply
+         --  an artifact of our array-based implementation. Logically Sort
+         --  requires a check for cursor tampering.
+
+         if Container.Busy > 0 then
             raise Program_Error with
-              "attempt to tamper with elements (vector is locked)";
+              "attempt to tamper with cursors (vector is busy)";
          end if;
 
          Sort (Container.Elements.EA (Index_Type'First .. Container.Last));
@@ -2591,7 +2658,20 @@ package body Ada.Containers.Vectors is
          raise Constraint_Error with "Position cursor is out of range";
       end if;
 
-      return (Element => Container.Elements.EA (Position.Index)'Access);
+      declare
+         C : Vector renames Position.Container.all;
+         B : Natural renames C.Busy;
+         L : Natural renames C.Lock;
+      begin
+         return R : constant Reference_Type :=
+                      (Element =>
+                         Container.Elements.EA (Position.Index)'Access,
+                       Control => (Controlled with Position.Container))
+         do
+            B := B + 1;
+            L := L + 1;
+         end return;
+      end;
    end Reference;
 
    function Reference
@@ -2602,7 +2682,20 @@ package body Ada.Containers.Vectors is
       if Index > Container.Last then
          raise Constraint_Error with "Index is out of range";
       else
-         return (Element => Container.Elements.EA (Index)'Access);
+         declare
+            C : Vector renames Container'Unrestricted_Access.all;
+            B : Natural renames C.Busy;
+            L : Natural renames C.Lock;
+         begin
+            return R : constant Reference_Type :=
+                         (Element => Container.Elements.EA (Index)'Access,
+                          Control =>
+                            (Controlled with Container'Unrestricted_Access))
+            do
+               B := B + 1;
+               L := L + 1;
+            end return;
+         end;
       end if;
    end Reference;
 
@@ -2977,28 +3070,39 @@ package body Ada.Containers.Vectors is
          return;
       end if;
 
-      if Container.Lock > 0 then
+      --  The exception behavior for the vector container must match that for
+      --  the list container, so we check for cursor tampering here (which will
+      --  catch more things) instead of for element tampering (which will catch
+      --  fewer things). It's true that the elements of this vector container
+      --  could be safely moved around while (say) an iteration is taking place
+      --  (iteration only increments the busy counter), and so technically
+      --  all we would need here is a test for element tampering (indicated
+      --  by the lock counter), that's simply an artifact of our array-based
+      --  implementation. Logically Reverse_Elements requires a check for
+      --  cursor tampering.
+
+      if Container.Busy > 0 then
          raise Program_Error with
-           "attempt to tamper with elements (vector is locked)";
+           "attempt to tamper with cursors (vector is busy)";
       end if;
 
       declare
-         I, J : Index_Type;
-         E    : Elements_Type renames Container.Elements.all;
+         K : Index_Type;
+         J : Index_Type;
+         E : Elements_Type renames Container.Elements.all;
 
       begin
-         I := Index_Type'First;
+         K := Index_Type'First;
          J := Container.Last;
-         while I < J loop
+         while K < J loop
             declare
-               EI : constant Element_Type := E.EA (I);
-
+               EK : constant Element_Type := E.EA (K);
             begin
-               E.EA (I) := E.EA (J);
-               E.EA (J) := EI;
+               E.EA (K) := E.EA (J);
+               E.EA (J) := EK;
             end;
 
-            I := I + 1;
+            K := K + 1;
             J := J - 1;
          end loop;
       end;
@@ -3093,12 +3197,12 @@ package body Ada.Containers.Vectors is
       Count : constant Count_Type'Base := Container.Length - Length;
 
    begin
-      --  Set_Length allows the user to set the length explicitly, instead of
-      --  implicitly as a side-effect of deletion or insertion. If the
+      --  Set_Length allows the user to set the length explicitly, instead
+      --  of implicitly as a side-effect of deletion or insertion. If the
       --  requested length is less then the current length, this is equivalent
       --  to deleting items from the back end of the vector. If the requested
-      --  length is greater than the current length, then this is equivalent to
-      --  inserting "space" (nonce items) at the end.
+      --  length is greater than the current length, then this is equivalent
+      --  to inserting "space" (nonce items) at the end.
 
       if Count >= 0 then
          Container.Delete_Last (Count);
@@ -3337,6 +3441,7 @@ package body Ada.Containers.Vectors is
          end if;
 
       elsif Index_Type'First <= 0 then
+
          --  Here we can compute Last directly, in the normal way. We know that
          --  No_Index is less than 0, so there is no danger of overflow when
          --  adding the (positive) value of Length.
@@ -3417,13 +3522,11 @@ package body Ada.Containers.Vectors is
    begin
       if Position.Container = null then
          raise Constraint_Error with "Position cursor has no element";
-      end if;
-
-      if Position.Container /= Container'Unrestricted_Access then
+      elsif Position.Container /= Container'Unrestricted_Access then
          raise Program_Error with "Position cursor denotes wrong container";
+      else
+         Update_Element (Container, Position.Index, Process);
       end if;
-
-      Update_Element (Container, Position.Index, Process);
    end Update_Element;
 
    -----------

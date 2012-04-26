@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale/time_get
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,15 +26,6 @@ paolo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-get_year
-dir
-
-requirements
-dir
-
-get_monthname
-dir
-
 date_order
 dir
 
@@ -45,5 +36,14 @@ get_date
 dir
 
 get_time
+dir
+
+get_year
+dir
+
+requirements
+dir
+
+get_monthname
 dir
 

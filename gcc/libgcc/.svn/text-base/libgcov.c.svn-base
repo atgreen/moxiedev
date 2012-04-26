@@ -30,12 +30,11 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #include "coretypes.h"
 #include "tm.h"
 #include "libgcc_tm.h"
+#include "gthr.h"
 
 #if defined(inhibit_libc)
 #define IN_LIBGCOV (-1)
 #else
-#undef NULL /* Avoid errors if stdio.h and our stddef.h mismatch.  */
-#include <stdio.h>
 #define IN_LIBGCOV 1
 #if defined(L_gcov)
 #define GCOV_LINKAGE /* nothing */
@@ -705,6 +704,25 @@ __gcov_init (struct gcov_info *info)
   info->version = 0;
 }
 
+#ifdef __GTHREAD_MUTEX_INIT
+ATTRIBUTE_HIDDEN __gthread_mutex_t __gcov_flush_mx = __GTHREAD_MUTEX_INIT;
+#define init_mx_once()
+#else
+__gthread_mutex_t __gcov_flush_mx ATTRIBUTE_HIDDEN;
+
+static void
+init_mx (void)
+{
+  __GTHREAD_MUTEX_INIT_FUNCTION (&__gcov_flush_mx);
+}
+static void
+init_mx_once (void)
+{
+  static __gthread_once_t once = __GTHREAD_ONCE_INIT;
+  __gthread_once (&once, init_mx);
+}
+#endif
+
 /* Called before fork or exec - write out profile information gathered so
    far and reset it to zero.  This avoids duplication or loss of the
    profile information gathered so far.  */
@@ -713,6 +731,9 @@ void
 __gcov_flush (void)
 {
   const struct gcov_info *gi_ptr;
+
+  init_mx_once ();
+  __gthread_mutex_lock (&__gcov_flush_mx);
 
   gcov_exit ();
   for (gi_ptr = gcov_list; gi_ptr; gi_ptr = gi_ptr->next)
@@ -737,6 +758,8 @@ __gcov_flush (void)
 	    }
 	}
     }
+
+  __gthread_mutex_unlock (&__gcov_flush_mx);
 }
 
 #endif /* L_gcov */
@@ -975,8 +998,13 @@ __gcov_ior_profiler (gcov_type *counters, gcov_type value)
 pid_t
 __gcov_fork (void)
 {
+  pid_t pid;
+  extern __gthread_mutex_t __gcov_flush_mx;
   __gcov_flush ();
-  return fork ();
+  pid = fork ();
+  if (pid == 0)
+    __GTHREAD_MUTEX_INIT_FUNCTION (&__gcov_flush_mx);
+  return pid;
 }
 #endif
 

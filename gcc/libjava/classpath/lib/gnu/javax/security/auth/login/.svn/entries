@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/javax/security/auth/login
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2012-03-23T15:19:26.333085Z
+185741
+gandalf
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-3dc2e1c36fdf8cea861d2bcf12a7714f
-2008-10-21T17:55:01.166395Z
-141271
-doko
+2012-04-26T00:33:40.677414Z
+1da0a5158a722d9697da6f602d2c1d32
+2012-03-23T15:19:26.333085Z
+185741
+gandalf
 has-props
 
 
@@ -58,7 +58,7 @@ has-props
 
 
 
-3435
+3229
 
 GnuConfiguration.class
 file
@@ -66,11 +66,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-474bad67763929d591a04a01d913f951
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2012-04-26T00:33:40.678414Z
+df626eaca49d34dcf57508e2a602e363
+2012-03-23T15:19:26.333085Z
+185741
+gandalf
 has-props
 
 
@@ -92,7 +92,7 @@ has-props
 
 
 
-5608
+5463
 
 ConfigFileParser.class
 file
@@ -100,11 +100,11 @@ file
 
 
 
-2009-04-24T17:47:45.000000Z
-631fefd2140366b93656c0a84341bd3e
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2012-04-26T00:33:40.678414Z
+b3fc4cd3b2543ca3451c3a16d8af8aa1
+2012-03-23T15:19:26.333085Z
+185741
+gandalf
 has-props
 
 
@@ -126,5 +126,5 @@ has-props
 
 
 
-5506
+5361
 

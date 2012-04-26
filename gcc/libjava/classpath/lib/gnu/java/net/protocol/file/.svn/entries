@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/net/protocol/file
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,13 +26,47 @@ tromey
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+Connection$StaticData.class
+file
+
+
+
+
+2012-02-01T17:19:16.617277Z
+c4b23778ea3830caf23ce895cf4c6fa1
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1010
+
 Handler.class
 file
 
 
 
 
-2009-04-24T17:47:34.000000Z
+2012-02-01T17:19:16.618277Z
 f1114509eefdc2e42d72cdc1891b0566
 2006-12-12T18:41:51.528840Z
 119793
@@ -66,7 +100,7 @@ file
 
 
 
-2009-04-24T17:47:34.000000Z
+2012-02-01T17:19:16.618277Z
 9e6805d1eaf631d5afb9478541e4de8f
 2006-12-12T18:41:51.528840Z
 119793
@@ -93,38 +127,4 @@ has-props
 
 
 5576
-
-Connection$StaticData.class
-file
-
-
-
-
-2009-04-24T17:47:34.000000Z
-c4b23778ea3830caf23ce895cf4c6fa1
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1010
 

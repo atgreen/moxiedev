@@ -615,13 +615,15 @@ init_reg_modes_target (void)
     {
       reg_raw_mode[i] = choose_hard_reg_mode (i, 1, false);
 
-      /* If we couldn't find a valid mode, just use the previous mode.
-         ??? One situation in which we need to do this is on the mips where
-	 HARD_REGNO_NREGS (fpreg, [SD]Fmode) returns 2.  Ideally we'd like
-	 to use DF mode for the even registers and VOIDmode for the odd
-	 (for the cpu models where the odd ones are inaccessible).  */
+      /* If we couldn't find a valid mode, just use the previous mode
+	 if it is suitable, otherwise fall back on word_mode.  */
       if (reg_raw_mode[i] == VOIDmode)
-	reg_raw_mode[i] = i == 0 ? word_mode : reg_raw_mode[i-1];
+    	{
+	  if (i > 0 && hard_regno_nregs[i][reg_raw_mode[i - 1]] == 1)
+	    reg_raw_mode[i] = reg_raw_mode[i - 1];
+	  else
+	    reg_raw_mode[i] = word_mode;
+	}
     }
 }
 
@@ -1220,17 +1222,7 @@ reg_scan_mark_refs (rtx x, rtx insn)
       /* If this is setting a register from a register or from a simple
 	 conversion of a register, propagate REG_EXPR.  */
       if (REG_P (dest) && !REG_ATTRS (dest))
-	{
-	  rtx src = SET_SRC (x);
-
-	  while (GET_CODE (src) == SIGN_EXTEND
-		 || GET_CODE (src) == ZERO_EXTEND
-		 || GET_CODE (src) == TRUNCATE
-		 || (GET_CODE (src) == SUBREG && subreg_lowpart_p (src)))
-	    src = XEXP (src, 0);
-
-	  set_reg_attrs_from_value (dest, src);
-	}
+	set_reg_attrs_from_value (dest, SET_SRC (x));
 
       /* ... fall through ...  */
 

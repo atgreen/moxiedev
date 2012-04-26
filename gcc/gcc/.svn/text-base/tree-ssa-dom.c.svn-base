@@ -1779,6 +1779,9 @@ dom_opt_leave_block (struct dom_walk_data *walk_data, basic_block bb)
       && (single_succ_edge (bb)->flags & EDGE_ABNORMAL) == 0
       && potentially_threadable_block (single_succ (bb)))
     {
+      /* Push a marker on the stack, which thread_across_edge expects
+	 and will remove.  */
+      VEC_safe_push (tree, heap, const_and_copies_stack, NULL_TREE);
       dom_thread_across_edge (walk_data, single_succ_edge (bb));
     }
   else if ((last = last_stmt (bb))
@@ -2291,15 +2294,14 @@ optimize_stmt (basic_block bb, gimple_stmt_iterator si)
 	      && rhs == cached_lhs)
 	    {
 	      basic_block bb = gimple_bb (stmt);
-	      int lp_nr = lookup_stmt_eh_lp (stmt);
 	      unlink_stmt_vdef (stmt);
-	      gsi_remove (&si, true);
-	      if (lp_nr != 0)
+	      if (gsi_remove (&si, true))
 		{
 		  bitmap_set_bit (need_eh_cleanup, bb->index);
 		  if (dump_file && (dump_flags & TDF_DETAILS))
 		    fprintf (dump_file, "  Flagged to clear EH edges.\n");
 		}
+	      release_defs (stmt);
 	      return;
 	    }
 	}

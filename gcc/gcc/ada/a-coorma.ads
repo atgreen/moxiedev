@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 S p e c                                  --
 --                                                                          --
---          Copyright (C) 2004-2011, Free Software Foundation, Inc.         --
+--          Copyright (C) 2004-2012, Free Software Foundation, Inc.         --
 --                                                                          --
 -- This specification is derived from the Ada Reference Manual for use with --
 -- GNAT. The copyright notice above, and the license provisions that follow --
@@ -31,11 +31,11 @@
 -- This unit was originally developed by Matthew J Heaney.                  --
 ------------------------------------------------------------------------------
 
+with Ada.Iterator_Interfaces;
+
 private with Ada.Containers.Red_Black_Trees;
 private with Ada.Finalization;
-
-with Ada.Streams; use Ada.Streams;
-with Ada.Iterator_Interfaces;
+private with Ada.Streams;
 
 generic
    type Key_Type is private;
@@ -108,18 +108,22 @@ package Ada.Containers.Ordered_Maps is
    function Constant_Reference
      (Container : aliased Map;
       Position  : Cursor) return Constant_Reference_Type;
+   pragma Inline (Constant_Reference);
 
    function Reference
      (Container : aliased in out Map;
       Position  : Cursor) return Reference_Type;
+   pragma Inline (Reference);
 
    function Constant_Reference
      (Container : aliased Map;
       Key       : Key_Type) return Constant_Reference_Type;
+   pragma Inline (Constant_Reference);
 
    function Reference
      (Container : aliased in out Map;
       Key       : Key_Type) return Reference_Type;
+   pragma Inline (Reference);
 
    procedure Assign (Target : in out Map; Source : Map);
 
@@ -259,6 +263,19 @@ private
    use Red_Black_Trees;
    use Tree_Types;
    use Ada.Finalization;
+   use Ada.Streams;
+
+   procedure Write
+     (Stream    : not null access Root_Stream_Type'Class;
+      Container : Map);
+
+   for Map'Write use Write;
+
+   procedure Read
+     (Stream    : not null access Root_Stream_Type'Class;
+      Container : out Map);
+
+   for Map'Read use Read;
 
    type Map_Access is access all Map;
    for Map_Access'Storage_Size use 0;
@@ -280,37 +297,22 @@ private
 
    for Cursor'Read use Read;
 
-   No_Element : constant Cursor := Cursor'(null, null);
+   type Reference_Control_Type is
+      new Controlled with record
+         Container : Map_Access;
+      end record;
 
-   procedure Write
-     (Stream    : not null access Root_Stream_Type'Class;
-      Container : Map);
+   overriding procedure Adjust (Control : in out Reference_Control_Type);
+   pragma Inline (Adjust);
 
-   for Map'Write use Write;
-
-   procedure Read
-     (Stream    : not null access Root_Stream_Type'Class;
-      Container : out Map);
-
-   for Map'Read use Read;
+   overriding procedure Finalize (Control : in out Reference_Control_Type);
+   pragma Inline (Finalize);
 
    type Constant_Reference_Type
-      (Element : not null access constant Element_Type) is null record;
-
-   type Reference_Type
-      (Element : not null access Element_Type) is null record;
-
-   procedure Read
-     (Stream : not null access Root_Stream_Type'Class;
-      Item   : out Reference_Type);
-
-   for Reference_Type'Read use Read;
-
-   procedure Write
-     (Stream : not null access Root_Stream_Type'Class;
-      Item   : Reference_Type);
-
-   for Reference_Type'Write use Write;
+      (Element : not null access constant Element_Type) is
+      record
+         Control : Reference_Control_Type;
+      end record;
 
    procedure Read
      (Stream : not null access Root_Stream_Type'Class;
@@ -324,6 +326,24 @@ private
 
    for Constant_Reference_Type'Write use Write;
 
+   type Reference_Type
+      (Element : not null access Element_Type) is
+      record
+         Control : Reference_Control_Type;
+      end record;
+
+   procedure Read
+     (Stream : not null access Root_Stream_Type'Class;
+      Item   : out Reference_Type);
+
+   for Reference_Type'Read use Read;
+
+   procedure Write
+     (Stream : not null access Root_Stream_Type'Class;
+      Item   : Reference_Type);
+
+   for Reference_Type'Write use Write;
+
    Empty_Map : constant Map :=
                  (Controlled with Tree => (First  => null,
                                            Last   => null,
@@ -331,4 +351,7 @@ private
                                            Length => 0,
                                            Busy   => 0,
                                            Lock   => 0));
+
+   No_Element : constant Cursor := Cursor'(null, null);
+
 end Ada.Containers.Ordered_Maps;

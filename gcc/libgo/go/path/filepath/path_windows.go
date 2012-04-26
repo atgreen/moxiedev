@@ -35,9 +35,7 @@ func VolumeName(path string) (v string) {
 	}
 	// with drive letter
 	c := path[0]
-	if path[1] == ':' &&
-		('0' <= c && c <= '9' || 'a' <= c && c <= 'z' ||
-			'A' <= c && c <= 'Z') {
+	if path[1] == ':' && ('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z') {
 		return path[:2]
 	}
 	// is it UNC
@@ -67,8 +65,7 @@ func VolumeName(path string) (v string) {
 	return ""
 }
 
-// HasPrefix tests whether the path p begins with prefix.
-// It ignores case while comparing.
+// HasPrefix exists for historical compatibility and should not be used.
 func HasPrefix(p, prefix string) bool {
 	if strings.HasPrefix(p, prefix) {
 		return true

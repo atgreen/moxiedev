@@ -74,7 +74,7 @@ void
 runtime_panicstring(const char *s)
 {
 	Eface err;
-	
+
 	if(runtime_m()->gcing) {
 		runtime_printf("panic: %s\n", s);
 		runtime_throw("panic during gc");
@@ -101,7 +101,7 @@ runtime_goargs(void)
 {
 	String *s;
 	int32 i;
-	
+
 	// for windows implementation see "os" package
 	if(Windows)
 		return;
@@ -115,11 +115,11 @@ runtime_goargs(void)
 }
 
 void
-runtime_goenvs(void)
+runtime_goenvs_unix(void)
 {
 	String *s;
 	int32 i, n;
-	
+
 	for(n=0; argv[argc+1+n] != 0; n++)
 		;
 
@@ -182,4 +182,30 @@ runtime_fastrand1(void)
 		x ^= 0x88888eefUL;
 	m->fastrand = x;
 	return x;
+}
+
+static struct root_list runtime_roots =
+{ NULL,
+  { { &syscall_Envs, sizeof syscall_Envs },
+    { &os_Args, sizeof os_Args },
+    { NULL, 0 } },
+};
+
+void
+runtime_check(void)
+{
+	__go_register_gc_roots(&runtime_roots);
+}
+
+int64
+runtime_cputicks(void)
+{
+#if defined(__386__) || defined(__x86_64__)
+  uint32 low, high;
+  asm("rdtsc" : "=a" (low), "=d" (high));
+  return (int64)(((uint64)high << 32) | (uint64)low);
+#else
+  // FIXME: implement for other processors.
+  return 0;
+#endif
 }

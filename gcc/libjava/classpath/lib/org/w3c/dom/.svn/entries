@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/org/w3c/dom
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,13 +26,433 @@ doko
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+DOMImplementationSource.class
+file
+
+
+
+
+2012-02-01T17:19:19.830177Z
+26d516458c5f64a25c98148220d07d59
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+317
+
+DOMConfiguration.class
+file
+
+
+
+
+2012-02-01T17:19:19.830177Z
+cd155aca194949cf0e49d5cf15f77926
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+445
+
+stylesheets
+dir
+
+ls
+dir
+
+Attr.class
+file
+
+
+
+
+2012-02-01T17:19:19.830177Z
+86fb13e0dfd9c845890af4078af6cd03
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+432
+
+ranges
+dir
+
+Document.class
+file
+
+
+
+
+2012-02-01T17:19:19.831177Z
+7c7a113857e58b1e6366e849b20a35c4
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2096
+
+NodeList.class
+file
+
+
+
+
+2012-02-01T17:19:19.831177Z
+3385b217a3ad3ee0e6faa683bdd08689
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+174
+
+Node.class
+file
+
+
+
+
+2012-02-01T17:19:19.831177Z
+0ab89bf9e0e5894201ccfcd9dcc36c4e
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2560
+
+DOMErrorHandler.class
+file
+
+
+
+
+2012-02-01T17:19:19.830177Z
+0201021ad953f453152a7a3574ff13c4
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+173
+
+NamedNodeMap.class
+file
+
+
+
+
+2012-02-01T17:19:19.831177Z
+7f7f7171c6d9fd7233a98253ac2b1681
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+566
+
+Element.class
+file
+
+
+
+
+2012-02-01T17:19:19.831177Z
+e8e2c0b699bd354b38db94f085f3829d
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1532
+
+TypeInfo.class
+file
+
+
+
+
+2012-02-01T17:19:19.831177Z
+326dd8b63c77fe65e3ff858367aa7083
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+437
+
+CDATASection.class
+file
+
+
+
+
+2012-02-01T17:19:19.830177Z
+77e074a4e9325fa1100f97346571e0fd
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+141
+
+UserDataHandler.class
+file
+
+
+
+
+2012-02-01T17:19:19.831177Z
+df9059b129a4c4c80134ec3f73080379
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+419
+
+bootstrap
+dir
+
 NameList.class
 file
 
 
 
 
-2009-04-24T17:48:31.000000Z
+2012-02-01T17:19:19.831177Z
 ddaf362fb7076ebb74f9acbbf8511634
 2006-12-12T18:41:51.528840Z
 119793
@@ -66,7 +486,7 @@ file
 
 
 
-2009-04-24T17:48:31.000000Z
+2012-02-01T17:19:19.831177Z
 0ad376c7d1dd6114a5fe64848cb4efd5
 2006-12-12T18:41:51.528840Z
 119793
@@ -94,433 +514,13 @@ has-props
 
 298
 
-DocumentType.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-8d61cf847b01b9eab4228faeaa49dbf9
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-330
-
-Text.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-76a231456fa8379b4304784bd9234dc1
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-398
-
-DOMErrorHandler.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-0201021ad953f453152a7a3574ff13c4
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-173
-
-DOMError.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-3f16d91ff3ae91031d8c576348584061
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-470
-
-Element.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-e8e2c0b699bd354b38db94f085f3829d
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1532
-
-Notation.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-9e036b4cf740dc6f418a2faca1a898bc
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-200
-
-DOMException.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-a01b8f0a9da931941be9d3c1a04eb084
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1156
-
-events
-dir
-
-DocumentFragment.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-8dfd77b374994a06487929232b3e6086
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-149
-
-DOMLocator.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-e0b3fec4f122c5fd0a8036586bae5585
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-306
-
-UserDataHandler.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-df9059b129a4c4c80134ec3f73080379
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-419
-
-DOMConfiguration.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-cd155aca194949cf0e49d5cf15f77926
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-445
-
-bootstrap
-dir
-
-ls
-dir
-
-Attr.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-86fb13e0dfd9c845890af4078af6cd03
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-432
-
-ranges
-dir
-
 ProcessingInstruction.class
 file
 
 
 
 
-2009-04-24T17:48:31.000000Z
+2012-02-01T17:19:19.831177Z
 9361944d7fc2a1901153d97fede4eb89
 2006-12-12T18:41:51.528840Z
 119793
@@ -548,51 +548,17 @@ has-props
 
 315
 
-Document.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-7c7a113857e58b1e6366e849b20a35c4
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2096
-
 xpath
 dir
 
-NodeList.class
+DocumentType.class
 file
 
 
 
 
-2009-04-24T17:48:31.000000Z
-3385b217a3ad3ee0e6faa683bdd08689
+2012-02-01T17:19:19.831177Z
+8d61cf847b01b9eab4228faeaa49dbf9
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -617,7 +583,7 @@ has-props
 
 
 
-174
+330
 
 DOMImplementationList.class
 file
@@ -625,7 +591,7 @@ file
 
 
 
-2009-04-24T17:48:31.000000Z
+2012-02-01T17:19:19.830177Z
 7fa4b0992bcd8ac9d79dbf84f58789e9
 2006-12-12T18:41:51.528840Z
 119793
@@ -659,14 +625,14 @@ dir
 css
 dir
 
-Node.class
+Text.class
 file
 
 
 
 
-2009-04-24T17:48:31.000000Z
-0ab89bf9e0e5894201ccfcd9dcc36c4e
+2012-02-01T17:19:19.831177Z
+76a231456fa8379b4304784bd9234dc1
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -691,7 +657,7 @@ has-props
 
 
 
-2560
+398
 
 DOMImplementation.class
 file
@@ -699,7 +665,7 @@ file
 
 
 
-2009-04-24T17:48:31.000000Z
+2012-02-01T17:19:19.830177Z
 bf61f618a734c915ce161b02065251dc
 2006-12-12T18:41:51.528840Z
 119793
@@ -733,7 +699,7 @@ file
 
 
 
-2009-04-24T17:48:31.000000Z
+2012-02-01T17:19:19.830177Z
 4e07f427609321f68ececa5e1a17beef
 2006-12-12T18:41:51.528840Z
 119793
@@ -761,14 +727,14 @@ has-props
 
 558
 
-NamedNodeMap.class
+DOMError.class
 file
 
 
 
 
-2009-04-24T17:48:31.000000Z
-7f7f7171c6d9fd7233a98253ac2b1681
+2012-02-01T17:19:19.830177Z
+3f16d91ff3ae91031d8c576348584061
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -793,10 +759,44 @@ has-props
 
 
 
-566
+470
 
 views
 dir
+
+Notation.class
+file
+
+
+
+
+2012-02-01T17:19:19.831177Z
+9e036b4cf740dc6f418a2faca1a898bc
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+200
 
 EntityReference.class
 file
@@ -804,7 +804,7 @@ file
 
 
 
-2009-04-24T17:48:31.000000Z
+2012-02-01T17:19:19.831177Z
 16acc154962020990f33f26bdca10a03
 2006-12-12T18:41:51.528840Z
 119793
@@ -832,14 +832,14 @@ has-props
 
 147
 
-TypeInfo.class
+DOMException.class
 file
 
 
 
 
-2009-04-24T17:48:31.000000Z
-326dd8b63c77fe65e3ff858367aa7083
+2012-02-01T17:19:19.830177Z
+a01b8f0a9da931941be9d3c1a04eb084
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -864,19 +864,22 @@ has-props
 
 
 
-437
+1156
 
 traversal
 dir
 
-CDATASection.class
+events
+dir
+
+DocumentFragment.class
 file
 
 
 
 
-2009-04-24T17:48:31.000000Z
-77e074a4e9325fa1100f97346571e0fd
+2012-02-01T17:19:19.831177Z
+8dfd77b374994a06487929232b3e6086
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -901,7 +904,7 @@ has-props
 
 
 
-141
+149
 
 Comment.class
 file
@@ -909,7 +912,7 @@ file
 
 
 
-2009-04-24T17:48:31.000000Z
+2012-02-01T17:19:19.830177Z
 4291b80a72d28a125805cfebdcfb2f40
 2006-12-12T18:41:51.528840Z
 119793
@@ -943,7 +946,7 @@ file
 
 
 
-2009-04-24T17:48:31.000000Z
+2012-02-01T17:19:19.831177Z
 90a66e340488a97cce9a20827c2b1fa4
 2006-12-12T18:41:51.528840Z
 119793
@@ -971,14 +974,14 @@ has-props
 
 227
 
-DOMImplementationSource.class
+DOMLocator.class
 file
 
 
 
 
-2009-04-24T17:48:31.000000Z
-26d516458c5f64a25c98148220d07d59
+2012-02-01T17:19:19.831177Z
+e0b3fec4f122c5fd0a8036586bae5585
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -1003,8 +1006,5 @@ has-props
 
 
 
-317
-
-stylesheets
-dir
+306
 

@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util/is_copy_assignable
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,13 +26,16 @@ paolo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+requirements
+dir
+
 value.cc
 file
 
 
 
 
-2011-06-04T18:06:09.677104Z
+2012-02-01T17:19:25.112012Z
 309e09886685f01eb6abb3ffdd0c4b06
 2011-05-19T10:30:20.308356Z
 173899
@@ -59,7 +62,4 @@ paolo
 
 
 2690
-
-requirements
-dir
 

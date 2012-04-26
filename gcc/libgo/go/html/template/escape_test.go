@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"text/template"
@@ -223,14 +224,14 @@ func TestEscape(t *testing.T) {
 			`<button onclick='alert(&quot;\x3cHello\x3e&quot;)'>`,
 		},
 		{
-			"badMarshaller",
+			"badMarshaler",
 			`<button onclick='alert(1/{{.B}}in numbers)'>`,
 			`<button onclick='alert(1/ /* json: error calling MarshalJSON for type *template.badMarshaler: invalid character &#39;f&#39; looking for beginning of object key string */null in numbers)'>`,
 		},
 		{
-			"jsMarshaller",
+			"jsMarshaler",
 			`<button onclick='alert({{.M}})'>`,
-			`<button onclick='alert({&#34;&lt;foo&gt;&#34;:&#34;O&#39;Reilly&#34;})'>`,
+			`<button onclick='alert({&#34;\u003cfoo\u003e&#34;:&#34;O&#39;Reilly&#34;})'>`,
 		},
 		{
 			"jsStrNotUnderEscaped",
@@ -302,7 +303,7 @@ func TestEscape(t *testing.T) {
 		},
 		{
 			"styleObfuscatedExpressionBlocked",
-			`<p style="width: {{"  e\78preS\0Sio/**/n(alert(1337))"}}">`,
+			`<p style="width: {{"  e\\78preS\x00Sio/**/n(alert(1337))"}}">`,
 			`<p style="width: ZgotmplZ">`,
 		},
 		{
@@ -312,7 +313,7 @@ func TestEscape(t *testing.T) {
 		},
 		{
 			"styleObfuscatedMozBindingBlocked",
-			`<p style="{{"  -mo\7a-B\0I/**/nding(alert(1337))"}}: ...">`,
+			`<p style="{{"  -mo\\7a-B\x00I/**/nding(alert(1337))"}}: ...">`,
 			`<p style="ZgotmplZ: ...">`,
 		},
 		{
@@ -430,6 +431,11 @@ func TestEscape(t *testing.T) {
 			"HTML doctype not normalized",
 			"<!DOCTYPE html>Hello, World!",
 			"<!DOCTYPE html>Hello, World!",
+		},
+		{
+			"HTML doctype not case-insensitive",
+			"<!doCtYPE htMl>Hello, World!",
+			"<!doCtYPE htMl>Hello, World!",
 		},
 		{
 			"No doctype injection",
@@ -899,7 +905,7 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			`<a href="{{if .F}}/foo?a={{else}}/bar/{{end}}{{.H}}">`,
-			"z:1: (action: [(command: [F=[H]])]) appears in an ambiguous URL context",
+			"z:1: {{.H}} appears in an ambiguous URL context",
 		},
 		{
 			`<a onclick="alert('Hello \`,
@@ -1471,7 +1477,7 @@ func TestEscapeText(t *testing.T) {
 
 	for _, test := range tests {
 		b, e := []byte(test.input), newEscaper(nil)
-		c := e.escapeText(context{}, &parse.TextNode{parse.NodeText, b})
+		c := e.escapeText(context{}, &parse.TextNode{NodeType: parse.NodeText, Text: b})
 		if !test.output.eq(c) {
 			t.Errorf("input %q: want context\n\t%v\ngot\n\t%v", test.input, test.output, c)
 			continue
@@ -1490,62 +1496,62 @@ func TestEnsurePipelineContains(t *testing.T) {
 	}{
 		{
 			"{{.X}}",
-			"[(command: [F=[X]])]",
+			".X",
 			[]string{},
 		},
 		{
 			"{{.X | html}}",
-			"[(command: [F=[X]]) (command: [I=html])]",
+			".X | html",
 			[]string{},
 		},
 		{
 			"{{.X}}",
-			"[(command: [F=[X]]) (command: [I=html])]",
+			".X | html",
 			[]string{"html"},
 		},
 		{
 			"{{.X | html}}",
-			"[(command: [F=[X]]) (command: [I=html]) (command: [I=urlquery])]",
+			".X | html | urlquery",
 			[]string{"urlquery"},
 		},
 		{
 			"{{.X | html | urlquery}}",
-			"[(command: [F=[X]]) (command: [I=html]) (command: [I=urlquery])]",
+			".X | html | urlquery",
 			[]string{"urlquery"},
 		},
 		{
 			"{{.X | html | urlquery}}",
-			"[(command: [F=[X]]) (command: [I=html]) (command: [I=urlquery])]",
+			".X | html | urlquery",
 			[]string{"html", "urlquery"},
 		},
 		{
 			"{{.X | html | urlquery}}",
-			"[(command: [F=[X]]) (command: [I=html]) (command: [I=urlquery])]",
+			".X | html | urlquery",
 			[]string{"html"},
 		},
 		{
 			"{{.X | urlquery}}",
-			"[(command: [F=[X]]) (command: [I=html]) (command: [I=urlquery])]",
+			".X | html | urlquery",
 			[]string{"html", "urlquery"},
 		},
 		{
 			"{{.X | html | print}}",
-			"[(command: [F=[X]]) (command: [I=urlquery]) (command: [I=html]) (command: [I=print])]",
+			".X | urlquery | html | print",
 			[]string{"urlquery", "html"},
 		},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		tmpl := template.Must(template.New("test").Parse(test.input))
 		action, ok := (tmpl.Tree.Root.Nodes[0].(*parse.ActionNode))
 		if !ok {
-			t.Errorf("First node is not an action: %s", test.input)
+			t.Errorf("#%d: First node is not an action: %s", i, test.input)
 			continue
 		}
 		pipe := action.Pipe
 		ensurePipelineContains(pipe, test.ids)
 		got := pipe.String()
 		if got != test.output {
-			t.Errorf("%s, %v: want\n\t%s\ngot\n\t%s", test.input, test.ids, test.output, got)
+			t.Errorf("#%d: %s, %v: want\n\t%s\ngot\n\t%s", i, test.input, test.ids, test.output, got)
 		}
 	}
 }
@@ -1629,6 +1635,14 @@ func TestIndirectPrint(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	} else if buf.String() != "hello" {
 		t.Errorf(`Expected "hello"; got %q`, buf.String())
+	}
+}
+
+// This is a test for issue 3272.
+func TestEmptyTemplate(t *testing.T) {
+	page := Must(New("page").ParseFiles(os.DevNull))
+	if err := page.ExecuteTemplate(os.Stdout, "page", "nothing"); err == nil {
+		t.Fatal("expected error")
 	}
 }
 

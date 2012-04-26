@@ -1,7 +1,7 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/28_regex/basic_regex
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,12 +26,6 @@ redi
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-requirements
-dir
-
-assign
-dir
-
 ctors
 dir
 
@@ -41,7 +35,7 @@ file
 
 
 
-2011-06-04T18:06:03.287104Z
+2012-02-01T17:19:25.851989Z
 ef8a8cacb8b682d79d7f236d5eee40f8
 2010-06-25T19:27:16.509668Z
 161410
@@ -68,4 +62,10 @@ smw
 
 
 1015
+
+requirements
+dir
+
+assign
+dir
 

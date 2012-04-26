@@ -1,15 +1,15 @@
 10
 
 dir
-183351
+186854
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/performance
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2011-12-19T23:29:14.244828Z
-182510
-bkoz
+2012-04-11T20:31:06.465796Z
+186354
+redi
 
 
 
@@ -26,6 +26,15 @@ bkoz
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+21_strings
+dir
+
+26_numerics
+dir
+
+30_threads
+dir
+
 25_algorithms
 dir
 
@@ -39,14 +48,5 @@ dir
 dir
 
 23_containers
-dir
-
-21_strings
-dir
-
-26_numerics
-dir
-
-30_threads
 dir
 

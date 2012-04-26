@@ -7,7 +7,8 @@
 	to C's printf and scanf.  The format 'verbs' are derived from C's but
 	are simpler.
 
-	Printing:
+
+	Printing
 
 	The verbs:
 
@@ -30,8 +31,9 @@
 		%X	base 16, with upper-case letters for A-F
 		%U	Unicode format: U+1234; same as "U+%04X"
 	Floating-point and complex constituents:
-		%b	decimalless scientific notation with exponent a power
-			of two, in the manner of strconv.Ftoa32, e.g. -123456p-78
+		%b	decimalless scientific notation with exponent a power of two, 
+			in the manner of strconv.FormatFloat with the 'b' format, 
+			e.g. -123456p-78
 		%e	scientific notation, e.g. -1234.456e+78
 		%E	scientific notation, e.g. -1234.456E+78
 		%f	decimal point but no exponent, e.g. 123.456
@@ -126,7 +128,8 @@
 	by a single character (the verb) and end with a parenthesized
 	description.
 
-	Scanning:
+
+	Scanning
 
 	An analogous set of functions scans formatted text to yield
 	values.  Scan, Scanf and Scanln read from os.Stdin; Fscan,

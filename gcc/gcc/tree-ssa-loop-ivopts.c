@@ -115,7 +115,7 @@ along with GCC; see the file COPYING3.  If not see
 static inline HOST_WIDE_INT
 avg_loop_niter (struct loop *loop)
 {
-  HOST_WIDE_INT niter = max_stmt_executions_int (loop, false);
+  HOST_WIDE_INT niter = estimated_stmt_executions_int (loop);
   if (niter == -1)
     return AVG_LOOP_NITER (loop);
 
@@ -1411,7 +1411,8 @@ expr_invariant_in_loop_p (struct loop *loop, tree expr)
 
   len = TREE_OPERAND_LENGTH (expr);
   for (i = 0; i < len; i++)
-    if (!expr_invariant_in_loop_p (loop, TREE_OPERAND (expr, i)))
+    if (TREE_OPERAND (expr, i)
+	&& !expr_invariant_in_loop_p (loop, TREE_OPERAND (expr, i)))
       return false;
 
   return true;
@@ -2405,28 +2406,26 @@ add_candidate (struct ivopts_data *data,
     add_autoinc_candidates (data, base, step, important, use);
 }
 
-/* Add a standard "0 + 1 * iteration" iv candidate for a
-   type with SIZE bits.  */
-
-static void
-add_standard_iv_candidates_for_size (struct ivopts_data *data,
-				     unsigned int size)
-{
-  tree type = lang_hooks.types.type_for_size (size, true);
-  add_candidate (data, build_int_cst (type, 0), build_int_cst (type, 1),
-		 true, NULL);
-}
-
 /* Adds standard iv candidates.  */
 
 static void
 add_standard_iv_candidates (struct ivopts_data *data)
 {
-  add_standard_iv_candidates_for_size (data, INT_TYPE_SIZE);
+  add_candidate (data, integer_zero_node, integer_one_node, true, NULL);
 
   /* The same for a double-integer type if it is still fast enough.  */
-  if (BITS_PER_WORD >= INT_TYPE_SIZE * 2)
-    add_standard_iv_candidates_for_size (data, INT_TYPE_SIZE * 2);
+  if (TYPE_PRECISION
+        (long_integer_type_node) > TYPE_PRECISION (integer_type_node)
+      && TYPE_PRECISION (long_integer_type_node) <= BITS_PER_WORD)
+    add_candidate (data, build_int_cst (long_integer_type_node, 0),
+		   build_int_cst (long_integer_type_node, 1), true, NULL);
+
+  /* The same for a double-integer type if it is still fast enough.  */
+  if (TYPE_PRECISION
+        (long_long_integer_type_node) > TYPE_PRECISION (long_integer_type_node)
+      && TYPE_PRECISION (long_long_integer_type_node) <= BITS_PER_WORD)
+    add_candidate (data, build_int_cst (long_long_integer_type_node, 0),
+		   build_int_cst (long_long_integer_type_node, 1), true, NULL);
 }
 
 
@@ -4048,7 +4047,11 @@ get_computation_cost_at (struct ivopts_data *data,
       return infinite_cost;
     }
 
-  if (address_p)
+  if (address_p
+      || (use->iv->base_object
+	  && cand->iv->base_object
+	  && POINTER_TYPE_P (TREE_TYPE (use->iv->base_object))
+	  && POINTER_TYPE_P (TREE_TYPE (cand->iv->base_object))))
     {
       /* Do not try to express address of an object with computation based
 	 on address of a different object.  This may cause problems in rtl
@@ -4692,7 +4695,7 @@ may_eliminate_iv (struct ivopts_data *data,
           /* See if we can take advantage of infered loop bound information.  */
           if (data->loop_single_exit_p)
             {
-              if (!estimated_loop_iterations (loop, true, &max_niter))
+              if (!max_loop_iterations (loop, &max_niter))
                 return false;
               /* The loop bound is already adjusted by adding 1.  */
               if (double_int_ucmp (max_niter, period_value) > 0)

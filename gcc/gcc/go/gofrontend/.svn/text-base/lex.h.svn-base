@@ -70,6 +70,8 @@ class Token
     TOKEN_STRING,
     // Token is an operator.
     TOKEN_OPERATOR,
+    // Token is a character constant.
+    TOKEN_CHARACTER,
     // Token is an integer.
     TOKEN_INTEGER,
     // Token is a floating point number.
@@ -132,6 +134,16 @@ class Token
   {
     Token tok(TOKEN_OPERATOR, location);
     tok.u_.op = op;
+    return tok;
+  }
+
+  // Make a character constant token.
+  static Token
+  make_character_token(mpz_t val, Location location)
+  {
+    Token tok(TOKEN_CHARACTER, location);
+    mpz_init(tok.u_.integer_value);
+    mpz_swap(tok.u_.integer_value, val);
     return tok;
   }
 
@@ -225,6 +237,14 @@ class Token
     return *this->u_.string_value;
   }
 
+  // Return the value of a character constant.
+  const mpz_t*
+  character_value() const
+  {
+    go_assert(this->classification_ == TOKEN_CHARACTER);
+    return &this->u_.integer_value;
+  }
+
   // Return the value of an integer.
   const mpz_t*
   integer_value() const
@@ -300,7 +320,7 @@ class Token
     } identifier_value;
     // The string value for TOKEN_STRING.
     std::string* string_value;
-    // The token value for TOKEN_INTEGER.
+    // The token value for TOKEN_CHARACTER or TOKEN_INTEGER.
     mpz_t integer_value;
     // The token value for TOKEN_FLOAT or TOKEN_IMAGINARY.
     mpfr_t float_value;
@@ -324,10 +344,22 @@ class Lex
   Token
   next_token();
 
+  // Return the contents of any current //extern comment.
+  const std::string&
+  extern_name() const
+  { return this->extern_; }
+
   // Return whether the identifier NAME should be exported.  NAME is a
   // mangled name which includes only ASCII characters.
   static bool
   is_exported_name(const std::string& name);
+
+  // Return whether the identifier NAME is invalid.  When we see an
+  // invalid character we still build an identifier, but we use a
+  // magic string to indicate that the identifier is invalid.  We then
+  // use this to avoid knockon errors.
+  static bool
+  is_invalid_identifier(const std::string& name);
 
   // A helper function.  Append V to STR.  IS_CHARACTER is true if V
   // is a Unicode character which should be converted into UTF-8,
@@ -447,6 +479,9 @@ class Lex
   size_t lineno_;
   // Whether to add a semicolon if we see a newline now.
   bool add_semi_at_eol_;
+  // The external name to use for a function declaration, from a magic
+  // //extern comment.
+  std::string extern_;
 };
 
 #endif // !defined(GO_LEX_H)

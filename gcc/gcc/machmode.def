@@ -196,9 +196,8 @@ INT_MODE (TI, 16);
 
    These are the IEEE mappings.  They can be overridden with
    RESET_FLOAT_FORMAT or at runtime (in TARGET_OPTION_OVERRIDE).  */
-/* DCPU16 HACK FIXME */
-FLOAT_MODE (SF, 2, ieee_single_format);
-FLOAT_MODE (DF, 4, ieee_double_format);
+FLOAT_MODE (SF, 4, ieee_single_format);
+FLOAT_MODE (DF, 8, ieee_double_format);
 
 /* Basic CC modes.
    FIXME define this only for targets that need it.  */

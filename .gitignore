@@ -28,3 +28,7 @@ moxie/rtl/verilog/muskoka.qsf
 moxie/rtl/verilog/smart.log
 moxie/rtl/verilog/tan.chg
 moxielyzer/moxielyzer
+moxie/soc/muskoka/sim/a.out
+moxie/soc/muskoka/sim/bootrom.vh
+moxie/soc/muskoka/sim/bootrom.x
+moxie/soc/muskoka/sim/dump.vcd

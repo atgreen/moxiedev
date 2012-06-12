@@ -18,54 +18,47 @@
 // 02110-1301, USA.
 
 module cpu_registerfile (/*AUTOARG*/
-  // Outputs
-  value1_o, value2_o, sp_o, fp_o,
-  // Inputs
-  rst_i, clk_i, write_enable_i, reg_write_index_i, reg_read_index1_i,
-  reg_read_index2_i, value_i
-  );
+   // Outputs
+   value0_o, value1_o, sp_o, fp_o,
+   // Inputs
+   rst_i, clk_i, write_enable0_i, write_enable1_i, value0_i, value1_i,
+   reg_write_index0_i, reg_write_index1_i, reg_read_index0_i,
+   reg_read_index1_i
+   );
    
+  // synthesis translate_off 
+  initial
+    begin
+       $dumpvars(1, mem_2w4r);
+    end
+  // synthesis translate_on 
+
   // --- Clock and Reset ------------------------------------------
   input  rst_i, clk_i;
-  
-  input [0:0] write_enable_i;
-  input [3:0] reg_write_index_i;
-  input [3:0] reg_read_index1_i;
-  input [3:0] reg_read_index2_i;
-  input [31:0] value_i;
-  output [31:0] value1_o;
-  output [31:0] value2_o;
 
-  output [31:0] sp_o;
-  output [31:0] fp_o;
-  
-  wire [31:0] value1_o = registers[reg_read_index1_i];
-  wire [31:0] value2_o = registers[reg_read_index2_i];
+   output [31:0] value0_o, value1_o;
+   output [31:0] sp_o;
+   output [31:0] fp_o;
 
-  reg [31:0] registers[0:15];
-
-  assign fp_o = registers[0];
-  assign sp_o = registers[1];
-  
-  always @ (posedge rst_i or posedge clk_i) begin
-    if (rst_i) begin
-      registers[0] <= 32'b00000000000000000000000000000000;
-      registers[1] <= 32'b00000000000000000000000000000000;
-      registers[2] <= 32'b00000000000000000000000000000000;
-      registers[3] <= 32'b00000000000000000000000000000000;
-      registers[4] <= 32'b00000000000000000000000000000000;
-      registers[5] <= 32'b00000000000000000000000000000000;
-      registers[6] <= 32'b00000000000000000000000000000000;
-      registers[7] <= 32'b00000000000000000000000000000000;
-      registers[8] <= 32'b00000000000000000000000000000000;
-      registers[9] <= 32'b00000000000000000000000000000000;
-      registers[10] <= 32'b00000000000000000000000000000000;
-      registers[11] <= 32'b00000000000000000000000000000000;
-      registers[12] <= 32'b00000000000000000000000000000000;
-      registers[13] <= 32'b00000000000000000000000000000000;
-    end else
-      if (write_enable_i)
-        registers[reg_write_index_i] <= value_i;
-  end
-
+   input write_enable0_i, write_enable1_i;
+   input [31:0] value0_i, value1_i;
+   input [0:3] reg_write_index0_i, reg_write_index1_i;
+   input [0:3] reg_read_index0_i, reg_read_index1_i;
+   
+  MEM_2w4r mem_2w4r (clk_i,
+		     write_enable0_i,
+		     0,
+		     reg_write_index0_i,
+		     value0_i,
+		     reg_write_index1_i,
+		     value1_i,
+		     reg_read_index0_i,
+		     value0_o,
+		     reg_read_index1_i,
+		     value1_o,
+		     0,
+		     fp_o,
+		     1,
+		     sp_o);
+   
 endmodule // cpu_registerfile

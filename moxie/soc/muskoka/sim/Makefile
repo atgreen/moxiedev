@@ -2,6 +2,7 @@ MSOURCES = sim.v testram.v \
 	$(wildcard ../rtl/*.v) \
 	$(wildcard ../../../cores/moxie/*.v) \
 	$(wildcard ../../../cores/wishbone/*.v) \
+	$(wildcard ../../../cores/LVT-regs/*.v) \
 	$(wildcard ../../../cores/uart16550/rtl/verilog/*.v) 
 
 PROJECT = muskoka
@@ -14,6 +15,7 @@ bootrom.vh: ../../../firmware/bootrom.s
 
 a.out: $(MSOURCES) bootrom.vh
 	iverilog -I../../../cores/moxie \
+		 -I../../../cores/LVT-regs \
 		 -I../../../cores/uart16550/rtl/verilog $(MSOURCES)
 
 clean: 

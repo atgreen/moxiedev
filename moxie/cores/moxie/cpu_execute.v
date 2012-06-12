@@ -106,6 +106,7 @@ module cpu_execute (/*AUTOARG*/
 	  $display ("EXECUTE STALL");
 	  memory_read_enable_o <= 0;
 	  memory_write_enable_o <= 0;
+	  register_write_enable_o <= 0;
 	end
       else begin
 	case (current_state)

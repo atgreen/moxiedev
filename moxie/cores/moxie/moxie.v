@@ -116,18 +116,20 @@ module moxie (/*AUTOARG*/
   // synthesis translate_on 
 
   cpu_registerfile regs (// Outputs
-			 .value1_o (rx_reg_value1), 
-			 .value2_o (rx_reg_value2),
+			 .value0_o (rx_reg_value1), 
+			 .value1_o (rx_reg_value2),
 			 // Inputs
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
-			 .write_enable_i (wr_register_write_enable), 
-			 .reg_write_index_i (wr_register_write_index),
-			 .reg_read_index1_i (xr_reg_index1), 
-			 .reg_read_index2_i (xr_reg_index2),
+			 .write_enable0_i (wr_register_write_enable), 
+			 .write_enable1_i (0), 
+			 .reg_write_index0_i (wr_register_write_index),
+			 .reg_read_index0_i (xr_reg_index1), 
+			 .reg_read_index1_i (xr_reg_index2),
 			 .sp_o (rx_sp),
 			 .fp_o (rx_fp),
-			 .value_i (wr_reg_result));
+			 .value0_i (wr_reg_result),
+			 .value1_i (0));
 
   always @(posedge clk_i)
     if (rst_i) begin
@@ -215,15 +217,8 @@ module moxie (/*AUTOARG*/
 			   .register_we_o (wr_register_write_enable),
 			   .reg_result_o (wr_reg_result));
 
-  assign hazard_war = 0;
-
-  // (dr_A_read_enable & (xr_register_write_enable & (dr_reg_index1 == xr_register_write_index))) |  (dr_B_read_enable & (xr_register_write_enable & (dr_reg_index2 == xr_register_write_index)));
-    
-  always @ (posedge clk_i) begin
-    if (!rst_i & hazard_war)
-      begin
-
-      end
-  end
+  assign hazard_war = xw_register_write_enable
+		      & ((xw_register_write_index == dx_reg_index1)
+			 | (xw_register_write_index == dx_reg_index2));
 
 endmodule // moxie

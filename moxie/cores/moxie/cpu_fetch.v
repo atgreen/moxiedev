@@ -71,6 +71,7 @@ module cpu_fetch #(parameter BOOT_ADDRESS = 32'h00001000
 		   // Inputs
 		   .rst_i		(rst_i | flush_ififo),
 		   .clk_i		(clk_i),
+		   .stall_i             (stall_i),
 		   .PC_i                (fetchPC),
 		   .newPC_p_i           (newPC_p),
 		   .write_en_i		(wren),

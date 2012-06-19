@@ -20,12 +20,12 @@
 `include "defines.v"
 
 module cpu_decode (/*AUTOARG*/
-  // Outputs
-  register_write_enable_o, register_write_index_o, operand_o, riA_o,
-  riB_o, op_o, PC_o,
-  // Inputs
-  rst_i, clk_i, stall_i, opcode_i, operand_i, valid_i, PC_i
-  );
+   // Outputs
+   register_write_enable_o, register_write_index_o, operand_o, riA_o,
+   riB_o, op_o, PC_o,
+   // Inputs
+   rst_i, clk_i, stall_i, opcode_i, operand_i, valid_i, PC_i
+   );
 
   // --- Clock and Reset ------------------------------------------
   input  rst_i, clk_i;
@@ -64,6 +64,11 @@ module cpu_decode (/*AUTOARG*/
   wire [3:0]     b3 = opcode_i[11:8];
   wire [3:0]     b4 = opcode_i[15:12];
 
+  wire [2:0] 	 control;
+
+  microcode mcode (.opcode(opcode_i[15:8]),
+		   .q(control));
+
   assign riA = foo ? opcode_i[7:4] : opcode_i[11:8];
   assign riB = opcode_i[3:0];
 
@@ -75,16 +80,10 @@ module cpu_decode (/*AUTOARG*/
     end
   
   always @(posedge clk_i)
-    if (rst_i)
-      begin
-	// Reset logic
-	register_write_enable_o <= 0;
-      end
-    else
-      begin
-	if (stall_i | !valid_i)
-	  begin
-	    register_write_enable_o <= 0;
+    begin
+       register_write_enable_o <= control[2];
+       if (stall_i | !valid_i)
+	 begin
 	    op_o <= `OP_NOP;
 	  end
 	else begin
@@ -92,19 +91,16 @@ module cpu_decode (/*AUTOARG*/
 	  casex (opcode_i[15:8])
 	    8'b00000000:
 	      begin
-		register_write_enable_o <= 0;
 		op_o <= `OP_NOP;
 	      end
 	    8'b00000001:
 	      begin
 		op_o <= `OP_LDI_L;
-		register_write_enable_o <= 1;
 		operand_o <= operand_i;
 	      end
 	    8'b00000010:
 	      begin
 		op_o <= `OP_MOV;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00000011:
 	      begin
@@ -117,7 +113,6 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00000101:
 	      begin
 		op_o <= `OP_ADD_L;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00000110:
 	      begin
@@ -130,7 +125,6 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00001000:
 	      begin
 		op_o <= `OP_LDA_L;
-		register_write_enable_o <= 1;
 		operand_o <= operand_i;
 	      end
 	    8'b00001001:
@@ -141,7 +135,6 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00001010:
 	      begin
 		op_o <= `OP_LD_L;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00001011:
 	      begin
@@ -150,7 +143,6 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00001100:
 	      begin
 		op_o <= `OP_LDO_L;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00001101:
 	      begin
@@ -212,17 +204,14 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00011011:
 	      begin
 		op_o <= `OP_LDI_B;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00011100:
 	      begin
 		op_o <= `OP_LD_B;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00011101:
 	      begin
 		op_o <= `OP_LDA_B;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00011110:
 	      begin
@@ -235,17 +224,14 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00100000:
 	      begin
 		op_o <= `OP_LDI_S;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00100001:
 	      begin
 		op_o <= `OP_LD_S;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00100010:
 	      begin
 		op_o <= `OP_LDA_S;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00100011:
 	      begin
@@ -262,52 +248,42 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00100110:
 	      begin
 		op_o <= `OP_AND;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00100111:
 	      begin
 		op_o <= `OP_LSHR;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00101000:
 	      begin
 		op_o <= `OP_ASHL;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00101001:
 	      begin
 		op_o <= `OP_SUB_L;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00101010:
 	      begin
 		op_o <= `OP_NEG;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00101011:
 	      begin
 		op_o <= `OP_OR;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00101100:
 	      begin
 		op_o <= `OP_NOT;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00101101:
 	      begin
 		op_o <= `OP_ASHR;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00101110:
 	      begin
 		op_o <= `OP_XOR;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00101111:
 	      begin
 		op_o <= `OP_MUL_L;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00110000:
 	      begin
@@ -316,22 +292,18 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00110001:
 	      begin
 		op_o <= `OP_DIV_L;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00110010:
 	      begin
 		op_o <= `OP_UDIV_L;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00110011:
 	      begin
 		op_o <= `OP_MOD_L;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00110100:
 	      begin
 		op_o <= `OP_UMOD_L;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00110101:
 	      begin
@@ -340,7 +312,6 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00110110:
 	      begin
 		op_o <= `OP_LDO_B;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00110111:
 	      begin
@@ -349,7 +320,6 @@ module cpu_decode (/*AUTOARG*/
 	    8'b00111000:
 	      begin
 		op_o <= `OP_LDO_S;
-		register_write_enable_o <= 1;
 	      end
 	    8'b00111001:
 	      begin
@@ -382,19 +352,16 @@ module cpu_decode (/*AUTOARG*/
 	    8'b1000????:
 	      begin
 		op_o <= `OP_INC;
-		register_write_enable_o <= 1;
 		operand_o <= opcode_i[3:0];
 	      end
 	    8'b1001????:
 	      begin
 		op_o <= `OP_DEC;
-		register_write_enable_o <= 1;
 		operand_o <= opcode_i[3:0];
 	      end
 	    8'b1010????:
 	      begin
 		op_o <= `OP_GSR;
-		register_write_enable_o <= 1;
 	      end
 	    8'b1011????:
 	      begin

@@ -107,6 +107,7 @@ module moxie (/*AUTOARG*/
       $dumpvars(1,stage_fetch); 
       $dumpvars(1,stage_fetch.ififo); 
       $dumpvars(1,stage_decode); 
+      $dumpvars(1,stage_decode.mcode); 
       $dumpvars(1,stage_execute); 
       $dumpvars(1,stage_write);
       $dumpvars(1,stage_write.cache);

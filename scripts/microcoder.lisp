@@ -23,10 +23,9 @@
 ;;;
 
 (ql:quickload "cl-ppcre")
-(ql:quickload "trivial-bit-streams")
 
 (defpackage :microcoder
-  (:use :cl :cl-user :cl-ppcre :trivial-bit-streams))
+  (:use :cl :cl-user :cl-ppcre))
 
 (in-package :microcoder)
 
@@ -44,35 +43,29 @@
     ;; microcode.bin file.
     (with-open-file 
      (out "microcode.bin" :direction :output
-	  :element-type '(unsigned-byte 8)
 	  :if-exists :supersede)
-     (with-bit-output-stream 
-      (bs :callback (make-stream-output-callback out))
-      (loop for filepos = (file-position in)
-	    for line = (read-line in nil)
-	    while line do 
-	    (let ((s (cl-ppcre:split "\\|" line)))
-	      (if (equal 7 (length s))
-		  (destructuring-bind (junk1 name code wreg? rA? rb? &rest junk2) 
-				      (mapcar (lambda (v) (string-trim " " v)) s)
-				      (setf (aref opcode-array (parse-integer code :radix 2))
-					    (list name wreg? rA? rb?))))))
-      (loop for i from 0 to 63
-	    do (let ((o (aref opcode-array i)))
-		 (if o
-		     (mapcar (lambda (v)
-			       (let ((n (parse-integer v :radix 2)))
-				 (cond 
-				  ((equal n 0)
-				   (write-sequence #*0 bs))
-				  ((equal n 1)
-				   (write-sequence #*1 bs))
-				  (t
-				   (error "bad table entry")))))
-			     (cdr o))
-		   (write-sequence #*000 bs))))))
-      
-    (close in)))
+     (loop for filepos = (file-position in)
+	   for line = (read-line in nil)
+	   while line do 
+	   (let ((s (cl-ppcre:split "\\|" line)))
+	     (if (equal 7 (length s))
+		 (destructuring-bind (junk1 name code wreg? rA? rb? &rest junk2) 
+				     (mapcar (lambda (v) (string-trim " " v)) s)
+				     (setf (aref opcode-array (parse-integer code :radix 2))
+					   (list name wreg? rA? rb?))))))
+     (loop for i from 0 to 63
+	   do (let ((o (aref opcode-array i)))
+		(if o
+		    (mapc (lambda (v)
+			    (let ((n (parse-integer v :radix 2)))
+			      (cond 
+			       ((equal n 0) (format out "0"))
+			       ((equal n 1) (format out "1"))
+			       (t (error "bad table entry")))))
+			  (cdr o))
+		  (format out "000"))
+		(format out "~%"))))
+  (close in)))
     
 (sb-ext:quit)
 

@@ -64,11 +64,9 @@ module moxie (/*AUTOARG*/
   wire [0:0]  fd_valid;
   wire [31:0] dx_operand;
   wire [31:0] dx_PC;
-  wire [0:0]  dx_register_write_enable;
+  wire [`PCB_WIDTH-1:0] dx_pipeline_control_bits;
   wire [5:0]  dx_op;
-  wire [0:0]  xw_register_write_enable;
-  wire [0:0]  xw_loadp;
-  wire [0:0]  xw_memory_we;
+  wire [`PCB_WIDTH-1:0] xw_pipeline_control_bits;
   wire [0:0]  wr_register_write_enable;
   wire [3:0]  dx_register_write_index;
   wire [3:0]  xw_register_write_index;
@@ -90,10 +88,8 @@ module moxie (/*AUTOARG*/
  
   wire [31:0] rx_reg_value1;
   wire [31:0] rx_reg_value2;
-  wire [3:0]  dx_reg_index1;
-  wire [3:0]  dx_reg_index2;
-  wire [3:0]  xr_reg_index1;
-  wire [3:0]  xr_reg_index2;
+  wire [3:0]  dr_reg_index1;
+  wire [3:0]  dr_reg_index2;
 
   wire [0:0]  stall_x;
 
@@ -125,8 +121,8 @@ module moxie (/*AUTOARG*/
 			 .write_enable0_i (wr_register_write_enable), 
 			 .write_enable1_i (0), 
 			 .reg_write_index0_i (wr_register_write_index),
-			 .reg_read_index0_i (xr_reg_index1), 
-			 .reg_read_index1_i (xr_reg_index2),
+			 .reg_read_index0_i (dr_reg_index1), 
+			 .reg_read_index1_i (dr_reg_index2),
 			 .sp_o (rx_sp),
 			 .fp_o (rx_fp),
 			 .value0_i (wr_reg_result),
@@ -167,12 +163,12 @@ module moxie (/*AUTOARG*/
 			   .valid_i		(fd_valid),
 			   .stall_i             (hazard_war | stall_x),
 			   // Outputs
-			   .register_write_enable_o (dx_register_write_enable),
+			   .pipeline_control_bits_o (dx_pipeline_control_bits),
 			   .register_write_index_o (dx_register_write_index),
 			   .operand_o (dx_operand),
 			   .PC_o (dx_PC),
-			   .riA_o (dx_reg_index1),
-			   .riB_o (dx_reg_index2),
+			   .riA_o (dr_reg_index1),
+			   .riB_o (dr_reg_index2),
 			   .op_o (dx_op));
     
   cpu_execute stage_execute (// Inputs
@@ -183,23 +179,18 @@ module moxie (/*AUTOARG*/
 			     .op_i           (dx_op),
 			     .PC_i           (dx_PC),
 			     .operand_i		(dx_operand[31:0]),
-			     .riA_i (dx_reg_index1),
-			     .riB_i (dx_reg_index2),
-			     .riA_o (xr_reg_index1),
-			     .riB_o (xr_reg_index2),
 			     .regA_i (rx_reg_value1),
 			     .regB_i (rx_reg_value2),
 			     .branch_flag_o (xf_branch_flag),
 			     .branch_target_o (xf_branch_target),
+			     .pipeline_control_bits_i (dx_pipeline_control_bits),
 			     .register_write_index_i (dx_register_write_index),
 			     // Outputs
-			     .register_write_enable_o (xw_register_write_enable),
+			     .pipeline_control_bits_o (xw_pipeline_control_bits),
 			     .register_write_index_o (xw_register_write_index),
 			     .reg_result_o (xw_reg_result),
 			     .mem_result_o (xw_mem_result),
 			     .memory_address_o (xw_memory_address),
-			     .memory_read_enable_o (xw_loadp),
-			     .memory_write_enable_o (xw_memory_we),
 			     .sp_i (rx_sp),
 			     .fp_i (rx_fp));
   
@@ -207,9 +198,7 @@ module moxie (/*AUTOARG*/
 			   .rst_i (rst_i),
 			   .clk_i (clk_i),
 			   .register_write_index_i (xw_register_write_index),
-			   .register_we_i (xw_register_write_enable),
-			   .loadp_i (xw_loadp),
-			   .memory_we_i (xw_memory_we),
+			   .pipeline_control_bits_i (xw_pipeline_control_bits),
 			   .memory_address_i (xw_memory_address),
 			   .reg_result_i (xw_reg_result),
 			   .mem_result_i (xw_mem_result),
@@ -218,8 +207,15 @@ module moxie (/*AUTOARG*/
 			   .register_we_o (wr_register_write_enable),
 			   .reg_result_o (wr_reg_result));
 
-  assign hazard_war = xw_register_write_enable
-		      & ((xw_register_write_index == dx_reg_index1)
-			 | (xw_register_write_index == dx_reg_index2));
-
+   assign hazard_war = 0;
+   
+   
+   // assign hazard_war = dx_pipeline_control_bits[`PCB_RB] &
+   // 		       xw_pipeline_control_bits[`PCB_WR] &
+   // 		       xw_register_write_index == dx_reg_index2;
+   
+   // assign hazard_war = (xw_pipeline_control_bits[`PCB_WR]
+   // 			& ((xw_register_write_index == dx_reg_index1)
+   // 			   | (xw_register_write_index == dx_reg_index2)));
+   
 endmodule // moxie

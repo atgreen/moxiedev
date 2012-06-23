@@ -36,7 +36,7 @@
     (loop for filepos = (file-position in)
 	  for line = (read-line in nil)
  	  until (let ((s (cl-ppcre:split "\\|" line)))
-		  (equal (length s) 7)))
+		  (equal (length s) 9)))
     (read-line in nil)
 
     ;; We're at the table contents now.  Parse it and write our new
@@ -48,11 +48,11 @@
 	   for line = (read-line in nil)
 	   while line do 
 	   (let ((s (cl-ppcre:split "\\|" line)))
-	     (if (equal 7 (length s))
-		 (destructuring-bind (junk1 name code wreg? rA? rb? &rest junk2) 
+	     (if (equal 9 (length s))
+		 (destructuring-bind (junk1 name code wr? rA? rB? rm? wm? &rest junk2) 
 				     (mapcar (lambda (v) (string-trim " " v)) s)
 				     (setf (aref opcode-array (parse-integer code :radix 2))
-					   (list name wreg? rA? rb?))))))
+					   (list name wr? rA? rB? rm? wm?))))))
      (loop for i from 0 to 63
 	   do (let ((o (aref opcode-array i)))
 		(if o
@@ -63,7 +63,7 @@
 			       ((equal n 1) (format out "1"))
 			       (t (error "bad table entry")))))
 			  (cdr o))
-		  (format out "000"))
+		  (format out "00000"))
 		(format out "~%"))))
   (close in)))
     

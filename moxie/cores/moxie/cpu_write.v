@@ -18,23 +18,22 @@
 // 02110-1301, USA.
 
 module cpu_write (/*AUTOARG*/
-  // Outputs
-  register_write_index_o, register_we_o, reg_result_o,
-  // Inputs
-  rst_i, clk_i, register_write_index_i, register_we_i, memory_we_i,
-  loadp_i, memory_address_i, reg_result_i, mem_result_i
-  );
+   // Outputs
+   register_write_index_o, register_we_o, reg_result_o,
+   // Inputs
+   rst_i, clk_i, pipeline_control_bits_i, register_write_index_i,
+   memory_address_i, reg_result_i, mem_result_i
+   );
   
   // --- Clock and Reset ------------------------------------------
   input  rst_i, clk_i;
   
+   input [`PCB_WIDTH-1:0] pipeline_control_bits_i;
   input [3:0] register_write_index_i;
-  input [0:0] register_we_i;
-  input [0:0] memory_we_i;
-  input [0:0] loadp_i;
   input [31:0] memory_address_i;
   input [31:0] reg_result_i;
   input [31:0] mem_result_i;
+
 
   output [3:0] register_write_index_o;
   output [0:0] register_we_o;
@@ -43,16 +42,16 @@ module cpu_write (/*AUTOARG*/
   wire [31:0] 	data;
   
   wire [3:0] register_write_index_o = register_write_index_i;
-  wire [0:0] register_we_o = register_we_i;
+  wire [0:0] register_we_o = pipeline_control_bits_i[`PCB_WR];
 
-  // loadp_i is high if we are loading memory from cache
-  wire [31:0] reg_result_o = loadp_i ? data : reg_result_i;
+  // PCB_RM is high if we are loading memory from cache
+  wire [31:0] reg_result_o = pipeline_control_bits_i[`PCB_RM] ? data : reg_result_i;
 
   // The data cache. Fake. Never stalls.  Note that we can do a single
   // cycle memory-to-memory transfer.
   dcache cache (.clk_i (clk_i),
 		.rst_i (rst_i),
-		.we_i (memory_we_i),
+		.we_i (pipeline_control_bits_i[`PCB_WM]),
 		.address_i (memory_address_i),
 		.data_i (mem_result_i),
 		.data_o (data));

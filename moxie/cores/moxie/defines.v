@@ -17,6 +17,13 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 // 02110-1301, USA.
 
+`define PCB_WIDTH 5
+`define PCB_WR    4
+`define PCB_RA    3
+`define PCB_RB    2
+`define PCB_WM    1
+`define PCB_RM    0
+
 `define OP_ADD_L  6'b000000
 `define OP_AND    6'b000001
 `define OP_ASHL   6'b000010

@@ -20,12 +20,12 @@
 `include "defines.v"
 
 module cpu_decode (/*AUTOARG*/
-   // Outputs
-   pipeline_control_bits_o, register_write_index_o, operand_o, riAr_o,
-   riBr_o, riA_o, riB_o, op_o, PC_o,
-   // Inputs
-   rst_i, clk_i, stall_i, opcode_i, operand_i, valid_i, PC_i
-   );
+  // Outputs
+  pipeline_control_bits_o, register_write_index_o, operand_o, riA_o,
+  riB_o, op_o, PC_o,
+  // Inputs
+  rst_i, clk_i, stall_i, opcode_i, operand_i, valid_i, PC_i
+  );
 
    // --- Clock and Reset ------------------------------------------
    input  rst_i, clk_i;
@@ -43,8 +43,6 @@ module cpu_decode (/*AUTOARG*/
    output [`PCB_WIDTH-1:0] pipeline_control_bits_o;
    output [3:0] 	   register_write_index_o;
    output [31:0] 	   operand_o;
-   output [3:0] 	   riAr_o;
-   output [3:0] 	   riBr_o;
    output [3:0] 	   riA_o;
    output [3:0] 	   riB_o;
    output [5:0] 	   op_o;
@@ -53,8 +51,6 @@ module cpu_decode (/*AUTOARG*/
    reg [5:0] 		   op_o;
    wire [3:0] 		   riA_o;
    wire [3:0] 		   riB_o;
-   reg [3:0] 		   riAr_o;
-   reg [3:0] 		   riBr_o;
    reg [31:0] 		   operand_o;
    reg [31:0] 		   PC_o;
    reg [`PCB_WIDTH-1:0]    pipeline_control_bits_o;
@@ -77,8 +73,6 @@ module cpu_decode (/*AUTOARG*/
    always @(posedge clk_i)
      begin
 	if (! stall_i) begin
-	   riAr_o <= riA_o;
-	   riBr_o <= riB_o;
 	   PC_o <= PC_i;
 	end
      end

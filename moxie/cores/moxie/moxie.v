@@ -64,6 +64,7 @@ module moxie (/*AUTOARG*/
   wire [0:0]  fd_valid;
   wire [31:0] dx_operand;
   wire [31:0] dx_PC;
+  wire [31:0] xw_PC;
   wire [`PCB_WIDTH-1:0] dx_pipeline_control_bits;
   wire [5:0]  dx_op;
   wire [`PCB_WIDTH-1:0] xw_pipeline_control_bits;
@@ -178,9 +179,10 @@ module moxie (/*AUTOARG*/
 			     .stall_o        (stall_x),
 			     .op_i           (dx_op),
 			     .PC_i           (dx_PC),
+			     .PC_o           (xw_PC),
 			     .operand_i		(dx_operand[31:0]),
-			     .regA_i (rx_reg_value1),
-			     .regB_i (rx_reg_value2),
+			     .regA_i (forward_0 ? xr_reg_result : rx_reg_value1),
+			     .regB_i (forward_1 ? xr_reg_result : rx_reg_value2),
 			     .branch_flag_o (xf_branch_flag),
 			     .branch_target_o (xf_branch_target),
 			     .pipeline_control_bits_i (dx_pipeline_control_bits),
@@ -198,12 +200,24 @@ module moxie (/*AUTOARG*/
   cpu_write stage_write (  // Inputs
 			   .rst_i (rst_i),
 			   .clk_i (clk_i),
+			   .PC_i           (xw_PC),
 			   .pipeline_control_bits_i (xw_pipeline_control_bits),
 			   .memory_address_i (xw_memory_address),
 			   .mem_result_i (xw_mem_result) );
 
-   assign hazard_war = 0;
-   
+  // Forwarding logic.  
+  reg forward_0;
+  always @(posedge clk_i)
+    forward_0 <= xr_register_write_enable
+	& dx_pipeline_control_bits[`PCB_RB]
+	& (dx_register_write_index == dr_reg_index1);
+  reg forward_1;
+  always @(posedge clk_i)
+    forward_1 <= xr_register_write_enable
+	& dx_pipeline_control_bits[`PCB_RB]
+	& (dx_register_write_index == dr_reg_index2);
+
+  assign hazard_war = 0;
    
    // assign hazard_war = dx_pipeline_control_bits[`PCB_RB] &
    // 		       xw_pipeline_control_bits[`PCB_WR] &

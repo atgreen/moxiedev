@@ -1,9 +1,8 @@
 .text
 	ldi.l	$sp, 0x4000000+4096
 	ldi.l	$r0, 0x55555555
-	nop
 	mov	$r1, $sp
-	mov	$r2, $r0
+	mov	$r2, $r1
 	ldi.l	$r0, 0x66666666
 	mov	$r2, $sp
 	nop

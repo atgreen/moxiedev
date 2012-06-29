@@ -25,7 +25,6 @@ module MEM_1w4r(
        $dumpvars(1, MEM_1w1r_2);
        $dumpvars(1, MEM_1w1r_3);
     end
-   
 
 MEM_1w1r MEM_1w1r_0(
     .clock(clock),

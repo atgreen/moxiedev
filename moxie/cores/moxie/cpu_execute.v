@@ -20,15 +20,15 @@
 `include "defines.v"
 
 module cpu_execute (/*AUTOARG*/
-   // Outputs
-   register_we_o, register_write_index_o, pipeline_control_bits_o,
-   memory_address_o, reg_result_o, mem_result_o, riA_o, riB_o,
-   stall_o, branch_flag_o, branch_target_o,
-   // Inputs
-   rst_i, clk_i, stall_i, riA_i, riB_i, regA_i, regB_i,
-   pipeline_control_bits_i, register_write_index_i, operand_i, op_i,
-   sp_i, fp_i, PC_i
-   );
+  // Outputs
+  register_we_o, register_write_index_o, pipeline_control_bits_o,
+  memory_address_o, reg_result_o, mem_result_o, riA_o, riB_o, PC_o,
+  stall_o, branch_flag_o, branch_target_o,
+  // Inputs
+  rst_i, clk_i, stall_i, riA_i, riB_i, regA_i, regB_i,
+  pipeline_control_bits_i, register_write_index_i, operand_i, op_i,
+  sp_i, fp_i, PC_i
+  );
 
   parameter [1:0] STATE_READY = 2'b00,
     STATE_JSR1 = 2'b01,
@@ -62,6 +62,7 @@ module cpu_execute (/*AUTOARG*/
   output [31:0] mem_result_o;
   output [3:0] riA_o;
   output [3:0] riB_o;
+  output [31:0] PC_o;
       
 
   output [0:0] stall_o;
@@ -78,6 +79,8 @@ module cpu_execute (/*AUTOARG*/
   reg [31:0] 	memory_address_o;
   reg [31:0] 	reg_result_o;
   reg [31:0] 	mem_result_o;
+
+  reg [31:0] 		   PC_o;
 
   reg [1:0] 	current_state, next_state;
   
@@ -109,6 +112,7 @@ module cpu_execute (/*AUTOARG*/
 	end
       else begin
 	pipeline_control_bits_o <= pipeline_control_bits_i;
+	PC_o <= PC_i;
 	case (current_state)
 	  STATE_READY:
 	    begin

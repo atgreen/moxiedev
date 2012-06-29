@@ -67,11 +67,11 @@ module moxie (/*AUTOARG*/
   wire [`PCB_WIDTH-1:0] dx_pipeline_control_bits;
   wire [5:0]  dx_op;
   wire [`PCB_WIDTH-1:0] xw_pipeline_control_bits;
-  wire [0:0]  wr_register_write_enable;
+  wire [0:0]  xr_register_write_enable;
   wire [3:0]  dx_register_write_index;
-  wire [3:0]  xw_register_write_index;
+  wire [3:0]  xr_register_write_index;
   wire [31:0] xw_memory_address;
-  wire [31:0] xw_reg_result;
+  wire [31:0] xr_reg_result;
   wire [31:0] xw_mem_result;
   wire [3:0]  wr_register_write_index;
   wire [31:0] wr_reg_result;
@@ -118,14 +118,14 @@ module moxie (/*AUTOARG*/
 			 // Inputs
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
-			 .write_enable0_i (wr_register_write_enable), 
+			 .write_enable0_i (xr_register_write_enable), 
 			 .write_enable1_i (0), 
-			 .reg_write_index0_i (wr_register_write_index),
+			 .reg_write_index0_i (xr_register_write_index),
 			 .reg_read_index0_i (dr_reg_index1), 
 			 .reg_read_index1_i (dr_reg_index2),
 			 .sp_o (rx_sp),
 			 .fp_o (rx_fp),
-			 .value0_i (wr_reg_result),
+			 .value0_i (xr_reg_result),
 			 .value1_i (0));
 
   always @(posedge clk_i)
@@ -170,7 +170,7 @@ module moxie (/*AUTOARG*/
 			   .riA_o (dr_reg_index1),
 			   .riB_o (dr_reg_index2),
 			   .op_o (dx_op));
-    
+
   cpu_execute stage_execute (// Inputs
 			     .rst_i			(rst_i),
 			     .clk_i			(clk_i),
@@ -187,25 +187,20 @@ module moxie (/*AUTOARG*/
 			     .register_write_index_i (dx_register_write_index),
 			     // Outputs
 			     .pipeline_control_bits_o (xw_pipeline_control_bits),
-			     .register_write_index_o (xw_register_write_index),
-			     .reg_result_o (xw_reg_result),
+			     .register_write_index_o (xr_register_write_index),
+			     .reg_result_o (xr_reg_result),
 			     .mem_result_o (xw_mem_result),
 			     .memory_address_o (xw_memory_address),
 			     .sp_i (rx_sp),
-			     .fp_i (rx_fp));
+			     .fp_i (rx_fp),
+			     .register_we_o (xr_register_write_enable));
   
   cpu_write stage_write (  // Inputs
 			   .rst_i (rst_i),
 			   .clk_i (clk_i),
-			   .register_write_index_i (xw_register_write_index),
 			   .pipeline_control_bits_i (xw_pipeline_control_bits),
 			   .memory_address_i (xw_memory_address),
-			   .reg_result_i (xw_reg_result),
-			   .mem_result_i (xw_mem_result),
-			   // Outputs
-			   .register_write_index_o (wr_register_write_index),
-			   .register_we_o (wr_register_write_enable),
-			   .reg_result_o (wr_reg_result));
+			   .mem_result_i (xw_mem_result) );
 
    assign hazard_war = 0;
    

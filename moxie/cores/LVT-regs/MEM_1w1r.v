@@ -12,7 +12,7 @@ module MEM_1w1r(
 
 reg `WORD memory `MEM;
 
-always @(posedge clock) begin
+always @(negedge clock) begin
     if (we)  
       memory[write_addr] <= write_data;
 end

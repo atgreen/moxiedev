@@ -1,11 +1,27 @@
-[timestart] 1972780
-[size] 1680 993
+[*]
+[*] GTKWave Analyzer v3.3.35 (w)1999-2012 BSI
+[*] Fri Jun 29 14:49:06 2012
+[*]
+[dumpfile] "/home/green/moxiedev/moxie/soc/muskoka/sim/dump.vcd"
+[dumpfile_mtime] "Fri Jun 29 14:43:25 2012"
+[dumpfile_size] 7534707
+[savefile] "/home/green/moxiedev/moxie/soc/muskoka/gtkwave/muskoka.sav"
+[timestart] 43990000
+[size] 959 1021
 [pos] -1 -1
-*-14.000000 86580 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-24.000000 75080000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] sim.
 [treeopen] sim.soc.
 [treeopen] sim.soc.core.
+[treeopen] sim.soc.core.regs.
+[treeopen] sim.soc.core.regs.mem_2w4r.
+[treeopen] sim.soc.core.regs.mem_2w4r.MEM_0.
+[treeopen] sim.soc.core.stage_decode.
 [treeopen] sim.soc.core.stage_write.
+[sst_width] 315
+[signals_width] 246
+[sst_expanded] 1
+[sst_vpaned_height] 293
 @28
 sim.soc.core.stage_fetch.rst_i
 sim.soc.core.stage_fetch.clk_i
@@ -13,10 +29,8 @@ sim.soc.core.stage_fetch.clk_i
 -
 @800200
 -FETCH UNIT
-@22
-sim.soc.core.stage_fetch.PC[31:0]
 @4022
-^>1 ../gtkwave/gtkwave-opcodes.lisp
+^>1 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-opcodes.lisp
 sim.soc.core.stage_fetch.opcode[15:0]
 @c00200
 -INSTRUCTION FIFO
@@ -34,7 +48,7 @@ sim.soc.core.stage_fetch.ififo.can_read_48
 sim.soc.core.stage_fetch.ififo.write_en_i
 sim.soc.core.stage_fetch.ififo.can_write_32
 @4022
-^>1 ../gtkwave/gtkwave-opcodes.lisp
+^>1 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-opcodes.lisp
 sim.soc.core.stage_fetch.ififo.opcode_o[15:0]
 @22
 sim.soc.core.stage_fetch.ififo.operand_o[31:0]
@@ -44,15 +58,19 @@ sim.soc.core.stage_fetch.ififo.operand_o[31:0]
 -FETCH UNIT
 @800200
 -DECODE UNIT
-@2022
-^1 ../gtkwave/gtkwave-ops.txt
-sim.soc.core.stage_decode.op_o[5:0]
+@22
+sim.soc.core.stage_decode.PC_i[31:0]
+@4022
+^>1 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-opcodes.lisp
+sim.soc.core.stage_decode.opcode_i[15:0]
 @1000200
 -DECODE UNIT
 @800200
 -EXECUTE UNIT
+@22
+sim.soc.core.stage_execute.PC_i[31:0]
 @c02022
-^1 ../gtkwave/gtkwave-ops.txt
+^1 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-ops.txt
 sim.soc.core.stage_execute.op_i[5:0]
 @28
 (0)sim.soc.core.stage_execute.op_i[5:0]
@@ -63,32 +81,120 @@ sim.soc.core.stage_execute.op_i[5:0]
 (5)sim.soc.core.stage_execute.op_i[5:0]
 @1401200
 -group_end
-@2022
-^2 ../gtkwave/gtkwave-regs.txt
-sim.soc.core.stage_execute.riA_i[3:0]
-^2 ../gtkwave/gtkwave-regs.txt
-sim.soc.core.stage_execute.riB_i[3:0]
 @22
+sim.soc.core.stage_execute.regA_i[31:0]
+sim.soc.core.stage_execute.regB_i[31:0]
 sim.soc.core.stage_execute.operand_i[31:0]
 @1000200
 -EXECUTE UNIT
 @800200
 -WRITE UNIT
 @2022
-^2 ../gtkwave/gtkwave-regs.txt
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
 sim.soc.core.stage_write.register_write_index_i[3:0]
-@28
-sim.soc.core.stage_write.memory_we_i
 @22
 sim.soc.core.stage_write.memory_address_i[31:0]
 sim.soc.core.stage_write.mem_result_i[31:0]
 sim.soc.core.stage_write.reg_result_i[31:0]
-@28
-sim.soc.core.stage_write.register_we_i
-@2023
-^2 ../gtkwave/gtkwave-regs.txt
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
 sim.soc.core.stage_write.register_write_index_i[3:0]
 @1000200
 -WRITE UNIT
+@800200
+-REGISTER FILE
+@28
+sim.soc.core.regs.mem_2w4r.we0
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.write_addr_0[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.write_data_0[31:0]
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.read_addr_0[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.read_data_0[31:0]
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.read_addr_1[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.read_data_1[31:0]
+@1000200
+-REGISTER FILE
+@800200
+-MEM_0
+@28
+sim.soc.core.regs.mem_2w4r.MEM_0.we
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.MEM_0.write_addr[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.MEM_0.write_data[31:0]
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.MEM_0.read_addr_0[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.MEM_0.read_data_0[31:0]
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.MEM_0.read_addr_1[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.MEM_0.read_data_1[31:0]
+@1000200
+-MEM_0
+@800200
+-MEM_1w1r_0
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.MEM_0.MEM_1w1r_0.read_addr[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.MEM_0.MEM_1w1r_0.read_data[31:0]
+@28
+sim.soc.core.regs.mem_2w4r.MEM_0.MEM_1w1r_0.we
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.MEM_0.MEM_1w1r_0.write_addr[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.MEM_0.MEM_1w1r_0.write_data[31:0]
+@1000200
+-MEM_1w1r_0
+@800200
+-MEM_1w1r_1
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.MEM_0.MEM_1w1r_1.read_addr[3:0]
+@23
+sim.soc.core.regs.mem_2w4r.MEM_0.MEM_1w1r_1.read_data[31:0]
+@28
+sim.soc.core.regs.mem_2w4r.MEM_0.MEM_1w1r_1.we
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.MEM_0.MEM_1w1r_1.write_addr[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.MEM_0.MEM_1w1r_1.write_data[31:0]
+@1000200
+-MEM_1w1r_1
+@800200
+-MEM_1
+@28
+sim.soc.core.regs.mem_2w4r.MEM_1.we
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.MEM_1.write_addr[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.MEM_1.write_data[31:0]
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.MEM_1.read_addr_0[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.MEM_1.read_data_0[31:0]
+@2022
+^2 /home/green/moxiedev/moxie/soc/muskoka/gtkwave/../gtkwave/gtkwave-regs.txt
+sim.soc.core.regs.mem_2w4r.MEM_1.read_addr_1[3:0]
+@22
+sim.soc.core.regs.mem_2w4r.MEM_1.read_data_2[31:0]
+@1000200
+-MEM_1
 [pattern_trace] 1
 [pattern_trace] 0

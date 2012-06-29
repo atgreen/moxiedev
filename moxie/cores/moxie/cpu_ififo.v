@@ -190,15 +190,16 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 	end else begin
 	  if (write_en_i && (!read_en_i) && (can_write_32)) begin
 	    buffer[write_ptr] <= data_i[31:16];
-	    buffer[write_ptr+1] <= data_i[15:0];
+	    buffer[(write_ptr+1)%4] <= data_i[15:0];
 	    write_ptr <= write_ptr + 2;
 	    ptr_gap = ptr_gap + 2;
 	    full_o = ((ptr_gap == 3) || (ptr_gap == 4));
 	  end
 	  else if ((!write_en_i) && read_en_i && (can_read_48)) begin
+	     // #1 $display ("A(%x) - [%x, %x, %x, %x]", read_ptr, buffer[0], buffer[1], buffer[2], buffer[3]);
 	    opcode_o <= buffer[read_ptr];
-	    operand_o[31:16] <= buffer[read_ptr+1];
-	    operand_o[15:0] <= buffer[read_ptr+2];
+	    operand_o[31:16] <= buffer[(read_ptr+1)%4];
+	    operand_o[15:0] <= buffer[(read_ptr+2)%4];
 	    valid_o <= 1;
 	    next_PC <= PC + 6;
 	    read_ptr <= read_ptr + 3;

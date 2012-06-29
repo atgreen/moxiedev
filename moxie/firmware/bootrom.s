@@ -1,21 +1,21 @@
 .text
 	ldi.l	$sp, 0x4000000+4096
 	ldi.l	$r0, 0x55555555
-#	xor	$r0, $r0 # Zero out $r0
-	mov	$r1, $r0
+	nop
+	mov	$r1, $sp
 	mov	$r2, $r0
+	ldi.l	$r0, 0x66666666
+	mov	$r2, $sp
+	nop
 	mov	$r3, $r0
 	mov	$r4, $r0
         ldi.l   $r5, fun+0x1000
-        nop
-        nop
-
 #       jsr     $r5
 loop:	push	$sp, $r0
 	inc	$r0, 0x1 # Increment $r0
 	inc	$r1, 0x1
 	inc	$r2, 0x1
-	inc	$r3, 0x1 
+ 	inc	$r3, 0x1 
 	inc	$r4, 0x1
 	nop
 	sta.l	0x4000000, $r4

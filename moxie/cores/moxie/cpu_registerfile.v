@@ -44,21 +44,27 @@ module cpu_registerfile (/*AUTOARG*/
    input [31:0] value0_i, value1_i;
    input [0:3] reg_write_index0_i, reg_write_index1_i;
    input [0:3] reg_read_index0_i, reg_read_index1_i;
+
+
+  always @(posedge clk_i)
+    if (write_enable0_i) begin
+       $display("%x <= %x", reg_write_index0_i, value0_i);
+    end
    
-  MEM_2w4r mem_2w4r (clk_i,
-		     write_enable0_i,
-		     0,
-		     reg_write_index0_i,
-		     value0_i,
-		     reg_write_index1_i,
-		     value1_i,
-		     reg_read_index0_i,
-		     value0_o,
-		     reg_read_index1_i,
-		     value1_o,
-		     0,
-		     fp_o,
-		     1,
-		     sp_o);
+  MEM_2w4r mem_2w4r (.clock(clk_i),
+		     .we0(write_enable0_i),
+		     .we1(0),
+		     .write_addr_0(reg_write_index0_i),
+		     .write_data_0(value0_i),
+		     .write_addr_1(reg_write_index1_i),
+		     .write_data_1(value1_i),
+		     .read_addr_0(reg_read_index0_i),
+		     .read_data_0(value0_o),
+		     .read_addr_1(reg_read_index1_i),
+		     .read_data_1(value1_o),
+		     .read_addr_2(0),
+		     .read_data_2(fp_o),
+		     .read_addr_3(1),
+		     .read_data_3(sp_o));
    
 endmodule // cpu_registerfile

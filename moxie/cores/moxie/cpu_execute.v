@@ -21,9 +21,9 @@
 
 module cpu_execute (/*AUTOARG*/
    // Outputs
-   register_write_index_o, pipeline_control_bits_o, memory_address_o,
-   reg_result_o, mem_result_o, riA_o, riB_o, stall_o, branch_flag_o,
-   branch_target_o,
+   register_we_o, register_write_index_o, pipeline_control_bits_o,
+   memory_address_o, reg_result_o, mem_result_o, riA_o, riB_o,
+   stall_o, branch_flag_o, branch_target_o,
    // Inputs
    rst_i, clk_i, stall_i, riA_i, riB_i, regA_i, regB_i,
    pipeline_control_bits_i, register_write_index_i, operand_i, op_i,
@@ -54,6 +54,7 @@ module cpu_execute (/*AUTOARG*/
   input [31:0] PC_i;
   
   // --- Outputs --------------------------------------------------
+  output register_we_o;
   output [3:0] register_write_index_o;
   output [`PCB_WIDTH-1:0] pipeline_control_bits_o;
   output [31:0] memory_address_o;  
@@ -61,6 +62,7 @@ module cpu_execute (/*AUTOARG*/
   output [31:0] mem_result_o;
   output [3:0] riA_o;
   output [3:0] riB_o;
+      
 
   output [0:0] stall_o;
   reg [0:0]    stall_o;
@@ -82,11 +84,15 @@ module cpu_execute (/*AUTOARG*/
   assign riA_o = riA_i;
   assign riB_o = riB_i;
 
+   reg [0:0] 	register_we_o;
+
+
   always @(posedge rst_i or posedge clk_i)
     if (rst_i == 1) begin
       branch_flag_o <= 0;
       current_state <= STATE_READY;
     end else begin
+      register_we_o = pipeline_control_bits_i[`PCB_WR];
       branch_flag_o <= (op_i == `OP_JMPA) || (current_state == STATE_JSR1);
       current_state <= next_state;
     end
@@ -135,7 +141,7 @@ module cpu_execute (/*AUTOARG*/
 		  end
 		`OP_BAD:
 		  begin
-		    $display ("Executing OP_BAD");
+		    // $display ("Executing OP_BAD");
 		    next_state <= STATE_READY;
 		    stall_o <= 0;
 		  end
@@ -213,7 +219,7 @@ module cpu_execute (/*AUTOARG*/
 		  end
 		`OP_DEC:
 		  begin
-		    $display ("EXECUTE OP_DEC: 0x%x", operand_i);
+		     // $display ("EXECUTE OP_DEC: 0x%x", operand_i);
 		    reg_result_o <= regA_i - operand_i;
 		    register_write_index_o <= register_write_index_i;
 		    next_state <= STATE_READY;
@@ -233,7 +239,7 @@ module cpu_execute (/*AUTOARG*/
 		  end
 		`OP_INC:
 		  begin
-		    $display ("EXECUTE OP_INC: 0x%x", operand_i);
+		     // $display ("EXECUTE OP_INC: 0x%x", operand_i);
 		    reg_result_o <= regA_i + operand_i;
 		    register_write_index_o <= register_write_index_i;
 		    next_state <= STATE_READY;
@@ -299,7 +305,7 @@ module cpu_execute (/*AUTOARG*/
 		  end
 		`OP_LDI_L:
 		  begin
-		    $display ("EXECUTE OP_LDI_L: 0x%x", operand_i);
+		     // $display ("EXECUTE OP_LDI_L: 0x%x", operand_i);
 		    reg_result_o <= operand_i;
 		    register_write_index_o <= register_write_index_i;
 		    next_state <= STATE_READY;
@@ -355,7 +361,7 @@ module cpu_execute (/*AUTOARG*/
 		  end
 		`OP_MOV:
 		  begin
-		    $display ("Executing OP_MOV");
+		     // $display ("Executing OP_MOV");
 		    reg_result_o <= regB_i;
 		    register_write_index_o <= register_write_index_i;
 		    next_state <= STATE_READY;

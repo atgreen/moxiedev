@@ -54,6 +54,12 @@ wire `WORD read_data_1_0;
 wire `WORD read_data_2_0;
 wire `WORD read_data_3_0;
 
+  initial
+    begin
+       $dumpvars(1, MEM_0);
+       $dumpvars(1, MEM_1);
+    end
+
 MEM_1w4r MEM_0(
     .clock(clock),
     .we(we0),

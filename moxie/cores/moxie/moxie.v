@@ -94,8 +94,6 @@ module moxie (/*AUTOARG*/
 
   wire [0:0]  stall_x;
 
-  wire [0:0] hazard_war;
-
   reg [0:0]  wb_I_stb_o;
 
   // synthesis translate_off 
@@ -152,7 +150,7 @@ module moxie (/*AUTOARG*/
 			 .clk_i			(clk_i),
 			 .branch_flag_i (xf_branch_flag),
 			 .branch_target_i (xf_branch_target),
-			 .stall_i               (hazard_war | stall_x),
+			 .stall_i               (stall_x),
 			 .imem_data_i           (wb_I_dat_i[31:0]));
     
   cpu_decode stage_decode (// Inputs
@@ -162,7 +160,7 @@ module moxie (/*AUTOARG*/
 			   .operand_i		(fd_operand[31:0]),
 			   .PC_i                (fd_PC[31:0]),
 			   .valid_i		(fd_valid),
-			   .stall_i             (hazard_war | stall_x),
+			   .stall_i             (stall_x),
 			   // Outputs
 			   .pipeline_control_bits_o (dx_pipeline_control_bits),
 			   .register_write_index_o (dx_register_write_index),
@@ -175,7 +173,7 @@ module moxie (/*AUTOARG*/
   cpu_execute stage_execute (// Inputs
 			     .rst_i			(rst_i),
 			     .clk_i			(clk_i),
-			     .stall_i        (hazard_war),
+			     .stall_i        0,
 			     .stall_o        (stall_x),
 			     .op_i           (dx_op),
 			     .PC_i           (dx_PC),
@@ -207,24 +205,18 @@ module moxie (/*AUTOARG*/
 
   // Forwarding logic.  
   reg forward_0;
-  always @(posedge clk_i)
-    forward_0 <= xr_register_write_enable
-	& dx_pipeline_control_bits[`PCB_RB]
-	& (dx_register_write_index == dr_reg_index1);
   reg forward_1;
   always @(posedge clk_i)
-    forward_1 <= xr_register_write_enable
-	& dx_pipeline_control_bits[`PCB_RB]
-	& (dx_register_write_index == dr_reg_index2);
+    begin
+      // If we're writing to the same register we're about to read
+      // from, then forward the value we're writing back into the
+      // pipeline instead of reading from the register file.
+      forward_0 <= xr_register_write_enable
+		   & (dx_pipeline_control_bits[`PCB_RA]
+		      & (dx_register_write_index == dr_reg_index1));
+      forward_1 <= xr_register_write_enable
+		   & (dx_pipeline_control_bits[`PCB_RB]
+		      & (dx_register_write_index == dr_reg_index2));
+    end
 
-  assign hazard_war = 0;
-   
-   // assign hazard_war = dx_pipeline_control_bits[`PCB_RB] &
-   // 		       xw_pipeline_control_bits[`PCB_WR] &
-   // 		       xw_register_write_index == dx_reg_index2;
-   
-   // assign hazard_war = (xw_pipeline_control_bits[`PCB_WR]
-   // 			& ((xw_register_write_index == dx_reg_index1)
-   // 			   | (xw_register_write_index == dx_reg_index2)));
-   
 endmodule // moxie

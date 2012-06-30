@@ -173,7 +173,7 @@ module moxie (/*AUTOARG*/
   cpu_execute stage_execute (// Inputs
 			     .rst_i			(rst_i),
 			     .clk_i			(clk_i),
-			     .stall_i        0,
+			     .stall_i        (0),
 			     .stall_o        (stall_x),
 			     .op_i           (dx_op),
 			     .PC_i           (dx_PC),

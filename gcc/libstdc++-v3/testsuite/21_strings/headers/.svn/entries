@@ -1,46 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/headers
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2009-07-24T20:55:59.435386Z
-150063
-jsm28
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-cstdlib
-dir
-
-string
-dir
-
-cctype
-dir
-
-cwchar
-dir
-
-cstring
-dir
-
-cwctype
-dir
-

@@ -1,40 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libgomp/config
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-03-12T15:35:56.809485Z
-185240
-ro
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-linux
-dir
-
-posix
-dir
-
-mingw32
-dir
-
-bsd
-dir
-

@@ -1,179 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/gcc/common/config
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-03-12T09:59:25.457157Z
-185218
-kyukhin
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-c6x
-dir
-
-cris
-dir
-
-v850
-dir
-
-spu
-dir
-
-sparc
-dir
-
-sh
-dir
-
-mmix
-dir
-
-iq2000
-dir
-
-cr16
-dir
-
-bfin
-dir
-
-mep
-dir
-
-microblaze
-dir
-
-s390
-dir
-
-vax
-dir
-
-pa
-dir
-
-xtensa
-dir
-
-h8300
-dir
-
-ia64
-dir
-
-mcore
-dir
-
-mips
-dir
-
-fr30
-dir
-
-score
-dir
-
-lm32
-dir
-
-epiphany
-dir
-
-tilepro
-dir
-
-arm
-dir
-
-m32r
-dir
-
-m68k
-dir
-
-pdp11
-dir
-
-alpha
-dir
-
-avr
-dir
-
-rx
-dir
-
-i386
-dir
-
-rs6000
-dir
-
-default-common.c
-file
-
-
-
-
-2012-02-01T17:18:59.567809Z
-cddfec91014b8500299ab21080930f24
-2011-07-07T13:22:44.444993Z
-175969
-jsm28
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1299
-
-xstormy16
-dir
-
-tilegx
-dir
-
-frv
-dir
-
-mn10300
-dir
-
-picochip
-dir
-

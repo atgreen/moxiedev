@@ -1,37 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale/num_put
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-01-23T17:46:34.691860Z
-183442
-ro
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-put
-dir
-
-cons
-dir
-
-requirements
-dir
-

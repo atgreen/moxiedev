@@ -1,40 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/vect/costmodel
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-04-05T12:11:50.460054Z
-186163
-wschmidt
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-x86_64
-dir
-
-ppc
-dir
-
-spu
-dir
-
-i386
-dir
-

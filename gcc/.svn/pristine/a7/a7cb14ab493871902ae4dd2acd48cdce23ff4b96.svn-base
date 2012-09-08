@@ -1,0 +1,62 @@
+2012-08-31  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/54428
+	* c-convert.c (convert): Don't call fold_convert_loc if
+	TYPE_MAIN_VARIANT of a COMPLEX_TYPE is the same, unless e
+	is a COMPLEX_EXPR.  Remove TYPE_MAIN_VARIANT check from
+	COMPLEX_TYPE -> COMPLEX_TYPE conversion.
+
+2012-08-24  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/54355
+	* c-decl.c (c_parser_label): Pass true as nested and fix up comments
+	for nested and empty_ok arguments in the call to
+	c_parser_declaration_or_fndef.
+
+2012-08-17  Jakub Jelinek  <jakub@redhat.com>
+
+	* c-tree.h (c_last_sizeof_arg): Declare.
+	* c-parser.c (struct c_tree_loc_pair): New type.
+	(c_parser_expr_list): Add sizeof_arg argument.  Fill it in if
+	non-NULL.
+	(c_parser_attributes, c_parser_objc_keywordexpr): Adjust callers.
+	(c_parser_postfix_expression_after_primary): Likewise.  Call
+	sizeof_pointer_memaccess_warning if needed.
+	(sizeof_ptr_memacc_comptypes): New function.
+	* c-typeck.c (c_last_sizeof_arg): New global variable.
+	(c_expr_sizeof_expr, c_expr_sizeof_type): Initialize it.
+
+2012-07-24  Uros Bizjak  <ubizjak@gmail.com>
+
+	* c-lang.h (lang_decl): Add variable_size GTY option.
+
+2012-07-16  Steven Bosscher  <steven@gcc.gnu.org>
+
+	* c-decl.c: Include dumpfile.h instead of tree-dump.h.
+	* Make-lang.in: Fix dependencies.
+
+2012-06-29  Steven Bosscher  <steven@gcc.gnu.org>
+
+	* Make-lang.in: New file, rules migrated from gcc/Makefile.in
+	and add language Makefile hooks.
+	* config-lang.in: New file.
+	* c-config-lang.in: Moved from gcc/config-lang.in to here, and
+	add the required "normal" config-lang.in rules.
+	* c-lang.h: Moved from gcc/ to here.
+	* c-tree.h: Likewise.
+	* c-objc-common.c: Likewise.
+	* c-objc-common.h: Likewise.
+	* c-typeck.c: Likewise.
+	* c-convert.c: Likewise.
+	* c-lang.c: Likewise.
+	* c-aux-info.c: Likewise.
+	* c-errors.c: Likewise.
+	* gccspec.c: Likewise.
+	* c-decl.c: Likewise.  Include gt-c-c-decl.h, not gt-c-decl.h.
+	* c-parser.c: Likewise.  Include gt-c-c-parser.h, not gt-c-parser.h.
+
+Copyright (C) 2012 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.

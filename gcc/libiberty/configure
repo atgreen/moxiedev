@@ -5541,10 +5541,8 @@ _ACEOF
     # newlib doesnt provide any of the variables in $vars, so we
     # dont have to check them here.
 
-    # Of the functions in $checkfuncs, newlib only has strerror
-    # and psignal.
+    # Of the functions in $checkfuncs, newlib only has strerror.
     $as_echo "#define HAVE_STRERROR 1" >>confdefs.h
-    $as_echo "#define HAVE_PSIGNAL 1" >>confdefs.h
 
 
     setobjs=yes

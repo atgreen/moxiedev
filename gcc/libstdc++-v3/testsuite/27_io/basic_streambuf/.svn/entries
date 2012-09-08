@@ -1,61 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_streambuf
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2010-09-15T10:46:39.518825Z
-164300
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-sputc
-dir
-
-sputbackc
-dir
-
-sgetn
-dir
-
-imbue
-dir
-
-cons
-dir
-
-in_avail
-dir
-
-overflow
-dir
-
-requirements
-dir
-
-sgetc
-dir
-
-sputn
-dir
-
-sync
-dir
-

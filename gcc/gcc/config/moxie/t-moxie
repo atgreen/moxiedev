@@ -18,9 +18,3 @@
 # along with GCC; see the file COPYING3.  If not see
 # <http://www.gnu.org/licenses/>.
 
-# Assemble startup files.
-$(T)crti.o: $(srcdir)/config/moxie/crti.asm $(GCC_PASSES)
-	$(GCC_FOR_TARGET) -c -o $(T)crti.o -x assembler $(srcdir)/config/moxie/crti.asm
-
-$(T)crtn.o: $(srcdir)/config/moxie/crtn.asm $(GCC_PASSES)
-	$(GCC_FOR_TARGET) -c -o $(T)crtn.o -x assembler $(srcdir)/config/moxie/crtn.asm

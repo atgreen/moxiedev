@@ -1,141 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/include
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-04-25T18:03:03.639729Z
-186836
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-std
-dir
-
-c_std
-dir
-
-parallel
-dir
-
-decimal
-dir
-
-ext
-dir
-
-profile
-dir
-
-bits
-dir
-
-c_global
-dir
-
-precompiled
-dir
-
-tr1
-dir
-
-tr2
-dir
-
-Makefile.am
-file
-
-
-
-
-2012-04-26T00:33:21.902413Z
-7ac6150c70649c33fada68a9af0a9d59
-2012-03-19T23:48:16.315073Z
-185548
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-51848
-
-c_compatibility
-dir
-
-backward
-dir
-
-c
-dir
-
-Makefile.in
-file
-
-
-
-
-2012-04-26T00:33:21.901413Z
-17eff0bb824d9035890ec502875b976d
-2012-03-19T23:48:16.315073Z
-185548
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-65001
-
-debug
-dir
-

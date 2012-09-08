@@ -1,49 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/go
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-03-30T22:36:44.121638Z
-186029
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-ast
-dir
-
-scanner
-dir
-
-parser
-dir
-
-build
-dir
-
-token
-dir
-
-printer
-dir
-
-doc
-dir
-

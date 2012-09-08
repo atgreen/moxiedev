@@ -1,58 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/tr1/8_c_compatibility
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2011-11-12T15:57:03.405739Z
-181321
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-cctype
-dir
-
-complex
-dir
-
-cwchar
-dir
-
-cstdint
-dir
-
-cmath
-dir
-
-cwctype
-dir
-
-cfenv
-dir
-
-cinttypes
-dir
-
-cstdlib
-dir
-
-cstdio
-dir
-

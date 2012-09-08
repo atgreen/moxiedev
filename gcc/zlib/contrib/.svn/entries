@@ -1,122 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/zlib/contrib
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-03-02T17:24:45.458146Z
-184806
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-iostream3
-dir
-
-untgz
-dir
-
-dotzlib
-dir
-
-amd64
-dir
-
-minizip
-dir
-
-iostream
-dir
-
-asm686
-dir
-
-ada
-dir
-
-infback9
-dir
-
-README.contrib
-file
-
-
-
-
-2012-04-26T00:33:30.237414Z
-fe1aa939bc61cde4afc0d1ea23b01ed5
-2012-03-02T17:15:20.251905Z
-184805
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3120
-
-vstudio
-dir
-
-masmx64
-dir
-
-testzlib
-dir
-
-puff
-dir
-
-inflate86
-dir
-
-pascal
-dir
-
-masmx86
-dir
-
-gcc_gvmat64
-dir
-
-blast
-dir
-
-delphi
-dir
-
-iostream2
-dir
-

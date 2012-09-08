@@ -1,100 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/ada/acats/tests
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-03-13T10:22:56.464395Z
-185325
-ro
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-cxf
-dir
-
-a
-dir
-
-cxg
-dir
-
-cxh
-dir
-
-d
-dir
-
-ca
-dir
-
-e
-dir
-
-cb
-dir
-
-cc
-dir
-
-cd
-dir
-
-ce
-dir
-
-l
-dir
-
-gcc
-dir
-
-c2
-dir
-
-c3
-dir
-
-c4
-dir
-
-c5
-dir
-
-c6
-dir
-
-c7
-dir
-
-c8
-dir
-
-cxa
-dir
-
-c9
-dir
-
-cxb
-dir
-
-cz
-dir
-

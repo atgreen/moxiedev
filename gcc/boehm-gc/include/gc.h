@@ -503,7 +503,7 @@ GC_API GC_PTR GC_malloc_atomic_ignore_off_page GC_PROTO((size_t lb));
 #if defined(__linux__) || defined(__GLIBC__)
 # include <features.h>
 # if (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 1 || __GLIBC__ > 2) \
-    && !defined(__ia64__) && !defined(__moxie__)
+     && !defined(__ia64__)
 #   ifndef GC_HAVE_BUILTIN_BACKTRACE
 #     define GC_HAVE_BUILTIN_BACKTRACE
 #   endif

@@ -40,7 +40,7 @@ details.  */
 
 char *_Jv_Module_Load_Path = NULL;
 
-#if 0
+#ifdef USE_LTDL
 #include <ltdl.h>
 
 void
@@ -379,7 +379,7 @@ gnu::classpath::SystemProperties::insertSystemProperties (::java::util::Properti
   else
     {
       // Set a value for user code to see.
-#if 0
+#ifdef USE_LTDL
       char *libpath = getenv (LTDL_SHLIBPATH_VAR);
       char* val = _Jv_PrependVersionedLibdir (libpath);
       SET ("java.library.path", val);

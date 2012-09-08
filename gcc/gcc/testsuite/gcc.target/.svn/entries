@@ -1,91 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-04-26T00:02:12.845025Z
-186850
-amodra
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-ia64
-dir
-
-spu
-dir
-
-mips
-dir
-
-sparc
-dir
-
-sh
-dir
-
-epiphany
-dir
-
-bfin
-dir
-
-arm
-dir
-
-powerpc
-dir
-
-alpha
-dir
-
-m68k
-dir
-
-microblaze
-dir
-
-avr
-dir
-
-i386
-dir
-
-rx
-dir
-
-xstormy16
-dir
-
-frv
-dir
-
-tic6x
-dir
-
-s390
-dir
-
-x86_64
-dir
-
-cris
-dir
-

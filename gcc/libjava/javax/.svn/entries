@@ -1,79 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libjava/javax
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-03-23T15:19:26.333085Z
-185741
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-transaction
-dir
-
-net
-dir
-
-accessibility
-dir
-
-rmi
-dir
-
-swing
-dir
-
-sound
-dir
-
-activity
-dir
-
-print
-dir
-
-sql
-dir
-
-xml
-dir
-
-tools
-dir
-
-activation
-dir
-
-security
-dir
-
-naming
-dir
-
-imageio
-dir
-
-management
-dir
-
-crypto
-dir
-

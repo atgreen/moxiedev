@@ -1,55 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libitm/config
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-04-04T15:49:23.454424Z
-186140
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-linux
-dir
-
-arm
-dir
-
-powerpc
-dir
-
-posix
-dir
-
-alpha
-dir
-
-x86
-dir
-
-sparc
-dir
-
-sh
-dir
-
-generic
-dir
-

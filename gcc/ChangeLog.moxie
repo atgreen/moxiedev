@@ -1,6 +1,0 @@
-2009-04-16  Anthony Green  <green@moxielogic.com>
-
-	* MAINTAINERS: Add self as moxie maintainer.
-	* config.sub: Add moxie support.
-	* configure.ac: Add moxie support.
-	* configure: Rebuilt.

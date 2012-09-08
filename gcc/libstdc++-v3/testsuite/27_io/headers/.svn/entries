@@ -1,58 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/headers
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2011-10-31T19:34:14.500734Z
-180707
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-cinttypes
-dir
-
-iostream
-dir
-
-istream
-dir
-
-cstdio
-dir
-
-streambuf
-dir
-
-ios
-dir
-
-ostream
-dir
-
-iomanip
-dir
-
-sstream
-dir
-
-fstream
-dir
-

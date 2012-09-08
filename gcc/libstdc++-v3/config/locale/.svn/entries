@@ -1,43 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/config/locale
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-03-09T19:48:55.064632Z
-185149
-schwab
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-gnu
-dir
-
-ieee_1003.1-2001
-dir
-
-generic
-dir
-
-newlib
-dir
-
-darwin
-dir
-

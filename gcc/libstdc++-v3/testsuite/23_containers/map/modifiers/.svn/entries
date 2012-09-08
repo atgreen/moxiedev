@@ -1,37 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/map/modifiers
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2011-11-15T23:28:49.992963Z
-181394
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-erase
-dir
-
-insert
-dir
-
-swap
-dir
-

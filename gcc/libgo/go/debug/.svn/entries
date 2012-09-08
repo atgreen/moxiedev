@@ -1,43 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libgo/go/debug
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-04-20T18:44:09.759109Z
-186633
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-dwarf
-dir
-
-pe
-dir
-
-elf
-dir
-
-macho
-dir
-
-gosym
-dir
-

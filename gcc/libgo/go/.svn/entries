@@ -1,148 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libgo/go
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-04-25T04:40:49.984010Z
-186803
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-flag
-dir
-
-syscall
-dir
-
-errors
-dir
-
-old
-dir
-
-os
-dir
-
-image
-dir
-
-hash
-dir
-
-runtime
-dir
-
-text
-dir
-
-debug
-dir
-
-encoding
-dir
-
-unicode
-dir
-
-math
-dir
-
-strings
-dir
-
-compress
-dir
-
-exp
-dir
-
-time
-dir
-
-bufio
-dir
-
-html
-dir
-
-database
-dir
-
-expvar
-dir
-
-sync
-dir
-
-testing
-dir
-
-crypto
-dir
-
-archive
-dir
-
-log
-dir
-
-container
-dir
-
-reflect
-dir
-
-bytes
-dir
-
-fmt
-dir
-
-net
-dir
-
-sort
-dir
-
-mime
-dir
-
-regexp
-dir
-
-path
-dir
-
-strconv
-dir
-
-go
-dir
-
-builtin
-dir
-
-io
-dir
-
-index
-dir
-

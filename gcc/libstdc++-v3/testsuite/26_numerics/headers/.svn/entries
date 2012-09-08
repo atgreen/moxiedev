@@ -1,55 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/26_numerics/headers
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-04-14T01:34:00.445268Z
-186445
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-numeric
-dir
-
-cstdlib
-dir
-
-complex
-dir
-
-ctgmath
-dir
-
-ccomplex
-dir
-
-cmath
-dir
-
-random
-dir
-
-cfenv
-dir
-
-valarray
-dir
-

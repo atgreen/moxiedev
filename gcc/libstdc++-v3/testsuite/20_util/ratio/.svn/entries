@@ -1,40 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util/ratio
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-03-08T05:20:52.412735Z
-185094
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-comparisons
-dir
-
-cons
-dir
-
-operations
-dir
-
-requirements
-dir
-

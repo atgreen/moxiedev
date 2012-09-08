@@ -1,34 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_istream/readsome
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-01-25T19:00:30.296236Z
-183531
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-char
-dir
-
-wchar_t
-dir
-

@@ -1,67 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libjava/java
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-03-26T16:24:33.522834Z
-185811
-gerald
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-text
-dir
-
-applet
-dir
-
-nio
-dir
-
-net
-dir
-
-io
-dir
-
-rmi
-dir
-
-security
-dir
-
-beans
-dir
-
-math
-dir
-
-awt
-dir
-
-util
-dir
-
-sql
-dir
-
-lang
-dir
-

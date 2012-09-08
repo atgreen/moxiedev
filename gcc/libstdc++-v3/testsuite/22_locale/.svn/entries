@@ -1,97 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-03-14T16:33:37.926982Z
-185390
-ro
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-money_get
-dir
-
-time_put
-dir
-
-codecvt
-dir
-
-num_put
-dir
-
-moneypunct_byname
-dir
-
-time_get
-dir
-
-num_get
-dir
-
-locale
-dir
-
-moneypunct
-dir
-
-messages_byname
-dir
-
-numpunct_byname
-dir
-
-messages
-dir
-
-numpunct
-dir
-
-headers
-dir
-
-global_templates
-dir
-
-ctype_base
-dir
-
-collate_byname
-dir
-
-money_put
-dir
-
-ctype_byname
-dir
-
-facet
-dir
-
-codecvt_byname
-dir
-
-collate
-dir
-
-ctype
-dir
-

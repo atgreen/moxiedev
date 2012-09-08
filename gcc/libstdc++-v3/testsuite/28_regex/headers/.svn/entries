@@ -1,34 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/28_regex/headers
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2011-10-31T19:34:14.500734Z
-180707
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-regex
-dir
-
-04_header
-dir
-

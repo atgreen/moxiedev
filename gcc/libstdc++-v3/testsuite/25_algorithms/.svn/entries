@@ -1,289 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/25_algorithms
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2012-04-23T11:17:28.155053Z
-186701
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-sort_heap
-dir
-
-sort
-dir
-
-count
-dir
-
-replace_if
-dir
-
-generate
-dir
-
-pop_heap
-dir
-
-all_of
-dir
-
-partial_sort_copy
-dir
-
-iter_swap
-dir
-
-remove
-dir
-
-merge
-dir
-
-set_symmetric_difference
-dir
-
-prev_permutation
-dir
-
-lexicographical_compare
-dir
-
-for_each
-dir
-
-equal
-dir
-
-partition
-dir
-
-transform
-dir
-
-replace
-dir
-
-is_partitioned
-dir
-
-heap
-dir
-
-min
-dir
-
-is_heap_until
-dir
-
-max
-dir
-
-minmax
-dir
-
-is_sorted
-dir
-
-random_shuffle
-dir
-
-min_element
-dir
-
-max_element
-dir
-
-minmax_element
-dir
-
-stable_partition
-dir
-
-set_union
-dir
-
-replace_copy
-dir
-
-mismatch
-dir
-
-move
-dir
-
-find_end
-dir
-
-includes
-dir
-
-is_sorted_until
-dir
-
-generate_n
-dir
-
-adjacent_find
-dir
-
-copy
-dir
-
-remove_if
-dir
-
-upper_bound
-dir
-
-none_of
-dir
-
-fill
-dir
-
-copy_if
-dir
-
-inplace_merge
-dir
-
-find_if
-dir
-
-unique_copy
-dir
-
-nth_element
-dir
-
-move_backward
-dir
-
-remove_copy_if
-dir
-
-set_difference
-dir
-
-count_if
-dir
-
-unique
-dir
-
-is_heap
-dir
-
-copy_backward
-dir
-
-swap_ranges
-dir
-
-binary_search
-dir
-
-swap
-dir
-
-reverse
-dir
-
-find_first_of
-dir
-
-lower_bound
-dir
-
-set_intersection
-dir
-
-stable_sort
-dir
-
-search_n
-dir
-
-partition_point
-dir
-
-replace_copy_if
-dir
-
-equal_range
-dir
-
-copy_n
-dir
-
-remove_copy
-dir
-
-rotate_copy
-dir
-
-shuffle
-dir
-
-rotate
-dir
-
-is_permutation
-dir
-
-partial_sort
-dir
-
-partition_copy
-dir
-
-fill_n
-dir
-
-next_permutation
-dir
-
-reverse_copy
-dir
-
-search
-dir
-
-make_heap
-dir
-
-any_of
-dir
-
-headers
-dir
-
-push_heap
-dir
-
-find_if_not
-dir
-
-find
-dir
-

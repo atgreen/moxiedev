@@ -1,34 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/manipulators/extended
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2011-11-28T13:24:23.758937Z
-181775
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-get_money
-dir
-
-put_money
-dir
-

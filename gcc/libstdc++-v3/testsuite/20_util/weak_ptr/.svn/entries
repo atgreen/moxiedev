@@ -1,43 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util/weak_ptr
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2011-10-18T17:39:15.101878Z
-180159
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-requirements
-dir
-
-lock
-dir
-
-comparison
-dir
-
-observers
-dir
-
-cons
-dir
-

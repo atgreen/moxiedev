@@ -1,73 +1,0 @@
-10
-
-dir
-186854
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/18_support/headers
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2011-11-07T08:46:58.527062Z
-181076
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-climits
-dir
-
-csetjmp
-dir
-
-cfloat
-dir
-
-cstdint
-dir
-
-cstdalign
-dir
-
-cstdbool
-dir
-
-cstddef
-dir
-
-csignal
-dir
-
-cstdlib
-dir
-
-cstdarg
-dir
-
-new
-dir
-
-typeinfo
-dir
-
-exception
-dir
-
-ctime
-dir
-
-limits
-dir
-

@@ -1,7 +1,6 @@
 /* Support for printing Modula 2 types for GDB, the GNU debugger.
-   Copyright (C) 1986, 1988, 1989, 1991, 1992, 1995, 2000, 2001, 2002, 2003,
-                 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-                 Free Software Foundation, Inc.
+   Copyright (C) 1986, 1988-1989, 1991-1992, 1995, 2000-2012 Free
+   Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -608,10 +607,11 @@ m2_enum (struct type *type, struct ui_file *stream, int show, int level)
 	    fprintf_filtered (stream, ", ");
 	  wrap_here ("    ");
 	  fputs_filtered (TYPE_FIELD_NAME (type, i), stream);
-	  if (lastval != TYPE_FIELD_BITPOS (type, i))
+	  if (lastval != TYPE_FIELD_ENUMVAL (type, i))
 	    {
-	      fprintf_filtered (stream, " = %d", TYPE_FIELD_BITPOS (type, i));
-	      lastval = TYPE_FIELD_BITPOS (type, i);
+	      fprintf_filtered (stream, " = %s",
+				plongest (TYPE_FIELD_ENUMVAL (type, i)));
+	      lastval = TYPE_FIELD_ENUMVAL (type, i);
 	    }
 	  lastval++;
 	}

@@ -1,6 +1,5 @@
 /* C preprocessor macro expansion for GDB.
-   Copyright (C) 2002, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2002, 2007-2012 Free Software Foundation, Inc.
    Contributed by Red Hat, Inc.
 
    This file is part of GDB.
@@ -114,6 +113,17 @@ free_buffer (struct macro_buffer *b)
     xfree (b->text);
 }
 
+/* Like free_buffer, but return the text as an xstrdup()d string.
+   This only exists to try to make the API relatively clean.  */
+
+static char *
+free_buffer_return_text (struct macro_buffer *b)
+{
+  gdb_assert (! b->shared);
+  gdb_assert (b->size);
+  /* Nothing to do.  */
+  return b->text;
+}
 
 /* A cleanup function for macro buffers.  */
 static void
@@ -640,7 +650,7 @@ append_tokens_without_splicing (struct macro_buffer *dest,
    stringify; it is LEN bytes long.  */
 
 static void
-stringify (struct macro_buffer *dest, char *arg, int len)
+stringify (struct macro_buffer *dest, const char *arg, int len)
 {
   /* Trim initial whitespace from ARG.  */
   while (len > 0 && macro_is_whitespace (*arg))
@@ -681,6 +691,22 @@ stringify (struct macro_buffer *dest, char *arg, int len)
     }
   appendc (dest, '"');
   dest->last_token = dest->len;
+}
+
+/* See macroexp.h.  */
+
+char *
+macro_stringify (const char *str)
+{
+  struct macro_buffer buffer;
+  int len = strlen (str);
+  char *result;
+
+  init_buffer (&buffer, len);
+  stringify (&buffer, str, len);
+  appendc (&buffer, '\0');
+
+  return free_buffer_return_text (&buffer);
 }
 
 

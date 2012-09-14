@@ -2,8 +2,7 @@
 
 @c This file is part of the GDB manual.
 @c
-@c Copyright (C) 2003, 2004, 2005, 2006, 2008, 2009, 2010, 2011
-@c Free Software Foundation, Inc.
+@c Copyright (C) 2003-2006, 2008-2012 Free Software Foundation, Inc.
 @c
 @c See the file gdbint.texinfo for copying conditions.
 @c
@@ -225,6 +224,18 @@ to the current inferior at @var{addr}.
 @deftypefun void before_prompt (const char *@var{current_prompt})
 Called before a top-level prompt is displayed.  @var{current_prompt} is
 the current top-level prompt.
+@end deftypefun
+
+@deftypefun void gdb_datadir_changed (void)
+Variable gdb_datadir has been set.  The value may not necessarily change.
+@end deftypefun
+
+@deftypefun void command_param_changed (const char *@var{param}, const char *@var{value})
+The parameter of some @code{set} commands in console are changed.  This
+method is called after a command @code{set @var{param} @var{value}}.
+@var{param} is the parameter of @code{set} command, and @var{value}
+is the value of changed parameter.
+
 @end deftypefun
 
 @deftypefun void test_notification (int @var{somearg})

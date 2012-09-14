@@ -1,7 +1,6 @@
 /* GNU/Linux on ARM target support.
 
-   Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1999-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -43,6 +42,12 @@
 #include "inferior.h"
 #include "gdbthread.h"
 #include "symfile.h"
+
+#include "cli/cli-utils.h"
+#include "stap-probe.h"
+#include "parser-defs.h"
+#include "user-regs.h"
+#include <ctype.h>
 
 #include "gdb_string.h"
 
@@ -843,7 +848,12 @@ arm_linux_software_single_step (struct frame_info *frame)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   struct address_space *aspace = get_frame_address_space (frame);
-  CORE_ADDR next_pc = arm_get_next_pc (frame, get_frame_pc (frame));
+  CORE_ADDR next_pc;
+
+  if (arm_deal_with_atomic_sequence (frame))
+    return 1;
+
+  next_pc = arm_get_next_pc (frame, get_frame_pc (frame));
 
   /* The Linux kernel offers some user-mode helpers in a high page.  We can
      not read this page (as of 2.6.23), and even if we could then we couldn't
@@ -932,6 +942,9 @@ arm_linux_copy_svc (struct gdbarch *gdbarch, struct regcache *regs,
 	      inferior_thread ()->control.step_resume_breakpoint
         	= set_momentary_breakpoint (gdbarch, sal, get_frame_id (frame),
 					    bp_step_resume);
+
+	      /* set_momentary_breakpoint invalidates FRAME.  */
+	      frame = NULL;
 
 	      /* We need to make sure we actually insert the momentary
 	         breakpoint set above.  */
@@ -1049,6 +1062,122 @@ arm_linux_displaced_step_copy_insn (struct gdbarch *gdbarch,
   return dsc;
 }
 
+static int
+arm_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
+{
+  return (*s == '#' /* Literal number.  */
+	  || *s == '[' /* Register indirection or
+			  displacement.  */
+	  || isalpha (*s)); /* Register value.  */
+}
+
+/* This routine is used to parse a special token in ARM's assembly.
+
+   The special tokens parsed by it are:
+
+      - Register displacement (e.g, [fp, #-8])
+
+   It returns one if the special token has been parsed successfully,
+   or zero if the current token is not considered special.  */
+
+static int
+arm_stap_parse_special_token (struct gdbarch *gdbarch,
+			      struct stap_parse_info *p)
+{
+  if (*p->arg == '[')
+    {
+      /* Temporary holder for lookahead.  */
+      const char *tmp = p->arg;
+      /* Used to save the register name.  */
+      const char *start;
+      char *regname;
+      int len, offset;
+      int got_minus = 0;
+      long displacement;
+      struct stoken str;
+
+      ++tmp;
+      start = tmp;
+
+      /* Register name.  */
+      while (isalnum (*tmp))
+	++tmp;
+
+      if (*tmp != ',')
+	return 0;
+
+      len = tmp - start;
+      regname = alloca (len + 2);
+
+      offset = 0;
+      if (isdigit (*start))
+	{
+	  /* If we are dealing with a register whose name begins with a
+	     digit, it means we should prefix the name with the letter
+	     `r', because GDB expects this name pattern.  Otherwise (e.g.,
+	     we are dealing with the register `fp'), we don't need to
+	     add such a prefix.  */
+	  regname[0] = 'r';
+	  offset = 1;
+	}
+
+      strncpy (regname + offset, start, len);
+      len += offset;
+      regname[len] = '\0';
+
+      if (user_reg_map_name_to_regnum (gdbarch, regname, len) == -1)
+	error (_("Invalid register name `%s' on expression `%s'."),
+	       regname, p->saved_arg);
+
+      ++tmp;
+      tmp = skip_spaces_const (tmp);
+      if (*tmp++ != '#')
+	return 0;
+
+      if (*tmp == '-')
+	{
+	  ++tmp;
+	  got_minus = 1;
+	}
+
+      displacement = strtol (tmp, (char **) &tmp, 10);
+
+      /* Skipping last `]'.  */
+      if (*tmp++ != ']')
+	return 0;
+
+      /* The displacement.  */
+      write_exp_elt_opcode (OP_LONG);
+      write_exp_elt_type (builtin_type (gdbarch)->builtin_long);
+      write_exp_elt_longcst (displacement);
+      write_exp_elt_opcode (OP_LONG);
+      if (got_minus)
+	write_exp_elt_opcode (UNOP_NEG);
+
+      /* The register name.  */
+      write_exp_elt_opcode (OP_REGISTER);
+      str.ptr = regname;
+      str.length = len;
+      write_exp_string (str);
+      write_exp_elt_opcode (OP_REGISTER);
+
+      write_exp_elt_opcode (BINOP_ADD);
+
+      /* Casting to the expected type.  */
+      write_exp_elt_opcode (UNOP_CAST);
+      write_exp_elt_type (lookup_pointer_type (p->arg_type));
+      write_exp_elt_opcode (UNOP_CAST);
+
+      write_exp_elt_opcode (UNOP_IND);
+
+      p->arg = tmp;
+    }
+  else
+    return 0;
+
+  return 1;
+}
+
 static void
 arm_linux_init_abi (struct gdbarch_info info,
 		    struct gdbarch *gdbarch)
@@ -1148,8 +1277,23 @@ arm_linux_init_abi (struct gdbarch_info info,
 					   simple_displaced_step_free_closure);
   set_gdbarch_displaced_step_location (gdbarch, displaced_step_at_entry_point);
 
+  /* Reversible debugging, process record.  */
+  set_gdbarch_process_record (gdbarch, arm_process_record);
+
+  /* SystemTap functions.  */
+  set_gdbarch_stap_integer_prefix (gdbarch, "#");
+  set_gdbarch_stap_register_prefix (gdbarch, "r");
+  set_gdbarch_stap_register_indirection_prefix (gdbarch, "[");
+  set_gdbarch_stap_register_indirection_suffix (gdbarch, "]");
+  set_gdbarch_stap_gdb_register_prefix (gdbarch, "r");
+  set_gdbarch_stap_is_single_operand (gdbarch, arm_stap_is_single_operand);
+  set_gdbarch_stap_parse_special_token (gdbarch,
+					arm_stap_parse_special_token);
 
   tdep->syscall_next_pc = arm_linux_syscall_next_pc;
+
+  /* Syscall record.  */
+  tdep->arm_swi_record = NULL;
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */

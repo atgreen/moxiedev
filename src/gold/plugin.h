@@ -393,7 +393,9 @@ class Pluginobj : public Object
 
   // Fill in the symbol resolution status for the given plugin symbols.
   ld_plugin_status
-  get_symbol_resolution_info(int nsyms, ld_plugin_symbol* syms) const;
+  get_symbol_resolution_info(int nsyms,
+			     ld_plugin_symbol* syms,
+			     int version) const;
 
   // Store the incoming symbols from the plugin for later processing.
   void
@@ -491,8 +493,9 @@ class Sized_pluginobj : public Pluginobj
   do_section_name(unsigned int shndx);
 
   // Return a view of the contents of a section.
-  Object::Location
-  do_section_contents(unsigned int shndx);
+  const unsigned char*
+  do_section_contents(unsigned int shndx, section_size_type* plen,
+		      bool cache);
 
   // Return section flags.
   uint64_t

@@ -81,30 +81,25 @@ scan_relocs(
 	  unsigned int shndx = lsym.get_st_shndx();
 	  bool is_ordinary;
 	  shndx = object->adjust_sym_shndx(r_sym, shndx, &is_ordinary);
-	  if (is_ordinary
-	      && shndx != elfcpp::SHN_UNDEF
-	      && !object->is_section_included(shndx)
-              && !symtab->is_section_folded(object, shndx))
-	    {
-	      // RELOC is a relocation against a local symbol in a
-	      // section we are discarding.  We can ignore this
-	      // relocation.  It will eventually become a reloc
-	      // against the value zero.
-	      //
-	      // FIXME: We should issue a warning if this is an
-	      // allocated section; is this the best place to do it?
-	      // 
-	      // FIXME: The old GNU linker would in some cases look
-	      // for the linkonce section which caused this section to
-	      // be discarded, and, if the other section was the same
-	      // size, change the reloc to refer to the other section.
-	      // That seems risky and weird to me, and I don't know of
-	      // any case where it is actually required.
-
-	      continue;
-	    }
+	  // If RELOC is a relocation against a local symbol in a
+	  // section we are discarding then we can ignore it.  It will
+	  // eventually become a reloc against the value zero.
+	  //
+	  // FIXME: We should issue a warning if this is an
+	  // allocated section; is this the best place to do it?
+	  // 
+	  // FIXME: The old GNU linker would in some cases look
+	  // for the linkonce section which caused this section to
+	  // be discarded, and, if the other section was the same
+	  // size, change the reloc to refer to the other section.
+	  // That seems risky and weird to me, and I don't know of
+	  // any case where it is actually required.
+	  bool is_discarded = (is_ordinary
+			       && shndx != elfcpp::SHN_UNDEF
+			       && !object->is_section_included(shndx)
+			       && !symtab->is_section_folded(object, shndx));
 	  scan.local(symtab, layout, target, object, data_shndx,
-		     output_section, reloc, r_type, lsym);
+		     output_section, reloc, r_type, lsym, is_discarded);
 	}
       else
 	{
@@ -423,17 +418,17 @@ apply_relocation(const Relocate_info<size, big_endian>* relinfo,
 		 section_size_type view_size)
 {
   // Construct the ELF relocation in a temporary buffer.
-  const int reloc_size = elfcpp::Elf_sizes<64>::rela_size;
+  const int reloc_size = elfcpp::Elf_sizes<size>::rela_size;
   unsigned char relbuf[reloc_size];
-  elfcpp::Rela<64, false> rel(relbuf);
-  elfcpp::Rela_write<64, false> orel(relbuf);
+  elfcpp::Rela<size, big_endian> rel(relbuf);
+  elfcpp::Rela_write<size, big_endian> orel(relbuf);
   orel.put_r_offset(r_offset);
-  orel.put_r_info(elfcpp::elf_r_info<64>(0, r_type));
+  orel.put_r_info(elfcpp::elf_r_info<size>(0, r_type));
   orel.put_r_addend(r_addend);
 
   // Setup a Symbol_value for the global symbol.
-  const Sized_symbol<64>* sym = static_cast<const Sized_symbol<64>*>(gsym);
-  Symbol_value<64> symval;
+  const Sized_symbol<size>* sym = static_cast<const Sized_symbol<size>*>(gsym);
+  Symbol_value<size> symval;
   gold_assert(sym->has_symtab_index() && sym->symtab_index() != -1U);
   symval.set_output_symtab_index(sym->symtab_index());
   symval.set_output_value(sym->value());
@@ -590,12 +585,12 @@ scan_relocatable_relocs(
     }
 }
 
-// Relocate relocs during a relocatable link.  This is a default
-// definition which should work for most targets.
+// Relocate relocs.  Called for a relocatable link, and for --emit-relocs.
+// This is a default definition which should work for most targets.
 
 template<int size, bool big_endian, int sh_type>
 void
-relocate_for_relocatable(
+relocate_relocs(
     const Relocate_info<size, big_endian>* relinfo,
     const unsigned char* prelocs,
     size_t reloc_count,
@@ -669,6 +664,7 @@ relocate_for_relocatable(
 	    case Relocatable_relocs::RELOC_ADJUST_FOR_SECTION_2:
 	    case Relocatable_relocs::RELOC_ADJUST_FOR_SECTION_4:
 	    case Relocatable_relocs::RELOC_ADJUST_FOR_SECTION_8:
+	    case Relocatable_relocs::RELOC_ADJUST_FOR_SECTION_4_UNALIGNED:
 	      {
 		// We are adjusting a section symbol.  We need to find
 		// the symbol table index of the section symbol for
@@ -788,6 +784,12 @@ relocate_for_relocatable(
 	    case Relocatable_relocs::RELOC_ADJUST_FOR_SECTION_8:
 	      Relocate_functions<size, big_endian>::rel64(padd, object,
 							  psymval);
+	      break;
+
+	    case Relocatable_relocs::RELOC_ADJUST_FOR_SECTION_4_UNALIGNED:
+	      Relocate_functions<size, big_endian>::rel32_unaligned(padd,
+								    object,
+								    psymval);
 	      break;
 
 	    default:

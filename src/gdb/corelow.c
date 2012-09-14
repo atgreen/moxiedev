@@ -1,8 +1,7 @@
 /* Core dump and executable file functions below target vector, for GDB.
 
-   Copyright (C) 1986, 1987, 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
-   1998, 1999, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-   2011 Free Software Foundation, Inc.
+   Copyright (C) 1986-1987, 1989, 1991-2001, 2003-2012 Free Software
+   Foundation, Inc.
 
    This file is part of GDB.
 
@@ -47,8 +46,7 @@
 #include "filenames.h"
 #include "progspace.h"
 #include "objfiles.h"
-#include "wrapper.h"
-
+#include "gdb_bfd.h"
 
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
@@ -77,9 +75,6 @@ struct gdbarch *core_gdbarch = NULL;
    implementation detail of the core target, just like ptrace is for
    unix child targets.  */
 static struct target_section_table *core_data;
-
-/* True if we needed to fake the pid of the loaded core inferior.  */
-static int core_has_fake_pid = 0;
 
 static void core_files_info (struct target_ops *);
 
@@ -132,8 +127,7 @@ default_core_sniffer (struct core_fns *our_fns, bfd *abfd)
 }
 
 /* Walk through the list of core functions to find a set that can
-   handle the core file open on ABFD.  Default to the first one in the
-   list if nothing matches.  Returns pointer to set that is
+   handle the core file open on ABFD.  Returns pointer to set that is
    selected.  */
 
 static struct core_fns *
@@ -162,15 +156,9 @@ sniff_core_bfd (bfd *abfd)
 	       bfd_get_filename (abfd), matches);
     }
   else if (matches == 0)
-    {
-      warning (_("\"%s\": no core file handler "
-		 "recognizes format, using default"),
-	       bfd_get_filename (abfd));
-    }
-  if (yummy == NULL)
-    {
-      yummy = core_file_fns;
-    }
+    error (_("\"%s\": no core file handler recognizes format"),
+	   bfd_get_filename (abfd));
+
   return (yummy);
 }
 
@@ -214,20 +202,21 @@ core_close (int quitting)
       int pid = ptid_get_pid (inferior_ptid);
       inferior_ptid = null_ptid;    /* Avoid confusion from thread
 				       stuff.  */
-      exit_inferior_silent (pid);
+      if (pid != 0)
+	exit_inferior_silent (pid);
 
       /* Clear out solib state while the bfd is still open.  See
          comments in clear_solib in solib.c.  */
       clear_solib ();
 
-      xfree (core_data->sections);
-      xfree (core_data);
-      core_data = NULL;
-      core_has_fake_pid = 0;
+      if (core_data)
+	{
+	  xfree (core_data->sections);
+	  xfree (core_data);
+	  core_data = NULL;
+	}
 
-      name = bfd_get_filename (core_bfd);
-      gdb_bfd_close_or_warn (core_bfd);
-      xfree (name);
+      gdb_bfd_unref (core_bfd);
       core_bfd = NULL;
     }
   core_vec = NULL;
@@ -250,6 +239,8 @@ add_to_thread_list (bfd *abfd, asection *asect, void *reg_sect_arg)
   int core_tid;
   int pid, lwpid;
   asection *reg_sect = (asection *) reg_sect_arg;
+  int fake_pid_p = 0;
+  struct inferior *inf;
 
   if (strncmp (bfd_section_name (abfd, asect), ".reg/", 5) != 0)
     return;
@@ -259,14 +250,18 @@ add_to_thread_list (bfd *abfd, asection *asect, void *reg_sect_arg)
   pid = bfd_core_file_pid (core_bfd);
   if (pid == 0)
     {
-      core_has_fake_pid = 1;
+      fake_pid_p = 1;
       pid = CORELOW_PID;
     }
 
   lwpid = core_tid;
 
-  if (current_inferior ()->pid == 0)
-    inferior_appeared (current_inferior (), pid);
+  inf = current_inferior ();
+  if (inf->pid == 0)
+    {
+      inferior_appeared (inf, pid);
+      inf->fake_pid_p = fake_pid_p;
+    }
 
   ptid = ptid_build (pid, lwpid, 0);
 
@@ -291,6 +286,7 @@ core_open (char *filename, int from_tty)
   bfd *temp_bfd;
   int scratch_chan;
   int flags;
+  volatile struct gdb_exception except;
 
   target_preopen (from_tty);
   if (!filename)
@@ -322,9 +318,9 @@ core_open (char *filename, int from_tty)
   if (scratch_chan < 0)
     perror_with_name (filename);
 
-  temp_bfd = bfd_fopen (filename, gnutarget, 
-			write_files ? FOPEN_RUB : FOPEN_RB,
-			scratch_chan);
+  temp_bfd = gdb_bfd_fopen (filename, gnutarget, 
+			    write_files ? FOPEN_RUB : FOPEN_RB,
+			    scratch_chan);
   if (temp_bfd == NULL)
     perror_with_name (filename);
 
@@ -335,7 +331,7 @@ core_open (char *filename, int from_tty)
       /* FIXME: should be checking for errors from bfd_close (for one
          thing, on error it does not free all the storage associated
          with the bfd).  */
-      make_cleanup_bfd_close (temp_bfd);
+      make_cleanup_bfd_unref (temp_bfd);
       error (_("\"%s\" is not a core dump: %s"),
 	     filename, bfd_errmsg (bfd_get_error ()));
     }
@@ -343,7 +339,7 @@ core_open (char *filename, int from_tty)
   /* Looks semi-reasonable.  Toss the old core file and work on the
      new.  */
 
-  discard_cleanups (old_chain);	/* Don't free filename any more */
+  do_cleanups (old_chain);
   unpush_target (&core_ops);
   core_bfd = temp_bfd;
   old_chain = make_cleanup (core_close_cleanup, 0 /*ignore*/);
@@ -387,7 +383,6 @@ core_open (char *filename, int from_tty)
   init_thread_list ();
 
   inferior_ptid = null_ptid;
-  core_has_fake_pid = 0;
 
   /* Need to flush the register cache (and the frame cache) from a
      previous debug session.  If inferior_ptid ends up the same as the
@@ -429,7 +424,13 @@ core_open (char *filename, int from_tty)
      may be a thread_stratum target loaded on top of target core by
      now.  The layer above should claim threads found in the BFD
      sections.  */
-  gdb_target_find_new_threads ();
+  TRY_CATCH (except, RETURN_MASK_ERROR)
+    {
+      target_find_new_threads ();
+    }
+
+  if (except.reason < 0)
+    exception_print (gdb_stderr, except);
 
   p = bfd_core_file_failing_command (core_bfd);
   if (p)
@@ -438,17 +439,20 @@ core_open (char *filename, int from_tty)
   siggy = bfd_core_file_failing_signal (core_bfd);
   if (siggy > 0)
     {
-      /* NOTE: target_signal_from_host() converts a target signal
-	 value into gdb's internal signal value.  Unfortunately gdb's
-	 internal value is called ``target_signal'' and this function
-	 got the name ..._from_host().  */
-      enum target_signal sig = (core_gdbarch != NULL
-		       ? gdbarch_target_signal_from_host (core_gdbarch,
-							  siggy)
-		       : target_signal_from_host (siggy));
+      /* If we don't have a CORE_GDBARCH to work with, assume a native
+	 core (map gdb_signal from host signals).  If we do have
+	 CORE_GDBARCH to work with, but no gdb_signal_from_target
+	 implementation for that gdbarch, as a fallback measure,
+	 assume the host signal mapping.  It'll be correct for native
+	 cores, but most likely incorrect for cross-cores.  */
+      enum gdb_signal sig = (core_gdbarch != NULL
+			     && gdbarch_gdb_signal_from_target_p (core_gdbarch)
+			     ? gdbarch_gdb_signal_from_target (core_gdbarch,
+							       siggy)
+			     : gdb_signal_from_host (siggy));
 
       printf_filtered (_("Program terminated with signal %d, %s.\n"),
-		       siggy, target_signal_to_string (sig));
+		       siggy, gdb_signal_to_string (sig));
     }
 
   /* Fetch all registers from core file.  */
@@ -848,6 +852,7 @@ static char *
 core_pid_to_str (struct target_ops *ops, ptid_t ptid)
 {
   static char buf[64];
+  struct inferior *inf;
   int pid;
 
   /* The preferred way is to have a gdbarch/OS specific
@@ -866,7 +871,8 @@ core_pid_to_str (struct target_ops *ops, ptid_t ptid)
 
   /* Otherwise, this isn't a "threaded" core -- use the PID field, but
      only if it isn't a fake PID.  */
-  if (!core_has_fake_pid)
+  inf = find_inferior_pid (ptid_get_pid (ptid));
+  if (inf != NULL && !inf->fake_pid_p)
     return normal_pid_to_str (ptid);
 
   /* No luck.  We simply don't have a valid PID to print.  */

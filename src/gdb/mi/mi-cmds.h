@@ -1,7 +1,7 @@
 /* MI Command Set for GDB, the GNU debugger.
 
-   Copyright (C) 2000, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2000, 2003-2005, 2007-2012 Free Software Foundation,
+   Inc.
 
    Contributed by Cygnus Solutions (a Red Hat company).
 
@@ -35,7 +35,9 @@ extern const char mi_all_values[];
 
 typedef void (mi_cmd_argv_ftype) (char *command, char **argv, int argc);
 
-/* Function implementing each command */
+/* Declarations of the functions implementing each command.  */
+
+extern mi_cmd_argv_ftype mi_cmd_ada_task_info;
 extern mi_cmd_argv_ftype mi_cmd_add_inferior;
 extern mi_cmd_argv_ftype mi_cmd_break_insert;
 extern mi_cmd_argv_ftype mi_cmd_break_commands;
@@ -71,6 +73,7 @@ extern mi_cmd_argv_ftype mi_cmd_file_list_exec_source_files;
 extern mi_cmd_argv_ftype mi_cmd_gdb_exit;
 extern mi_cmd_argv_ftype mi_cmd_inferior_tty_set;
 extern mi_cmd_argv_ftype mi_cmd_inferior_tty_show;
+extern mi_cmd_argv_ftype mi_cmd_info_os;
 extern mi_cmd_argv_ftype mi_cmd_interpreter_exec;
 extern mi_cmd_argv_ftype mi_cmd_list_features;
 extern mi_cmd_argv_ftype mi_cmd_list_target_features;
@@ -116,7 +119,7 @@ extern mi_cmd_argv_ftype mi_cmd_var_update;
 extern mi_cmd_argv_ftype mi_cmd_enable_pretty_printing;
 extern mi_cmd_argv_ftype mi_cmd_var_set_update_range;
 
-/* Description of a single command. */
+/* Description of a single command.  */
 
 struct mi_cli
 {
@@ -128,16 +131,22 @@ struct mi_cli
 
 struct mi_cmd
 {
-  /* official name of the command.  */
+  /* Official name of the command.  */
   const char *name;
   /* The corresponding CLI command that can be used to implement this
      MI command (if cli.lhs is non NULL).  */
   struct mi_cli cli;
   /* If non-null, the function implementing the MI command.  */
   mi_cmd_argv_ftype *argv_func;
+  /* If non-null, the pointer to a field in
+     'struct mi_suppress_notification', which will be set to true by MI
+     command processor (mi-main.c:mi_cmd_execute) when this command is
+     being executed.  It will be set back to false when command has been
+     executed.  */
+  int *suppress_notification;
 };
 
-/* Lookup a command in the mi comand table */
+/* Lookup a command in the MI command table.  */
 
 extern struct mi_cmd *mi_lookup (const char *command);
 

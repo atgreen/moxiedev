@@ -1,7 +1,6 @@
 /* Target-dependent code for Analog Devices Blackfin processor, for GDB.
 
-   Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2005-2012 Free Software Foundation, Inc.
 
    Contributed by Analog Devices, Inc.
 
@@ -664,7 +663,7 @@ bfin_store_return_value (struct type *type,
 
 static enum return_value_convention
 bfin_return_value (struct gdbarch *gdbarch,
-		   struct type *func_type,
+		   struct value *function,
 		   struct type *type,
 		   struct regcache *regcache,
 		   gdb_byte *readbuf,

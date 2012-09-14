@@ -1,5 +1,5 @@
-# Copyright 1992, 1994, 1996, 1997, 1998, 2001, 2003, 2007, 2008, 2009, 2010,
-# 2011 Free Software Foundation, Inc.
+# Copyright 1992, 1994, 1996-1998, 2001, 2003, 2007-2012 Free Software
+# Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,10 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # This file was written by Michael Snyder (msnyder@cygnus.com)
-
-if $tracelevel then {
-	strace $tracelevel
-}
 
 
 set testfile "setshow"
@@ -91,13 +87,17 @@ gdb_test_no_output "set annotate 0" "set annotate 0"
 gdb_test "show annotate" "Annotation_level is 0..*"  "show annotate (0)" 
 #test annotation_level 0
 gdb_test "info line 1" "Line 1 of .* is at address .* but contains no code.*"  "annotation_level 0" 
+
+gdb_test_no_output "set args ~"
+gdb_test "show args" "Argument list to give program being debugged when it is started is \"~\"..*" \
+    "show args ~"
 #test set args
 gdb_test_no_output "set args foo bar blup baz bubble" "set args" 
 #test show args
 gdb_test "show args" "Argument list to give program being debugged when it is started is \"foo bar blup baz bubble\"..*" "show args"
 
 # Don't test if we can't pass args or if we're using a stub.
-if { ![target_info exists use_gdb_stub] && ![target_info exists noargs] } {
+if { !$use_gdb_stub && ![target_info exists noargs] } {
     #test passing args
     gdb_test "cont" "Continuing.*" "continuing"
     delete_breakpoints
@@ -114,19 +114,22 @@ gdb_test "show check range" "Range checking is \"off\"\..*" "show check range (o
 #test set check range auto
 gdb_test_no_output "set check range auto" "set check range auto" 
 #test show check range auto
-gdb_test "show check range" "Range checking is \"auto; currently .*" "show check range (auto)" 
-#test set check type on
-gdb_test "set check type on" ".*" "set check type on" 
-#test show check type on
-gdb_test "show check type" "Type checking is \"on\"..*" "show check type (on)" 
-#test set check type off with trailing space
-gdb_test_no_output "set check type off " "set check type off" 
-#test show check type off
-gdb_test "show check type" "Type checking is \"off\"..*" "show check type (off)" 
-#test set check type auto
-gdb_test_no_output "set check type auto" "set check type auto" 
-#test show check type
-gdb_test "show check type" "Type checking is \"auto; currently .*" "show check type (auto)" 
+gdb_test "show check range" "Range checking is \"auto; currently .*" "show check range (auto)"
+
+# Test set check type on
+gdb_test "set check type on" ".*" "set check type on"
+
+# Test show check type on
+gdb_test "show check type" "Strict type checking is on\..*" \
+    "show check type (on)"
+
+# Test set check type off with trailing space
+gdb_test_no_output "set check type off " "set check type off"
+
+# Test show check type off
+gdb_test "show check type" "Strict type checking is off\..*" \
+    "show check type (off)"
+
 #test set complaints 100
 gdb_test_no_output "set complaints 100" "set complaints 100" 
 #test show complaints 100
@@ -246,10 +249,6 @@ gdb_test_no_output "set write on" "set write on"
 #test show write on
 # This is only supported on targets which use exec.o.
 gdb_test "show write" "Writing into executable and core files is on..*" "show write (on)" 
-#test set symbol-reloading on
-gdb_test_no_output "set symbol-reloading on" "set symbol-reloading on" 
-#test show symbol-reloading on
-gdb_test "show symbol-reloading" "Dynamic symbol table reloading multiple times in one run is on..*" "show symbol-reloading (on)" 
 #test show user
 gdb_test_no_output "show user" "show user" 
 #test set verbose on

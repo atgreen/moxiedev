@@ -1,6 +1,6 @@
 /* Simulator for Analog Devices Blackfin processors.
 
-   Copyright (C) 2005-2011 Free Software Foundation, Inc.
+   Copyright (C) 2005-2012 Free Software Foundation, Inc.
    Contributed by Analog Devices, Inc.
 
    This file is part of simulators.
@@ -161,7 +161,7 @@ bfin_syscall (SIM_CPU *cpu)
   bu32 args[6];
   CB_SYSCALL sc;
   char *p;
-  char _tbuf[512], *tbuf = _tbuf;
+  char _tbuf[1024 * 3], *tbuf = _tbuf, tstr[1024];
   int fmt_ret_hex = 0;
 
   CB_SYSCALL_INIT (&sc);
@@ -440,14 +440,18 @@ bfin_syscall (SIM_CPU *cpu)
       break;
 
     case CB_SYS_stat64:
-      tbuf += sprintf (tbuf, "stat64(%#x, %u)", args[0], args[1]);
+      if (cb_get_string (cb, &sc, tstr, sizeof (tstr), args[0]))
+	strcpy (tstr, "???");
+      tbuf += sprintf (tbuf, "stat64(%#x:\"%s\", %u)", args[0], tstr, args[1]);
       cb->stat_map = stat_map_64;
       sc.func = TARGET_LINUX_SYS_stat;
       cb_syscall (cb, &sc);
       cb->stat_map = stat_map_32;
       break;
     case CB_SYS_lstat64:
-      tbuf += sprintf (tbuf, "lstat64(%#x, %u)", args[0], args[1]);
+      if (cb_get_string (cb, &sc, tstr, sizeof (tstr), args[0]))
+	strcpy (tstr, "???");
+      tbuf += sprintf (tbuf, "lstat64(%#x:\"%s\", %u)", args[0], tstr, args[1]);
       cb->stat_map = stat_map_64;
       sc.func = TARGET_LINUX_SYS_lstat;
       cb_syscall (cb, &sc);
@@ -515,7 +519,10 @@ bfin_syscall (SIM_CPU *cpu)
       break;
 
     case CB_SYS_open:
-      tbuf += sprintf (tbuf, "open(%#x, %#x, %o)", args[0], args[1], args[2]);
+      if (cb_get_string (cb, &sc, tstr, sizeof (tstr), args[0]))
+	strcpy (tstr, "???");
+      tbuf += sprintf (tbuf, "open(%#x:\"%s\", %#x, %o)",
+		       args[0], tstr, args[1], args[2]);
       goto case_default;
     case CB_SYS_close:
       tbuf += sprintf (tbuf, "close(%i)", args[0]);
@@ -524,31 +531,47 @@ bfin_syscall (SIM_CPU *cpu)
       tbuf += sprintf (tbuf, "read(%i, %#x, %u)", args[0], args[1], args[2]);
       goto case_default;
     case CB_SYS_write:
-      tbuf += sprintf (tbuf, "write(%i, %#x, %u)", args[0], args[1], args[2]);
+      if (cb_get_string (cb, &sc, tstr, sizeof (tstr), args[1]))
+	strcpy (tstr, "???");
+      tbuf += sprintf (tbuf, "write(%i, %#x:\"%s\", %u)",
+		       args[0], args[1], tstr, args[2]);
       goto case_default;
     case CB_SYS_lseek:
       tbuf += sprintf (tbuf, "lseek(%i, %i, %i)", args[0], args[1], args[2]);
       goto case_default;
     case CB_SYS_unlink:
-      tbuf += sprintf (tbuf, "unlink(%#x)", args[0]);
+      if (cb_get_string (cb, &sc, tstr, sizeof (tstr), args[0]))
+	strcpy (tstr, "???");
+      tbuf += sprintf (tbuf, "unlink(%#x:\"%s\")", args[0], tstr);
       goto case_default;
     case CB_SYS_truncate:
-      tbuf += sprintf (tbuf, "truncate(%#x, %i)", args[0], args[1]);
+      if (cb_get_string (cb, &sc, tstr, sizeof (tstr), args[0]))
+	strcpy (tstr, "???");
+      tbuf += sprintf (tbuf, "truncate(%#x:\"%s\", %i)", args[0], tstr, args[1]);
       goto case_default;
     case CB_SYS_ftruncate:
       tbuf += sprintf (tbuf, "ftruncate(%i, %i)", args[0], args[1]);
       goto case_default;
     case CB_SYS_rename:
-      tbuf += sprintf (tbuf, "rename(%#x, %#x)", args[0], args[1]);
+      if (cb_get_string (cb, &sc, tstr, sizeof (tstr), args[0]))
+	strcpy (tstr, "???");
+      tbuf += sprintf (tbuf, "rename(%#x:\"%s\", ", args[0], tstr);
+      if (cb_get_string (cb, &sc, tstr, sizeof (tstr), args[1]))
+	strcpy (tstr, "???");
+      tbuf += sprintf (tbuf, "%#x:\"%s\")", args[1], tstr);
       goto case_default;
     case CB_SYS_stat:
-      tbuf += sprintf (tbuf, "stat(%#x, %#x)", args[0], args[1]);
+      if (cb_get_string (cb, &sc, tstr, sizeof (tstr), args[0]))
+	strcpy (tstr, "???");
+      tbuf += sprintf (tbuf, "stat(%#x:\"%s\", %#x)", args[0], tstr, args[1]);
       goto case_default;
     case CB_SYS_fstat:
       tbuf += sprintf (tbuf, "fstat(%i, %#x)", args[0], args[1]);
       goto case_default;
     case CB_SYS_lstat:
-      tbuf += sprintf (tbuf, "lstat(%i, %#x)", args[0], args[1]);
+      if (cb_get_string (cb, &sc, tstr, sizeof (tstr), args[0]))
+	strcpy (tstr, "???");
+      tbuf += sprintf (tbuf, "lstat(%#x:\"%s\", %#x)", args[0], tstr, args[1]);
       goto case_default;
     case CB_SYS_pipe:
       tbuf += sprintf (tbuf, "pipe(%#x, %#x)", args[0], args[1]);
@@ -1028,7 +1051,7 @@ bfin_user_init (SIM_DESC sd, SIM_CPU *cpu, struct bfd *abfd,
 
   /* start, at_phdr, at_phnum, at_base, at_entry, pt_dynamic  */
   bu32 elf_addrs[6];
-  bu32 auxvt, auxvt_size;
+  bu32 auxvt;
   bu32 exec_loadmap, ldso_loadmap;
   char *ldso_path;
 
@@ -1121,9 +1144,9 @@ bfin_user_init (SIM_DESC sd, SIM_CPU *cpu, struct bfd *abfd,
   sp -= 4; \
   auxvt = (at); \
   sim_write (sd, sp, (void *)&auxvt, 4)
-  auxvt_size = 0;
       unsigned int egid = getegid (), gid = getgid ();
       unsigned int euid = geteuid (), uid = getuid ();
+      bu32 auxvt_size = 0;
       AT_PUSH (AT_NULL, 0);
       AT_PUSH (AT_SECURE, egid != gid || euid != uid);
       AT_PUSH (AT_EGID, egid);

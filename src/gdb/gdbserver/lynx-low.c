@@ -1,4 +1,4 @@
-/* Copyright (C) 2009, 2010, 2011 Free Software Foundation, Inc.
+/* Copyright (C) 2009-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -450,7 +450,7 @@ retry:
   if (WIFSTOPPED (wstat))
     {
       status->kind = TARGET_WAITKIND_STOPPED;
-      status->value.integer = target_signal_from_host (WSTOPSIG (wstat));
+      status->value.integer = gdb_signal_from_host (WSTOPSIG (wstat));
       lynx_debug ("process stopped with signal: %d",
                   status->value.integer);
     }
@@ -463,7 +463,7 @@ retry:
   else if (WIFSIGNALED (wstat))
     {
       status->kind = TARGET_WAITKIND_SIGNALLED;
-      status->value.integer = target_signal_from_host (WTERMSIG (wstat));
+      status->value.integer = gdb_signal_from_host (WTERMSIG (wstat));
       lynx_debug ("process terminated with code: %d",
                   status->value.integer);
     }
@@ -473,7 +473,7 @@ retry:
 	 in fact get here.  But if we do, handle the event the best
 	 we can.  */
       status->kind = TARGET_WAITKIND_STOPPED;
-      status->value.integer = target_signal_from_host (0);
+      status->value.integer = gdb_signal_from_host (0);
       lynx_debug ("unknown event ????");
     }
 
@@ -481,7 +481,7 @@ retry:
      breakpoint events (Eg. new-thread events).  Handle those other types
      of events, and resume the execution if necessary.  */
   if (status->kind == TARGET_WAITKIND_STOPPED
-      && status->value.integer == TARGET_SIGNAL_TRAP)
+      && status->value.integer == GDB_SIGNAL_TRAP)
     {
       const int realsig = lynx_ptrace (PTRACE_GETTRACESIG, new_ptid, 0, 0, 0);
 

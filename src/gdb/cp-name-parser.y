@@ -1,7 +1,6 @@
 /* YACC parser for C++ names, for GDB.
 
-   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2003-2005, 2007-2012 Free Software Foundation, Inc.
 
    Parts of the lexer are based on c-exp.y from GDB.
 
@@ -171,6 +170,12 @@ static struct demangle_component *d_binary (const char *,
 #define yygindex cpname_yygindex
 #define yytable	 cpname_yytable
 #define yycheck	 cpname_yycheck
+#define yyss	cpname_yyss
+#define yysslim	cpname_yysslim
+#define yyssp	cpname_yyssp
+#define yystacksize cpname_yystacksize
+#define yyvs	cpname_yyvs
+#define yyvsp	cpname_yyvsp
 
 int yyparse (void);
 static int yylex (void);
@@ -189,7 +194,11 @@ fill_comp (enum demangle_component_type d_type, struct demangle_component *lhs,
 	   struct demangle_component *rhs)
 {
   struct demangle_component *ret = d_grab ();
-  cplus_demangle_fill_component (ret, d_type, lhs, rhs);
+  int i;
+
+  i = cplus_demangle_fill_component (ret, d_type, lhs, rhs);
+  gdb_assert (i);
+
   return ret;
 }
 
@@ -205,7 +214,11 @@ static struct demangle_component *
 make_operator (const char *name, int args)
 {
   struct demangle_component *ret = d_grab ();
-  cplus_demangle_fill_operator (ret, name, args);
+  int i;
+
+  i = cplus_demangle_fill_operator (ret, name, args);
+  gdb_assert (i);
+
   return ret;
 }
 
@@ -213,7 +226,11 @@ static struct demangle_component *
 make_dtor (enum gnu_v3_dtor_kinds kind, struct demangle_component *name)
 {
   struct demangle_component *ret = d_grab ();
-  cplus_demangle_fill_dtor (ret, kind, name);
+  int i;
+
+  i = cplus_demangle_fill_dtor (ret, kind, name);
+  gdb_assert (i);
+
   return ret;
 }
 
@@ -221,7 +238,11 @@ static struct demangle_component *
 make_builtin_type (const char *name)
 {
   struct demangle_component *ret = d_grab ();
-  cplus_demangle_fill_builtin_type (ret, name);
+  int i;
+
+  i = cplus_demangle_fill_builtin_type (ret, name);
+  gdb_assert (i);
+
   return ret;
 }
 
@@ -229,7 +250,11 @@ static struct demangle_component *
 make_name (const char *name, int len)
 {
   struct demangle_component *ret = d_grab ();
-  cplus_demangle_fill_name (ret, name, len);
+  int i;
+
+  i = cplus_demangle_fill_name (ret, name, len);
+  gdb_assert (i);
+
   return ret;
 }
 
@@ -421,13 +446,13 @@ demangler_special
 		;
 
 operator	:	OPERATOR NEW
-			{ $$ = make_operator ("new", 1); }
+			{ $$ = make_operator ("new", 3); }
 		|	OPERATOR DELETE
-			{ $$ = make_operator ("delete", 1); }
+			{ $$ = make_operator ("delete ", 1); }
 		|	OPERATOR NEW '[' ']'
-			{ $$ = make_operator ("new[]", 1); }
+			{ $$ = make_operator ("new[]", 3); }
 		|	OPERATOR DELETE '[' ']'
-			{ $$ = make_operator ("delete[]", 1); }
+			{ $$ = make_operator ("delete[] ", 1); }
 		|	OPERATOR '+'
 			{ $$ = make_operator ("+", 2); }
 		|	OPERATOR '-'
@@ -2028,9 +2053,6 @@ cp_merge_demangle_parse_infos (struct demangle_parse_info *dest,
   /* Clear the (pointer to) SRC's parse data so that it is not freed when
      cp_demangled_parse_info_free is called.  */
   src->info = NULL;
-
-  /* Assert if the SRC obstack is not empty.  */
-  gdb_assert (obstack_empty_p (&src->obstack));
 
   /* Free SRC.  */
   cp_demangled_name_parse_free (src);

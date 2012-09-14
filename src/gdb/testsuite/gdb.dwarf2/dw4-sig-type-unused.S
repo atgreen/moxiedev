@@ -1,4 +1,4 @@
-/* Copyright 2011 Free Software Foundation, Inc.
+/* Copyright 2011-2012 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,10 +15,10 @@
 
 	.section	.debug_info
 debug_start:
-	.long	debug_end - 1f	/* Length of Compilation Unit Info */
+	.4byte	debug_end - 1f	/* Length of Compilation Unit Info */
 1:
 	.2byte	0x4	/* DWARF version number */
-	.long	.Ldebug_abbrev0	/* Offset Into Abbrev. Section */
+	.4byte	.Ldebug_abbrev0	/* Offset Into Abbrev. Section */
 	.byte	0x4	/* Pointer Size (in bytes) */
 	.uleb128 0x3	/* (DIE (0xb) DW_TAG_compile_unit) */
 	.ascii "GNU C 4.4.3\0"	/* DW_AT_producer */
@@ -29,15 +29,15 @@ debug_end:
 	.section	.debug_types
 types_start:
 	.macro	unit sig1 sig2 name
-	.long	2f - 1f	/* Length of Compilation Unit Info */
+	.4byte	2f - 1f	/* Length of Compilation Unit Info */
 1:
 	.2byte	0x4	/* DWARF version number */
-	.long	.Ldebug_abbrev0	/* Offset Into Abbrev. Section */
+	.4byte	.Ldebug_abbrev0	/* Offset Into Abbrev. Section */
 	.byte	0x4	/* Pointer Size (in bytes) */
 	/* signature */
 	.4byte	\sig1
 	.4byte	\sig2
-	.long	3f-types_start	/* offset into type DIE */
+	.4byte	3f-types_start	/* offset into type DIE */
 	.uleb128 0x1	/* DW_TAG_type_unit) */
 	.byte	0x0c	/* DW_AT_language = DW_LANG_C99 */
 3:
@@ -58,7 +58,7 @@ types_start:
 	.section	.debug_abbrev
 .Ldebug_abbrev0:
 	.uleb128 0x1	/* (abbrev code) */
-	.uleb128 0x11	/* (TAG: DW_TAG_type_unit) */
+	.uleb128 0x41	/* (TAG: DW_TAG_type_unit) */
 	.byte	0x1	/* DW_children_yes */
 	.uleb128 0x13	/* (DW_AT_language) */
 	.uleb128 0xb	/* (DW_FORM_data1) */

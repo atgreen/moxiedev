@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright 2009-2012 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,6 +20,9 @@ struct s
   int a;
   int b;
 };
+
+typedef struct s TS;
+TS ts;
 
 #ifdef __cplusplus
 struct C
@@ -43,6 +46,10 @@ Temargs<D, 23, &C::c> temvar;
 
 #endif
 
+enum E
+{ v1, v2, v3
+};
+
 int
 main ()
 {
@@ -56,9 +63,12 @@ main ()
   d.e = 3;
   d.f = 4;
 #endif
-
+  enum E e;
+  
   st.a = 3;
   st.b = 5;
 
+  e = v2;
+  
   return 0;      /* break to inspect struct and array.  */
 }

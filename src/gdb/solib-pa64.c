@@ -1,7 +1,6 @@
 /* Handle PA64 shared libraries for GDB, the GNU Debugger.
 
-   Copyright (C) 2004, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2004, 2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -363,7 +362,7 @@ manpage for methods to privately map shared library text."));
 	 to find any magic formula to find it for Solaris (appears to
 	 be trivial on GNU/Linux).  Therefore, we have to try an alternate
 	 mechanism to find the dynamic linker's base address.  */
-      tmp_bfd = bfd_openr (buf, gnutarget);
+      tmp_bfd = gdb_bfd_open (buf, gnutarget, -1);
       if (tmp_bfd == NULL)
 	return;
 
@@ -372,7 +371,7 @@ manpage for methods to privately map shared library text."));
 	{
 	  warning (_("Unable to grok dynamic linker %s as an object file"),
 		   buf);
-	  bfd_close (tmp_bfd);
+	  gdb_bfd_unref (tmp_bfd);
 	  return;
 	}
 
@@ -384,8 +383,8 @@ manpage for methods to privately map shared library text."));
 	 routine.  */
       load_addr = regcache_read_pc (get_current_regcache ())
 		  - tmp_bfd->start_address;
-      sym_addr = bfd_lookup_symbol_from_symtab (tmp_bfd, cmp_name,
-						"__dld_break");
+      sym_addr = gdb_bfd_lookup_symbol_from_symtab (tmp_bfd, cmp_name,
+						    "__dld_break");
       sym_addr = load_addr + sym_addr + 4;
       
       /* Create the shared library breakpoint.  */
@@ -402,7 +401,7 @@ manpage for methods to privately map shared library text."));
       }
 
       /* We're done with the temporary bfd.  */
-      bfd_close (tmp_bfd);
+      gdb_bfd_unref (tmp_bfd);
     }
 }
 

@@ -1,7 +1,6 @@
 /* Target dependent code for GDB on TI C6x systems.
 
-   Copyright (C) 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2010-2012 Free Software Foundation, Inc.
    Contributed by Andrew Jenner <andrew@codesourcery.com>
    Contributed by Yao Qi <yao@codesourcery.com>
 
@@ -322,8 +321,10 @@ struct linux_target_ops the_low_target = {
   tic6x_arch_setup,
   TIC6X_NUM_REGS,
   0,
+  NULL,
   tic6x_cannot_fetch_register,
   tic6x_cannot_store_register,
+  NULL, /* fetch_register */
   tic6x_get_pc,
   tic6x_set_pc,
   (const unsigned char *) &tic6x_breakpoint,

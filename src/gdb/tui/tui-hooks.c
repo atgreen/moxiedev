@@ -1,7 +1,6 @@
 /* GDB hooks for TUI.
 
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-   2011 Free Software Foundation, Inc.
+   Copyright (C) 2001-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -70,6 +69,13 @@ tui_query_hook (const char *msg, va_list argp)
   int retval;
   int ans2;
   int answer;
+  char *question;
+  struct cleanup *old_chain;
+
+  /* Format the question outside of the loop, to avoid reusing
+     ARGP.  */
+  question = xstrvprintf (msg, argp);
+  old_chain = make_cleanup (xfree, question);
 
   echo ();
   while (1)
@@ -77,7 +83,7 @@ tui_query_hook (const char *msg, va_list argp)
       wrap_here ("");		/* Flush any buffered output.  */
       gdb_flush (gdb_stdout);
 
-      vfprintf_filtered (gdb_stdout, msg, argp);
+      fputs_filtered (question, gdb_stdout);
       printf_filtered (_("(y or n) "));
 
       wrap_here ("");
@@ -114,6 +120,8 @@ tui_query_hook (const char *msg, va_list argp)
       printf_filtered (_("Please answer y or n.\n"));
     }
   noecho ();
+
+  do_cleanups (old_chain);
   return retval;
 }
 

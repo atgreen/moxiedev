@@ -1,6 +1,6 @@
 /* Simulator tracing/debugging support.
-   Copyright (C) 1997, 1998, 2001, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1997-1998, 2001, 2007-2012 Free Software Foundation,
+   Inc.
    Contributed by Cygnus Support.
 
 This file is part of GDB, the GNU debugger.
@@ -249,8 +249,25 @@ extern void trace_generic PARAMS ((SIM_DESC sd,
 				   ...))
      __attribute__((format (printf, 4, 5)));
 
+typedef enum {
+  trace_fmt_invalid,
+  trace_fmt_word,
+  trace_fmt_fp,
+  trace_fmt_fpu,
+  trace_fmt_string,
+  trace_fmt_bool,
+  trace_fmt_addr,
+  trace_fmt_instruction_incomplete,
+} data_fmt;
+
 /* Trace a varying number of word sized inputs/outputs.  trace_result*
    must be called to close the trace operation. */
+
+extern void save_data PARAMS ((SIM_DESC sd,
+                               TRACE_DATA *data,
+                               data_fmt fmt,
+                               long size,
+                               const void *buf));
 
 extern void trace_input0 PARAMS ((SIM_DESC sd,
 				  sim_cpu *cpu,

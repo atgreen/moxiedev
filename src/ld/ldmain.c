@@ -1,6 +1,6 @@
 /* Main program of GNU linker.
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
    Written by Steve Chamberlain steve@cygnus.com
 
@@ -88,24 +88,12 @@ int g_switch_value = 8;
 /* Nonzero means print names of input files as processed.  */
 bfd_boolean trace_files;
 
-/* Nonzero means same, but note open failures, too.  */
-bfd_boolean trace_file_tries;
+/* Nonzero means report actions taken by the linker, and describe the linker script in use.  */
+bfd_boolean verbose;
 
 /* Nonzero means version number was printed, so exit successfully
    instead of complaining if no input files are given.  */
 bfd_boolean version_printed;
-
-/* Nonzero means link in every member of an archive.  */
-bfd_boolean whole_archive;
-
-/* True means only create DT_NEEDED entries for dynamic libraries
-   if they actually satisfy some reference in a regular object.  */
-bfd_boolean add_DT_NEEDED_for_regular;
-
-/* True means create DT_NEEDED entries for dynamic libraries that
-   are DT_NEEDED by dynamic libraries specifically mentioned on
-   the command line.  */
-bfd_boolean add_DT_NEEDED_for_dynamic;
 
 /* TRUE if we should demangle symbol names.  */
 bfd_boolean demangling;
@@ -172,6 +160,8 @@ static struct bfd_link_callbacks link_callbacks =
   ldlang_override_segment_assignment
 };
 
+static bfd_assert_handler_type default_bfd_assert_handler;
+
 struct bfd_link_info link_info;
 
 static void
@@ -183,6 +173,17 @@ ld_cleanup (void)
 #endif
   if (output_filename && delete_output_file_on_failure)
     unlink_if_ordinary (output_filename);
+}
+
+/* If there's a BFD assertion, we'll notice and exit with an error
+   unless otherwise instructed.  */
+
+static void
+ld_bfd_assert_handler (const char *fmt, const char *bfdver,
+		       const char *file, int line)
+{
+  (*default_bfd_assert_handler) (fmt, bfdver, file, line);
+  config.make_executable = FALSE;
 }
 
 int
@@ -210,6 +211,11 @@ main (int argc, char **argv)
   bfd_init ();
 
   bfd_set_error_program_name (program_name);
+
+  /* We want to notice and fail on those nasty BFD assertions which are
+     likely to signal incorrect output being generated but otherwise may
+     leave no trace.  */
+  default_bfd_assert_handler = bfd_set_assert_handler (ld_bfd_assert_handler);
 
   xatexit (ld_cleanup);
 
@@ -297,73 +303,13 @@ main (int argc, char **argv)
   if (config.hash_table_size != 0)
     bfd_hash_set_default_size (config.hash_table_size);
 
+#ifdef ENABLE_PLUGINS
+  /* Now all the plugin arguments have been gathered, we can load them.  */
+  if (plugin_load_plugins ())
+    einfo (_("%P%F: %s: error loading plugin\n"), plugin_error_plugin ());
+#endif /* ENABLE_PLUGINS */
+
   ldemul_set_symbols ();
-
-  if (link_info.relocatable)
-    {
-      if (command_line.check_section_addresses < 0)
-	command_line.check_section_addresses = 0;
-      if (link_info.shared)
-	einfo (_("%P%F: -r and -shared may not be used together\n"));
-    }
-
-  /* We may have -Bsymbolic, -Bsymbolic-functions, --dynamic-list-data,
-     --dynamic-list-cpp-new, --dynamic-list-cpp-typeinfo and
-     --dynamic-list FILE.  -Bsymbolic and -Bsymbolic-functions are
-     for shared libraries.  -Bsymbolic overrides all others and vice
-     versa.  */
-  switch (command_line.symbolic)
-    {
-    case symbolic_unset:
-      break;
-    case symbolic:
-      /* -Bsymbolic is for shared library only.  */
-      if (link_info.shared)
-	{
-	  link_info.symbolic = TRUE;
-	  /* Should we free the unused memory?  */
-	  link_info.dynamic_list = NULL;
-	  command_line.dynamic_list = dynamic_list_unset;
-	}
-      break;
-    case symbolic_functions:
-      /* -Bsymbolic-functions is for shared library only.  */
-      if (link_info.shared)
-	command_line.dynamic_list = dynamic_list_data;
-      break;
-    }
-
-  switch (command_line.dynamic_list)
-    {
-    case dynamic_list_unset:
-      break;
-    case dynamic_list_data:
-      link_info.dynamic_data = TRUE;
-    case dynamic_list:
-      link_info.dynamic = TRUE;
-      break;
-    }
-
-  if (! link_info.shared)
-    {
-      if (command_line.filter_shlib)
-	einfo (_("%P%F: -F may not be used without -shared\n"));
-      if (command_line.auxiliary_filters)
-	einfo (_("%P%F: -f may not be used without -shared\n"));
-    }
-
-  if (! link_info.shared || link_info.pie)
-    link_info.executable = TRUE;
-
-  /* Treat ld -r -s as ld -r -S -x (i.e., strip all local symbols).  I
-     don't see how else this can be handled, since in this case we
-     must preserve all externally visible symbols.  */
-  if (link_info.relocatable && link_info.strip == strip_all)
-    {
-      link_info.strip = strip_debugger;
-      if (link_info.discard == discard_sec_merge)
-	link_info.discard = discard_all;
-    }
 
   /* If we have not already opened and parsed a linker script,
      try the default script from command line first.  */
@@ -387,14 +333,14 @@ main (int argc, char **argv)
       else
 	{
 	  lex_string = s;
-	  lex_redirect (s);
+	  lex_redirect (s, _("built in linker script"), 1);
 	}
       parser_input = input_script;
       yyparse ();
       lex_string = NULL;
     }
 
-  if (trace_file_tries)
+  if (verbose)
     {
       if (saved_script_handle)
 	info_msg (_("using external linker script:"));
@@ -827,9 +773,9 @@ add_archive_element (struct bfd_link_info *info,
 	  file.filesize = arelt_size (abfd);
 	  file.fd = fd;
 	  plugin_maybe_claim (&file, input);
-	  if (input->claimed)
+	  if (input->flags.claimed)
 	    {
-	      input->claim_archive = TRUE;
+	      input->flags.claim_archive = TRUE;
 	      *subsbfd = input->the_bfd;
 	    }
 	}
@@ -915,7 +861,7 @@ add_archive_element (struct bfd_link_info *info,
 	minfo ("(%s)\n", name);
     }
 
-  if (trace_files || trace_file_tries)
+  if (trace_files || verbose)
     info_msg ("%I\n", &orig_input);
   return TRUE;
 }

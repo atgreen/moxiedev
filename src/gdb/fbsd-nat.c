@@ -1,7 +1,6 @@
 /* Native-dependent code for FreeBSD.
 
-   Copyright (C) 2002, 2003, 2004, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2002-2004, 2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -132,8 +131,9 @@ fbsd_find_memory_regions (find_memory_region_ftype func, void *obfd)
 			    exec ? 'x' : '-');
 	}
 
-      /* Invoke the callback function to create the corefile segment.  */
-      func (start, size, read, write, exec, obfd);
+      /* Invoke the callback function to create the corefile segment.
+	 Pass MODIFIED as true, we do not know the real modification state.  */
+      func (start, size, read, write, exec, 1, obfd);
     }
 
   do_cleanups (cleanup);
@@ -143,14 +143,14 @@ fbsd_find_memory_regions (find_memory_region_ftype func, void *obfd)
 static int
 find_signalled_thread (struct thread_info *info, void *data)
 {
-  if (info->suspend.stop_signal != TARGET_SIGNAL_0
+  if (info->suspend.stop_signal != GDB_SIGNAL_0
       && ptid_get_pid (info->ptid) == ptid_get_pid (inferior_ptid))
     return 1;
 
   return 0;
 }
 
-static enum target_signal
+static enum gdb_signal
 find_stop_signal (void)
 {
   struct thread_info *info =
@@ -159,7 +159,7 @@ find_stop_signal (void)
   if (info)
     return info->suspend.stop_signal;
   else
-    return TARGET_SIGNAL_0;
+    return GDB_SIGNAL_0;
 }
 
 /* Create appropriate note sections for a corefile, returning them in

@@ -1,4 +1,4 @@
-.\" Copyright (C) 1991, 1999, 2010, 2011 Free Software Foundation, Inc.
+.\" Copyright (C) 1991, 1999, 2010-2012 Free Software Foundation, Inc.
 .\" See section COPYING for conditions for redistribution
 .\" $Id: gdb.1,v 1.4 1999/01/05 00:50:50 jsm Exp $
 .TH gdb 1 "22may2002" "GNU Tools" "GNU Tools"
@@ -33,7 +33,10 @@ gdb \- The GNU Debugger
 .I core\c
 \&\|]
 .RB "[\|" "\-x "\c
-.I cmds\c
+.I file\c
+\&\|]
+.RB "[\|" "\-ex "\c
+.I cmd\c
 \&\|]
 .RB "[\|" "\-d "\c
 .I dir\c
@@ -261,6 +264,13 @@ Use file \c
 Execute GDB commands from file \c
 .I file\c
 \&.  
+
+.TP
+.BI "\-ex " "command"\c
+\&
+Execute given GDB \c
+.I command\c
+\&.
 
 .TP
 .BI "\-directory=" "directory"\c

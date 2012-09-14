@@ -1,7 +1,7 @@
 /* Cache and manage the values of registers for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1987, 1989, 1991, 1994, 1995, 1996, 1998, 2000, 2001,
-   2002, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1986-1987, 1989, 1991, 1994-1996, 1998, 2000-2002,
+   2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -174,9 +174,6 @@ typedef enum register_status (regcache_cooked_read_ftype) (void *src,
 extern void regcache_save (struct regcache *dst,
 			   regcache_cooked_read_ftype *cooked_read,
 			   void *cooked_read_context);
-extern void regcache_restore (struct regcache *dst,
-			      regcache_cooked_read_ftype *cooked_read,
-			      void *cooked_read_context);
 
 /* Copy/duplicate the contents of a register cache.  By default, the
    operation is pass-through.  Writes to DST and reads from SRC will

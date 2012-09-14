@@ -1,6 +1,5 @@
 /* Main simulator entry points specific to the CRIS.
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2004-2012 Free Software Foundation, Inc.
    Contributed by Axis Communications.
 
 This file is part of the GNU simulators.
@@ -21,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 /* Based on the fr30 file, mixing in bits from the i960 and pruning of
    dead code.  */
 
+#include "config.h"
 #include "libiberty.h"
 #include "bfd.h"
 #include "elf-bfd.h"

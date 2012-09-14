@@ -1,7 +1,6 @@
 /* Host support routines for MinGW, for GDB, the GNU debugger.
 
-   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2006-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -251,6 +250,9 @@ gdb_call_async_signal_handler (struct async_signal_handler *handler,
     }
   SetEvent (sigint_event);
 }
+
+/* -Wmissing-prototypes */
+extern initialize_file_ftype _initialize_mingw_hdep;
 
 void
 _initialize_mingw_hdep (void)

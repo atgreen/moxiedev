@@ -1,6 +1,5 @@
 /* Target operations for the remote server for GDB.
-   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2002-2005, 2007-2012 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -54,7 +53,7 @@ struct thread_resume
      thread.  If stopping a thread, and this is 0, the target should
      stop the thread however it best decides to (e.g., SIGSTOP on
      linux; SuspendThread on win32).  This is a host signal value (not
-     enum target_signal).  */
+     enum gdb_signal).  */
   int sig;
 };
 
@@ -98,7 +97,7 @@ struct target_waitstatus
     union
       {
 	int integer;
-	enum target_signal sig;
+	enum gdb_signal sig;
 	ptid_t related_pid;
 	char *execd_pathname;
       }
@@ -334,7 +333,7 @@ struct target_ops
   /* Read Thread Information Block address.  */
   int (*get_tib_address) (ptid_t ptid, CORE_ADDR *address);
 
-  /* Pause all threads.  If FREEZE, arrange for any resume attempt be
+  /* Pause all threads.  If FREEZE, arrange for any resume attempt to
      be ignored until an unpause_all call unfreezes threads again.
      There can be nested calls to pause_all, so a freeze counter
      should be maintained.  */
@@ -359,24 +358,45 @@ struct target_ops
      pad lock object.  ORIG_SIZE is the size in bytes of the
      instruction at TPADDR.  JUMP_ENTRY points to the address of the
      jump pad entry, and on return holds the address past the end of
-     the created jump pad. JJUMP_PAD_INSN is a buffer containing a
-     copy of the instruction at TPADDR.  ADJUST_INSN_ADDR and
-     ADJUST_INSN_ADDR_END are output parameters that return the
-     address range where the instruction at TPADDR was relocated
-     to.  */
+     the created jump pad.  If a trampoline is created by the function,
+     then TRAMPOLINE and TRAMPOLINE_SIZE return the address and size of
+     the trampoline, else they remain unchanged.  JJUMP_PAD_INSN is a
+     buffer containing a copy of the instruction at TPADDR.
+     ADJUST_INSN_ADDR and ADJUST_INSN_ADDR_END are output parameters that
+     return the address range where the instruction at TPADDR was relocated
+     to.  If an error occurs, the ERR may be used to pass on an error
+     message.  */
   int (*install_fast_tracepoint_jump_pad) (CORE_ADDR tpoint, CORE_ADDR tpaddr,
 					   CORE_ADDR collector,
 					   CORE_ADDR lockaddr,
 					   ULONGEST orig_size,
 					   CORE_ADDR *jump_entry,
+					   CORE_ADDR *trampoline,
+					   ULONGEST *trampoline_size,
 					   unsigned char *jjump_pad_insn,
 					   ULONGEST *jjump_pad_insn_size,
 					   CORE_ADDR *adjusted_insn_addr,
-					   CORE_ADDR *adjusted_insn_addr_end);
+					   CORE_ADDR *adjusted_insn_addr_end,
+					   char *err);
 
   /* Return the bytecode operations vector for the current inferior.
      Returns NULL if bytecode compilation is not supported.  */
   struct emit_ops *(*emit_ops) (void);
+
+  /* Returns true if the target supports disabling randomization.  */
+  int (*supports_disable_randomization) (void);
+
+  /* Return the minimum length of an instruction that can be safely overwritten
+     for use as a fast tracepoint.  */
+  int (*get_min_fast_tracepoint_insn_len) (void);
+
+  /* Read solib info on SVR4 platforms.  */
+  int (*qxfer_libraries_svr4) (const char *annex, unsigned char *readbuf,
+			       unsigned const char *writebuf,
+			       CORE_ADDR offset, int len);
+
+  /* Return true if target supports debugging agent.  */
+  int (*supports_agent) (void);
 };
 
 extern struct target_ops *the_target;
@@ -389,8 +409,7 @@ void set_target_ops (struct target_ops *);
 #define myattach(pid) \
   (*the_target->attach) (pid)
 
-#define kill_inferior(pid) \
-  (*the_target->kill) (pid)
+int kill_inferior (int);
 
 #define detach_inferior(pid) \
   (*the_target->detach) (pid)
@@ -434,6 +453,10 @@ void set_target_ops (struct target_ops *);
 #define target_supports_fast_tracepoints()		\
   (the_target->install_fast_tracepoint_jump_pad != NULL)
 
+#define target_get_min_fast_tracepoint_insn_len()	\
+  (the_target->get_min_fast_tracepoint_insn_len		\
+   ? (*the_target->get_min_fast_tracepoint_insn_len) () : 0)
+
 #define thread_stopped(thread) \
   (*the_target->thread_stopped) (thread)
 
@@ -468,20 +491,34 @@ void set_target_ops (struct target_ops *);
 #define install_fast_tracepoint_jump_pad(tpoint, tpaddr,		\
 					 collector, lockaddr,		\
 					 orig_size,			\
-					 jump_entry, jjump_pad_insn,	\
+					 jump_entry,			\
+					 trampoline, trampoline_size,	\
+					 jjump_pad_insn,		\
 					 jjump_pad_insn_size,		\
 					 adjusted_insn_addr,		\
-					 adjusted_insn_addr_end)	\
+					 adjusted_insn_addr_end,	\
+					 err)				\
   (*the_target->install_fast_tracepoint_jump_pad) (tpoint, tpaddr,	\
 						   collector,lockaddr,	\
 						   orig_size, jump_entry, \
+						   trampoline,		\
+						   trampoline_size,	\
 						   jjump_pad_insn,	\
 						   jjump_pad_insn_size, \
 						   adjusted_insn_addr,	\
-						   adjusted_insn_addr_end)
+						   adjusted_insn_addr_end, \
+						   err)
 
 #define target_emit_ops() \
   (the_target->emit_ops ? (*the_target->emit_ops) () : NULL)
+
+#define target_supports_disable_randomization() \
+  (the_target->supports_disable_randomization ? \
+   (*the_target->supports_disable_randomization) () : 0)
+
+#define target_supports_agent() \
+  (the_target->supports_agent ? \
+   (*the_target->supports_agent) () : 0)
 
 /* Start non-stop mode, returns 0 on success, -1 on failure.   */
 
@@ -501,6 +538,10 @@ ptid_t mywait (ptid_t ptid, struct target_waitstatus *ourstatus, int options,
       if (the_target->done_accessing_memory)     	\
 	(*the_target->done_accessing_memory) ();  	\
     } while (0)
+
+#define target_core_of_thread(ptid)		\
+  (the_target->core_of_thread ? (*the_target->core_of_thread) (ptid) \
+   : -1)
 
 int read_inferior_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len);
 

@@ -1,8 +1,9 @@
 #PROG: elfedit
 #elfedit: --output-mach k1om
 #source: empty.s
+#as: --64
 #readelf: -h
-#name: Update ELF header 1
+#name: Update ELF header 4
 #target: x86_64-*-*
 
 #...

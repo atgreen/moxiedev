@@ -1,7 +1,6 @@
 /* Target-dependent code for Atmel AVR, for GDB.
 
-   Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1996-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -743,7 +742,6 @@ avr_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR pc_beg, CORE_ADDR pc_end,
 	0xcd, 0xb7,		/* in r28,__SP_L__ */
 	0xde, 0xb7		/* in r29,__SP_H__ */
       };
-      unsigned short insn1;
 
       if (vpc + sizeof (img) < len
 	  && memcmp (prologue + vpc, img, sizeof (img)) == 0)
@@ -903,7 +901,7 @@ avr_breakpoint_from_pc (struct gdbarch *gdbarch,
    from WRITEBUF into REGCACHE.  */
 
 static enum return_value_convention
-avr_return_value (struct gdbarch *gdbarch, struct type *func_type,
+avr_return_value (struct gdbarch *gdbarch, struct value *function,
 		  struct type *valtype, struct regcache *regcache,
 		  gdb_byte *readbuf, const gdb_byte *writebuf)
 {

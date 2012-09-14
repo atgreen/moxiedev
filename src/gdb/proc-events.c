@@ -1,7 +1,7 @@
 /* Machine-independent support for SVR4 /proc (process file system)
 
-   Copyright (C) 1999, 2000, 2004, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1999-2000, 2004, 2007-2012 Free Software Foundation,
+   Inc.
 
    Written by Michael Snyder at Cygnus Solutions.
    Based on work by Fred Fish, Stu Grossman, Geoff Noer, and others.
@@ -44,6 +44,8 @@
 #ifdef HAVE_SYS_FAULT_H
 #include <sys/fault.h>
 #endif
+
+#include "proc-utils.h"
 
 /* Much of the information used in the /proc interface, particularly
    for printing status information, is kept as tables of structures of
@@ -105,7 +107,7 @@ struct trans
 #define MAX_SYSCALLS 262	/* Pretty arbitrary.  */
 static char *syscall_table[MAX_SYSCALLS];
 
-void
+static void
 init_syscall_table (void)
 {
 #ifdef SYS_BSD_getime

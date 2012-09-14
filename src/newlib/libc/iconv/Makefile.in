@@ -153,6 +153,7 @@ MKDIR_P = @MKDIR_P@
 NEWLIB_CFLAGS = @NEWLIB_CFLAGS@
 NM = @NM@
 NMEDIT = @NMEDIT@
+NO_INCLUDE_LIST = @NO_INCLUDE_LIST@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
 OTOOL = @OTOOL@
@@ -563,7 +564,7 @@ iconv.def: lib/iconv.def
 	cp lib/iconv.def iconv.def
 
 stmp-def: force
-	(cd lib && make doc)
+	(cd lib && $(MAKE) doc)
 	touch $@
 
 .PHONY: force

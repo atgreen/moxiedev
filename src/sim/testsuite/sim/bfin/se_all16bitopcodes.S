@@ -12,137 +12,39 @@
 # sim: --environment operating
 
 #include "test.h"
+
+#define SE_ALL_BITS 16
+#define SE_ALL_NEW_INSN_STUB
+#include "se_allopcodes.h"
 	.include "testutils.inc"
 
-	start
+.macro se_all_load_insn
+	R2 = W[P5];
+	R0 = R2;
+.endm
 
-	/* Set up exception handler */
-	imm32 P4, EVT3;
-	loadsym R1, _evx;
-	[P4] = R1;
-
-	/* set up the _location */
-	loadsym P0, _location
-	loadsym P1, _table;
-	[P0] = P1;
-
-	/* Enable single stepping */
-	R0 = 1;
-	SYSCFG = R0;
-
-	/* Lower to the code we want to single step through */
-	loadsym R1, _usr;
-	RETI = R1;
-
-	/* set up pointers to valid data (32Meg), to reduce address violations */
-	init_p_regs 0x2000000;
-	init_i_regs 0x2000000;
-	init_b_regs 0x2000000;
-	init_l_regs 0;
-	imm32 fp, 0x2000000;
-	usp = p0;
-
-	RTI;
-
-	.align 4;
-_usr:
-	.dd 0x0000;
-	jump fail_lvl;
-
-_evx:
-	/* Make sure exception reason is single step */
-	R3 = SEQSTAT;
-	R4 = 0x3f;
-	R3 = R3 & R4;
-
-	/* find a match */
-	loadsym P0, _usr;
-	loadsym P2, _location;
-	P1 = [P2];
-	R0 = W[P0];
-
-_match:
-	R7 = W[P1++];
-	R6 = W[P1++];
-	R5 = W[P1++];
-
-	/* is this the end of the table? */
-	R4 = 0;
-	CC = R4 == R7;
-	IF CC jump _legal_instruction;
-
-	/* is the opcode (R0) greater than the 2nd entry in the table (R6) */
-	/* if so look at the next line in the table */
-	CC = R6 < R0;
-	if CC jump _match;
-
-	/* is the opcode (R0) smaller than the first entry in the table (R7) */
-	/* this means it's somewhere between the two lines, and should be legal */
-	CC = R7 <= R0;
-	if !CC jump _legal_instruction;
-
-	/* is the current EXCAUSE (R3), the same as the table (R5) */
-	/* if not, fail */
-	CC = R3 == R5
-	if !CC jump fail_lvl;
-
-_match_done:
-	/* back up, and store the location to search next */
-	R0 = P1;
-	/* 3 back, * word/byte) */
-	R0 += (-3 * 2);
-	[P2] = R0;
-
-	/* it matches, so fall through */
-	jump _next_instruction;
-
-_legal_instruction:
-	R4 = 0x10;
-	CC = R3 == R4;
-	IF !CC JUMP fail_lvl;
-	/* it wasn't in the list, and was a single step, so fall through */
-
-_next_instruction:
+.macro se_all_next_insn
 	/* increment, and go again. */
-	loadsym P0, _usr;
-	R0 = W[P0];
+	R0 = R2;
+
 	R0 += 1;
-	W[P0] = R0;
+	/* finish once we hit the 32bit limit */
 	R1 = 0xC000 (Z);
 	CC = R1 == R0;
 	IF CC JUMP pass_lvl;
 
-	/* Make sure the opcode isn't in a write buffer */
-	SSYNC;
+	W[P5] = R0;
+.endm
 
-	loadsym R1, _usr
-	RETX = R1;
+.macro se_all_new_insn_stub
+	jump _legal_instruction;
+.endm
 
-	/* set up pointers to valid data (32Meg), to reduce address violations */
-	init_p_regs 0x2000000;
-	init_i_regs 0x2000000;
-	init_b_regs 0x2000000;
-	init_l_regs 0;
-	imm32 fp, 0x2000000;
-	usp = p0;
-	RETS = p0;
-	RETN = p0;
-	RETE = p0;
-	RETI = p0;
-	RTX;
-
-pass_lvl:
-	dbg_pass;
-fail_lvl:
-	dbg_fail;
-
-
+.macro se_all_insn_init
+	.dw 0x0000;
+.endm
+.macro se_all_insn_table
 	/* this table must be sorted, and end with zero */
-	.data
-	.align 4;
-_location:
-	.dd 0
-_table:
 	/* start	end		SEQSTAT */
 	.dw 0x0001,	0x000f,		0x21
 	.dw 0x0011,	0x0013,		0x2e
@@ -442,3 +344,6 @@ _table:
 	.dw 0x9ef0,	0x9eff,		0x21
 	.dw 0x9f70,	0x9f7f,		0x21
 	.dw 0x0000,	0x0000,		0x00
+.endm
+
+	se_all_test

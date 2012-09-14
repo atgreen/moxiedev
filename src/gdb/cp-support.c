@@ -1,6 +1,5 @@
 /* Helper routines for C++ support in GDB.
-   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2002-2005, 2007-2012 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -35,6 +34,7 @@
 #include "exceptions.h"
 #include "expression.h"
 #include "value.h"
+#include "cp-abi.h"
 
 #include "safe-ctype.h"
 
@@ -72,19 +72,6 @@ struct cmd_list_element *maint_cplus_cmd_list = NULL;
 
 static void maint_cplus_command (char *arg, int from_tty);
 static void first_component_command (char *arg, int from_tty);
-
-/* Operator validation.
-   NOTE: Multi-byte operators (usually the assignment variety
-   operator) must appear before the single byte version, i.e., "+="
-   before "+".  */
-static const char *operator_tokens[] =
-  {
-    "++", "+=", "+", "->*", "->", "--", "-=", "-", "*=", "*",
-    "/=", "/", "%=", "%", "!=", "==", "!", "&&", "<<=", "<<",
-    ">>=", ">>", "<=", "<", ">=", ">", "~", "&=", "&", "|=",
-    "||", "|", "^=", "^", "=", "()", "[]", ",", "new", "delete"
-    /* new[] and delete[] require special whitespace handling */
-  };
 
 /* A list of typedefs which should not be substituted by replace_typedefs.  */
 static const char * const ignore_typedefs[] =
@@ -528,6 +515,13 @@ cp_canonicalize_string (const char *string)
   estimated_len = strlen (string) * 2;
   ret = cp_comp_to_string (info->tree, estimated_len);
   cp_demangled_name_parse_free (info);
+
+  if (ret == NULL)
+    {
+      warning (_("internal error: string \"%s\" failed to be canonicalized"),
+	       string);
+      return NULL;
+    }
 
   if (strcmp (string, ret) == 0)
     {
@@ -1146,14 +1140,12 @@ static void
 make_symbol_overload_list_block (const char *name,
                                  const struct block *block)
 {
-  struct dict_iterator iter;
+  struct block_iterator iter;
   struct symbol *sym;
 
-  const struct dictionary *dict = BLOCK_DICT (block);
-
-  for (sym = dict_iter_name_first (dict, name, &iter);
+  for (sym = block_iter_name_first (block, name, &iter);
        sym != NULL;
-       sym = dict_iter_name_next (name, &iter))
+       sym = block_iter_name_next (name, &iter))
     overload_list_add_symbol (sym, name);
 }
 
@@ -1199,7 +1191,7 @@ make_symbol_overload_list_adl_namespace (struct type *type,
                                          const char *func_name)
 {
   char *namespace;
-  char *type_name;
+  const char *type_name;
   int i, prefix_len;
 
   while (TYPE_CODE (type) == TYPE_CODE_PTR
@@ -1328,12 +1320,9 @@ make_symbol_overload_list_using (const char *func_name,
 static void
 make_symbol_overload_list_qualified (const char *func_name)
 {
-  struct symbol *sym;
   struct symtab *s;
   struct objfile *objfile;
   const struct block *b, *surrounding_static_block = 0;
-  struct dict_iterator iter;
-  const struct dictionary *dict;
 
   /* Look through the partial symtabs for all symbols which begin by
      matching FUNC_NAME.  Make sure we read that symbol table in.  */
@@ -1452,109 +1441,16 @@ first_component_command (char *arg, int from_tty)
 
 extern initialize_file_ftype _initialize_cp_support; /* -Wmissing-prototypes */
 
-#define SKIP_SPACE(P)				\
-  do						\
-  {						\
-    while (*(P) == ' ' || *(P) == '\t')		\
-      ++(P);					\
-  }						\
-  while (0)
 
-/* Returns the length of the operator name or 0 if INPUT does not
-   point to a valid C++ operator.  INPUT should start with
-   "operator".  */
-int
-cp_validate_operator (const char *input)
+/* Implement "info vtbl".  */
+
+static void
+info_vtbl_command (char *arg, int from_tty)
 {
-  int i;
-  char *copy;
-  const char *p;
-  struct expression *expr;
-  struct value *val;
-  struct gdb_exception except;
+  struct value *value;
 
-  p = input;
-
-  if (strncmp (p, "operator", 8) == 0)
-    {
-      int valid = 0;
-
-      p += 8;
-      SKIP_SPACE (p);
-      for (i = 0;
-	   i < sizeof (operator_tokens) / sizeof (operator_tokens[0]);
-	   ++i)
-	{
-	  int length = strlen (operator_tokens[i]);
-
-	  /* By using strncmp here, we MUST have operator_tokens
-	     ordered!  See additional notes where operator_tokens is
-	     defined above.  */
-	  if (strncmp (p, operator_tokens[i], length) == 0)
-	    {
-	      const char *op = p;
-
-	      valid = 1;
-	      p += length;
-
-	      if (strncmp (op, "new", 3) == 0
-		  || strncmp (op, "delete", 6) == 0)
-		{
-
-		  /* Special case: new[] and delete[].  We must be
-		     careful to swallow whitespace before/in "[]".  */
-		  SKIP_SPACE (p);
-
-		  if (*p == '[')
-		    {
-		      ++p;
-		      SKIP_SPACE (p);
-		      if (*p == ']')
-			++p;
-		      else
-			valid = 0;
-		    }
-		}
-
-	      if (valid)
-		return (p - input);
-	    }
-	}
-
-      /* Check input for a conversion operator.  */
-
-      /* Skip past base typename.  */
-      while (*p != '*' && *p != '&' && *p != 0 && *p != ' ')
-	++p;
-      SKIP_SPACE (p);
-
-      /* Add modifiers '*' / '&'.  */
-      while (*p == '*' || *p == '&')
-	{
-	  ++p;
-	  SKIP_SPACE (p);
-	}
-
-      /* Check for valid type.  [Remember: input starts with 
-	 "operator".]  */
-      copy = savestring (input + 8, p - input - 8);
-      expr = NULL;
-      val = NULL;
-      TRY_CATCH (except, RETURN_MASK_ALL)
-	{
-	  expr = parse_expression (copy);
-	  val = evaluate_type (expr);
-	}
-
-      xfree (copy);
-      if (expr)
-	xfree (expr);
-
-      if (val != NULL && value_type (val) != NULL)
-	return (p - input);
-    }
-
-  return 0;
+  value = parse_and_eval (arg);
+  cplus_print_vtable (value);
 }
 
 void
@@ -1575,4 +1471,10 @@ _initialize_cp_support (void)
 	   first_component_command,
 	   _("Print the first class/namespace component of NAME."),
 	   &maint_cplus_cmd_list);
+
+  add_info ("vtbl", info_vtbl_command,
+	    _("Show the virtual function table for a C++ object.\n\
+Usage: info vtbl EXPRESSION\n\
+Evaluate EXPRESSION and display the virtual function table for the\n\
+resulting object."));
 }

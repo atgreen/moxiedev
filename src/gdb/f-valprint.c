@@ -1,7 +1,7 @@
 /* Support for printing Fortran values for GDB, the GNU debugger.
 
-   Copyright (C) 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2003, 2005, 2006,
-   2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1993-1996, 1998-2000, 2003, 2005-2012 Free Software
+   Foundation, Inc.
 
    Contributed by Motorola.  Adapted from the C definitions by Farooq Butt
    (fmbutt@engage.sps.mot.com), additionally worked over by Stan Shebs.
@@ -41,7 +41,7 @@ static int there_is_a_visible_common_named (char *);
 
 extern void _initialize_f_valprint (void);
 static void info_common_command (char *, int);
-static void list_all_visible_commons (char *);
+static void list_all_visible_commons (const char *);
 static void f77_create_arrayprint_offset_tbl (struct type *,
 					      struct ui_file *);
 static void f77_get_dynamic_length_of_aggregate (struct type *);
@@ -242,11 +242,22 @@ Type node corrupt! F77 arrays cannot have %d subscripts (%d Max)"),
 }
 
 
-/* See val_print for a description of the various parameters of this
-   function; they are identical.  The semantics of the return value is
-   also identical to val_print.  */
+/* Decorations for Fortran.  */
 
-int
+static const struct generic_val_print_decorations f_decorations =
+{
+  "(",
+  ",",
+  ")",
+  ".TRUE.",
+  ".FALSE.",
+  "VOID",
+};
+
+/* See val_print for a description of the various parameters of this
+   function; they are identical.  */
+
+void
 f_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 	     CORE_ADDR address, struct ui_file *stream, int recurse,
 	     const struct value *original_value,
@@ -256,7 +267,6 @@ f_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned int i = 0;	/* Number of characters printed.  */
   struct type *elttype;
-  LONGEST val;
   CORE_ADDR addr;
   int index;
 
@@ -299,19 +309,26 @@ f_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 	}
       else
 	{
+	  int want_space = 0;
+
 	  addr = unpack_pointer (type, valaddr + embedded_offset);
 	  elttype = check_typedef (TYPE_TARGET_TYPE (type));
 
 	  if (TYPE_CODE (elttype) == TYPE_CODE_FUNC)
 	    {
 	      /* Try to print what function it points to.  */
-	      print_address_demangle (gdbarch, addr, stream, demangle);
-	      /* Return value is irrelevant except for string pointers.  */
-	      return 0;
+	      print_function_pointer_address (options, gdbarch, addr, stream);
+	      return;
 	    }
 
-	  if (options->addressprint && options->format != 's')
-	    fputs_filtered (paddress (gdbarch, addr), stream);
+	  if (options->symbol_print)
+	    want_space = print_address_demangle (options, gdbarch, addr,
+						 stream, demangle);
+	  else if (options->addressprint && options->format != 's')
+	    {
+	      fputs_filtered (paddress (gdbarch, addr), stream);
+	      want_space = 1;
+	    }
 
 	  /* For a pointer to char or unsigned char, also print the string
 	     pointed to, unless pointer is null.  */
@@ -319,64 +336,17 @@ f_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 	      && TYPE_CODE (elttype) == TYPE_CODE_INT
 	      && (options->format == 0 || options->format == 's')
 	      && addr != 0)
-	    i = val_print_string (TYPE_TARGET_TYPE (type), NULL, addr, -1,
-				  stream, options);
-
-	  /* Return number of characters printed, including the terminating
-	     '\0' if we reached the end.  val_print_string takes care including
-	     the terminating '\0' if necessary.  */
-	  return i;
-	}
-      break;
-
-    case TYPE_CODE_REF:
-      elttype = check_typedef (TYPE_TARGET_TYPE (type));
-      if (options->addressprint)
-	{
-	  CORE_ADDR addr
-	    = extract_typed_address (valaddr + embedded_offset, type);
-
-	  fprintf_filtered (stream, "@");
-	  fputs_filtered (paddress (gdbarch, addr), stream);
-	  if (options->deref_ref)
-	    fputs_filtered (": ", stream);
-	}
-      /* De-reference the reference.  */
-      if (options->deref_ref)
-	{
-	  if (TYPE_CODE (elttype) != TYPE_CODE_UNDEF)
 	    {
-	      struct value *deref_val =
-		value_at
-		(TYPE_TARGET_TYPE (type),
-		 unpack_pointer (type, valaddr + embedded_offset));
-
-	      common_val_print (deref_val, stream, recurse,
-				options, current_language);
+	      if (want_space)
+		fputs_filtered (" ", stream);
+	      i = val_print_string (TYPE_TARGET_TYPE (type), NULL, addr, -1,
+				    stream, options);
 	    }
-	  else
-	    fputs_filtered ("???", stream);
+	  return;
 	}
-      break;
-
-    case TYPE_CODE_FUNC:
-      if (options->format)
-	{
-	  val_print_scalar_formatted (type, valaddr, embedded_offset,
-				      original_value, options, 0, stream);
-	  break;
-	}
-      /* FIXME, we should consider, at least for ANSI C language, eliminating
-         the distinction made between FUNCs and POINTERs to FUNCs.  */
-      fprintf_filtered (stream, "{");
-      type_print (type, "", stream, -1);
-      fprintf_filtered (stream, "} ");
-      /* Try to print what function it points to, and its address.  */
-      print_address_demangle (gdbarch, address, stream, demangle);
       break;
 
     case TYPE_CODE_INT:
-    case TYPE_CODE_CHAR:
       if (options->format || options->output_format)
 	{
 	  struct value_print_options opts = *options;
@@ -393,7 +363,7 @@ f_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 	     Since we don't know whether the value is really intended to
 	     be used as an integer or a character, print the character
 	     equivalent as well.  */
-	  if (TYPE_LENGTH (type) == 1 || TYPE_CODE (type) == TYPE_CODE_CHAR)
+	  if (TYPE_LENGTH (type) == 1)
 	    {
 	      LONGEST c;
 
@@ -402,84 +372,6 @@ f_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 	      LA_PRINT_CHAR ((unsigned char) c, type, stream);
 	    }
 	}
-      break;
-
-    case TYPE_CODE_FLAGS:
-      if (options->format)
-	val_print_scalar_formatted (type, valaddr, embedded_offset,
-				    original_value, options, 0, stream);
-      else
-	val_print_type_code_flags (type, valaddr + embedded_offset, stream);
-      break;
-
-    case TYPE_CODE_FLT:
-      if (options->format)
-	val_print_scalar_formatted (type, valaddr, embedded_offset,
-				    original_value, options, 0, stream);
-      else
-	print_floating (valaddr + embedded_offset, type, stream);
-      break;
-
-    case TYPE_CODE_VOID:
-      fprintf_filtered (stream, "VOID");
-      break;
-
-    case TYPE_CODE_ERROR:
-      fprintf_filtered (stream, "%s", TYPE_ERROR_NAME (type));
-      break;
-
-    case TYPE_CODE_RANGE:
-      /* FIXME, we should not ever have to print one of these yet.  */
-      fprintf_filtered (stream, "<range type>");
-      break;
-
-    case TYPE_CODE_BOOL:
-      if (options->format || options->output_format)
-	{
-	  struct value_print_options opts = *options;
-
-	  opts.format = (options->format ? options->format
-			 : options->output_format);
-	  val_print_scalar_formatted (type, valaddr, embedded_offset,
-				      original_value, &opts, 0, stream);
-	}
-      else
-	{
-	  val = extract_unsigned_integer (valaddr + embedded_offset,
-					  TYPE_LENGTH (type), byte_order);
-	  if (val == 0)
-	    fprintf_filtered (stream, ".FALSE.");
-	  else if (val == 1)
-	    fprintf_filtered (stream, ".TRUE.");
-	  else
-	    /* Not a legitimate logical type, print as an integer.  */
-	    {
-	      /* Bash the type code temporarily.  */
-	      TYPE_CODE (type) = TYPE_CODE_INT;
-	      val_print (type, valaddr, embedded_offset,
-			 address, stream, recurse,
-			 original_value, options, current_language);
-	      /* Restore the type code so later uses work as intended.  */
-	      TYPE_CODE (type) = TYPE_CODE_BOOL;
-	    }
-	}
-      break;
-
-    case TYPE_CODE_COMPLEX:
-      type = TYPE_TARGET_TYPE (type);
-      fputs_filtered ("(", stream);
-      print_floating (valaddr + embedded_offset, type, stream);
-      fputs_filtered (",", stream);
-      print_floating (valaddr + embedded_offset + TYPE_LENGTH (type),
-		      type, stream);
-      fputs_filtered (")", stream);
-      break;
-
-    case TYPE_CODE_UNDEF:
-      /* This happens (without TYPE_FLAG_STUB set) on systems which don't use
-         dbx xrefs (NO_DBX_XREFS in gcc) if a file has a "struct foo *bar"
-         and no complete type for struct foo in that file.  */
-      fprintf_filtered (stream, "<incomplete type>");
       break;
 
     case TYPE_CODE_STRUCT:
@@ -501,15 +393,28 @@ f_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
       fprintf_filtered (stream, " )");
       break;     
 
+    case TYPE_CODE_REF:
+    case TYPE_CODE_FUNC:
+    case TYPE_CODE_FLAGS:
+    case TYPE_CODE_FLT:
+    case TYPE_CODE_VOID:
+    case TYPE_CODE_ERROR:
+    case TYPE_CODE_RANGE:
+    case TYPE_CODE_UNDEF:
+    case TYPE_CODE_COMPLEX:
+    case TYPE_CODE_BOOL:
+    case TYPE_CODE_CHAR:
     default:
-      error (_("Invalid F77 type code %d in symbol table."), TYPE_CODE (type));
+      generic_val_print (type, valaddr, embedded_offset, address,
+			 stream, recurse, original_value, options,
+			 &f_decorations);
+      break;
     }
   gdb_flush (stream);
-  return 0;
 }
 
 static void
-list_all_visible_commons (char *funname)
+list_all_visible_commons (const char *funname)
 {
   SAVED_F77_COMMON_PTR tmp;
 
@@ -536,7 +441,7 @@ info_common_command (char *comname, int from_tty)
   SAVED_F77_COMMON_PTR the_common;
   COMMON_ENTRY_PTR entry;
   struct frame_info *fi;
-  char *funname = 0;
+  const char *funname = 0;
   struct symbol *func;
 
   /* We have been told to display the contents of F77 COMMON 
@@ -600,6 +505,8 @@ info_common_command (char *comname, int from_tty)
 
   if (the_common)
     {
+      struct frame_id frame_id = get_frame_id (fi);
+
       if (strcmp (comname, BLANK_COMMON_NAME_LOCAL) == 0)
 	printf_filtered (_("Contents of blank COMMON block:\n"));
       else
@@ -610,7 +517,18 @@ info_common_command (char *comname, int from_tty)
 
       while (entry != NULL)
 	{
+	  fi = frame_find_by_id (frame_id);
+	  if (fi == NULL)
+	    {
+	      warning (_("Unable to restore previously selected frame."));
+	      break;
+	    }
+
 	  print_variable_and_value (NULL, entry->symbol, fi, gdb_stdout, 0);
+
+	  /* print_variable_and_value invalidates FI.  */
+	  fi = NULL;
+
 	  entry = entry->next;
 	}
     }

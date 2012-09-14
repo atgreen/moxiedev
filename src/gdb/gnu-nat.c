@@ -1,6 +1,6 @@
 /* Interface GDB to the GNU Hurd.
-   Copyright (C) 1992, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2006, 2007,
-   2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1992, 1995-2001, 2006-2012 Free Software Foundation,
+   Inc.
 
    This file is part of GDB.
 
@@ -107,7 +107,7 @@ void inf_resume (struct inf *inf);
 void inf_set_step_thread (struct inf *inf, struct proc *proc);
 void inf_detach (struct inf *inf);
 void inf_attach (struct inf *inf, int pid);
-void inf_signal (struct inf *inf, enum target_signal sig);
+void inf_signal (struct inf *inf, enum gdb_signal sig);
 void inf_continue (struct inf *inf);
 
 #define inf_debug(_inf, msg, args...) \
@@ -1254,7 +1254,7 @@ inf_detach (struct inf *inf)
 	  if (inf->nomsg)
 	    inf_continue (inf);
 	  else
-	    inf_signal (inf, TARGET_SIGNAL_0);
+	    inf_signal (inf, GDB_SIGNAL_0);
 	}
 
       proc_restore_exc_port (task);
@@ -1321,12 +1321,12 @@ inf_restore_exc_ports (struct inf *inf)
    signal 0, will continue it.  INF is assumed to be in a paused state, and
    the resume_sc's of INF's threads may be affected.  */
 void
-inf_signal (struct inf *inf, enum target_signal sig)
+inf_signal (struct inf *inf, enum gdb_signal sig)
 {
   error_t err = 0;
-  int host_sig = target_signal_to_host (sig);
+  int host_sig = gdb_signal_to_host (sig);
 
-#define NAME target_signal_to_name (sig)
+#define NAME gdb_signal_to_name (sig)
 
   if (host_sig >= _NSIG)
     /* A mach exception.  Exceptions are encoded in the signal space by
@@ -1574,7 +1574,7 @@ rewait:
 		     inf->pending_execs);
 	}
       else if (kind == TARGET_WAITKIND_STOPPED
-	       && w->status.value.sig == TARGET_SIGNAL_TRAP)
+	       && w->status.value.sig == GDB_SIGNAL_TRAP)
 	/* Ah hah!  A SIGTRAP from the inferior while starting up probably
 	   means we've succesfully completed an exec!  */
 	{
@@ -1694,7 +1694,7 @@ S_exception_raise_request (mach_port_t port, mach_port_t reply_port,
       if (exception == EXC_BREAKPOINT)
 	/* GDB likes to get SIGTRAP for breakpoints.  */
 	{
-	  inf->wait.status.value.sig = TARGET_SIGNAL_TRAP;
+	  inf->wait.status.value.sig = GDB_SIGNAL_TRAP;
 	  mach_port_deallocate (mach_task_self (), reply_port);
 	}
       else
@@ -1728,7 +1728,7 @@ S_exception_raise_request (mach_port_t port, mach_port_t reply_port,
 	     them after _NSIG; this assumes they're positive (and not
 	     extremely large)!  */
 	  inf->wait.status.value.sig =
-	    target_signal_from_host (_NSIG + exception);
+	    gdb_signal_from_host (_NSIG + exception);
 	}
     }
   else
@@ -1750,7 +1750,7 @@ inf_task_died_status (struct inf *inf)
   warning (_("Pid %d died with unknown exit status, using SIGKILL."),
 	   inf->pid);
   inf->wait.status.kind = TARGET_WAITKIND_SIGNALLED;
-  inf->wait.status.value.sig = TARGET_SIGNAL_KILL;
+  inf->wait.status.value.sig = GDB_SIGNAL_KILL;
 }
 
 /* Notify server routines.  The only real one is dead name notification.  */
@@ -1918,7 +1918,7 @@ S_msg_sig_post_untraced_reply (mach_port_t reply, error_t err)
        server should like).  */
     {
       inf->wait.status.kind = TARGET_WAITKIND_STOPPED;
-      inf->wait.status.value.sig = TARGET_SIGNAL_0;
+      inf->wait.status.value.sig = GDB_SIGNAL_0;
     }
   else if (err)
     warning (_("Signal delivery failed: %s"), safe_strerror (err));
@@ -1975,7 +1975,7 @@ port_msgs_queued (mach_port_t port)
 
 static void
 gnu_resume (struct target_ops *ops,
-	    ptid_t ptid, int step, enum target_signal sig)
+	    ptid_t ptid, int step, enum gdb_signal sig)
 {
   struct proc *step_thread = 0;
   int resume_all;
@@ -1986,9 +1986,9 @@ gnu_resume (struct target_ops *ops,
 
   inf_validate_procinfo (inf);
 
-  if (sig != TARGET_SIGNAL_0 || inf->stopped)
+  if (sig != GDB_SIGNAL_0 || inf->stopped)
     {
-      if (sig == TARGET_SIGNAL_0 && inf->nomsg)
+      if (sig == GDB_SIGNAL_0 && inf->nomsg)
 	inf_continue (inf);
       else
 	inf_signal (inf, sig);
@@ -2000,7 +2000,7 @@ gnu_resume (struct target_ops *ops,
       proc_abort (inf->wait.thread, 1);
       warning (_("Aborting %s with unforwarded exception %s."),
 	       proc_string (inf->wait.thread),
-	       target_signal_to_name (inf->wait.status.value.sig));
+	       gdb_signal_to_name (inf->wait.status.value.sig));
     }
 
   if (port_msgs_queued (inf->event_port))
@@ -2558,6 +2558,7 @@ gnu_find_memory_regions (find_memory_region_ftype func, void *data)
 		     last_protection & VM_PROT_READ,
 		     last_protection & VM_PROT_WRITE,
 		     last_protection & VM_PROT_EXECUTE,
+		     1, /* MODIFIED is unknown, pass it as true.  */
 		     data);
 	  last_region_address = region_address;
 	  last_region_end = region_address += region_length;
@@ -2571,6 +2572,7 @@ gnu_find_memory_regions (find_memory_region_ftype func, void *data)
 	     last_protection & VM_PROT_READ,
 	     last_protection & VM_PROT_WRITE,
 	     last_protection & VM_PROT_EXECUTE,
+	     1, /* MODIFIED is unknown, pass it as true.  */
 	     data);
 
   return 0;
@@ -2643,8 +2645,8 @@ gnu_target (void)
 
 /* User task commands.  */
 
-struct cmd_list_element *set_task_cmd_list = 0;
-struct cmd_list_element *show_task_cmd_list = 0;
+static struct cmd_list_element *set_task_cmd_list = 0;
+static struct cmd_list_element *show_task_cmd_list = 0;
 /* User thread commands.  */
 
 /* Commands with a prefix of `set/show thread'.  */

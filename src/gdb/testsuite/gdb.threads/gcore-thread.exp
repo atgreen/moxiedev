@@ -1,5 +1,4 @@
-# Copyright 2002, 2003, 2004, 2007, 2008, 2009, 2010, 2011
-# Free Software Foundation, Inc.
+# Copyright 2002-2004, 2007-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,17 +16,11 @@
 # This file was written by Michael Snyder (msnyder@redhat.com)
 # This is a test for the gdb command "generate-core-file".
 
-if $tracelevel then {
-	strace $tracelevel
-}
-
 # Single-threaded test case
-set testfile "gcore-thread"
-set srcfile  pthreads.c
-set objfile  ${objdir}/${subdir}/${testfile}.o
-set binfile  ${objdir}/${subdir}/${testfile}
-set corefile ${objdir}/${subdir}/${testfile}.test
-set core0file ${objdir}/${subdir}/${testfile}0.test
+standard_testfile pthreads.c
+set objfile  $binfile.o
+set corefile $binfile.test
+set core0file ${binfile}0.test
 
 if [istarget "*-*-linux"] then {
     set target_cflags "-D_MIT_POSIX_THREADS"
@@ -40,7 +33,7 @@ if [istarget "*-*-linux"] then {
 # libpthread, therefore libthread_db will not fail as expected
 # on the test `zeroed-threads cannot be listed'.
 
-set opts [list debug "incdir=${objdir}"]
+set opts [list debug]
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${objfile}" object $opts] != ""
     || ([gdb_compile_pthreads "${objfile}" "${binfile}" executable [concat $opts {additional_flags=-Wl,-z,norelro}] ] != ""
         && [gdb_compile_pthreads "${objfile}" "${binfile}" executable $opts] != "") } {
@@ -148,11 +141,9 @@ proc load_core { corefile } {
     global gdb_prompt
     global libthread_db_seen
 
-    set libthread_db_seen 0
     gdb_test_multiple "core $corefile" \
 	"re-load generated corefile" {
 	    -re "\\\[Thread debugging using \[^ \r\n\]* enabled\\\]\r\n" {
-		set libthread_db_seen 1
 		exp_continue
 	    }
 	    -re " is not a core dump:.*\r\n$gdb_prompt $" {
@@ -175,39 +166,27 @@ proc load_core { corefile } {
     return 1
 }
 
-if ![load_core $corefile] {
-    return
-}
-
-# FIXME: now what can we test about the thread state?
-# We do not know for certain that there should be at least 
-# three threads, because who knows what kind of many-to-one
-# mapping various OS's may do?  Let's assume that there must
-# be at least two threads:
-
-gdb_test "info threads" ".*${nl}  2 ${horiz}${nl}\\* 1 .*" \
-	"corefile contains at least two threads"
-
-# One thread in the corefile should be in the "thread2" function.
-
-gdb_test "info threads" ".* thread2 .*" \
-	"a corefile thread is executing thread2"
-
-# The thread2 thread should be marked as the current thread.
-
-gdb_test "info threads" ".*${nl}\\* ${horiz} thread2 .*" \
-	"thread2 is current thread in corefile"
-
-
-# Test the uninitialized thread list.
-
-if {"$core0file" != "" && [load_core $core0file]} {
-    set test "zeroed-threads cannot be listed"
-
-    if {!$libthread_db_seen} {
-	verbose -log "No libthread_db loaded - -Wl,-z,relro compilation?"
-	xfail $test
-    } else {
-	gdb_test "info threads" "Cannot find new threads: .*" $test
+foreach name { corefile core0file } { with_test_prefix $name {
+    if ![load_core [subst $$name]] {
+	continue
     }
-}
+
+    # FIXME: now what can we test about the thread state?
+    # We do not know for certain that there should be at least 
+    # three threads, because who knows what kind of many-to-one
+    # mapping various OS's may do?  Let's assume that there must
+    # be at least two threads:
+
+    gdb_test "info threads" ".*${nl}  2 ${horiz}${nl}\\* 1 .*" \
+	    "corefile contains at least two threads"
+
+    # One thread in the corefile should be in the "thread2" function.
+
+    gdb_test "info threads" ".* thread2 .*" \
+	    "a corefile thread is executing thread2"
+
+    # The thread2 thread should be marked as the current thread.
+
+    gdb_test "info threads" ".*${nl}\\* ${horiz} thread2 .*" \
+	    "thread2 is current thread in corefile"
+}}

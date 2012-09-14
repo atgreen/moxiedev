@@ -1,7 +1,7 @@
 /* Cache and manage the values of registers for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1987, 1989, 1991, 1994, 1995, 1996, 1998, 2000, 2001,
-   2002, 2004, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1986-1987, 1989, 1991, 1994-1996, 1998, 2000-2002,
+   2004, 2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -331,7 +331,7 @@ regcache_save (struct regcache *dst, regcache_cooked_read_ftype *cooked_read,
     }
 }
 
-void
+static void
 regcache_restore (struct regcache *dst,
 		  regcache_cooked_read_ftype *cooked_read,
 		  void *cooked_read_context)
@@ -351,9 +351,10 @@ regcache_restore (struct regcache *dst,
     {
       if (gdbarch_register_reggroup_p (gdbarch, regnum, restore_reggroup))
 	{
-	  int valid = cooked_read (cooked_read_context, regnum, buf);
+	  enum register_status status;
 
-	  if (valid)
+	  status = cooked_read (cooked_read_context, regnum, buf);
+	  if (status == REG_VALID)
 	    regcache_cooked_write (dst, regnum, buf);
 	}
     }
@@ -547,7 +548,6 @@ void
 registers_changed_ptid (ptid_t ptid)
 {
   struct regcache_list *list, **list_link;
-  int wildcard = ptid_equal (ptid, minus_one_ptid);
 
   list = current_regcache;
   list_link = &current_regcache;
@@ -568,13 +568,13 @@ registers_changed_ptid (ptid_t ptid)
       list = *list_link;
     }
 
-  if (wildcard || ptid_equal (ptid, current_thread_ptid))
+  if (ptid_match (current_thread_ptid, ptid))
     {
       current_thread_ptid = null_ptid;
       current_thread_arch = NULL;
     }
 
-  if (wildcard || ptid_equal (ptid, inferior_ptid))
+  if (ptid_match (inferior_ptid, ptid))
     {
       /* We just deleted the regcache of the current thread.  Need to
 	 forget about any frames we have cached, too.  */

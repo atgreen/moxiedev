@@ -1,3 +1,12 @@
+2012-02-24  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* signals.c (_rl_block_sigwinch, _rl_release_sigwinch): Add
+	conditional SIGWINCH around functions.
+
+2011-05-11  Sterling Augustine  <saugustine@google.com>
+
+	* complete.c (rl_completion_matches): Undo inadvertant checkin.
+
 2011-06-29  Jan Kratochvil  <jan.kratochvil@redhat.com>
 
 	Avoid free from a signal handler.

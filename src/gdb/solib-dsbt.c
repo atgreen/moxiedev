@@ -1,5 +1,5 @@
 /* Handle TIC6X (DSBT) shared libraries for GDB, the GNU Debugger.
-   Copyright (C) 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 2010-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -30,11 +30,12 @@
 #include "gdbcmd.h"
 #include "elf-bfd.h"
 #include "exceptions.h"
+#include "gdb_bfd.h"
 
 #define GOT_MODULE_OFFSET 4
 
 /* Flag which indicates whether internal debug messages should be printed.  */
-static int solib_dsbt_debug = 0;
+static unsigned int solib_dsbt_debug = 0;
 
 /* TIC6X pointers are four bytes wide.  */
 enum { TIC6X_PTR_SIZE = 4 };
@@ -232,7 +233,7 @@ decode_loadmap (gdb_byte *buf)
   struct int_elf32_dsbt_loadmap *int_ldmbuf;
 
   int version, seg, nsegs;
-  int ext_ldmbuf_size, int_ldmbuf_size;
+  int int_ldmbuf_size;
 
   ext_ldmbuf = (struct ext_elf32_dsbt_loadmap *) buf;
 
@@ -841,8 +842,7 @@ enable_break2 (void)
       unsigned int interp_sect_size;
       gdb_byte *buf;
       bfd *tmp_bfd = NULL;
-      int status;
-      CORE_ADDR addr, interp_loadmap_addr;
+      CORE_ADDR addr;
       gdb_byte addr_buf[TIC6X_PTR_SIZE];
       struct int_elf32_dsbt_loadmap *ldm;
       volatile struct gdb_exception ex;
@@ -900,7 +900,7 @@ enable_break2 (void)
 	{
 	  warning (_("Could not find symbol _dl_debug_addr in dynamic linker"));
 	  enable_break_failure_warning ();
-	  bfd_close (tmp_bfd);
+	  gdb_bfd_unref (tmp_bfd);
 	  return 0;
 	}
 
@@ -949,13 +949,13 @@ enable_break2 (void)
 		     "(at address %s) from dynamic linker"),
 	           hex_string_custom (addr + 8, 8));
 	  enable_break_failure_warning ();
-	  bfd_close (tmp_bfd);
+	  gdb_bfd_unref (tmp_bfd);
 	  return 0;
 	}
       addr = extract_unsigned_integer (addr_buf, sizeof addr_buf, byte_order);
 
       /* We're done with the temporary bfd.  */
-      bfd_close (tmp_bfd);
+      gdb_bfd_unref (tmp_bfd);
 
       /* We're also done with the loadmap.  */
       xfree (ldm);
@@ -1029,8 +1029,6 @@ dsbt_special_symbol_handling (void)
 static void
 dsbt_relocate_main_executable (void)
 {
-  int status;
-  CORE_ADDR exec_addr, interp_addr;
   struct int_elf32_dsbt_loadmap *ldm;
   struct cleanup *old_chain;
   struct section_offsets *new_offsets;
@@ -1173,7 +1171,7 @@ void
 _initialize_dsbt_solib (void)
 {
   solib_dsbt_pspace_data
-    = register_program_space_data_with_cleanup (dsbt_pspace_data_cleanup);
+    = register_program_space_data_with_cleanup (NULL, dsbt_pspace_data_cleanup);
 
   dsbt_so_ops.relocate_section_addresses = dsbt_relocate_section_addresses;
   dsbt_so_ops.free_so = dsbt_free_so;
@@ -1186,12 +1184,12 @@ _initialize_dsbt_solib (void)
   dsbt_so_ops.bfd_open = solib_bfd_open;
 
   /* Debug this file's internals.  */
-  add_setshow_zinteger_cmd ("solib-dsbt", class_maintenance,
-			    &solib_dsbt_debug, _("\
+  add_setshow_zuinteger_cmd ("solib-dsbt", class_maintenance,
+			     &solib_dsbt_debug, _("\
 Set internal debugging of shared library code for DSBT ELF."), _("\
 Show internal debugging of shared library code for DSBT ELF."), _("\
 When non-zero, DSBT solib specific internal debugging is enabled."),
-			    NULL,
-			    show_dsbt_debug,
-			    &setdebuglist, &showdebuglist);
+			     NULL,
+			     show_dsbt_debug,
+			     &setdebuglist, &showdebuglist);
 }

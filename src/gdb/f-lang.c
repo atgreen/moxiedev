@@ -1,7 +1,7 @@
 /* Fortran language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2001, 2002, 2003,
-   2004, 2005, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1993-1996, 1998-2005, 2007-2012 Free Software
+   Foundation, Inc.
 
    Contributed by Motorola.  Adapted from the C parser by Farooq Butt
    (fmbutt@engage.sps.mot.com).
@@ -33,6 +33,7 @@
 #include "value.h"
 #include "cp-support.h"
 #include "charset.h"
+#include "c-lang.h"
 
 
 /* Following is dubious stuff that had been in the xcoff reader.  */
@@ -262,23 +263,17 @@ f_word_break_characters (void)
 /* Consider the modules separator :: as a valid symbol name character
    class.  */
 
-static char **
+static VEC (char_ptr) *
 f_make_symbol_completion_list (char *text, char *word)
 {
   return default_make_symbol_completion_list_break_on (text, word, ":");
 }
-
-/* This is declared in c-lang.h but it is silly to import that file for what
-   is already just a hack.  */
-extern int c_value_print (struct value *, struct ui_file *,
-			  const struct value_print_options *);
 
 const struct language_defn f_language_defn =
 {
   "fortran",
   language_fortran,
   range_check_on,
-  type_check_on,
   case_sensitive_off,
   array_column_major,
   macro_expansion_no,
@@ -293,6 +288,7 @@ const struct language_defn f_language_defn =
   default_print_typedef,	/* Print a typedef using appropriate syntax */
   f_val_print,			/* Print a value using appropriate syntax */
   c_value_print,		/* FIXME */
+  default_read_var_value,	/* la_read_var_value */
   NULL,				/* Language specific skip_trampoline */
   NULL,                    	/* name_of_this */
   cp_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
@@ -309,6 +305,8 @@ const struct language_defn f_language_defn =
   default_print_array_index,
   default_pass_by_reference,
   default_get_string,
+  NULL,				/* la_get_symbol_name_cmp */
+  iterate_over_symbols,
   LANG_MAGIC
 };
 
@@ -570,7 +568,7 @@ find_first_common_named (char *name)
    that belongs to function funcname.  */
 
 SAVED_F77_COMMON_PTR
-find_common_for_function (char *name, char *funcname)
+find_common_for_function (const char *name, const char *funcname)
 {
 
   SAVED_F77_COMMON_PTR tmp;

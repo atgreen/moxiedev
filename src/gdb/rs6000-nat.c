@@ -1,8 +1,7 @@
 /* IBM RS/6000 native-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1987, 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
-   1998, 1999, 2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1986-1987, 1989, 1991-2004, 2007-2012 Free Software
+   Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,6 +31,7 @@
 #include "gdb-stabs.h"
 #include "regcache.h"
 #include "arch-utils.h"
+#include "inf-child.h"
 #include "inf-ptrace.h"
 #include "ppc-tdep.h"
 #include "rs6000-tdep.h"
@@ -551,7 +551,7 @@ rs6000_wait (struct target_ops *ops,
 
 	  /* Claim it exited with unknown signal.  */
 	  ourstatus->kind = TARGET_WAITKIND_SIGNALLED;
-	  ourstatus->value.sig = TARGET_SIGNAL_UNKNOWN;
+	  ourstatus->value.sig = GDB_SIGNAL_UNKNOWN;
 	  return inferior_ptid;
 	}
 
@@ -730,7 +730,7 @@ static struct vmap *
 add_vmap (LdInfo *ldi)
 {
   bfd *abfd, *last;
-  char *mem, *objname, *filename;
+  char *mem, *filename;
   struct objfile *obj;
   struct vmap *vp;
   int fd;
@@ -743,19 +743,13 @@ add_vmap (LdInfo *ldi)
   filename = LDI_FILENAME (ldi, arch64);
   mem = filename + strlen (filename) + 1;
   mem = xstrdup (mem);
-  objname = xstrdup (filename);
 
   fd = LDI_FD (ldi, arch64);
-  if (fd < 0)
-    /* Note that this opens it once for every member; a possible
-       enhancement would be to only open it once for every object.  */
-    abfd = bfd_openr (objname, gnutarget);
-  else
-    abfd = bfd_fdopenr (objname, gnutarget, fd);
+  abfd = gdb_bfd_open (filename, gnutarget, fd < 0 ? -1 : fd);
   if (!abfd)
     {
       warning (_("Could not open `%s' as an executable file: %s"),
-	       objname, bfd_errmsg (bfd_get_error ()));
+	       filename, bfd_errmsg (bfd_get_error ()));
       return NULL;
     }
 
@@ -766,35 +760,44 @@ add_vmap (LdInfo *ldi)
 
   else if (bfd_check_format (abfd, bfd_archive))
     {
-      last = 0;
-      /* FIXME??? am I tossing BFDs?  bfd?  */
-      while ((last = bfd_openr_next_archived_file (abfd, last)))
-	if (strcmp (mem, last->filename) == 0)
-	  break;
+      last = gdb_bfd_openr_next_archived_file (abfd, NULL);
+      while (last != NULL)
+	{
+	  bfd *next;
+
+	  if (strcmp (mem, last->filename) == 0)
+	    break;
+
+	  next = gdb_bfd_openr_next_archived_file (abfd, last);
+	  gdb_bfd_unref (last);
+	}
 
       if (!last)
 	{
-	  warning (_("\"%s\": member \"%s\" missing."), objname, mem);
-	  bfd_close (abfd);
+	  warning (_("\"%s\": member \"%s\" missing."), filename, mem);
+	  gdb_bfd_unref (abfd);
 	  return NULL;
 	}
 
       if (!bfd_check_format (last, bfd_object))
 	{
 	  warning (_("\"%s\": member \"%s\" not in executable format: %s."),
-		   objname, mem, bfd_errmsg (bfd_get_error ()));
-	  bfd_close (last);
-	  bfd_close (abfd);
+		   filename, mem, bfd_errmsg (bfd_get_error ()));
+	  gdb_bfd_unref (last);
+	  gdb_bfd_unref (abfd);
 	  return NULL;
 	}
 
       vp = map_vmap (last, abfd);
+      /* map_vmap acquired a reference to LAST, so we can release
+	 ours.  */
+      gdb_bfd_unref (last);
     }
   else
     {
       warning (_("\"%s\": not in executable format: %s."),
-	       objname, bfd_errmsg (bfd_get_error ()));
-      bfd_close (abfd);
+	       filename, bfd_errmsg (bfd_get_error ()));
+      gdb_bfd_unref (abfd);
       return NULL;
     }
   obj = allocate_objfile (vp->bfd, 0);
@@ -803,6 +806,11 @@ add_vmap (LdInfo *ldi)
   /* Always add symbols for the main objfile.  */
   if (vp == vmap || auto_solib_add)
     vmap_add_symbols (vp);
+
+  /* Anything needing a reference to ABFD has already acquired it, so
+     release our local reference.  */
+  gdb_bfd_unref (abfd);
+
   return vp;
 }
 
@@ -1214,6 +1222,8 @@ find_toc_address (CORE_ADDR pc)
   error (_("Unable to find TOC entry for pc %s."), hex_string (pc));
 }
 
+
+void _initialize_rs6000_nat (void);
 
 void
 _initialize_rs6000_nat (void)

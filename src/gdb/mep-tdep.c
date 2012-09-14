@@ -1,7 +1,6 @@
 /* Target-dependent code for the Toshiba MeP for GDB, the GNU debugger.
 
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-   2011 Free Software Foundation, Inc.
+   Copyright (C) 2001-2012 Free Software Foundation, Inc.
 
    Contributed by Red Hat, Inc.
 
@@ -1912,7 +1911,7 @@ mep_analyze_prologue (struct gdbarch *gdbarch,
 static CORE_ADDR
 mep_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  char *name;
+  const char *name;
   CORE_ADDR func_addr, func_end;
   struct mep_prologue p;
 
@@ -2195,7 +2194,7 @@ Try using the 'return' command with no argument."));
 }
 
 static enum return_value_convention
-mep_return_value (struct gdbarch *gdbarch, struct type *func_type,
+mep_return_value (struct gdbarch *gdbarch, struct value *function,
 		  struct type *type, struct regcache *regcache,
 		  gdb_byte *readbuf, const gdb_byte *writebuf)
 {

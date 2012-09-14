@@ -1,6 +1,6 @@
 /* opncls.c -- open and close a BFD.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012
    Free Software Foundation, Inc.
 
    Written by Cygnus Support.
@@ -127,7 +127,7 @@ _bfd_new_bfd_contained_in (bfd *obfd)
 
 /* Delete a BFD.  */
 
-void
+static void
 _bfd_delete_bfd (bfd *abfd)
 {
   if (abfd->memory)
@@ -135,6 +135,8 @@ _bfd_delete_bfd (bfd *abfd)
       bfd_hash_table_free (&abfd->section_htab);
       objalloc_free ((struct objalloc *) abfd->memory);
     }
+
+  free (abfd->arelt_data);
   free (abfd);
 }
 
@@ -190,6 +192,8 @@ DESCRIPTION
 	If <<NULL>> is returned then an error has occured.   Possible errors
 	are <<bfd_error_no_memory>>, <<bfd_error_invalid_target>> or
 	<<system_call>> error.
+
+	On error, @var{fd} is always closed.
 */
 
 bfd *
@@ -200,11 +204,17 @@ bfd_fopen (const char *filename, const char *target, const char *mode, int fd)
 
   nbfd = _bfd_new_bfd ();
   if (nbfd == NULL)
-    return NULL;
+    {
+      if (fd != -1)
+	close (fd);
+      return NULL;
+    }
 
   target_vec = bfd_find_target (target, nbfd);
   if (target_vec == NULL)
     {
+      if (fd != -1)
+	close (fd);
       _bfd_delete_bfd (nbfd);
       return NULL;
     }
@@ -307,6 +317,8 @@ DESCRIPTION
 
 	Possible errors are <<bfd_error_no_memory>>,
 	<<bfd_error_invalid_target>> and <<bfd_error_system_call>>.
+
+	On error, @var{fd} is closed.
 */
 
 bfd *
@@ -323,6 +335,10 @@ bfd_fdopenr (const char *filename, const char *target, int fd)
   fdflags = fcntl (fd, F_GETFL, NULL);
   if (fdflags == -1)
     {
+      int save = errno;
+
+      close (fd);
+      errno = save;
       bfd_set_error (bfd_error_system_call);
       return NULL;
     }
@@ -693,20 +709,11 @@ bfd_boolean
 bfd_close (bfd *abfd)
 {
   bfd_boolean ret;
-  bfd *nbfd;
-  bfd *next;
 
   if (bfd_write_p (abfd))
     {
       if (! BFD_SEND_FMT (abfd, _bfd_write_contents, (abfd)))
 	return FALSE;
-    }
-
-  /* Close nested archives (if this bfd is a thin archive).  */
-  for (nbfd = abfd->nested_archives; nbfd; nbfd = next)
-    {
-      next = nbfd->archive_next;
-      bfd_close (nbfd);
     }
 
   if (! BFD_SEND (abfd, _close_and_cleanup, (abfd)))

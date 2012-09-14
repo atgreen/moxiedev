@@ -1,6 +1,5 @@
 /* Support for printing Pascal types for GDB, the GNU debugger.
-   Copyright (C) 2000, 2001, 2002, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2000-2002, 2006-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -31,7 +30,7 @@
 #include "language.h"
 #include "p-lang.h"
 #include "typeprint.h"
-
+#include "gdb-demangle.h"
 #include "gdb_string.h"
 #include <errno.h>
 #include <ctype.h>
@@ -132,7 +131,7 @@ pascal_print_typedef (struct type *type, struct symbol *new_symbol,
 static void
 pascal_type_print_derivation_info (struct ui_file *stream, struct type *type)
 {
-  char *name;
+  const char *name;
   int i;
 
   for (i = 0; i < TYPE_N_BASECLASSES (type); i++)
@@ -184,8 +183,7 @@ pascal_type_print_method_args (const char *physname, const char *methodname,
 	  physname += len;
 
 	  for (j = 0; j < i; ++j)
-	    fputc_filtered (physname[i], stream);
-	  fputs_filtered (physname, stream);
+	    fputc_filtered (physname[j], stream);
 
 	  physname += i;
 	  if (physname[0] != 0)
@@ -291,7 +289,6 @@ pascal_type_print_varspec_prefix (struct type *type, struct ui_file *stream,
     case TYPE_CODE_SET:
     case TYPE_CODE_RANGE:
     case TYPE_CODE_STRING:
-    case TYPE_CODE_BITSTRING:
     case TYPE_CODE_COMPLEX:
     case TYPE_CODE_TYPEDEF:
       /* These types need no prefix.  They are listed here so that
@@ -410,7 +407,6 @@ pascal_type_print_varspec_suffix (struct type *type, struct ui_file *stream,
     case TYPE_CODE_SET:
     case TYPE_CODE_RANGE:
     case TYPE_CODE_STRING:
-    case TYPE_CODE_BITSTRING:
     case TYPE_CODE_COMPLEX:
     case TYPE_CODE_TYPEDEF:
       /* These types do not need a suffix.  They are listed so that
@@ -631,7 +627,7 @@ pascal_type_print_base (struct type *type, struct ui_file *stream, int show,
 	    {
 	      struct fn_field *f = TYPE_FN_FIELDLIST1 (type, i);
 	      int j, len2 = TYPE_FN_FIELDLIST_LENGTH (type, i);
-	      char *method_name = TYPE_FN_FIELDLIST_NAME (type, i);
+	      const char *method_name = TYPE_FN_FIELDLIST_NAME (type, i);
 
 	      /* this is GNU C++ specific
 	         how can we know constructor/destructor?
@@ -752,11 +748,12 @@ pascal_type_print_base (struct type *type, struct ui_file *stream, int show,
 		fprintf_filtered (stream, ", ");
 	      wrap_here ("    ");
 	      fputs_filtered (TYPE_FIELD_NAME (type, i), stream);
-	      if (lastval != TYPE_FIELD_BITPOS (type, i))
+	      if (lastval != TYPE_FIELD_ENUMVAL (type, i))
 		{
 		  fprintf_filtered (stream,
-				    " := %d", TYPE_FIELD_BITPOS (type, i));
-		  lastval = TYPE_FIELD_BITPOS (type, i);
+				    " := %s",
+				    plongest (TYPE_FIELD_ENUMVAL (type, i)));
+		  lastval = TYPE_FIELD_ENUMVAL (type, i);
 		}
 	      lastval++;
 	    }
@@ -791,10 +788,6 @@ pascal_type_print_base (struct type *type, struct ui_file *stream, int show,
       fputs_filtered ("set of ", stream);
       pascal_print_type (TYPE_INDEX_TYPE (type), "", stream,
 			 show - 1, level);
-      break;
-
-    case TYPE_CODE_BITSTRING:
-      fputs_filtered ("BitString", stream);
       break;
 
     case TYPE_CODE_STRING:

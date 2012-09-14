@@ -1,7 +1,7 @@
 /* Simulator for Analog Devices Blackfin processors.
 
-   Copyright (C) 2005-2011 Free Software Foundation, Inc.
-   Contributed by Analog Devices, Inc.
+   Copyright (C) 2005-2012 Free Software Foundation, Inc.
+   Contributed by Analog Devices, Inc. and Mike Frysinger.
 
    This file is part of simulators.
 
@@ -885,7 +885,6 @@ static const struct bfin_memory_layout bf54x_mem[] =
 {
   LAYOUT (0xFFC00800, 0x60, read_write),	/* SPORT0 stub XXX: not on BF542/4 */
   LAYOUT (0xFFC00900, 0x60, read_write),	/* SPORT1 stub */
-  LAYOUT (0xFFC01400, 0x200, read_write),	/* PORT/GPIO stub */
   LAYOUT (0xFFC02500, 0x60, read_write),	/* SPORT2 stub */
   LAYOUT (0xFFC02600, 0x60, read_write),	/* SPORT3 stub */
   LAYOUT (0xFFC03800, 0x70, read_write),	/* ATAPI stub */
@@ -915,6 +914,20 @@ static const struct bfin_dev_layout bf542_dev[] =
   DEVICE (0xFFC00A00, BF54X_MMR_EBIU_AMC_SIZE, "bfin_ebiu_amc"),
   DEVICE (0xFFC00A20, BFIN_MMR_EBIU_DDRC_SIZE, "bfin_ebiu_ddrc"),
  _DEVICE (0xFFC01300, BFIN_MMR_EPPI_SIZE,      "bfin_eppi@1", 1),
+  DEVICE (0xFFC01400, BFIN_MMR_PINT_SIZE,      "bfin_pint@0"),
+  DEVICE (0xFFC01430, BFIN_MMR_PINT_SIZE,      "bfin_pint@1"),
+ _DEVICE (0xFFC01460, BFIN_MMR_PINT_SIZE,      "bfin_pint@2", 2),
+ _DEVICE (0xFFC01490, BFIN_MMR_PINT_SIZE,      "bfin_pint@3", 2),
+  DEVICE (0xFFC014C0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@0"),
+  DEVICE (0xFFC014E0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@1"),
+  DEVICE (0xFFC01500, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@2"),
+  DEVICE (0xFFC01520, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@3"),
+  DEVICE (0xFFC01540, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@4"),
+  DEVICE (0xFFC01560, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@5"),
+  DEVICE (0xFFC01580, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@6"),
+  DEVICE (0xFFC015A0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@7"),
+  DEVICE (0xFFC015C0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@8"),
+  DEVICE (0xFFC015E0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@9"),
   DEVICE (0xFFC01600, BFIN_MMR_GPTIMER_SIZE,   "bfin_gptimer@0"),
   DEVICE (0xFFC01610, BFIN_MMR_GPTIMER_SIZE,   "bfin_gptimer@1"),
   DEVICE (0xFFC01620, BFIN_MMR_GPTIMER_SIZE,   "bfin_gptimer@2"),
@@ -945,6 +958,20 @@ static const struct bfin_dev_layout bf544_dev[] =
   DEVICE (0xFFC00A20, BFIN_MMR_EBIU_DDRC_SIZE, "bfin_ebiu_ddrc"),
  _DEVICE (0xFFC01000, BFIN_MMR_EPPI_SIZE,      "bfin_eppi@0", 1),
  _DEVICE (0xFFC01300, BFIN_MMR_EPPI_SIZE,      "bfin_eppi@1", 1),
+  DEVICE (0xFFC01400, BFIN_MMR_PINT_SIZE,      "bfin_pint@0"),
+  DEVICE (0xFFC01430, BFIN_MMR_PINT_SIZE,      "bfin_pint@1"),
+ _DEVICE (0xFFC01460, BFIN_MMR_PINT_SIZE,      "bfin_pint@2", 2),
+ _DEVICE (0xFFC01490, BFIN_MMR_PINT_SIZE,      "bfin_pint@3", 2),
+  DEVICE (0xFFC014C0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@0"),
+  DEVICE (0xFFC014E0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@1"),
+  DEVICE (0xFFC01500, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@2"),
+  DEVICE (0xFFC01520, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@3"),
+  DEVICE (0xFFC01540, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@4"),
+  DEVICE (0xFFC01560, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@5"),
+  DEVICE (0xFFC01580, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@6"),
+  DEVICE (0xFFC015A0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@7"),
+  DEVICE (0xFFC015C0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@8"),
+  DEVICE (0xFFC015E0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@9"),
   DEVICE (0xFFC01600, BFIN_MMR_GPTIMER_SIZE,   "bfin_gptimer@0"),
   DEVICE (0xFFC01610, BFIN_MMR_GPTIMER_SIZE,   "bfin_gptimer@1"),
   DEVICE (0xFFC01620, BFIN_MMR_GPTIMER_SIZE,   "bfin_gptimer@2"),
@@ -976,6 +1003,20 @@ static const struct bfin_dev_layout bf547_dev[] =
   DEVICE (0xFFC00A20, BFIN_MMR_EBIU_DDRC_SIZE, "bfin_ebiu_ddrc"),
  _DEVICE (0xFFC01000, BFIN_MMR_EPPI_SIZE,      "bfin_eppi@0", 1),
  _DEVICE (0xFFC01300, BFIN_MMR_EPPI_SIZE,      "bfin_eppi@1", 1),
+  DEVICE (0xFFC01400, BFIN_MMR_PINT_SIZE,      "bfin_pint@0"),
+  DEVICE (0xFFC01430, BFIN_MMR_PINT_SIZE,      "bfin_pint@1"),
+ _DEVICE (0xFFC01460, BFIN_MMR_PINT_SIZE,      "bfin_pint@2", 2),
+ _DEVICE (0xFFC01490, BFIN_MMR_PINT_SIZE,      "bfin_pint@3", 2),
+  DEVICE (0xFFC014C0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@0"),
+  DEVICE (0xFFC014E0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@1"),
+  DEVICE (0xFFC01500, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@2"),
+  DEVICE (0xFFC01520, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@3"),
+  DEVICE (0xFFC01540, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@4"),
+  DEVICE (0xFFC01560, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@5"),
+  DEVICE (0xFFC01580, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@6"),
+  DEVICE (0xFFC015A0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@7"),
+  DEVICE (0xFFC015C0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@8"),
+  DEVICE (0xFFC015E0, BFIN_MMR_GPIO2_SIZE,     "bfin_gpio2@9"),
   DEVICE (0xFFC01600, BFIN_MMR_GPTIMER_SIZE,   "bfin_gptimer@0"),
   DEVICE (0xFFC01610, BFIN_MMR_GPTIMER_SIZE,   "bfin_gptimer@1"),
   DEVICE (0xFFC01620, BFIN_MMR_GPTIMER_SIZE,   "bfin_gptimer@2"),
@@ -1005,6 +1046,23 @@ static const struct bfin_dmac_layout bf54x_dmac[] =
 #define bf547_dmac bf54x_dmac
 #define bf548_dmac bf54x_dmac
 #define bf549_dmac bf54x_dmac
+#define PINT_PIQS(p, b, g) \
+  PORT (p, "piq0@"#b,  g, "p0"), \
+  PORT (p, "piq1@"#b,  g, "p1"), \
+  PORT (p, "piq2@"#b,  g, "p2"), \
+  PORT (p, "piq3@"#b,  g, "p3"), \
+  PORT (p, "piq4@"#b,  g, "p4"), \
+  PORT (p, "piq5@"#b,  g, "p5"), \
+  PORT (p, "piq6@"#b,  g, "p6"), \
+  PORT (p, "piq7@"#b,  g, "p7"), \
+  PORT (p, "piq8@"#b,  g, "p8"), \
+  PORT (p, "piq9@"#b,  g, "p9"), \
+  PORT (p, "piq10@"#b, g, "p10"), \
+  PORT (p, "piq11@"#b, g, "p11"), \
+  PORT (p, "piq12@"#b, g, "p12"), \
+  PORT (p, "piq13@"#b, g, "p13"), \
+  PORT (p, "piq14@"#b, g, "p14"), \
+  PORT (p, "piq15@"#b, g, "p15")
 static const struct bfin_port_layout bf54x_port[] =
 {
   SIC (0,  0, "bfin_pll",          "pll"),
@@ -1027,7 +1085,11 @@ static const struct bfin_port_layout bf54x_port[] =
   SIC (0, 17, "bfin_gptimer@9",    "stat"),
   SIC (0, 18, "bfin_gptimer@10",   "stat"),
   SIC (0, 19, "bfin_pint@0",       "stat"),
+  PINT_PIQS ("bfin_pint@0", 0, "bfin_gpio2@0"),
+  PINT_PIQS ("bfin_pint@0", 1, "bfin_gpio2@1"),
   SIC (0, 20, "bfin_pint@1",       "stat"),
+  PINT_PIQS ("bfin_pint@1", 0, "bfin_gpio2@0"),
+  PINT_PIQS ("bfin_pint@1", 1, "bfin_gpio2@1"),
   SIC (0, 21, "bfin_dma@256",      "di"),	/* mdma0 */
   SIC (0, 21, "bfin_dma@257",      "di"),	/* mdma0 */
   SIC (0, 22, "bfin_dma@258",      "di"),	/* mdma1 */
@@ -1109,7 +1171,23 @@ static const struct bfin_port_layout bf54x_port[] =
   SIC (2, 28, "bfin_gptimer@6",    "stat"),
   SIC (2, 29, "bfin_gptimer@7",    "stat"),
   SIC (2, 30, "bfin_pint@2",       "stat"),
+  PINT_PIQS ("bfin_pint@2", 0, "bfin_gpio2@2"),
+  PINT_PIQS ("bfin_pint@2", 1, "bfin_gpio2@3"),
+  PINT_PIQS ("bfin_pint@2", 2, "bfin_gpio2@4"),
+  PINT_PIQS ("bfin_pint@2", 3, "bfin_gpio2@5"),
+  PINT_PIQS ("bfin_pint@2", 4, "bfin_gpio2@6"),
+  PINT_PIQS ("bfin_pint@2", 5, "bfin_gpio2@7"),
+  PINT_PIQS ("bfin_pint@2", 6, "bfin_gpio2@8"),
+  PINT_PIQS ("bfin_pint@2", 7, "bfin_gpio2@9"),
   SIC (2, 31, "bfin_pint@3",       "stat"),
+  PINT_PIQS ("bfin_pint@3", 0, "bfin_gpio2@2"),
+  PINT_PIQS ("bfin_pint@3", 1, "bfin_gpio2@3"),
+  PINT_PIQS ("bfin_pint@3", 2, "bfin_gpio2@4"),
+  PINT_PIQS ("bfin_pint@3", 3, "bfin_gpio2@5"),
+  PINT_PIQS ("bfin_pint@3", 4, "bfin_gpio2@6"),
+  PINT_PIQS ("bfin_pint@3", 5, "bfin_gpio2@7"),
+  PINT_PIQS ("bfin_pint@3", 6, "bfin_gpio2@8"),
+  PINT_PIQS ("bfin_pint@3", 7, "bfin_gpio2@9"),
 };
 #define bf542_port bf54x_port
 #define bf544_port bf54x_port
@@ -1541,27 +1619,27 @@ static const struct bfrom bf538_roms[] =
 };
 static const struct bfrom bf54x_roms[] =
 {
-  BFROM (54x, 4, 0),
-  BFROM (54x, 2, 0),
-  BFROM (54x, 1, 0),
-  BFROM (54x, 0, 0),
-  BFROMA (0xffa14000, 54x_l1, 4, 0),
-  BFROMA (0xffa14000, 54x_l1, 2, 0),
-  BFROMA (0xffa14000, 54x_l1, 1, 0),
-  BFROMA (0xffa14000, 54x_l1, 0, 0),
+  BFROM (54x, 4, 0x1000),
+  BFROM (54x, 2, 0x1000),
+  BFROM (54x, 1, 0x1000),
+  BFROM (54x, 0, 0x1000),
+  BFROMA (0xffa14000, 54x_l1, 4, 0x10000),
+  BFROMA (0xffa14000, 54x_l1, 2, 0x10000),
+  BFROMA (0xffa14000, 54x_l1, 1, 0x10000),
+  BFROMA (0xffa14000, 54x_l1, 0, 0x10000),
   BFROM_STUB,
 };
 static const struct bfrom bf561_roms[] =
 {
   /* XXX: No idea what the actual wrap limit is here.  */
-  BFROM (561, 5, 0),
+  BFROM (561, 5, 0x1000),
   BFROM_STUB,
 };
 static const struct bfrom bf59x_roms[] =
 {
   BFROM (59x, 1, 0x1000000),
   BFROM (59x, 0, 0x1000000),
-  BFROMA (0xffa10000, 59x_l1, 1, 0),
+  BFROMA (0xffa10000, 59x_l1, 1, 0x10000),
   BFROM_STUB,
 };
 
@@ -1583,7 +1661,7 @@ bfin_model_map_bfrom (SIM_DESC sd, SIM_CPU *cpu)
   else if (mnum >= 531 && mnum <= 533)
     bfrom = bf533_roms;
   else if (mnum == 535)
-    /* Stub.  */;
+    return; /* Stub.  */
   else if (mnum >= 534 && mnum <= 537)
     bfrom = bf537_roms;
   else if (mnum >= 538 && mnum <= 539)
@@ -1781,7 +1859,7 @@ bfin_reg_fetch (SIM_CPU *cpu, int rn, unsigned char *buf, int len)
   else if (rn == SIM_BFIN_CC_REGNUM)
     value = CCREG;
   else
-    return 0; // will be an error in gdb
+    return -1;
 
   /* Handle our KSP/USP shadowing in SP.  While in supervisor mode, we
      have the normal SP/USP behavior.  User mode is tricky though.  */
@@ -1796,7 +1874,7 @@ bfin_reg_fetch (SIM_CPU *cpu, int rn, unsigned char *buf, int len)
 
   bfin_store_unsigned_integer (buf, 4, value);
 
-  return -1; // disables size checking in gdb
+  return 4;
 }
 
 static int
@@ -1815,9 +1893,9 @@ bfin_reg_store (SIM_CPU *cpu, int rn, unsigned char *buf, int len)
   else if (rn == SIM_BFIN_CC_REGNUM)
     SET_CCREG (value);
   else
-    return 0; // will be an error in gdb
+    return -1;
 
-  return -1; // disables size checking in gdb
+  return 4;
 }
 
 static sim_cia

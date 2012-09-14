@@ -1,4 +1,5 @@
-/* THIS FILE IS GENERATED.  Original: tic6x-c62x-linux.xml */
+/* THIS FILE IS GENERATED.  -*- buffer-read-only: t -*- vi:set ro:
+  Original: tic6x-c62x-linux.xml */
 
 #include "defs.h"
 #include "osabi.h"
@@ -10,7 +11,6 @@ initialize_tdesc_tic6x_c62x_linux (void)
 {
   struct target_desc *result = allocate_target_description ();
   struct tdesc_feature *feature;
-  struct tdesc_type *field_type, *type;
 
   set_tdesc_architecture (result, bfd_scan_arch ("tic6x"));
 

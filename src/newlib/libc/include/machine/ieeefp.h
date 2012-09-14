@@ -69,6 +69,11 @@
 #endif
 #endif
 
+#ifdef __epiphany__
+#define __IEEE_LITTLE_ENDIAN
+#define Sudden_Underflow 1
+#endif
+
 #ifdef __hppa__
 #define __IEEE_BIG_ENDIAN
 #endif
@@ -275,7 +280,11 @@
 #endif
 
 #ifdef __moxie__
+#ifdef __MOXIE_BIG_ENDIAN__
 #define __IEEE_BIG_ENDIAN
+#else
+#define __IEEE_LITTLE_ENDIAN
+#endif
 #endif
 
 #ifdef __ia64__
@@ -340,6 +349,12 @@
 
 #ifdef __MICROBLAZE__
 #define __IEEE_BIG_ENDIAN
+#endif
+
+#ifdef __RL78__
+#define __IEEE_LITTLE_ENDIAN
+#define __SMALL_BITFIELDS	/* 16 Bit INT */
+#define _DOUBLE_IS_32BITS
 #endif
 
 #ifdef __RX__

@@ -1,8 +1,6 @@
 /* Definitions for reading symbol files into GDB.
 
-   Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1990-2004, 2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -24,6 +22,7 @@
 
 /* This file requires that you first include "bfd.h".  */
 #include "symtab.h"
+#include "probe.h"
 
 /* Opaque declarations.  */
 struct target_section;
@@ -31,6 +30,11 @@ struct objfile;
 struct obj_section;
 struct obstack;
 struct block;
+struct probe;
+struct value;
+struct frame_info;
+struct agent_expr;
+struct axs_value;
 
 /* Comparison function for symbol look ups.  */
 
@@ -152,22 +156,24 @@ struct quick_symbol_functions
   /* Forget all cached full file names for OBJFILE.  */
   void (*forget_cached_source_info) (struct objfile *objfile);
 
-  /* Look up the symbol table, in OBJFILE, of a source file named
-     NAME.  If there is no '/' in the name, a match after a '/' in the
-     symbol table's file name will also work.  FULL_PATH is the
-     absolute file name, and REAL_PATH is the same, run through
-     gdb_realpath.
+  /* Expand and iterate over each "partial" symbol table in OBJFILE
+     where the source file is named NAME.
 
-     If no such symbol table can be found, returns 0.
+     If NAME is not absolute, a match after a '/' in the symbol
+     table's file name will also work.  FULL_PATH is the absolute file
+     name, and REAL_PATH is the same, run through gdb_realpath.
 
-     Otherwise, sets *RESULT to the symbol table and returns 1.  This
-     might return 1 and set *RESULT to NULL if the requested file is
-     an include file that does not have a symtab of its own.  */
-  int (*lookup_symtab) (struct objfile *objfile,
-			const char *name,
-			const char *full_path,
-			const char *real_path,
-			struct symtab **result);
+     If a match is found, the "partial" symbol table is expanded.
+     Then, this calls iterate_over_some_symtabs (or equivalent) over
+     all newly-created symbol tables, passing CALLBACK and DATA to it.
+     The result of this call is returned.  */
+  int (*map_symtabs_matching_filename) (struct objfile *objfile,
+					const char *name,
+					const char *full_path,
+					const char *real_path,
+					int (*callback) (struct symtab *,
+							 void *),
+					void *data);
 
   /* Check to see if the symbol is defined in a "partial" symbol table
      of OBJFILE.  KIND should be either GLOBAL_BLOCK or STATIC_BLOCK,
@@ -176,7 +182,9 @@ struct quick_symbol_functions
      indicates what sort of symbol to search for.
 
      Returns the newly-expanded symbol table in which the symbol is
-     defined, or NULL if no such symbol table exists.  */
+     defined, or NULL if no such symbol table exists.  If OBJFILE
+     contains !TYPE_OPAQUE symbol prefer its symtab.  If it contains
+     only TYPE_OPAQUE symbol(s), return at least that symtab.  */
   struct symtab *(*lookup_symbol) (struct objfile *objfile,
 				   int kind, const char *name,
 				   domain_enum domain);
@@ -222,24 +230,24 @@ struct quick_symbol_functions
   void (*expand_symtabs_with_filename) (struct objfile *objfile,
 					const char *filename);
 
-  /* Return the file name of the file holding the symbol in OBJFILE
+  /* Return the file name of the file holding the global symbol in OBJFILE
      named NAME.  If no such symbol exists in OBJFILE, return NULL.  */
   const char *(*find_symbol_file) (struct objfile *objfile, const char *name);
 
   /* Find global or static symbols in all tables that are in NAMESPACE 
      and for which MATCH (symbol name, NAME) == 0, passing each to 
-     CALLBACK, reading in partial symbol symbol tables as needed.  Look
+     CALLBACK, reading in partial symbol tables as needed.  Look
      through global symbols if GLOBAL and otherwise static symbols.
      Passes NAME, NAMESPACE, and DATA to CALLBACK with each symbol
      found.  After each block is processed, passes NULL to CALLBACK.
-     MATCH must be weaker than strcmp_iw in the sense that
-     strcmp_iw(x,y) == 0 --> MATCH(x,y) == 0.  ORDERED_COMPARE, if
-     non-null, must be an ordering relation compatible with strcmp_iw
-     in the sense that  
-            strcmp(x,y) == 0 --> ORDERED_COMPARE(x,y) == 0 
+     MATCH must be weaker than strcmp_iw_ordered in the sense that
+     strcmp_iw_ordered(x,y) == 0 --> MATCH(x,y) == 0.  ORDERED_COMPARE,
+     if non-null, must be an ordering relation compatible with
+     strcmp_iw_ordered in the sense that
+            strcmp_iw_ordered(x,y) == 0 --> ORDERED_COMPARE(x,y) == 0
      and 
-            strcmp(x,y) <= 0 --> ORDERED_COMPARE(x,y) <= 0
-     (allowing strcmp(x,y) < 0 while ORDERED_COMPARE(x, y) == 0).
+            strcmp_iw_ordered(x,y) <= 0 --> ORDERED_COMPARE(x,y) <= 0
+     (allowing strcmp_iw_ordered(x,y) < 0 while ORDERED_COMPARE(x, y) == 0).
      CALLBACK returns 0 to indicate that the scan should continue, or
      non-zero to indicate that the scan should be terminated.  */
 
@@ -258,10 +266,10 @@ struct quick_symbol_functions
      file is skipped.  If FILE_MATCHER is NULL such file is not skipped.
 
      Otherwise, if KIND does not match this symbol is skipped.
-     
-     If even KIND matches, then NAME_MATCHER is called for each symbol defined
-     in the file.  The symbol's "natural" name and DATA are passed to
-     NAME_MATCHER.
+
+     If even KIND matches, then NAME_MATCHER is called for each symbol
+     defined in the file.  The symbol "search" name and DATA are passed
+     to NAME_MATCHER.
 
      If NAME_MATCHER returns zero, then this symbol is skipped.
 
@@ -269,11 +277,12 @@ struct quick_symbol_functions
 
      DATA is user data that is passed unmodified to the callback
      functions.  */
-  void (*expand_symtabs_matching) (struct objfile *objfile,
-				   int (*file_matcher) (const char *, void *),
-				   int (*name_matcher) (const char *, void *),
-				   enum search_domain kind,
-				   void *data);
+  void (*expand_symtabs_matching)
+    (struct objfile *objfile,
+     int (*file_matcher) (const char *, void *),
+     int (*name_matcher) (const char *, void *),
+     enum search_domain kind,
+     void *data);
 
   /* Return the symbol table from OBJFILE that contains PC and
      SECTION.  Return NULL if there is no such symbol table.  This
@@ -289,9 +298,54 @@ struct quick_symbol_functions
 
   /* Call a callback for every file defined in OBJFILE whose symtab is
      not already read in.  FUN is the callback.  It is passed the file's
-     FILENAME, the file's FULLNAME, and the DATA passed to this function.  */
+     FILENAME, the file's FULLNAME (if need_fullname is non-zero), and
+     the DATA passed to this function.  */
   void (*map_symbol_filenames) (struct objfile *objfile,
-				symbol_filename_ftype *fun, void *data);
+				symbol_filename_ftype *fun, void *data,
+				int need_fullname);
+};
+
+/* Structure of functions used for probe support.  If one of these functions
+   is provided, all must be.  */
+
+struct sym_probe_fns
+{
+  /* If non-NULL, return an array of probe objects.
+
+     The returned value does not have to be freed and it has lifetime of the
+     OBJFILE.  */
+  VEC (probe_p) *(*sym_get_probes) (struct objfile *);
+
+  /* Return the number of arguments available to PROBE.  PROBE will
+     have come from a call to this objfile's sym_get_probes method.
+     If you provide an implementation of sym_get_probes, you must
+     implement this method as well.  */
+  unsigned (*sym_get_probe_argument_count) (struct probe *probe);
+
+  /* Evaluate the Nth argument available to PROBE.  PROBE will have
+     come from a call to this objfile's sym_get_probes method.  N will
+     be between 0 and the number of arguments available to this probe.
+     FRAME is the frame in which the evaluation is done; the frame's
+     PC will match the address of the probe.  If you provide an
+     implementation of sym_get_probes, you must implement this method
+     as well.  */
+  struct value *(*sym_evaluate_probe_argument) (struct probe *probe,
+						unsigned n);
+
+  /* Compile the Nth probe argument to an agent expression.  PROBE
+     will have come from a call to this objfile's sym_get_probes
+     method.  N will be between 0 and the number of arguments
+     available to this probe.  EXPR and VALUE are the agent expression
+     that is being updated.  */
+  void (*sym_compile_to_ax) (struct probe *probe,
+			     struct agent_expr *expr,
+			     struct axs_value *value,
+			     unsigned n);
+
+  /* Relocate the probe section of OBJFILE.  */
+  void (*sym_relocate_probe) (struct objfile *objfile,
+			      struct section_offsets *new_offsets,
+			      struct section_offsets *delta);
 };
 
 /* Structure to keep track of symbol reading functions for various
@@ -363,6 +417,10 @@ struct sym_fns
      malloc'd buffer otherwise.  */
 
   bfd_byte *(*sym_relocate) (struct objfile *, asection *sectp, bfd_byte *buf);
+
+  /* If non-NULL, this objfile has probe support, and all the probe
+     functions referred to here will be non-NULL.  */
+  const struct sym_probe_fns *sym_probe_fns;
 
   /* The "quick" (aka partial) symbol functions for this symbol
      reader.  */
@@ -492,7 +550,7 @@ extern void find_lowest_section (bfd *, asection *, void *);
 
 extern bfd *symfile_bfd_open (char *);
 
-extern bfd *bfd_open_maybe_remote (const char *);
+extern bfd *gdb_bfd_open_maybe_remote (const char *);
 
 extern int get_section_index (struct objfile *, char *);
 
@@ -586,6 +644,7 @@ struct dwarf2_debug_sections {
   struct dwarf2_section_names str;
   struct dwarf2_section_names ranges;
   struct dwarf2_section_names types;
+  struct dwarf2_section_names addr;
   struct dwarf2_section_names frame;
   struct dwarf2_section_names eh_frame;
   struct dwarf2_section_names gdb_index;

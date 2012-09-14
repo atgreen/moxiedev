@@ -1,8 +1,7 @@
 /* Target-dependent code for the S+core architecture, for GDB,
    the GNU Debugger.
 
-   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2006-2012 Free Software Foundation, Inc.
 
    Contributed by Qinwei (qinwei@sunnorth.com.cn)
    Contributed by Ching-Peng Lin (cplin@sunplus.com)
@@ -222,7 +221,6 @@ score3_adjust_pc_and_fetch_inst (CORE_ADDR *pcptr, int *lenptr,
 
 #define EXTRACT_LEN 2
   CORE_ADDR adjust_pc = *pcptr & ~0x1;
-  int inst_len;
   gdb_byte buf[5][EXTRACT_LEN] =
     {
       {'\0', '\0'},
@@ -451,7 +449,7 @@ score_xfer_register (struct regcache *regcache, int regnum, int length,
 }
 
 static enum return_value_convention
-score_return_value (struct gdbarch *gdbarch, struct type *func_type,
+score_return_value (struct gdbarch *gdbarch, struct value *function,
                     struct type *type, struct regcache *regcache,
                     gdb_byte * readbuf, const gdb_byte * writebuf)
 {

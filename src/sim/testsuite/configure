@@ -1832,6 +1832,7 @@ case "${target}" in
        ;;
    bfin-*-*)
        sim_arch=bfin
+       sim_testsuite=yes
        ;;
    cr16*-*-*)
        sim_arch=cr16
@@ -1892,6 +1893,9 @@ case "${target}" in
        sim_arch=moxie
        sim_testsuite=yes
        ;;
+   rl78-*-*)
+       sim_arch=rl78
+       ;;
    rx-*-*)
        sim_arch=rx
        ;;
@@ -1903,7 +1907,7 @@ case "${target}" in
        sim_arch=sh
        sim_testsuite=yes
        ;;
-   sparc-*-rtems*|sparc-*-elf*)
+   sparc-*-rtems*|sparc-*-elf*|erc32*-*-*)
        sim_arch=erc32
        sim_testsuite=yes
        ;;

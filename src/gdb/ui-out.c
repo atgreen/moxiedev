@@ -1,7 +1,7 @@
 /* Output generating routines for GDB.
 
-   Copyright (C) 1999, 2000, 2001, 2002, 2004, 2005, 2007, 2008, 2009, 2010,
-   2011 Free Software Foundation, Inc.
+   Copyright (C) 1999-2002, 2004-2005, 2007-2012 Free Software
+   Foundation, Inc.
 
    Contributed by Cygnus Solutions.
    Written by Fernando Nasser for Cygnus.
@@ -501,17 +501,17 @@ ui_out_field_core_addr (struct ui_out *uiout,
 void
 ui_out_field_stream (struct ui_out *uiout,
 		     const char *fldname,
-		     struct ui_stream *buf)
+		     struct ui_file *stream)
 {
   long length;
-  char *buffer = ui_file_xstrdup (buf->stream, &length);
+  char *buffer = ui_file_xstrdup (stream, &length);
   struct cleanup *old_cleanup = make_cleanup (xfree, buffer);
 
   if (length > 0)
     ui_out_field_string (uiout, fldname, buffer);
   else
     ui_out_field_skip (uiout, fldname);
-  ui_file_rewind (buf->stream);
+  ui_file_rewind (stream);
   do_cleanups (old_cleanup);
 }
 
@@ -589,37 +589,6 @@ ui_out_message (struct ui_out *uiout, int verbosity,
   va_end (args);
 }
 
-struct ui_stream *
-ui_out_stream_new (struct ui_out *uiout)
-{
-  struct ui_stream *tempbuf;
-
-  tempbuf = XMALLOC (struct ui_stream);
-  tempbuf->uiout = uiout;
-  tempbuf->stream = mem_fileopen ();
-  return tempbuf;
-}
-
-void
-ui_out_stream_delete (struct ui_stream *buf)
-{
-  ui_file_delete (buf->stream);
-  xfree (buf);
-}
-
-static void
-do_stream_delete (void *buf)
-{
-  ui_out_stream_delete (buf);
-}
-
-struct cleanup *
-make_cleanup_ui_out_stream_delete (struct ui_stream *buf)
-{
-  return make_cleanup (do_stream_delete, buf);
-}
-
-
 void
 ui_out_wrap_hint (struct ui_out *uiout, char *identstring)
 {
@@ -674,61 +643,6 @@ ui_out_get_verblvl (struct ui_out *uiout)
   /* FIXME: not implemented yet.  */
   return 0;
 }
-
-#if 0
-void
-ui_out_result_begin (struct ui_out *uiout, char *class)
-{
-}
-
-void
-ui_out_result_end (struct ui_out *uiout)
-{
-}
-
-void
-ui_out_info_begin (struct ui_out *uiout, char *class)
-{
-}
-
-void
-ui_out_info_end (struct ui_out *uiout)
-{
-}
-
-void
-ui_out_notify_begin (struct ui_out *uiout, char *class)
-{
-}
-
-void
-ui_out_notify_end (struct ui_out *uiout)
-{
-}
-
-void
-ui_out_error_begin (struct ui_out *uiout, char *class)
-{
-}
-
-void
-ui_out_error_end (struct ui_out *uiout)
-{
-}
-#endif
-
-#if 0
-void
-gdb_error (ui_out * uiout, int severity, char *format,...)
-{
-  va_list args;
-}
-
-void
-gdb_query (struct ui_out *uiout, int qflags, char *qprompt)
-{
-}
-#endif
 
 int
 ui_out_is_mi_like_p (struct ui_out *uiout)
@@ -999,8 +913,8 @@ clear_header_list (struct ui_out *uiout)
     {
       uiout->table.header_next = uiout->table.header_first;
       uiout->table.header_first = uiout->table.header_first->next;
-      if (uiout->table.header_next->colhdr != NULL)
-	xfree (uiout->table.header_next->colhdr);
+      xfree (uiout->table.header_next->colhdr);
+      xfree (uiout->table.header_next->col_name);
       xfree (uiout->table.header_next);
     }
   gdb_assert (uiout->table.header_first == NULL);

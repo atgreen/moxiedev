@@ -1,8 +1,6 @@
 /* Exception (throw catch) mechanism, for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996,
-   1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1986, 1988-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -84,6 +82,9 @@ enum errors {
   /* Value not available.  E.g., a register was not collected in a
      traceframe.  */
   NOT_AVAILABLE_ERROR,
+
+  /* DW_OP_GNU_entry_value resolving failed.  */
+  NO_ENTRY_VALUE_ERROR,
 
   /* Add more errors here.  */
   NR_ERRORS

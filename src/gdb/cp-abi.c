@@ -1,7 +1,6 @@
 /* Generic code for supporting multiple C++ ABI's
 
-   Copyright (C) 2001, 2002, 2003, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2001-2003, 2005-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -112,7 +111,7 @@ value_rtti_type (struct value *v, int *full,
 		 int *top, int *using_enc)
 {
   struct type *ret = NULL;
-  struct gdb_exception e;
+  volatile struct gdb_exception e;
 
   if ((current_cp_abi.rtti_type) == NULL)
     return NULL;
@@ -168,6 +167,16 @@ cplus_method_ptr_to_value (struct value **this_p,
   if (current_cp_abi.method_ptr_to_value == NULL)
     error (_("GDB does not support pointers to methods on this target"));
   return (*current_cp_abi.method_ptr_to_value) (this_p, method_ptr);
+}
+
+/* See cp-abi.h.  */
+
+void
+cplus_print_vtable (struct value *value)
+{
+  if (current_cp_abi.print_vtable == NULL)
+    error (_("GDB cannot print the vtable on this target"));
+  return (*current_cp_abi.print_vtable) (value);
 }
 
 int

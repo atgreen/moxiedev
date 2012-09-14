@@ -1,7 +1,7 @@
 /* Definitions for expressions stored in reversed prefix form, for GDB.
 
-   Copyright (C) 1986, 1989, 1992, 1994, 2000, 2003, 2005, 2007, 2008, 2009,
-   2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1986, 1989, 1992, 1994, 2000, 2003, 2005, 2007-2012
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -100,7 +100,8 @@ extern struct expression *parse_expression (char *);
 
 extern struct type *parse_field_expression (char *, char **);
 
-extern struct expression *parse_exp_1 (char **, struct block *, int);
+extern struct expression *parse_exp_1 (char **, CORE_ADDR pc, struct block *,
+				       int);
 
 /* For use by parsers; set if we want to parse an expression and
    attempt to complete a field name.  */
@@ -136,6 +137,8 @@ extern struct value *evaluate_subexp_standard
 /* From expprint.c */
 
 extern void print_expression (struct expression *, struct ui_file *);
+
+extern char *op_name (struct expression *exp, enum exp_opcode opcode);
 
 extern char *op_string (enum exp_opcode);
 

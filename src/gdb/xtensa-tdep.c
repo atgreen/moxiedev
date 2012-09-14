@@ -1,7 +1,6 @@
 /* Target-dependent code for the Xtensa port of GDB, the GNU debugger.
 
-   Copyright (C) 2003, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2003, 2005-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -56,7 +55,7 @@
 #include "xtensa-config.h"
 
 
-static int xtensa_debug_level = 0;
+static unsigned int xtensa_debug_level = 0;
 
 #define DEBUGWARN(args...) \
   if (xtensa_debug_level > 0) \
@@ -666,7 +665,6 @@ xtensa_pseudo_register_write (struct gdbarch *gdbarch,
       && (regnum <= gdbarch_tdep (gdbarch)->a0_base + 15))
     {
       gdb_byte *buf = (gdb_byte *) alloca (MAX_REGISTER_SIZE);
-      unsigned int wb;
 
       regcache_raw_read (regcache,
 			 gdbarch_tdep (gdbarch)->wb_regnum, buf);
@@ -1683,7 +1681,7 @@ xtensa_store_return_value (struct type *type,
 
 static enum return_value_convention
 xtensa_return_value (struct gdbarch *gdbarch,
-		     struct type *func_type,
+		     struct value *function,
 		     struct type *valtype,
 		     struct regcache *regcache,
 		     gdb_byte *readbuf,
@@ -2817,7 +2815,6 @@ execute_code (struct gdbarch *gdbarch, CORE_ADDR current_pc, CORE_ADDR wb)
   void (*func) (struct gdbarch *, int, int, int, CORE_ADDR);
 
   int at, as, offset;
-  int num_operands;
 
   /* WindowUnderflow12 = true, when inside _WindowUnderflow12.  */ 
   int WindowUnderflow12 = (current_pc & 0x1ff) >= 0x140; 
@@ -3311,14 +3308,14 @@ _initialize_xtensa_tdep (void)
   gdbarch_register (bfd_arch_xtensa, xtensa_gdbarch_init, xtensa_dump_tdep);
   xtensa_init_reggroups ();
 
-  add_setshow_zinteger_cmd ("xtensa",
-			    class_maintenance,
-			    &xtensa_debug_level,
+  add_setshow_zuinteger_cmd ("xtensa",
+			     class_maintenance,
+			     &xtensa_debug_level,
 			    _("Set Xtensa debugging."),
 			    _("Show Xtensa debugging."), _("\
 When non-zero, Xtensa-specific debugging is enabled. \
 Can be 1, 2, 3, or 4 indicating the level of debugging."),
-			    NULL,
-			    NULL,
-			    &setdebuglist, &showdebuglist);
+			     NULL,
+			     NULL,
+			     &setdebuglist, &showdebuglist);
 }

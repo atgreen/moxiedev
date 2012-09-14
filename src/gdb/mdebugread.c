@@ -1,8 +1,7 @@
 /* Read a symbol table in ECOFF format (Third-Eye).
 
-   Copyright (C) 1986, 1987, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996,
-   1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009, 2010,
-   2011 Free Software Foundation, Inc.
+   Copyright (C) 1986-1987, 1989-2004, 2007-2012 Free Software
+   Foundation, Inc.
 
    Original version contributed by Alessandro Forin (af@cs.cmu.edu) at
    CMU.  Major work by Per Bothner, John Gilmore and Ian Lance Taylor
@@ -52,6 +51,7 @@
 #include "stabsread.h"
 #include "complaints.h"
 #include "demangle.h"
+#include "gdb-demangle.h"
 #include "gdb_assert.h"
 #include "block.h"
 #include "dictionary.h"
@@ -1047,7 +1047,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 		if (tsym.st != stMember)
 		  break;
 
-		SET_FIELD_BITPOS (*f, tsym.value);
+		SET_FIELD_ENUMVAL (*f, tsym.value);
 		FIELD_TYPE (*f) = t;
 		FIELD_NAME (*f) = debug_info->ss + cur_fdr->issBase + tsym.iss;
 		FIELD_BITSIZE (*f) = 0;
@@ -1184,7 +1184,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 
 	      if (nparams > 0)
 		{
-		  struct dict_iterator iter;
+		  struct block_iterator iter;
 
 		  TYPE_NFIELDS (ftype) = nparams;
 		  TYPE_FIELDS (ftype) = (struct field *)
@@ -2359,7 +2359,7 @@ parse_partial_symbols (struct objfile *objfile)
   int past_first_source_file = 0;
 
   /* List of current psymtab's include files.  */
-  char **psymtab_include_list;
+  const char **psymtab_include_list;
   int includes_allocated;
   int includes_used;
   EXTR *extern_tab;
@@ -2389,8 +2389,8 @@ parse_partial_symbols (struct objfile *objfile)
 
   includes_allocated = 30;
   includes_used = 0;
-  psymtab_include_list = (char **) alloca (includes_allocated *
-					   sizeof (char *));
+  psymtab_include_list = (const char **) alloca (includes_allocated *
+						 sizeof (const char *));
   next_symbol_text_func = mdebug_next_symbol_text;
 
   dependencies_allocated = 30;
@@ -2754,7 +2754,7 @@ parse_partial_symbols (struct objfile *objfile)
 	  for (cur_sdx = 2; cur_sdx < fh->csym; cur_sdx++)
 	    {
 	      int type_code;
-	      char *namestring;
+	      const char *namestring;
 
 	      (*swap_sym_in) (cur_bfd,
 			      (((char *) debug_info->external_sym)
@@ -3090,13 +3090,13 @@ parse_partial_symbols (struct objfile *objfile)
 		      psymtab_include_list[includes_used++] = namestring;
 		      if (includes_used >= includes_allocated)
 			{
-			  char **orig = psymtab_include_list;
+			  const char **orig = psymtab_include_list;
 
-			  psymtab_include_list = (char **)
+			  psymtab_include_list = (const char **)
 			    alloca ((includes_allocated *= 2) *
-				    sizeof (char *));
+				    sizeof (const char *));
 			  memcpy (psymtab_include_list, orig,
-				  includes_used * sizeof (char *));
+				  includes_used * sizeof (const char *));
 			}
 		      continue;
 		    }
@@ -4607,7 +4607,7 @@ static struct symbol *
 mylookup_symbol (char *name, struct block *block,
 		 domain_enum domain, enum address_class class)
 {
-  struct dict_iterator iter;
+  struct block_iterator iter;
   int inc;
   struct symbol *sym;
 
@@ -4713,7 +4713,7 @@ sort_blocks (struct symtab *s)
 {
   struct blockvector *bv = BLOCKVECTOR (s);
 
-  if (BLOCKVECTOR_NBLOCKS (bv) <= 2)
+  if (BLOCKVECTOR_NBLOCKS (bv) <= FIRST_LOCAL_BLOCK)
     {
       /* Cosmetic */
       if (BLOCK_END (BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK)) == 0)
@@ -4728,7 +4728,7 @@ sort_blocks (struct symtab *s)
    * are very different.  It would be nice to find a reliable test
    * to detect -O3 images in advance.
    */
-  if (BLOCKVECTOR_NBLOCKS (bv) > 3)
+  if (BLOCKVECTOR_NBLOCKS (bv) > FIRST_LOCAL_BLOCK + 1)
     qsort (&BLOCKVECTOR_BLOCK (bv, FIRST_LOCAL_BLOCK),
 	   BLOCKVECTOR_NBLOCKS (bv) - FIRST_LOCAL_BLOCK,
 	   sizeof (struct block *),

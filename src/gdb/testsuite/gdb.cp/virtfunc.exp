@@ -1,5 +1,5 @@
-# Copyright 1992, 1994, 1995, 1996, 1997, 1998, 1999, 2001, 2002, 2003, 2004,
-# 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+# Copyright 1992, 1994-1999, 2001-2004, 2006-2012 Free Software
+# Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,21 +19,14 @@
 
 set nl		"\[\r\n\]+"
 
-if $tracelevel then {
-    strace $tracelevel
-}
-
 if { [skip_cplus_tests] } { continue }
 
 load_lib "cp-support.exp"
 
-set testfile "virtfunc"
-set srcfile ${testfile}.cc
-set binfile ${objdir}/${subdir}/${testfile}
+standard_testfile .cc
 
-if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {c++ debug}] != "" } {
-     untested virtfunc.exp
-     return -1
+if {[prepare_for_testing $testfile.exp $testfile $srcfile {debug c++}]} {
+    return -1
 }
 
 proc test_ptype_of_classes {} {
@@ -230,16 +223,55 @@ proc test_virtual_calls {} {
     }
 }
 
+# A helper proc that creates a regular expression matching a
+# particular vtable.  NAME is the type name.  Each element of ARGS is
+# the name of a function in the vtable.
+
+proc make_one_vtable_result {name args} {
+    global hex
+
+    set nls "\[\r\n\]+"
+
+    set result "vtable for '${name}' @ $hex .subobject @ $hex.:$nls"
+    set count 0
+    foreach func $args {
+	append result ".${count}.: $hex <$func..>${nls}"
+	incr count
+    }
+
+    return $result
+}
+
+# Test "info vtbl".
+
+proc test_info_vtbl {} {
+    global hex
+
+    set nls "\[\r\n\]+"
+
+    set vt_A [make_one_vtable_result A A::f]
+    set vt_B [make_one_vtable_result B B::f]
+    set vt_V [make_one_vtable_result V VB::vvb V::vv]
+    set vt_V2 [make_one_vtable_result V VB::vvb "virtual thunk to E::vv"]
+    set vt_D [make_one_vtable_result D D::vg D::vd]
+    set vt_D2 [make_one_vtable_result D "non-virtual thunk to E::vg" D::vd]
+    set vt_E [make_one_vtable_result E E::f E::vg E::vv]
+
+    gdb_test "info vtbl a" "${vt_A}${vt_V}"
+    gdb_test "info vtbl b" "${vt_B}${vt_V}"
+    gdb_test "info vtbl c" "${vt_V}"
+    gdb_test "info vtbl d" "${vt_D}${vt_V}"
+    gdb_test "info vtbl e" "${vt_E}${vt_D2}${vt_V2}"
+    gdb_test "info vtbl pEe" "${vt_E}${vt_D2}${vt_V2}"
+
+    gdb_test "info vtbl" "Argument required.*"
+    gdb_test "info vtbl va" \
+	"This object does not have a virtual function table.*"
+    gdb_test "info vtbl all_count" \
+	"This object does not have a virtual function table.*"
+}
+
 proc do_tests {} {
-    global srcdir subdir binfile
-    global gdb_prompt
-
-
-    gdb_exit
-    gdb_start
-    gdb_reinitialize_dir $srcdir/$subdir
-    gdb_load $binfile
-
     gdb_test_no_output "set language c++" ""
     gdb_test_no_output "set width 0" ""
 
@@ -248,6 +280,7 @@ proc do_tests {} {
 	return
     }
     test_ptype_of_classes
+    test_info_vtbl
 
     gdb_breakpoint test_calls
     gdb_test "continue" ".*Breakpoint .* test_calls.*" ""

@@ -1,6 +1,6 @@
 /* FLEX lexer for Ada expressions, for GDB.
-   Copyright (C) 1994, 1997, 1998, 2000, 2001, 2002, 2003, 2007, 2008, 2009,
-   2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1994, 1997-1998, 2000-2003, 2007-2012 Free Software
+   Foundation, Inc.
 
    This file is part of GDB.
 
@@ -293,7 +293,7 @@ false		{ return FALSEKEYWORD; }
 
 /* Initialize the lexer for processing new expression. */
 
-void
+static void
 lexer_init (FILE *inp)
 {
   BEGIN INITIAL;
@@ -410,7 +410,9 @@ processReal (const char *num0)
 
 
 /* Store a canonicalized version of NAME0[0..LEN-1] in yylval.ssym.  The
-   resulting string is valid until the next call to ada_parse.  It differs
+   resulting string is valid until the next call to ada_parse.  If
+   NAME0 contains the substring "___", it is assumed to be already
+   encoded and the resulting name is equal to it.  Otherwise, it differs
    from NAME0 in that:
     + Characters between '...' or <...> are transfered verbatim to 
       yylval.ssym.
@@ -430,8 +432,18 @@ processId (const char *name0, int len)
   int i0, i;
   struct stoken result;
 
+  result.ptr = name;
   while (len > 0 && isspace (name0[len-1]))
     len -= 1;
+
+  if (strstr (name0, "___") != NULL)
+    {
+      strncpy (name, name0, len);
+      name[len] = '\000';
+      result.length = len;
+      return result;
+    }
+
   i = i0 = 0;
   while (i0 < len)
     {
@@ -471,7 +483,6 @@ processId (const char *name0, int len)
     }
   name[i] = '\000';
 
-  result.ptr = name;
   result.length = i;
   return result;
 }

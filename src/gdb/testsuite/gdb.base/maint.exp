@@ -1,5 +1,4 @@
-# Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2007, 2008, 2009, 2010, 2011
-# Free Software Foundation, Inc.
+# Copyright 1998-2003, 2007-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -47,12 +46,6 @@
 #
 
 
-
-if $tracelevel then {
-        strace $tracelevel
-        }
-
-global usestubs
 
 set testfile "break"
 set srcfile ${testfile}.c
@@ -157,7 +150,7 @@ if [istarget "*-*-cygwin*"] {
 
 send_gdb "maint print statistics\n"
 gdb_expect  {
-    -re "Statistics for\[^\n\r\]*break\[^\n\r\]*:\r\n  Number of \"minimal\" symbols read: $decimal\r\n  Number of \"partial\" symbols read: $decimal\r\n  Number of \"full\" symbols read: $decimal\r\n  Number of \"types\" defined: $decimal\r\n  Number of psym tables \\(not yet expanded\\): $decimal\r\n  Number of symbol tables: $decimal\r\n  Number of symbol tables with line tables: $decimal\r\n  Number of symbol tables with blockvectors: $decimal\r\n  Total memory used for objfile obstack: $decimal\r\n  Total memory used for psymbol cache: $decimal\r\n  Total memory used for macro cache: $decimal\r\n  Total memory used for file name cache: $decimal\r\n" {
+    -re "Statistics for\[^\n\r\]*break\[^\n\r\]*:\r\n  Number of \"minimal\" symbols read: $decimal\r\n  Number of \"partial\" symbols read: $decimal\r\n  Number of \"full\" symbols read: $decimal\r\n  Number of \"types\" defined: $decimal\r\n  Number of psym tables \\(not yet expanded\\): $decimal\r\n  Number of symbol tables: $decimal\r\n  Number of symbol tables with line tables: $decimal\r\n  Number of symbol tables with blockvectors: $decimal\r\n  Total memory used for objfile obstack: $decimal\r\n  Total memory used for BFD obstack: $decimal\r\n  Total memory used for psymbol cache: $decimal\r\n  Total memory used for macro cache: $decimal\r\n  Total memory used for file name cache: $decimal\r\n" {
 	gdb_expect {
 	    -re "$gdb_prompt $" {
 		pass "maint print statistics"
@@ -431,9 +424,10 @@ gdb_test_multiple "maint info sections CODE" "maint info sections CODE" {
 # Test for new option: DATA section flag
 # If your text section is tagged DATA, xfail this test.
 #
-# The "maint info sections DATA" test is marked for XFAIL on Cygwin,
+# The "maint info sections DATA" test is marked for XFAIL on Windows,
 # because Windows has text sections marked DATA.
 setup_xfail "*-*-*cygwin*"
+setup_xfail "*-*-*mingw*"
 
 gdb_test_multiple "maint info sections DATA" "maint info sections DATA" {
     -re ".* $text_section .*$gdb_prompt $" { fail "maint info sections DATA" }

@@ -1,6 +1,6 @@
 /* Common definitions for remote server for GDB.
-   Copyright (C) 1993, 1995, 1997, 1998, 1999, 2000, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1993, 1995, 1997-2000, 2002-2012 Free Software
+   Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,10 +21,14 @@
 #define SERVER_H
 
 #include "config.h"
+#include "build-gnulib-gdbserver/config.h"
 
 #ifdef __MINGW32CE__
 #include "wincecompat.h"
 #endif
+
+#include "libiberty.h"
+#include "ansidecl.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -59,10 +63,6 @@ extern void perror (const char *);
 #endif
 #endif
 
-#if !HAVE_DECL_MEMMEM
-extern void *memmem (const void *, size_t , const void *, size_t);
-#endif
-
 #if !HAVE_DECL_VASPRINTF
 extern int vasprintf(char **strp, const char *fmt, va_list ap);
 #endif
@@ -70,36 +70,16 @@ extern int vasprintf(char **strp, const char *fmt, va_list ap);
 int vsnprintf(char *str, size_t size, const char *format, va_list ap);
 #endif
 
-#ifndef ATTR_NORETURN
-#if defined(__GNUC__) && (__GNUC__ > 2 \
-			  || (__GNUC__ == 2 && __GNUC_MINOR__ >= 7))
-#define ATTR_NORETURN __attribute__ ((noreturn))
-#else
-#define ATTR_NORETURN           /* nothing */
-#endif
-#endif
-
-#ifndef ATTR_FORMAT
-#if defined(__GNUC__) && (__GNUC__ > 2 \
-			  || (__GNUC__ == 2 && __GNUC_MINOR__ >= 4))
-#define ATTR_FORMAT(type, x, y) __attribute__ ((format(type, x, y)))
-#else
-#define ATTR_FORMAT(type, x, y) /* nothing */
-#endif
-#endif
-
-#ifndef ATTR_MALLOC
-#if defined(__GNUC__) && (__GNUC__ >= 3)
-#define ATTR_MALLOC __attribute__ ((__malloc__))
-#else
-#define ATTR_MALLOC             /* nothing */
-#endif
-#endif
-
 /* Define underscore macro, if not available, to be able to use it inside
    code shared with gdb in common directory.  */
 #ifndef _
 #define _(String) (String)
+#endif
+
+#ifdef IN_PROCESS_AGENT
+#  define PROG "ipa"
+#else
+#  define PROG "gdbserver"
 #endif
 
 /* A type used for binary buffers.  */
@@ -139,44 +119,7 @@ struct regcache;
 #include "gdb_signals.h"
 #include "target.h"
 #include "mem-break.h"
-
-struct thread_info
-{
-  struct inferior_list_entry entry;
-  void *target_data;
-  void *regcache_data;
-
-  /* The last resume GDB requested on this thread.  */
-  enum resume_kind last_resume_kind;
-
-  /* The last wait status reported for this thread.  */
-  struct target_waitstatus last_status;
-
-  /* Given `while-stepping', a thread may be collecting data for more
-     than one tracepoint simultaneously.  E.g.:
-
-    ff0001  INSN1 <-- TP1, while-stepping 10 collect $regs
-    ff0002  INSN2
-    ff0003  INSN3 <-- TP2, collect $regs
-    ff0004  INSN4 <-- TP3, while-stepping 10 collect $regs
-    ff0005  INSN5
-
-   Notice that when instruction INSN5 is reached, the while-stepping
-   actions of both TP1 and TP3 are still being collected, and that TP2
-   had been collected meanwhile.  The whole range of ff0001-ff0005
-   should be single-stepped, due to at least TP1's while-stepping
-   action covering the whole range.
-
-   On the other hand, the same tracepoint with a while-stepping action
-   may be hit by more than one thread simultaneously, hence we can't
-   keep the current step count in the tracepoint itself.
-
-   This is the head of the list of the states of `while-stepping'
-   tracepoint actions this thread is now collecting; NULL if empty.
-   Each item in the list holds the current step of the while-stepping
-   action.  */
-  struct wstep_state *while_stepping;
-};
+#include "gdbthread.h"
 
 struct dll_info
 {
@@ -233,9 +176,9 @@ void initialize_low ();
 /* From inferiors.c.  */
 
 extern struct inferior_list all_processes;
-extern struct inferior_list all_threads;
 extern struct inferior_list all_dlls;
 extern int dlls_changed;
+extern void clear_dlls (void);
 
 void add_inferior_to_list (struct inferior_list *list,
 			   struct inferior_list_entry *new_inferior);
@@ -245,8 +188,6 @@ void for_each_inferior (struct inferior_list *list,
 extern struct thread_info *current_inferior;
 void remove_inferior (struct inferior_list *list,
 		      struct inferior_list_entry *entry);
-void remove_thread (struct thread_info *thread);
-void add_thread (ptid_t ptid, void *target_data);
 
 struct process_info *add_process (int pid, int attached);
 void remove_process (struct process_info *process);
@@ -254,12 +195,10 @@ struct process_info *find_process_pid (int pid);
 int have_started_inferiors_p (void);
 int have_attached_inferiors_p (void);
 
-struct thread_info *find_thread_ptid (ptid_t ptid);
-
 ptid_t thread_id_to_gdb_id (ptid_t);
 ptid_t thread_to_gdb_id (struct thread_info *);
 ptid_t gdb_id_to_thread_id (ptid_t);
-struct thread_info *gdb_id_to_thread (unsigned int);
+
 void clear_inferiors (void);
 struct inferior_list_entry *find_inferior
      (struct inferior_list *,
@@ -272,8 +211,6 @@ void *inferior_target_data (struct thread_info *);
 void set_inferior_target_data (struct thread_info *, void *);
 void *inferior_regcache_data (struct thread_info *);
 void set_inferior_regcache_data (struct thread_info *, void *);
-void add_pid_to_list (struct inferior_list *list, unsigned long pid);
-int pull_pid_from_list (struct inferior_list *list, unsigned long pid);
 
 void loaded_dll (const char *name, CORE_ADDR base_addr);
 void unloaded_dll (const char *name, CORE_ADDR base_addr);
@@ -287,6 +224,8 @@ extern int server_waiting;
 extern int debug_threads;
 extern int debug_hw_points;
 extern int pass_signals[];
+extern int program_signals[];
+extern int program_signals_p;
 
 extern jmp_buf toplevel;
 
@@ -298,6 +237,8 @@ extern int disable_packet_qfThreadInfo;
 extern int run_once;
 extern int multi_process;
 extern int non_stop;
+
+extern int disable_randomization;
 
 #if USE_WIN32API
 #include <winsock2.h>
@@ -339,6 +280,9 @@ extern int noack_mode;
 extern int transport_is_reliable;
 
 int gdb_connected (void);
+
+#define STDIO_CONNECTION_NAME "stdio"
+int remote_connection_is_stdio (void);
 
 ptid_t read_ptid (char *buf, char **obuf);
 char *write_ptid (char *buf, ptid_t ptid);
@@ -397,17 +341,10 @@ void monitor_output (const char *msg);
 /* Functions from utils.c */
 #include "common-utils.h"
 
-void *xmalloc (size_t) ATTR_MALLOC;
-void *xrealloc (void *, size_t);
-void *xcalloc (size_t, size_t) ATTR_MALLOC;
-char *xstrdup (const char *) ATTR_MALLOC;
-int xsnprintf (char *str, size_t size, const char *format, ...)
-  ATTR_FORMAT (printf, 3, 4);;
-void freeargv (char **argv);
 void perror_with_name (const char *string);
-void error (const char *string,...) ATTR_NORETURN ATTR_FORMAT (printf, 1, 2);
-void fatal (const char *string,...) ATTR_NORETURN ATTR_FORMAT (printf, 1, 2);
-void warning (const char *string,...) ATTR_FORMAT (printf, 1, 2);
+void error (const char *string,...) ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (1, 2);
+void fatal (const char *string,...) ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (1, 2);
+void warning (const char *string,...) ATTRIBUTE_PRINTF (1, 2);
 char *paddress (CORE_ADDR addr);
 char *pulongest (ULONGEST u);
 char *plongest (LONGEST l);
@@ -427,7 +364,9 @@ char *pfildes (gdb_fildes_t fd);
 
 /* Functions from tracepoint.c */
 
-int in_process_agent_loaded (void);
+/* Size for a small buffer to report problems from the in-process
+   agent back to GDBserver.  */
+#define IPA_BUFSIZ 100
 
 void initialize_tracepoint (void);
 
@@ -492,9 +431,35 @@ void supply_fast_tracepoint_registers (struct regcache *regcache,
 void supply_static_tracepoint_registers (struct regcache *regcache,
 					 const unsigned char *regs,
 					 CORE_ADDR pc);
+void set_trampoline_buffer_space (CORE_ADDR begin, CORE_ADDR end,
+				  char *errmsg);
 #else
 void stop_tracing (void);
+
+int claim_trampoline_space (ULONGEST used, CORE_ADDR *trampoline);
+int have_fast_tracepoint_trampoline_buffer (char *msgbuf);
+void gdb_agent_about_to_close (int pid);
 #endif
+
+struct traceframe;
+
+/* Do memory copies for bytecodes.  */
+/* Do the recording of memory blocks for actions and bytecodes.  */
+
+int agent_mem_read (struct traceframe *tframe,
+		    unsigned char *to, CORE_ADDR from,
+		    ULONGEST len);
+
+LONGEST agent_get_trace_state_variable_value (int num);
+void agent_set_trace_state_variable_value (int num, LONGEST val);
+
+/* Record the value of a trace state variable.  */
+
+int agent_tsv_read (struct traceframe *tframe, int n);
+int agent_mem_read_string (struct traceframe *tframe,
+			   unsigned char *to,
+			   CORE_ADDR from,
+			   ULONGEST len);
 
 /* Bytecode compilation function vector.  */
 
@@ -551,6 +516,12 @@ struct emit_ops
 
 /* Returns the address of the get_raw_reg function in the IPA.  */
 CORE_ADDR get_raw_reg_func_addr (void);
+/* Returns the address of the get_trace_state_variable_value
+   function in the IPA.  */
+CORE_ADDR get_get_tsv_func_addr (void);
+/* Returns the address of the set_trace_state_variable_value
+   function in the IPA.  */
+CORE_ADDR get_set_tsv_func_addr (void);
 
 CORE_ADDR current_insn_ptr;
 int emit_error;

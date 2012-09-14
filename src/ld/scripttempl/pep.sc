@@ -39,9 +39,11 @@ if test "${RELOCATING}"; then
   R_CRT_XP='*(SORT(.CRT$XP*))  /* Pre-termination */'
   R_CRT_XT='*(SORT(.CRT$XT*))  /* Termination */'
   R_TLS='
+    *(.tls$AAA)    
     *(.tls)
     *(.tls$)
-    *(SORT(.tls$*))'
+    *(SORT(.tls$*))
+    *(.tls$ZZZ)'
   R_RSRC='*(SORT(.rsrc$*))'
 else
   R_TEXT=
@@ -73,6 +75,7 @@ SECTIONS
     *(.text)
     ${R_TEXT}
     ${RELOCATING+ *(.text.*)}
+    ${RELOCATING+ *(.gnu.linkonce.t.*)}
     *(.glue_7t)
     *(.glue_7)
     ${CONSTRUCTING+. = ALIGN(8);}
@@ -184,6 +187,10 @@ SECTIONS
     ${RELOCATING+___crt_xt_end__ = . ;}
   }
 
+  /* Windows TLS expects .tls\$AAA to be at the start and .tls\$ZZZ to be
+     at the end of the .tls section.  This is important because _tls_start MUST
+     be at the beginning of the section to enable SECREL32 relocations with TLS
+     data.  */
   .tls ${RELOCATING+BLOCK(__section_alignment__)} :
   { 					
     ${RELOCATING+___tls_start__ = . ;}
@@ -244,7 +251,7 @@ SECTIONS
   /* DWARF 2.  */
   .debug_info ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
   {
-    *(.debug_info) *(.gnu.linkonce.wi.*)
+    *(.debug_info${RELOCATING+ .gnu.linkonce.wi.*})
   }
 
   .debug_abbrev ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
@@ -312,7 +319,7 @@ SECTIONS
   /* DWARF 4.  */
   .debug_types ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
   {
-    *(.debug_types) *(.gnu.linkonce.wt.*)
+    *(.debug_types${RELOCATING+ .gnu.linkonce.wt.*})
   }
 }
 EOF

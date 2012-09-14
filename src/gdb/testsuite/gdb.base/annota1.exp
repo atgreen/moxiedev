@@ -1,5 +1,4 @@
-# Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-# 2010, 2011 Free Software Foundation, Inc.
+# Copyright 1999-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,10 +14,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # This file was written by Elena Zannoni (ezannoni@cygnus.com)
-
-if $tracelevel then {
-    strace $tracelevel
-}
 
 
 # are we on a target board? If so, don't run these tests.
@@ -50,15 +45,6 @@ gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load ${binfile}
 
-if [target_info exists gdb_stub] {
-    gdb_step_for_stub;
-}
-
-#
-# the line at which break main will put the breakpoint
-#
-set main_line 32
-
 # The commands we test here produce many lines of output; disable "press 
 # <return> to continue" prompts.
 gdb_test_no_output "set height 0"
@@ -66,8 +52,11 @@ gdb_test_no_output "set height 0"
 #
 # break at main
 #
+
+set main_line [gdb_get_line_number "break main"]
+
 gdb_test "break main" \
-    "Breakpoint.*at.* file .*$srcfile, line.*" \
+    "Breakpoint.*at.* file .*$srcfile, line $main_line\\." \
     "breakpoint main"
 
 
@@ -144,7 +133,7 @@ gdb_test_multiple "info break" "breakpoint info" {
 #exp_internal 1
 set binexp [string_to_regexp $binfile]
 gdb_test_multiple "run" "run until main breakpoint" {
-    -re "\r\n\032\032post-prompt\r\nStarting program: $binexp \(\(\r\n\r\n\032\032frames-invalid\)|\(\r\n\r\n\032\032breakpoints-invalid\)\)+\r\n\r\n\032\032starting\(\(\r\n\r\n\032\032frames-invalid\)|\(\r\n\r\n\032\032breakpoints-invalid\)\)*\r\n\r\n\032\032breakpoint 1\r\n\r\nBreakpoint 1, \r\n\032\032frame-begin 0 $hex\r\n\r\n\032\032frame-function-name\r\nmain\r\n\032\032frame-args\r\n \\(\\)\r\n\032\032frame-source-begin\r\n at \r\n\032\032frame-source-file\r\n.*annota1.c\r\n\032\032frame-source-file-end\r\n:\r\n\032\032frame-source-line\r\n$main_line\r\n\032\032frame-source-end\r\n\r\n\r\n\032\032source.*$srcfile:$main_line:.*:beg:$hex\r\n\r\n\032\032frame-end\r\n\r\n\032\032stopped.*$gdb_prompt$" {
+    -re "\r\n\032\032post-prompt\r\nStarting program: $binexp \(\r\nwarning: Skipping \[^\r\n\]+ .gdb_index section in \[^\r\n\]+\r\nDo \"set use-deprecated-index-sections on\" before the file is read\r\nto use the section anyway\\.\)?\(\(\r\n\r\n\032\032frames-invalid\)|\(\r\n\r\n\032\032breakpoints-invalid\)\)*\r\n\r\n\032\032starting\(\(\r\n\r\n\032\032frames-invalid\)|\(\r\n\r\n\032\032breakpoints-invalid\)\)*\r\n\r\n\032\032breakpoint 1\r\n\r\nBreakpoint 1, \r\n\032\032frame-begin 0 $hex\r\n\r\n\032\032frame-function-name\r\nmain\r\n\032\032frame-args\r\n \\(\\)\r\n\032\032frame-source-begin\r\n at \r\n\032\032frame-source-file\r\n.*annota1.c\r\n\032\032frame-source-file-end\r\n:\r\n\032\032frame-source-line\r\n$main_line\r\n\032\032frame-source-end\r\n\r\n\r\n\032\032source.*$srcfile:$main_line:.*:beg:$hex\r\n\r\n\032\032frame-end\r\n\r\n\032\032stopped.*$gdb_prompt$" {
 	pass "run until main breakpoint" 
     }
 }
@@ -311,13 +300,13 @@ gdb_test_multiple "delete 3" "delete bp 3" {
 # break at main, after value is initialized. This is in preparation
 # to test the annotate output for the display command.
 #
-gdb_test_multiple "break main" "break at 28" {
+gdb_test_multiple "break main" "break at main" {
     -re "post-prompt.*\032\032breakpoints-invalid.*Breakpoint 4 at $hex: file ${escapedsrcfile}, line $main_line.*$gdb_prompt$" {
-	pass "break at 28"
+	pass "break at main"
     }
     -re "post-prompt.*\032\032breakpoints-invalid.*Breakpoint 4 at $hex: file .*${srcfile}, line $main_line.*$gdb_prompt$" {
 	setup_xfail "*-*-*" 1270
-	fail "break at 28"
+	fail "break at main"
     }
 }
 
@@ -360,9 +349,12 @@ gdb_expect {
 # Test that breakpoints-invalid is issued once and only once for
 # breakpoint ignore count changes, after annotation stopped.
 #
-gdb_test_multiple "break 46" "break at 46" {
-    -re "Breakpoint 5 at $hex: file .*$srcfile, line 46.*$gdb_prompt$" {
-	pass "break at 46"
+
+set value_inc_line [gdb_get_line_number "increment value"]
+
+gdb_test_multiple "break $value_inc_line" "break at value++" {
+    -re "Breakpoint 5 at $hex: file .*$srcfile, line $value_inc_line.*$gdb_prompt$" {
+	pass "break at value++"
     }
 }
 
@@ -373,7 +365,7 @@ gdb_test_multiple "ignore 5 4" "ignore 5 4" {
 }
 
 gdb_test_multiple "continue" "annotate ignore count change" {
-    -re ".*$srcfile:46:.*\032\032stopped\r\n\r\n\032\032breakpoints-invalid\r\n$gdb_prompt$" {
+    -re ".*$srcfile:$value_inc_line:.*\032\032stopped\r\n\r\n\032\032breakpoints-invalid\r\n$gdb_prompt$" {
 	pass "annotate ignore count change"
     }
 }
@@ -386,8 +378,10 @@ gdb_test_multiple "next" "next to exit loop" {
     }
 }
 
+set after_loop_line [gdb_get_line_number "after loop"]
+
 gdb_test_multiple "next" "breakpoint ignore count" {
-    -re ".*$srcfile:49:.*$gdb_prompt$" {
+    -re ".*$srcfile:$after_loop_line:.*$gdb_prompt$" {
 	pass "breakpoint ignore count"
     }
 }
@@ -453,7 +447,7 @@ proc thread_test {} {
     set binfile ${objdir}/${subdir}/${testfile}-watch_thread_num
     set gdb_prompt $old_gdb_prompt
 
-    if { ![get_compiler_info ${binfile}] && [gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug nowarnings}] == "" } {
+    if { ![get_compiler_info] && [gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug nowarnings}] == "" } {
 
 	gdb_exit
 	gdb_start

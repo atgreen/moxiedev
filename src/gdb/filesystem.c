@@ -1,6 +1,6 @@
 /* Handle different target file systems for GDB, the GNU Debugger.
 
-   Copyright (C) 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 2010-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,7 +25,7 @@
 const char file_system_kind_auto[] = "auto";
 const char file_system_kind_unix[] = "unix";
 const char file_system_kind_dos_based[] = "dos-based";
-const char *target_file_system_kinds[] =
+const char *const target_file_system_kinds[] =
 {
   file_system_kind_auto,
   file_system_kind_unix,

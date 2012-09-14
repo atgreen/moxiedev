@@ -109,6 +109,7 @@
 @V@/gdb/ChangeLog-2008 @V@/gdb/ChangeLog.008
 @V@/gdb/ChangeLog-2009 @V@/gdb/ChangeLog.009
 @V@/gdb/ChangeLog-2010 @V@/gdb/ChangeLog.010
+@V@/gdb/ChangeLog-2011 @V@/gdb/ChangeLog.011
 @V@/gdb/ChangeLog-3.x @V@/gdb/ChangeLog.3-x
 @V@/gdb/ada-exp.tab.c @V@/gdb/ada-exp_tab.c
 @V@/gdb/amd64-windows-nat.c @V@/gdb/a64w-nat.c
@@ -416,6 +417,10 @@
 @V@/gdb/testsuite/gdb.base/hook-stop-frame.c @V@/gdb/testsuite/gdb.base/hstop-frame.c
 @V@/gdb/testsuite/gdb.base/hook-stop-continue.exp @V@/gdb/testsuite/gdb.base/hstop-continue.exp
 @V@/gdb/testsuite/gdb.base/hook-stop-frame.exp @V@/gdb/testsuite/gdb.base/hstop-frame.exp
+@V@/gdb/testsuite/gdb.base/print-file-var-lib1.c @V@/gdb/testsuite/gdb.base/pfv-lib1.c
+@V@/gdb/testsuite/gdb.base/print-file-var-lib2.c @V@/gdb/testsuite/gdb.base/pfv-lib2.c
+@V@/gdb/testsuite/gdb.base/print-file-var-main.c @V@/gdb/testsuite/gdb.base/pfv-main.c
+@V@/gdb/testsuite/gdb.base/print-file-var.exp @V@/gdb/testsuite/gdb.base/pfv.exp
 @V@/gdb/testsuite/gdb.base/return-nodebug1.c @V@/gdb/testsuite/gdb.base/return-1nodebug.c
 @V@/gdb/testsuite/gdb.base/siginfo-addr.c @V@/gdb/testsuite/gdb.base/si-addr.c
 @V@/gdb/testsuite/gdb.base/siginfo-obj.c @V@/gdb/testsuite/gdb.base/si-obj.c

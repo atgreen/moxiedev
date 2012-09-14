@@ -1,7 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-dnl Copyright (C) 2005, 2007, 2008, 2009, 2010, 2011
-dnl Free Software Foundation, Inc.
+dnl Copyright (C) 2005, 2007-2012 Free Software Foundation, Inc.
 dnl Contributed by Red Hat, Inc.
 dnl 
 dnl This file is part of the GNU simulators.
@@ -19,12 +18,13 @@ dnl
 dnl You should have received a copy of the GNU General Public License
 dnl along with this program.  If not, see <http://www.gnu.org/licenses/>.
 dnl
-AC_PREREQ(2.5)dnl
+AC_PREREQ(2.64)dnl
 AC_INIT(Makefile.in)
-AC_CONFIG_HEADER(config.h:config.in)
-AC_CHECK_HEADERS(getopt.h)
+sinclude(../common/acinclude.m4)
 
-sinclude(../common/aclocal.m4)
+SIM_AC_COMMON
+
+AC_CHECK_HEADERS(getopt.h)
 
 AC_ARG_ENABLE(cycle-accurate,
 [  --disable-cycle-accurate ],
@@ -44,20 +44,15 @@ echo enable_cycle_accurate is $enable_cycle_accurate
 echo enable_cycle_stats is $enable_cycle_stats
 
 if test "x${enable_cycle_accurate}" != xno; then
-AC_DEFINE([CYCLE_ACCURATE])
+  AC_DEFINE([CYCLE_ACCURATE], 1, [--enable-cycle-accurate])
 
   if test "x${enable_cycle_stats}" != xno; then
-  AC_DEFINE([CYCLE_STATS])
+    AC_DEFINE([CYCLE_STATS], 1, [--enable-cycle-stats])
   fi
 else
   if test "x${enable_cycle_stats}" != xno; then
-  AC_ERROR([cycle-stats not available without cycle-accurate])
+    AC_ERROR([cycle-stats not available without cycle-accurate])
   fi
 fi
-
-
-# Bugs in autoconf 2.59 break the call to SIM_AC_COMMON, hack around
-# it by inlining the macro's contents.
-sinclude(../common/common.m4)
 
 SIM_AC_OUTPUT

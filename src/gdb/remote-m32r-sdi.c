@@ -1,7 +1,6 @@
 /* Remote debugging interface for M32R/SDI.
 
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2003-2012 Free Software Foundation, Inc.
 
    Contributed by Renesas Technology Co.
    Written by Kei Sakamoto <sakamoto.kei@renesas.com>.
@@ -40,6 +39,7 @@
 #include <sys/time.h>
 #include <signal.h>
 #include <time.h>
+#include "gdb_bfd.h"
 
 
 #include "serial.h"
@@ -182,8 +182,6 @@ get_ack (void)
 static int
 send_data (void *buf, int len)
 {
-  int ret;
-
   if (!sdi_desc)
     return -1;
 
@@ -453,7 +451,7 @@ m32r_close (int quitting)
 
 static void
 m32r_resume (struct target_ops *ops,
-	     ptid_t ptid, int step, enum target_signal sig)
+	     ptid_t ptid, int step, enum gdb_signal sig)
 {
   unsigned long pc_addr, bp_addr, ab_addr;
   int ib_breakpoints;
@@ -708,14 +706,13 @@ m32r_wait (struct target_ops *ops,
   int ib_breakpoints;
   long i;
   unsigned char buf[13];
-  unsigned long val;
   int ret, c;
 
   if (remote_debug)
     fprintf_unfiltered (gdb_stdlog, "m32r_wait()\n");
 
   status->kind = TARGET_WAITKIND_EXITED;
-  status->value.sig = TARGET_SIGNAL_0;
+  status->value.sig = GDB_SIGNAL_0;
 
   interrupted = 0;
   prev_sigint = signal (SIGINT, gdb_cntrl_c);
@@ -734,7 +731,7 @@ m32r_wait (struct target_ops *ops,
       if (c == '-')		/* error */
 	{
 	  status->kind = TARGET_WAITKIND_STOPPED;
-	  status->value.sig = TARGET_SIGNAL_HUP;
+	  status->value.sig = GDB_SIGNAL_HUP;
 	  return inferior_ptid;
 	}
       else if (c == '+')	/* stopped */
@@ -750,9 +747,9 @@ m32r_wait (struct target_ops *ops,
 
   status->kind = TARGET_WAITKIND_STOPPED;
   if (interrupted)
-    status->value.sig = TARGET_SIGNAL_INT;
+    status->value.sig = GDB_SIGNAL_INT;
   else
-    status->value.sig = TARGET_SIGNAL_TRAP;
+    status->value.sig = GDB_SIGNAL_TRAP;
 
   interrupted = 0;
   signal (SIGINT, prev_sigint);
@@ -886,7 +883,7 @@ m32r_detach (struct target_ops *ops, char *args, int from_tty)
   if (remote_debug)
     fprintf_unfiltered (gdb_stdlog, "m32r_detach(%d)\n", from_tty);
 
-  m32r_resume (ops, inferior_ptid, 0, TARGET_SIGNAL_0);
+  m32r_resume (ops, inferior_ptid, 0, GDB_SIGNAL_0);
 
   /* Calls m32r_close to do the real work.  */
   pop_target ();
@@ -1226,7 +1223,6 @@ m32r_load (char *args, int from_tty)
   int nostart;
   struct timeval start_time, end_time;
   unsigned long data_count;	/* Number of bytes transferred to memory.  */
-  int ret;
   static RETSIGTYPE (*prev_sigint) ();
 
   /* for direct tcp connections, we can do a fast binary download.  */
@@ -1262,13 +1258,13 @@ m32r_load (char *args, int from_tty)
   if (!filename)
     filename = get_exec_file (1);
 
-  pbfd = bfd_openr (filename, gnutarget);
+  pbfd = gdb_bfd_open (filename, gnutarget, -1);
   if (pbfd == NULL)
     {
       perror_with_name (filename);
       return;
     }
-  old_chain = make_cleanup_bfd_close (pbfd);
+  old_chain = make_cleanup_bfd_unref (pbfd);
 
   if (!bfd_check_format (pbfd, bfd_object))
     error (_("\"%s\" is not an object file: %s"), filename,

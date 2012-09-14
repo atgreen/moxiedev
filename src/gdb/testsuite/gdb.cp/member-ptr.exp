@@ -1,5 +1,5 @@
-# Copyright 1998, 1999, 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
-# Free Software Foundation, Inc.
+# Copyright 1998-1999, 2003-2004, 2006-2012 Free Software Foundation,
+# Inc.
 
 # This file is part of the gdb testsuite
 
@@ -22,30 +22,18 @@
 
 set vhn "\\$\[0-9\]+"
 
-if $tracelevel then {
-    strace $tracelevel
-}
-
 if { [skip_cplus_tests] } { continue }
 
 
-set testfile "member-ptr"
-set srcfile ${testfile}.cc
-set binfile ${objdir}/${subdir}/${testfile}
+standard_testfile .cc
 
-if [get_compiler_info ${binfile} "c++"] {
+if [get_compiler_info "c++"] {
     return -1
 }
 
-if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug c++}] != "" } {
-     untested member-ptr.exp
-     return -1
+if {[prepare_for_testing $testfile.exp $testfile $srcfile {debug c++}]} {
+    return -1
 }
-
-gdb_exit
-gdb_start
-gdb_reinitialize_dir $srcdir/$subdir
-gdb_load ${binfile}
 
 if ![runto_main] then {
     perror "couldn't run to breakpoint"
@@ -261,7 +249,7 @@ gdb_test_multiple "print a" $name {
     -re "$vhn = \{c = 120 'x', j = 33, jj = 1331, (static|static int) s = 10, Virtual table at $hex\}\r\n$gdb_prompt $" {
 	pass $name
     }
-    -re "$vhn = \{(_vptr.A|_vptr\\$) = $hex, c = 120 'x', j = 33, jj = 1331, (static|static int) s = 10\}\r\n$gdb_prompt $" {
+    -re "$vhn = \{(_vptr.A|_vptr\\$) = ${hex}( <vtable for A.*>)?, c = 120 'x', j = 33, jj = 1331, (static|static int) s = 10\}\r\n$gdb_prompt $" {
 	pass $name
     }
     -re "$vhn = \{(_vptr.A|_vptr\\$) = $hex, c = 120 'x', j = 121, jj = 1331, (static|static int) s = 10\}\r\n$gdb_prompt $" {
@@ -309,7 +297,7 @@ gdb_test_multiple "print a" $name {
     -re "$vhn = \{c = 120 'x', j = 44, jj = 1331, (static|static int) s = 10, Virtual table at $hex\}\r\n$gdb_prompt $" {
 	pass $name
     }
-    -re "$vhn = \{(_vptr.A|_vptr\\$) = $hex, c = 120 'x', j = 44, jj = 1331, (static|static int) s = 10\}\r\n$gdb_prompt $" {
+    -re "$vhn = \{(_vptr.A|_vptr\\$) = ${hex}( <vtable for A.*>), c = 120 'x', j = 44, jj = 1331, (static|static int) s = 10\}\r\n$gdb_prompt $" {
 	pass $name
     }
     -re "$vhn = \{(_vptr.A|_vptr\\$) = $hex, c = 120 'x', j = 121, jj = 1331, (static|static int) s = 10\}\r\n$gdb_prompt $" {

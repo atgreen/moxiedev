@@ -1,8 +1,7 @@
 /* Support for printing C++ values for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1988, 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
-   2000, 2001, 2002, 2003, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1986, 1988-1989, 1991-1997, 2000-2003, 2005-2012 Free
+   Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -99,7 +98,7 @@ const char vtbl_ptr_name[] = "__vtbl_ptr_type";
 int
 cp_is_vtbl_ptr_type (struct type *type)
 {
-  char *typename = type_name_no_tag (type);
+  const char *typename = type_name_no_tag (type);
 
   return (typename != NULL && !strcmp (typename, vtbl_ptr_name));
 }
@@ -359,6 +358,21 @@ cp_print_value_fields (struct type *type, struct type *real_type,
 					   v, stream, recurse + 1,
 					   options);
 		}
+	      else if (i == TYPE_VPTR_FIELDNO (type))
+		{
+		  int i_offset = offset + TYPE_FIELD_BITPOS (type, i) / 8;
+		  struct type *i_type = TYPE_FIELD_TYPE (type, i);
+
+		  if (valprint_check_validity (stream, i_type, i_offset, val))
+		    {
+		      CORE_ADDR addr;
+		      
+		      addr = extract_typed_address (valaddr + i_offset, i_type);
+		      print_function_pointer_address (options,
+						      get_type_arch (type),
+						      addr, stream);
+		    }
+		}
 	      else
 		{
 		  struct value_print_options opts = *options;
@@ -496,7 +510,7 @@ cp_print_value (struct type *type, struct type *real_type,
       int boffset = 0;
       int skip;
       struct type *baseclass = check_typedef (TYPE_BASECLASS (type, i));
-      char *basename = TYPE_NAME (baseclass);
+      const char *basename = TYPE_NAME (baseclass);
       const gdb_byte *base_valaddr = NULL;
       const struct value *base_val = NULL;
       volatile struct gdb_exception ex;
@@ -540,9 +554,11 @@ cp_print_value (struct type *type, struct type *real_type,
 	      if ((boffset + offset) < 0
 		  || (boffset + offset) >= TYPE_LENGTH (real_type))
 		{
-		  /* FIXME (alloca): unsafe if baseclass is really
-		     really large.  */
-		  gdb_byte *buf = alloca (TYPE_LENGTH (baseclass));
+		  gdb_byte *buf;
+		  struct cleanup *back_to;
+
+		  buf = xmalloc (TYPE_LENGTH (baseclass));
+		  back_to = make_cleanup (xfree, buf);
 
 		  if (target_read_memory (address + boffset, buf,
 					  TYPE_LENGTH (baseclass)) != 0)
@@ -554,6 +570,7 @@ cp_print_value (struct type *type, struct type *real_type,
 		  boffset = 0;
 		  thistype = baseclass;
 		  base_valaddr = value_contents_for_printing_const (base_val);
+		  do_cleanups (back_to);
 		}
 	      else
 		{
@@ -795,7 +812,7 @@ cp_print_class_member (const gdb_byte *valaddr, struct type *type,
 
   if (domain != NULL)
     {
-      char *name;
+      const char *name;
 
       fputs_filtered (prefix, stream);
       name = type_name_no_tag (domain);

@@ -1,7 +1,6 @@
 /* Target-dependent code for the Sanyo Xstormy16a (LC590000) processor.
 
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2001-2005, 2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -198,7 +197,7 @@ xstormy16_store_return_value (struct type *type, struct regcache *regcache,
 }
 
 static enum return_value_convention
-xstormy16_return_value (struct gdbarch *gdbarch, struct type *func_type,
+xstormy16_return_value (struct gdbarch *gdbarch, struct value *function,
 			struct type *type, struct regcache *regcache,
 			gdb_byte *readbuf, const gdb_byte *writebuf)
 {
@@ -280,16 +279,20 @@ xstormy16_push_dummy_call (struct gdbarch *gdbarch,
   for (j = nargs - 1; j >= i; j--)
     {
       char *val;
+      struct cleanup *back_to;
+      const gdb_byte *bytes = value_contents (args[j]);
 
       typelen = TYPE_LENGTH (value_enclosing_type (args[j]));
       slacklen = typelen & 1;
-      val = alloca (typelen + slacklen);
-      memcpy (val, value_contents (args[j]), typelen);
+      val = xmalloc (typelen + slacklen);
+      back_to = make_cleanup (xfree, val);
+      memcpy (val, bytes, typelen);
       memset (val + typelen, 0, slacklen);
 
       /* Now write this data to the stack.  The stack grows upwards.  */
       write_memory (stack_dest, val, typelen + slacklen);
       stack_dest += typelen + slacklen;
+      do_cleanups (back_to);
     }
 
   store_unsigned_integer (buf, xstormy16_pc_size, byte_order, bp_addr);
@@ -414,7 +417,7 @@ static CORE_ADDR
 xstormy16_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_addr = 0, func_end = 0;
-  char *func_name;
+  const char *func_name;
 
   if (find_pc_partial_function (pc, &func_name, &func_addr, &func_end))
     {

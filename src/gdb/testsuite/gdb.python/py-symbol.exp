@@ -1,4 +1,4 @@
-# Copyright (C) 2010, 2011 Free Software Foundation, Inc.
+# Copyright (C) 2010-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,25 +16,13 @@
 # This file is part of the GDB testsuite.  It tests the mechanism
 # exposing values to Python.
 
-if $tracelevel then {
-    strace $tracelevel
-}
-
 load_lib gdb-python.exp
 
-set testfile "py-symbol"
-set srcfile ${testfile}.c
-set binfile ${objdir}/${subdir}/${testfile}
-if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-    untested "Couldn't compile ${srcfile}"
+standard_testfile
+
+if {[prepare_for_testing $testfile.exp $testfile $srcfile debug]} {
     return -1
 }
-
-# Start with a fresh gdb.
-gdb_exit
-gdb_start
-gdb_reinitialize_dir $srcdir/$subdir
-gdb_load ${binfile}
 
 # Skip all tests if Python scripting is not enabled.
 if { [skip_python_tests] } { continue }
@@ -45,6 +33,21 @@ if { [skip_python_tests] } { continue }
 gdb_py_test_silent_cmd "python main_func = gdb.lookup_global_symbol(\"main\")" "Lookup main" 1
 gdb_test "python print main_func.is_function" "True" "Test main_func.is_function"
 gdb_test "python print gdb.lookup_global_symbol(\"junk\")" "None" "Test lookup_global_symbol(\"junk\")"
+
+gdb_test "python print gdb.lookup_global_symbol('main').value()" "$hex .main." \
+    "print value of main"
+
+set qq_line [gdb_get_line_number "line of qq"]
+gdb_test "python print gdb.lookup_global_symbol('qq').line" "$qq_line" \
+    "print line number of qq"
+
+gdb_test "python print gdb.lookup_global_symbol('qq').value()" "72" \
+    "print value of qq"
+
+gdb_test "python print gdb.lookup_global_symbol('qq').needs_frame" \
+    "False" \
+    "print whether qq needs a frame"
+
 
 if ![runto_main] then {
     fail "Can't run to main"
@@ -87,6 +90,14 @@ gdb_test "python print a\[0\].is_constant" "False" "Test a.is_constant"
 gdb_test "python print a\[0\].is_argument" "False" "Test a.is_argument"
 gdb_test "python print a\[0\].is_function" "False" "Test a.is_function"
 gdb_test "python print a\[0\].addr_class == gdb.SYMBOL_LOC_COMPUTED" "True" "Test a.addr_class"
+
+gdb_test "python print a\[0\].value()" \
+    "symbol requires a frame to compute its value.*"\
+    "try to print value of a without a frame"
+gdb_test "python print a\[0\].value(frame)" "0" \
+    "print value of a"
+gdb_test "python print a\[0\].needs_frame" "True" \
+    "print whether a needs a frame"
 
 # Test is_constant attribute
 gdb_py_test_silent_cmd "python t = gdb.lookup_symbol(\"one\")" "Get variable a" 0

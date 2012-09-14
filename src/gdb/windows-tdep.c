@@ -1,4 +1,4 @@
-/* Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+/* Copyright (C) 2008-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -26,6 +26,7 @@
 #include "command.h"
 #include "gdbcmd.h"
 #include "gdbthread.h"
+#include "objfiles.h"
 
 struct cmd_list_element *info_w32_cmdlist;
 
@@ -268,7 +269,7 @@ static const struct lval_funcs tlb_value_funcs =
    if there's no object available.  */
 
 static struct value *
-tlb_make_value (struct gdbarch *gdbarch, struct internalvar *var)
+tlb_make_value (struct gdbarch *gdbarch, struct internalvar *var, void *ignore)
 {
   if (target_has_stack && !ptid_equal (inferior_ptid, null_ptid))
     {
@@ -398,6 +399,51 @@ windows_xfer_shared_library (const char* so_name, CORE_ADDR load_addr,
   obstack_grow_str (obstack, "\"/></library>");
 }
 
+/* Implement the "iterate_over_objfiles_in_search_order" gdbarch
+   method.  It searches all objfiles, starting with CURRENT_OBJFILE
+   first (if not NULL).
+
+   On Windows, the system behaves a little differently when two
+   objfiles each define a global symbol using the same name, compared
+   to other platforms such as GNU/Linux for instance.  On GNU/Linux,
+   all instances of the symbol effectively get merged into a single
+   one, but on Windows, they remain distinct.
+
+   As a result, it usually makes sense to start global symbol searches
+   with the current objfile before expanding it to all other objfiles.
+   This helps for instance when a user debugs some code in a DLL that
+   refers to a global variable defined inside that DLL.  When trying
+   to print the value of that global variable, it would be unhelpful
+   to print the value of another global variable defined with the same
+   name, but in a different DLL.  */
+
+void
+windows_iterate_over_objfiles_in_search_order
+  (struct gdbarch *gdbarch,
+   iterate_over_objfiles_in_search_order_cb_ftype *cb,
+   void *cb_data, struct objfile *current_objfile)
+{
+  int stop;
+  struct objfile *objfile;
+
+  if (current_objfile)
+    {
+      stop = cb (current_objfile, cb_data);
+      if (stop)
+	return;
+    }
+
+  ALL_OBJFILES (objfile)
+    {
+      if (objfile != current_objfile)
+	{
+	  stop = cb (objfile, cb_data);
+	  if (stop)
+	    return;
+	}
+    }
+}
+
 static void
 show_maint_show_all_tib (struct ui_file *file, int from_tty,
 		struct cmd_list_element *c, const char *value)
@@ -425,6 +471,18 @@ init_w32_command_list (void)
     }
 }
 
+/* Provide a prototype to silence -Wmissing-prototypes.  */
+extern initialize_file_ftype _initialize_windows_tdep;
+
+/* Implementation of `tlb' variable.  */
+
+static const struct internalvar_funcs tlb_funcs =
+{
+  tlb_make_value,
+  NULL,
+  NULL
+};
+
 void
 _initialize_windows_tdep (void)
 {
@@ -451,5 +509,5 @@ even if their meaning is unknown."),
      value with a void typed value, and when we get here, gdbarch
      isn't initialized yet.  At this point, we're quite sure there
      isn't another convenience variable of the same name.  */
-  create_internalvar_type_lazy ("_tlb", tlb_make_value);
+  create_internalvar_type_lazy ("_tlb", &tlb_funcs, NULL);
 }

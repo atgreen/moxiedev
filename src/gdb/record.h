@@ -1,6 +1,6 @@
 /* Process record and replay target for GDB, the GNU debugger.
 
-   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 2008-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,12 +22,18 @@
 
 #define RECORD_IS_USED	(current_target.to_stratum == record_stratum)
 
-extern int record_debug;
+extern unsigned int record_debug;
 extern int record_memory_query;
 
 extern int record_arch_list_add_reg (struct regcache *regcache, int num);
 extern int record_arch_list_add_mem (CORE_ADDR addr, int len);
 extern int record_arch_list_add_end (void);
 extern struct cleanup *record_gdb_operation_disable_set (void);
+
+/* Wrapper for target_read_memory that prints a debug message if
+   reading memory fails.  */
+extern int record_read_memory (struct gdbarch *gdbarch,
+			       CORE_ADDR memaddr, gdb_byte *myaddr,
+			       ssize_t len);
 
 #endif /* _RECORD_H_ */

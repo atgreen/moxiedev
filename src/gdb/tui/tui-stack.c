@@ -1,7 +1,6 @@
 /* TUI display locator.
 
-   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2006, 2007, 2008,
-   2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1998-2004, 2006-2012 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -28,6 +27,7 @@
 #include "inferior.h"
 #include "target.h"
 #include "top.h"
+#include "gdb-demangle.h"
 #include "gdb_string.h"
 #include "tui/tui.h"
 #include "tui/tui-data.h"
@@ -228,6 +228,7 @@ tui_get_function_from_frame (struct frame_info *fi)
   if (*p == '<')
     p++;
   strncpy (name, p, sizeof (name) - 1);
+  name[sizeof (name) - 1] = 0;
   p = strchr (name, '(');
   if (!p)
     p = strchr (name, '>');
@@ -378,7 +379,8 @@ tui_show_frame_info (struct frame_info *fi)
 	    }
 	  else
 	    {
-	      if (find_pc_partial_function (get_frame_pc (fi), (char **) NULL,
+	      if (find_pc_partial_function (get_frame_pc (fi),
+					    (const char **) NULL,
 					    &low, (CORE_ADDR) 0) == 0)
 		{
 		  /* There is no symbol available for current PC.  There is no

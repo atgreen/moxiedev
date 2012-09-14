@@ -94,6 +94,9 @@ object_unittest_SOURCES = object_unittest.cc
 check_PROGRAMS += binary_unittest
 binary_unittest_SOURCES = binary_unittest.cc
 
+check_PROGRAMS += leb128_unittest
+leb128_unittest_SOURCES = leb128_unittest.cc
+
 endif NATIVE_OR_CROSS_LINKER
 
 # ---------------------------------------------------------------------
@@ -161,6 +164,16 @@ gc_orphan_section_test:gc_orphan_section_test.o gcctestdir/ld
 gc_orphan_section_test.stdout: gc_orphan_section_test
 	$(TEST_NM) gc_orphan_section_test > gc_orphan_section_test.stdout
 
+check_SCRIPTS += pr14265.sh
+check_DATA += pr14265.stdout
+MOSTLYCLEANFILES += pr14265
+pr14265.o: pr14265.c
+	$(COMPILE) -O0 -c -o $@ $<
+pr14265: pr14265.o 
+	$(LINK) -Bgcctestdir/ -Wl,--gc-sections -T $(srcdir)/pr14265.t -o $@ $<
+pr14265.stdout: pr14265
+	$(TEST_NM) --format=bsd --numeric-sort $< > $@
+
 check_SCRIPTS += icf_test.sh
 check_DATA += icf_test.stdout
 MOSTLYCLEANFILES += icf_test
@@ -215,7 +228,7 @@ final_layout_sequence.txt:
 final_layout: final_layout.o final_layout_sequence.txt gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ -Wl,--section-ordering-file,final_layout_sequence.txt final_layout.o
 final_layout.stdout: final_layout
-	$(TEST_NM) -n final_layout > final_layout.stdout
+	$(TEST_NM) -n --synthetic final_layout > final_layout.stdout
 
 check_PROGRAMS += icf_virtual_function_folding_test
 MOSTLYCLEANFILES += icf_virtual_function_folding_test
@@ -861,7 +874,7 @@ initpri1_LDADD =
 check_PROGRAMS += initpri2
 initpri2_SOURCES = initpri2.c
 initpri2_DEPENDENCIES = gcctestdir/ld
-initpri2_LDFLAGS = -Bgcctestdir/
+initpri2_LDFLAGS = -Bgcctestdir/ -Wl,--ctors-in-init-array
 initpri2_LDADD =
 
 check_PROGRAMS += initpri3a
@@ -870,11 +883,16 @@ initpri3a_DEPENDENCIES = gcctestdir/ld
 initpri3a_LDFLAGS = -Bgcctestdir/
 initpri3a_LDADD =
 
-check_PROGRAMS += initpri3b
-initpri3b_SOURCES = initpri3.c
-initpri3b_DEPENDENCIES = gcctestdir/ld
-initpri3b_LDFLAGS = -Bgcctestdir/ -Wl,--no-ctors-in-init-array
-initpri3b_LDADD =
+# This test fails on targets not using .ctors and .dtors sections (e.g. ARM
+# EABI). Given that gcc is moving towards using .init_array in all cases,
+# this test is commented out.  A better fix would be checking whether gcc
+# uses .ctors or .init_array sections in configure.
+
+# check_PROGRAMS += initpri3b
+# initpri3b_SOURCES = initpri3.c
+# initpri3b_DEPENDENCIES = gcctestdir/ld
+# initpri3b_LDFLAGS = -Bgcctestdir/ -Wl,--no-ctors-in-init-array
+# initpri3b_LDADD =
 
 # Test --detect-odr-violations
 check_SCRIPTS += debug_msg.sh
@@ -1510,6 +1528,22 @@ unused.o: unused.c
 unused.c:
 	@cp /dev/null $@
 
+check_SCRIPTS += plugin_final_layout.sh
+check_DATA += plugin_final_layout.stdout plugin_final_layout_readelf.stdout
+plugin_final_layout.o: plugin_final_layout.cc
+	$(CXXCOMPILE) -O0 -c -ffunction-sections  -fdata-sections -g -o $@ $<
+plugin_final_layout: plugin_final_layout.o plugin_section_order.so gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--plugin,"./plugin_section_order.so" plugin_final_layout.o
+plugin_final_layout.stdout: plugin_final_layout
+	$(TEST_NM) -n --synthetic plugin_final_layout > plugin_final_layout.stdout
+plugin_final_layout_readelf.stdout: plugin_final_layout
+	$(TEST_READELF) -Wl plugin_final_layout > plugin_final_layout_readelf.stdout
+
+plugin_section_order.so: plugin_section_order.o
+	$(LINK) -Bgcctestdir/ -shared plugin_section_order.o
+plugin_section_order.o: plugin_section_order.c
+	$(COMPILE) -O0 -c -fpic -o $@ $<
+
 endif PLUGINS
 
 check_PROGRAMS += exclude_libs_test
@@ -1651,7 +1685,7 @@ no_version_test.stdout: libno_version_test.so
 if IFUNC
 
 ifuncmod1.o: ifuncmod1.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 ifuncmod1.so: ifuncmod1.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -shared ifuncmod1.o
 
@@ -1659,9 +1693,9 @@ ifuncdep1.o: ifuncmod1.c
 	$(COMPILE) -c -o $@ $<
 
 ifuncmain1pic.o: ifuncmain1.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 ifuncmain1pie.o: ifuncmain1.c
-	$(COMPILE) -c -fpie -o $@ $<
+	$(COMPILE) -c -fPIE -o $@ $<
 
 if HAVE_STATIC
 if IFUNC_STATIC
@@ -1695,7 +1729,7 @@ ifuncmain1vis_LDADD = ifuncmod1.so
 
 check_PROGRAMS += ifuncmain1vispic
 ifuncmain1vispic.o: ifuncmain1vis.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 ifuncmain1vispic: ifuncmain1vispic.o ifuncmod1.so gcctestdir/ld
 	$(LINK) -Bgcctestdir/ ifuncmain1pic.o ifuncmod1.so -Wl,-R,.
 
@@ -1709,7 +1743,7 @@ ifuncmain1pie: ifuncmain1pie.o ifuncmod1.so gcctestdir/ld
 
 check_PROGRAMS += ifuncmain1vispie
 ifuncmain1vispie.o: ifuncmain1vis.c
-	$(COMPILE) -c -fpie -o $@ $<
+	$(COMPILE) -c -fPIE -o $@ $<
 ifuncmain1vispie: ifuncmain1vispie.o ifuncmod1.so gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -pie ifuncmain1vispie.o ifuncmod1.so -Wl,-R,.
 
@@ -1718,10 +1752,10 @@ ifuncmain1staticpie: ifuncmain1pie.o ifuncmod1.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -pie ifuncmain1pie.o ifuncmod1.o
 
 ifuncmain2pic.o: ifuncmain2.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 
 ifuncdep2pic.o: ifuncdep2.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 
 if HAVE_STATIC
 if IFUNC_STATIC
@@ -1748,7 +1782,7 @@ ifuncmain2pic: ifuncmain2pic.o ifuncdep2pic.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ ifuncmain2pic.o ifuncdep2pic.o
 
 ifuncmod3.o: ifuncmod3.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 ifuncmod3.so: ifuncmod3.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -shared ifuncmod3.o
 
@@ -1759,7 +1793,7 @@ ifuncmain3_LDFLAGS = -Bgcctestdir/ -Wl,--export-dynamic -Wl,-R,.
 ifuncmain3_LDADD = -ldl
 
 ifuncmain4pic.o: ifuncmain4.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 
 if HAVE_STATIC
 if IFUNC_STATIC
@@ -1782,13 +1816,13 @@ ifuncmain4_LDFLAGS = -Bgcctestdir/
 ifuncmain4_LDADD =
 
 ifuncmain5pic.o: ifuncmain5.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 
 ifuncmain5pie.o: ifuncmain5.c
-	$(COMPILE) -c -fpie -o $@ $<
+	$(COMPILE) -c -fPIE -o $@ $<
 
 ifuncmod5.o: ifuncmod5.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 ifuncmod5.so: ifuncmod5.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -shared ifuncmod5.o
 
@@ -1828,10 +1862,10 @@ ifuncmain5pie: ifuncmain5pie.o ifuncmod5.so gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -pie ifuncmain5pie.o ifuncmod5.so -Wl,-R,.
 
 ifuncmain6pie.o: ifuncmain6pie.c
-	$(COMPILE) -c -fpie -o $@ $<
+	$(COMPILE) -c -fPIE -o $@ $<
 
 ifuncmod6.o: ifuncmod6.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 ifuncmod6.so: ifuncmod6.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -shared ifuncmod6.o
 
@@ -1840,10 +1874,10 @@ ifuncmain6pie: ifuncmain6pie.o ifuncmod6.so gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -pie ifuncmain6pie.o ifuncmod6.so -Wl,-R,.
 
 ifuncmain7pic.o: ifuncmain7.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 
 ifuncmain7pie.o: ifuncmain7.c
-	$(COMPILE) -c -fpie -o $@ $<
+	$(COMPILE) -c -fPIE -o $@ $<
 
 if HAVE_STATIC
 if IFUNC_STATIC
@@ -1875,9 +1909,9 @@ ifuncmain7pie: ifuncmain7pie.o gcctestdir/ld
 
 check_PROGRAMS += ifuncvar
 ifuncvar1_pic.o: ifuncvar1.c
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 ifuncvar2_pic.o: ifuncvar2.c	
-	$(COMPILE) -c -fpic -o $@ $<
+	$(COMPILE) -c -fPIC -o $@ $<
 ifuncvar.so: ifuncvar1_pic.o ifuncvar2_pic.o gcctestdir/ld
 	$(LINK) -Bgcctestdir/ -shared ifuncvar1_pic.o ifuncvar2_pic.o
 ifuncvar_SOURCES = ifuncvar3.c
@@ -1941,9 +1975,61 @@ MOSTLYCLEANFILES += memory_test.stdout memory_test memory_test.o
 memory_test.o: memory_test.s
 	$(COMPILE) -o $@ -c $<
 memory_test: memory_test.o gcctestdir/ld $(srcdir)/memory_test.t
-	$(LINK) -Bgcctestdir/ -nostartfiles -nostdlib -T $(srcdir)/memory_test.t -o $@ memory_test.o
+	$(LINK) -Bgcctestdir/ -nostartfiles -nostdlib -z max-page-size=0x1000 -z common-page-size=0x1000 -T $(srcdir)/memory_test.t -o $@ memory_test.o
 memory_test.stdout: memory_test
 	$(TEST_READELF) -lWS  $< > $@
+
+if HAVE_PUBNAMES
+
+# Test that --gdb-index functions correctly without gcc-generated pubnames.
+check_SCRIPTS += gdb_index_test_1.sh
+check_DATA += gdb_index_test_1.stdout
+MOSTLYCLEANFILES += gdb_index_test_1.stdout gdb_index_test_1
+gdb_index_test.o: gdb_index_test.cc
+	$(CXXCOMPILE) -O0 -g -gno-pubnames -c -o $@ $<
+gdb_index_test_1: gdb_index_test.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--gdb-index $<
+gdb_index_test_1.stdout: gdb_index_test_1
+	$(TEST_READELF) --debug-dump=gdb_index $< > $@
+
+if HAVE_ZLIB
+
+# Test that --gdb-index functions correctly with compressed debug sections.
+check_SCRIPTS += gdb_index_test_2.sh
+check_DATA += gdb_index_test_2.stdout
+MOSTLYCLEANFILES += gdb_index_test_2.stdout gdb_index_test_2
+gdb_index_test_cdebug.o: gdb_index_test.cc
+	$(CXXCOMPILE) -Bgcctestdir/ -O0 -g -Wa,--compress-debug-sections -c -o $@ $<
+gdb_index_test_2: gdb_index_test_cdebug.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--gdb-index $<
+gdb_index_test_2.stdout: gdb_index_test_2
+	$(TEST_READELF) --debug-dump=gdb_index $< > $@
+
+endif HAVE_ZLIB
+
+# Another simple C test (DW_AT_high_pc encoding) for --gdb-index.
+check_SCRIPTS += gdb_index_test_3.sh
+check_DATA += gdb_index_test_3.stdout
+MOSTLYCLEANFILES += gdb_index_test_3.stdout gdb_index_test_3
+gdb_index_test_3.o: gdb_index_test_3.c
+	$(COMPILE) -O0 -g -c -o $@ $<
+gdb_index_test_3: gdb_index_test_3.o gcctestdir/ld
+	$(LINK) -Bgcctestdir/ -Wl,--gdb-index,--fatal-warnings $<
+gdb_index_test_3.stdout: gdb_index_test_3
+	$(TEST_READELF) --debug-dump=gdb_index $< > $@
+
+# Test that --gdb-index functions correctly with gcc-generated pubnames.
+check_SCRIPTS += gdb_index_test_4.sh
+check_DATA += gdb_index_test_4.stdout
+MOSTLYCLEANFILES += gdb_index_test_4.stdout gdb_index_test_4
+gdb_index_test_pub.o: gdb_index_test.cc
+	$(CXXCOMPILE) -O0 -g -gpubnames -c -o $@ $<
+gdb_index_test_4: gdb_index_test_pub.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--gdb-index $<
+gdb_index_test_4.stdout: gdb_index_test_4
+	$(TEST_READELF) --debug-dump=gdb_index $< > $@
+
+endif HAVE_PUBNAMES
 
 # End-to-end incremental linking tests.
 # Incremental linking is currently supported only on the x86_64 target.
@@ -2188,7 +2274,7 @@ thumb_bl_in_range.stdout: thumb_bl_in_range
 	$(TEST_OBJDUMP) -D $< > $@
 
 thumb_bl_in_range: thumb_bl_in_range.o ../ld-new
-	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+	../ld-new --no-fix-arm1176 -T $(srcdir)/thumb_branch_range.t -o $@ $<
 
 thumb_bl_in_range.o: thumb_bl_in_range.s
 	$(TEST_AS) -o $@ -march=armv5te $<
@@ -2197,7 +2283,7 @@ thumb_bl_out_of_range.stdout: thumb_bl_out_of_range
 	$(TEST_OBJDUMP) -D $< > $@
 
 thumb_bl_out_of_range: thumb_bl_out_of_range.o ../ld-new
-	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+	../ld-new --no-fix-arm1176 -T $(srcdir)/thumb_branch_range.t -o $@ $<
 
 thumb_bl_out_of_range.o: thumb_bl_out_of_range.s
 	$(TEST_AS) -o $@ -march=armv5te $<
@@ -2224,7 +2310,7 @@ thumb_blx_in_range.stdout: thumb_blx_in_range
 	$(TEST_OBJDUMP) -D $< > $@
 
 thumb_blx_in_range: thumb_blx_in_range.o ../ld-new
-	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+	../ld-new --no-fix-arm1176 -T $(srcdir)/thumb_branch_range.t -o $@ $<
 
 thumb_blx_in_range.o: thumb_blx_in_range.s
 	$(TEST_AS) -o $@ -march=armv5te $<
@@ -2233,7 +2319,7 @@ thumb_blx_out_of_range.stdout: thumb_blx_out_of_range
 	$(TEST_OBJDUMP) -D $< > $@
 
 thumb_blx_out_of_range: thumb_blx_out_of_range.o ../ld-new
-	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+	../ld-new --no-fix-arm1176 -T $(srcdir)/thumb_branch_range.t -o $@ $<
 
 thumb_blx_out_of_range.o: thumb_blx_out_of_range.s
 	$(TEST_AS) -o $@ -march=armv5te $<
@@ -2260,7 +2346,7 @@ thumb_bl_out_of_range_local.stdout: thumb_bl_out_of_range_local
 	$(TEST_OBJDUMP) -D $< > $@
 
 thumb_bl_out_of_range_local: thumb_bl_out_of_range_local.o ../ld-new
-	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+	../ld-new --no-fix-arm1176 -T $(srcdir)/thumb_branch_range.t -o $@ $<
 
 thumb_bl_out_of_range_local.o: thumb_bl_out_of_range_local.s
 	$(TEST_AS) -o $@ -march=armv5te $<
@@ -2297,7 +2383,7 @@ arm_fix_v4bx.stdout: arm_fix_v4bx
 	$(TEST_OBJDUMP) -D -j.text $< > $@
 
 arm_fix_v4bx: arm_fix_v4bx.o ../ld-new
-	../ld-new --fix-v4bx -o $@ $<
+	../ld-new --no-fix-arm1176 --fix-v4bx -o $@ $<
 
 arm_fix_v4bx.o: arm_fix_v4bx.s
 	$(TEST_AS) -o $@ $<
@@ -2306,13 +2392,13 @@ arm_fix_v4bx_interworking.stdout: arm_fix_v4bx_interworking
 	$(TEST_OBJDUMP) -D -j.text $< > $@
 
 arm_fix_v4bx_interworking: arm_fix_v4bx.o ../ld-new
-	../ld-new --fix-v4bx-interworking -o $@ $<
+	../ld-new --no-fix-arm1176 --fix-v4bx-interworking -o $@ $<
 
 arm_no_fix_v4bx.stdout: arm_no_fix_v4bx
 	$(TEST_OBJDUMP) -D -j.text $< > $@
 
 arm_no_fix_v4bx: arm_fix_v4bx.o ../ld-new
-	../ld-new -o $@ $<
+	../ld-new --no-fix-arm1176 -o $@ $<
 
 MOSTLYCLEANFILES += arm_fix_v4bx arm_fix_v4bx_interworking arm_no_fix_v4bx
 
@@ -2351,6 +2437,69 @@ arm_attr_merge_7b.o: arm_attr_merge_7b.s
 	$(TEST_AS) -o $@ $<
 
 MOSTLYCLEANFILES += arm_attr_merge_6 arm_attr_merge_6r arm_attr_merge_7
+
+# ARM1176 workaround test.
+check_SCRIPTS += arm_fix_1176.sh
+check_DATA += arm_fix_1176_default_v6z.stdout arm_fix_1176_on_v6z.stdout \
+	arm_fix_1176_off_v6z.stdout arm_fix_1176_default_v5te.stdout \
+	arm_fix_1176_default_v7a.stdout arm_fix_1176_default_1156t2f_s.stdout
+
+arm_fix_1176_default_v6z.stdout: arm_fix_1176_default_v6z
+	$(TEST_OBJDUMP) -D -j.foo $< > $@
+
+arm_fix_1176_default_v6z: arm_fix_1176_default_v6z.o ../ld-new
+	../ld-new --section-start=.foo=0x2001014 -o $@ $<
+
+arm_fix_1176_default_v6z.o: arm_fix_1176.s
+	$(TEST_AS) -march=armv6z -o $@ $<
+
+arm_fix_1176_on_v6z.stdout: arm_fix_1176_on_v6z
+	$(TEST_OBJDUMP) -D -j.foo $< > $@
+
+arm_fix_1176_on_v6z: arm_fix_1176_on_v6z.o ../ld-new
+	../ld-new --section-start=.foo=0x2001014 --fix-arm1176 -o $@ $<
+
+arm_fix_1176_on_v6z.o: arm_fix_1176.s
+	$(TEST_AS) -march=armv6z -o $@ $<
+
+arm_fix_1176_off_v6z.stdout: arm_fix_1176_off_v6z
+	$(TEST_OBJDUMP) -D -j.foo $< > $@
+
+arm_fix_1176_off_v6z: arm_fix_1176_off_v6z.o ../ld-new
+	../ld-new --section-start=.foo=0x2001014 --no-fix-arm1176 -o $@ $<
+
+arm_fix_1176_off_v6z.o: arm_fix_1176.s
+	$(TEST_AS) -march=armv6z -o $@ $<
+
+arm_fix_1176_default_v5te.stdout: arm_fix_1176_default_v5te
+	$(TEST_OBJDUMP) -D -j.foo $< > $@
+
+arm_fix_1176_default_v5te: arm_fix_1176_default_v5te.o ../ld-new
+	../ld-new --section-start=.foo=0x2001014 -o $@ $<
+
+arm_fix_1176_default_v5te.o: arm_fix_1176.s
+	$(TEST_AS) -march=armv5te -o $@ $<
+
+arm_fix_1176_default_v7a.stdout: arm_fix_1176_default_v7a
+	$(TEST_OBJDUMP) -D -j.foo $< > $@
+
+arm_fix_1176_default_v7a: arm_fix_1176_default_v7a.o ../ld-new
+	../ld-new --section-start=.foo=0x2001014 -o $@ $<
+
+arm_fix_1176_default_v7a.o: arm_fix_1176.s
+	$(TEST_AS) -march=armv7-a -o $@ $<
+
+arm_fix_1176_default_1156t2f_s.stdout: arm_fix_1176_default_1156t2f_s
+	$(TEST_OBJDUMP) -D -j.foo $< > $@
+
+arm_fix_1176_default_1156t2f_s: arm_fix_1176_default_1156t2f_s.o ../ld-new
+	../ld-new --section-start=.foo=0x2001014 -o $@ $<
+
+arm_fix_1176_default_1156t2f_s.o: arm_fix_1176.s
+	$(TEST_AS) -mcpu=arm1156t2f-s -o $@ $<
+
+MOSTLYCLEANFILES += arm_fix_1176_default_v6z arm_fix_1176_on_v6z arm_fix_1176_off_v6z \
+	arm_fix_1176_default_v5te arm_fix_1176_default_v7a arm_fix_1176_default_1156t2f_s
 
 # Cortex-A8 workaround test.
 
@@ -2420,7 +2569,7 @@ check_SCRIPTS += arm_exidx_test.sh
 check_DATA += arm_exidx_test.stdout
 
 arm_exidx_test.stdout: arm_exidx_test.so
-	$(TEST_READELF) -S $< > $@
+	$(TEST_READELF) -Sr $< > $@
 
 arm_exidx_test.so: arm_exidx_test.o ../ld-new
 	../ld-new -shared -o $@ $<
@@ -2444,18 +2593,138 @@ pr12826_2.o: pr12826_2.s
 	$(TEST_AS) -o $@ $<
 
 check_SCRIPTS += arm_unaligned_reloc.sh
-check_DATA += arm_unaligned_reloc.stdout
+check_DATA += arm_unaligned_reloc.stdout arm_unaligned_reloc_r.stdout
 
 arm_unaligned_reloc.stdout: arm_unaligned_reloc
 	$(TEST_OBJDUMP) -D $< > $@
 
+arm_unaligned_reloc_r.stdout: arm_unaligned_reloc_r
+	$(TEST_OBJDUMP) -Dr $< > $@
+
 arm_unaligned_reloc: arm_unaligned_reloc.o ../ld-new
 	../ld-new -o $@ $<
+
+arm_unaligned_reloc_r: arm_unaligned_reloc.o ../ld-new
+	../ld-new -r -o $@ $<
 
 arm_unaligned_reloc.o: arm_unaligned_reloc.s
 	$(TEST_AS) -o $@ $<
 
-MOSTLYCLEANFILES += arm_unaligned_reloc
+MOSTLYCLEANFILES += arm_unaligned_reloc arm_unaligned_reloc_r
+
+# Check ARM to ARM farcall veneers
+
+check_SCRIPTS += arm_farcall_arm_arm.sh
+check_DATA += arm_farcall_arm_arm.stdout
+
+arm_farcall_arm_arm.stdout: arm_farcall_arm_arm
+	$(TEST_OBJDUMP) -d $< > $@
+
+arm_farcall_arm_arm: arm_farcall_arm_arm.o ../ld-new
+	../ld-new --no-fix-arm1176 --section-start .text=0x1000 --section-start .foo=0x2001020 -o $@ $<
+
+arm_farcall_arm_arm.o: arm_farcall_arm_arm.s
+	$(TEST_AS) -o $@ $<
+
+MOSTLYCLEANFILES += arm_farcall_arm_arm
+
+# Check ARM to Thumb farcall veneers
+
+check_SCRIPTS += arm_farcall_arm_thumb.sh
+check_DATA += arm_farcall_arm_thumb.stdout arm_farcall_arm_thumb_5t.stdout
+
+arm_farcall_arm_thumb.stdout: arm_farcall_arm_thumb
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_farcall_arm_thumb: arm_farcall_arm_thumb.o ../ld-new
+	../ld-new --section-start .text=0x1000 --section-start .foo=0x2001014 -o $@ $<
+
+arm_farcall_arm_thumb.o: arm_farcall_arm_thumb.s
+	$(TEST_AS) -o $@ $<
+
+arm_farcall_arm_thumb_5t.stdout: arm_farcall_arm_thumb_5t
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_farcall_arm_thumb_5t: arm_farcall_arm_thumb_5t.o ../ld-new
+	../ld-new --no-fix-arm1176 --section-start .text=0x1000 --section-start .foo=0x2001014 -o $@ $<
+
+arm_farcall_arm_thumb_5t.o: arm_farcall_arm_thumb.s
+	$(TEST_AS) -march=armv5t -o $@ $<
+
+MOSTLYCLEANFILES += arm_farcall_arm_thumb arm_farcall_arm_thumb_5t
+
+# Check Thumb to Thumb farcall veneers
+
+check_SCRIPTS += arm_farcall_thumb_thumb.sh
+check_DATA += arm_farcall_thumb_thumb.stdout \
+	      arm_farcall_thumb_thumb_5t.stdout \
+	      arm_farcall_thumb_thumb_7m.stdout \
+	      arm_farcall_thumb_thumb_6m.stdout
+
+arm_farcall_thumb_thumb.stdout: arm_farcall_thumb_thumb
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_farcall_thumb_thumb: arm_farcall_thumb_thumb.o ../ld-new
+	../ld-new --section-start .text=0x1000 --section-start .foo=0x2001014 -o $@ $<
+
+arm_farcall_thumb_thumb.o: arm_farcall_thumb_thumb.s
+	$(TEST_AS) -march=armv4t -o $@ $<
+
+arm_farcall_thumb_thumb_5t.stdout: arm_farcall_thumb_thumb_5t
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_farcall_thumb_thumb_5t: arm_farcall_thumb_thumb_5t.o ../ld-new
+	../ld-new --no-fix-arm1176 --section-start .text=0x1000 --section-start .foo=0x2001014 -o $@ $<
+
+arm_farcall_thumb_thumb_5t.o: arm_farcall_thumb_thumb.s
+	$(TEST_AS) -march=armv5t -o $@ $<
+
+arm_farcall_thumb_thumb_7m.stdout: arm_farcall_thumb_thumb_7m
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_farcall_thumb_thumb_7m: arm_farcall_thumb_thumb_7m.o ../ld-new
+	../ld-new --section-start .text=0x1000 --section-start .foo=0x2001014 -o $@ $<
+
+arm_farcall_thumb_thumb_7m.o: arm_farcall_thumb_thumb.s
+	$(TEST_AS) -march=armv7-m -o $@ $<
+
+arm_farcall_thumb_thumb_6m.stdout: arm_farcall_thumb_thumb_6m
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_farcall_thumb_thumb_6m: arm_farcall_thumb_thumb_6m.o ../ld-new
+	../ld-new --section-start .text=0x1000 --section-start .foo=0x2001014 -o $@ $<
+
+arm_farcall_thumb_thumb_6m.o: arm_farcall_thumb_thumb.s
+	$(TEST_AS) -march=armv6-m -o $@ $<
+
+MOSTLYCLEANFILES += arm_farcall_thumb_thumb arm_farcall_thumb_thumb_5t \
+		    arm_farcall_thumb_thumb_7m arm_farcall_thumb_thumb_6m
+
+# Check Thumb to ARM farcall veneers
+
+check_SCRIPTS += arm_farcall_thumb_arm.sh
+check_DATA += arm_farcall_thumb_arm.stdout \
+	      arm_farcall_thumb_arm_5t.stdout
+
+arm_farcall_thumb_arm.stdout: arm_farcall_thumb_arm
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_farcall_thumb_arm: arm_farcall_thumb_arm.o ../ld-new
+	../ld-new --section-start .text=0x1c01010 --section-start .foo=0x2001014 -o $@ $<
+
+arm_farcall_thumb_arm.o: arm_farcall_thumb_arm.s
+	$(TEST_AS) -o $@ $<
+
+arm_farcall_thumb_arm_5t.stdout: arm_farcall_thumb_arm_5t
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_farcall_thumb_arm_5t: arm_farcall_thumb_arm_5t.o ../ld-new
+	../ld-new --no-fix-arm1176 --section-start .text=0x1c01010 --section-start .foo=0x2001014 -o $@ $<
+
+arm_farcall_thumb_arm_5t.o: arm_farcall_thumb_arm.s
+	$(TEST_AS) -march=armv5t -o $@ $<
+
+MOSTLYCLEANFILES += arm_farcall_thumb_arm arm_farcall_thumb_arm_5t
 
 endif DEFAULT_TARGET_ARM
 

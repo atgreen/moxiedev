@@ -1,3 +1,100 @@
+2012-08-26  Art Haas <ahaas@impactweather.com>
+
+	* cloog.m4 (CLOOG_INIT_FLAGS): Use = instead of == in test.
+
+2012-07-04  Tristan Gingold  <gingold@adacore.com>
+
+	* isl.m4 (ISL_CHECK_VERSION): Set to yes if cross-compiling.
+	Fix comments.
+
+2012-07-03  Richard Guenther  <rguenther@suse.de>
+
+	* cloog.m4: Remove debugging print.
+
+2012-07-03  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* isl.m4 (ISL_CHECK_VERSION): Add -lisl to LIBS, not LDFLAGS.
+
+2012-07-02  Richard Guenther  <rguenther@suse.de>
+
+	* isl.m4 (_ISL_CHECK_CT_PROG): Omit main function header/footer.
+	Fix version test. 
+
+2012-07-02  Richard Guenther  <rguenther@suse.de>
+	Michael Matz  <matz@suse.de>
+	Tobias Grosser <tobias@grosser.es>
+	Sebastian Pop <sebpop@gmail.com>
+
+	* cloog.m4: Set up to work against ISL only.
+	* isl.m4: New file.
+
+2012-05-29  Joseph Myers  <joseph@codesourcery.com>
+
+	* mt-sde: Fix typos.
+	* stdint.m4: Fix typos.
+	* tcl.m4: Fix typos.
+
+2012-05-03  Olivier Hainque  <hainque@adacore.com>
+
+	* mh-ppc-aix (LDFLAGS): Quote $(CC).
+
+2012-04-03  Tristan Gingold  <gingold@adacore.com>
+
+	* mmap.m4: Use *vms* instead of vms*.
+
+2012-04-02  Tristan Gingold  <gingold@adacore.com>
+
+	* math.m4 (GCC_CHECK_MATH_FUNC): Remove if-present
+	argument.  Define the variable.
+
+2012-03-26  Tristan Gingold  <gingold@adacore.com>
+
+	* math.m4: New file.
+
+2012-03-12  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* weakref.m4 (GCC_CHECK_ELF_STYLE_WEAKREF): Remove
+	alpha*-dec-osf*.
+
+2012-01-22  Douglas B Rupp  <rupp@gnat.com>
+
+	* config/mh-interix: Remove as unneeded.
+	* config/picflag.m4 (i[[34567]]86-*-interix3*):
+        Change triplet to i[[34567]]86-*-interix[[3-9]]*.
+
+2012-01-04  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+
+	PR bootstrap/51734
+	* picflag.m4: Remove s390 case statement.
+
+2011-12-20  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* warnings.m4 (ACX_PROG_CC_WARNING_OPTS): Avoid leading dash in
+	expr call.
+
+2011-12-19  Andreas Schwab  <schwab@linux-m68k.org>
+
+	PR bootstrap/51388
+	* warnings.m4 (ACX_PROG_CC_WARNING_OPTS)
+	(ACX_PROG_CC_WARNING_ALMOST_PEDANTIC): Run the test without the
+	no- prefix.
+
+2011-12-18  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* acx.m4 (Test for GNAT): Update comment and add quotes in final test.
+
+2011-11-22  Iain Sandoe  <iains@gcc.gnu.org>
+
+	* weakref.m4: New file.
+
+2011-11-09  Richard Henderson  <rth@redhat.com>
+
+	* asmcfi.m4: New file.
+
+2011-11-02  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* mh-interix (LIBGCC2_DEBUG_CFLAGS): Remove.
+
 2011-08-22  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
 
 	* picflag.m4: New file.
@@ -5,6 +102,15 @@
 2011-07-18  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
 
 	* elf.m4 (target_elf): Remove *-netware*.
+
+2011-07-06  Uros Bizjak  <ubizjak@gmail.com>
+
+	* mt-alphaieee (GOCFLAGS_FOR_TARGET): Add -mieee.
+
+2011-06-15  Mike Stump  <mikestump@comcast.net>
+
+	PR target/49461
+	* mh-darwin: Turn off -pie on darwin11 and later.
 
 2011-04-20  Eric Botcazou  <ebotcazou@adacore.com>
 

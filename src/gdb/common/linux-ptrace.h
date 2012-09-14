@@ -1,4 +1,4 @@
-/* Copyright (C) 2011 Free Software Foundation, Inc.
+/* Copyright (C) 2011-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,6 +17,8 @@
 
 #ifndef COMMON_LINUX_PTRACE_H
 #define COMMON_LINUX_PTRACE_H
+
+struct buffer;
 
 #include <sys/ptrace.h>
 
@@ -51,11 +53,21 @@
 
 #endif /* PTRACE_EVENT_FORK */
 
+#if (defined __bfin__ || defined __frv__ || defined __sh__) \
+    && !defined PTRACE_GETFDPIC
+#define PTRACE_GETFDPIC		31
+#define PTRACE_GETFDPIC_EXEC	0
+#define PTRACE_GETFDPIC_INTERP	1
+#endif
+
 /* We can't always assume that this flag is available, but all systems
    with the ptrace event handlers also have __WALL, so it's safe to use
    in some contexts.  */
 #ifndef __WALL
 #define __WALL          0x40000000 /* Wait for any child.  */
 #endif
+
+extern void linux_ptrace_attach_warnings (pid_t pid, struct buffer *buffer);
+extern void linux_ptrace_init_warnings (void);
 
 #endif /* COMMON_LINUX_PTRACE_H */

@@ -1,6 +1,6 @@
 /* Ravenscar SPARC target support.
 
-   Copyright 2004, 2010, 2011 Free Software Foundation, Inc.
+   Copyright 2004, 2010-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -174,6 +174,9 @@ ravenscar_sparc_store_registers (struct regcache *regcache, int regnum)
                 buf,
                 buf_size);
 }
+
+/* Provide a prototype to silence -Wmissing-prototypes.  */
+extern void _initialize_ravenscar_sparc (void);
 
 void
 _initialize_ravenscar_sparc (void)

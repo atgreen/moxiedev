@@ -1,7 +1,6 @@
 /* Target-dependent code for Morpho mt processor, for GDB.
 
-   Copyright (C) 2005, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2005, 2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -336,7 +335,7 @@ mt_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
    values.  */
 
 static enum return_value_convention
-mt_return_value (struct gdbarch *gdbarch, struct type *func_type,
+mt_return_value (struct gdbarch *gdbarch, struct value *function,
 		 struct type *type, struct regcache *regcache,
 		 gdb_byte *readbuf, const gdb_byte *writebuf)
 {
@@ -409,7 +408,7 @@ mt_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR func_addr = 0, func_end = 0;
-  char *func_name;
+  const char *func_name;
   unsigned long instr;
 
   if (find_pc_partial_function (pc, &func_name, &func_addr, &func_end))
@@ -846,16 +845,20 @@ mt_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   for (j = nargs - 1; j >= i; j--)
     {
       gdb_byte *val;
+      struct cleanup *back_to;
+      const gdb_byte *contents = value_contents (args[j]);
       
       /* Right-justify the value in an aligned-length buffer.  */
       typelen = TYPE_LENGTH (value_type (args[j]));
       slacklen = (wordsize - (typelen % wordsize)) % wordsize;
-      val = alloca (typelen + slacklen);
-      memcpy (val, value_contents (args[j]), typelen);
+      val = xmalloc (typelen + slacklen);
+      back_to = make_cleanup (xfree, val);
+      memcpy (val, contents, typelen);
       memset (val + typelen, 0, slacklen);
       /* Now write this data to the stack.  */
       stack_dest -= typelen + slacklen;
       write_memory (stack_dest, val, typelen + slacklen);
+      do_cleanups (back_to);
     }
 
   /* Finally, if a param needs to be split between registers and stack, 

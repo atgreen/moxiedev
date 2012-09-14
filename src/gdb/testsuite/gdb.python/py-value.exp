@@ -1,4 +1,4 @@
-# Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+# Copyright (C) 2008-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,15 +16,9 @@
 # This file is part of the GDB testsuite.  It tests the mechanism
 # exposing values to Python.
 
-if $tracelevel then {
-    strace $tracelevel
-}
-
 load_lib gdb-python.exp
 
-set testfile "py-value"
-set srcfile ${testfile}.c
-set binfile ${objdir}/${subdir}/${testfile}
+standard_testfile
 
 # Build inferior to language specification.
 proc build_inferior {exefile lang} {
@@ -106,8 +100,8 @@ proc test_value_numeric_ops {} {
   gdb_test "print (void *) 5" ".*" ""
   gdb_test_no_output "python b = gdb.history (0)" ""
 
-  gdb_test "python print 'result = ' + str(a+5)" " = 0x7" "add pointer value with python integer"
-  gdb_test "python print 'result = ' + str(b-2)" " = 0x3" "subtract python integer from pointer value"
+  gdb_test "python print 'result = ' + str(a+5)" " = 0x7( <.*>)?" "add pointer value with python integer"
+  gdb_test "python print 'result = ' + str(b-2)" " = 0x3( <.*>)?" "subtract python integer from pointer value"
   gdb_test "python print 'result = ' + str(b-a)" " = 3" "subtract two pointer values"
 
   # Test some invalid operations.
@@ -216,8 +210,47 @@ proc test_value_in_inferior {} {
   # Test address attribute
   gdb_test "python print 'result =', arg0.address" "= 0x\[\[:xdigit:\]\]+" "Test address attribute"
 
+  # Test displaying a variable that is temporarily at a bad address.
+  # But if we can examine what's at memory address 0, then we'll also be
+  # able to display it without error.  Don't run the test in that case.
+  set can_read_0 0
+  gdb_test_multiple "x 0" "memory at address 0" {
+      -re "0x0:\[ \t\]*Cannot access memory at address 0x0\r\n$gdb_prompt $" { }
+      -re "0x0:\[ \t\]*Error accessing memory address 0x0\r\n$gdb_prompt $" { }
+      -re "\r\n$gdb_prompt $" {
+	  set can_read_0 1
+      }
+  }
+
   # Test memory error.
-  gdb_test "python print gdb.parse_and_eval('*(int*)0')" "gdb.MemoryError: Cannot access memory at address 0x0.*"
+  set test "parse_and_eval with memory error"
+  if {$can_read_0} {
+    untested $test
+  } else {
+    gdb_test "python print gdb.parse_and_eval('*(int*)0')" "gdb.MemoryError: Cannot access memory at address 0x0.*" $test
+  }
+
+  # Test Python lazy value handling
+  set test "memory error and lazy values"
+  if {$can_read_0} {
+    untested $test
+  } else {
+    gdb_test "python inval = gdb.parse_and_eval('*(int*)0')"
+    gdb_test "python print inval.is_lazy" "True"
+    gdb_test "python inval2 = inval+1" "gdb.MemoryError: Cannot access memory at address 0x0.*" $test
+    gdb_test "python inval.fetch_lazy ()" "gdb.MemoryError: Cannot access memory at address 0x0.*" $test
+  }
+  gdb_test "python argc_lazy = gdb.parse_and_eval('argc')"
+  gdb_test "python argc_notlazy = gdb.parse_and_eval('argc')"
+  gdb_test "python argc_notlazy.fetch_lazy()"
+  gdb_test "python print argc_lazy.is_lazy" "True"
+  gdb_test "python print argc_notlazy.is_lazy" "False"
+  gdb_test "print argc" " = 1" "sanity check argc"
+  gdb_test "python print argc_lazy.is_lazy" "\r\nTrue"
+  gdb_test_no_output "set argc=2"
+  gdb_test "python print argc_notlazy" "\r\n1"
+  gdb_test "python print argc_lazy" "\r\n2"
+  gdb_test "python print argc_lazy.is_lazy" "False"
 
   # Test string fetches,  both partial and whole.
   gdb_test "print st" "\"divide et impera\""
@@ -330,14 +363,8 @@ proc test_value_after_death {} {
 # subscript operation to proceed.
 
 proc test_subscript_regression {exefile lang} {
-
- global srcdir subdir
-
  # Start with a fresh gdb.
- gdb_exit
- gdb_start
- gdb_reinitialize_dir $srcdir/$subdir
- gdb_load ${exefile}
+ clean_restart ${exefile}
 
  if ![runto_main ] then {
      perror "couldn't run to breakpoint"
@@ -433,11 +460,7 @@ build_inferior "${binfile}" "c"
 build_inferior "${binfile}-cxx" "c++"
 
 # Start with a fresh gdb.
-
-gdb_exit
-gdb_start
-gdb_reinitialize_dir $srcdir/$subdir
-gdb_load ${binfile}
+clean_restart ${binfile}
 
 # Skip all tests if Python scripting is not enabled.
 if { [skip_python_tests] } { continue }

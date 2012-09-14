@@ -1,7 +1,7 @@
 /* write.c - emit .o file
    Copyright 1986, 1987, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
    1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010, 2011 Free Software Foundation, Inc.
+   2010, 2011, 2012 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -151,7 +151,7 @@ fix_new_internal (fragS *frag,		/* Which frag?  */
 		  symbolS *sub_symbol,	/* X_op_symbol.  */
 		  offsetT offset,	/* X_add_number.  */
 		  int pcrel,		/* TRUE if PC-relative relocation.  */
-		  RELOC_ENUM r_type ATTRIBUTE_UNUSED /* Relocation type.  */,
+		  RELOC_ENUM r_type	/* Relocation type.  */,
 		  int at_beginning)	/* Add to the start of the list?  */
 {
   fixS *fixP;
@@ -654,15 +654,21 @@ dump_section_relocs (bfd *abfd ATTRIBUTE_UNUSED, asection *sec, FILE *stream)
 static void
 resolve_reloc_expr_symbols (void)
 {
+  bfd_vma addr_mask = 1;
   struct reloc_list *r;
+
+  /* Avoid a shift by the width of type.  */
+  addr_mask <<= bfd_arch_bits_per_address (stdoutput) - 1;
+  addr_mask <<= 1;
+  addr_mask -= 1;
 
   for (r = reloc_list; r; r = r->next)
     {
+      reloc_howto_type *howto = r->u.a.howto;
       expressionS *symval;
       symbolS *sym;
       bfd_vma offset, addend;
       asection *sec;
-      reloc_howto_type *howto;
 
       resolve_symbol_value (r->u.a.offset_sym);
       symval = symbol_get_value_expression (r->u.a.offset_sym);
@@ -709,7 +715,16 @@ resolve_reloc_expr_symbols (void)
 	    }
 	  else if (sym != NULL)
 	    {
-	      if (S_IS_LOCAL (sym) && !symbol_section_p (sym))
+	      /* Convert relocs against local symbols to refer to the
+	         corresponding section symbol plus offset instead.  Keep
+	         PC-relative relocs of the REL variety intact though to
+		 prevent the offset from overflowing the relocated field,
+	         unless it has enough bits to cover the whole address
+	         space.  */
+	      if (S_IS_LOCAL (sym) && !symbol_section_p (sym)
+		  && !(howto->partial_inplace
+		       && howto->pc_relative
+		       && howto->src_mask != addr_mask))
 		{
 		  asection *symsec = S_GET_SEGMENT (sym);
 		  if (!(((symsec->flags & SEC_MERGE) != 0
@@ -729,8 +744,6 @@ resolve_reloc_expr_symbols (void)
 	    abs_section_sym = section_symbol (absolute_section);
 	  sym = abs_section_sym;
 	}
-
-      howto = r->u.a.howto;
 
       r->u.b.sec = sec;
       r->u.b.s = symbol_get_bfdsym (sym);
@@ -1006,6 +1019,10 @@ fixup_segment (fixS *fixP, segT this_segment)
 			      S_GET_NAME (fixP->fx_subsy),
 			      segment_name (sub_symbol_segment));
 	    }
+	  else if (sub_symbol_segment != undefined_section
+		   && ! bfd_is_com_section (sub_symbol_segment)
+		   && MD_APPLY_SYM_VALUE (fixP))
+	    add_number -= S_GET_VALUE (fixP->fx_subsy);
 	}
 
       if (fixP->fx_addsy)
@@ -1754,6 +1771,10 @@ write_object_file (void)
   fragS *fragP;			/* Track along all frags.  */
 #endif
 
+#ifdef md_pre_output_hook
+  md_pre_output_hook;
+#endif
+
   /* Do we really want to write it?  */
   {
     int n_warns, n_errs;
@@ -1776,6 +1797,10 @@ write_object_file (void)
 		    n_warns, n_warns == 1 ? "" : "s");
       }
   }
+
+#ifdef md_pre_relax_hook
+  md_pre_relax_hook;
+#endif
 
   /* From now on, we don't care about sub-segments.  Build one frag chain
      for each segment. Linked thru fr_next.  */

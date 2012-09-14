@@ -1,5 +1,4 @@
-# Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010,
-# 2011 Free Software Foundation, Inc.
+# Copyright 1999-2005, 2007-2012 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,10 +27,9 @@ if [mi_gdb_start] {
     continue
 }
 
-set testfile "var-cmd"
-set srcfile ${testfile}.c
-set binfile ${objdir}/${subdir}/mi-var-display
-if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug additional_flags=-DFAKEARGV}] != "" } {
+standard_testfile var-cmd.c
+
+if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
     untested mi-var-display.exp
     return -1
 }
@@ -287,7 +285,7 @@ mi_gdb_test "-var-set-format weird.func_ptr_struct hexadecimal" \
 	"set format variable weird.func_ptr_struct"
 
 mi_gdb_test "-var-set-format weird.func_ptr_ptr natural" \
-	"\\^done,format=\"natural\",value=\"0\"" \
+	"\\^done,format=\"natural\",value=\"0x0\"" \
 	"set format variable weird.func_ptr_ptr"
 
 mi_gdb_test "-var-set-format weird.u1 natural" \
@@ -529,13 +527,11 @@ mi_list_varobj_children anons {
 # Desc: create enum e
 mi_create_varobj e e "create local variable e"
 
-setup_xfail "*-*-*"
 # Test: c_variable-7.51
 # Desc: value of e
 mi_gdb_test "-var-evaluate-expression e" \
-	"\\^done,value=\"FIXME\"" \
+	"\\^done,value=\"bar\"" \
 	"eval variable e"
-clear_xfail "*-*-*"
 
 # Test: c_variable-7.52
 # Desc: type of e
@@ -617,9 +613,13 @@ mi_gdb_test "-var-create a1 * a" \
 	"\\^done,name=\"a1\",numchild=\"0\",value=\".*\",type=\"char\".*" \
 	"create local variable a1"
 
-mi_gdb_test "-var-create a2 $fp a" \
+if { [info exists fp] } {
+    mi_gdb_test "-var-create a2 $fp a" \
 	"\\^done,name=\"a2\",numchild=\"0\",value=\".*\",type=\"int\".*" \
 	"create variable a2 in different scope"
+} else {
+    untested "create variable a2 in different scope"
+}
 
 #gdbtk_test c_variable-7.81 {create variables in different scopes} {
 #  set a1 [gdb_variable create -expr a]

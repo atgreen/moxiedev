@@ -1,13 +1,9 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_PREREQ(2.59)dnl
+AC_PREREQ(2.64)dnl
 AC_INIT(Makefile.in)
-AC_CONFIG_HEADER(config.h:config.in)
+sinclude(../common/acinclude.m4)
 
-sinclude(../common/aclocal.m4)
-
-# Bugs in autoconf 2.59 break the call to SIM_AC_COMMON, hack around
-# it by inlining the macro's contents.
-sinclude(../common/common.m4)
+SIM_AC_COMMON
 
 dnl Options available in this module
 SIM_AC_OPTION_INLINE()
@@ -234,7 +230,7 @@ if test ${sim_gen} = MULTI; then
 
   cat << __EOF__ > multi-run.c
 /* Main entry point for MULTI simulators.
-   Copyright (C) 2003, 2007, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2003, 2007, 2010, 2012 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -413,14 +409,13 @@ case "${target}" in
   mips*tx39*)
 	hw_enabled=yes
 	hw_extra_devices="tx3904cpu tx3904irc tx3904tmr tx3904sio" 
-	mips_extra_objs="dv-sockser.o"
 	SIM_SUBTARGET="$SIM_SUBTARGET -DTARGET_TX3904=1"
 	;;
   *)
-	mips_extra_objs="" 
 	;;
 esac
 SIM_AC_OPTION_HARDWARE($hw_enabled,$hw_devices,$hw_extra_devices)
+mips_extra_objs="dv-sockser.o"
 AC_SUBST(mips_extra_objs)
 
 

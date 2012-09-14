@@ -1,7 +1,6 @@
 /* Memory attributes support, for GDB.
 
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-   2011 Free Software Foundation, Inc.
+   Copyright (C) 2001-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -208,7 +207,7 @@ create_mem_region (CORE_ADDR lo, CORE_ADDR hi,
 
       if ((lo >= n->lo && (lo < n->hi || n->hi == 0)) 
 	  || (hi > n->lo && (hi <= n->hi || n->hi == 0))
-	  || (lo <= n->lo && (hi >= n->hi || hi == 0)))
+	  || (lo <= n->lo && ((hi >= n->hi && n->hi != 0) || hi == 0)))
 	{
 	  printf_unfiltered (_("overlapping memory region\n"));
 	  return;

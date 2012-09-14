@@ -1,4 +1,4 @@
-# Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+# Copyright (C) 2008-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,20 +16,12 @@
 # This file is part of the GDB testsuite.  It tests the mechanism
 # exposing values to Python.
 
-if $tracelevel then {
-    strace $tracelevel
-}
-
 load_lib gdb-python.exp
 
-set testfile "python"
-set srcfile  ${testfile}.c
-set srcfile1  ${testfile}-1.c
-set binfile  ${objdir}/${subdir}/${testfile}
+standard_testfile python.c python-1.c
 
-if { [gdb_compile "${srcdir}/${subdir}/${srcfile} ${srcdir}/${subdir}/${srcfile1}" \
-	  ${binfile} executable {debug}] != "" } {
-    untested "Could not compile $binfile."
+if {[build_executable $testfile.exp $testfile \
+	 [list $srcfile $srcfile2] debug] == -1} {
     return -1
 }
 
@@ -47,7 +39,9 @@ gdb_test_multiple "python print 23" "verify python support" {
 
       # If Python is not supported, verify that sourcing a python script
       # causes an error.
-      gdb_test "source $srcdir/$subdir/source2.py" "Error in sourced command file:.*"
+      gdb_test "source $srcdir/$subdir/source2.py" \
+	  "Error in sourced command file:.*" \
+	  "source source2.py when python disabled"
       return -1
     }
     -re "$gdb_prompt $"	{}
@@ -73,7 +67,9 @@ gdb_py_test_multiple "indented multi-line python command" \
   "foo ()" "" \
   "end" "hello, world!"
 
-gdb_test "source $srcdir/$subdir/source2.py" "yes"
+gdb_test "source $srcdir/$subdir/source2.py" "yes" "source source2.py"
+
+gdb_test "source -s source2.py" "yes" "source -s source2.py"
 
 gdb_test "python print gdb.current_objfile()" "None"
 gdb_test "python print gdb.objfiles()" "\\\[\\\]"
@@ -106,21 +102,33 @@ gdb_test_no_output "set height $lines"
 
 set test "verify pagination beforehand"
 gdb_test_multiple "python print \"\\n\" * $lines" $test {
-    -re "---Type <return> to continue, or q <return> to quit---$" {
+    -re "---Type <return>" {
+	exp_continue
+    }
+    -re " to continue, or q <return>" {
+	exp_continue
+    }
+    -re " to quit---$" {
 	pass $test
     }
 }
-gdb_test "q" "Quit" "verify pagination beforehand: q"
+gdb_test "q" "Quit.*Error while executing Python.*" "verify pagination beforehand: q"
 
 gdb_test "python if gdb.execute('python print \"\\\\n\" * $lines', to_string=True) == \"\\n\" * [expr $lines + 1]: print \"yes\"" "yes" "gdb.execute does not page"
 
 set test "verify pagination afterwards"
 gdb_test_multiple "python print \"\\n\" * $lines" $test {
-    -re "---Type <return> to continue, or q <return> to quit---$" {
+    -re "---Type <return>" {
+	exp_continue
+    }
+    -re " to continue, or q <return>" {
+	exp_continue
+    }
+    -re " to quit---$" {
 	pass $test
     }
 }
-gdb_test "q" "Quit" "verify pagination afterwards: q"
+gdb_test "q" "Quit.*Error while executing Python.*" "verify pagination afterwards: q"
 
 gdb_test_no_output "set height 0"
 
@@ -170,29 +178,27 @@ gdb_test "python print len(symtab)" "2" "Test decode_line func1 length"
 gdb_test "python print len(symtab\[1\])" "1" "Test decode_line func1 length"
 gdb_test "python print symtab\[1\]\[0\].symtab" ".*gdb.python/python-1.c.*" "Test decode_line func1 filename"
 gdb_test "python print symtab\[1\]\[0\].line" "19" "Test decode_line func1 line number"
+gdb_py_test_silent_cmd {python symtab = gdb.decode_line ("func1,func2")} \
+    "test decode_line func1,func2" 1
+gdb_test {python print symtab[0]} ",func2" "stop at comma in linespec"
 
 # gdb.write
-gdb_test "python print sys.stderr" ".*__main__.GdbOutputErrorFile instance at.*" "Test stderr location"
-gdb_test "python print sys.stdout" ".*__main__.GdbOutputFile instance at.*" "Test stdout location"
+gdb_test "python print sys.stderr" ".*gdb.GdbOutputErrorFile instance at.*" "Test stderr location"
+gdb_test "python print sys.stdout" ".*gdb.GdbOutputFile instance at.*" "Test stdout location"
 gdb_test "python gdb.write(\"Foo\\n\")" "Foo" "Test default write"
 gdb_test "python gdb.write(\"Error stream\\n\", stream=gdb.STDERR)" "Error stream" "Test stderr write"
 gdb_test "python gdb.write(\"Normal stream\\n\", stream=gdb.STDOUT)" "Normal stream" "Test stdout write"
 gdb_test "python gdb.write(\"Log stream\\n\", stream=gdb.STDLOG)" "Log stream" "Test stdlog write"
 
-# Deprecate maint set/show python print-stack
-gdb_test "maint show python print-stack" \
-    "Warning: command 'maintenance show python print-stack' is deprecated.*Use 'show python print-stack'.*" \
-    "Test deprecation maint show warning."
-gdb_test "maint set python print-stack off" \
-    "Warning: command 'maintenance set python print-stack' is deprecated.*Use 'set python print-stack'.*" \
-    "Test deprecation maint set warning."
+# print-stack
 gdb_test "show python print-stack" \
-    "Whether Python stack will be printed on error is off.*" \
-    "Test print-backtrace show setting. Default off."
-gdb_py_test_silent_cmd "set python print-stack on" \
+    "The mode of Python stack printing on error is \"message\".*" \
+    "Test print-backtrace show setting. Default is message."
+gdb_py_test_silent_cmd "set python print-stack full" \
     "Test print-backtrace set setting" 1
 gdb_test "show python print-stack" \
-    "Whether Python stack will be printed on error is on.*" \
+    "The mode of Python stack printing on error is \"full\".*" \
+    "Test print-backtrace show setting to full."
 
 # Test prompt substituion
 
@@ -297,7 +303,83 @@ gdb_test_multiple "set extended-prompt \\w " \
 
 gdb_test_multiple "set extended-prompt some param \\p{python print-stack} " \
     "set extended prompt parameter" {
-    -re "\[\r\n\]some param True $" {
+    -re "\[\r\n\]some param full $" {
 	pass "set extended prompt parameter"
     }
 }
+
+# Start with a fresh gdb.
+clean_restart ${testfile}
+
+# The following tests require execution.
+
+if ![runto_main] then {
+    fail "Can't run to main"
+    return 0
+}
+
+# print-stack settings
+gdb_test "show python print-stack" \
+    "The mode of Python stack printing on error is \"message\".*" \
+    "Test print-backtrace show setting. Default is message."
+gdb_py_test_silent_cmd "set python print-stack full" \
+    "Test print-backtrace set setting" 1
+gdb_test "show python print-stack" \
+    "The mode of Python stack printing on error is \"full\".*" \
+    "Test print-backtrace show setting to full."
+gdb_py_test_silent_cmd "set python print-stack none" \
+    "Test print-backtrace set setting" 1
+gdb_test "show python print-stack" \
+    "The mode of Python stack printing on error is \"none\".*" \
+    "Test print-backtrace show setting to none."
+
+gdb_py_test_silent_cmd "set python print-stack message" \
+    "Test print-backtrace set setting" 1
+
+gdb_py_test_multiple "prompt substitution readline" \
+  "python" "" \
+  "pCounter = 0" "" \
+  "def error_prompt(current):" "" \
+  "   raise RuntimeError(\"Python exception called\")" "" \
+  "end" ""
+
+gdb_test_multiple "python gdb.prompt_hook = error_prompt" "set the hook" {
+    -re "Python Exception <type 'exceptions.RuntimeError'> Python exception called.*" {
+	pass "set hook"
+    }
+}
+
+gdb_py_test_silent_cmd "python gdb.prompt_hook = None" \
+    "set the hook to default" 1
+
+gdb_py_test_silent_cmd "set python print-stack full" \
+    "Test print-backtrace set setting" 1
+
+gdb_test_multiple "python gdb.prompt_hook = error_prompt" "set the hook" {
+    -re "Traceback.*File.*line.*RuntimeError.*Python exception called.*" {
+	pass "set hook"
+    }
+}
+
+gdb_py_test_silent_cmd "python gdb.prompt_hook = None" \
+    "set the hook to default" 1
+
+# Start with a fresh gdb.
+clean_restart ${testfile}
+
+# The following tests require execution.
+
+if ![runto_main] then {
+    fail "Can't run to main"
+    return 0
+}
+
+runto [gdb_get_line_number "Break at func2 call site."]
+
+gdb_py_test_silent_cmd "python line = gdb.selected_frame().find_sal().line" "Get line number of func2 call site" 1
+gdb_test "python print gdb.find_pc_line(gdb.selected_frame().pc()).line == line" "True" "Test find_pc_line at func2 call site"
+
+gdb_py_test_silent_cmd "step" "Step into func2" 1
+gdb_py_test_silent_cmd "up" "Step out of func2" 1
+
+gdb_test "python print gdb.find_pc_line(gdb.selected_frame().pc()).line > line" "True" "Test find_pc_line with resume address"

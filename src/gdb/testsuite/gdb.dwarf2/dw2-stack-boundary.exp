@@ -1,4 +1,4 @@
-# Copyright 2010, 2011 Free Software Foundation, Inc.
+# Copyright 2010-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,10 +19,7 @@ if {![dwarf2_support]} {
     return 0  
 }
 
-set testfile "dw2-stack-boundary"
-set srcfile ${testfile}.S
-set executable ${testfile}.x
-set binfile ${objdir}/${subdir}/${executable}
+standard_testfile .S
 
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" object {}] != "" } {
     return -1
@@ -41,7 +38,7 @@ if [is_remote host] {
     }
 }
 gdb_test_no_output "set complaints 100"
-gdb_test "file $binfile" {Reading symbols from .*\.\.\.Asked for position 0 of stack, stack only has 0 elements on it\..*\.\.\.done\.} "check partial symtab errors"
+gdb_test "file $binfile" {Reading symbols from .*\.\.\.location description stack underflow\.\.\.location description stack overflow\.\.\.done\.} "check partial symtab errors"
 
 gdb_test "p underflow" {Asked for position 0 of stack, stack only has 0 elements on it\.}
 gdb_test "p overflow" " = 2"

@@ -25,6 +25,12 @@ _BEGIN_STD_C
 #define _JBLEN  40
 #endif
 
+#ifdef __epiphany__
+/* All callee preserved registers: r4-r10,fp, sp, lr,r15, r32-r39  */
+#define _JBTYPE long long
+#define _JBLEN 10
+#endif
+
 /* necv70 was 9 as well. */
 
 #if defined(__m68k__) || defined(__mc68000__)
@@ -264,6 +270,12 @@ _BEGIN_STD_C
 #endif
 #define _JBTYPE unsigned short
 #endif /* __m32c__ */
+
+#ifdef __RL78__
+/* Three banks of registers, SP, CS, ES, PC */
+#define _JBLEN (8*3+8)
+#define _JBTYPE unsigned char
+#endif
 
 #ifdef __RX__
 #define _JBLEN 0x44

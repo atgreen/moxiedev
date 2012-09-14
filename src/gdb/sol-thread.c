@@ -1,7 +1,6 @@
 /* Solaris threads debugging interface.
 
-   Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1996-2005, 2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -69,8 +68,6 @@
 #include "procfs.h"
 
 struct target_ops sol_thread_ops;
-
-extern char *procfs_pid_to_str (struct target_ops *ops, ptid_t ptid);
 
 /* Prototypes for supply_gregset etc.  */
 #include "gregset.h"
@@ -348,7 +345,7 @@ sol_thread_detach (struct target_ops *ops, char *args, int from_tty)
 
 static void
 sol_thread_resume (struct target_ops *ops,
-		   ptid_t ptid, int step, enum target_signal signo)
+		   ptid_t ptid, int step, enum gdb_signal signo)
 {
   struct cleanup *old_chain;
   struct target_ops *beneath = find_target_beneath (ops);
@@ -1135,7 +1132,7 @@ ps_lgetLDT (gdb_ps_prochandle_t ph, lwpid_t lwpid,
 
 /* Convert PTID to printable form.  */
 
-char *
+static char *
 solaris_pid_to_str (struct target_ops *ops, ptid_t ptid)
 {
   static char buf[100];
@@ -1342,6 +1339,9 @@ init_sol_thread_ops (void)
   sol_thread_ops.to_get_ada_task_ptid = sol_get_ada_task_ptid;
   sol_thread_ops.to_magic = OPS_MAGIC;
 }
+
+/* Silence -Wmissing-prototypes.  */
+extern void _initialize_sol_thread (void);
 
 void
 _initialize_sol_thread (void)

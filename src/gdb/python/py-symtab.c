@@ -1,6 +1,6 @@
 /* Python interface to symbol tables.
 
-   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 2008-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,6 +23,7 @@
 #include "source.h"
 #include "python-internal.h"
 #include "objfiles.h"
+#include "block.h"
 
 typedef struct stpy_symtab_object {
   PyObject_HEAD
@@ -153,6 +154,38 @@ stpy_is_valid (PyObject *self, PyObject *args)
   Py_RETURN_TRUE;
 }
 
+/* Return the GLOBAL_BLOCK of the underlying symtab.  */
+
+static PyObject *
+stpy_global_block (PyObject *self, PyObject *args)
+{
+  struct symtab *symtab = NULL;
+  struct block *block = NULL;
+  struct blockvector *blockvector;
+
+  STPY_REQUIRE_VALID (self, symtab);
+
+  blockvector = BLOCKVECTOR (symtab);
+  block = BLOCKVECTOR_BLOCK (blockvector, GLOBAL_BLOCK);
+  return block_to_block_object (block, symtab->objfile);
+}
+
+/* Return the STATIC_BLOCK of the underlying symtab.  */
+
+static PyObject *
+stpy_static_block (PyObject *self, PyObject *args)
+{
+  struct symtab *symtab = NULL;
+  struct block *block = NULL;
+  struct blockvector *blockvector;
+
+  STPY_REQUIRE_VALID (self, symtab);
+
+  blockvector = BLOCKVECTOR (symtab);
+  block = BLOCKVECTOR_BLOCK (blockvector, STATIC_BLOCK);
+  return block_to_block_object (block, symtab->objfile);
+}
+
 static PyObject *
 salpy_str (PyObject *self)
 {
@@ -202,6 +235,22 @@ salpy_get_pc (PyObject *self, void *closure)
   SALPY_REQUIRE_VALID (self, sal);
 
   return gdb_py_long_from_ulongest (sal->pc);
+}
+
+/* Implementation of the get method for the 'last' attribute of
+   gdb.Symtab_and_line.  */
+
+static PyObject *
+salpy_get_last (PyObject *self, void *closure)
+{
+  struct symtab_and_line *sal = NULL;
+
+  SALPY_REQUIRE_VALID (self, sal);
+
+  if (sal->end > 0)
+    return gdb_py_long_from_ulongest (sal->end - 1);
+  else
+    Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -477,6 +526,12 @@ Return true if this symbol table is valid, false if not." },
   { "fullname", stpy_fullname, METH_NOARGS,
     "fullname () -> String.\n\
 Return the symtab's full source filename." },
+  { "global_block", stpy_global_block, METH_NOARGS,
+    "global_block () -> gdb.Block.\n\
+Return the global block of the symbol table." },
+  { "static_block", stpy_static_block, METH_NOARGS,
+    "static_block () -> gdb.Block.\n\
+Return the static block of the symbol table." },
   {NULL}  /* Sentinel */
 };
 
@@ -517,6 +572,8 @@ static PyTypeObject symtab_object_type = {
 static PyGetSetDef sal_object_getset[] = {
   { "symtab", salpy_get_symtab, NULL, "Symtab object.", NULL },
   { "pc", salpy_get_pc, NULL, "Return the symtab_and_line's pc.", NULL },
+  { "last", salpy_get_last, NULL,
+    "Return the symtab_and_line's last address.", NULL },
   { "line", salpy_get_line, NULL,
     "Return the symtab_and_line's line.", NULL },
   {NULL}  /* Sentinel */

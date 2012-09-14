@@ -1,8 +1,7 @@
 /* Parser definitions for GDB.
 
-   Copyright (C) 1986, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
-   1998, 1999, 2000, 2002, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1986, 1989-2000, 2002, 2007-2012 Free Software
+   Foundation, Inc.
 
    Modified from expread.y by the Department of Computer Science at the
    State University of New York at Buffalo.
@@ -26,6 +25,7 @@
 #define PARSER_DEFS_H 1
 
 #include "doublest.h"
+#include "vec.h"
 
 struct block;
 
@@ -108,6 +108,8 @@ struct objc_class_str
     int class;
   };
 
+typedef struct type *type_ptr;
+DEF_VEC_P (type_ptr);
 
 /* For parsing of complicated types.
    An array should be preceded in the list by the size of the array.  */
@@ -117,19 +119,57 @@ enum type_pieces
     tp_pointer, 
     tp_reference, 
     tp_array, 
-    tp_function, 
+    tp_function,
+    tp_function_with_arguments,
     tp_const, 
     tp_volatile, 
-    tp_space_identifier
+    tp_space_identifier,
+    tp_type_stack
   };
 /* The stack can contain either an enum type_pieces or an int.  */
 union type_stack_elt
   {
     enum type_pieces piece;
     int int_val;
+    struct type_stack *stack_val;
+    VEC (type_ptr) *typelist_val;
   };
-extern union type_stack_elt *type_stack;
-extern int type_stack_depth, type_stack_size;
+
+/* The type stack is an instance of this structure.  */
+
+struct type_stack
+{
+  /* Elements on the stack.  */
+  union type_stack_elt *elements;
+  /* Current stack depth.  */
+  int depth;
+  /* Allocated size of stack.  */
+  int size;
+};
+
+/* Helper function to initialize the expout, expout_size, expout_ptr
+   trio before it is used to store expression elements created during
+   the parsing of an expression.  INITIAL_SIZE is the initial size of
+   the expout array.  LANG is the language used to parse the expression.
+   And GDBARCH is the gdbarch to use during parsing.  */
+
+extern void initialize_expout (int, const struct language_defn *,
+			       struct gdbarch *);
+
+/* Helper function that frees any unsed space in the expout array.
+   It is generally used when the parser has just been parsed and
+   created.  */
+
+extern void reallocate_expout (void);
+
+/* Reverse an expression from suffix form (in which it is constructed)
+   to prefix form (in which we can conveniently print or execute it).
+   Ordinarily this always returns -1.  However, if EXPOUT_LAST_STRUCT
+   is not -1 (i.e., we are trying to complete a field name), it will
+   return the index of the subexpression which is the left-hand-side
+   of the struct operation at EXPOUT_LAST_STRUCT.  */
+
+extern int prefixify_expression (struct expression *expr);
 
 extern void write_exp_elt_opcode (enum exp_opcode);
 
@@ -169,15 +209,28 @@ extern int end_arglist (void);
 
 extern char *copy_name (struct stoken);
 
+extern void insert_type (enum type_pieces);
+
 extern void push_type (enum type_pieces);
 
 extern void push_type_int (int);
 
-extern void push_type_address_space (char *);
+extern void insert_type_address_space (char *);
 
 extern enum type_pieces pop_type (void);
 
 extern int pop_type_int (void);
+
+extern struct type_stack *get_type_stack (void);
+
+extern struct type_stack *append_type_stack (struct type_stack *to,
+					     struct type_stack *from);
+
+extern void push_type_stack (struct type_stack *stack);
+
+extern void type_stack_cleanup (void *arg);
+
+extern void push_typelist (VEC (type_ptr) *typelist);
 
 extern int length_of_subexp (struct expression *, int);
 
@@ -216,17 +269,6 @@ extern char *lexptr;
 /* After a token has been recognized, this variable points to it.
    Currently used only for error reporting.  */
 extern char *prev_lexptr;
-
-/* Tokens that refer to names do so with explicit pointer and length,
-   so they can share the storage that lexptr is parsing.
-
-   When it is necessary to pass a name to a function that expects
-   a null-terminated string, the substring is copied out
-   into a block of storage that namecopy points to.
-
-   namecopy is allocated once, guaranteed big enough, for each parsing.  */
-
-extern char *namecopy;
 
 /* Current depth in parentheses within the expression.  */
 

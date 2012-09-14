@@ -1,8 +1,6 @@
 /* GDB CLI command scripting.
 
-   Copyright (c) 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995,
-   1996, 1997, 1998, 1999, 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (c) 1986-2002, 2004-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -316,7 +314,7 @@ execute_user_command (struct cmd_list_element *c, char *args)
   struct cleanup *old_chain;
   enum command_control_type ret;
   static int user_call_depth = 0;
-  extern int max_user_call_depth;
+  extern unsigned int max_user_call_depth;
 
   cmdlines = c->user_commands;
   if (cmdlines == 0)
@@ -1180,6 +1178,12 @@ recurse_read_control_structure (char * (*read_next_line_func) (void),
   return ret;
 }
 
+static void
+restore_interp (void *arg)
+{
+  interp_set_temp (interp_name ((struct interp *)arg));
+}
+
 /* Read lines from the input stream and accumulate them in a chain of
    struct command_line's, which is then returned.  For input from a
    terminal, the special command "end" is used to mark the end of the
@@ -1212,8 +1216,21 @@ read_command_lines (char *prompt_arg, int from_tty, int parse_commands,
 	}
     }
 
-  head = read_command_lines_1 (read_next_line, parse_commands,
-			       validator, closure);
+
+  /* Reading commands assumes the CLI behavior, so temporarily
+     override the current interpreter with CLI.  */
+  if (current_interp_named_p (INTERP_CONSOLE))
+    head = read_command_lines_1 (read_next_line, parse_commands,
+				 validator, closure);
+  else
+    {
+      struct interp *old_interp = interp_set_temp (INTERP_CONSOLE);
+      struct cleanup *old_chain = make_cleanup (restore_interp, old_interp);
+
+      head = read_command_lines_1 (read_next_line, parse_commands,
+				   validator, closure);
+      do_cleanups (old_chain);
+    }
 
   if (deprecated_readline_end_hook && from_tty && input_from_terminal_p ())
     {
@@ -1616,11 +1633,9 @@ script_from_file (FILE *stream, const char *file)
   if (stream == NULL)
     internal_error (__FILE__, __LINE__, _("called with NULL file pointer!"));
 
-  old_cleanups = make_cleanup_fclose (stream);
-
   old_lines.old_line = source_line_number;
   old_lines.old_file = source_file_name;
-  make_cleanup (source_cleanup_lines, &old_lines);
+  old_cleanups = make_cleanup (source_cleanup_lines, &old_lines);
   source_line_number = 0;
   source_file_name = file;
   /* This will get set every time we read a line.  So it won't stay ""

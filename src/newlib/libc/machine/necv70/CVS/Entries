@@ -1,9 +1,9 @@
 D/machine////
-/Makefile.am/1.4/Mon Jul 11 12:59:21 2011/-ko/
-/Makefile.in/1.17/Mon Jul 11 12:59:21 2011/-ko/
-/aclocal.m4/1.25/Mon Jul 11 12:59:21 2011/-ko/
-/configure/1.30/Mon Jul 11 12:59:21 2011/-ko/
-/configure.in/1.2/Mon Jul 11 12:59:21 2011/-ko/
-/fastmath.S/1.1/Mon Jul 11 12:59:21 2011//
-/necv70.tex/1.2/Mon Jul 11 12:59:21 2011/-ko/
-/setjmp.S/1.1/Mon Jul 11 12:59:21 2011//
+/Makefile.am/1.4/Thu Sep 13 21:52:42 2012/-ko/
+/Makefile.in/1.18/Fri Sep 14 04:47:29 2012/-ko/
+/aclocal.m4/1.26/Fri Sep 14 04:47:29 2012/-ko/
+/configure/1.31/Fri Sep 14 04:47:30 2012/-ko/
+/configure.in/1.2/Thu Sep 13 21:52:42 2012/-ko/
+/fastmath.S/1.1/Thu Sep 13 21:52:42 2012//
+/necv70.tex/1.2/Thu Sep 13 21:52:42 2012/-ko/
+/setjmp.S/1.1/Thu Sep 13 21:52:42 2012//

@@ -108,7 +108,7 @@ _DEFUN(__sfp, (d),
   int n;
   struct _glue *g;
 
-  __sfp_lock_acquire ();
+  _newlib_sfp_lock_start ();
 
   if (!_GLOBAL_REENT->__sdidinit)
     __sinit (_GLOBAL_REENT);
@@ -121,7 +121,7 @@ _DEFUN(__sfp, (d),
 	  (g->_next = __sfmoreglue (d, NDYNAMIC)) == NULL)
 	break;
     }
-  __sfp_lock_release ();
+  _newlib_sfp_lock_exit ();
   d->_errno = ENOMEM;
   return NULL;
 
@@ -132,7 +132,7 @@ found:
 #ifndef __SINGLE_THREAD__
   __lock_init_recursive (fp->_lock);
 #endif
-  __sfp_lock_release ();
+  _newlib_sfp_lock_end ();
 
   fp->_p = NULL;		/* no current pointer */
   fp->_w = 0;			/* nothing to read or write */
@@ -192,7 +192,6 @@ _DEFUN(__sinit, (s),
 
   /* make sure we clean up on exit */
   s->__cleanup = _cleanup_r;	/* conservative */
-  s->__sdidinit = 1;
 
   s->__sglue._next = NULL;
 #ifndef _REENT_SMALL
@@ -201,6 +200,11 @@ _DEFUN(__sinit, (s),
 #else
   s->__sglue._niobs = 0;
   s->__sglue._iobs = NULL;
+  /* Avoid infinite recursion when calling __sfp  for _GLOBAL_REENT.  The
+     problem is that __sfp checks for _GLOBAL_REENT->__sdidinit and calls
+     __sinit if it's 0. */
+  if (s == _GLOBAL_REENT)
+    s->__sdidinit = 1;
   s->_stdin = __sfp(s);
   s->_stdout = __sfp(s);
   s->_stderr = __sfp(s);
@@ -223,6 +227,8 @@ _DEFUN(__sinit, (s),
   /* POSIX requires stderr to be opened for reading and writing, even
      when the underlying fd 2 is write-only.  */
   std (s->_stderr, __SRW | __SNBF, 2, s);
+
+  s->__sdidinit = 1;
 
   __sinit_lock_release ();
 }

@@ -1,8 +1,6 @@
 /* Target-dependent code for the Motorola 68000 series.
 
-   Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1990-1996, 1999-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -379,8 +377,8 @@ m68k_svr4_store_return_value (struct type *type, struct regcache *regcache,
     m68k_store_return_value (type, regcache, valbuf);
 }
 
-/* Return non-zero if TYPE, which is assumed to be a structure or
-   union type, should be returned in registers for architecture
+/* Return non-zero if TYPE, which is assumed to be a structure, union or
+   complex type, should be returned in registers for architecture
    GDBARCH.  */
 
 static int
@@ -390,7 +388,8 @@ m68k_reg_struct_return_p (struct gdbarch *gdbarch, struct type *type)
   enum type_code code = TYPE_CODE (type);
   int len = TYPE_LENGTH (type);
 
-  gdb_assert (code == TYPE_CODE_STRUCT || code == TYPE_CODE_UNION);
+  gdb_assert (code == TYPE_CODE_STRUCT || code == TYPE_CODE_UNION
+	      || code == TYPE_CODE_COMPLEX);
 
   if (tdep->struct_return == pcc_struct_return)
     return 0;
@@ -405,14 +404,15 @@ m68k_reg_struct_return_p (struct gdbarch *gdbarch, struct type *type)
    from WRITEBUF into REGCACHE.  */
 
 static enum return_value_convention
-m68k_return_value (struct gdbarch *gdbarch, struct type *func_type,
+m68k_return_value (struct gdbarch *gdbarch, struct value *function,
 		   struct type *type, struct regcache *regcache,
 		   gdb_byte *readbuf, const gdb_byte *writebuf)
 {
   enum type_code code = TYPE_CODE (type);
 
   /* GCC returns a `long double' in memory too.  */
-  if (((code == TYPE_CODE_STRUCT || code == TYPE_CODE_UNION)
+  if (((code == TYPE_CODE_STRUCT || code == TYPE_CODE_UNION
+	|| code == TYPE_CODE_COMPLEX)
        && !m68k_reg_struct_return_p (gdbarch, type))
       || (code == TYPE_CODE_FLT && TYPE_LENGTH (type) == 12))
     {
@@ -440,13 +440,14 @@ m68k_return_value (struct gdbarch *gdbarch, struct type *func_type,
 }
 
 static enum return_value_convention
-m68k_svr4_return_value (struct gdbarch *gdbarch, struct type *func_type,
+m68k_svr4_return_value (struct gdbarch *gdbarch, struct value *function,
 			struct type *type, struct regcache *regcache,
 			gdb_byte *readbuf, const gdb_byte *writebuf)
 {
   enum type_code code = TYPE_CODE (type);
 
-  if ((code == TYPE_CODE_STRUCT || code == TYPE_CODE_UNION)
+  if ((code == TYPE_CODE_STRUCT || code == TYPE_CODE_UNION
+       || code == TYPE_CODE_COMPLEX)
       && !m68k_reg_struct_return_p (gdbarch, type))
     {
       /* The System V ABI says that:
@@ -479,7 +480,7 @@ m68k_svr4_return_value (struct gdbarch *gdbarch, struct type *func_type,
   if (code == TYPE_CODE_STRUCT && TYPE_NFIELDS (type) == 1)
     {
       type = check_typedef (TYPE_FIELD_TYPE (type, 0));
-      return m68k_svr4_return_value (gdbarch, func_type, type, regcache,
+      return m68k_svr4_return_value (gdbarch, function, type, regcache,
 				     readbuf, writebuf);
     }
 
@@ -856,7 +857,6 @@ m68k_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 {
   struct m68k_frame_cache cache;
   CORE_ADDR pc;
-  int op;
 
   cache.locals = -1;
   pc = m68k_analyze_prologue (gdbarch, start_pc, (CORE_ADDR) -1, &cache);
@@ -1053,6 +1053,16 @@ m68k_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
 }
 
 
+/* This is the implementation of gdbarch method
+   return_in_first_hidden_param_p.  */
+
+static int
+m68k_return_in_first_hidden_param_p (struct gdbarch *gdbarch,
+				     struct type *type)
+{
+  return 0;
+}
+
 /* System V Release 4 (SVR4).  */
 
 void
@@ -1238,6 +1248,8 @@ m68k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Function call & return.  */
   set_gdbarch_push_dummy_call (gdbarch, m68k_push_dummy_call);
   set_gdbarch_return_value (gdbarch, m68k_return_value);
+  set_gdbarch_return_in_first_hidden_param_p (gdbarch,
+					      m68k_return_in_first_hidden_param_p);
 
 
   /* Disassembler.  */

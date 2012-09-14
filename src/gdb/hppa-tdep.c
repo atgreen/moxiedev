@@ -1,8 +1,7 @@
 /* Target-dependent code for the HP PA-RISC architecture.
 
-   Copyright (C) 1986, 1987, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996,
-   1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010,
-   2011 Free Software Foundation, Inc.
+   Copyright (C) 1986-1987, 1989-1996, 1998-2005, 2007-2012 Free
+   Software Foundation, Inc.
 
    Contributed by the Center for Software Science at the
    University of Utah (pa-gdb-bugs@cs.utah.edu).
@@ -544,7 +543,6 @@ hppa_in_function_epilogue_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   unsigned long status;
   unsigned int inst;
   char buf[4];
-  int off;
 
   status = target_read_memory (pc, buf, 4);
   if (status != 0)
@@ -1115,7 +1113,7 @@ hppa64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 /* Handle 32/64-bit struct return conventions.  */
 
 static enum return_value_convention
-hppa32_return_value (struct gdbarch *gdbarch, struct type *func_type,
+hppa32_return_value (struct gdbarch *gdbarch, struct value *function,
 		     struct type *type, struct regcache *regcache,
 		     gdb_byte *readbuf, const gdb_byte *writebuf)
 {
@@ -1155,7 +1153,7 @@ hppa32_return_value (struct gdbarch *gdbarch, struct type *func_type,
 }
 
 static enum return_value_convention
-hppa64_return_value (struct gdbarch *gdbarch, struct type *func_type,
+hppa64_return_value (struct gdbarch *gdbarch, struct value *function,
 		     struct type *type, struct regcache *regcache,
 		     gdb_byte *readbuf, const gdb_byte *writebuf)
 {
@@ -1699,7 +1697,6 @@ after_prologue (CORE_ADDR pc)
 {
   struct symtab_and_line sal;
   CORE_ADDR func_addr, func_end;
-  struct symbol *f;
 
   /* If we can not find the symbol in the partial symbol table, then
      there is no hope we can determine the function's start address
@@ -1739,10 +1736,7 @@ after_prologue (CORE_ADDR pc)
 static CORE_ADDR
 hppa_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  unsigned long inst;
-  int offset;
   CORE_ADDR post_prologue_pc;
-  char buf[4];
 
   /* See if we can determine the end of the prologue via the symbol table.
      If so, then return either PC, or the PC after the prologue, whichever
@@ -1794,7 +1788,6 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
   struct hppa_frame_cache *cache;
   long saved_gr_mask;
   long saved_fr_mask;
-  CORE_ADDR this_sp;
   long frame_size;
   struct unwind_table_entry *u;
   CORE_ADDR prologue_end;

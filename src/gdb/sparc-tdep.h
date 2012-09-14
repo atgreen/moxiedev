@@ -1,7 +1,6 @@
 /* Target-dependent code for SPARC.
 
-   Copyright (C) 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2003-2004, 2006-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -114,6 +113,12 @@ enum sparc_regnum
   SPARC_I7_REGNUM,		/* %i7 */
   SPARC_F0_REGNUM,		/* %f0 */
   SPARC_F1_REGNUM,
+  SPARC_F2_REGNUM,
+  SPARC_F3_REGNUM,
+  SPARC_F4_REGNUM,
+  SPARC_F5_REGNUM,
+  SPARC_F6_REGNUM,
+  SPARC_F7_REGNUM,
   SPARC_F31_REGNUM		/* %f31 */
   = SPARC_F0_REGNUM + 31
 };
@@ -210,9 +215,9 @@ extern void sparc32_collect_fpregset (const struct regcache *regcache,
 /* Register offsets for Solaris 2.  */
 extern const struct sparc_gregset sparc32_sol2_gregset;
 
-extern int sparc_sol2_pc_in_sigtramp (CORE_ADDR pc, char *name);
+extern int sparc_sol2_pc_in_sigtramp (CORE_ADDR pc, const char *name);
 
-extern char *sparc_sol2_static_transform_name (char *name);
+extern const char *sparc_sol2_static_transform_name (const char *name);
 
 extern void sparc32_sol2_init_abi (struct gdbarch_info info,
 				   struct gdbarch *gdbarch);

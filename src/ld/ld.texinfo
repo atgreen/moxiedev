@@ -1,7 +1,7 @@
 \input texinfo
 @setfilename ld.info
 @c Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-@c 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+@c 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
 @c Free Software Foundation, Inc.
 @syncodeindex ky cp
 @c man begin INCLUDE
@@ -3410,6 +3410,7 @@ the symbol and place it into the symbol table with a global scope.
 
 @menu
 * Simple Assignments::		Simple Assignments
+* HIDDEN::			HIDDEN
 * PROVIDE::			PROVIDE
 * PROVIDE_HIDDEN::		PROVIDE_HIDDEN
 * Source Code Reference::	How to use a linker script defined symbol in source code
@@ -3472,6 +3473,31 @@ zero.  The symbol @samp{_etext} will be defined as the address following
 the last @samp{.text} input section.  The symbol @samp{_bdata} will be
 defined as the address following the @samp{.text} output section aligned
 upward to a 4 byte boundary.
+
+@node HIDDEN
+@subsection HIDDEN
+@cindex HIDDEN
+For ELF targeted ports, define a symbol that will be hidden and won't be
+exported.  The syntax is @code{HIDDEN(@var{symbol} = @var{expression})}.
+
+Here is the example from @ref{Simple Assignments}, rewritten to use
+@code{HIDDEN}:
+
+@smallexample
+HIDDEN(floating_point = 0);
+SECTIONS
+@{
+  .text :
+    @{
+      *(.text)
+      HIDDEN(_etext = .);
+    @}
+  HIDDEN(_bdata = (. + 3) & ~ 3);
+  .data : @{ *(.data) @}
+@}
+@end smallexample
+@noindent
+In this case none of the three symbols will be visible outside this module.
 
 @node PROVIDE
 @subsection PROVIDE
@@ -4037,6 +4063,10 @@ treated as nested sorting command.
 
 If the section sorting command in linker script is nested, the
 command line option will be ignored.
+
+@cindex SORT_NONE
+@code{SORT_NONE} disables section sorting by ignoring the command line
+section sorting option.
 
 If you ever get confused about where input sections are going, use the
 @samp{-M} linker option to generate a map file.  The map file shows
@@ -5300,7 +5330,7 @@ well as section flag.
 
 If an orphaned section's name is representable as a C identifier then
 the linker will automatically @pxref{PROVIDE} two symbols:
-__start_SECNAME and __end_SECNAME, where SECNAME is the name of the
+__start_SECNAME and __stop_SECNAME, where SECNAME is the name of the
 section.  These indicate the start address and end address of the
 orphaned section respectively.  Note: most section names are not
 representable as C identifiers because they contain a @samp{.}
@@ -6710,7 +6740,9 @@ optimization.
 @cindex PowerPC64 multi-TOC
 @kindex --no-multi-toc
 @item --no-multi-toc
-By default, PowerPC64 GCC generates code for a TOC model where TOC
+If given any toc option besides @code{-mcmodel=medium} or
+@code{-mcmodel=large}, PowerPC64 GCC generates code for a TOC model
+where TOC
 entries are accessed with a 16-bit offset from r2.  This limits the
 total TOC size to 64K.  PowerPC64 @command{ld} extends this limit by
 grouping code sections such that each group uses less than 64K for its
@@ -6719,6 +6751,52 @@ calls.  @command{ld} does not split apart input sections, so cannot
 help if a single input file has a @code{.toc} section that exceeds
 64K, most likely from linking multiple files with @command{ld -r}.
 Use this option to turn off this feature.
+
+@cindex PowerPC64 TOC sorting
+@kindex --no-toc-sort
+@item --no-toc-sort
+By default, @command{ld} sorts TOC sections so that those whose file
+happens to have a section called @code{.init} or @code{.fini} are
+placed first, followed by TOC sections referenced by code generated
+with PowerPC64 gcc's @code{-mcmodel=small}, and lastly TOC sections
+referenced only by code generated with PowerPC64 gcc's
+@code{-mcmodel=medium} or @code{-mcmodel=large} options.  Doing this
+results in better TOC grouping for multi-TOC.  Use this option to turn
+off this feature.
+
+@cindex PowerPC64 PLT stub alignment
+@kindex --plt-align
+@kindex --no-plt-align
+@item --plt-align
+@itemx --no-plt-align
+Use these options to control whether individual PLT call stubs are
+aligned to a 32-byte boundary, or to the specified power of two
+boundary when using @code{--plt-align=}.  By default PLT call stubs
+are packed tightly.
+
+@cindex PowerPC64 PLT call stub static chain
+@kindex --plt-static-chain
+@kindex --no-plt-static-chain
+@item --plt-static-chain
+@itemx --no-plt-static-chain
+Use these options to control whether PLT call stubs load the static
+chain pointer (r11).  @code{ld} defaults to not loading the static
+chain since there is never any need to do so on a PLT call.
+
+@cindex PowerPC64 PLT call stub thread safety
+@kindex --plt-thread-safe
+@kindex --no-plt-thread-safe
+@item --plt-thread-safe
+@itemx --no-thread-safe
+With power7's weakly ordered memory model, it is possible when using
+lazy binding for ld.so to update a plt entry in one thread and have
+another thread see the individual plt entry words update in the wrong
+order, despite ld.so carefully writing in the correct order and using
+memory write barriers.  To avoid this we need some sort of read
+barrier in the call stub, or use LD_BIND_NOW=1.  By default, @code{ld}
+looks for calls to commonly used functions that create threads, and if
+seen, adds the necessary barriers.  Use these options to change the
+default behaviour.
 @end table
 
 @ifclear GENERIC

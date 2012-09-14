@@ -34,6 +34,10 @@ dnl indicates whether to run configure within the libnosys subdirectory
 config_libnosys=true
 
 case "${target}" in
+  epiphany-*-*)
+	AC_CONFIG_SUBDIRS(epiphany)
+	config_testsuite=true
+	;;
   i[[3456]]86-*-elf* | i[[3456]]86-*-coff*)
 	AC_CONFIG_SUBDIRS([i386])
 	;;
@@ -52,10 +56,13 @@ case "${target}" in
   i960-*-coff)
 	AC_CONFIG_SUBDIRS([i960])
 	;;
+  sparc-*leon*-elf* | sparc-*leon*-none*)
+	AC_CONFIG_SUBDIRS([sparc_leon])
+	;; 
   sparclet-*-aout* | sparc-*-elf* | sparc64-*-elf* | sparc86x-*-* | sparclite-*-*)
 	AC_CONFIG_SUBDIRS([sparc])
 	;;
-  sh*-*-pe | mips*-*-pe | *arm-wince-pe)
+  sh*-*-pe | mips*-*-pe | *arm*-wince-pe)
 	AC_CONFIG_SUBDIRS([wince])
 	;;
   mips*-*-*)
@@ -121,10 +128,13 @@ case "${target}" in
   m32c-*-*)
 	AC_CONFIG_SUBDIRS([m32c])
 	;;
+  rl78*-*-elf)
+	AC_CONFIG_SUBDIRS([rl78])
+	;;
   rx*-*-elf)
 	AC_CONFIG_SUBDIRS([rx])
 	;;
-  arm*-*-elf | arm*-*-coff | arm-*-*)
+  arm*-*-elf | arm*-*-coff | arm*-*-*)
 	AC_CONFIG_SUBDIRS([arm])
 	;;
   spu-*-elf)

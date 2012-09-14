@@ -1,6 +1,5 @@
 /* Handle FR-V (FDPIC) shared libraries for GDB, the GNU Debugger.
-   Copyright (C) 2004, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2004, 2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,9 +31,10 @@
 #include "gdbcmd.h"
 #include "elf/frv.h"
 #include "exceptions.h"
+#include "gdb_bfd.h"
 
 /* Flag which indicates whether internal debug messages should be printed.  */
-static int solib_frv_debug;
+static unsigned int solib_frv_debug;
 
 /* FR-V pointers are four bytes wide.  */
 enum { FRV_PTR_SIZE = 4 };
@@ -575,7 +575,7 @@ enable_break2 (void)
 	{
 	  warning (_("Unable to determine dynamic linker loadmap address."));
 	  enable_break_failure_warning ();
-	  bfd_close (tmp_bfd);
+	  gdb_bfd_unref (tmp_bfd);
 	  return 0;
 	}
 
@@ -590,7 +590,7 @@ enable_break2 (void)
 	  warning (_("Unable to load dynamic linker loadmap at address %s."),
 	           hex_string_custom (interp_loadmap_addr, 8));
 	  enable_break_failure_warning ();
-	  bfd_close (tmp_bfd);
+	  gdb_bfd_unref (tmp_bfd);
 	  return 0;
 	}
 
@@ -624,7 +624,7 @@ enable_break2 (void)
 	  warning (_("Could not find symbol _dl_debug_addr "
 		     "in dynamic linker"));
 	  enable_break_failure_warning ();
-	  bfd_close (tmp_bfd);
+	  gdb_bfd_unref (tmp_bfd);
 	  return 0;
 	}
 
@@ -675,7 +675,7 @@ enable_break2 (void)
 		     "(at address %s) from dynamic linker"),
 	           hex_string_custom (addr + 8, 8));
 	  enable_break_failure_warning ();
-	  bfd_close (tmp_bfd);
+	  gdb_bfd_unref (tmp_bfd);
 	  return 0;
 	}
       addr = extract_unsigned_integer (addr_buf, sizeof addr_buf, byte_order);
@@ -687,13 +687,13 @@ enable_break2 (void)
 		     "(at address %s) from dynamic linker"),
 	           hex_string_custom (addr, 8));
 	  enable_break_failure_warning ();
-	  bfd_close (tmp_bfd);
+	  gdb_bfd_unref (tmp_bfd);
 	  return 0;
 	}
       addr = extract_unsigned_integer (addr_buf, sizeof addr_buf, byte_order);
 
       /* We're done with the temporary bfd.  */
-      bfd_close (tmp_bfd);
+      gdb_bfd_unref (tmp_bfd);
 
       /* We're also done with the loadmap.  */
       xfree (ldm);
@@ -962,7 +962,7 @@ frv_fdpic_find_global_pointer (CORE_ADDR addr)
 
 /* Forward declarations for frv_fdpic_find_canonical_descriptor().  */
 static CORE_ADDR find_canonical_descriptor_in_load_object
-  (CORE_ADDR, CORE_ADDR, char *, bfd *, struct lm_info *);
+  (CORE_ADDR, CORE_ADDR, const char *, bfd *, struct lm_info *);
 
 /* Given a function entry point, attempt to find the canonical descriptor
    associated with that entry point.  Return 0 if no canonical descriptor
@@ -971,13 +971,11 @@ static CORE_ADDR find_canonical_descriptor_in_load_object
 CORE_ADDR
 frv_fdpic_find_canonical_descriptor (CORE_ADDR entry_point)
 {
-  char *name;
+  const char *name;
   CORE_ADDR addr;
   CORE_ADDR got_value;
   struct int_elf32_fdpic_loadmap *ldm = 0;
   struct symbol *sym;
-  int status;
-  CORE_ADDR exec_loadmap_addr;
 
   /* Fetch the corresponding global pointer for the entry point.  */
   got_value = frv_fdpic_find_global_pointer (entry_point);
@@ -1020,7 +1018,7 @@ frv_fdpic_find_canonical_descriptor (CORE_ADDR entry_point)
 
 static CORE_ADDR
 find_canonical_descriptor_in_load_object
-  (CORE_ADDR entry_point, CORE_ADDR got_value, char *name, bfd *abfd,
+  (CORE_ADDR entry_point, CORE_ADDR got_value, const char *name, bfd *abfd,
    struct lm_info *lm)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch);
@@ -1186,12 +1184,12 @@ _initialize_frv_solib (void)
   frv_so_ops.bfd_open = solib_bfd_open;
 
   /* Debug this file's internals.  */
-  add_setshow_zinteger_cmd ("solib-frv", class_maintenance,
-			    &solib_frv_debug, _("\
+  add_setshow_zuinteger_cmd ("solib-frv", class_maintenance,
+			     &solib_frv_debug, _("\
 Set internal debugging of shared library code for FR-V."), _("\
 Show internal debugging of shared library code for FR-V."), _("\
 When non-zero, FR-V solib specific internal debugging is enabled."),
-			    NULL,
-			    NULL, /* FIXME: i18n: */
-			    &setdebuglist, &showdebuglist);
+			     NULL,
+			     NULL, /* FIXME: i18n: */
+			     &setdebuglist, &showdebuglist);
 }

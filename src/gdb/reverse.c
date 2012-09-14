@@ -1,7 +1,6 @@
 /* Reverse execution and reverse debugging.
 
-   Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2006-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -217,7 +216,6 @@ delete_all_bookmarks (void)
 static void
 delete_bookmark_command (char *args, int from_tty)
 {
-  struct bookmark *b;
   int num;
   struct get_number_or_range_state state;
 

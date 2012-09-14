@@ -1,6 +1,6 @@
 /* Annotation routines for GDB.
-   Copyright (C) 1986, 1989, 1990, 1991, 1992, 1994, 1995, 1996, 1998, 1999,
-   2000, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1986, 1989-1992, 1994-1996, 1998-2000, 2007-2012 Free
+   Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -522,11 +522,11 @@ annotate_frame_end (void)
 }
 
 void
-annotate_array_section_begin (int index, struct type *elttype)
+annotate_array_section_begin (int idx, struct type *elttype)
 {
   if (annotation_level == 2)
     {
-      printf_filtered (("\n\032\032array-section-begin %d "), index);
+      printf_filtered (("\n\032\032array-section-begin %d "), idx);
       print_value_flags (elttype);
       printf_filtered (("\n"));
     }

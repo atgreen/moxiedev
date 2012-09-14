@@ -1,7 +1,5 @@
 /* Read coff symbol tables and convert to internal format, for GDB.
-   Copyright (C) 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996,
-   1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009,
-   2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1987-2005, 2007-2012 Free Software Foundation, Inc.
    Contributed by David D. Johnson, Brown University (ddj@cs.brown.edu).
 
    This file is part of GDB.
@@ -313,7 +311,7 @@ cs_section_address (struct coff_symbol *cs, bfd *abfd)
   args.resultp = &sect;
   bfd_map_over_sections (abfd, find_targ_sec, &args);
   if (sect != NULL)
-    addr = bfd_get_section_vma (objfile->obfd, sect);
+    addr = bfd_get_section_vma (abfd, sect);
   return addr;
 }
 
@@ -655,13 +653,14 @@ coff_symfile_read (struct objfile *objfile, int symfile_flags)
       char *debugfile;
 
       debugfile = find_separate_debug_file_by_debuglink (objfile);
+      make_cleanup (xfree, debugfile);
 
       if (debugfile)
 	{
 	  bfd *abfd = symfile_bfd_open (debugfile);
 
+	  make_cleanup_bfd_unref (abfd);
 	  symbol_file_add_separate (abfd, symfile_flags, objfile);
-	  xfree (debugfile);
 	}
     }
 
@@ -1308,7 +1307,6 @@ static const char *
 coff_getfilename (union internal_auxent *aux_entry)
 {
   static char buffer[BUFSIZ];
-  char *temp;
   const char *result;
 
   if (aux_entry->x_file.x_n.x_zeroes == 0)
@@ -1457,10 +1455,11 @@ patch_type (struct type *type, struct type *real_type)
 
   if (TYPE_NAME (real_target))
     {
+      /* The previous copy of TYPE_NAME is allocated by
+	 process_coff_symbol.  */
       if (TYPE_NAME (target))
-	xfree (TYPE_NAME (target));
-      TYPE_NAME (target) = concat (TYPE_NAME (real_target), 
-				   (char *) NULL);
+	xfree ((char*) TYPE_NAME (target));
+      TYPE_NAME (target) = xstrdup (TYPE_NAME (real_target));
     }
 }
 
@@ -1472,7 +1471,7 @@ static void
 patch_opaque_types (struct symtab *s)
 {
   struct block *b;
-  struct dict_iterator iter;
+  struct block_iterator iter;
   struct symbol *real_sym;
 
   /* Go through the per-file symbols only.  */
@@ -1488,7 +1487,7 @@ patch_opaque_types (struct symtab *s)
 	  && TYPE_CODE (SYMBOL_TYPE (real_sym)) == TYPE_CODE_PTR
 	  && TYPE_LENGTH (TYPE_TARGET_TYPE (SYMBOL_TYPE (real_sym))) != 0)
 	{
-	  char *name = SYMBOL_LINKAGE_NAME (real_sym);
+	  const char *name = SYMBOL_LINKAGE_NAME (real_sym);
 	  int hash = hashname (name);
 	  struct symbol *sym, *prev;
 
@@ -1677,7 +1676,7 @@ process_coff_symbol (struct coff_symbol *cs,
 		}
 	      else
 		TYPE_NAME (SYMBOL_TYPE (sym)) =
-		  concat (SYMBOL_LINKAGE_NAME (sym), (char *) NULL);
+		  xstrdup (SYMBOL_LINKAGE_NAME (sym));
 	    }
 
 	  /* Keep track of any type which points to empty structured
@@ -2160,7 +2159,7 @@ coff_read_enum_type (int index, int length, int lastsym,
 
 	  SYMBOL_TYPE (xsym) = type;
 	  TYPE_FIELD_NAME (type, n) = SYMBOL_LINKAGE_NAME (xsym);
-	  SET_FIELD_BITPOS (TYPE_FIELD (type, n), SYMBOL_VALUE (xsym));
+	  SET_FIELD_ENUMVAL (TYPE_FIELD (type, n), SYMBOL_VALUE (xsym));
 	  if (SYMBOL_VALUE (xsym) < 0)
 	    unsigned_enum = 0;
 	  TYPE_FIELD_BITSIZE (type, n) = 0;
@@ -2197,6 +2196,7 @@ static const struct sym_fns coff_sym_fns =
 
   default_symfile_relocate,	/* sym_relocate: Relocate a debug
 				   section.  */
+  NULL,				/* sym_probe_fns */
   &psym_functions
 };
 

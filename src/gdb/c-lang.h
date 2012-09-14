@@ -1,7 +1,7 @@
 /* C language support definitions for GDB, the GNU debugger.
 
-   Copyright (C) 1992, 1994, 1995, 1996, 1997, 1998, 2000, 2002, 2005, 2006,
-   2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1992, 1994-1998, 2000, 2002, 2005-2012 Free Software
+   Foundation, Inc.
 
    This file is part of GDB.
 
@@ -71,14 +71,14 @@ extern void c_print_typedef (struct type *,
 			     struct symbol *,
 			     struct ui_file *);
 
-extern int c_val_print (struct type *, const gdb_byte *,
-			int, CORE_ADDR,
-			struct ui_file *, int,
-			const struct value *,
-			const struct value_print_options *);
+extern void c_val_print (struct type *, const gdb_byte *,
+			 int, CORE_ADDR,
+			 struct ui_file *, int,
+			 const struct value *,
+			 const struct value_print_options *);
 
-extern int c_value_print (struct value *, struct ui_file *,
-			  const struct value_print_options *);
+extern void c_value_print (struct value *, struct ui_file *,
+			   const struct value_print_options *);
 
 /* These are in c-lang.c: */
 

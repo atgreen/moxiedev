@@ -1,6 +1,6 @@
 /* Support for printing Ada types for GDB, the GNU debugger.
-   Copyright (C) 1986, 1988, 1989, 1991, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1986, 1988-1989, 1991, 1997-2004, 2007-2012 Free
+   Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -76,7 +76,7 @@ decoded_type_name (struct type *type)
     return NULL;
   else
     {
-      char *raw_name = ada_type_name (type);
+      const char *raw_name = ada_type_name (type);
       char *s, *q;
 
       if (name_buffer == NULL || name_buffer_len <= strlen (raw_name))
@@ -223,9 +223,9 @@ print_dynamic_range_bound (struct type *type, const char *name, int name_len,
 static void
 print_range_type (struct type *raw_type, struct ui_file *stream)
 {
-  char *name;
+  const char *name;
   struct type *base_type;
-  char *subtype_info;
+  const char *subtype_info;
 
   gdb_assert (raw_type != NULL);
   name = TYPE_NAME (raw_type);
@@ -274,7 +274,8 @@ static void
 print_enum_type (struct type *type, struct ui_file *stream)
 {
   int len = TYPE_NFIELDS (type);
-  int i, lastval;
+  int i;
+  LONGEST lastval;
 
   fprintf_filtered (stream, "(");
   wrap_here (" ");
@@ -287,10 +288,11 @@ print_enum_type (struct type *type, struct ui_file *stream)
 	fprintf_filtered (stream, ", ");
       wrap_here ("    ");
       fputs_filtered (ada_enum_name (TYPE_FIELD_NAME (type, i)), stream);
-      if (lastval != TYPE_FIELD_BITPOS (type, i))
+      if (lastval != TYPE_FIELD_ENUMVAL (type, i))
 	{
-	  fprintf_filtered (stream, " => %d", TYPE_FIELD_BITPOS (type, i));
-	  lastval = TYPE_FIELD_BITPOS (type, i);
+	  fprintf_filtered (stream, " => %s",
+			    plongest (TYPE_FIELD_ENUMVAL (type, i)));
+	  lastval = TYPE_FIELD_ENUMVAL (type, i);
 	}
       lastval += 1;
     }
@@ -810,7 +812,7 @@ ada_print_type (struct type *type0, const char *varstring,
 	  print_fixed_point_type (type, stream);
 	else
 	  {
-	    char *name = ada_type_name (type);
+	    const char *name = ada_type_name (type);
 
 	    if (!ada_is_range_type_name (name))
 	      fprintf_filtered (stream, _("<%d-byte integer>"),

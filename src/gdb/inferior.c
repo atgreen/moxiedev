@@ -1,6 +1,6 @@
 /* Multi-process control for GDB, the GNU debugger.
 
-   Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 2008-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,6 +22,7 @@
 #include "inferior.h"
 #include "target.h"
 #include "command.h"
+#include "completer.h"
 #include "gdbcmd.h"
 #include "gdbthread.h"
 #include "ui-out.h"
@@ -35,8 +36,10 @@
 
 void _initialize_inferiors (void);
 
-static void inferior_alloc_data (struct inferior *inf);
-static void inferior_free_data (struct inferior *inf);
+/* Keep a registry of per-inferior data-pointers required by other GDB
+   modules.  */
+
+DEFINE_REGISTRY (inferior, REGISTRY_ACCESS_FIELD)
 
 struct inferior *inferior_list = NULL;
 static int highest_inferior_num;
@@ -178,25 +181,6 @@ delete_thread_of_inferior (struct thread_info *tp, void *data)
   return 0;
 }
 
-void
-delete_threads_of_inferior (int pid)
-{
-  struct inferior *inf;
-  struct delete_thread_of_inferior_arg arg;
-
-  for (inf = inferior_list; inf; inf = inf->next)
-    if (inf->pid == pid)
-      break;
-
-  if (!inf)
-    return;
-
-  arg.pid = pid;
-  arg.silent = 1;
-
-  iterate_over_threads (delete_thread_of_inferior, &arg);
-}
-
 /* If SILENT then be quiet -- don't announce a inferior death, or the
    exit of its threads.  */
 
@@ -276,6 +260,7 @@ exit_inferior_1 (struct inferior *inftoex, int silent)
   observer_notify_inferior_exit (inf);
 
   inf->pid = 0;
+  inf->fake_pid_p = 0;
   if (inf->vfork_parent != NULL)
     {
       inf->vfork_parent->vfork_child = NULL;
@@ -525,6 +510,18 @@ number_of_inferiors (void)
   return count;
 }
 
+/* Converts an inferior process id to a string.  Like
+   target_pid_to_str, but special cases the null process.  */
+
+static char *
+inferior_pid_to_str (int pid)
+{
+  if (pid != 0)
+    return target_pid_to_str (pid_to_ptid (pid));
+  else
+    return _("<null>");
+}
+
 /* Prints the list of inferiors and their details on UIOUT.  This is a
    version of 'info_inferior_command' suitable for use from MI.
 
@@ -578,11 +575,8 @@ print_inferior (struct ui_out *uiout, char *requested_inferiors)
 
       ui_out_field_int (uiout, "number", inf->num);
 
-      if (inf->pid)
-	ui_out_field_string (uiout, "target-id",
-			     target_pid_to_str (pid_to_ptid (inf->pid)));
-      else
-	ui_out_field_string (uiout, "target-id", "<null>");
+      ui_out_field_string (uiout, "target-id",
+			   inferior_pid_to_str (inf->pid));
 
       if (inf->pspace->ebfd)
 	ui_out_field_string (uiout, "exec",
@@ -699,7 +693,7 @@ inferior_command (char *args, int from_tty)
 
   printf_filtered (_("[Switching to inferior %d [%s] (%s)]\n"),
 		   inf->num,
-		   target_pid_to_str (pid_to_ptid (inf->pid)),
+		   inferior_pid_to_str (inf->pid),
 		   (inf->pspace->ebfd
 		    ? bfd_get_filename (inf->pspace->ebfd)
 		    : _("<noexec>")));
@@ -750,7 +744,7 @@ info_inferiors_command (char *args, int from_tty)
 
 /* remove-inferior ID */
 
-void
+static void
 remove_inferior_command (char *args, int from_tty)
 {
   int num;
@@ -809,7 +803,7 @@ add_inferior_with_spaces (void)
 
 /* add-inferior [-copies N] [-exec FILENAME]  */
 
-void
+static void
 add_inferior_command (char *args, int from_tty)
 {
   int i, copies = 1;
@@ -872,7 +866,7 @@ add_inferior_command (char *args, int from_tty)
 
 /* clone-inferior [-copies N] [ID] */
 
-void
+static void
 clone_inferior_command (char *args, int from_tty)
 {
   int i, copies = 1;
@@ -963,108 +957,11 @@ show_print_inferior_events (struct ui_file *file, int from_tty,
 
 
 
-/* Keep a registry of per-inferior data-pointers required by other GDB
-   modules.  */
-
-struct inferior_data
-{
-  unsigned index;
-  void (*cleanup) (struct inferior *, void *);
-};
-
-struct inferior_data_registration
-{
-  struct inferior_data *data;
-  struct inferior_data_registration *next;
-};
-
-struct inferior_data_registry
-{
-  struct inferior_data_registration *registrations;
-  unsigned num_registrations;
-};
-
-static struct inferior_data_registry inferior_data_registry
-  = { NULL, 0 };
-
-const struct inferior_data *
-register_inferior_data_with_cleanup
-  (void (*cleanup) (struct inferior *, void *))
-{
-  struct inferior_data_registration **curr;
-
-  /* Append new registration.  */
-  for (curr = &inferior_data_registry.registrations;
-       *curr != NULL; curr = &(*curr)->next);
-
-  *curr = XMALLOC (struct inferior_data_registration);
-  (*curr)->next = NULL;
-  (*curr)->data = XMALLOC (struct inferior_data);
-  (*curr)->data->index = inferior_data_registry.num_registrations++;
-  (*curr)->data->cleanup = cleanup;
-
-  return (*curr)->data;
-}
-
-const struct inferior_data *
-register_inferior_data (void)
-{
-  return register_inferior_data_with_cleanup (NULL);
-}
-
-static void
-inferior_alloc_data (struct inferior *inf)
-{
-  gdb_assert (inf->data == NULL);
-  inf->num_data = inferior_data_registry.num_registrations;
-  inf->data = XCALLOC (inf->num_data, void *);
-}
-
-static void
-inferior_free_data (struct inferior *inf)
-{
-  gdb_assert (inf->data != NULL);
-  clear_inferior_data (inf);
-  xfree (inf->data);
-  inf->data = NULL;
-}
-
-void
-clear_inferior_data (struct inferior *inf)
-{
-  struct inferior_data_registration *registration;
-  int i;
-
-  gdb_assert (inf->data != NULL);
-
-  for (registration = inferior_data_registry.registrations, i = 0;
-       i < inf->num_data;
-       registration = registration->next, i++)
-    if (inf->data[i] != NULL && registration->data->cleanup)
-      registration->data->cleanup (inf, inf->data[i]);
-
-  memset (inf->data, 0, inf->num_data * sizeof (void *));
-}
-
-void
-set_inferior_data (struct inferior *inf,
-		       const struct inferior_data *data,
-		       void *value)
-{
-  gdb_assert (data->index < inf->num_data);
-  inf->data[data->index] = value;
-}
-
-void *
-inferior_data (struct inferior *inf, const struct inferior_data *data)
-{
-  gdb_assert (data->index < inf->num_data);
-  return inf->data[data->index];
-}
-
 void
 initialize_inferiors (void)
 {
+  struct cmd_list_element *c = NULL;
+
   /* There's always one inferior.  Note that this function isn't an
      automatic _initialize_foo function, since other _initialize_foo
      routines may need to install their per-inferior data keys.  We
@@ -1078,12 +975,13 @@ initialize_inferiors (void)
   add_info ("inferiors", info_inferiors_command, 
 	    _("IDs of specified inferiors (all inferiors if no argument)."));
 
-  add_com ("add-inferior", no_class, add_inferior_command, _("\
+  c = add_com ("add-inferior", no_class, add_inferior_command, _("\
 Add a new inferior.\n\
 Usage: add-inferior [-copies <N>] [-exec <FILENAME>]\n\
 N is the optional number of inferiors to add, default is 1.\n\
 FILENAME is the file name of the executable to use\n\
 as main program."));
+  set_cmd_completer (c, filename_completer);
 
   add_com ("remove-inferiors", no_class, remove_inferior_command, _("\
 Remove inferior ID (or list of IDs).\n\

@@ -7,7 +7,7 @@
 
 Contents of the .[z]?debug_abbrev section:
 
-  Number TAG
+  Number TAG \(0x0\)
    1      DW_TAG_compile_unit    \[has children\]
     DW_AT_producer     DW_FORM_strp
     DW_AT_language     DW_FORM_data1
@@ -16,6 +16,7 @@ Contents of the .[z]?debug_abbrev section:
     DW_AT_low_pc       DW_FORM_addr
     DW_AT_high_pc      DW_FORM_addr
     DW_AT_stmt_list    DW_FORM_data4
+    DW_AT value: 0     DW_FORM value: 0
    2      DW_TAG_subprogram    \[no children\]
     DW_AT_external     DW_FORM_flag
     DW_AT_name         DW_FORM_strp
@@ -24,13 +25,14 @@ Contents of the .[z]?debug_abbrev section:
     DW_AT_low_pc       DW_FORM_addr
     DW_AT_high_pc      DW_FORM_addr
     DW_AT_frame_base   DW_FORM_block1
+    DW_AT value: 0     DW_FORM value: 0
 
 Contents of the .[z]?debug_info section:
 
   Compilation Unit @ offset 0x0:
    Length:        0x5e \(32-bit\)
    Version:       3
-   Abbrev Offset: 0
+   Abbrev Offset: 0x0
    Pointer Size:  8
  <0><b>: Abbrev Number: 1 \(DW_TAG_compile_unit\)
     <c>   DW_AT_producer    : \(indirect string, offset: 0x0\): GNU C 4.4.4	
@@ -56,6 +58,7 @@ Contents of the .[z]?debug_info section:
     <4f>   DW_AT_low_pc      : 0x10	
     <57>   DW_AT_high_pc     : 0x15	
     <5f>   DW_AT_frame_base  : 1 byte block: 9c 	\(DW_OP_call_frame_cfa\)
+ <1><61>: Abbrev Number: 0
 
 Raw dump of debug contents of section .[z]?debug_line:
 

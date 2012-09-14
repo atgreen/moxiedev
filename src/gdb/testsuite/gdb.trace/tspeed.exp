@@ -1,5 +1,4 @@
-# Copyright 2011
-# Free Software Foundation, Inc.
+# Copyright 2011-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,12 +15,10 @@
 
 load_lib "trace-support.exp"
 
-set testfile "tspeed"
-set srcfile ${testfile}.c
+standard_testfile
 set executable $testfile
-set binfile $objdir/$subdir/$executable
 
-set ipalib $objdir/../gdbserver/libinproctrace.so
+set ipalib [get_in_proc_agent]
 
 if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile \
 	  executable [concat {debug nowarnings c} libs=$ipalib]] != "" } {
@@ -89,6 +86,7 @@ proc gdb_slow_trace_speed_test { } {
 }
 
 proc gdb_fast_trace_speed_test { } {
+    global gdb_prompt
 
     gdb_delete_tracepoints
 
@@ -100,11 +98,11 @@ proc gdb_fast_trace_speed_test { } {
 
     gdb_test_multiple "ftrace $testline if (globfoo != 12 && globfoo2 == 45)" \
 	"set conditional fast tracepoint" {
-	    -re "Fast tracepoint \[0-9\]+ at .*" {
+	    -re "Fast tracepoint \[0-9\]+ at .*\r\n$gdb_prompt $" {
 		pass "set conditional fast tracepoint, done"
 		set run_ftrace 1
 	    }
-	    -re "May not have a fast tracepoint at .*" {
+	    -re "May not have a fast tracepoint at .*\r\n$gdb_prompt $" {
 		pass "set conditional fast tracepoint, not allowed at line"
 	    }
 	}
@@ -129,10 +127,8 @@ proc gdb_trace_collection_test {} {
 clean_restart $executable
 runto_main
 
-# We generously give ourselves one "pass" if we successfully
-# detect that this test cannot be run on this target!
 if { ![gdb_target_supports_trace] } then {
-    pass "Current target does not support trace"
+    unsupported "Current target does not support trace"
     return 1;
 }
 

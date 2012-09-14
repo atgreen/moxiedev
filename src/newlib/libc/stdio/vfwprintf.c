@@ -396,10 +396,11 @@ _DEFUN(_VFWPRINTF_R, (data, fp, fmt0, ap),
 	wchar_t sign;		/* sign prefix (' ', '+', '-', or \0) */
 #ifdef _WANT_IO_C99_FORMATS
 				/* locale specific numeric grouping */
-	wchar_t thousands_sep;
-	const char *grouping;
+	wchar_t thousands_sep = L'\0';
+	const char *grouping = NULL;
 #endif
-#ifdef _MB_CAPABLE
+#if defined (_MB_CAPABLE) && !defined (__HAVE_LOCALE_INFO_EXTENDED__) \
+    && (defined (FLOATING_POINT) || defined (_WANT_IO_C99_FORMATS))
 	mbstate_t state;        /* mbtowc calls from library must not change state */
 #endif
 #ifdef FLOATING_POINT
@@ -415,7 +416,7 @@ _DEFUN(_VFWPRINTF_R, (data, fp, fmt0, ap),
 #if defined (FLOATING_POINT) || defined (_WANT_IO_C99_FORMATS)
 	int ndig = 0;		/* actual number of digits returned by cvt */
 #endif
-#ifdef _WANT_IO_C99_FORMATS
+#if defined (FLOATING_POINT) && defined (_WANT_IO_C99_FORMATS)
 	int nseps;		/* number of group separators with ' */
 	int nrepeats;		/* number of repeats of the last group */
 #endif
@@ -553,20 +554,20 @@ _DEFUN(_VFWPRINTF_R, (data, fp, fmt0, ap),
 #ifndef STRING_ONLY
 	/* Initialize std streams if not dealing with sprintf family.  */
 	CHECK_INIT (data, fp);
-	_flockfile (fp);
+	_newlib_flockfile_start (fp);
 
 	ORIENT(fp, 1);
 
 	/* sorry, fwprintf(read_only_file, "") returns EOF, not 0 */
 	if (cantwrite (data, fp)) {
-		_funlockfile (fp);
+		_newlib_flockfile_exit (fp);
 		return (EOF);
 	}
 
 	/* optimise fwprintf(stderr) (and other unbuffered Unix files) */
 	if ((fp->_flags & (__SNBF|__SWR|__SRW)) == (__SNBF|__SWR) &&
 	    fp->_file >= 0) {
-		_funlockfile (fp);
+		_newlib_flockfile_exit (fp);
 		return (__sbwprintf (data, fp, fmt0, ap));
 	}
 #else /* STRING_ONLY */
@@ -619,9 +620,9 @@ _DEFUN(_VFWPRINTF_R, (data, fp, fmt0, ap),
 		sign = L'\0';
 #ifdef FLOATING_POINT
 		lead = 0;
-#endif
 #ifdef _WANT_IO_C99_FORMATS
 		nseps = nrepeats = 0;
+#endif
 #endif
 #ifndef _NO_POS_ARGS
 		N = arg_index;
@@ -1074,6 +1075,15 @@ reswitch:	switch (ch) {
 				sign = L'-';
 			break;
 #endif /* FLOATING_POINT */
+#ifdef _GLIBC_EXTENSION
+		case L'm':  /* GNU extension */
+			{
+				int dummy;
+				cp = (wchar_t *) _strerror_r (data, data->_errno, 1, &dummy);
+			}
+			flags &= ~LONGINT;
+			goto string;
+#endif
 		case L'n':
 #ifndef _NO_LONGLONG
 			if (flags & QUADINT)
@@ -1118,8 +1128,11 @@ reswitch:	switch (ch) {
 #ifdef _WANT_IO_C99_FORMATS
 		case L'S':	/* POSIX extension */
 #endif
-			sign = '\0';
 			cp = GET_ARG (N, ap, wchar_ptr_t);
+#ifdef _GLIBC_EXTENSION
+string:
+#endif
+			sign = '\0';
 #ifndef __OPTIMIZE_SIZE__
 			/* Behavior is undefined if the user passed a
 			   NULL string when precision is not 0.
@@ -1132,7 +1145,7 @@ reswitch:	switch (ch) {
 			else
 #endif /* __OPTIMIZE_SIZE__ */
 #ifdef _MB_CAPABLE
-			if (ch == L's' && !(flags & LONGINT)) {
+			if (ch != L'S' && !(flags & LONGINT)) {
 				char *arg = (char *) cp;
 				size_t insize = 0, nchars = 0, nconv = 0;
 				mbstate_t ps;
@@ -1453,7 +1466,7 @@ error:
 	if (malloc_buf != NULL)
 		_free_r (data, malloc_buf);
 #ifndef STRING_ONLY
-	_funlockfile (fp);
+	_newlib_flockfile_end (fp);
 #endif
 	return (__sferror (fp) ? EOF : ret);
 	/* NOTREACHED */

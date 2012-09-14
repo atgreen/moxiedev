@@ -1,6 +1,6 @@
 /* Simulator for Analog Devices Blackfin processors.
 
-   Copyright (C) 2005-2011 Free Software Foundation, Inc.
+   Copyright (C) 2005-2012 Free Software Foundation, Inc.
    Contributed by Analog Devices, Inc.
 
    This file is part of simulators.
@@ -82,12 +82,14 @@ enum {
 #define BFIN_MMR_EMAC_SIZE		0x200
 #define BFIN_MMR_EPPI_SIZE		0x40
 #define BFIN_MMR_GPIO_SIZE		(17 * 4)
+#define BFIN_MMR_GPIO2_SIZE		(8 * 4)
 #define BFIN_MMR_GPTIMER_SIZE		(4 * 4)
 #define BFIN_MMR_NFC_SIZE		0x50
 /* XXX: Not exactly true; it's two sets of 4 regs near each other:
           0xFFC03600 0x10 - Control
           0xFFC03680 0x10 - Data  */
 #define BFIN_MMR_OTP_SIZE		0xa0
+#define BFIN_MMR_PINT_SIZE		0x28
 #define BFIN_MMR_PLL_BASE		0xFFC00000
 #define BFIN_MMR_PLL_SIZE		(4 * 6)
 #define BFIN_MMR_PPI_SIZE		(4 * 5)

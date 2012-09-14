@@ -1,6 +1,5 @@
 /* Hardware ports.
-   Copyright (C) 1998, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1998, 2007-2012 Free Software Foundation, Inc.
    Contributed by Andrew Cagney and Cygnus Solutions.
 
 This file is part of GDB, the GNU debugger.
@@ -287,7 +286,7 @@ hw_port_decode (struct hw *me,
 	    }
 	}
     }
-  hw_abort (me, "Unreconized port %s", port_name);
+  hw_abort (me, "Unrecognized port %s", port_name);
   return 0;
 }
 

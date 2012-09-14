@@ -1,8 +1,7 @@
 /* Machine independent support for QNX Neutrino /proc (process file system)
    for GDB.  Written by Colin Burgess at QNX Software Systems Limited.
 
-   Copyright (C) 2003, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2003, 2006-2012 Free Software Foundation, Inc.
 
    Contributed by QNX Software Systems Ltd.
 
@@ -313,7 +312,7 @@ update_thread_private_data (struct thread_info *new_thread,
 #endif /* _NTO_VERSION */
 }
 
-void
+static void
 procfs_find_new_threads (struct target_ops *ops)
 {
   procfs_status status;
@@ -733,7 +732,7 @@ procfs_wait (struct target_ops *ops,
   if (ptid_equal (inferior_ptid, null_ptid))
     {
       ourstatus->kind = TARGET_WAITKIND_STOPPED;
-      ourstatus->value.sig = TARGET_SIGNAL_0;
+      ourstatus->value.sig = GDB_SIGNAL_0;
       exit_signo = 0;
       return null_ptid;
     }
@@ -753,13 +752,13 @@ procfs_wait (struct target_ops *ops,
   if (status.flags & _DEBUG_FLAG_SSTEP)
     {
       ourstatus->kind = TARGET_WAITKIND_STOPPED;
-      ourstatus->value.sig = TARGET_SIGNAL_TRAP;
+      ourstatus->value.sig = GDB_SIGNAL_TRAP;
     }
   /* Was it a breakpoint?  */
   else if (status.flags & _DEBUG_FLAG_TRACE)
     {
       ourstatus->kind = TARGET_WAITKIND_STOPPED;
-      ourstatus->value.sig = TARGET_SIGNAL_TRAP;
+      ourstatus->value.sig = GDB_SIGNAL_TRAP;
     }
   else if (status.flags & _DEBUG_FLAG_ISTOP)
     {
@@ -768,7 +767,7 @@ procfs_wait (struct target_ops *ops,
 	case _DEBUG_WHY_SIGNALLED:
 	  ourstatus->kind = TARGET_WAITKIND_STOPPED;
 	  ourstatus->value.sig =
-	    target_signal_from_host (status.info.si_signo);
+	    gdb_signal_from_host (status.info.si_signo);
 	  exit_signo = 0;
 	  break;
 	case _DEBUG_WHY_FAULTED:
@@ -781,7 +780,7 @@ procfs_wait (struct target_ops *ops,
 	  else
 	    {
 	      ourstatus->value.sig =
-		target_signal_from_host (status.info.si_signo);
+		gdb_signal_from_host (status.info.si_signo);
 	      exit_signo = ourstatus->value.sig;
 	    }
 	  break;
@@ -810,7 +809,7 @@ procfs_wait (struct target_ops *ops,
 	case _DEBUG_WHY_REQUESTED:
 	  /* We are assuming a requested stop is due to a SIGINT.  */
 	  ourstatus->kind = TARGET_WAITKIND_STOPPED;
-	  ourstatus->value.sig = TARGET_SIGNAL_INT;
+	  ourstatus->value.sig = GDB_SIGNAL_INT;
 	  exit_signo = 0;
 	  break;
 	}
@@ -953,7 +952,7 @@ procfs_remove_hw_breakpoint (struct gdbarch *gdbarch,
 
 static void
 procfs_resume (struct target_ops *ops,
-	       ptid_t ptid, int step, enum target_signal signo)
+	       ptid_t ptid, int step, enum gdb_signal signo)
 {
   int signal_to_pass;
   procfs_status status;
@@ -983,12 +982,12 @@ procfs_resume (struct target_ops *ops,
 
   run.flags |= _DEBUG_RUN_ARM;
 
-  signal_to_pass = target_signal_to_host (signo);
+  signal_to_pass = gdb_signal_to_host (signo);
 
   if (signal_to_pass)
     {
       devctl (ctl_fd, DCMD_PROC_STATUS, &status, sizeof (status), 0);
-      signal_to_pass = target_signal_to_host (signo);
+      signal_to_pass = gdb_signal_to_host (signo);
       if (status.why & (_DEBUG_WHY_SIGNALLED | _DEBUG_WHY_FAULTED))
 	{
 	  if (signal_to_pass != status.info.si_signo)
@@ -1341,7 +1340,7 @@ procfs_pass_signals (int numsigs, unsigned char *pass_signals)
 
   for (signo = 1; signo < NSIG; signo++)
     {
-      int target_signo = target_signal_from_host (signo);
+      int target_signo = gdb_signal_from_host (signo);
       if (target_signo < numsigs && pass_signals[target_signo])
         sigdelset (&run.trace, signo);
     }
@@ -1354,7 +1353,7 @@ procfs_thread_info (pid_t pid, short tid)
   return NULL;
 }
 
-char *
+static char *
 procfs_pid_to_str (struct target_ops *ops, ptid_t ptid)
 {
   static char buf[1024];

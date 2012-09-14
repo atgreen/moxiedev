@@ -1,3 +1,184 @@
+2012-07-31  Mike Frysinger  <vapier@gentoo.org>
+
+	* machs.c (bf54x_roms): Pass 0x1000 to alias field of BFROM, and
+	0x10000 to the alias field of BFROMA.
+	(bf561_roms): Pass 0x1000 to alias field of BFROM.
+	(bf59x_roms): Pass 0x10000 to alias field of BFROMA.
+
+2012-07-31  Mike Frysinger  <vapier@gentoo.org>
+
+	* machs.c (bfin_reg_fetch): Change return 0 to return -1, and
+	return -1 to return 4.
+	(bfin_reg_store): Likewise.
+
+2012-06-15  Joel Brobecker  <brobecker@adacore.com>
+
+	* config.in, configure: Regenerate.
+
+2012-04-09  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac (SIM_AC_OPTION_HARDWARE): Add bfin_pint.
+	* configure: Regenerate.
+	* dv-bfin_pint.c, dv-bfin_pint.h: New device model.
+	* machs.c (bf542_dev): Add PINT register blocks.
+	(bf544_dev, bf547_dev): Likewise.
+	(PINT_PIQS): Define.
+	(bf54x_port): Add pint/gpio routing.
+	* machs.h (BFIN_MMR_PINT_SIZE): Define.
+
+2012-04-09  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac (SIM_AC_OPTION_HARDWARE): Add bfin_gpio2.
+	* configure: Regenerate.
+	* dv-bfin_gpio2.c, dv-bfin_gpio2.h: New device model.
+	* machs.c (bf54x_mem): Delete GPIO mem stub.
+	(bf542_dev): Add GPIO register blocks.
+	(bf544_dev, bf547_dev): Likewise.
+	* machs.h (BFIN_MMR_GPIO2_SIZE): Define.
+
+2012-04-09  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (decode_dsp32shift_0): Extract the sign for ASHIFT
+	and LSHIFT, and set ASTAT based on the before/after values.
+	Rename "val" to "acc" to be consistent with other code branches.
+
+2012-04-09  Robin Getz  <robin.getz@analog.com>
+
+	* bfin-sim.c (sgn_extend): New helper.
+	(decode_dsp32shiftimm_0): Call lshift when newimmag is more
+	than 16, otherwise call ashiftrt.  Set ASTAT fields as needed.
+	For accumulator shifts, call new sgn_extend helper.
+
+2012-04-08  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-sim.c (illegal_instruction_or_combination): New helper.
+	(decode_ProgCtrl_0): Call illegal_instruction_or_combination instead
+	of illegal_instruction.
+	(decode_PushPopReg_0, decode_CCflag_0, decode_CC2dreg_0,
+	decode_LDSTpmod_0, decode_dagMODim_0, decode_dagMODik_0,
+	decode_dspLDST_0, decode_LDST_0, _interp_insn_bfin): Likewise.
+	(decode_PushPopMultiple_0): Call illegal_instruction_combination when
+	PARALLEL_GROUP is not BFIN_PARALLEL_NONE.
+	(decode_CCflag_0, decode_REGMV_0, decode_ALU2op_0, decode_PTR2op_0,
+	decode_COMPI2opD_0, decode_COMPI2opP_0): Likewise.
+	(decode_CC2stat_0): Check PARALLEL_GROUP before cbit.
+	(decode_LDSTpmod_0): Call illegal_instruction_combination when
+	PARALLEL_GROUP is BFIN_PARALLEL_GROUP2.
+	(decode_dagMODim_0, decode_dagMODik_0, decode_LDST_0,
+	decode_LDSTiiFP_0, decode_LDSTii_0): Likewise.
+
+2012-04-08  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-sim.h (bfin_parallel_group): New enum.
+	(bfin_cpu_state): Add new "group" member.
+	(PARALLEL_GROUP): Define.
+	* bfin-sim.c (decode_ProgCtrl_0): Change INSN_LEN check to
+	PARALLEL_GROUP.
+	(decode_CaCTRL_0, decode_PushPopReg_0, decode_ccMV_0, decode_CCflag_0,
+	decode_CC2dreg_0, decode_CC2stat_0, decode_BRCC_0, decode_UJUMP_0,
+	decode_LOGI2op_0, decode_LoopSetup_0, decode_LDIMMhalf_0,
+	decode_CALLa_0, decode_linkage_0): Likewise.
+	(_interp_insn_bfin): Set PARALLEL_GROUP.
+	(interp_insn_bfin): Likewise.
+
+2012-04-08  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-sim.c (decode_dsp32alu_0): Delete extra space in TRACE_INSN.
+
+2012-04-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-sim.c (_interp_insn_bfin): Call illegal_instruction_combination
+	when INSN_LEN is non-zero before 32bit decode.
+
+2012-04-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-dis.c (fmtconst): Replace decimal handling with a single
+	sprintf call and the '*' field width.
+
+2012-04-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* machs.c (bfin_model_map_bfrom): Return when mnum is 535.
+
+2012-04-01  Mike Frysinger  <vapier@gentoo.org>
+
+	* interp.c (bfin_user_init): Move auxvt_size decl from top to
+	inside of auxvt check.
+
+2012-03-31  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-bfin_sic.c (bfin_sic_finish): Change iwr1 to iwr2.
+
+2012-03-31  Mike Frysinger  <vapier@gentoo.org>
+
+	* devices.c: Include devices.h.
+
+2012-03-24  Mike Frysinger  <vapier@gentoo.org>
+
+	* aclocal.m4, config.in, configure: Regenerate.
+
+2012-03-19  Robin Getz  <robin.getz@analog.com>
+	    Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-sim.c (lshift): Add an overflow flag.  Delete now unused
+	i, j, and tmp vars.  Add a new v_i var.  Split the overflow logic
+	out from the saturate logic.  Do not set V ASTAT bits when working
+	with accumulators.
+	(decode_ALU2op_0): Add new argument to lshift call.
+	(decode_LOGI2op_0, decode_dsp32shift_0, decode_dsp32shiftimm_0):
+	Likewise.
+
+2012-03-18  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-bfin_ebiu_amc.c (struct bfin_ebiu_amc): Add bank_base.
+	(bfin_ebiu_amc_write_amgctl): Replace BFIN_EBIU_AMC_BASE with
+	amc->bank_base.
+	(bfin_ebiu_amc_finish): Assign BFIN_EBIU_AMC_BASE to amc->bank_base.
+
+2012-03-18  Mike Frysinger  <vapier@gentoo.org>
+
+	* dv-bfin_ebiu_amc.c (bfin_ebiu_amc_attach_address_callback): Use
+	ARRAY_SIZE rather than hardcoded constant.
+
+2012-02-04  Mike Frysinger  <vapier@gentoo.org>
+
+	* config.in: Regenerate.
+	* configure: Likewise.
+	* configure.ac: Add linux/types.h to AC_CHECK_HEADERS.
+	* dv-eth_phy.c: Check for HAVE_LINUX_TYPES_H, and delete __u16 and
+	_LINUX_TYPES_H defines.
+
+2011-12-03  Mike Frysinger  <vapier@gentoo.org>
+
+	* interp.c (bfin_syscall): Increase _tbuf storage.  Declare new local
+	tstr buffer.  Call cb_get_string on tstr when handling CB_SYS_stat64,
+	CB_SYS_lstat64, CB_SYS_open, CB_SYS_write, CB_SYS_unlink,
+	CB_SYS_truncate, CB_SYS_rename, CB_SYS_stat, CB_SYS_lstat.  Include
+	tstr in the tbuf output.
+
+2011-12-03  Mike Frysinger  <vapier@gentoo.org>
+
+	* Makefile.in: Delete all dependency rules.
+	* aclocal.m4, configure: Regenerate.
+
+2011-10-19  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure: Regenerate after common/acinclude.m4 update.
+
+2011-10-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Change include to common/acinclude.m4.
+	* aclocal.m4, configure: Regenerate.
+
+2011-10-17  Mike Frysinger  <vapier@gentoo.org>
+
+	* configure.ac: Change AC_PREREQ to 2.64.  Delete AC_CONFIG_HEADER
+	call.  Replace common.m4 include with SIM_AC_COMMON.
+	* configure: Regenerate.
+
+2011-09-28  Mike Frysinger  <vapier@gentoo.org>
+
+	* bfin-sim.c (decode_dsp32shift_0): Use STORE() for VIT_MAX insns.
+
 2011-07-05  Mike Frysinger  <vapier@gentoo.org>
 
 	* interp.c (sim_do_command): Delete.

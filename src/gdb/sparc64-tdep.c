@@ -1,7 +1,6 @@
 /* Target-dependent code for UltraSPARC.
 
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2003-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -94,6 +93,26 @@ sparc64_floating_p (const struct type *type)
       {
 	int len = TYPE_LENGTH (type);
 	gdb_assert (len == 4 || len == 8 || len == 16);
+      }
+      return 1;
+    default:
+      break;
+    }
+
+  return 0;
+}
+
+/* Check whether TYPE is "Complex Floating".  */
+
+static int
+sparc64_complex_floating_p (const struct type *type)
+{
+  switch (TYPE_CODE (type))
+    {
+    case TYPE_CODE_COMPLEX:
+      {
+	int len = TYPE_LENGTH (type);
+	gdb_assert (len == 8 || len == 16 || len == 32);
       }
       return 1;
     default:
@@ -622,11 +641,13 @@ static void
 sparc64_store_floating_fields (struct regcache *regcache, struct type *type,
 			       const gdb_byte *valbuf, int element, int bitpos)
 {
+  int len = TYPE_LENGTH (type);
+
   gdb_assert (element < 16);
 
-  if (sparc64_floating_p (type))
+  if (sparc64_floating_p (type)
+      || (sparc64_complex_floating_p (type) && len <= 16))
     {
-      int len = TYPE_LENGTH (type);
       int regnum;
 
       if (len == 16)
@@ -764,7 +785,8 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
       struct type *type = value_type (args[i]);
       int len = TYPE_LENGTH (type);
 
-      if (sparc64_structure_or_union_p (type))
+      if (sparc64_structure_or_union_p (type)
+	  || (sparc64_complex_floating_p (type) && len == 32))
 	{
 	  /* Structure or Union arguments.  */
 	  if (len <= 16)
@@ -795,10 +817,9 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
 	      num_elements++;
 	    }
 	}
-      else if (sparc64_floating_p (type))
+      else if (sparc64_floating_p (type) || sparc64_complex_floating_p (type))
 	{
 	  /* Floating arguments.  */
-
 	  if (len == 16)
 	    {
 	      /* The psABI says that "Each quad-precision parameter
@@ -866,7 +887,8 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
       int regnum = -1;
       gdb_byte buf[16];
 
-      if (sparc64_structure_or_union_p (type))
+      if (sparc64_structure_or_union_p (type)
+	  || (sparc64_complex_floating_p (type) && len == 32))
 	{
 	  /* Structure or Union arguments.  */
 	  gdb_assert (len <= 16);
@@ -886,7 +908,7 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
 	  if (element < 16)
 	    sparc64_store_floating_fields (regcache, type, valbuf, element, 0);
 	}
-      else if (sparc64_floating_p (type))
+      else if (sparc64_floating_p (type) || sparc64_complex_floating_p (type))
 	{
 	  /* Floating arguments.  */
 	  if (len == 16)
@@ -901,12 +923,12 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
 	      if (element < 16)
 		regnum = SPARC64_D0_REGNUM + element;
 	    }
-	  else
+	  else if (len == 4)
 	    {
 	      /* The psABI says "Each single-precision parameter value
                  will be assigned to one extended word in the
                  parameter array, and right-justified within that
-                 word; the left half (even floatregister) is
+                 word; the left half (even float register) is
                  undefined."  Even though the psABI says that "the
                  left half is undefined", set it to zero here.  */
 	      memset (buf, 0, 4);
@@ -939,7 +961,7 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
 	    }
 	  else if (regnum >= SPARC64_Q0_REGNUM && regnum <= SPARC64_Q8_REGNUM)
 	    {
-	      gdb_assert (element < 6);
+	      gdb_assert (element < 5);
 	      regnum = SPARC_O0_REGNUM + element;
 	      regcache_cooked_write (regcache, regnum, valbuf);
 	      regcache_cooked_write (regcache, regnum + 1, valbuf + 8);
@@ -1013,7 +1035,7 @@ sparc64_extract_return_value (struct type *type, struct regcache *regcache,
 	sparc64_extract_floating_fields (regcache, type, buf, 0);
       memcpy (valbuf, buf, len);
     }
-  else if (sparc64_floating_p (type))
+  else if (sparc64_floating_p (type) || sparc64_complex_floating_p (type))
     {
       /* Floating return values.  */
       for (i = 0; i < len / 4; i++)
@@ -1067,7 +1089,7 @@ sparc64_store_return_value (struct type *type, struct regcache *regcache,
       if (TYPE_CODE (type) != TYPE_CODE_UNION)
 	sparc64_store_floating_fields (regcache, type, buf, 0, 0);
     }
-  else if (sparc64_floating_p (type))
+  else if (sparc64_floating_p (type) || sparc64_complex_floating_p (type))
     {
       /* Floating return values.  */
       memcpy (buf, valbuf, len);
@@ -1097,7 +1119,7 @@ sparc64_store_return_value (struct type *type, struct regcache *regcache,
 }
 
 static enum return_value_convention
-sparc64_return_value (struct gdbarch *gdbarch, struct type *func_type,
+sparc64_return_value (struct gdbarch *gdbarch, struct value *function,
 		      struct type *type, struct regcache *regcache,
 		      gdb_byte *readbuf, const gdb_byte *writebuf)
 {

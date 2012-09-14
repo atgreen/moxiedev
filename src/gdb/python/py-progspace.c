@@ -1,6 +1,6 @@
 /* Python interface to program spaces.
 
-   Copyright (C) 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 2010-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -179,7 +179,7 @@ void
 gdbpy_initialize_pspace (void)
 {
   pspy_pspace_data_key
-    = register_program_space_data_with_cleanup (py_free_pspace);
+    = register_program_space_data_with_cleanup (NULL, py_free_pspace);
 
   if (PyType_Ready (&pspace_object_type) < 0)
     return;

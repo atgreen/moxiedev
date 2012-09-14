@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 
-# Copyright 2011 Free Software Foundation, Inc.
+# Copyright 2011-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,15 +25,14 @@ set syscall_insn ""
 # Define the syscall instruction for each target.
 
 if { [istarget "i\[34567\]86-*-linux*"] || [istarget "x86_64-*-linux*"] } {
-    set syscall_insn "(int|syscall|sysenter)"
+    set syscall_insn "\[ \t\](int|syscall|sysenter)\[ \t\]"
 } else {
     return -1
 }
 
-proc disp_step_cross_syscall { syscall } {
+proc disp_step_cross_syscall { syscall } { with_test_prefix "$syscall" {
     global syscall_insn
     global gdb_prompt
-    global pf_prefix
 
     set testfile "disp-step-$syscall"
 
@@ -46,9 +45,6 @@ proc disp_step_cross_syscall { syscall } {
 	fail "run to main ($syscall)"
 	return
     }
-
-    set old_pf_prefix $pf_prefix
-    lappend pf_prefix "$syscall:"
 
     # Delete the breakpoint on main.
     gdb_test_no_output "delete break 1"
@@ -64,13 +60,13 @@ proc disp_step_cross_syscall { syscall } {
 	}
     }
 
-    gdb_test "continue" "Continuing\\..*Breakpoint \[0-9\]+, .* in $syscall ().*" \
+    gdb_test "continue" "Continuing\\..*Breakpoint \[0-9\]+, (.* in |__libc_|)$syscall \\(\\).*" \
 	"continue to $syscall (1st time)"
     # Hit the breakpoint on $syscall for the first time.  In this time, we will let PLT
     # resolution done, and the number single steps we will do later will be
     # reduced.
 
-    gdb_test "continue" "Continuing\\..*Breakpoint \[0-9\]+, .* in $syscall ().*" \
+    gdb_test "continue" "Continuing\\..*Breakpoint \[0-9\]+, (.* in |__libc_|)$syscall \\(\\).*" \
 	"continue to $syscall (2nd time)"
     # Hit the breakpoint on $syscall for the second time.  In this time, the address
     # of syscall insn and next insn of syscall are recorded.
@@ -94,7 +90,6 @@ proc disp_step_cross_syscall { syscall } {
 
     if {$see_syscall_insn == 0} then {
 	fail "find syscall insn in $syscall"
-	set pf_prefix $old_pf_prefix
 	return -1
     }
 
@@ -102,7 +97,7 @@ proc disp_step_cross_syscall { syscall } {
     gdb_test "stepi" ".*" "stepi $syscall insn"
     set syscall_insn_next_addr [get_hexadecimal_valueof "\$pc" "0"]
 
-    gdb_test "continue" "Continuing\\..*Breakpoint \[0-9\]+, .* in $syscall ().*" \
+    gdb_test "continue" "Continuing\\..*Breakpoint \[0-9\]+, (.* in |__libc_|)$syscall \\(\\).*" \
 	"continue to $syscall (3rd time)"
 
     # Hit the breakpoint on $syscall for the third time.  In this time, we'll set
@@ -123,16 +118,40 @@ proc disp_step_cross_syscall { syscall } {
     gdb_test_no_output "set displaced-stepping on"
 
     # Check the address of next instruction of syscall.
-    gdb_test "stepi" ".*$syscall_insn_next_addr.*" "single step over $syscall"
+    if {$syscall == "vfork" && [is_remote target]} {
+	setup_kfail server/13796 "*-*-*"
+    }
+    set test "single step over $syscall"
+    gdb_test_multiple "stepi" $test {
+	-re "Program terminated with signal SIGILL,.*\r\n$gdb_prompt $" {
+	    fail $test
+	    return
+	}
+	-re "\\\[Inferior .* exited normally\\\].*\r\n$gdb_prompt $" {
+	    fail $test
+	    return
+	}
+	-re "\r\n$gdb_prompt $" {
+	    pass $test
+	}
+    }
+
+    set syscall_insn_next_addr_found [get_hexadecimal_valueof "\$pc" "0"]
+
+    set test "single step over $syscall final pc"
+    if {$syscall_insn_next_addr != 0
+	&& $syscall_insn_next_addr == $syscall_insn_next_addr_found} {
+      pass $test
+    } else {
+      fail $test
+    }
 
     # Delete breakpoint syscall insns to avoid interference to other syscalls.
     gdb_test_no_output "delete $syscall_insn_bp" "delete break $syscall insn"
 
     gdb_test "continue" "Continuing\\..*Breakpoint \[0-9\]+, marker \\(\\) at.*" \
 	"continue to marker ($syscall)"
-
-    set pf_prefix $old_pf_prefix
-}
+}}
 
 disp_step_cross_syscall "fork"
 disp_step_cross_syscall "vfork"

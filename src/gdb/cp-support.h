@@ -1,6 +1,5 @@
 /* Helper routines for C++ support in GDB.
-   Copyright (C) 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2002-2005, 2007-2012 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
    Namespace support contributed by David Carlton.
@@ -27,6 +26,7 @@
 
 #include "symtab.h"
 #include "vec.h"
+#include "gdb_vecs.h"
 #include "gdb_obstack.h"
 
 /* Opaque declarations.  */
@@ -171,13 +171,9 @@ extern struct symbol **make_symbol_overload_list_adl (struct type **arg_types,
 extern struct type *cp_lookup_rtti_type (const char *name,
 					 struct block *block);
 
-extern int cp_validate_operator (const char *input);
-
 /* Functions/variables from cp-namespace.c.  */
 
 extern int cp_is_anonymous (const char *namespace);
-
-DEF_VEC_P (const_char_ptr);
 
 extern void cp_add_using_directive (const char *dest,
                                     const char *src,
@@ -186,18 +182,14 @@ extern void cp_add_using_directive (const char *dest,
 				    VEC (const_char_ptr) *excludes,
                                     struct obstack *obstack);
 
-extern void cp_initialize_namespace (void);
-
-extern void cp_finalize_namespace (struct block *static_block,
-				   struct obstack *obstack);
-
 extern void cp_set_block_scope (const struct symbol *symbol,
 				struct block *block,
 				struct obstack *obstack,
 				const char *processing_current_prefix,
 				int processing_has_namespace_info);
 
-extern void cp_scan_for_anonymous_namespaces (const struct symbol *symbol);
+extern void cp_scan_for_anonymous_namespaces (const struct symbol *symbol,
+					      struct objfile *objfile);
 
 extern struct symbol *cp_lookup_symbol_nonlocal (const char *name,
 						 const struct block *block,
@@ -221,9 +213,9 @@ extern struct symbol *cp_lookup_symbol_imports_or_template
       const struct block *block,
       const domain_enum domain);
 
-extern struct type *cp_lookup_nested_type (struct type *parent_type,
-					   const char *nested_name,
-					   const struct block *block);
+extern struct symbol *cp_lookup_nested_symbol (struct type *parent_type,
+					       const char *nested_name,
+					       const struct block *block);
 
 struct type *cp_lookup_transparent_type (const char *name);
 

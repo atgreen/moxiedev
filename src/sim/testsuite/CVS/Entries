@@ -8,7 +8,8 @@ D/mips64el-elf////
 D/sim////
 D/d30v-elf////
 D/fr30-elf////
-/ChangeLog/1.70/Thu Aug 25 20:11:28 2011/-ko/
-/Makefile.in/1.8/Sun Jun  5 16:54:42 2011/-ko/
-/configure/1.7/Sun Jun  5 16:54:42 2011/-ko/
-/configure.ac/1.2/Sun Jun  5 16:54:42 2011//
+/.gitignore/1.1/Mon Mar 19 03:51:09 2012//
+/ChangeLog/1.75/Fri Sep 14 05:05:25 2012/-ko/
+/Makefile.in/1.9/Fri Sep 14 05:05:25 2012/-ko/
+/configure/1.10/Fri Sep 14 05:05:26 2012/-ko/
+/configure.ac/1.2/Thu Sep 13 21:52:45 2012//

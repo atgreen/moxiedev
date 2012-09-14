@@ -1,7 +1,6 @@
 /* Target-dependent code for NetBSD/sparc.
 
-   Copyright (C) 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2002-2004, 2006-2012 Free Software Foundation, Inc.
    Contributed by Wasabi Systems, Inc.
 
    This file is part of GDB.
@@ -88,7 +87,7 @@ static const CORE_ADDR sparc32nbsd_sigtramp_start = 0xeffffef0;
 static const CORE_ADDR sparc32nbsd_sigtramp_end = 0xeffffff0;
 
 static int
-sparc32nbsd_pc_in_sigtramp (CORE_ADDR pc, char *name)
+sparc32nbsd_pc_in_sigtramp (CORE_ADDR pc, const char *name)
 {
   if (pc >= sparc32nbsd_sigtramp_start && pc < sparc32nbsd_sigtramp_end)
     return 1;
@@ -239,7 +238,7 @@ sparc32nbsd_sigcontext_frame_sniffer (const struct frame_unwind *self,
 				      void **this_cache)
 {
   CORE_ADDR pc = get_frame_pc (this_frame);
-  char *name;
+  const char *name;
 
   find_pc_partial_function (pc, &name, NULL, NULL);
   if (sparc32nbsd_pc_in_sigtramp (pc, name))

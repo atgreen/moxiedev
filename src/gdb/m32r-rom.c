@@ -1,8 +1,8 @@
 /* Remote debugging interface to m32r and mon2000 ROM monitors for GDB, 
    the GNU debugger.
 
-   Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2004, 2005, 2007, 2008,
-   2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1996-2001, 2004-2005, 2007-2012 Free Software
+   Foundation, Inc.
 
    Adapted by Michael Snyder of Cygnus Support.
 
@@ -40,6 +40,7 @@
 #include "inferior.h"
 #include <ctype.h>
 #include "regcache.h"
+#include "gdb_bfd.h"
 
 /*
  * All this stuff just to get my host computer's IP address!
@@ -122,16 +123,17 @@ static void
 m32r_load (char *filename, int from_tty)
 {
   bfd *abfd;
-  asection *s;
-  unsigned int i, data_count = 0;
+  unsigned int data_count = 0;
   struct timeval start_time, end_time;
+  struct cleanup *cleanup;
 
   if (filename == NULL || filename[0] == 0)
     filename = get_exec_file (1);
 
-  abfd = bfd_openr (filename, 0);
+  abfd = gdb_bfd_open (filename, NULL, -1);
   if (!abfd)
     error (_("Unable to open file %s."), filename);
+  cleanup = make_cleanup_bfd_unref (abfd);
   if (bfd_check_format (abfd, bfd_object) == 0)
     error (_("File is not an object file."));
   gettimeofday (&start_time, NULL);
@@ -189,6 +191,7 @@ m32r_load (char *filename, int from_tty)
      confused...  */
 
   clear_symtab_users (0);
+  do_cleanups (cleanup);
 }
 
 static void
@@ -238,8 +241,12 @@ m32r_supply_register (struct regcache *regcache, char *regname,
       monitor_supply_register (regcache, regno, val);
       if (regno == PSW_REGNUM)
 	{
+#if (defined SM_REGNUM || defined BSM_REGNUM || defined IE_REGNUM \
+     || defined BIE_REGNUM || defined COND_REGNUM  || defined CBR_REGNUM \
+     || defined BPC_REGNUM || defined BCARRY_REGNUM)
 	  unsigned long psw = strtoul (val, NULL, 16);
 	  char *zero = "00000000", *one = "00000001";
+#endif
 
 #ifdef SM_REGNUM
 	  /* Stack mode bit */
@@ -431,6 +438,7 @@ m32r_upload_command (char *args, int from_tty)
   char buf[1024];
   struct hostent *hostent;
   struct in_addr inet_addr;
+  struct cleanup *cleanup;
 
   /* First check to see if there's an ethernet port!  */
   monitor_printf ("ust\r");
@@ -521,7 +529,8 @@ m32r_upload_command (char *args, int from_tty)
     printf_filtered (" -- Ethernet load complete.\n");
 
   gettimeofday (&end_time, NULL);
-  abfd = bfd_openr (args, 0);
+  abfd = gdb_bfd_open (args, NULL, -1);
+  cleanup = make_cleanup_bfd_unref (abfd);
   if (abfd != NULL)
     {		/* Download is done -- print section statistics.  */
       if (bfd_check_format (abfd, bfd_object) == 0)
@@ -533,7 +542,6 @@ m32r_upload_command (char *args, int from_tty)
 	  {
 	    bfd_size_type section_size = bfd_section_size (abfd, s);
 	    bfd_vma section_base = bfd_section_lma (abfd, s);
-	    unsigned int buffer;
 
 	    data_count += section_size;
 
@@ -563,6 +571,7 @@ m32r_upload_command (char *args, int from_tty)
      confused...  */
 
   clear_symtab_users (0);
+  do_cleanups (cleanup);
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */

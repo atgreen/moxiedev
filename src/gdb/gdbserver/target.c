@@ -1,6 +1,6 @@
 /* Target operations for the remote server for GDB.
-   Copyright (C) 2002, 2004, 2005, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2002, 2004-2005, 2007-2012 Free Software Foundation,
+   Inc.
 
    Contributed by MontaVista Software.
 
@@ -63,7 +63,7 @@ write_inferior_memory (CORE_ADDR memaddr, const unsigned char *myaddr,
 
   buffer = xmalloc (len);
   memcpy (buffer, myaddr, len);
-  check_mem_write (memaddr, buffer, len);
+  check_mem_write (memaddr, buffer, myaddr, len);
   res = (*the_target->write_memory) (memaddr, buffer, len);
   free (buffer);
   buffer = NULL;
@@ -87,8 +87,8 @@ mywait (ptid_t ptid, struct target_waitstatus *ourstatus, int options,
 	     "\nChild exited with status %d\n", ourstatus->value.integer);
   else if (ourstatus->kind == TARGET_WAITKIND_SIGNALLED)
     fprintf (stderr, "\nChild terminated with signal = 0x%x (%s)\n",
-	     target_signal_to_host (ourstatus->value.sig),
-	     target_signal_to_name (ourstatus->value.sig));
+	     gdb_signal_to_host (ourstatus->value.sig),
+	     gdb_signal_to_name (ourstatus->value.sig));
 
   if (connected_wait)
     server_waiting = 0;
@@ -157,11 +157,11 @@ target_waitstatus_to_string (const struct target_waitstatus *ws)
       break;
     case TARGET_WAITKIND_STOPPED:
       sprintf (buf, "%sstopped, signal = %s",
-	       kind_str, target_signal_to_name (ws->value.sig));
+	       kind_str, gdb_signal_to_name (ws->value.sig));
       break;
     case TARGET_WAITKIND_SIGNALLED:
       sprintf (buf, "%ssignalled, signal = %s",
-	       kind_str, target_signal_to_name (ws->value.sig));
+	       kind_str, gdb_signal_to_name (ws->value.sig));
       break;
     case TARGET_WAITKIND_LOADED:
       sprintf (buf, "%sloaded", kind_str);
@@ -181,4 +181,12 @@ target_waitstatus_to_string (const struct target_waitstatus *ws)
     }
 
   return buf;
+}
+
+int
+kill_inferior (int pid)
+{
+  gdb_agent_about_to_close (pid);
+
+  return (*the_target->kill) (pid);
 }

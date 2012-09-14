@@ -1,7 +1,6 @@
 /* nto-tdep.c - general QNX Neutrino target functionality.
 
-   Copyright (C) 2003, 2004, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 2003-2004, 2007-2012 Free Software Foundation, Inc.
 
    Contributed by QNX Software Systems Ltd.
 
@@ -25,8 +24,6 @@
 #include "gdb_string.h"
 #include "nto-tdep.h"
 #include "top.h"
-#include "cli/cli-decode.h"
-#include "cli/cli-cmds.h"
 #include "inferior.h"
 #include "gdbarch.h"
 #include "bfd.h"
@@ -377,9 +374,9 @@ nto_initialize_signals (void)
 {
   /* We use SIG45 for pulses, or something, so nostop, noprint
      and pass them.  */
-  signal_stop_update (target_signal_from_name ("SIG45"), 0);
-  signal_print_update (target_signal_from_name ("SIG45"), 0);
-  signal_pass_update (target_signal_from_name ("SIG45"), 1);
+  signal_stop_update (gdb_signal_from_name ("SIG45"), 0);
+  signal_print_update (gdb_signal_from_name ("SIG45"), 0);
+  signal_pass_update (gdb_signal_from_name ("SIG45"), 1);
 
   /* By default we don't want to stop on these two, but we do want to pass.  */
 #if defined(SIGSELECT)
@@ -393,23 +390,4 @@ nto_initialize_signals (void)
   signal_print_update (SIGPHOTON, 0);
   signal_pass_update (SIGPHOTON, 1);
 #endif
-}
-
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-extern initialize_file_ftype _initialize_nto_tdep;
-
-void
-_initialize_nto_tdep (void)
-{
-  add_setshow_zinteger_cmd ("nto-debug", class_maintenance,
-			    &nto_internal_debugging, _("\
-Set QNX NTO internal debugging."), _("\
-Show QNX NTO internal debugging."), _("\
-When non-zero, nto specific debug info is\n\
-displayed. Different information is displayed\n\
-for different positive values."),
-			    NULL,
-			    NULL, /* FIXME: i18n: QNX NTO internal
-				     debugging is %s.  */
-			    &setdebuglist, &showdebuglist);
 }

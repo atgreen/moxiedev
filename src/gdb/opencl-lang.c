@@ -1,5 +1,5 @@
 /* OpenCL language support for GDB, the GNU debugger.
-   Copyright (C) 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 2010-2012 Free Software Foundation, Inc.
 
    Contributed by Ken Werner <ken.werner@de.ibm.com>.
 
@@ -68,7 +68,7 @@ enum opencl_primitive_types {
 
 static struct gdbarch_data *opencl_type_data;
 
-struct type **
+static struct type **
 builtin_opencl_type (struct gdbarch *gdbarch)
 {
   return gdbarch_data (gdbarch, opencl_type_data);
@@ -360,7 +360,8 @@ static const struct lval_funcs opencl_value_funcs =
     lval_func_write,
     lval_func_check_validity,
     lval_func_check_any_valid,
-    NULL,
+    NULL,	/* indirect */
+    NULL,	/* coerce_ref */
     lval_func_check_synthetic_pointer,
     lval_func_copy_closure,
     lval_func_free_closure
@@ -960,7 +961,7 @@ Cannot perform conditional operation on vectors with different sizes"));
   return evaluate_subexp_c (expect_type, exp, pos, noside);
 }
 
-void
+static void
 opencl_language_arch_info (struct gdbarch *gdbarch,
 			   struct language_arch_info *lai)
 {
@@ -992,7 +993,6 @@ const struct language_defn opencl_language_defn =
   "opencl",			/* Language name */
   language_opencl,
   range_check_off,
-  type_check_off,
   case_sensitive_on,
   array_row_major,
   macro_expansion_c,
@@ -1007,6 +1007,7 @@ const struct language_defn opencl_language_defn =
   c_print_typedef,		/* Print a typedef using appropriate syntax */
   c_val_print,			/* Print a value using appropriate syntax */
   c_value_print,		/* Print a top-level value */
+  default_read_var_value,	/* la_read_var_value */
   NULL,				/* Language specific skip_trampoline */
   NULL,                         /* name_of_this */
   basic_lookup_symbol_nonlocal,	/* lookup_symbol_nonlocal */
@@ -1023,6 +1024,8 @@ const struct language_defn opencl_language_defn =
   default_print_array_index,
   default_pass_by_reference,
   c_get_string,
+  NULL,				/* la_get_symbol_name_cmp */
+  iterate_over_symbols,
   LANG_MAGIC
 };
 
@@ -1112,6 +1115,9 @@ build_opencl_types (struct gdbarch *gdbarch)
 
   return types;
 }
+
+/* Provide a prototype to silence -Wmissing-prototypes.  */
+extern initialize_file_ftype _initialize_opencl_language;
 
 void
 _initialize_opencl_language (void)

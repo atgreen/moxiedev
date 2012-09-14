@@ -1,8 +1,7 @@
 /* Cache and manage frames for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1987, 1989, 1991, 1994, 1995, 1996, 1998, 2000, 2001,
-   2002, 2003, 2004, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1986-1987, 1989, 1991, 1994-1996, 1998, 2000-2004,
+   2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -166,7 +165,7 @@ frame_stash_invalidate (void)
 
 /* Flag to control debugging.  */
 
-int frame_debug;
+unsigned int frame_debug;
 static void
 show_frame_debug (struct ui_file *file, int from_tty,
 		  struct cmd_list_element *c, const char *value)
@@ -197,7 +196,7 @@ show_backtrace_past_entry (struct ui_file *file, int from_tty,
 		    value);
 }
 
-static int backtrace_limit = INT_MAX;
+static unsigned int backtrace_limit = UINT_MAX;
 static void
 show_backtrace_limit (struct ui_file *file, int from_tty,
 		      struct cmd_list_element *c, const char *value)
@@ -1030,6 +1029,26 @@ ULONGEST
 get_frame_register_unsigned (struct frame_info *frame, int regnum)
 {
   return frame_unwind_register_unsigned (frame->next, regnum);
+}
+
+int
+read_frame_register_unsigned (struct frame_info *frame, int regnum,
+			      ULONGEST *val)
+{
+  struct value *regval = get_frame_register_value (frame, regnum);
+
+  if (!value_optimized_out (regval)
+      && value_entirely_available (regval))
+    {
+      struct gdbarch *gdbarch = get_frame_arch (frame);
+      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+      int size = register_size (gdbarch, VALUE_REGNUM (regval));
+
+      *val = extract_unsigned_integer (value_contents (regval), size, byte_order);
+      return 1;
+    }
+
+  return 0;
 }
 
 void
@@ -2035,8 +2054,10 @@ get_frame_address_in_block (struct frame_info *this_frame)
   while (get_frame_type (next_frame) == INLINE_FRAME)
     next_frame = next_frame->next;
 
-  if (get_frame_type (next_frame) == NORMAL_FRAME
+  if ((get_frame_type (next_frame) == NORMAL_FRAME
+       || get_frame_type (next_frame) == TAILCALL_FRAME)
       && (get_frame_type (this_frame) == NORMAL_FRAME
+	  || get_frame_type (this_frame) == TAILCALL_FRAME
 	  || get_frame_type (this_frame) == INLINE_FRAME))
     return pc - 1;
 
@@ -2094,6 +2115,8 @@ find_frame_sal (struct frame_info *frame, struct symtab_and_line *sal)
 	   the call site is.  Do not pretend to.  This is jarring, but
 	   we can't do much better.  */
 	sal->pc = get_frame_pc (frame);
+
+      sal->pspace = get_frame_program_space (frame);
 
       return;
     }
@@ -2349,23 +2372,11 @@ frame_stop_reason_string (enum unwind_stop_reason reason)
 {
   switch (reason)
     {
-    case UNWIND_NULL_ID:
-      return _("unwinder did not report frame ID");
+#define SET(name, description) \
+    case name: return _(description);
+#include "unwind_stop_reasons.def"
+#undef SET
 
-    case UNWIND_UNAVAILABLE:
-      return _("Not enough registers or memory available to unwind further");
-
-    case UNWIND_INNER_ID:
-      return _("previous frame inner to this frame (corrupt stack?)");
-
-    case UNWIND_SAME_ID:
-      return _("previous frame identical to this frame (corrupt stack?)");
-
-    case UNWIND_NO_SAVED_PC:
-      return _("frame did not save the PC");
-
-    case UNWIND_NO_REASON:
-    case UNWIND_FIRST_ERROR:
     default:
       internal_error (__FILE__, __LINE__,
 		      "Invalid frame stop reason");
@@ -2477,23 +2488,23 @@ the rest of the stack trace."),
 			   &set_backtrace_cmdlist,
 			   &show_backtrace_cmdlist);
 
-  add_setshow_integer_cmd ("limit", class_obscure,
-			   &backtrace_limit, _("\
+  add_setshow_uinteger_cmd ("limit", class_obscure,
+			    &backtrace_limit, _("\
 Set an upper bound on the number of backtrace levels."), _("\
 Show the upper bound on the number of backtrace levels."), _("\
 No more than the specified number of frames can be displayed or examined.\n\
 Zero is unlimited."),
-			   NULL,
-			   show_backtrace_limit,
-			   &set_backtrace_cmdlist,
-			   &show_backtrace_cmdlist);
+			    NULL,
+			    show_backtrace_limit,
+			    &set_backtrace_cmdlist,
+			    &show_backtrace_cmdlist);
 
   /* Debug this files internals.  */
-  add_setshow_zinteger_cmd ("frame", class_maintenance, &frame_debug,  _("\
+  add_setshow_zuinteger_cmd ("frame", class_maintenance, &frame_debug,  _("\
 Set frame debugging."), _("\
 Show frame debugging."), _("\
 When non-zero, frame specific internal debugging is enabled."),
-			    NULL,
-			    show_frame_debug,
-			    &setdebuglist, &showdebuglist);
+			     NULL,
+			     show_frame_debug,
+			     &setdebuglist, &showdebuglist);
 }

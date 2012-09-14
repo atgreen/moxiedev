@@ -1,6 +1,6 @@
 /* Native debugging support for Intel x86 running DJGPP.
-   Copyright (C) 1997, 1999, 2000, 2001, 2005, 2006, 2007, 2008, 2009, 2010,
-   2011 Free Software Foundation, Inc.
+   Copyright (C) 1997, 1999-2001, 2005-2012 Free Software Foundation,
+   Inc.
    Written by Robert Hoehne.
 
    This file is part of GDB.
@@ -238,7 +238,7 @@ static void go32_attach (struct target_ops *ops, char *args, int from_tty);
 static void go32_detach (struct target_ops *ops, char *args, int from_tty);
 static void go32_resume (struct target_ops *ops,
 			 ptid_t ptid, int step,
-			 enum target_signal siggnal);
+			 enum gdb_signal siggnal);
 static void go32_fetch_registers (struct target_ops *ops,
 				  struct regcache *, int regno);
 static void store_register (const struct regcache *, int regno);
@@ -309,57 +309,57 @@ regno_mapping[] =
 static struct
   {
     int go32_sig;
-    enum target_signal gdb_sig;
+    enum gdb_signal gdb_sig;
   }
 sig_map[] =
 {
-  {0, TARGET_SIGNAL_FPE},
-  {1, TARGET_SIGNAL_TRAP},
+  {0, GDB_SIGNAL_FPE},
+  {1, GDB_SIGNAL_TRAP},
   /* Exception 2 is triggered by the NMI.  DJGPP handles it as SIGILL,
      but I think SIGBUS is better, since the NMI is usually activated
      as a result of a memory parity check failure.  */
-  {2, TARGET_SIGNAL_BUS},
-  {3, TARGET_SIGNAL_TRAP},
-  {4, TARGET_SIGNAL_FPE},
-  {5, TARGET_SIGNAL_SEGV},
-  {6, TARGET_SIGNAL_ILL},
-  {7, TARGET_SIGNAL_EMT},	/* no-coprocessor exception */
-  {8, TARGET_SIGNAL_SEGV},
-  {9, TARGET_SIGNAL_SEGV},
-  {10, TARGET_SIGNAL_BUS},
-  {11, TARGET_SIGNAL_SEGV},
-  {12, TARGET_SIGNAL_SEGV},
-  {13, TARGET_SIGNAL_SEGV},
-  {14, TARGET_SIGNAL_SEGV},
-  {16, TARGET_SIGNAL_FPE},
-  {17, TARGET_SIGNAL_BUS},
-  {31, TARGET_SIGNAL_ILL},
-  {0x1b, TARGET_SIGNAL_INT},
-  {0x75, TARGET_SIGNAL_FPE},
-  {0x78, TARGET_SIGNAL_ALRM},
-  {0x79, TARGET_SIGNAL_INT},
-  {0x7a, TARGET_SIGNAL_QUIT},
-  {-1, TARGET_SIGNAL_LAST}
+  {2, GDB_SIGNAL_BUS},
+  {3, GDB_SIGNAL_TRAP},
+  {4, GDB_SIGNAL_FPE},
+  {5, GDB_SIGNAL_SEGV},
+  {6, GDB_SIGNAL_ILL},
+  {7, GDB_SIGNAL_EMT},	/* no-coprocessor exception */
+  {8, GDB_SIGNAL_SEGV},
+  {9, GDB_SIGNAL_SEGV},
+  {10, GDB_SIGNAL_BUS},
+  {11, GDB_SIGNAL_SEGV},
+  {12, GDB_SIGNAL_SEGV},
+  {13, GDB_SIGNAL_SEGV},
+  {14, GDB_SIGNAL_SEGV},
+  {16, GDB_SIGNAL_FPE},
+  {17, GDB_SIGNAL_BUS},
+  {31, GDB_SIGNAL_ILL},
+  {0x1b, GDB_SIGNAL_INT},
+  {0x75, GDB_SIGNAL_FPE},
+  {0x78, GDB_SIGNAL_ALRM},
+  {0x79, GDB_SIGNAL_INT},
+  {0x7a, GDB_SIGNAL_QUIT},
+  {-1, GDB_SIGNAL_LAST}
 };
 
 static struct {
-  enum target_signal gdb_sig;
+  enum gdb_signal gdb_sig;
   int djgpp_excepno;
 } excepn_map[] = {
-  {TARGET_SIGNAL_0, -1},
-  {TARGET_SIGNAL_ILL, 6},	/* Invalid Opcode */
-  {TARGET_SIGNAL_EMT, 7},	/* triggers SIGNOFP */
-  {TARGET_SIGNAL_SEGV, 13},	/* GPF */
-  {TARGET_SIGNAL_BUS, 17},	/* Alignment Check */
+  {GDB_SIGNAL_0, -1},
+  {GDB_SIGNAL_ILL, 6},	/* Invalid Opcode */
+  {GDB_SIGNAL_EMT, 7},	/* triggers SIGNOFP */
+  {GDB_SIGNAL_SEGV, 13},	/* GPF */
+  {GDB_SIGNAL_BUS, 17},	/* Alignment Check */
   /* The rest are fake exceptions, see dpmiexcp.c in djlsr*.zip for
      details.  */
-  {TARGET_SIGNAL_TERM, 0x1b},	/* triggers Ctrl-Break type of SIGINT */
-  {TARGET_SIGNAL_FPE, 0x75},
-  {TARGET_SIGNAL_INT, 0x79},
-  {TARGET_SIGNAL_QUIT, 0x7a},
-  {TARGET_SIGNAL_ALRM, 0x78},	/* triggers SIGTIMR */
-  {TARGET_SIGNAL_PROF, 0x78},
-  {TARGET_SIGNAL_LAST, -1}
+  {GDB_SIGNAL_TERM, 0x1b},	/* triggers Ctrl-Break type of SIGINT */
+  {GDB_SIGNAL_FPE, 0x75},
+  {GDB_SIGNAL_INT, 0x79},
+  {GDB_SIGNAL_QUIT, 0x7a},
+  {GDB_SIGNAL_ALRM, 0x78},	/* triggers SIGTIMR */
+  {GDB_SIGNAL_PROF, 0x78},
+  {GDB_SIGNAL_LAST, -1}
 };
 
 static void
@@ -391,16 +391,16 @@ static int resume_signal = -1;
 
 static void
 go32_resume (struct target_ops *ops,
-	     ptid_t ptid, int step, enum target_signal siggnal)
+	     ptid_t ptid, int step, enum gdb_signal siggnal)
 {
   int i;
 
   resume_is_step = step;
 
-  if (siggnal != TARGET_SIGNAL_0 && siggnal != TARGET_SIGNAL_TRAP)
+  if (siggnal != GDB_SIGNAL_0 && siggnal != GDB_SIGNAL_TRAP)
   {
     for (i = 0, resume_signal = -1;
-	 excepn_map[i].gdb_sig != TARGET_SIGNAL_LAST; i++)
+	 excepn_map[i].gdb_sig != GDB_SIGNAL_LAST; i++)
       if (excepn_map[i].gdb_sig == siggnal)
       {
 	resume_signal = excepn_map[i].djgpp_excepno;
@@ -408,7 +408,7 @@ go32_resume (struct target_ops *ops,
       }
     if (resume_signal == -1)
       printf_unfiltered ("Cannot deliver signal %s on this platform.\n",
-			 target_signal_to_name (siggnal));
+			 gdb_signal_to_name (siggnal));
   }
 }
 
@@ -513,7 +513,7 @@ go32_wait (struct target_ops *ops,
     }
   else
     {
-      status->value.sig = TARGET_SIGNAL_UNKNOWN;
+      status->value.sig = GDB_SIGNAL_UNKNOWN;
       status->kind = TARGET_WAITKIND_STOPPED;
       for (i = 0; sig_map[i].go32_sig != -1; i++)
 	{
@@ -521,7 +521,7 @@ go32_wait (struct target_ops *ops,
 	    {
 #if __DJGPP_MINOR__ < 3
 	      if ((status->value.sig = sig_map[i].gdb_sig) !=
-		  TARGET_SIGNAL_TRAP)
+		  GDB_SIGNAL_TRAP)
 		status->kind = TARGET_WAITKIND_SIGNALLED;
 #else
 	      status->value.sig = sig_map[i].gdb_sig;
@@ -801,6 +801,29 @@ go32_get_dr6 (void)
   return STATUS;
 }
 
+/* Get the value of the DR7 debug status register from the inferior.
+   Here we just return the value stored in D_REGS, as we've got it
+   from the last go32_wait call.  */
+
+static unsigned long
+go32_get_dr7 (void)
+{
+  return CONTROL;
+}
+
+/* Get the value of the DR debug register I from the inferior.  Here
+   we just return the value stored in D_REGS, as we've got it from the
+   last go32_wait call.  */
+
+static CORE_ADDR
+go32_get_dr (int i)
+{
+  if (i < 0 || i > 3)
+    internal_error (__FILE__, __LINE__,
+		    _("Invalid register %d in go32_get_dr.\n"), i);
+  return D_REGS[i];
+}
+
 /* Put the device open on handle FD into either raw or cooked
    mode, return 1 if it was in raw mode, zero otherwise.  */
 
@@ -984,8 +1007,9 @@ init_go32_ops (void)
 
   i386_dr_low.set_control = go32_set_dr7;
   i386_dr_low.set_addr = go32_set_dr;
-  i386_dr_low.reset_addr = NULL;
   i386_dr_low.get_status = go32_get_dr6;
+  i386_dr_low.get_control = go32_get_dr7;
+  i386_dr_low.get_addr = go32_get_dr;
   i386_set_debug_register_length (4);
 
   go32_ops.to_magic = OPS_MAGIC;
@@ -2072,6 +2096,9 @@ go32_info_dos_command (char *args, int from_tty)
 {
   help_list (info_dos_cmdlist, "info dos ", class_info, gdb_stdout);
 }
+
+/* -Wmissing-prototypes */
+extern initialize_file_ftype _initialize_go32_nat;
 
 void
 _initialize_go32_nat (void)

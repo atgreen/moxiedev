@@ -1,4 +1,4 @@
-# Copyright 2011 Free Software Foundation, Inc.
+# Copyright 2011-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,16 +16,12 @@
 # The same tests as in jit.exp, but loading JITer itself from a shared
 # library.
 
-if $tracelevel {
-    strace $tracelevel
-}
-
 if {[skip_shlib_tests]} {
     untested jit-so.exp
     return -1
 }
 
-if {[get_compiler_info not-used]} {
+if {[get_compiler_info]} {
     warning "Could not get compiler info"
     untested jit-so.exp
     return 1
@@ -67,11 +63,8 @@ if { [gdb_compile_shlib ${solib_srcfile} ${solib_binfile} {}] != "" } {
 
 set solib_binfile_target [gdb_download ${solib_binfile}]
 
-proc one_jit_test {count match_str} {
-    global verbose testfile srcfile2 binfile2 binfile2_dlopen solib_binfile_target solib_binfile_test_msg pf_prefix
-
-    set old_pf_prefix $pf_prefix
-    set pf_prefix "one_jit_test-$count"
+proc one_jit_test {count match_str} { with_test_prefix "one_jit_test-$count" {
+    global verbose testfile srcfile2 binfile2 binfile2_dlopen solib_binfile_target solib_binfile_test_msg
 
     clean_restart $testfile
     gdb_load_shlibs $binfile2
@@ -117,9 +110,8 @@ proc one_jit_test {count match_str} {
     gdb_continue_to_breakpoint "break here 2"
     # All jit librares must have been unregistered
     gdb_test "info function jit_function" \
-	"All functions matching regular expression \"jit_function\":" \
-    set pf_prefix $old_pf_prefix
-}
+	"All functions matching regular expression \"jit_function\":"
+}}
 
 one_jit_test 1 "${hex}  jit_function_0000"
 one_jit_test 2 "${hex}  jit_function_0000\[\r\n\]+${hex}  jit_function_0001"

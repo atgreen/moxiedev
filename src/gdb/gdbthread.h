@@ -1,6 +1,6 @@
 /* Multi-process/thread control defs for GDB, the GNU debugger.
-   Copyright (C) 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1997, 1998, 1999,
-   2000, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1987-1993, 1997-2000, 2007-2012 Free Software
+   Foundation, Inc.
    Contributed by Lynx Real-Time Systems, Inc.  Los Gatos, CA.
    
 
@@ -123,7 +123,7 @@ struct thread_control_state
 struct thread_suspend_state
 {
   /* Last signal that the inferior received (why it stopped).  */
-  enum target_signal stop_signal;
+  enum gdb_signal stop_signal;
 };
 
 struct thread_info
@@ -216,7 +216,9 @@ struct thread_info
   int stop_requested;
 
   /* The initiating frame of a nexting operation, used for deciding
-     which exceptions to intercept.  */
+     which exceptions to intercept.  If it is null_frame_id no
+     bp_longjmp or bp_exception but longjmp has been caught just for
+     bp_longjmp_call_dummy.  */
   struct frame_id initiating_frame;
 
   /* Private data used by the target vector implementation.  */
@@ -298,6 +300,11 @@ void thread_change_ptid (ptid_t old_ptid, ptid_t new_ptid);
    once for each known thread.  */
 typedef int (*thread_callback_func) (struct thread_info *, void *);
 extern struct thread_info *iterate_over_threads (thread_callback_func, void *);
+
+/* Traverse all threads.  */
+
+#define ALL_THREADS(T)				\
+  for (T = thread_list; T; T = T->next)
 
 extern int thread_count (void);
 
@@ -388,5 +395,7 @@ extern struct cleanup *make_cleanup_restore_current_thread (void);
 extern struct thread_info* inferior_thread (void);
 
 extern void update_thread_list (void);
+
+extern struct thread_info *thread_list;
 
 #endif /* GDBTHREAD_H */

@@ -19,11 +19,11 @@ D/syscalls////
 D/time////
 D/unix////
 D/xdr////
-/Makefile.am/1.19/Mon Jul 11 12:59:21 2011/-ko/
-/Makefile.in/1.31/Mon Jul 11 12:59:21 2011/-ko/
-/aclocal.m4/1.31/Mon Jul 11 12:59:21 2011/-ko/
-/configure/1.50/Mon Jul 11 12:59:21 2011/-ko/
-/configure.in/1.21/Mon Jul 11 12:59:21 2011/-ko/
-/libc.texinfo/1.21/Mon Jul 11 12:59:21 2011/-ko/
-/saber/1.1.1.1/Mon Jul 11 12:59:21 2011/-ko/
-/sys.tex/1.5/Mon Jul 11 12:59:22 2011/-ko/
+/Makefile.am/1.19/Thu Sep 13 21:52:42 2012/-ko/
+/Makefile.in/1.32/Fri Sep 14 04:46:58 2012/-ko/
+/aclocal.m4/1.32/Fri Sep 14 04:46:58 2012/-ko/
+/configure/1.51/Fri Sep 14 04:46:59 2012/-ko/
+/configure.in/1.21/Thu Sep 13 21:52:42 2012/-ko/
+/libc.texinfo/1.22/Fri Sep 14 04:46:59 2012/-ko/
+/saber/1.1.1.1/Thu Sep 13 21:52:43 2012/-ko/
+/sys.tex/1.5/Thu Sep 13 21:52:43 2012/-ko/

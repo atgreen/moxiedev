@@ -1,7 +1,5 @@
 /* Read dbx symbol tables and convert to internal format, for GDB.
-   Copyright (C) 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995,
-   1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2008, 2009, 2010, 2011.
-   Free Software Foundation, Inc.
+   Copyright (C) 1986-2004, 2008-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1212,7 +1210,7 @@ read_dbx_symtab (struct objfile *objfile)
   struct partial_symtab *pst;
 
   /* List of current psymtab's include files.  */
-  char **psymtab_include_list;
+  const char **psymtab_include_list;
   int includes_allocated;
   int includes_used;
 
@@ -1234,8 +1232,8 @@ read_dbx_symtab (struct objfile *objfile)
 
   includes_allocated = 30;
   includes_used = 0;
-  psymtab_include_list = (char **) alloca (includes_allocated *
-					   sizeof (char *));
+  psymtab_include_list = (const char **) alloca (includes_allocated *
+						 sizeof (const char *));
 
   dependencies_allocated = 30;
   dependencies_used = 0;
@@ -1637,12 +1635,12 @@ read_dbx_symtab (struct objfile *objfile)
 	    psymtab_include_list[includes_used++] = namestring;
 	    if (includes_used >= includes_allocated)
 	      {
-		char **orig = psymtab_include_list;
+		const char **orig = psymtab_include_list;
 
-		psymtab_include_list = (char **)
-		  alloca ((includes_allocated *= 2) * sizeof (char *));
+		psymtab_include_list = (const char **)
+		  alloca ((includes_allocated *= 2) * sizeof (const char *));
 		memcpy (psymtab_include_list, orig,
-			includes_used * sizeof (char *));
+			includes_used * sizeof (const char *));
 	      }
 	    continue;
 	  }
@@ -2228,7 +2226,8 @@ start_psymtab (struct objfile *objfile, char *filename, CORE_ADDR textlow,
    FIXME:  List variables and peculiarities of same.  */
 
 struct partial_symtab *
-end_psymtab (struct partial_symtab *pst, char **include_list, int num_includes,
+end_psymtab (struct partial_symtab *pst,
+	     const char **include_list, int num_includes,
 	     int capping_symbol_offset, CORE_ADDR capping_text,
 	     struct partial_symtab **dependency_list, int number_dependencies,
 	     int textlow_not_set)
@@ -3590,6 +3589,7 @@ static const struct sym_fns aout_sym_fns =
   default_symfile_segments,	/* Get segment information from a file.  */
   NULL,
   default_symfile_relocate,	/* Relocate a debug section.  */
+  NULL,				/* sym_probe_fns */
   &psym_functions
 };
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+# Copyright (C) 2008-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -174,6 +174,18 @@ class pp_hint_error:
     def display_hint (self):
         raise Exception("hint failed")
 
+class pp_children_as_list:
+    "Throw error from display_hint"
+
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        return 'children_as_list_val'
+
+    def children (self):
+        return [('one', 1)]
+
 class pp_outer:
     "Print struct outer"
 
@@ -198,6 +210,14 @@ class MemoryErrorString:
 
     def display_hint (self):
         return 'string'
+
+class pp_eval_type:
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+	gdb.execute("bt", to_string=True)
+        return "eval=<" + str(gdb.parse_and_eval("eval_func (123456789, 2, 3, 4, 5, 6, 7, 8)")) + ">"
 
 def lookup_function (val):
     "Look-up and return a pretty-printer that can print val."
@@ -274,7 +294,12 @@ def register_pretty_printers ():
     pretty_printers_dict[re.compile ('^struct hint_error$')]  = pp_hint_error
     pretty_printers_dict[re.compile ('^hint_error$')]  = pp_hint_error
 
+    pretty_printers_dict[re.compile ('^struct children_as_list$')]  = pp_children_as_list
+    pretty_printers_dict[re.compile ('^children_as_list$')]  = pp_children_as_list
+
     pretty_printers_dict[re.compile ('^memory_error$')]  = MemoryErrorString
+
+    pretty_printers_dict[re.compile ('^eval_type_s$')] = pp_eval_type
 
 pretty_printers_dict = {}
 

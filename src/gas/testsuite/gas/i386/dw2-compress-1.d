@@ -7,7 +7,7 @@ Contents of the .zdebug_info section:
   Compilation Unit @ offset 0x0:
    Length:        0x4e \(32-bit\)
    Version:       2
-   Abbrev Offset: 0
+   Abbrev Offset: 0x0
    Pointer Size:  4
  <0><b>: Abbrev Number: 1 \(DW_TAG_compile_unit\)
     <c>   DW_AT_stmt_list   : 0x0	
@@ -29,10 +29,11 @@ Contents of the .zdebug_info section:
     <4b>   DW_AT_name        : int	
     <4f>   DW_AT_byte_size   : 4	
     <50>   DW_AT_encoding    : 5	\(signed\)
+ <1><51>: Abbrev Number: 0
 
 Contents of the .zdebug_abbrev section:
 
-  Number TAG
+  Number TAG \(0x0\)
    1      DW_TAG_compile_unit    \[has children\]
     DW_AT_stmt_list    DW_FORM_data4
     DW_AT_high_pc      DW_FORM_addr
@@ -40,6 +41,7 @@ Contents of the .zdebug_abbrev section:
     DW_AT_name         DW_FORM_string
     DW_AT_producer     DW_FORM_string
     DW_AT_language     DW_FORM_data1
+    DW_AT value: 0     DW_FORM value: 0
    2      DW_TAG_subprogram    \[no children\]
     DW_AT_external     DW_FORM_flag
     DW_AT_decl_file    DW_FORM_data1
@@ -49,10 +51,12 @@ Contents of the .zdebug_abbrev section:
     DW_AT_low_pc       DW_FORM_addr
     DW_AT_high_pc      DW_FORM_addr
     DW_AT_frame_base   DW_FORM_block1
+    DW_AT value: 0     DW_FORM value: 0
    3      DW_TAG_base_type    \[no children\]
     DW_AT_name         DW_FORM_string
     DW_AT_byte_size    DW_FORM_data1
     DW_AT_encoding     DW_FORM_data1
+    DW_AT value: 0     DW_FORM value: 0
 
 Raw dump of debug contents of section .zdebug_line:
 

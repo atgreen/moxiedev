@@ -1,6 +1,5 @@
 /* Support for printing Java types for GDB, the GNU debugger.
-   Copyright (C) 1997, 1998, 1999, 2000, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1997-2000, 2007-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,6 +22,7 @@
 #include "gdbtypes.h"
 #include "value.h"
 #include "demangle.h"
+#include "gdb-demangle.h"
 #include "jv-lang.h"
 #include "gdb_string.h"
 #include "typeprint.h"
@@ -39,7 +39,7 @@ static void java_type_print_base (struct type * type,
 static void
 java_type_print_derivation_info (struct ui_file *stream, struct type *type)
 {
-  char *name;
+  const char *name;
   int i;
   int n_bases;
   int prev;
@@ -208,8 +208,8 @@ java_type_print_base (struct type *type, struct ui_file *stream, int show,
 	    {
 	      struct fn_field *f;
 	      int j;
-	      char *method_name;
-	      char *name;
+	      const char *method_name;
+	      const char *name;
 	      int is_constructor;
 	      int n_overloads;
 
@@ -328,9 +328,6 @@ java_type_print_base (struct type *type, struct ui_file *stream, int show,
 }
 
 /* LEVEL is the depth to indent lines by.  */
-
-extern void c_type_print_varspec_suffix (struct type *, struct ui_file *,
-					 int, int, int);
 
 void
 java_print_type (struct type *type, const char *varstring,

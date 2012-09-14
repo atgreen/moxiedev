@@ -1,8 +1,6 @@
 /* Remote debugging interface for boot monitors, for GDB.
 
-   Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1990-2002, 2006-2012 Free Software Foundation, Inc.
 
    Contributed by Cygnus Support.  Written by Rob Savoye for Cygnus.
    Resurrected from the ashes by Stu Grossman.
@@ -122,7 +120,7 @@ static ptid_t monitor_ptid;
 
 static void monitor_debug (const char *fmt, ...) ATTRIBUTE_PRINTF (1, 2);
 
-static int monitor_debug_p = 0;
+static unsigned int monitor_debug_p = 0;
 
 /* NOTE: This file alternates between monitor_debug_p and remote_debug
    when determining if debug information is printed.  Perhaps this
@@ -514,6 +512,7 @@ monitor_expect (char *string, char *buf, int buflen)
     }
 
   immediate_quit++;
+  QUIT;
   while (1)
     {
       if (buf)
@@ -936,7 +935,7 @@ monitor_supply_register (struct regcache *regcache, int regno, char *valstr)
 
 static void
 monitor_resume (struct target_ops *ops,
-		ptid_t ptid, int step, enum target_signal sig)
+		ptid_t ptid, int step, enum gdb_signal sig)
 {
   /* Some monitors require a different command when starting a program.  */
   monitor_debug ("MON resume\n");
@@ -1164,7 +1163,7 @@ monitor_wait (struct target_ops *ops,
 #endif
 
   status->kind = TARGET_WAITKIND_STOPPED;
-  status->value.sig = TARGET_SIGNAL_TRAP;
+  status->value.sig = GDB_SIGNAL_TRAP;
 
   discard_cleanups (old_chain);
 
@@ -2378,14 +2377,14 @@ When enabled, a hashmark \'#\' is displayed."),
 			   NULL, /* FIXME: i18n: */
 			   &setlist, &showlist);
 
-  add_setshow_zinteger_cmd ("monitor", no_class, &monitor_debug_p, _("\
+  add_setshow_zuinteger_cmd ("monitor", no_class, &monitor_debug_p, _("\
 Set debugging of remote monitor communication."), _("\
 Show debugging of remote monitor communication."), _("\
 When enabled, communication between GDB and the remote monitor\n\
 is displayed."),
-			    NULL,
-			    NULL, /* FIXME: i18n: */
-			    &setdebuglist, &showdebuglist);
+			     NULL,
+			     NULL, /* FIXME: i18n: */
+			     &setdebuglist, &showdebuglist);
 
   /* Yes, 42000 is arbitrary.  The only sense out of it, is that it
      isn't 0.  */

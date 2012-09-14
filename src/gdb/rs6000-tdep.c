@@ -1,8 +1,7 @@
 /* Target-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1987, 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
-   1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010, 2011 Free Software Foundation, Inc.
+   Copyright (C) 1986-1987, 1989, 1991-2012 Free Software Foundation,
+   Inc.
 
    This file is part of GDB.
 
@@ -109,7 +108,7 @@ static struct cmd_list_element *showpowerpccmdlist = NULL;
 static enum auto_boolean powerpc_soft_float_global = AUTO_BOOLEAN_AUTO;
 
 /* The vector ABI to use.  Keep this in sync with powerpc_vector_abi.  */
-static const char *powerpc_vector_strings[] =
+static const char *const powerpc_vector_strings[] =
 {
   "auto",
   "generic",
@@ -1116,8 +1115,8 @@ ppc_deal_with_atomic_sequence (struct frame_info *frame)
          its destination address.  */
       if ((insn & BRANCH_MASK) == BC_INSN)
         {
-          int immediate = ((insn & ~3) << 16) >> 16;
-          int absolute = ((insn >> 1) & 1);
+          int immediate = ((insn & 0xfffc) ^ 0x8000) - 0x8000;
+          int absolute = insn & 2;
 
           if (bc_insn_count >= 1)
             return 0; /* More than one conditional branch found, fallback 
@@ -1126,7 +1125,7 @@ ppc_deal_with_atomic_sequence (struct frame_info *frame)
 	  if (absolute)
 	    breaks[1] = immediate;
 	  else
-	    breaks[1] = pc + immediate;
+	    breaks[1] = loc + immediate;
 
 	  bc_insn_count++;
 	  last_breakpoint++;
@@ -1150,11 +1149,10 @@ ppc_deal_with_atomic_sequence (struct frame_info *frame)
   breaks[0] = loc;
 
   /* Check for duplicated breakpoints.  Check also for a breakpoint
-     placed (branch instruction's destination) at the stwcx/stdcx 
-     instruction, this resets the reservation and take us back to the 
-     lwarx/ldarx instruction at the beginning of the atomic sequence.  */
-  if (last_breakpoint && ((breaks[1] == breaks[0]) 
-      || (breaks[1] == closing_insn)))
+     placed (branch instruction's destination) anywhere in sequence.  */
+  if (last_breakpoint
+      && (breaks[1] == breaks[0]
+	  || (breaks[1] >= pc && breaks[1] <= closing_insn)))
     last_breakpoint = 0;
 
   /* Effectively inserts the breakpoints.  */
@@ -1824,6 +1822,15 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 
 	  /* Set up frame pointer */
 	}
+      else if (op == 0x603d0000)       /* oril r29, r1, 0x0 */
+	{
+	  fdata->frameless = 0;
+	  framep = 1;
+	  fdata->alloca_reg = (tdep->ppc_gp0_regnum + 29);
+	  continue;
+
+	  /* Another way to set up the frame pointer.  */
+	}
       else if (op == 0x603f0000	/* oril r31, r1, 0x0 */
 	       || op == 0x7c3f0b78)
 	{			/* mr r31, r1 */
@@ -2191,7 +2198,7 @@ rs6000_frame_align (struct gdbarch *gdbarch, CORE_ADDR addr)
 
 static int
 rs6000_in_solib_return_trampoline (struct gdbarch *gdbarch,
-				   CORE_ADDR pc, char *name)
+				   CORE_ADDR pc, const char *name)
 {
   return name && !strncmp (name, "@FIX", 4);
 }
@@ -3545,7 +3552,6 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   enum bfd_architecture arch;
   unsigned long mach;
   bfd abfd;
-  asection *sect;
   enum auto_boolean soft_float_flag = powerpc_soft_float_global;
   int soft_float;
   enum powerpc_vector_abi vector_abi = powerpc_vector_abi_global;

@@ -1,13 +1,9 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_PREREQ(2.59)dnl
+AC_PREREQ(2.64)dnl
 AC_INIT(Makefile.in)
-AC_CONFIG_HEADER(config.h:config.in)
+sinclude(../common/acinclude.m4)
 
-sinclude(../common/aclocal.m4)
-
-# Bugs in autoconf 2.59 break the call to SIM_AC_COMMON, hack around
-# it by inlining the macro's contents.
-sinclude(../common/common.m4)
+SIM_AC_COMMON
 
 SIM_AC_OPTION_ENDIAN(LITTLE_ENDIAN)
 SIM_AC_OPTION_ALIGNMENT(STRICT_ALIGNMENT,STRICT_ALIGNMENT)
@@ -28,12 +24,14 @@ SIM_AC_OPTION_HARDWARE(yes,,\
 	bfin_eppi \
 	bfin_evt \
 	bfin_gpio \
+	bfin_gpio2 \
 	bfin_gptimer \
 	bfin_jtag \
 	bfin_mmu \
 	bfin_nfc \
 	bfin_otp \
 	bfin_pfmon \
+	bfin_pint \
 	bfin_pll \
 	bfin_ppi \
 	bfin_rtc \
@@ -49,7 +47,14 @@ SIM_AC_OPTION_HARDWARE(yes,,\
 )
 
 AC_CHECK_FUNCS([getuid getgid geteuid getegid setuid setgid mmap munmap kill pread])
-AC_CHECK_HEADERS([sys/ioctl.h sys/mman.h net/if.h linux/if_tun.h linux/mii.h])
+AC_CHECK_HEADERS([ \
+	linux/if_tun.h \
+	linux/mii.h \
+	linux/types.h \
+	net/if.h \
+	sys/ioctl.h \
+	sys/mman.h \
+])
 
 BFIN_SIM_EXTRA_OBJS=
 

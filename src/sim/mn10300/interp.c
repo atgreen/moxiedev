@@ -1,10 +1,10 @@
+#include "config.h"
 #include <signal.h>
 
 #include "sim-main.h"
 #include "sim-options.h"
 #include "sim-hw.h"
 
-#include "sysdep.h"
 #include "bfd.h"
 #include "sim-assert.h"
 
@@ -383,7 +383,7 @@ sim_fetch_register (SIM_DESC sd,
 		    int length)
 {
   put_word (memory, State.regs[rn]);
-  return -1;
+  return length;
 }
  
 int

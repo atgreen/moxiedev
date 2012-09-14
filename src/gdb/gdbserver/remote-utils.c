@@ -1,7 +1,5 @@
 /* Remote utility routines for the remote server for GDB.
-   Copyright (C) 1986, 1989, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
-   Free Software Foundation, Inc.
+   Copyright (C) 1986, 1989, 1993-2012 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,6 +19,7 @@
 #include "server.h"
 #include "terminal.h"
 #include "target.h"
+#include "gdbthread.h"
 #include <stdio.h>
 #include <string.h>
 #if HAVE_SYS_IOCTL_H
@@ -107,6 +106,8 @@ struct sym_cache
 int remote_debug = 0;
 struct ui_file *gdb_stdlog;
 
+static int remote_is_stdio = 0;
+
 static gdb_fildes_t remote_desc = INVALID_DESCRIPTOR;
 static gdb_fildes_t listen_desc = INVALID_DESCRIPTOR;
 
@@ -128,6 +129,14 @@ int
 gdb_connected (void)
 {
   return remote_desc != INVALID_DESCRIPTOR;
+}
+
+/* Return true if the remote connection is over stdio.  */
+
+int
+remote_connection_is_stdio (void)
+{
+  return remote_is_stdio;
 }
 
 static void
@@ -222,6 +231,17 @@ remote_prepare (char *name)
   socklen_t tmp;
   char *port_end;
 
+  remote_is_stdio = 0;
+  if (strcmp (name, STDIO_CONNECTION_NAME) == 0)
+    {
+      /* We need to record fact that we're using stdio sooner than the
+	 call to remote_open so start_inferior knows the connection is
+	 via stdio.  */
+      remote_is_stdio = 1;
+      transport_is_reliable = 1;
+      return;
+    }
+
   port_str = strchr (name, ':');
   if (port_str == NULL)
     {
@@ -272,11 +292,27 @@ remote_open (char *name)
   char *port_str;
 
   port_str = strchr (name, ':');
-  if (port_str == NULL)
-    {
 #ifdef USE_WIN32API
-      error ("Only <host>:<port> is supported on this platform.");
-#else
+  if (port_str == NULL)
+    error ("Only <host>:<port> is supported on this platform.");
+#endif
+
+  if (strcmp (name, STDIO_CONNECTION_NAME) == 0)
+    {
+      fprintf (stderr, "Remote debugging using stdio\n");
+
+      /* Use stdin as the handle of the connection.
+	 We only select on reads, for example.  */
+      remote_desc = fileno (stdin);
+
+      enable_async_notification (remote_desc);
+
+      /* Register the event loop handler.  */
+      add_file_handler (remote_desc, handle_serial_event, NULL);
+    }
+#ifndef USE_WIN32API
+  else if (port_str == NULL)
+    {
       struct stat statbuf;
 
       if (stat (name, &statbuf) == 0
@@ -341,8 +377,8 @@ remote_open (char *name)
 
       /* Register the event loop handler.  */
       add_file_handler (remote_desc, handle_serial_event, NULL);
-#endif /* USE_WIN32API */
     }
+#endif /* USE_WIN32API */
   else
     {
       int port;
@@ -372,7 +408,8 @@ remote_close (void)
 #ifdef USE_WIN32API
   closesocket (remote_desc);
 #else
-  close (remote_desc);
+  if (! remote_connection_is_stdio ())
+    close (remote_desc);
 #endif
   remote_desc = INVALID_DESCRIPTOR;
 
@@ -731,6 +768,32 @@ read_ptid (char *buf, char **obuf)
   return ptid_build (pid, tid, 0);
 }
 
+/* Write COUNT bytes in BUF to the client.
+   The result is the number of bytes written or -1 if error.
+   This may return less than COUNT.  */
+
+static int
+write_prim (const void *buf, int count)
+{
+  if (remote_connection_is_stdio ())
+    return write (fileno (stdout), buf, count);
+  else
+    return write (remote_desc, buf, count);
+}
+
+/* Read COUNT bytes from the client and store in BUF.
+   The result is the number of bytes read or -1 if error.
+   This may return less than COUNT.  */
+
+static int
+read_prim (void *buf, int count)
+{
+  if (remote_connection_is_stdio ())
+    return read (fileno (stdin), buf, count);
+  else
+    return read (remote_desc, buf, count);
+}
+
 /* Send a packet to the remote machine, with error checking.
    The data of the packet is in BUF, and the length of the
    packet is in CNT.  Returns >= 0 on success, -1 otherwise.  */
@@ -768,7 +831,7 @@ putpkt_binary_1 (char *buf, int cnt, int is_notif)
 
   do
     {
-      if (write (remote_desc, buf2, p - buf2) != p - buf2)
+      if (write_prim (buf2, p - buf2) != p - buf2)
 	{
 	  perror ("putpkt(write)");
 	  free (buf2);
@@ -863,7 +926,7 @@ input_interrupt (int unused)
       int cc;
       char c = 0;
 
-      cc = read (remote_desc, &c, 1);
+      cc = read_prim (&c, 1);
 
       if (cc != 1 || c != '\003' || current_inferior == NULL)
 	{
@@ -991,8 +1054,7 @@ readchar (void)
 
   if (readchar_bufcnt == 0)
     {
-      readchar_bufcnt = read (remote_desc, readchar_buf,
-			      sizeof (readchar_buf));
+      readchar_bufcnt = read_prim (readchar_buf, sizeof (readchar_buf));
 
       if (readchar_bufcnt <= 0)
 	{
@@ -1114,7 +1176,7 @@ getpkt (char *buf)
 
       fprintf (stderr, "Bad checksum, sentsum=0x%x, csum=0x%x, buf=%s\n",
 	       (c1 << 4) + c2, csum, buf);
-      if (write (remote_desc, "-", 1) != 1)
+      if (write_prim ("-", 1) != 1)
 	return -1;
     }
 
@@ -1126,7 +1188,7 @@ getpkt (char *buf)
 	  fflush (stderr);
 	}
 
-      if (write (remote_desc, "+", 1) != 1)
+      if (write_prim ("+", 1) != 1)
 	return -1;
 
       if (remote_debug)
@@ -1252,7 +1314,7 @@ prepare_resume_reply (char *buf, ptid_t ptid,
 		      struct target_waitstatus *status)
 {
   if (debug_threads)
-    fprintf (stderr, "Writing resume reply for %s:%d\n\n",
+    fprintf (stderr, "Writing resume reply for %s:%d\n",
 	     target_pid_to_str (ptid), status->kind);
 
   switch (status->kind)
@@ -1329,8 +1391,8 @@ prepare_resume_reply (char *buf, ptid_t ptid,
 		strcat (buf, ";");
 		buf += strlen (buf);
 
-		if (the_target->core_of_thread)
-		  core = (*the_target->core_of_thread) (ptid);
+		core = target_core_of_thread (ptid);
+
 		if (core != -1)
 		  {
 		    sprintf (buf, "core:");
@@ -1613,7 +1675,7 @@ look_up_one_symbol (const char *name, CORE_ADDR *addrp, int may_ask_gdb)
    where we want the instruction to be copied (and possibly adjusted)
    to.  On output, it points to one past the end of the resulting
    instruction(s).  The effect of executing the instruction at TO
-   shall be the same as if executing it at FROM.  For example, call
+   shall be the same as if executing it at OLDLOC.  For example, call
    instructions that implicitly push the return address on the stack
    should be adjusted to return to the instruction after OLDLOC;
    relative branches, and other PC-relative instructions need the

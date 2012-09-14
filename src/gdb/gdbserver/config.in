@@ -18,9 +18,9 @@
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 
-/* Define to 1 if you have the declaration of `memmem', and to 0 if you don't.
-   */
-#undef HAVE_DECL_MEMMEM
+/* Define to 1 if you have the declaration of `ADDR_NO_RANDOMIZE', and to 0 if
+   you don't. */
+#undef HAVE_DECL_ADDR_NO_RANDOMIZE
 
 /* Define to 1 if you have the declaration of `perror', and to 0 if you don't.
    */
@@ -29,6 +29,10 @@
 /* Define to 1 if you have the declaration of `strerror', and to 0 if you
    don't. */
 #undef HAVE_DECL_STRERROR
+
+/* Define to 1 if you have the declaration of `strstr', and to 0 if you don't.
+   */
+#undef HAVE_DECL_STRSTR
 
 /* Define to 1 if you have the declaration of `vasprintf', and to 0 if you
    don't. */
@@ -44,6 +48,12 @@
 
 /* Define to 1 if you have the `dladdr' function. */
 #undef HAVE_DLADDR
+
+/* Define to 1 if the system has the type `Elf32_auxv_t'. */
+#undef HAVE_ELF32_AUXV_T
+
+/* Define to 1 if the system has the type `Elf64_auxv_t'. */
+#undef HAVE_ELF64_AUXV_T
 
 /* Define if <sys/procfs.h> has elf_fpregset_t. */
 #undef HAVE_ELF_FPREGSET_T
@@ -72,14 +82,11 @@
 /* Define if the target supports PTRACE_PEEKUSR for register access. */
 #undef HAVE_LINUX_USRREGS
 
-/* Define if <sys/procfs.h> has lwpid_t. */
+/* Define if <thread_db.h> has lwpid_t. */
 #undef HAVE_LWPID_T
 
 /* Define to 1 if you have the <malloc.h> header file. */
 #undef HAVE_MALLOC_H
-
-/* Define to 1 if you have the `memmem' function. */
-#undef HAVE_MEMMEM
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
@@ -96,6 +103,9 @@
 /* Define to 1 if you have the <netinet/tcp.h> header file. */
 #undef HAVE_NETINET_TCP_H
 
+/* Define if you support the personality syscall. */
+#undef HAVE_PERSONALITY
+
 /* Define to 1 if you have the `pread' function. */
 #undef HAVE_PREAD
 
@@ -108,7 +118,7 @@
 /* Define to 1 if you have the <proc_service.h> header file. */
 #undef HAVE_PROC_SERVICE_H
 
-/* Define if <sys/procfs.h> has psaddr_t. */
+/* Define if <thread_db.h> has psaddr_t. */
 #undef HAVE_PSADDR_T
 
 /* Define if the target supports PTRACE_GETFPXREGS for extended register
@@ -120,6 +130,9 @@
 
 /* Define to 1 if you have the `pwrite' function. */
 #undef HAVE_PWRITE
+
+/* Define to 1 if you have the `readlink' function. */
+#undef HAVE_READLINK
 
 /* Define to 1 if you have the <sgtty.h> header file. */
 #undef HAVE_SGTTY_H
@@ -173,6 +186,9 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <sys/un.h> header file. */
+#undef HAVE_SYS_UN_H
 
 /* Define to 1 if you have the <sys/wait.h> header file. */
 #undef HAVE_SYS_WAIT_H

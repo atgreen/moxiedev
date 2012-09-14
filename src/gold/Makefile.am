@@ -15,7 +15,7 @@ AM_CPPFLAGS = \
 	-I$(srcdir) -I$(srcdir)/../include -I$(srcdir)/../elfcpp \
 	-DLOCALEDIR="\"$(datadir)/locale\"" \
 	-DBINDIR="\"$(bindir)\"" -DTOOLBINDIR="\"$(tooldir)/bin\"" \
-	@INCINTL@
+	-DTOOLLIBDIR="\"$(tooldir)/lib\"" @INCINTL@
 
 LIBIBERTY = ../libiberty/libiberty.a
 
@@ -55,6 +55,7 @@ CCFILES = \
 	expression.cc \
 	fileread.cc \
         gc.cc \
+        gdb-index.cc \
 	gold.cc \
 	gold-threads.cc \
 	icf.cc \
@@ -63,6 +64,7 @@ CCFILES = \
 	layout.cc \
 	mapfile.cc \
 	merge.cc \
+	nacl.cc \
 	object.cc \
 	options.cc \
 	output.cc \
@@ -102,6 +104,7 @@ HFILES = \
 	fileread.h \
 	freebsd.h \
         gc.h \
+        gdb-index.h \
 	gold.h \
 	gold-threads.h \
 	icf.h \
@@ -109,6 +112,7 @@ HFILES = \
 	layout.h \
 	mapfile.h \
 	merge.h \
+	nacl.h \
 	object.h \
 	options.h \
 	output.h \

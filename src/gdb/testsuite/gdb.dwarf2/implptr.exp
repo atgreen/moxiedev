@@ -1,4 +1,4 @@
-# Copyright 2010, 2011 Free Software Foundation, Inc.
+# Copyright 2010-2012 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,10 +21,8 @@ if {![dwarf2_support]} {
     return 0  
 }
 
-set testfile "implptr"
-set srcfile ${testfile}.S
+standard_testfile .S
 set csrcfile ${testfile}.c
-set binfile ${objdir}/${subdir}/${testfile}.x
 set opts {}
 
 if [info exists COMPILE] {
@@ -36,7 +34,7 @@ if [info exists COMPILE] {
     return 0  
 }
 
-if {[prepare_for_testing ${testfile}.exp ${testfile}.x $srcfile $opts]} {
+if {[prepare_for_testing ${testfile}.exp ${testfile} $srcfile $opts]} {
     return -1
 }
 

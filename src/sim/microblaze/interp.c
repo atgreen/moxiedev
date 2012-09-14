@@ -1,5 +1,5 @@
 /* Simulator for Xilinx MicroBlaze processor
-   Copyright 2009, 2010, 2011 Free Software Foundation, Inc.
+   Copyright 2009-2012 Free Software Foundation, Inc.
 
    This file is part of GDB, the GNU debugger.
 
@@ -18,6 +18,7 @@
    Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA
    02110-1301, USA.  */
 
+#include "config.h"
 #include <signal.h>
 #include "sysdep.h"
 #include <sys/times.h>

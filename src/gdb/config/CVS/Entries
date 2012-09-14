@@ -15,8 +15,6 @@ D/sh////
 D/sparc////
 D/vax////
 D/xtensa////
-/nm-linux.h/1.36/Sun Jun  5 16:54:36 2011/-ko/
-/nm-nto.h/1.7/Sun Jun  5 16:54:36 2011//
 D/a29k////
 D/arc////
 D/avr////
@@ -52,3 +50,5 @@ D/v850////
 D/w65////
 D/xstormy16////
 D/z8k////
+/nm-linux.h/1.37/Fri Sep 14 05:03:38 2012/-ko/
+/nm-nto.h/1.8/Fri Sep 14 05:03:38 2012//

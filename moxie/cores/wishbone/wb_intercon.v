@@ -17,7 +17,9 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 // 02110-1301, USA.
 
+
 module wb_intercon #(
+  parameter data_width = 32,
   parameter slave_0_mask = 20'h00000,
   parameter slave_0_addr = 20'h00000,
   parameter slave_1_mask = 20'h00000,
@@ -41,8 +43,8 @@ module wb_intercon #(
   );
 
   // Wishbone Master Interface
-  input [31:0]  wbm_dat_i;
-  output [31:0] wbm_dat_o;
+  input [data_width-1:0] wbm_dat_i;
+  output [data_width-1:0] wbm_dat_o;
   input [31:0]  wbm_adr_i;
   input [1:0]   wbm_sel_i;
   input         wbm_we_i;
@@ -51,8 +53,8 @@ module wb_intercon #(
   output        wbm_ack_o;
   
   // Wishbone Slave 0 Interface
-  input [31:0]  wbs_0_dat_i;
-  output [31:0] wbs_0_dat_o;
+  input [data_width-1:0]  wbs_0_dat_i;
+  output [data_width-1:0] wbs_0_dat_o;
   output [31:0] wbs_0_adr_o;
   output [1:0]  wbs_0_sel_o;
   output        wbs_0_we_o;
@@ -61,8 +63,8 @@ module wb_intercon #(
   input         wbs_0_ack_i;
 
   // Wishbone Slave 1 Interface
-  input [31:0]  wbs_1_dat_i;
-  output [31:0] wbs_1_dat_o;
+  input [data_width-1:0]  wbs_1_dat_i;
+  output [data_width-1:0] wbs_1_dat_o;
   output [31:0] wbs_1_adr_o;
   output [1:0]  wbs_1_sel_o;
   output        wbs_1_we_o;
@@ -71,8 +73,8 @@ module wb_intercon #(
   input         wbs_1_ack_i;
 
   // Wishbone Slave 2 Interface
-  input [31:0]  wbs_2_dat_i;
-  output [31:0] wbs_2_dat_o;
+  input [data_width-1:0]  wbs_2_dat_i;
+  output [data_width-1:0] wbs_2_dat_o;
   output [31:0] wbs_2_adr_o;
   output [1:0]  wbs_2_sel_o;
   output        wbs_2_we_o;
@@ -81,8 +83,8 @@ module wb_intercon #(
   input         wbs_2_ack_i;
 
   // Wishbone Slave 3 Interface
-  input [31:0]  wbs_3_dat_i;
-  output [31:0] wbs_3_dat_o;
+  input [data_width-1:0]  wbs_3_dat_i;
+  output [data_width-1:0] wbs_3_dat_o;
   output [31:0] wbs_3_adr_o;
   output [1:0]  wbs_3_sel_o;
   output        wbs_3_we_o;
@@ -102,7 +104,7 @@ module wb_intercon #(
   assign slave_3_sel = ((wbm_adr_i & slave_3_mask) == slave_3_addr);
 
   // An aggregation of all master bus input wires
-  wire [32+32+2+1+1-1:0] master_bus_i;
+  wire [32+data_width+2+1+1-1:0] master_bus_i;
   
   assign master_bus_i = {wbm_adr_i, wbm_dat_i, wbm_sel_i, 
 			 wbm_we_i, wbm_cyc_i};
@@ -129,8 +131,8 @@ module wb_intercon #(
   assign wbm_ack_o = wbs_0_ack_i | wbs_1_ack_i | wbs_2_ack_i | wbs_3_ack_i;
   
   // Master bus data output comes from the selected slave.
-  wire [31:0] 		 i_dat_s;   // internal shared bus, slave data to master
-  assign i_dat_s = ({32{slave_0_sel}} & wbs_0_dat_o);
+  wire [data_width-1:0] i_dat_s;   // internal shared bus, slave data to master
+  assign i_dat_s = ({data_width{slave_0_sel}} & wbs_0_dat_o);
   assign wbm_dat_o = i_dat_s;
   //
   //                   | (slave_1_sel & wbs_1_dat_o)

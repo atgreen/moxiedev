@@ -96,6 +96,10 @@ module moxie (/*AUTOARG*/
 
   reg [0:0]  wb_I_stb_o;
 
+  // Forwarding registers.  
+  reg forward_0;
+  reg forward_1;
+
   // synthesis translate_off 
   initial
     begin
@@ -203,9 +207,7 @@ module moxie (/*AUTOARG*/
 			   .memory_address_i (xw_memory_address),
 			   .mem_result_i (xw_mem_result) );
 
-  // Forwarding logic.  
-  reg forward_0;
-  reg forward_1;
+   // Forwarding logic.
   always @(posedge clk_i)
     begin
       // If we're writing to the same register we're about to read

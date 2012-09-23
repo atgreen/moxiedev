@@ -68,14 +68,16 @@ module moxie (/*AUTOARG*/
   wire [`PCB_WIDTH-1:0] dx_pipeline_control_bits;
   wire [5:0]  dx_op;
   wire [`PCB_WIDTH-1:0] xw_pipeline_control_bits;
-  wire [0:0]  xr_register_write_enable;
-  wire [3:0]  dx_register_write_index;
-  wire [3:0]  xr_register_write_index;
+  wire [0:0]  xr_register0_write_enable;
+  wire [0:0]  xr_register1_write_enable;
+  wire [3:0]  dx_register0_write_index;
+  wire [3:0]  dx_register1_write_index;
+  wire [3:0]  xr_register0_write_index;
+  wire [3:0]  xr_register1_write_index;
   wire [31:0] xw_memory_address;
-  wire [31:0] xr_reg_result;
+  wire [31:0] xr_reg0_result;
+  wire [31:0] xr_reg1_result;
   wire [31:0] xw_mem_result;
-  wire [3:0]  wr_register_write_index;
-  wire [31:0] wr_reg_result;
   wire [3:0]  dx_regA;
   wire [3:0]  dx_regB;
   wire [3:0]  dx_regC;
@@ -95,10 +97,6 @@ module moxie (/*AUTOARG*/
   wire [0:0]  stall_x;
 
   reg [0:0]  wb_I_stb_o;
-
-  // Forwarding registers.  
-  reg forward_0;
-  reg forward_1;
 
   // synthesis translate_off 
   initial
@@ -121,14 +119,15 @@ module moxie (/*AUTOARG*/
 			 // Inputs
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
-			 .write_enable0_i (xr_register_write_enable), 
-			 .write_enable1_i (0), 
-			 .reg_write_index0_i (xr_register_write_index),
+			 .write_enable0_i (xr_register0_write_enable),
+			 .write_enable1_i (xr_register1_write_enable), 
+			 .reg_write_index0_i (xr_register0_write_index),
+			 .reg_write_index1_i (xr_register1_write_index),
 			 .reg_read_index0_i (dr_reg_index1), 
 			 .reg_read_index1_i (dr_reg_index2),
 			 .sp_o (rx_sp),
 			 .fp_o (rx_fp),
-			 .value0_i (xr_reg_result),
+			 .value0_i (xr_reg0_result),
 			 .value1_i (0));
 
   always @(posedge clk_i)
@@ -143,6 +142,10 @@ module moxie (/*AUTOARG*/
 
   assign wb_I_cyc_o = wb_I_stb_o;
   
+  // Forwarding logic.  
+  reg forward_0;
+  reg forward_1;
+
   cpu_fetch stage_fetch (// Outputs
 			 .opcode		(fd_opcode[15:0]),
 			 .valid		        (fd_valid),
@@ -167,7 +170,8 @@ module moxie (/*AUTOARG*/
 			   .stall_i             (stall_x),
 			   // Outputs
 			   .pipeline_control_bits_o (dx_pipeline_control_bits),
-			   .register_write_index_o (dx_register_write_index),
+			   .register0_write_index_o (dx_register0_write_index),
+			   .register1_write_index_o (dx_register1_write_index),
 			   .operand_o (dx_operand),
 			   .PC_o (dx_PC),
 			   .riA_o (dr_reg_index1),
@@ -183,21 +187,25 @@ module moxie (/*AUTOARG*/
 			     .PC_i           (dx_PC),
 			     .PC_o           (xw_PC),
 			     .operand_i		(dx_operand[31:0]),
-			     .regA_i (forward_0 ? xr_reg_result : rx_reg_value1),
-			     .regB_i (forward_1 ? xr_reg_result : rx_reg_value2),
+			     .regA_i (forward_0 ? xr_reg0_result : rx_reg_value1),
+			     .regB_i (forward_1 ? xr_reg0_result : rx_reg_value2),
 			     .branch_flag_o (xf_branch_flag),
 			     .branch_target_o (xf_branch_target),
 			     .pipeline_control_bits_i (dx_pipeline_control_bits),
-			     .register_write_index_i (dx_register_write_index),
+			     .register0_write_index_i (dx_register0_write_index),
+			     .register1_write_index_i (dx_register1_write_index),
 			     // Outputs
 			     .pipeline_control_bits_o (xw_pipeline_control_bits),
-			     .register_write_index_o (xr_register_write_index),
-			     .reg_result_o (xr_reg_result),
+			     .register0_write_index_o (xr_register0_write_index),
+			     .register1_write_index_o (xr_register1_write_index),
+			     .reg0_result_o (xr_reg0_result),
+			     .reg1_result_o (xr_reg1_result),
 			     .mem_result_o (xw_mem_result),
 			     .memory_address_o (xw_memory_address),
 			     .sp_i (rx_sp),
 			     .fp_i (rx_fp),
-			     .register_we_o (xr_register_write_enable));
+			     .register_wea_o (xr_register0_write_enable),
+			     .register_web_o (xr_register1_write_enable));
   
   cpu_write stage_write (  // Inputs
 			   .rst_i (rst_i),
@@ -207,18 +215,17 @@ module moxie (/*AUTOARG*/
 			   .memory_address_i (xw_memory_address),
 			   .mem_result_i (xw_mem_result) );
 
-   // Forwarding logic.
   always @(posedge clk_i)
     begin
       // If we're writing to the same register we're about to read
       // from, then forward the value we're writing back into the
       // pipeline instead of reading from the register file.
-      forward_0 <= xr_register_write_enable
+      forward_0 <= xr_register0_write_enable
 		   & (dx_pipeline_control_bits[`PCB_RA]
-		      & (dx_register_write_index == dr_reg_index1));
-      forward_1 <= xr_register_write_enable
+		      & (dx_register0_write_index == dr_reg_index1));
+      forward_1 <= xr_register0_write_enable
 		   & (dx_pipeline_control_bits[`PCB_RB]
-		      & (dx_register_write_index == dr_reg_index2));
+		      & (dx_register0_write_index == dr_reg_index2));
     end
 
 endmodule // moxie

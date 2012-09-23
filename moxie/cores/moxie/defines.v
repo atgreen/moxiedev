@@ -1,6 +1,6 @@
 // defines.v - Common definitions
 //
-// Copyright (c) 2010 Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2012 Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -17,8 +17,9 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 // 02110-1301, USA.
 
-`define PCB_WIDTH 5
-`define PCB_WR    4
+`define PCB_WIDTH 6
+`define PCB_WA    5
+`define PCB_WB    4
 `define PCB_RA    3
 `define PCB_RB    2
 `define PCB_WM    1

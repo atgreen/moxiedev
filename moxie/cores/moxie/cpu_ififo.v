@@ -108,7 +108,6 @@ module cpu_ififo #(parameter BOOT_ADDRESS = 32'h00001000
 
   assign PC = (newPC_p_i ? PC_i : next_PC);
 
-   // FIXME: multiple assignments to next_PC :(
   always @(negedge rst_i)
     next_PC <= PC_i;
   

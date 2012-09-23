@@ -1,6 +1,6 @@
 // cpu_registerfile.v - moxie register file
 //
-// Copyright (c) 2010, 2011  Anthony Green.  All Rights Reserved.
+// Copyright (c) 2010, 2011, 2012  Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
 // 
 // The above named program is free software; you can redistribute it
@@ -18,13 +18,13 @@
 // 02110-1301, USA.
 
 module cpu_registerfile (/*AUTOARG*/
-   // Outputs
-   value0_o, value1_o, sp_o, fp_o,
-   // Inputs
-   rst_i, clk_i, write_enable0_i, write_enable1_i, value0_i, value1_i,
-   reg_write_index0_i, reg_write_index1_i, reg_read_index0_i,
-   reg_read_index1_i
-   );
+  // Outputs
+  value0_o, value1_o, sp_o, fp_o,
+  // Inputs
+  rst_i, clk_i, write_enable0_i, write_enable1_i, value0_i, value1_i,
+  reg_write_index0_i, reg_write_index1_i, reg_read_index0_i,
+  reg_read_index1_i
+  );
    
   // synthesis translate_off 
   initial
@@ -45,15 +45,19 @@ module cpu_registerfile (/*AUTOARG*/
    input [0:3] reg_write_index0_i, reg_write_index1_i;
    input [0:3] reg_read_index0_i, reg_read_index1_i;
 
-
   always @(posedge clk_i)
-    if (write_enable0_i) begin
-       $display("%x <= %x", reg_write_index0_i, value0_i);
+    begin
+      if (write_enable0_i) begin
+	$display("%x <= %x", reg_write_index0_i, value0_i);
+      end
+      if (write_enable1_i) begin
+	$display("%x <= %x", reg_write_index1_i, value1_i);
+      end
     end
    
   MEM_2w4r mem_2w4r (.clock(clk_i),
 		     .we0(write_enable0_i),
-		     .we1(0),
+		     .we1(write_enable1_i),
 		     .write_addr_0(reg_write_index0_i),
 		     .write_data_0(value0_i),
 		     .write_addr_1(reg_write_index1_i),

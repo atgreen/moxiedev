@@ -36,7 +36,7 @@ module microcode (/*AUTOARG*/
    wire [`PCB_WIDTH-1:0] f1, f2;
    
    assign f1 = rom[opcode[5:0]];
-   assign f2 = 5'b11111;
+   assign f2 = 6'b111111;
    
    assign q = (opcode[7] ? f2 : f1);
    
